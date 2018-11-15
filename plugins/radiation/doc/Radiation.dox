@@ -1,0 +1,373 @@
+/*! \page "RadiationDoc" Radiation Model Plugin Documentation
+
+ \image html GreenhouseImage.png
+
+ \tableofcontents
+
+ <p> <br><br> </p>
+
+ <table>
+   <tr>	
+      <th>Dependencies</th>
+      <td>NVIDIA CUDA 5.0+</td>
+   </tr>
+   <tr>	
+     <th>CMakeLists.txt</th>
+     <td>set( PLUGINS "radiation" )</td>
+   </tr>
+   <tr>	
+     <th>Header File</th>
+     <td>#include "RadiationModel.h"</td>
+   </tr>
+   <tr>	
+     <th>Class</th>
+     <td>\ref RadiationModel</td>
+   </tr>
+ </table>
+
+ <table>
+   <caption>Installing dependent packages</caption>
+   <tr>	
+     <th>Package</th>
+     <td>\image html apple-logo.jpg</td>
+     <td>\image html unix-logo.png</td>
+   </tr>
+   <tr>	
+     <td>NVIDIA CUDA 5.0+</td>
+     <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+     <td>Debian/Ubuntu:**<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install nvidia-cuda-toolkit</code></div></td>
+   </tr>
+ </table>
+
+ \*\* Potential issues:
+ - In Debian, this requires you to enable 'non-free' packages.  Follow <a href="http://ask.xmodulo.com/install-nonfree-packages-debian.html">this link</a> for instructions on how to allow non-free packages.
+ - It is possible that your installed compiler is too new for the latest CUDA version.  If this is the case, you will get an error while compiling, and you will have to revert to an earlier compiler version.  You will have to add a symbolic link from the lower compiler version to /usr/bin/cc, /usr/bin/gcc, /usr/bin/c++, and /usr/bin/g++.
+
+ \section Introduction
+
+ This model simulates the transport of radiative energy for arbitrary wavelength bands using a GPU-accelerated ray-tracing model. The model details are described in <a href="http://dx.doi.org/10.1016/j.ecolmodel.2017.11.022">Bailey (2018)</a>. Briefly, the model uses a reverse ray-tracing approach to simulate emission from primitive elements, collimated radiation sources, and point radiation sources.
+
+ \section RadConstructor RadiationModel Class Constructor
+
+ <table>
+   <tr>	
+      <th>Constructors</th>
+   </tr>
+   <tr>	
+     <td>\ref RadiationModel( helios::Context* context )</td>
+   </tr>
+ </table>
+
+ The \ref RadiationModel class is initialized by simply passing a pointer to the Helios context as an argument to the constructor. This gives the class the ability to automatically query model geometry and read/write from/to model data.
+
+ \section RadVarsAndProps Input/Output Primitive Data
+
+ \subsection RadInputData Input Primitive Data
+
+ <table>
+   <tr>	
+     <th>Primitive Data</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+     <th>Availalbe Plug-ins</th>
+     <th>Default Value</th>
+   </tr>
+   <tr>
+     <td>temperature</td>
+     <td>Kelvin</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Primitive surface temperature. <b>NOTE: Only needed if performing emission calculations.</b></td>
+     <td>Can be computed by \ref EnergyBalanceModel plug-in</td>
+     <td>300 K</td>
+   </tr>
+   <tr>
+     <td>reflectivity_*</td>
+     <td>unitless</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Primitive reflectivity for band * (i.e., reflectivity for band 'PAR' would be 'reflectivity_PAR').</td>
+     <td>N/A</td>
+     <td>0</td>
+   </tr>
+   <tr>
+     <td>transmissivity_*</td>
+     <td>unitless</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Primitive transmissivity for band * (i.e., transmissivity for band 'PAR' would be 'transmissivity_PAR').</td>
+     <td>N/A</td>
+     <td>0</td>
+   </tr>
+   <tr>
+     <td>emissivity_*</td>
+     <td>unitless</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Primitive emissivity for band * (i.e., emissivity for band 'PAR' would be 'emissivity_PAR'). <b>NOTE: Only needed if performing emission calculations.</b></td>
+     <td>N/A</td>
+     <td>1.0</td>
+   </tr>
+ </table>	
+ 
+ \subsection RadOutputData Output Primitive Data
+ 
+ <table>
+   <tr>	
+     <th>Primitive Data</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>radiation_flux_*</td>
+     <td>W/m<sup>2</sup></td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Absorbed radiation flux for band * (i.e., the flux for band 'PAR' would be 'radiation_flux_PAR').</td>
+   </tr>
+ </table>
+
+ \section RadUse Using the Radiation Model Plug-In
+
+ \subsection RadConst Model Class Constructor
+
+ The radiation model class contains functions and data assoicated with the model. To begin, declare an instance of the RadiationModel class. The class constructor takes one argument - a pointer to the Helios context. It uses this pointer to access model geometry and data in the context.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>%RadiationModel radiationmodel(&context); //declare the model class</code></pre></div>
+
+ \subsection RadBands Defining Wavelength Bands
+
+ Arbitrary radiation wavelength bands can be added to the model, over which radiation calculations are performed.  Each wavelength band is given a label that is defined by the user (e.g., 'PAR').  Each band has the possibility of having components of direct, diffuse, and emission, each of which are specified when adding the band.  The \ref RadiationModel::addRadiationBand() "addRadiationBand()" command is used to add each band, which takes one argument, which is a user-defined label for the band (e.g, 'PAR').
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>radiationmodel.addRadiationBand( "PAR" ); //Add band 'PAR'</code></pre></div>
+
+ \subsection RadProps Radiative Properties
+
+ Radiative properties (reflectivity, transmissivity, emissivity) are defined for each band each primitive.  Their values are set via primitive data (see also Input Primitive Data table above, and \ref helios::Context::setPrimitiveData() "setPrimitiveData()"):  
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> \c// Initialize the Context
+  Context context;
+
+  \c// Add 'Patch' primitive
+  vec3 center = make_vec3(0,0,1);
+  vec2 size = make_vec2(1,1);
+  uint UUID = context.addPatch( center, size );
+
+  float rho = 0.1; //reflectivity value
+  context.setPrimitiveData( UUID, "reflectivity_PAR", HELIOS_TYPE_FLOAT, 1, &rho);
+
+  float tau = 0.1; //transmissivity value
+  context.setPrimitiveData( UUID, "transmissivity_PAR", HELIOS_TYPE_FLOAT, 1, &tau);</code></pre></div>
+
+ Note that absorptivity is not directly set, rather it is calculated as \f$1-\rho-\tau\f$.  If \f$1-\rho-\tau\f$ is calculated to be negative, an error is thrown.
+
+ \subsection RadEmission Radiative Emission
+
+ By default, radiation emission calculations are performed for each band.  Each primitive emits radiation with a flux of \f$\varepsilon \sigma T^4\f$, where \f$\varepsilon\f$ is the primitive's emissivity, \f$\sigma=5.67\times 10^{-8}\,W/m^2/K^4\f$ is the Steffan Boltzmann constant, and \f$T\f$ is the primitive's surface temperature in Kelvin.  By default, it is assumed that \f$\varepsilon=1\f$, unless primitive data exists that defines the emissivity.  By default, it is also assumed that \f$T=300K\f$, unless the primitive data 'temperature' exists in the Context whose value defines the temperature.
+
+ Emission can be disabled for the band by caling the \ref RadiationModel::disableEmission() "disableEmission()" function.  For example, for the photosynthetically active (PAR) band, terrestrial objects do not emit radiation (i.e., \f$\varepsilon\approx 0\f$) and thus rather than setting a zero emissivity for this band for all primitives, it is desirable to simply disable radiation emission for this band:
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+   <pre><code>radiationmodel.disableEmission( "PAR" ); //Disable emission for the 'PAR' band</code></pre></div>
+
+ \subsubsection RadTwoSided Single-Sided Emission and Absorption
+
+ By default, a planar primitive will emit radiation from both faces. For primitives that only emit from one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0. Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.
+
+ A primitive with "twosided_flag" set to 0 will not absorb any radiation from the back face of the primitive, but it will attenuate radiation. So if a ray hits the back face, the ray trajectory will be terminated, but no energy will be deposited.
+
+ \subsection RadSources External Radiation Sources
+
+ There are three types of external sources of radiation that can be simulated: 1) a collimated radiation source (beams of radiation are approximately parallel), 2) ambient diffuse radiation, and 3) a point source.
+ 
+ \subsubsection ColSource Adding Collimated Sources
+
+ A collimated radiation source is defined by a unit vector pointing in the direction of the collimated source, and by the radiation flux emitted by the source normal to the direction of radiation propagation.
+ 
+ The radiation model also requires the specification of the number of rays per primitive to be used in the simulation (default is 100 rays per primitive).  The more rays used in the simulation the more accurate the answer will be, but this will result in a longer simulation time.
+
+ Below is an example of adding a collimated source oriented in the direction of the sun, with a flux of 800 and using 200 rays per primitive:
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>vec3 sun_dir(0,0,1);
+ uint SunSource = radiationmodel.addCollimatedRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'SunSource' variable
+  radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source
+  radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div>
+
+ \subsubsection PointSource Adding Point Sources
+
+ Adding point sources is similar to adding collimated sources. Point sources are added using the \ref addPointRadiationSource() function, which takes an (x,y,z) location of the point source as its argument. This function returns a uint which specifies the identifier for the point source, similar to a collimated source. The flux emanating from the source can also be set using the source identifier.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>vec3 sun_dir(0,0,1);
+ uint PointSource = radiationmodel.addPointRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'PointSource' variable
+ radiationmodel.setSourceFlux(PointSource,"PAR",800); //set the flux of the source
+ radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources</code></pre></div>
+	 
+ \subsubsection AmbSource Adding Diffuse/Ambient Sources
+
+ An ambient radiation source is added simply by setting its flux value:
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>radiationmodel.setDiffuseRadiationFlux("PAR",200.f); //set the flux</code></pre></div>
+
+ The default is to use 100 diffuse rays per primitive, which can be set to a user-defined value using the following command:
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>radiationmodel.setDiffuseRayCount("PAR",200); //set the number of rays</code></pre></div>	  
+
+ \subsection RadScatter Scattering Iterations
+ 
+ If the reflectivity or tranmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively until there is no energy left to be scattered.  The number of scattering iterations is defined using:
+ 
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>radiationmodel.setScatteringDepth(5); //set the number of scattering iterations</code></pre></div>	
+
+ \subsection RadRun Running Simulations
+
+ Before simulations are run, we must update the context geometry within the radiation model using the \ref RadiationModel::updateGeometry() "updateGeometry()" command.  The geometry update can be somewhat costly, so it should only be done whenever geometry changes.
+
+ Simulations for each band are run separately via the \ref RadiationModel::runBand() "runBand()" command:
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> radiationmodel.updateGeometry(); //build the context geometry in the radiation model
+
+  radiationmodel.runBand("PAR"); //run the model for the 'PAR' band</code></pre></div>
+
+ The model will create several primitive data in the context with values set using simulation results (see Sect. "Output Primitive Data" above).
+
+ \subsection RadSolar Integrating with the SolarPosition Plug-in
+
+ A common task when using the radiation model is to integrate with the \ref SolarPosition plug-in to set the position of a collimated radiation source (i.e., the sun), potentially at several different times of the day.  In this case, one would initialize the SolarPosition and RadiationModel classes and set up relevant inputs, then execute a for-loop over each time of the day. For each time iteration, the current time is set in the Context, the direction of the sun is calculated for that particular time, then the sun direction is passed to the radiation model. An example is illustrated in the code below.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+  #include "Visualizer.h"
+  #include "SolarPosition.h"
+  #include "RadiationModel.h"
+
+  using namespace helios;
+
+  int main( void ){
+
+     \c//---- inputs ----//
+     int UTC = 7;             //hours from UTC
+     float latitude = 35.2;   //latitude in degrees
+     float longitude = 124.3; //longitude in degrees
+     Date date(1,6,2018);     //current date (June 1 2018)
+  
+     float pressure = 101300; //atmospheric pressure (Pa)
+     float temperature = 300; //air temperature (K)
+     float humidity = 0.5;    //relative humidity (-)
+     float turbidity = 0.05;  //atmospheric turbidity coeff (-)
+     \c//----------------//
+
+     \c// --- 1. Initialize the Context and some geometry --- //
+     Context context; //Initialize Context
+
+     \c// add some geometry
+     context.addTile( make_vec3(0,0,0), make_vec2(10,10), make_SphericalCoord(0,0), make_int2(500,500) );
+
+     context.addSphere( 50, make_vec3(0,0,2), 1 );
+
+     \c// --- 2. Initialize the solar position model --- //
+
+     %SolarPosition solarposition( UTC, latitude, longitude, &context ); //initialize the solar position model
+
+     \c// --- 3. Initialize the radiation model --- //
+  
+     %RadiationModel radiationmodel( &context ); //initialize the radiation model
+  
+     uint SunSource = radiationmodel.addCollimatedRadiationSource(); //add the source (sun), we'll set it's direction later
+  
+     radiationmodel.addRadiationBand("SW");
+     radiationmodel.setDirectRayCount("SW",1000); //set the ray count for source
+     radiationmodel.disableEmission("SW");
+  
+     radiationmodel.updateGeometry();
+
+     \c// --- 4. Loop over various hours of the day (7:00 thru 21:00) --- //
+  
+     context.setDate( date ); //set the date, which will not change
+     
+     for( int hour=7; hour<22; hour++ ){
+
+        \c// --- 5. Set the current time and calculate the associated sun direction --- //
+    
+        context.setTime(0,hour); //set the current time for this iteration
+
+        \c//Set the correct sun position for the current date, time, latitude, etc.
+        vec3 sdir = solarposition.getSunDirectionVector(); //get the solar direction from plug-in
+        radiationmodel.setSourcePosition( SunSource, sdir ); //set the radiation source direction in radiation model
+
+        \c// --- 6. Calculate incoming solar fluxes for the current time --- //
+      
+        \c//Calculate the clear-sky direct and diffuse solar flux for the current date, time, latitude, etc.
+        float Rflux = solarposition.getSolarFlux( pressure, temperature, humidity, turbidity );
+        float fdiff = solarposition.getDiffuseFraction( pressure, temperature, humidity, turbidity ); //fraction of Rflux that is diffuse
+        radiationmodel.setSourceFlux( SunSource, "SW", Rflux*(1-fdiff) ); //set the direct flux: Rflux*(1-fdiff)
+        radiationmodel.setDiffuseRadiationFlux( "SW", Rflux*fdiff ); //set the diffuse flux: Rflux*fdiff
+
+        \c// --- 7. Run the model --- //
+        radiationmodel.runBand("SW");
+
+        \c// --- 8. Visualize the result --- //
+    
+        %Visualizer vis(1000); //Initialize the visualizer
+
+        vis.buildContextGeometry(&context); //add all geometry in the Context to the visualizer
+        vis.colorContextPrimitivesByData( "radiation_flux_SW" ); //tell the visualizer to color based on radiation flux (primitive data)
+
+        vis.plotUpdate(); //plot the result
+
+        vis.printWindow(); //print to JPEG image
+
+        helios::wait(3); //wait for 3 seconds
+
+        vis.closeWindow(); //close the window, then continue to next loop iteration
+
+     }//end loop over time
+
+     return 0;     
+     
+  }</code></pre></div>
+ 
+ \subsection RadVis Visualizing Model Outputs
+ 
+ Visualization of radiation model outputs is typically achieved by coloring primitives based on the value of the primitive data "radiation_flux_*" for a particular band.  However, we could visualize any input or output of the model or calculated value based on the model outputs.
+
+ A simple example of visualization of the absorbed flux for band "PAR" is given below, which assumes that a band exists named "PAR" and the model was run for that band.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> %Visualizer vis(1000);
+
+  vis.buildContextGeometry( &context );
+  vis.colorContextPrimitivesByData("radiation_flux_PAR");
+  vis.enableColorbar();
+
+  vis.plotInteractive();</code></pre></div>
+
+
+ It could also be possible to visualize the net all-wave radiation flux by summing multiple band fluxes. The following example assumes that there are bands created in the model for shortwave radiation called "SW" and for longwave radiation called "LW", and that the model has been run for each of these bands.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> %Visualizer vis(1000);
+
+  vis.buildContextGeometry( &context );
+
+  std::vector<float> total_flux;
+  std::vector<uint> allUUIDs = context.getAllUUIDs();
+  for( size_t p=0; p<allUUIDs.size(); p++ ){
+      uint UUID = allUUIDs.at(p);
+      float flux_SW, flux_LW;
+      context.getPrimitiveData( UUID, "radiation_flux_SW", flux_SW );
+      context.getPrimitiveData( UUID, "radiation_flux_LW", flux_LW );
+      total_flux.push_back( flux_SW + flux_LW );
+  }
+	   
+  vis.colorContextPrimitivesByValue( total_flux );
+  vis.enableColorbar();
+
+  vis.plotInteractive();</code></pre></div>
+ 
+*/

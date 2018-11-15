@@ -1,0 +1,403 @@
+/*! \page PhotosynthesisDoc Photosynthesis Model Plugin Documentation
+
+ \tableofcontents
+
+ <p> <br><br> </p>
+
+ <table>
+   <tr>	
+     <th>Dependencies</th>
+     <td>None</td>
+   </tr>
+   <tr>	
+     <th>CMakeLists.txt</th>
+     <td>set( PLUGINS "photosynthesis" )</td>
+   </tr>
+   <tr>	
+     <th>Header File</th>
+     <td>#include "PhotosynthesisModel.h"</td>
+   </tr>
+   <tr>	
+     <th>Class</th>
+     <td>\ref PhotosynthesisModel</td>
+   </tr>
+ </table>
+ 
+ \section PhotoConstructor Class Constructor
+ 
+ <table>
+   <tr>	
+     <th>Constructors</th>
+   </tr>
+   <tr>	
+     <td>\ref PhotosynthesisModel( helios::Context* )</td>
+   </tr>
+ </table>
+ 
+ \section VarsAndProps Primitive Data	
+ 
+ \subsection PhotoInputData Input Primitive Data
+
+ <table>
+   <tr>	
+     <th>Primitive Data Label</th>
+     <th>Symbol</th>
+     <th>Units</th>	
+     <th>Data Type</th>
+     <th>Description</th>
+     <th>Available Plug-ins</th>
+     <th>Default Value</th>
+   </tr>
+   <tr>
+     <td>radiation_flux_PAR</td>
+     <td>\f$i\f$</td>
+     <td>W/m<sup>2</sup></td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Radiative flux in PAR band.</td>
+     <td>Can be computed by \ref RadiationModel plug-in.</td>
+     <td>0</td>
+   </tr>
+   <tr>
+     <td>temperature</td>
+     <td>\f$T_s\f$</td>
+     <td>Kelvin</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Primitive surface temperature.</td>
+     <td>Can be computed by \ref EnergyBalanceModel plug-in.</td>
+     <td>300 K</td>
+   </tr>
+   <tr>
+     <td>air_CO2</td>
+     <td>\f$C_a\f$</td>
+     <td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>CO<sub>2</sub> concentration of air outside of primitive boundary-layer.</td>
+     <td>N/A</td>
+     <td>390 \f$\mu\f$mol/mol</td>
+   </tr>  	   
+   <tr>
+     <td>moisture_conductance</td>
+     <td>\f$g_M\f$</td>
+     <td>mol air/m<sup>2</sup>-s</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Overall conductance to moisture between substomatal cells and outside of boundary-layer.</td>
+     <td>Can be computed by \ref StomatalConductanceModel plug-in.</td>	  
+     <td>0.25 mol/m<sup>2</sup>-s</td>
+   </tr>
+ </table>	
+ 
+ \subsection PhotoOutputData Output Primitive Data
+
+ <table>
+   <tr>	
+     <th>Primitive Data Label</th>
+     <th>Symbol</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>net_photosynthesis</td>
+     <td>\f$A\f$</td>
+     <td>\f$\mu\f$mol CO<sub>2</sub>/m<sup>2</sup>-sec</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Net rate of carbon transfer per unit one-sided area.</td>
+   </tr>
+ </table>
+
+ \section PhotoDescription Introduction
+
+ The photosynthesis plug-in implements two types of models: an empirical model similar to that of <a href="../../plugins/photosynthesis/doc/Johnson_2010_PlantMod.pdf">Johnson (2010)</a>; and the biochemical model of <a href="https://link.springer.com/article/10.1007/BF00386231">Farquhar, von Caemmerer, and Berry (1980)</a>, which are described separately below.
+
+ By default, the plug-in uses the empirical model. There are functions that can be used to switch between the two types of available models, as illustrated below.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.4">
+  <pre><code> #include "PhotosynthesisModel.h"
+
+  int main( void ){
+	%PhotosynthesisModel photosynthesismodel(&context);
+
+	\c//Use the Farquahar-von Caemmerer-Berry model
+	photosynthesismodel.setModelType_Farquhar();
+
+	photosynthesismodel.run();
+
+	\c//Switch back to the empirical model
+	photosynthesismodel.setModelType_Empirical();
+  }</code></pre>
+  </div>
+    
+  \section EmpiricalDescription Empirical Model Description
+
+ The net photosynthetic rate is described by the equation:
+ 
+ \f$A = A_{sat} f_L f_T f_C - R_d\f$
+ 
+ \f$A_{sat}\,({\mu}mol/m^2-s)\f$ is the photosynthesis assimilation rate at saturating irradiance and reference temperature (\f$T_{ref}\f$) and intercellular CO<sub>2</sub> concentration (\f$C_{i,ref}\f$).
+    
+ \subsection LightResponse Light Response Function
+
+ The response of photosynthesis to light is given by a simple exponential function, which is defined by only one parameter:
+
+ \f$f_L(i) = \dfrac{i}{\theta+i}\f$,
+
+ where \f$\theta\f$ is the light response curvature.
+
+ \subsection TempResponse Temperature Response
+
+ It is assumed that the maximum CO<sub>2</sub> assimilation rate \f$A_{max}\f$ decreases exponentially about some optimum temperature \f$T_{opt}\f$. The temperature response function is given by:
+
+ \f$f_T(T_s) = \left(\dfrac{T_s-T_{min}}{T_{ref}-T_{min}}\right)^q\left(\dfrac{(1+q)T_{opt}-T_{min}-qT_s}{(1+q)T_{opt}-T_{min}-qT_{ref}}\right)\f$,
+
+ where \f$T_{min}\f$ is the minimum temperature at which assimilation occurs, \f$T_{opt}\f$ is the temperature at which the maximum assimilation rate occurs, \f$T_{ref}\f$ is the reference temperature chosen to define \f$A_{ref}\f$, and \f$q\f$ is a shape parameter.
+
+ The "dark" respiration rate \f$R_d\f$ is assumed to increase exponentially with temperature following the Arrhenius equation (and assumed not to vary with ambient CO<sub>2</sub> concentration).  Thus, the dark respiration rate is calculated simply as
+
+ \f$R_d = R\sqrt{T_s}\mathrm{exp}\left(-E_R/(T_s+273)\right)\f$,
+
+ where \f$R\f$ and \f$E_R\f$ are parameters, and temperature is in Kelvin.
+
+ \subsection CO2Response CO2 Response Function
+
+ We assume that the maximum assimilation rate varies linearly with intercellular CO<sub>2</sub> concentration over the range of expected concentrations, and is zero at zero CO<sub>2</sub>.  Thus, the response function is simply
+
+ \f$f_C(C_i) = k_C\dfrac{C_i}{C_{i,ref}}\f$, 
+
+ where \f$C_i\f$ is intercellular CO<sub>2</sub> concentration (\f$\mu\f$mol CO<sub>2</sub>/mol air).
+
+ \subsection Ci Intercellular CO2 Concentration
+
+ The intercellular CO<sub>2</sub> concentration is estimated as a function of the boundary-layer conductance, stomatal conductance, and ambient CO<sub>2</sub> concentration outside of the primitive boundary-layer.  The rate of transport of CO<sub>2</sub> to the leaf (i.e., assimilation rate) is given by
+
+ \f$A+R_d = 0.75g_M\left(C_{amb}-C_i\right)\f$,
+    
+ where \f$g_M\f$ is the conductance to moisture from the substomtal cells to outside of the boundary-layer. The 0.75 factor comes from the fact that diffusion of CO<sub>2</sub> in air is slower than that of water vapor (see Eq. 7.33 of <a href="http://www.springer.com/us/book/9780387949376#otherversion=9781461216261">Campbell and Norman</a>).
+
+ Since \f$A\f$ is dependent on \f$C_i\f$ and vice-versa, an iterative solution is requred for \f$A\f$.
+
+ \subsection PhotoCalib Empirical Model Calibration Procedure
+
+ \subsubsection PhotoVars Summary of Empirical Model Independent Variables
+
+ <table>
+   <tr>	
+     <th>Variable</th>
+     <th>Units</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>\f$i\f$</td>
+     <td>W/m<sup>2</sup></td>
+     <td>Photosynthetic radiation energy flux.</td>
+   </tr>
+   <tr>	
+     <td>\f$T_s\f$</td>
+     <td>Kelvin</td>
+     <td>Surface temperature.</td>
+   </tr>
+   <tr>	
+     <td>\f$C_{amb}\f$</td>
+     <td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td>
+     <td>Ambient CO<sub>2</sub> concentration outside of boundary-layer.</td>
+   </tr>
+   <tr>	
+     <td>\f$g_{bl}\f$</td>
+     <td>mol air/m<sup>2</sup>-s</td>
+     <td>Boundary-layer conductance.</td>
+   </tr>
+   <tr>	
+     <td>\f$g_s\f$</td>
+     <td>mol air/m<sup>2</sup>-s</td>
+     <td>Stomatal conductance.</td>
+   </tr>
+ </table>
+ 
+ \subsubsection PhotoParams Summary of Empirical Model Parameters
+    
+ <table>
+   <tr>	
+     <th>Parameter</th>
+     <th>Units</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>\f$A_{sat}\f$</td>
+     <td>mol CO<sub>2</sub>/m<sup>2</sup>-sec</td>
+     <td>Assimilation rate at saturating irradiance and reference temperature and intercellular CO<sub>2</sub> concentration.</td>
+   </tr>
+   <tr>	
+     <td>\f$\theta\f$</td>
+     <td>W/m<sup>2</sup></td>
+     <td>Shape parameter for response to light.</td>
+   </tr>
+   <tr>	
+     <td>\f$T_{min}\f$</td>
+     <td>Kelvin</td>
+     <td>Minimum temperature at which assimilation occurs.</td>
+   </tr>
+   <tr>	
+     <td>\f$T_{opt}\f$</td>
+     <td>Kelvin</td>
+     <td>Temperature at which maximum assimilation rate occurs.</td>
+   </tr>
+   <tr>	
+     <td>\f$q\f$</td>
+     <td>unitless</td>
+     <td>Temperature response shape function.</td>
+   </tr>
+   <tr>	
+     <td>\f$R\f$</td>
+     <td>\f${\mu}\f$mol K<sup>1/2</sup>/m<sup>2</sup>-s</td>
+     <td>Pre-exponential factor for respiration temperature response.</td>
+   </tr>
+   <tr>	
+     <td>\f$E_R\f$</td>
+     <td>1/Kelvin</td>
+     <td>Respiration temperature response rate.</td>
+   </tr>
+   <tr>	
+     <td>\f$k_C\f$</td>
+     <td>unitless</td>
+     <td>CO<sub>2</sub> response rate.</td>
+   </tr>
+ </table>
+
+ \subsubsection PhotoLightParam Response of Assimilation Rate to Light
+
+ The response of the assimilation rate to light is obtained from gas exchange measurements at reference temperature (\f$T_{ref}\f$) and CO<sub>2</sub> (\f$C_{i,ref}\f$) in which the irradiance is varied across some range.  However, one important detail is that the dark respiration rate should be removed such that \f$A=0\f$ in the dark (see plot below).  This can be done by measuring the net CO<sub>2</sub> flux starting in the dark, then subtracting the dark flux from the total flux for each subsequent light level.  
+
+ \image html images/LightResponse.png
+
+ \subsubsection PhotoTempParam Response of Assimilation Rate to Temperature
+
+ The response of the assimilation rate to temperature is obtained using gas exchange measurements at saturating light levels and the reference CO<sub>2</sub> concentration.  The temperature is varied across some range, and the assimilation rate is measured.  It is assumed that the optimum temperature \f$T_{opt}\f$ is the temperature corresponding to the maximum measured assimilation rate.  The model is fit to the data to determine \f$T_{min}\f$ and \f$q\f$. 
+
+ \image html images/TempResponse.png
+
+ \subsubsection PhotoRespParam Response of Respiration Rate to Temperature
+
+ The response of the dark respiration to temperature is obtained using gas exchange measurements in the dark.  The leaf is first acclimated to the dark chamber, then leaf temperature is varied across some range.  The model is then fit to the data to determine parameters.
+ 
+ \image html images/RespResponse.png
+
+ \subsubsection PhotoCO2Param Response of Assimilation Rate to CO2
+
+ The response of the assimilation rate is obtained using gas exchange measurements at saturating light levels and the reference temperature \f$T_{ref}\f$, but with varying external CO<sub>2</sub> concentration (which produces varying intercellular CO<sub>2</sub>).
+
+ \image html images/CO2Response.png
+
+ \section FarquharDescription Farquhar, von Caemmerer, Berry Model Description
+
+ The model of <a href="https://link.springer.com/article/10.1007/BF00386231">Farquhar, von Caemmerer, and Berry (1980)</a> is a biochemical model of photosynthesis. The form used here predicts photosynthetic production as a function of photoshynthetically active radiation flux, ambient CO<sub>2</sub> concentration, and stomatal conductance, which may itself provide responses to a number of additional environmental variables.
+
+ The implementation used here calculates the net rate of CO<sub>2</sub> exchange as
+
+ \f$A=\left(1-\dfrac{\Gamma^*}{C_i}\right)\mathrm{min}\left\{W_c,W_j\right\}-R_d\f$
+
+ where
+
+ \f$W_c=\dfrac{V_{cmax}C_i}{C_i+K_{co}}\f$
+
+ is the rate limited by Rubisco, and
+
+ \f$W_j=\dfrac{J C_i}{4C_i+8\Gamma^*}\f$
+
+ is the rate limited by RuBP regeneration, and the potential electron transport rate \f$J\f$ is assumed to follow a rectangular hyperbolic relationship
+
+ \f$J=\dfrac{\alpha J_{max} i}{\alpha i + J_{max}}\f$.
+
+ Note that a limitation state based on TPU utilization is not included in the model for simplicity.
+
+ The intercellular CO<sub>2</sub> concentration \f$C_i\f$ is determined from the relation
+
+ \f$A+R_d=0.75g_M\left(C_{amb}-C_i\right)\f$
+
+ which is solved numerically using the Secant method, since \f$A\f$ is a complex nonlinear function of \f$C_i\f$ which prevents an analytical solution for \f$C_i\f$. The 0.75 factor comes from the fact that diffusion of CO<sub>2</sub> in air is slower than that of water vapor (see Eq. 7.33 of <a href="http://www.springer.com/us/book/9780387949376#otherversion=9781461216261">Campbell and Norman</a>).
+
+ The "dark" respiration rate \f$R_d\f$ is assumed to increase exponentially with temperature following the Arrhenius equation (and assumed not to vary with ambient CO<sub>2</sub> concentration).  Thus, the dark respiration rate is calculated simply as
+
+ \f$R_d = R\sqrt{T_s}\mathrm{exp}\left(-E_R/(T_s+273)\right)\f$,
+
+ where \f$R\f$ and \f$E_R\f$ are parameters, and temperature is in Kelvin.
+
+ \subsubsection FvCBPhotoVars Summary of FvCB Model Independent Variables
+
+ <table>
+   <tr>	
+     <th>Variable</th>
+     <th>Units</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>\f$i\f$</td>
+     <td>W/m<sup>2</sup></td>
+     <td>Photosynthetic radiation energy flux.</td>
+   </tr>
+   <tr>	
+     <td>\f$T_s\f$</td>
+     <td>Kelvin</td>
+     <td>Surface temperature.</td>
+   </tr>
+   <tr>	
+     <td>\f$C_{amb}\f$</td>
+     <td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td>
+     <td>Ambient CO<sub>2</sub> concentration outside of boundary-layer.</td>
+   </tr>
+   <tr>	
+     <td>\f$g_M\f$</td>
+     <td>mol air/m<sup>2</sup>-s</td>
+     <td>Conductance to moisture transfer between inside of the leaf and outside of boundary-layer.</td>
+   </tr>
+ </table>
+ 
+ \subsubsection FvCBPhotoParams Summary of FvCB Model Parameters
+    
+ <table>
+   <tr>	
+     <th>Parameter</th>
+     <th>Units</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>\f$V_{cmax}\f$</td>
+     <td>mol CO<sub>2</sub>/m<sup>2</sup>-sec</td>
+     <td>Maximum Rubisco carboxylation rate.</td>
+   </tr>
+   <tr>	
+     <td>\f$\Gamma^*\f$</td>
+     <td>Pa</sup></td>
+     <td>Chloroplastic CO<sub>2</sub> photocompensation point.</td>
+   </tr>
+   <tr>	
+     <td>\f$K_{co}\f$</td>
+     <td>Kelvin</td>
+     <td>Lumped parameter; \f$=K_c\left(1+O/K_o\right)\f$.</td>
+   </tr>
+   <tr>	
+     <td>\f$J_{max}\f$</td>
+     <td>mol/m<sup>2</td>
+     <td>Maximum electron transport rate.</td>
+   </tr>
+   <tr>	
+     <td>\f$q\f$</td>
+     <td>unitless</td>
+     <td>Temperature response shape function.</td>
+   </tr>
+   <tr>	
+     <td>\f$R\f$</td>
+     <td>\f${\mu}\f$mol K<sup>1/2</sup>/m<sup>2</sup>-s</td>
+     <td>Pre-exponential factor for respiration temperature response.</td>
+   </tr>
+   <tr>	
+     <td>\f$E_R\f$</td>
+     <td>1/Kelvin</td>
+     <td>Respiration temperature response rate.</td>
+   </tr>
+   <tr>	
+     <td>\f$k_C\f$</td>
+     <td>unitless</td>
+     <td>CO<sub>2</sub> response rate.</td>
+   </tr>
+ </table>
+    
+*/

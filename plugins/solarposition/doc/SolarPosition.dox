@@ -1,0 +1,288 @@
+/*! \page "SolarPositionDoc" Solar Position Plugin Documentation
+
+  \tableofcontents
+
+ <p> <br><br> </p>
+
+ <table>
+   <tr>	
+      <th>Dependencies</th>
+      <td>None.</td>
+   </tr>
+   <tr>	
+     <th>CMakeLists.txt</th>
+     <td>set( PLUGINS "solarposition" )</td>
+   </tr>
+   <tr>	
+     <th>Header File</th>
+     <td>#include "SolarPosition.h"</td>
+   </tr>
+   <tr>	
+     <th>Class</th>
+     <td>\ref SolarPosition</td>
+   </tr>
+ </table>
+
+ \section SolarIntro Introduction
+ 
+ This plugin calculates the position of the sun, and also implements other models for solar fluxes as well as longwave fluxes from the sky. Model theory and equations are given in the sections below.
+
+ \section SolarConstructor SolarPosition Class Constructor
+
+ <table>
+   <tr>	
+      <th>Constructors</th>
+   </tr>
+   <tr>	
+     <td>\ref SolarPosition::SolarPosition( helios::Context* context) "SolarPosition( helios::Context* context)"</td>
+   </tr>
+   <tr>	
+     <td>\ref SolarPosition::SolarPosition( int UTC, float latitude, float longitude, helios::Context* context) "SolarPosition( int UTC, float latitude, float longitude, helios::Context* context)"</td>
+   </tr>
+ </table>
+
+ The \ref SolarPosition class can be initialized by simply passing a pointer to the Helios context as an argument to the constructor. This gives the class the model access to the time and date currently set in the Context. The model must also know certain parameters about the simulated location, in particular the offset from UTC time, latitude, and longitude. A description of these parameters are given in the table below. These can be supplied using the second constructor listed in the table above. If the Context is the only argument supplied to the constructor, default values are assumed for UTC, latitude, and longitude (see table below).
+
+ <table>
+   <caption>\SolarPosition constructor inputs</caption>
+   <tr>	
+     <th>Input Parameter</th>
+     <th>Description</th>
+     <th>Convention</th>
+     <th>Default Behavior</th>
+   </tr>
+   <tr>	
+     <td>UTC</td>
+     <td>Difference in hours between Coordinated Universal Time (UTC) for a particular location.  See the figure below to determine a particular UTC offset.</td>
+     <td>UTC offset value is positive moving West.</td>
+     <td>+8:00</td>
+   </tr>
+   <tr>	
+     <td>latitude</td>
+     <td>Geographic coordinate that specifies the north–south position of a point on the Earth's surface in degrees.</td>
+     <td>Latitude is positive in the northern hemisphere.</td>
+     <td>+38.55</td>
+   </tr>
+   <tr>	
+     <td>longitude</td>
+     <td>Geographic coordinate that specifies the east-west position of a point on the Earth's surface in degrees.</td>
+     <td>Longitude is positive in the western hemisphere.</td>
+     <td>+121.76</td>
+   </tr>
+ </table>
+
+ \image html "images/1200px-Standard_World_Time_Zones.png"
+
+ \section SolarTheory Model Theory
+
+ \subsection SolarPosTheory Position of the Sun
+
+ The solar position model was implemented following the description in <a href="https://www.sciencedirect.com/science/article/pii/B9780123737502500069">Chapter 1 of Iqbal (1983)</a>.
+
+ The day angle \f$\Gamma\f$ given as the polar angle of the earth relative to the sun (\f$\Gamma=0\f$ on Jan. 1) is calculated as
+
+ <center>
+ \f$\Gamma = 2\pi(DOY-1)/365.25\f$,  (1)
+ </center>
+
+ where DOY is the <a href="https://en.wikipedia.org/wiki/Julian_day">Julian Day</a> of the year.
+
+ The solar declination angle is then calculated as
+
+ <center>
+ \f$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)\f$.         (2)
+ </center>
+
+ The <a href="https://en.wikipedia.org/wiki/Equation_of_time">equation of time</a> is calculated as
+ 
+ <center>
+ \f$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))\f$,         (3)
+ </center>
+
+ The hour angle is given by
+ 
+ <center>
+ \f$h=15(LST-12)\f$,         (4)
+ </center>
+
+ with
+
+ <center>
+   \f$LST=hour+minute/60+TC/60\f$,          (5)
+ </center>
+
+ and
+
+ <center>
+   \f$TC=4(15UTC-longitude)+EoT\f$,         (6)
+ </center>
+
+ Finally, the solar zenith angle is given by
+
+ <center>
+ \f$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )\f$,         (7)
+ </center>
+
+ and the solar azimuthal angle is given by
+
+ <center>
+ \f$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))\f$.         (8)
+ </center>
+
+ Note that \f$\mathrm{cos}^{-1}\f$ gives angles between 0 and \f$\pi\f$, so to get a \f$\phi_s\f$ between 0 and \f$2\pi\f$, we take \f$\phi_s=2\pi-\phi_s\f$ if \f$LST>12\f$.
+
+ \subsection SolarFluxTheory Direct and Diffuse Solar Flux
+
+ Clear-sky solar fluxes are calculated using the 'REST-2' model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. REST-2 is a state-of-the-art atmospheric transmission model that calculates the solar flux at Earth's surface after attenuation by water vapor, CO<sub>2</sub>, Ozone, NO<sub>2</sub>, and aerosols. The model partitions the total radiative flux into direct and diffuse components.
+
+ \subsection LWTheory Ambient Longwave Flux
+
+ The longwave radiation flux emanating from the clear-sky is modeled following <a href="https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/qj.49712253306">Prata (1996)</a>.
+
+ The model surmounts to calculating the effective emissivity of the sky as a function of precipitable water in the atmosphere
+
+ <center>
+   \f$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)\f$,
+ </center>
+
+ where \f$u\f$ is the wator vapor path length (cm of precipitable water) which can be estimated following <a href="https://journals.ametsoc.org/doi/abs/10.1175/1520-0450(1981)020%3C0003%3ATRBTPW%3E2.0.CO%3B2">Viswanadham (1981)</a> for example.
+
+ The downwelling longwave radiation flux on a horizontal surface is given by
+
+ <center>
+   \f$R_L=\epsilon_s\sigma T_a^4\f$,
+ </center>
+
+ where \f$\sigma=5.67\times10^{-8}\f$ W/m<sup>2</sup>-K<sup>4</sup>, and \f$T_a\f$ is the air temperature in Kelvin measured near the ground (say 2 m height).
+ 
+ \section SolarLib Using the SolarPosition Plug-in
+
+ \subsection SolarPos Getting the Direction of the Sun
+
+ The direction of the sun can be queried in one of several ways: a Cartesian unit vector pointing in the direction of the sun, a spherical coordinate describing the direction of the sun, the elevation angle of the sun, the zenithal angle of the sun, and the azimuthal angle of the sun.  The functions to query these quantities are given in the table below. Each of these functions calculates the solar direction based on the current time and date set in the Context (see \ref helios::Context::setTime() "setTime()" and \ref helios::Context::setDate() "setDate()"), and the UTC, latitude, and longitude specified in the \SolarPosition constructor.
+
+ <table>
+   <tr>	
+      <th>Direction Quantity</th>
+      <th>Function</th>
+   </tr>
+   <tr>	
+     <td>Unit vector pointing toward the sun.</td>
+     <td>\ref SolarPosition::getSunDirectionVector()</td>
+   </tr>
+   <tr>	
+     <td>Spherical coordinate vector pointing toward the sun.</td>
+     <td>\ref SolarPosition::getSunDirectionSpherical()</td>
+   </tr>
+   <tr>	
+     <td>Elevation angle of the sun (radians).</td>
+     <td>\ref SolarPosition::getSunElevation()</td>
+   </tr>
+   <tr>	
+     <td>Zenithal angle of the sun (radians).</td>
+     <td>\ref SolarPosition::getSunZenith()</td>
+   </tr>
+   <tr>	
+     <td>Azimuthal angle of the sun (radians).</td>
+     <td>\ref SolarPosition::getSunAzimuth()</td>
+   </tr>
+ </table>
+
+ Below is an example of how to use the \SolarPosition mode to calculate the sun angle.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2">
+  <pre><code> #include "Context.h"
+  #include "SolarPosition"     
+
+  int main( void ){
+      Context context; //declare the context
+
+      \c//Set the current time and date
+      context.setDate(1,5,2015); //May 1, 2015
+      context.setTime(30,12); //12:30
+
+      \c//Initialize the %SolarPosition class
+      %SolarPosition sun( 7, 31.256, 119.947, &context );
+
+      \c//Get the sun position
+      vec3 direction = sun.getSunDirectionVector(); //unit vector
+
+      float elevation = sun.getSunElevation(); //elevation angle (radians)
+      float azimuth = sun.getSunAzimuth(); //azimuthal angle (radians)
+      
+  }</code></pre>
+ </div>
+
+
+ \subsection SolarFlux Getting the Solar Flux
+
+ The solar flux can be calculated using the REST-2 model using the \ref SolarPosition::getSolarFlux() function. IT IS CRITICAL TO NOTE THAT THE CALCULATED FLUX IS FOR A SURFACE PERPENDICULAR TO THE SUN DIRECTION. To get the flux on a horizontal surface, multiply by the cosine of the solar zenith angle.
+
+ The getSolarFlux() function takes several arguments needed for the model, which are listed in the table below.
+
+ <table>
+   <tr>	
+      <th>Argument</th>
+      <th>Description</th>
+      <th>Example Value</th>
+   </tr>
+   <tr>	
+     <td>pressure</td>
+     <td>Atmospheric pressure in Pascals (near the ground).</td>
+     <td>101,000 Pa</td>
+   </tr>
+   <tr>	
+     <td>temperature</td>
+     <td>Air temperature in Kelvin (near the ground).</td>
+     <td>300 K</td>
+   </tr>
+   <tr>	
+     <td>humidity</td>
+     <td>Air relative humidity (near the ground).</td>
+     <td>0.6</td>
+   </tr>
+   <tr>	
+     <td>turbidity</td>
+     <td>Angstrom's aerosol turbidity coefficient.</td>
+     <td>0.05</td>
+   </tr>
+ </table>
+
+ The very similar function \ref SolarPosition::getDiffuseFraction() calculates the fraciton of the total flux that is diffuse. The fraction that is direct is simply one minus the diffuse fraction. This function takes the same arguments as getSolarFlux().
+
+ Example code for using these solar flux functions is given below.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2">
+  <pre><code> #include "Context.h"
+  #include "SolarPosition"     
+
+  int main( void ){
+      Context context; //declare the context
+
+      \c//Set the current time and date
+      context.setDate(1,5,2015); //May 1, 2015
+      context.setTime(30,12); //12:30
+
+      \c//Initialize the %SolarPosition class
+      %SolarPosition sun( 7, 31.256, 119.947, &context );
+
+      \c//Get the sun position
+      float zenith = sun.getSunZenith(); //zenithal angle (radians)
+
+      \c//Calculate solar flux
+      float R = sun.getSolarFlux( 101000, 300, 0.6, 0.05 ); //flux perpendicular to sun
+ (W/m^2)
+      float R_horiz = R*cos(zenith);  //flux on horizontal surface
+
+      float f_diff = sun.getDiffuseFraction( 101000, 300, 0.6, 0.05 ); //fraction of diffuse radiation
+
+      float R_dir = R*(1.f-f_diff); //direct component of flux (W/m^2)
+      
+  }</code></pre>
+ </div>
+
+ \subsection LWFlux Getting the Sky Longwave Flux
+
+ The downwelling longwave radiation flux from the sky can be calculated using the \ref SolarPosition::getAmbientLongwaveFlux() function. This function takes the air temperature and humidity as arguments, which are defined in the same was as for the getSolarFlux() function described above. The value returned by the function is the clear-sky downwelling longwave radiation flux on a horizontal surface in W/m<sup>2</sup>.
+
+*/

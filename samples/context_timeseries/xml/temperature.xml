@@ -1,0 +1,968 @@
+<?xml version=1.0?>
+
+<helios>
+
+  <timeseries label="temperature">
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 00 00 00 </time>
+		<value> 25.850000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 00 15 00 </time>
+		<value> 26.240000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 00 30 00 </time>
+		<value> 27.100000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 00 45 00 </time>
+		<value> 27.890000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 01 00 00 </time>
+		<value> 28.020000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 01 15 00 </time>
+		<value> 28.270000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 01 30 00 </time>
+		<value> 28.840000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 01 45 00 </time>
+		<value> 27.920000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 02 00 00 </time>
+		<value> 25.800000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 02 15 00 </time>
+		<value> 26.140000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 02 30 00 </time>
+		<value> 25.320000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 02 45 00 </time>
+		<value> 25.370000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 03 00 00 </time>
+		<value> 25.220000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 03 15 00 </time>
+		<value> 25.170000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 03 30 00 </time>
+		<value> 25.240000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 03 45 00 </time>
+		<value> 24.890000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 04 00 00 </time>
+		<value> 24.520000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 04 15 00 </time>
+		<value> 25.020000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 04 30 00 </time>
+		<value> 24.830000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 04 45 00 </time>
+		<value> 24.100000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 05 00 00 </time>
+		<value> 23.570000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 05 15 00 </time>
+		<value> 23.340000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 05 30 00 </time>
+		<value> 23.930000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 05 45 00 </time>
+		<value> 24.100000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 06 00 00 </time>
+		<value> 23.910000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 06 15 00 </time>
+		<value> 23.590000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 06 30 00 </time>
+		<value> 24.180000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 06 45 00 </time>
+		<value> 24.320000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 07 00 00 </time>
+		<value> 23.950000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 07 15 00 </time>
+		<value> 24.130000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 07 30 00 </time>
+		<value> 24.630000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 07 45 00 </time>
+		<value> 24.900000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 08 00 00 </time>
+		<value> 25.500000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 08 15 00 </time>
+		<value> 26.050000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 08 30 00 </time>
+		<value> 28.240000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 08 45 00 </time>
+		<value> 32.540000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 09 00 00 </time>
+		<value> 32.120000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 09 15 00 </time>
+		<value> 32.590000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 09 30 00 </time>
+		<value> 32.260000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 09 45 00 </time>
+		<value> 33.530000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 10 00 00 </time>
+		<value> 35.000000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 10 15 00 </time>
+		<value> 34.350000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 10 30 00 </time>
+		<value> 33.620000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 10 45 00 </time>
+		<value> 34.040000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 11 00 00 </time>
+		<value> 35.070000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 11 15 00 </time>
+		<value> 34.610000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 11 30 00 </time>
+		<value> 35.250000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 11 45 00 </time>
+		<value> 35.050000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 12 00 00 </time>
+		<value> 35.120000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 12 15 00 </time>
+		<value> 35.780000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 12 30 00 </time>
+		<value> 35.110000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 12 45 00 </time>
+		<value> 34.940000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 13 00 00 </time>
+		<value> 34.890000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 13 15 00 </time>
+		<value> 35.470000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 13 30 00 </time>
+		<value> 36.220000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 13 45 00 </time>
+		<value> 36.750000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 14 00 00 </time>
+		<value> 36.880000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 14 15 00 </time>
+		<value> 36.630000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 14 30 00 </time>
+		<value> 37.450000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 14 45 00 </time>
+		<value> 37.050000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 15 00 00 </time>
+		<value> 37.310000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 15 15 00 </time>
+		<value> 37.950000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 15 30 00 </time>
+		<value> 37.990000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 15 45 00 </time>
+		<value> 37.670000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 16 00 00 </time>
+		<value> 37.110000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 16 15 00 </time>
+		<value> 37.140000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 16 30 00 </time>
+		<value> 36.470000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 16 45 00 </time>
+		<value> 36.470000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 17 00 00 </time>
+		<value> 36.310000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 17 15 00 </time>
+		<value> 36.190000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 17 30 00 </time>
+		<value> 36.060000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 17 45 00 </time>
+		<value> 36.760000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 18 00 00 </time>
+		<value> 36.420000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 18 15 00 </time>
+		<value> 35.700000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 18 30 00 </time>
+		<value> 35.550000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 18 45 00 </time>
+		<value> 35.640000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 19 00 00 </time>
+		<value> 35.280000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 19 15 00 </time>
+		<value> 34.870000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 19 30 00 </time>
+		<value> 34.170000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 19 45 00 </time>
+		<value> 33.380000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 20 00 00 </time>
+		<value> 31.700000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 20 15 00 </time>
+		<value> 31.120000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 20 30 00 </time>
+		<value> 31.040000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 20 45 00 </time>
+		<value> 31.100000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 21 00 00 </time>
+		<value> 30.490000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 21 15 00 </time>
+		<value> 30.050000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 21 30 00 </time>
+		<value> 28.990000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 21 45 00 </time>
+		<value> 29.040000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 22 00 00 </time>
+		<value> 29.440000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 22 15 00 </time>
+		<value> 29.880000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 22 30 00 </time>
+		<value> 29.530000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 22 45 00 </time>
+		<value> 27.710000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 23 00 00 </time>
+		<value> 26.600000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 23 15 00 </time>
+		<value> 26.790000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 23 30 00 </time>
+		<value> 26.380000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 190 2014 </dateJulian>
+		<time> 23 45 00 </time>
+		<value> 26.250000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 00 00 00 </time>
+		<value> 26.190000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 00 15 00 </time>
+		<value> 26.610000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 00 30 00 </time>
+		<value> 27.000000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 00 45 00 </time>
+		<value> 26.810000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 01 00 00 </time>
+		<value> 26.790000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 01 15 00 </time>
+		<value> 26.730000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 01 30 00 </time>
+		<value> 25.680000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 01 45 00 </time>
+		<value> 24.960000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 02 00 00 </time>
+		<value> 24.640000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 02 15 00 </time>
+		<value> 24.280000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 02 30 00 </time>
+		<value> 22.860000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 02 45 00 </time>
+		<value> 22.520000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 03 00 00 </time>
+		<value> 22.580000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 03 15 00 </time>
+		<value> 25.170000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 03 30 00 </time>
+		<value> 26.530000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 03 45 00 </time>
+		<value> 24.030000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 04 00 00 </time>
+		<value> 22.940000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 04 15 00 </time>
+		<value> 21.110000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 04 30 00 </time>
+		<value> 20.230000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 04 45 00 </time>
+		<value> 20.350000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 05 00 00 </time>
+		<value> 20.320000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 05 15 00 </time>
+		<value> 20.270000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 05 30 00 </time>
+		<value> 20.450000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 05 45 00 </time>
+		<value> 20.170000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 06 00 00 </time>
+		<value> 20.620000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 06 15 00 </time>
+		<value> 20.460000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 06 30 00 </time>
+		<value> 20.580000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 06 45 00 </time>
+		<value> 22.480000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 07 00 00 </time>
+		<value> 20.860000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 07 15 00 </time>
+		<value> 20.510000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 07 30 00 </time>
+		<value> 20.880000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 07 45 00 </time>
+		<value> 21.730000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 08 00 00 </time>
+		<value> 21.640000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 08 15 00 </time>
+		<value> 21.930000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 08 30 00 </time>
+		<value> 25.480000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 08 45 00 </time>
+		<value> 29.040000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 09 00 00 </time>
+		<value> 29.800000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 09 15 00 </time>
+		<value> 31.790000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 09 30 00 </time>
+		<value> 31.810000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 09 45 00 </time>
+		<value> 32.950000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 10 00 00 </time>
+		<value> 32.060000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 10 15 00 </time>
+		<value> 33.090000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 10 30 00 </time>
+		<value> 33.760000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 10 45 00 </time>
+		<value> 34.590000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 11 00 00 </time>
+		<value> 34.750000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 11 15 00 </time>
+		<value> 34.500000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 11 30 00 </time>
+		<value> 34.640000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 11 45 00 </time>
+		<value> 34.920000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 12 00 00 </time>
+		<value> 35.310000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 12 15 00 </time>
+		<value> 36.330000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 12 30 00 </time>
+		<value> 36.690000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 12 45 00 </time>
+		<value> 36.810000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 13 00 00 </time>
+		<value> 37.040000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 13 15 00 </time>
+		<value> 36.820000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 13 30 00 </time>
+		<value> 37.250000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 13 45 00 </time>
+		<value> 36.900000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 14 00 00 </time>
+		<value> 39.030000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 14 15 00 </time>
+		<value> 39.930000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 14 30 00 </time>
+		<value> 39.100000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 14 45 00 </time>
+		<value> 38.880000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 15 00 00 </time>
+		<value> 38.600000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 15 15 00 </time>
+		<value> 39.380000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 15 30 00 </time>
+		<value> 39.600000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 15 45 00 </time>
+		<value> 39.730000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 16 00 00 </time>
+		<value> 39.750000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 16 15 00 </time>
+		<value> 40.150000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 16 30 00 </time>
+		<value> 39.100000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 16 45 00 </time>
+		<value> 38.790000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 17 00 00 </time>
+		<value> 38.870000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 17 15 00 </time>
+		<value> 37.700000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 17 30 00 </time>
+		<value> 38.290000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 17 45 00 </time>
+		<value> 39.100000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 18 00 00 </time>
+		<value> 37.540000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 18 15 00 </time>
+		<value> 37.310000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 18 30 00 </time>
+		<value> 37.020000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 18 45 00 </time>
+		<value> 37.680000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 19 00 00 </time>
+		<value> 38.000000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 19 15 00 </time>
+		<value> 37.860000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 19 30 00 </time>
+		<value> 36.280000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 19 45 00 </time>
+		<value> 34.730000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 20 00 00 </time>
+		<value> 33.440000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 20 15 00 </time>
+		<value> 32.430000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 20 30 00 </time>
+		<value> 31.910000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 20 45 00 </time>
+		<value> 31.670000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 21 00 00 </time>
+		<value> 31.590000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 21 15 00 </time>
+		<value> 31.600000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 21 30 00 </time>
+		<value> 31.110000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 21 45 00 </time>
+		<value> 30.810000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 22 00 00 </time>
+		<value> 31.450000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 22 15 00 </time>
+		<value> 31.410000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 22 30 00 </time>
+		<value> 31.770000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 22 45 00 </time>
+		<value> 31.360000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 23 00 00 </time>
+		<value> 30.080000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 23 15 00 </time>
+		<value> 27.660000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 23 30 00 </time>
+		<value> 26.520000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 191 2014 </dateJulian>
+		<time> 23 45 00 </time>
+		<value> 26.170000 </value>
+	</datapoint>
+  </timeseries>
+
+</helios>

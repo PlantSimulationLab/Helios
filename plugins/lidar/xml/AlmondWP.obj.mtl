@@ -1,0 +1,11 @@
+newmtl material1
+Ka 1.0 1.0 1.0
+Kd 1.0 1.0 1.0
+Ks 0.0 0.0 0.0
+illum 2
+
+newmtl material2
+Ka 0.39 0.19 0.05
+Kd 0.39 0.19 0.05
+Ks 0.0 0.0 0.0
+illum 2 

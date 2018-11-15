@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+
+<helios>
+
+<!--
+<scan>
+  <origin> 0.000000 -5.00000 1.2500000 </origin>
+  <size> 2500 4500 </size>
+</scan>
+
+<scan>
+  <origin> 0.000000 5.00000 1.2500000 </origin>
+  <size> 2500 4500 </size>
+</scan>
+
+<scan>
+  <origin> -5.00000 0 1.2500000 </origin>
+  <size> 2500 4500 </size>
+</scan>
+
+<scan>
+  <origin> 5.00000 0.000000 1.2500000 </origin>
+  <size> 2500 4500 </size>
+</scan>
+-->
+
+<scan>
+  <origin> -3.500000 -3.50000 1.2500000 </origin>
+  <size> 2500 4500 </size>
+</scan>
+
+<scan>
+  <origin> -3.500000 3.50000 1.2500000 </origin>
+  <size> 2500 4500 </size>
+</scan>
+
+<scan>
+  <origin> 3.50000 3.50000 1.2500000 </origin>
+  <size> 2500 4500 </size>
+</scan>
+
+<scan>
+  <origin> 3.50000 -3.500000 1.2500000 </origin>
+  <size> 2500 4500 </size>
+</scan>
+
+<grid>
+  <center> 0 0 3.85 </center>
+  <size> 5.42 5.42 5.54 </size>
+  <Nx> 10 </Nx>
+  <Ny> 10 </Ny>
+  <Nz> 10 </Nz> 
+</grid>
+
+</helios>

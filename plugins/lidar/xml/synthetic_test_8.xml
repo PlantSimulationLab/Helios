@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+
+<helios>
+
+<scan>
+  <origin> -5.000000 0.000000 0.500000 </origin>
+  <size> 6000 12000 </size>
+</scan>
+
+<grid>
+  <center> 0 0 0.5 </center>
+  <size> 1 1 1 </size>
+  <Nx> 2 </Nx>
+  <Ny> 2 </Ny>
+  <Nz> 2 </Nz>
+</grid>
+
+</helios>
