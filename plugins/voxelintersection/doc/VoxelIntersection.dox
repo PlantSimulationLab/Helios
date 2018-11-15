@@ -40,6 +40,10 @@
     </tr>
   </table>
 
+ \section VoxelIssues Known Issues
+
+ - Rotated voxels are currently not supported (must be axis-aligned).
+
  \section VoxelIntersectionConstructor Class Constructor
 
  <table>

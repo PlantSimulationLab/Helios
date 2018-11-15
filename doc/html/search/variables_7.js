@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['k_5fs',['K_s',['../struct_soil_properties.html#a809160b1bf1935c5a6c9d36a73466b99',1,'SoilProperties']]]
+  ['minute',['minute',['../structhelios_1_1_time.html#a744b90da076192b90a3ee4ce2ff3743a',1,'helios::Time']]],
+  ['month',['month',['../structhelios_1_1_date.html#a5d75f8c8616d778e470a59e0b3e890a3',1,'helios::Date']]]
 ];

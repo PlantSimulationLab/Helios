@@ -1,26 +1,26 @@
 #!/bin/bash
 
-SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "lidar_selftest" "tutorial0"  "tutorial1")
+SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "lidar_selftest" "voxelintersection_selftest" "tutorial0"  "tutorial1")
 # "tutorial2"  "tutorial5"  "tutorial6"  "tutorial8")
 
 if [ "$1" == "-checkout" ];then
 
     cd /tmp
 
-    if [ -e "./cronus_test" ];then
-	chmod -R 777 ./cronus_test
-	rm -r ./cronus_test
+    if [ -e "./helios_test" ];then
+	chmod -R 777 ./helios_test
+	rm -r ./helios_test
     fi
     
-    git clone https://gitlab.com/brianbailey86/Cronus.git ./cronus_test
+    git clone https://www.github.com/PlantSimulationLab/Helios ./helios_test
 
-    if [ ! -e "./cronus_test" ];then
+    if [ ! -e "./helios_test" ];then
 	echo "Git checkout unsuccessful..exiting."
 	exit 1
     fi
 	
-    chmod -R 777 ./cronus_test
-    cd ./cronus_test/samples
+    chmod -R 777 ./helios_test
+    cd ./helios_test/samples
     
 else
     cd ../samples
@@ -36,7 +36,7 @@ if [ ! -e "../utilities/create_project.sh" ];then
     ERROR_COUNT=$((ERROR_COUNT+1))
     rm -rf temp
 else
-    ../utilities/create_project.sh temp energybalance lidar photosynthesis radiation solarposition stomatalconductance topography visualizer voxelintersection weberpenntree
+    ../utilities/create_project.sh temp energybalance lidar photosynthesis radiation solarposition stomatalconductance visualizer voxelintersection weberpenntree
     cd temp
     if [ ! -e "main.cpp" ] || [ ! -e "CMakeLists.txt" ] || [ ! -e "build" ]; then
 	echo -e "\r\e[31mProject creation script failed to create correct structure...failed.\e[39m"
@@ -48,7 +48,9 @@ else
 	cd build
 	
 	echo -ne "Building project creation script test..."
-	if  cmake .. 2> /dev/null | grep -q 'Build files have been written to'  ;then
+	#if  cmake .. 2> /dev/null | grep -q 'Build files have been written to'  ;then
+	if ! cmake .. 2> /dev/null | grep -qi 'CMake Error'  ;then
+	#if ! cmake .. | grep -qi 'CMake Error'  ;then
 	    echo -e "\r\e[32mBuilding project creation script test...done.\e[39m"
 	else
 	    echo -e "\r\e[31mBuilding project creation script test...failed.\e[39m"
@@ -57,9 +59,9 @@ else
 
 	echo -ne "Compiling project creation script test..."
 
-	#if  make 2> /dev/null | grep -Fq '[100%]'  ;then
-	if  make | grep -Fq '[100%]'  ;then
-	    if [ -e "${i}" ]; then
+        if  make 2> /dev/null | grep -Fq '[100%]'  ;then
+	#if  make | grep -Fq '[100%]'  ;then
+	    if [ -e "temp" ]; then
 		echo -e "\r\e[32mCompiling project creation script test...done.\e[39m"
 	    else
 		echo -e "\r\e[31mCompiling project creation script test...failed.\e[39m"
@@ -72,7 +74,7 @@ else
 
 	echo -ne "Running project creation script test..."
 
-	./${i} &> /dev/null
+	./temp &> /dev/null
 
 	if (( $? == 0 ));then
 	    echo -e "\r\e[32mRunning project creation script test...done.\e[39m"
@@ -152,7 +154,7 @@ done
 
 if [ "$1" == "-checkout" ];then
     cd ../..
-    rm -r ./cronus_test
+    rm -r ./helios_test
 fi
 
 if (( $ERROR_COUNT == 0 ));then

@@ -1,0 +1,322 @@
+/*! \page EnergyBalanceDoc Energy Balance Model Plugin Documentation
+
+ \image html EnergyBalance.jpg
+
+ \tableofcontents
+
+ <p> <br><br> </p>
+
+ <table>
+   <tr>	
+      <th>Dependencies</th>
+      <td>NVIDIA CUDA 6.0+</td>
+   </tr>
+   <tr>	
+     <th>CMakeLists.txt</th>
+     <td>set( PLUGINS "energybalancemodel" )</td>
+   </tr>
+   <tr>	
+     <th>Header File</th>
+     <td>#include "EnergyBalanceModel.h"</td>
+   </tr>
+   <tr>	
+     <th>Class</th>
+     <td>\ref EnergyBalanceModel</td>
+   </tr>
+ </table>
+
+ \section EBissues Known Issues
+
+ None.
+
+ \section EBIntro Introduction
+
+ This model plugin calculates a local energy balance for every primitive, and ultimately predics sensible, latent, and longwave fluxes as well as surface temperature. The energy balance equation is solved in parallel on the GPU to accelerate calculations.
+
+ The model is solving the steady-state budget between absorbed radiation, emitted radiation, sensible heat exchange, and latent heat exchange, which is written as
+
+ \f$ R-\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\dfrac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+Q_{other}\f$
+
+ Variables in this equation are listed in this table:
+
+ <table>
+   <tr>	
+     <th>Variable (units)</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>\f$R\f$ (W/m<sup>2</sup>)</td>
+     <td>Absorbed all-wave radiation flux (shortwave+longwave).</td>
+   </tr>
+   <tr>	
+     <td>\f$T_s\f$ (K)</td>
+     <td>Primitive surface temperature.</td>
+   </tr>
+   <tr>	
+     <td>\f$g_H\f$ (mol air/m<sup>2</sup>-s)</td>
+     <td>Conductance to heat from primitive surface to outside of boundary-layer.</td>
+   </tr>
+   <tr>	
+     <td>\f$T_a\f$ (K)</td>
+     <td>Air temperature just outside primitive boundary-layer.</td>
+   </tr>
+   <tr>	
+     <td>\f$g_M\f$ (mol air/m<sup>2</sup>-s)</td>
+     <td>Conductance to moisture from primitive surface to outside of boundary-layer.</td>
+   </tr>
+   <tr>	
+     <td>\f$e_s(T)\f$ (Pa)</td>
+     <td>Saturation vapor pressure at temperature T. Calculated from Tetens equation (see <a href="https://en.wikipedia.org/wiki/Tetens_equation">en.wikipedia.org/wiki/Tetens_equation</a>)</td>
+   </tr>
+   <tr>	
+     <td>\f$f_s\f$</td>
+     <td>Relative humidity of air at primitive surface.</td>
+   </tr>
+   <tr>	
+     <td>\f$h\f$</td>
+     <td>Relative humidity of air outside of boundary-layer.</td>
+   </tr>
+   <tr>	
+     <td>\f$p_{atm}\f$ (Pa)</td>
+     <td>Atmospheric pressure.</td>
+   </tr>
+   <tr>	
+     <td>\f$Q_{other}\f$ (W/m<sup>2</sup>)</td>
+     <td>Any surface fluxes other than radiation, convection, or latent (e.g., storage).</td>
+   </tr>
+ </table>
+
+ Constants are given by:
+
+ <table>
+   <tr>	
+     <th>Constant (units)</th>
+     <th>Value</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>\f$c_p\f$ (J/mol/K)</td>
+     <td>29.25</td>
+     <td>Heat capacity of air.</td>
+   </tr>
+   <tr>	
+     <td>\f$\lambda\f$ (J/mol)</td>
+     <td>44,000</td>
+     <td>Latent heat of vaporization of air.</td>
+   </tr>
+ </table>
+
+ \section EBConstructor EnergyBalanceModel Class Constructor
+
+ <table>
+   <tr>	
+      <th>Constructors</th>
+   </tr>
+   <tr>	
+     <td>\ref EnergyBalanceModel::EnergyBalanceModel( helios::Context* context) "EnergyBalanceModel( helios::Context* context)"</td>
+   </tr>
+ </table>
+
+ The \ref EnergyBalanceModel class is initialized by simply passing a pointer to the Helios context as an argument to the constructor. 
+
+ \section EBData Input/Output Primitive Data
+ 
+ \subsection EBInputData Input Primitive Data
+
+ <table>
+   <tr>	
+     <th>Primitive Data</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+     <th>Available Plug-ins</th>
+     <th>Default Value</th>
+   </tr>
+   <tr>
+     <td>radiation_flux_[*]</td>
+     <td>W/m<sup>2</sup></td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Net absorbed radiation flux for band [*] (e.g., direct_flux_PAR).</td>
+     <td>Can be computed by \ref RadiationModel plug-in.</td>
+     <td>0</td>
+   </tr>
+   <tr>
+     <td>wind_speed</td>
+     <td>m/s</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Air wind speed just outside of primitive boundary-layer.</td>
+     <td>N/A</td>
+     <td>1 m/s</td>
+   </tr>
+   <tr>
+     <td>object_length</td>
+     <td>m</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Characteristic dimension of object formed by primitive.</td>
+     <td>N/A</td>
+     <td>Square root of primitive surface area</td>
+   </tr>
+   <tr>
+     <td>boundarylayer_conductance</td>
+     <td>mol air/m<sup>2</sup>-s</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Leaf boundary-layer conductance to heat.</td>
+     <td>N/A</td>
+     <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$</td>
+   </tr>
+   <tr>
+     <td>air_temperature</td>
+     <td>Kelvin</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Ambient air temperature outside of surface boundary layer.</td>
+     <td>N/A</td>
+     <td>300 K</td>
+   </tr>
+   <tr>
+     <td>moisture_conductance</td>
+     <td>mol air/m<sup>2</sup>-s</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Leaf boundary-layer conductance to moisture.</td>
+     <td>Can be computed by \ref StomatalConductanceModel plug-in.</td>
+     <td>0.1 mol/m<sup>2</sup>-s</td>
+   </tr>
+   <tr>
+     <td>surface_humidity</td>
+     <td>unitless</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Relative humidity of air immediately above surface evaporating site.</td>
+     <td>N/A</td>
+     <td>1.0 (saturated)</td>
+   </tr>
+   <tr>
+     <td>air_humidity</td>
+     <td>unitless</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Ambient air relative humidity outside of surface boundary layer.</td>
+     <td>N/A</td>
+     <td>0.5</td>
+   </tr>
+   <tr>
+     <td>air_pressure</td>
+     <td>Pascals</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Atmospheric pressure.</td>
+     <td>N/A</td>
+     <td>101,000 Pa</td>
+   </tr>
+   <tr>
+     <td>other_surface_flux</td>
+     <td>W/m<sup>2</sup></td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Other surface energy fluxes, e.g., storage flux.</td>
+     <td>N/A</td>
+     <td>0</td>
+   </tr>
+   
+ </table>	
+ 
+ \subsection EBOutputData Output Primitive Data
+ 
+ <table>
+   <tr>	
+     <th>Primitive Data</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>temperature</td>
+     <td>Kelvin</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Primitive surface temperature.</td>
+   </tr>
+   <tr>	
+     <td>sensible_flux</td>
+     <td>W/m<sup>2</sup></td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Sensible heat flux.</td>
+   </tr>
+   <tr>	
+     <td>latent_flux</td>
+     <td>W/m<sup>2</sup></td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Latent heat flux.</td>
+   </tr>
+   
+ </table>
+
+ \section EBUse Using the Energy Balance Model Plug-in
+
+ \subsection EBPrimData Input Variables
+
+ Inputs to the model are set by creating primitive variable data in the usual way. If a variable needed for a model input has not been create in the Context, the default value is assumed.
+
+ \subsection EBRad Input Radiative Bands
+
+ In order for the model to calculate the absorbed all-wave radiation flux, it needs to know the names of all radiation bands that were added to the radiation model. This is done using the function \ref EnergyBalanceModel::addRadiationBand() "addRadiationBand()". In the following examplle, assume we have three radiative wavebands "PAR", "NIR", and "LW". 
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> \c// Initialize the Model
+  %EnergyBalanceModel energybalance(&context);
+
+  energybalance.addRadiationBand("PAR");
+  energybalance.addRadiationBand("NIR");
+  energybalance.addRadiationBand("LW");</code></pre></div>
+
+ \subsection EBblc Boundary-layer Conductance Model
+
+ The boundary-layer conductance is calculated as
+
+ \f$g_H = 0.135\sqrt{\dfrac{U}{L}}\f$,
+
+ where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. If the primitive was a triangle that forms the surface of a sphere, \f$L\f$ could be assumed to be the diameter of the sphere.
+
+ Users can override this model by directly providing a value for \f$g_H\f$ by setting the value of primitive data labeled `boundarylayer_conductance'.
+
+ \subsection EBRun Running the Model
+
+ The model is run using the \ref EnergyBalanceModel::run() function, which will run the model for all primitives in the Context if no argument is give, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.
+
+ <table>
+   <caption>Functions to run the energy balance model.</caption>
+   <tr>	
+     <th>Model Run Function</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>\ref EnergyBalanceModel::run( void )</td>
+     <td>Run the model for all primitives in the Context.</td>
+   </tr>
+   <tr>	
+     <td>\ref EnergyBalanceModel::run( std::vector<uint> UUIDs )</td>
+     <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs.</td>
+   </tr>
+ </table>
+
+ <p> <br><br> </p>
+ 
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "EnergyBalanceModel.h"
+
+  int main(void){
+
+     \c// Initialize the Context
+     Context context;
+
+     \c// Add `Patch' primitive
+     vec3 center = make_vec3(0,0,1);
+     vec2 size = make_vec2(1,1);
+     uint UUID = context.addPatch( center, size );
+
+     %EnergyBalanceModel energybalance(&context);
+
+     energybalance.addRadiationBand("PAR");
+     energybalance.addRadiationBand("NIR");
+     energybalance.addRadiationBand("LW");
+
+     energybalance.run();
+  }</code></pre></div>
+
+ 
+
+*/

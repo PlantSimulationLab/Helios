@@ -288,7 +288,8 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
     Voxel* voxel = context->getVoxelPointer( UUIDs_voxels.at(c) );
     center[c] = vec3tofloat3( voxel->getCenter() );
     size[c] = vec3tofloat3( voxel->getSize() );
-    rotation[c] = voxel->getRotation();
+    //rotation[c] = voxel->getRotation();
+    rotation[c] = 0.f;
     context->setPrimitiveData( UUIDs_voxels.at(c), "primitive_UUIDs", HELIOS_TYPE_UINT, 0, NULL );
   }
 
