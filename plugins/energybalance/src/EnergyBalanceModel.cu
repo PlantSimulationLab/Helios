@@ -75,7 +75,7 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
 
   float resid_old = evaluateEnergyBalance(T_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p]);
   float resid_old_old = evaluateEnergyBalance(T_old_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p]);
-
+  
   float resid = 100;
   float err = resid;
   uint iter = 0;
@@ -107,13 +107,6 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
 
   TL[p] = T;
 
-}
-
-void EnergyBalanceModel::run( std::vector<std::string> _radiation_bands ){
-  for( uint i=0; i<_radiation_bands.size(); i++ ){
-    radiation_bands.push_back(_radiation_bands.at(i));
-  }
-  run();
 }
 
 void EnergyBalanceModel::run( void ){
@@ -250,6 +243,9 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
     float L;
     if( prim->doesPrimitiveDataExist("object_length") ){
       prim->getPrimitiveData("object_length",L);
+      if( L==0 ){
+	L = sqrt(prim->getArea());
+      }
     }else{
       L = sqrt(prim->getArea());
     }
@@ -280,7 +276,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
       pressure[p] = pressure_default;
     }
 
-    //Boundary-layer conductance to moisture
+    //Boundary-layer conductance to heat
     if( prim->doesPrimitiveDataExist("boundarylayer_conductance") ){
       prim->getPrimitiveData("boundarylayer_conductance",gH[p]);
     }else{
@@ -331,11 +327,11 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
   float * T = (float*)malloc( Nprimitives*sizeof(float) );
   float* d_T;
   CUDA_CHECK_ERROR( cudaMalloc((void**)&d_T, Nprimitives*sizeof(float)) );
-  
+
   //launch kernel
   dim3 dimBlock( 64, 1 );
   dim3 dimGrid( ceil(Nprimitives/64.f) );
-  solveEnergyBalance <<< dimGrid, dimBlock >>>(Nprimitives,To,R,Qother,eps,Ta,ea,pressure,gH,gS,Nsides,T);
+  solveEnergyBalance <<< dimGrid, dimBlock >>>(Nprimitives,d_To,d_R,d_Qother,d_eps,d_Ta,d_ea,d_pressure,d_gH,d_gS,d_Nsides,d_T);
   
   CUDA_CHECK_ERROR( cudaPeekAtLastError() );
   CUDA_CHECK_ERROR( cudaDeviceSynchronize() );

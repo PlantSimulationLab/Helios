@@ -3,8 +3,7 @@
 
 using namespace helios;
 
-int main(int argc, char* argv[])
-{
+int main( void ){
 
   //Declare and initialize the helios context
   //note that since we have used the `helios' namespace above, we do not need to declare the context as: helios::Context
@@ -36,8 +35,6 @@ int main(int argc, char* argv[])
   //Load the XML file with temperature data, which will create a timeseries named "temperature"
   context.loadXML( "../xml/temperature.xml" );
 
-  context.addVariable( "temperature" );
-
   //Number to data points in timeseries
   uint N = context.getTimeseriesLength("temperature");
 
@@ -46,9 +43,11 @@ int main(int argc, char* argv[])
   
   vis.setBackgroundColor( make_RGBcolor( 0.8, 0.8, 1 ) );
 
-  vis.enableColorbar();
   vis.setColormap(Visualizer::COLORMAP_HOT);
   vis.setColorbarRange( 20, 40 );
+
+  vis.setLightingModel( Visualizer::LIGHTING_PHONG );
+  vis.setLightDirection( make_vec3(1,1,1) );
 
   vis.buildContextGeometry(&context);
   
@@ -60,17 +59,16 @@ int main(int argc, char* argv[])
     float T = context.queryTimeseriesData( "temperature", t );
 
     for( uint j=0; j<bunny.size(); j++ ){
-      context.setVariableValue( bunny.at(j), "temperature", T );
+      context.setPrimitiveData( bunny.at(j), "temperature", T );
     }
 
     vis.buildContextGeometry(&context);
 
-    vis.colorContextPrimitivesByVariable( "temperature", bunny );
+    vis.colorContextPrimitivesByData( "temperature", bunny );
     
-    vis.setCameraPosition( make_SphericalCoord(10,0.05*M_PI,0.2f*M_PI), make_vec3(0,0,0) );
+    vis.setCameraPosition( make_SphericalCoord(10,0.05*M_PI,0.2f*M_PI), make_vec3(0,0,1) );
   
     vis.plotUpdate();
-    //vis.plotInteractive();
     
     helios::wait(0.01);
 

@@ -33,10 +33,6 @@ public:
   /** \return 0 if test was successful, 1 if test failed. */
   int selfTest( void );
 
-  //! Function to run the energy balance model
-  /** \param[in] "radiation_bands" Vector of strings that give the names of the radiation bands to include in net radiation flux calculation. */
-  DEPRECATED( void run( std::vector<std::string> radiation_bands ) );
-
   //! Function to run the energy balance model for all primitives in the Context
   /** \param[in] "radiation_bands" Vector of strings that give the names of the radiation bands to include in net radiation flux calculation. */
   void run(void) ;

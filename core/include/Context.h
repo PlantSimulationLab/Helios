@@ -990,52 +990,6 @@ public:
   //!Get all primitive UUIDs currently in the Context
   std::vector<uint> getAllUUIDs(void) const;
 
-  //-------- Variables Functions ---------- //
-
-  //! Add a variable to the Context
-  /** A variable is some value associated with each primitive element (e.g., temperature).
-      \param[in] "variable_name" Name of a variable to be added
-  */
-  DEPRECATED( void addVariable( const char* variable_name ) );
-
-  //! Set the value of a variable for an individual Primitive element
-  /** A variable is some value associated with each primitive element (e.g., temperature).
-      \param[in] "variable_name" Name of a variable to be added
-      \param[in] "UUID" Unique universal identifier of Primitive element
-      \param[in] "value" Variable value for Primitive element UUID
-  */
-  DEPRECATED( void setVariableValue( uint UUID, const char* variable_name, float value ) );
-
-  //! Set the value of a variable for group of Primitive elements
-  /** A variable is some value associated with each primitive element (e.g., temperature).
-      \param[in] "variable_name" Name of a variable to be added
-      \param[in] "UUID" A vector of unique universal identifiers (UUIDs) of Primitive elements
-      \param[in] "value" Variable value for Primitive element UUID
-  */
-  DEPRECATED( void setVariableValue( std::vector<uint> UUID, const char* variable_name, float value ) );
-
-  //! Get the value of a variable for an individual Primitive element
-  /** A variable is some value associated with each primitive element (e.g., temperature).
-      \param[in] "variable_name" Name of a variable to be added
-      \param[in] "UUID" Unique universal identifier of Primitive element
-      \note If the variable value was never set for primitive #UUID, the default value of `0' will be returned.
-  */
-  DEPRECATED( float getVariableValue( uint UUID, const char* variable_name ) const );
-
-  //! Get the value of a variable for a group of Primitive elements
-  /** A variable is some value associated with each primitive element (e.g., temperature).
-      \param[in] "variable_name" Name of a variable to be added
-      \param[in] "UUIDs" Vector of unique universal identifier of Primitive elements
-      \note If the variable value was never set for primitive #UUID, the default values of `0' will be returned.
-  */
-  DEPRECATED( std::vector<float> getVariableValue( std::vector<uint> UUID, const char* variable_name ) const );
-
-  //! Check whether a variable exists
-  /** A variable is some value associated with each primitive element (e.g., temperature).
-      \param[in] "variable_name" Name of a variable to be added
-  */
-  DEPRECATED( bool doesVariableExist( const char* variable_name ) const );
-
   //-------- Primitive Data Functions ---------- //
 
   //! Add data value (int) associated with a primitive element

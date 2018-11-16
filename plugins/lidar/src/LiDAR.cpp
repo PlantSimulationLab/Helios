@@ -146,20 +146,20 @@ int LiDARcloud::selfTest(void){
   
   LAD_exact = float(N.x*N.y*N.z)*4.f*diskR*diskR/(gsize.x*gsize.y*gsize.z);
 
-  // synthetic_1.syntheticScan( &context_2, "plugins/lidar/xml/synthetic_test.xml" );
+  synthetic_1.syntheticScan( &context_2, "plugins/lidar/xml/synthetic_test.xml" );
 
-  // synthetic_1.triangulateHitPoints( 0.04, 10 );
-  // synthetic_1.calculateLeafAreaGPU();
+  synthetic_1.triangulateHitPoints( 0.04, 10 );
+  synthetic_1.calculateLeafAreaGPU();
 
-  // LAD = synthetic_1.getCellLeafAreaDensity( 0 );
+  LAD = synthetic_1.getCellLeafAreaDensity( 0 );
 
-  // if( fabs(LAD-LAD_exact)/LAD_exact>0.15 || LAD!=LAD ){
-  //   std::cout << "failed." << std::endl;
-  //   std::cout << "LAD: " << LAD << " " << LAD_exact << std::endl;
-  //   fail_flag++;
-  // }else{
-  //   std::cout << "passed." << std::endl;
-  // }
+  if( fabs(LAD-LAD_exact)/LAD_exact>0.15 || LAD!=LAD ){
+    std::cout << "failed." << std::endl;
+    std::cout << "LAD: " << LAD << " " << LAD_exact << std::endl;
+    fail_flag++;
+  }else{
+    std::cout << "passed." << std::endl;
+  }
 
   //------ Isotropic Patches Inside Eight Voxels ------//
 
@@ -168,30 +168,28 @@ int LiDARcloud::selfTest(void){
   LiDARcloud synthetic_2;
   synthetic_2.disableMessages();
 
-  // synthetic_2.syntheticScan( &context_2, "plugins/lidar/xml/synthetic_test_8.xml" );
+  synthetic_2.syntheticScan( &context_2, "plugins/lidar/xml/synthetic_test_8.xml" );
 
-  // synthetic_2.triangulateHitPoints( 0.04, 10 );
-  // synthetic_2.calculateLeafAreaGPU();
+  synthetic_2.triangulateHitPoints( 0.04, 10 );
+  synthetic_2.calculateLeafAreaGPU();
 
-  // std::cout << synthetic_2.getGridCellCount() << " grid cells" << std::endl;
-
-  // float RMSE = 0.f;
-  // for( int i=0; i<synthetic_2.getGridCellCount(); i++ ){
+  float RMSE = 0.f;
+  for( int i=0; i<synthetic_2.getGridCellCount(); i++ ){
   
-  //   float LAD = synthetic_2.getCellLeafAreaDensity( i );
+    float LAD = synthetic_2.getCellLeafAreaDensity( i );
 
-  //   RMSE += pow(LAD-LAD_exact,2)/float(synthetic_2.getGridCellCount());
+    RMSE += pow(LAD-LAD_exact,2)/float(synthetic_2.getGridCellCount());
 
-  // }
-  // RMSE = sqrt(RMSE);
+  }
+  RMSE = sqrt(RMSE);
 
-  // if( RMSE>0.05 ){
-  //     std::cout << "failed." << std::endl;
-  //     std::cout << "RMSE: " << RMSE << std::endl;
-  //     fail_flag++;
-  // }else{
-  //   std::cout << "passed." << std::endl;
-  // }
+  if( RMSE>0.05 ){
+      std::cout << "failed." << std::endl;
+      std::cout << "RMSE: " << RMSE << std::endl;
+      fail_flag++;
+  }else{
+    std::cout << "passed." << std::endl;
+  }
 
   //------ Anisotropic Patches Inside One Voxel ------//
 
@@ -255,20 +253,20 @@ int LiDARcloud::selfTest(void){
   LiDARcloud synthetic_3;
   synthetic_3.disableMessages();
 
-  // synthetic_3.syntheticScan( &context_3, "plugins/lidar/xml/synthetic_test.xml" );
+  synthetic_3.syntheticScan( &context_3, "plugins/lidar/xml/synthetic_test.xml" );
 
-  // synthetic_3.triangulateHitPoints( 0.04, 10 );
-  // synthetic_3.calculateLeafAreaGPU();
+  synthetic_3.triangulateHitPoints( 0.04, 10 );
+  synthetic_3.calculateLeafAreaGPU();
 
-  // LAD = synthetic_3.getCellLeafAreaDensity( 0 );
+  LAD = synthetic_3.getCellLeafAreaDensity( 0 );
 
-  // if( fabs(LAD-LAD_exact)/LAD_exact>0.2 || LAD!=LAD ){
-  //   std::cout << "failed." << std::endl;
-  //   std::cout << "LAD: " << LAD << " " << LAD_exact << std::endl;
-  //   fail_flag++;
-  // }else{
-  //   std::cout << "passed." << std::endl;
-  // }
+  if( fabs(LAD-LAD_exact)/LAD_exact>0.2 || LAD!=LAD ){
+    std::cout << "failed." << std::endl;
+    std::cout << "LAD: " << LAD << " " << LAD_exact << std::endl;
+    fail_flag++;
+  }else{
+    std::cout << "passed." << std::endl;
+  }
 
   //------ Synthetic Scan of Almond Tree ------//
 
@@ -319,7 +317,6 @@ int LiDARcloud::selfTest(void){
       if( gridCell>=0 && gridCell<Ncells ){
   	total_area.at(gridCell) += context_4.getPrimitivePointer(UUID)->getArea();
       }
-
       
       for( int s=0; s<synthetic_4.getScanCount(); s++ ){
 	vec3 origin = synthetic_4.getScanOrigin(s);
