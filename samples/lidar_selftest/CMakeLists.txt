@@ -11,7 +11,7 @@ set( EXECUTABLE_NAME "lidar_selftest" )
 set( SOURCE_FILES "main.cpp" )
 
 #specify which plug-ins to use (separate plug-in names with semicolon)
-set( PLUGINS "lidar" )
+set( PLUGINS "lidar;visualizer" )
 
 #-------- MAIN CODE (Don't Modify) ---------#
 

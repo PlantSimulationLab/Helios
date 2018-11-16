@@ -290,7 +290,7 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
     size[c] = vec3tofloat3( voxel->getSize() );
     //rotation[c] = voxel->getRotation();
     rotation[c] = 0.f;
-    context->setPrimitiveData( UUIDs_voxels.at(c), "primitive_UUIDs", HELIOS_TYPE_UINT, 0, NULL );
+    context->setPrimitiveData( UUIDs_voxels.at(c), "inside_UUIDs", HELIOS_TYPE_UINT, 0, NULL );
   }
 
   //copy from host to device memory
@@ -326,7 +326,7 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
   for( std::map<uint,std::vector<uint> >::iterator it = vint.begin(); it!=vint.end(); ++it ){
     uint UUID = it->first;
     size_t s = vint.at(UUID).size();
-    context->setPrimitiveData( UUID, "primitive_UUIDs", HELIOS_TYPE_UINT, s, &vint.at(UUID)[0] );
+    context->setPrimitiveData( UUID, "inside_UUIDs", HELIOS_TYPE_UINT, s, &vint.at(UUID)[0] );
   }
 
   free(hit_vol);

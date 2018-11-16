@@ -3090,7 +3090,7 @@ vec3 Voxel::getCenter(void){
 }
 
 vec3 Voxel::getSize(void){
-  return make_vec3(transform[1],transform[5],transform[9]);
+  return make_vec3(transform[0],transform[5],transform[10]);
 }
 
 void Context::setDate( int day, int month, int year ){

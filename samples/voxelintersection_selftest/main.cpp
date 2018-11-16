@@ -5,7 +5,8 @@ using namespace helios;
 
 int main( void ){
 
-  VoxelIntersection voxelintersection;
+  Context context;
+  VoxelIntersection voxelintersection(&context);
 
   return voxelintersection.selfTest();
   

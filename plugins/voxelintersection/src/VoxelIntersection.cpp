@@ -25,7 +25,7 @@ VoxelIntersection::VoxelIntersection( helios::Context* __context ){
 
 }
 
-void VoxelIntersection::selfTest( void ){
+int VoxelIntersection::selfTest( void ){
 
   std::cout << "Running self-test for VoxelIntersection plug-in..." << std::flush;
 
@@ -64,7 +64,7 @@ void VoxelIntersection::selfTest( void ){
 
   std::vector<uint> UUIDs;
 
-  context_test.getPrimitiveData( UUID_v, "primitive_UUIDs", UUIDs );
+  context_test.getPrimitiveData( UUID_v, "inside_UUIDs", UUIDs );
 
   bool test_pass = true;
   for( int k=0; k<UUIDs.size(); k++ ){
@@ -77,16 +77,14 @@ void VoxelIntersection::selfTest( void ){
       }
     }
     if( !flag ){
-      std::cout << "failed." << std::endl;
       test_pass = false;
-      exit(EXIT_FAILURE);
+      break;
     }
 
     for( int i=0; i<UUID_outside.size(); i++ ){
       if( UUIDs.at(k)==UUID_outside.at(i) ){
-	std::cout << "failed." << std::endl;
 	test_pass = false;
-	exit(EXIT_FAILURE);
+	break;
       }
     }
     
@@ -102,13 +100,22 @@ void VoxelIntersection::selfTest( void ){
       }
     }
     if( !flag ){
-      std::cout << "failed." << std::endl;
       test_pass = false;
-      exit(EXIT_FAILURE);
+      break;
     }
     
   }
 
-  std::cout << "done." << std::endl;
+  if( UUIDs.size()!=UUID_inside.size() ){
+    test_pass = false;
+  }
+
+  if( test_pass ){
+    std::cout << "passed." << std::endl;
+    return 0;
+  }else{
+    std::cout << "failed." << std::endl;
+    return 1;
+  }
   
 }

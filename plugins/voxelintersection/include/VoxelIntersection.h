@@ -29,7 +29,7 @@ class VoxelIntersection{
   VoxelIntersection( helios::Context* context );
 
   //! Self-test fuction (unit tests)
-  void selfTest( void );
+  int selfTest( void );
   
   //! Calculate primitives that reside in all voxels for every primitive in the Context
   void calculatePrimitiveVoxelIntersection( void );

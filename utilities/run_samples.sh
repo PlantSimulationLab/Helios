@@ -77,7 +77,7 @@ else
 	./temp &> /dev/null
 
 	if (( $? == 0 ));then
-	    echo -e "\r\e[32mRunning project creation script test...done.\e[39m"
+	    echo -e "\r\e[32mRunning project creation script test...passed.\e[39m"
 	else
 	    echo -e "\r\e[31mRunning project creation script test...failed.\e[39m"
 	    ERROR_COUNT=$((ERROR_COUNT+1))

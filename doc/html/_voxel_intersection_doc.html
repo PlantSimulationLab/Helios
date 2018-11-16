@@ -65,6 +65,7 @@ $(function() {
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
 <ul><li class="level1"><a href="#VoxelIntersectionDepends">Dependencies</a></li>
+<li class="level1"><a href="#VoxelIssues">Known Issues</a></li>
 <li class="level1"><a href="#VoxelIntersectionConstructor">Class Constructor</a><ul><li class="level2"><a href="#VoxelIntersectionOutputData">Output Primitive Data</a></li>
 </ul>
 </li>
@@ -104,6 +105,11 @@ Dependencies</h1>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div> </td><td>Debian/Ubuntu:<br />
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cuda</code></div> </td><td>Unknown  </td></tr>
 </table>
+<h1><a class="anchor" id="VoxelIssues"></a>
+Known Issues</h1>
+<ul>
+<li>Rotated voxels are currently not supported (must be axis-aligned).</li>
+</ul>
 <h1><a class="anchor" id="VoxelIntersectionConstructor"></a>
 Class Constructor</h1>
 <table class="doxtable">
@@ -120,7 +126,7 @@ Output Primitive Data</h2>
 <tr>
 <th>Variable </th><th>Data Type </th><th>Description  </th></tr>
 <tr>
-<td>primitive_UUIDs </td><td>std::vector&lt;uint&gt; </td><td>Vector of UUIDs of planar primitives (patches and triangles) contained within the given voxel. Thus, the primitive data "primitive_UUIDs" is defined only for voxels. If no elements are contained within the voxel, the vector is empty.  </td></tr>
+<td>inside_UUIDs </td><td>std::vector&lt;uint&gt; </td><td>Vector of UUIDs of planar primitives (patches and triangles) contained within the given voxel. Thus, the primitive data "inside_UUIDs" is defined only for voxels. If no elements are contained within the voxel, the vector is empty.  </td></tr>
 </table>
 <h1><a class="anchor" id="VoxelIntersectionIntro"></a>
 Introduction</h1>
@@ -132,12 +138,12 @@ Introduction</h1>
 <h1><a class="anchor" id="VoxelIntersectionUse"></a>
 Using the Plug-In</h1>
 <p>To use the voxel intersection plug-in, an instance of the <a class="el" href="class_voxel_intersection.html">VoxelIntersection</a> must be declared, whose constructor takes a pointer to the Context as an argument. This class has only one member function, which is calculatePrimitiveVoxelIntersection(). If no arguments are passed to this function, it will consider all primitives in the Context. Alternatively, a vector of UUIDs can be passed as an argument, in which case only those primitives will be considered.</p>
-<p>When the calculatePrimitiveVoxelIntersection() function is run, the plug-in will search all patches and triangles and determine whether any portion of them is contained within any voxel. The plug-in will create primitive data called ``primitive_UUIDs", which is defined only for voxels currently in the Context. This primitive is a vector of UUIDs, and contains the UUIDs of any primitives that were found to be inside of the particular voxel. If no primitives are inside of the voxel, the vector will be empty. If there are no voxels in the Context, the plug-in will do nothing.</p>
+<p>When the calculatePrimitiveVoxelIntersection() function is run, the plug-in will search all patches and triangles and determine whether any portion of them is contained within any voxel. The plug-in will create primitive data called ``inside_UUIDs", which is defined only for voxels currently in the Context. This primitive is a vector of UUIDs, and contains the UUIDs of any primitives that were found to be inside of the particular voxel. If no primitives are inside of the voxel, the vector will be empty. If there are no voxels in the Context, the plug-in will do nothing.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
  #include "VoxelIntersection.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    uint UUIDt = context.addTriangle( make_vec3(0,0,1), make_vec3(0,1,1), make_vec3(1,1,1) );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    vec3 voxel_center(0,0,1);
     vec3 voxel_size(2,2,2);
     uint UUIDv = context.addVoxel( voxel_center, voxel_size );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <a class="el" href="class_voxel_intersection.html">VoxelIntersection</a> intersection(&amp;context);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    intersection.calculatePrimitiveVoxelIntersection();</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    std::vector&lt;uint&gt; intersected_UUIDs;
-    context.getPrimitiveData( UUIDv, "primitive_UUIDs", intersected_UUIDs );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    int p = std::find( intersected_UUIDs.begin(), intersected_UUIDs.end(), UUIDt );
+    context.getPrimitiveData( UUIDv, "inside_UUIDs", intersected_UUIDs );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    int p = std::find( intersected_UUIDs.begin(), intersected_UUIDs.end(), UUIDt );
     if( p != intersected_UUIDs.end() ){
         std::cout &lt;&lt; "Primitive is inside voxel." &lt;&lt; std::endl;
     }else{
