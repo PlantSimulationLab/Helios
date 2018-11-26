@@ -2580,26 +2580,27 @@ void Visualizer::buildContextGeometry_private( void ){
   //------- Simulation Geometry -------//
 
   //add primiitves 
+
   for(std::map<std::string,std::vector<uint> >::iterator iter = UUID_texture.begin(); iter != UUID_texture.end(); ++iter){
-
+ 
     std::vector<uint> UUIDs = iter->second;
-
+  
     for( size_t u=0; u<UUIDs.size(); u++ ){
 
       uint UUID = UUIDs.at(u);
-
+      
       if( !context->doesPrimitiveExist(UUID) ){
 	std::cerr << "WARNING (buildContextGeometry): UUID vector contains ID(s) that do not exist in the Context...they will be ignored." << std::endl;
 	continue;
       }
-
+      
       helios::Primitive* prim = context->getPrimitivePointer(UUID);
-
+    
       helios::PrimitiveType ptype = prim->getType();
-
+    
       std::vector<vec3> verts = prim->getVertices();
       std::string texture_file = prim->getTextureFile();
-
+      
       RGBAcolor color;
       float colorValue;
       if( colorPrimitivesByData.size()!=0 ){
@@ -2616,13 +2617,13 @@ void Visualizer::buildContextGeometry_private( void ){
       }
       
       if( ptype == helios::PRIMITIVE_TYPE_PATCH  ){
-
+	
 	if( texture_file.size()==0 ){//Patch does not have an associated texture or we are ignoring texture
 	  addRectangleByVertices( verts, color, COORDINATES_CARTESIAN );
 	}else{ //Patch has a texture
 	  helios::Patch* patch = static_cast<helios::Patch*>(prim);
 	  std::vector<vec2> uvs = patch->getTextureUV();
-
+	  
 	  if( colorPrimitivesByData.size()==0 ){//coloring primitive based on texture
 	    if( uvs.size()==4 ){//custom (u,v) coordinates
 	      addRectangleByVertices( verts, texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
@@ -2646,22 +2647,22 @@ void Visualizer::buildContextGeometry_private( void ){
 	  
 	  helios::Triangle* triangle = static_cast<helios::Triangle*>(prim);
 	  std::vector<vec2> uvs = triangle->getTextureUV();
-
+	  
 	  if( colorPrimitivesByData.size()==0 ){//coloring primitive based on texture
-	    addRectangleByVertices( verts, texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
+	    addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), COORDINATES_CARTESIAN );
 	  }else{//coloring primitive based on primitive data
-	    addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
+	    addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), make_RGBAcolor(color.r,color.g,color.b,1), COORDINATES_CARTESIAN );
 	  }
-
+	  
 	}
 	
       }else if( ptype == helios::PRIMITIVE_TYPE_VOXEL ){
-
+	
 	helios::Voxel* voxel = static_cast<helios::Voxel*>(prim);
-
+	
 	float transform[16];
 	voxel->getTransformationMatrix(transform);
-
+	
 	//vec3 center = make_vec3(
 	// vec3 size = voxel->getSize();
 	// float rotation = voxel->getRotation();
@@ -2670,7 +2671,7 @@ void Visualizer::buildContextGeometry_private( void ){
 	/** \todo Figure out voxel parameters from vertices or transformation matrix */
 	
       }
-
+      
     }
   }
   

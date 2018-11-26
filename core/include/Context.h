@@ -142,6 +142,8 @@ namespace helios {
     /** \param[out] "T" 1D vector corresponding to Primitive transformation matrix */
     void getTransformationMatrix( float (&T)[16] ) const;
 
+    //! Function to set the Affine transformation matrix of a Primitive
+    /** \param[in] "T" 1D vector corresponding to Primitive transformation matrix */
     void setTransformationMatrix( float (&T)[16] );
     
     //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
