@@ -548,7 +548,7 @@ int Visualizer::selfTest( void ){
 
   std::cout << "Running visualizer self-test..." << std::flush;
 
-  Visualizer visualizer( Wdisplay );
+  Visualizer visualizer( 1000 );
 
   visualizer.setCameraPosition( make_SphericalCoord(10,0.49*M_PI,0), make_vec3(0,0,0) );
     
@@ -560,7 +560,7 @@ int Visualizer::selfTest( void ){
   visualizer.addRectangleByCenter( make_vec3(-0.5,-0.5,0), make_vec2(1,1), make_SphericalCoord(0.f,0.f), RGB::blue, Visualizer::COORDINATES_CARTESIAN );
   visualizer.addRectangleByCenter( make_vec3(-0.5,0.5,0), make_vec2(1,1), make_SphericalCoord(0.f,0.f), RGB::red, Visualizer::COORDINATES_CARTESIAN );
   visualizer.addRectangleByCenter( make_vec3(1.5,0.5,0), make_vec2(3.41,1), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_logo.png", Visualizer::COORDINATES_CARTESIAN );
-  visualizer.addRectangleByCenter( make_vec3(1.5,-0.5,0), make_vec2(3.41,1), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_logo.jpg", Visualizer::COORDINATES_CARTESIAN );
+  visualizer.addRectangleByCenter( make_vec3(1.5,-0.5,0), make_vec2(3.41,1), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_logo.jpeg", Visualizer::COORDINATES_CARTESIAN );
 
   std::vector<vec3> vertices;
   vertices.resize(4);
@@ -2550,11 +2550,7 @@ void Visualizer::buildContextGeometry_private( void ){
 	uint UUID = UUIDs.at(u);
 	
 	float colorValue=-9999;
-	if( colorPrimitivesByVariable.size()!=0 ){
-	  if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){
-	    context->getPrimitiveData( UUID, colorPrimitivesByVariable.c_str(), colorValue );
-	  }
-	}else if( colorPrimitivesByData.size()!=0 ){
+	if( colorPrimitivesByData.size()!=0 ){
 	  if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0 ){
 	    if( context->doesPrimitiveDataExist( UUID, colorPrimitivesByData.c_str() ) ){
 	      context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), colorValue );
@@ -2605,58 +2601,58 @@ void Visualizer::buildContextGeometry_private( void ){
       std::string texture_file = prim->getTextureFile();
 
       RGBAcolor color;
-      float colorValue = -9999;
-      if( colorPrimitivesByVariable.size()!=0 ){
-	  if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){
-	    context->getPrimitiveData( UUID, colorPrimitivesByVariable.c_str(), colorValue );
-	    color = make_RGBAcolor(colormap_current.query( colorValue ),1);
+      float colorValue;
+      if( colorPrimitivesByData.size()!=0 ){
+	if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){
+	  if( context->doesPrimitiveDataExist( UUID, colorPrimitivesByData.c_str() ) ){
+	    context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), colorValue );
+	  }else{
+	    colorValue = 0;
 	  }
-      }else if( colorPrimitivesByData.size()!=0 ){
-	  if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){
-	    if( context->doesPrimitiveDataExist( UUID, colorPrimitivesByData.c_str() ) ){
-	      context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), colorValue );
-	    }else{
-	      colorValue = 0;
-	    }
-	    color = make_RGBAcolor(colormap_current.query( colorValue ),1);
-	  }
+	  color = make_RGBAcolor(colormap_current.query( colorValue ),1);
+	}
       }else{
 	color = prim->getColorRGBA();
       }
       
       if( ptype == helios::PRIMITIVE_TYPE_PATCH  ){
 
-	if( texture_file.size()==0 || colorValue!=-9999 ){//Patch does not have an associated texture or we are ignoring texture
+	if( texture_file.size()==0 ){//Patch does not have an associated texture or we are ignoring texture
 	  addRectangleByVertices( verts, color, COORDINATES_CARTESIAN );
 	}else{ //Patch has a texture
 	  helios::Patch* patch = static_cast<helios::Patch*>(prim);
 	  std::vector<vec2> uvs = patch->getTextureUV();
 
-	  if( (colorPrimitivesByData.size()!=0 || colorPrimitivesByVariable.size()!=0 || colorPrimitivesByValue.size()!=0 ) && prim->getTexture()->hasTransparencyChannel() && uvs.size()==4 ){
-	    addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
-	  }else if( (colorPrimitivesByData.size()!=0 || colorPrimitivesByVariable.size()!=0 || colorPrimitivesByValue.size()!=0 ) && prim->getTexture()->hasTransparencyChannel() && uvs.size()!=4 ){
-	    addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
-	  }else if( uvs.size()==4 ){
-	    addRectangleByVertices( verts, texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
-	  }else{
-	    addRectangleByVertices( verts, texture_file.c_str(), COORDINATES_CARTESIAN );
+	  if( colorPrimitivesByData.size()==0 ){//coloring primitive based on texture
+	    if( uvs.size()==4 ){//custom (u,v) coordinates
+	      addRectangleByVertices( verts, texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
+	    }else{//default (u,v) coordinates
+	      addRectangleByVertices( verts, texture_file.c_str(), COORDINATES_CARTESIAN );
+	    }
+	  }else{//coloring primitive based on primitive data
+	    if( uvs.size()==4 ){//custom (u,v) coordinates
+	      addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
+	    }else{//default (u,v) coordinates
+	      addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	    }
 	  }
 	}
-
+	
       }else if( ptype == helios::PRIMITIVE_TYPE_TRIANGLE ){
 	
-	if( texture_file.size()==0 || colorValue!=-9999 ){//Triangle does not have an associated texture or we are ignoring texture
+	if( texture_file.size()==0 ){//Triangle does not have an associated texture or we are ignoring texture
 	  addTriangle( verts.at(0), verts.at(1), verts.at(2), color, COORDINATES_CARTESIAN );
 	}else{ //Triangle has a texture
 	  
 	  helios::Triangle* triangle = static_cast<helios::Triangle*>(prim);
-	  std::vector<vec2> uv = triangle->getTextureUV();
+	  std::vector<vec2> uvs = triangle->getTextureUV();
 
-	  if( (colorPrimitivesByData.size()!=0 || colorPrimitivesByVariable.size()!=0 || colorPrimitivesByValue.size()!=0 ) && prim->getTexture()->hasTransparencyChannel() ){
-	    addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2), color, COORDINATES_CARTESIAN );
-	  }else{
-	    addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2), COORDINATES_CARTESIAN );
+	  if( colorPrimitivesByData.size()==0 ){//coloring primitive based on texture
+	    addRectangleByVertices( verts, texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
+	  }else{//coloring primitive based on primitive data
+	    addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
 	  }
+
 	}
 	
       }else if( ptype == helios::PRIMITIVE_TYPE_VOXEL ){
@@ -2680,24 +2676,6 @@ void Visualizer::buildContextGeometry_private( void ){
   
   std::cout << "done." << std::endl;
 
-}
-
-void Visualizer::colorContextPrimitivesByVariable( const char* variable_name ){
-  colorPrimitivesByVariable = variable_name;
-  colorPrimitivesByData = "";
-  colorPrimitivesByValue = "";
-  colorPrimitives_UUIDs.clear();
-  enableColorbar();
-}
-
-void Visualizer::colorContextPrimitivesByVariable( const char* variable_name, const std::vector<uint> UUIDs ){
-  colorPrimitivesByVariable = variable_name;
-  colorPrimitivesByData = "";
-  colorPrimitivesByValue = "";
-  for( size_t p=0; p<UUIDs.size(); p++ ){
-    colorPrimitives_UUIDs[UUIDs.at(p)] = UUIDs.at(p);
-  }
-  enableColorbar();
 }
 
 void Visualizer::colorContextPrimitivesByData( const char* data_name ){
@@ -3452,12 +3430,12 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
   std::vector<unsigned char> texture;
   uint texture_height, texture_width;
   std::string file = texture_file;
-  if(file.substr(file.find_last_of(".") + 1) == "jpg") {
+  if(file.substr(file.find_last_of(".") + 1) == "jpg" || file.substr(file.find_last_of(".") + 1) == "jpeg" ){
     read_JPEG_file (texture_file,texture,texture_height,texture_width);
   } else if(file.substr(file.find_last_of(".") + 1) == "png") {
     read_png_file (texture_file,texture,texture_height,texture_width);
   }else {
-    std::cerr << "ERROR: texture file " << texture_file << " must be JPG or PNG." << std::endl;
+    std::cerr << "ERROR: texture file " << texture_file << " must be JPG, JPEG, or PNG." << std::endl;
     exit(EXIT_FAILURE);
   }
   

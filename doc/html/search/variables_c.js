@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['scatter_5fdepth',['scatter_depth',['../struct_per_ray_data___m_c_r_t.html#ae30bddce469752f0cba0820d2bed7727',1,'PerRayData_MCRT']]],
-  ['second',['second',['../structhelios_1_1_time.html#a627acedd68e0228600727b867db537dd',1,'helios::Time']]],
-  ['seed',['seed',['../struct_per_ray_data.html#a757f60a4367093c4aa8bf21e6042c1dd',1,'PerRayData::seed()'],['../struct_per_ray_data___m_c_r_t.html#a29fa93c9c13d957f66891e0653cfab5a',1,'PerRayData_MCRT::seed()']]],
-  ['strength',['strength',['../struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935',1,'PerRayData::strength()'],['../struct_per_ray_data___m_c_r_t.html#a78da927b7a027a674c143a51ef3a2e58',1,'PerRayData_MCRT::strength()']]]
+  ['r',['r',['../structhelios_1_1_r_g_bcolor.html#a3e16659a90c69e6043c33c113b2fffe8',1,'helios::RGBcolor::r()'],['../structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df',1,'helios::RGBAcolor::r()']]],
+  ['radius',['radius',['../structhelios_1_1_spherical_coord.html#a017f345f74aeaa332cdd36b66b22c906',1,'helios::SphericalCoord']]]
 ];

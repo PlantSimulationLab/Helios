@@ -1558,6 +1558,14 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
     std::cout << "Updating geometry in radiation transport model..." << std::flush;
   }
 
+  context_UUIDs = UUIDs;
+
+  for( size_t u=0; u<context_UUIDs.size(); u++ ){
+    if( !context->doesPrimitiveExist( context_UUIDs.at(u) ) ){
+      context_UUIDs.erase( context_UUIDs.begin()+u );
+    }
+  }
+
   //--- Make Bounding Patches ---//
 
   //determine domain bounding sphere
@@ -1570,7 +1578,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
   //--- Populate Primitive Geometry Buffers ---//
 
-  size_t Nprimitives = UUIDs.size(); //Number of primitives
+  size_t Nprimitives = context_UUIDs.size(); //Number of primitives
 
   uint Nbands = emission_flag.size(); //Number of spectral bands
 
@@ -1613,7 +1621,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   std::size_t alphamask_count = 0;
   std::size_t voxel_count = 0;
   for( std::size_t u=0; u<Nprimitives; u++ ){
-    uint p = UUIDs.at(u);
+    uint p = context_UUIDs.at(u);
     
     helios::Primitive* prim = context->getPrimitivePointer(p);
 
@@ -1703,7 +1711,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   uvID.resize(context->getPrimitiveCount());
 
   for( size_t u=0; u<Nprimitives; u++ ){
-    uint p = UUIDs.at(u);
+    uint p = context_UUIDs.at(u);
     Primitive* prim = context->getPrimitivePointer(p);
     std::string maskfile = prim->getTextureFile();
     
@@ -1726,7 +1734,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   	maskname[maskfile] = maskdata.size();
   	maskdata.push_back( *context->getPrimitivePointer(p)->getTexture()->getTransparencyData() );
   	uint sy = maskdata.back().size();
-  	uint sx = maskdata.back().at(0).size();
+  	uint sx = maskdata.back().front().size();
   	masksize.push_back( optix::make_int2(sx,sy) );
       }
 
@@ -1837,16 +1845,15 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
   
   char prop[20];
 
-  size_t Nprimitives = context->getPrimitiveCount();
+  size_t Nprimitives = context_UUIDs.size();
 
   rho.resize(Nprimitives);
   tau.resize(Nprimitives);
   eps.resize(Nprimitives);
 
-  std::vector<uint> UUIDs_p = context->getAllUUIDs();
-  for( size_t u=0; u<UUIDs_p.size(); u++ ){
+  for( size_t u=0; u<Nprimitives; u++ ){
 
-    uint p = UUIDs_p.at(u);
+    uint p = context_UUIDs.at(u);
 
     helios::Primitive* prim = context->getPrimitivePointer(p);
 
@@ -2035,10 +2042,7 @@ void RadiationModel::runBand( const char* label ){
   
   updateRadiativeProperties(label);
 
-  size_t Nprimitives = context->getPrimitiveCount();
-  std::vector<uint> UUIDs = context->getAllUUIDs();
-
-  assert( Nprimitives == UUIDs.size() );
+  size_t Nprimitives = context_UUIDs.size();
 
   bool to_be_scattered;
 
@@ -2135,7 +2139,7 @@ void RadiationModel::runBand( const char* label ){
   	char prop[30];
   	sprintf(prop,"emissivity_%s",label);
   	for( size_t u=0; u<Nprimitives; u++ ){
-	  uint p = UUIDs.at(u);
+	  uint p = context_UUIDs.at(u);
   	  context->getPrimitiveData(p,prop,eps);
 	  if( context->doesPrimitiveDataExist(p,"temperature") ){
 	    context->getPrimitiveData(p,"temperature",temperature);
@@ -2191,7 +2195,7 @@ void RadiationModel::runBand( const char* label ){
 	TBS_bottom=getOptiXbufferData( scatter_buff_bottom_RTbuffer );
 	float TBS_max = 0;
 	for( size_t u=0; u<Nprimitives; u++ ){
-	  size_t p = UUIDs.at(u);
+	  size_t p = context_UUIDs.at(u);
 	  if( TBS_top.at(u)+TBS_bottom.at(u)>TBS_max ){
 	    TBS_max = TBS_top.at(u)+TBS_bottom.at(u);
 	  }
@@ -2235,7 +2239,7 @@ void RadiationModel::runBand( const char* label ){
   char prop[30];
   sprintf(prop,"radiation_flux_%s",label);
   for( size_t u=0; u<Nprimitives; u++ ){
-    size_t p = UUIDs.at(u);
+    size_t p = context_UUIDs.at(u);
     float R = radiation_flux_data.at(u)+TBS_top.at(u)+TBS_bottom.at(u);
     context->setPrimitiveData(p,prop,R);
     if( radiation_flux_data.at(u)!=radiation_flux_data.at(u) ){
@@ -2286,7 +2290,7 @@ void RadiationModel::runBand_MCRT( const char* label ){
     
   updateRadiativeProperties(label);
 
-  size_t Nprimitives = context->getPrimitiveCount();
+  size_t Nprimitives = context_UUIDs.size();
 
   // Zero buffers
   zeroBuffer1D( radiation_in_RTbuffer, Nprimitives );
@@ -2364,7 +2368,7 @@ void RadiationModel::runBand_MCRT( const char* label ){
 
   if( emission_flag[band] ){
 
-    std::vector<uint> UUIDs = context->getAllUUIDs();
+    size_t Nprimitives = context_UUIDs.size();
 
     std::vector<float> flux_top, flux_bottom;
     flux_top.resize(Nprimitives,0.f);
@@ -2375,7 +2379,7 @@ void RadiationModel::runBand_MCRT( const char* label ){
     char prop[30];
     sprintf(prop,"emissivity_%s",label);
     for( size_t u=0; u<Nprimitives; u++ ){
-      uint p = UUIDs.at(u);
+      uint p = context_UUIDs.at(u);
       context->getPrimitiveData(p,prop,eps);
       if( context->doesPrimitiveDataExist(p,"temperature") ){
 	context->getPrimitiveData(p,"temperature",temperature);
@@ -2422,9 +2426,8 @@ void RadiationModel::runBand_MCRT( const char* label ){
 
   char prop[30];
   sprintf(prop,"radiation_flux_%s",label);
-  std::vector<uint> UUIDs = context->getAllUUIDs();
-  for( size_t u=0; u<Nprimitives; u++ ){
-    size_t p = UUIDs.at(u);
+  for( size_t u=0; u<context_UUIDs.size(); u++ ){
+    size_t p = context_UUIDs.at(u);
     float R = radiation_flux_data.at(u);
     context->setPrimitiveData(p,prop,R);
     if( radiation_flux_data.at(u)!=radiation_flux_data.at(u) ){
@@ -2455,15 +2458,13 @@ std::vector<float> RadiationModel::getTotalAbsorbedFlux( void ){
   std::vector<float> total_flux;
   total_flux.resize(context->getPrimitiveCount(),0.f);
 
-  std::vector<uint> UUIDs = context->getAllUUIDs();
-  
   for( std::map<std::string,uint>::iterator iter = band_names.begin(); iter != band_names.end(); iter++ ){
     
     std::string label = iter->first;
 
-    for( size_t u=0; u<context->getPrimitiveCount(); u++ ){
+    for( size_t u=0; u<context_UUIDs.size(); u++ ){
 
-      uint p = UUIDs.at(u);
+      uint p = context_UUIDs.at(u);
       
       char str[50];
       printf(str,"radiation_flux_%s",label.c_str());
@@ -3556,16 +3557,13 @@ void RadiationModel::initializeBuffer3D( RTbuffer &buffer, std::vector<std::vect
 
 float RadiationModel::calculateGtheta( helios::Context* context, const helios::vec3 view_direction ){
 
-  std::vector<uint> UUIDs = context->getAllUUIDs();
-  int Nprimitives = UUIDs.size();
-
   vec3 dir = view_direction;
   dir.normalize();
 
   float Gtheta = 0;
   float total_area = 0;
-  for( std::size_t u=0; u<Nprimitives; u++ ){
-    std::size_t p = UUIDs.at(u);
+  for( std::size_t u=0; u<context_UUIDs.size(); u++ ){
+    std::size_t p = context_UUIDs.at(u);
     
     helios::Primitive* prim = context->getPrimitivePointer(p);
 

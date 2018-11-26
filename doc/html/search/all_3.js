@@ -11,7 +11,7 @@ var searchData=
   ['deletehitpoint',['deleteHitPoint',['../class_li_d_a_rcloud.html#a088d0b0c2250c6f1d112d1cf80e183fe',1,'LiDARcloud']]],
   ['deleteprimitive',['deletePrimitive',['../classhelios_1_1_context.html#aa122ae448c7730fef13fd40c01a2357a',1,'helios::Context::deletePrimitive(const uint UUID)'],['../classhelios_1_1_context.html#af566abe775819f6c823ce538bf5465a4',1,'helios::Context::deletePrimitive(const std::vector&lt; uint &gt; UUIDs)']]],
   ['dependent_20packages',['Dependent Packages',['../_dependencies.html',1,'']]],
-  ['deprecated',['DEPRECATED',['../class_visualizer.html#a9662df39fa388e0445b4f44535377b4a',1,'Visualizer::DEPRECATED(void addSkyDomeByCenter(const float radius, const helios::vec3 center, const uint Ndivisions, const char *texture_file, int layer))'],['../class_visualizer.html#abef8419c3607eb674d42620f1d5e36cc',1,'Visualizer::DEPRECATED(void colorContextPrimitivesByVariable(const char *variable_name))'],['../class_visualizer.html#a4fabfab31b919f34b97f671f2e41892f',1,'Visualizer::DEPRECATED(void colorContextPrimitivesByVariable(const char *variable_name, const std::vector&lt; uint &gt; UUIDs))']]],
+  ['deprecated',['DEPRECATED',['../class_visualizer.html#a9662df39fa388e0445b4f44535377b4a',1,'Visualizer']]],
   ['direction2rc',['direction2rc',['../struct_scan_metadata.html#a0eb70c4b0c8aa41d0d25093b381edd49',1,'ScanMetadata']]],
   ['disablecolorbar',['disableColorbar',['../class_visualizer.html#a5c8d26d18bd0bea73272834e8ed1bbe2',1,'Visualizer']]],
   ['disableemission',['disableEmission',['../class_radiation_model.html#a45774805001673a42a94e5cd1e45be4c',1,'RadiationModel']]],

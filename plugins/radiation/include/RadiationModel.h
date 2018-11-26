@@ -189,6 +189,9 @@ protected:
   //! Pointer to the context
   helios::Context* context;
 
+  //! UUIDs currently added from the Context
+  std::vector<uint> context_UUIDs;
+
   //! Number of rays to be used in direct radiation model for each band.
   std::vector<size_t> directRayCount;
 

@@ -690,19 +690,6 @@ public:
   */
   void buildContextGeometry( helios::Context* context, std::vector<uint> UUIDs );
 
-  //! Color all primitives from Context by color mapping one of their variables
-  /** 
-      \param[in] "variable_name" Name of a variable in the Context
-  */
-  DEPRECATED( void colorContextPrimitivesByVariable( const char* variable_name ) );
-
-  //! Color select primitives from Context by color mapping one of their variables
-  /** 
-      \param[in] "variable_name" Name of a variable in the Context
-      \param[in] "UUIDs" UUID's of primitives to be colored by variable
-  */
-  DEPRECATED( void colorContextPrimitivesByVariable( const char* variable_name, const std::vector<uint> UUIDs ) );
-
   //! Color primitives from Context by color mapping their `Primitive Data'
   /** \param[in] "data_name" Name of `Primitive Data'
       \note If the data value does not exist for a certain primitive, a value of 0 is assumed.

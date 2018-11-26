@@ -103,7 +103,7 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 	  float amag = d_magnitude(a);
 	  float bmag = d_magnitude(b);
 	  float2 uv = make_float2( ddota/amag/amag, 1.f-ddotb/bmag/bmag );
-	  uint ID = maskID[ objID ];
+	  uint ID = maskID[U];
 	  int2 sz = masksize[ID];
 	  uint3 ind;
 	  if( uvID[U]==-1 ){ //does not have custom (u,v) coordinates
@@ -192,7 +192,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 	  }
 	}else{ //has texture transparency
 
-	  uint ID = maskID[ U ];
+	  uint ID = maskID[U];
 	  int2 sz = masksize[ID];
 
 	  float2 uv0 = uvdata[ make_uint2(0,uvID[U]) ];
