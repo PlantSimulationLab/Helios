@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['elevation',['elevation',['../structhelios_1_1_spherical_coord.html#a7772770b8529c3e86d44b1172b7339db',1,'helios::SphericalCoord']]]
+  ['day',['day',['../structhelios_1_1_date.html#a876b0513daf0bcf0ab305029be3377d8',1,'helios::Date']]]
 ];

@@ -63,7 +63,7 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 
-<p>Structure containing metadata for a scan.  
+<p>Structure containing metadata for a terrestrial scan.  
  <a href="struct_scan_metadata.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>&gt;</code></p>
@@ -112,10 +112,10 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 <tr class="separator:a200bf65b728866855ace6456365d66a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Structure containing metadata for a scan. </p>
+<div class="textblock"><p>Structure containing metadata for a terrestrial scan. </p>
 <p>A scan is initialized by providing 1) the origin of the scan (see <a class="el" href="struct_scan_metadata.html#a200bf65b728866855ace6456365d66a3">origin</a>), 2) the number of zenithal scan directions (see <a class="el" href="struct_scan_metadata.html#a8432ab0ab545a0027bb47ce84f0a6704">Ntheta</a>), 3) the range of zenithal scan angles (see <a class="el" href="struct_scan_metadata.html#a1b5a4f80f3d64d54755d2b6499f3863f">thetaMin</a>, <a class="el" href="struct_scan_metadata.html#a2654da6ef2d7d383ba912cbc6cbfeedf">thetaMax</a>), 4) the number of azimuthal scan directions (see <a class="el" href="struct_scan_metadata.html#a8d9273e0fccbfc20916c284ab6c573ac">Nphi</a>), 5) the range of azimuthal scan angles (see <a class="el" href="struct_scan_metadata.html#a019acfcaf7a3ba3fe062af1a59c24513">phiMin</a>, <a class="el" href="struct_scan_metadata.html#a29f41bdfbec57a32c60755944b4c0a7f">phiMax</a>). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses. Points are set as hits using the addHitPoint() function. There are various functions to query the scan data. </p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00196">196</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00193">193</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ad3432a838430c33eaa0b1839e00a70ed"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad3432a838430c33eaa0b1839e00a70ed">&#9670;&nbsp;</a></span>ScanMetadata()</h2>
@@ -278,7 +278,7 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 <p>Maximum zenithal angle of scan in radians. </p>
 <dl class="section note"><dt>Note</dt><dd>Zenithal angles start at 0 (x=+,y=0) to <img class="formulaInl" alt="$\frac{1}{2}\pi$" src="form_23.png"/> (x=0,y=+) through <img class="formulaInl" alt="$2\pi$" src="form_1.png"/>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00241">241</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00238">238</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>
@@ -297,7 +297,7 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 <p>Minimum zenithal angle of scan in radians. </p>
 <dl class="section note"><dt>Note</dt><dd>Zenithal angles start at 0 (x=+,y=0) to <img class="formulaInl" alt="$\frac{1}{2}\pi$" src="form_23.png"/> (x=0,y=+) through <img class="formulaInl" alt="$2\pi$" src="form_1.png"/>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00238">238</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00235">235</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>
@@ -316,7 +316,7 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 <p>Maximum zenithal angle of scan in radians. </p>
 <dl class="section note"><dt>Note</dt><dd>Zenithal angles range from <img class="formulaInl" alt="$-\frac{1}{2}\pi$" src="form_21.png"/> (downward) to <img class="formulaInl" alt="$+\frac{1}{2}\pi$" src="form_22.png"/> (upward). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00232">232</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00229">229</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>
@@ -335,7 +335,7 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 <p>Minimum zenithal angle of scan in radians. </p>
 <dl class="section note"><dt>Note</dt><dd>Zenithal angles range from <img class="formulaInl" alt="$-\frac{1}{2}\pi$" src="form_21.png"/> (downward) to <img class="formulaInl" alt="$+\frac{1}{2}\pi$" src="form_22.png"/> (upward). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00229">229</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00226">226</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>

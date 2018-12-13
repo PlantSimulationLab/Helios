@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['date',['Date',['../structhelios_1_1_date.html',1,'helios']]],
-  ['dummymodel',['DummyModel',['../class_dummy_model.html',1,'']]],
-  ['dupex',['Dupex',['../struct_dupex.html',1,'']]]
+  ['colormap',['Colormap',['../struct_colormap.html',1,'']]],
+  ['context',['Context',['../classhelios_1_1_context.html',1,'helios']]]
 ];

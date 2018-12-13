@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['empiricalmodelcoefficients',['EmpiricalModelCoefficients',['../struct_empirical_model_coefficients.html',1,'']]],
-  ['energybalancemodel',['EnergyBalanceModel',['../class_energy_balance_model.html',1,'']]]
+  ['date',['Date',['../structhelios_1_1_date.html',1,'helios']]],
+  ['dummymodel',['DummyModel',['../class_dummy_model.html',1,'']]],
+  ['dupex',['Dupex',['../struct_dupex.html',1,'']]]
 ];

@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['int2',['int2',['../structhelios_1_1int2.html',1,'helios']]],
-  ['int3',['int3',['../structhelios_1_1int3.html',1,'helios']]],
-  ['int4',['int4',['../structhelios_1_1int4.html',1,'helios']]]
+  ['hitpoint',['HitPoint',['../struct_hit_point.html',1,'']]],
+  ['hittable',['HitTable',['../class_hit_table.html',1,'']]]
 ];

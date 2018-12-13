@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['hitpoint',['HitPoint',['../struct_hit_point.html',1,'']]],
-  ['hittable',['HitTable',['../class_hit_table.html',1,'']]]
+  ['globaldata',['GlobalData',['../structhelios_1_1_global_data.html',1,'helios']]],
+  ['glyph',['Glyph',['../class_glyph.html',1,'']]],
+  ['gridcell',['GridCell',['../struct_grid_cell.html',1,'']]]
 ];

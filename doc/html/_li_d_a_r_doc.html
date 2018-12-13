@@ -201,7 +201,7 @@ Loading scan data from file</h1>
 <p>Scan metadata is typically specified by loading an XML file containing the relevant metadata for each scan. The XML file specifies the path to an ASCII text file that contains the data for each scan. The code below gives a sample XML file for loading multiple scans. As specified in the metadata table above, not all entries are required.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> &lt;helios&gt;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   &lt;scan&gt;
      &lt;filename&gt; /path/to/data/file.xyz &lt;/filename&gt;
-     &lt;ASCII_format&gt; theta phi x y z r255 g255 b255 &lt;/ASCII_format&gt;
+     &lt;ASCII_format&gt; zenith azimuth x y z r255 g255 b255 &lt;/ASCII_format&gt;
      &lt;origin&gt; 0 0 0 &lt;/origin&gt;
      &lt;size&gt; 2500 4500 &lt;/size&gt;
      &lt;thetaMin&gt; 30 &lt;/thetaMin&gt; &lt;!-- OPTIONAL - default: 0 --&gt;
@@ -224,9 +224,9 @@ Loading scan data from file</h1>
 <tr>
 <td>z </td><td>z-component of the (x,y,z) Cartesian coordinate of the hit point. </td><td>None: REQUIRED  </td></tr>
 <tr>
-<td>theta (or theta_rad) </td><td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees. </td><td>Calculated from scan origin and hit (x,y,z).  </td></tr>
+<td>zenith (or zenith_rad) </td><td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees. </td><td>Calculated from scan origin and hit (x,y,z).  </td></tr>
 <tr>
-<td>phi (or phi_rad) </td><td>Azithal angle (degrees) of scan ray direction corresponding to the hit point. If "phi_rad" is used, phi has units of radians rather than degrees. </td><td>Calculated from scan origin and hit (x,y,z).  </td></tr>
+<td>azimuth (or phi_rad) </td><td>Azithal angle (degrees) of scan ray direction corresponding to the hit point. If "phi_rad" is used, phi has units of radians rather than degrees. </td><td>Calculated from scan origin and hit (x,y,z).  </td></tr>
 <tr>
 <td>r (or r255) </td><td>red component of (r,g,b) hit color. If "r" tag is used, r is a floating point value and 0&lt;r&lt;1. If "r255" is used, r is an integer and 0&lt;r&lt;255. </td><td>r=1 or r255=255  </td></tr>
 <tr>
