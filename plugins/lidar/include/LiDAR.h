@@ -23,8 +23,6 @@
 
 #include "s_hull_pro.h"
 
-/** /defgroup lidar LiDAR */
-
 template <class datatype> class HitTable {
 public:
 
@@ -189,9 +187,8 @@ struct GridCell{
   }
 };
 
-//! Structure containing metadata for a scan
+//! Structure containing metadata for a terrestrial scan
 /** A scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of azimuthal scan directions (see \ref Nphi), 5) the range of azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint() function. There are various functions to query the scan data.
-    \ingroup lidar
 */
 struct ScanMetadata{
 
@@ -246,9 +243,7 @@ struct ScanMetadata{
   
 };
 
-
-//! Primary class for LiDAR plug-in
-/** \ingroup lidar */
+//! Primary class for terrestrial LiDAR scan
 class LiDARcloud{
  private:
 
@@ -284,24 +279,14 @@ class LiDARcloud{
   std::vector<helios::SphericalCoord> reconstructed_alphamasks_rotation;
   std::vector<uint> reconstructed_alphamasks_gridcell;
   std::string reconstructed_alphamasks_maskfile;
-
-  
-  std::vector<std::vector<helios::vec3> > reconstructed_trimesh_center;
-  std::vector<std::vector<float> > reconstructed_trimesh_size;
-  std::vector<std::vector<helios::SphericalCoord> > reconstructed_trimesh_rotation;
-  std::string trimesh_PLY;
+  std::vector<bool> reconstructed_alphamasks_direct_flag;
   
   void leafReconstructionFloodfill( void );
 
-  void backfillLeavesTriangular( void );
-
   void backfillLeavesAlphaMask( const std::vector<float> leaf_size, const float leaf_aspect_ratio, const float solidfraction, const std::vector<bool> group_filter_flag );
-
-  void backfillLeavesTriangularMesh( const std::vector<float> leaf_size );
 
   void calculateLeafAngleCDF( const uint Nbins, std::vector<std::vector<float> > &CDF_theta, std::vector<std::vector<float> > &CDF_phi );
   
-  //void floodfill( HitTable<int>* I, HitTable<int>* hitmap, const int i, const int j, const int tag);
   void floodfill( size_t t, std::vector<Triangulation> &cloud_triangles, std::vector<int> &fill_flag, std::vector<std::vector<int> > &nodes, const int tag, const int depth, const int maxdepth );
   
  public:
@@ -331,14 +316,6 @@ class LiDARcloud{
   //! Add a LiDAR scan to the point cloud
   /** \param[in] "newscan" LiDAR scan data structure */
   void addScan( const ScanMetadata newscan );
-
-  //! Specify a scan point as a hit by providing the (x,y,z) coordinates
-  /** 
-      \param[in] "scanID" ID of scan hit point to which hit point should be added.  
-      \param[in] "xyz" (x,y,z) coordinates of hit point.
-      \note The spherical direction of the scan point is calculated automatically from a vector connecting the scan origin and the (x,y,z) hit point.
-  */
-  void addHitPoint( const uint scanID, const helios::vec3 xyz );
     
   //! Specify a scan point as a hit by providing the (x,y,z) coordinates and scan ray direction
   /** 
@@ -610,10 +587,17 @@ class LiDARcloud{
    */
   void addTrunkReconstructionToVisualizer( Visualizer* visualizer, const helios::RGBcolor trunk_color ) const;
   
-  //! Add reconstructed leaves (triangles or alpha masks) to the Context
+  //! Add reconstructed leaves (texture-masked patches) to the Context
   /** \param[in] "context" Pointer to the Helios context
+      \note This function creates the following primitive data for each patch 1) ``gridCell" which indicates the index of the gridcell that contains the patch, 2) ``directFlag" which equals 1 if the leaf was part of the direct reconstruction, and 0 if the leaf was backfilled.
    */
   std::vector<uint> addLeafReconstructionToContext( helios::Context* context ) const;
+
+  //! Add triangle groups used in the direct reconstruction to the Context
+  /** \param[in] "context" Pointer to the Helios context
+      \note This function creates primitive data called ``leafGroup" which provides an identifier for each triangle based on the fill group it is in.
+  */
+  std::vector<uint> addReconstructedTriangleGroupsToContext( helios::Context* context ) const;
 
   //! Add reconstructed trunk triangles to the Context
   /** \param[in] "context" Pointer to the Helios context
@@ -782,6 +766,5 @@ d the last cell's index is Ncells-1. */
   void trunkReconstruction( const helios::vec3 box_center, const helios::vec3 box_size, const float Lmax, const float max_aspect_ratio );
   
 };
-
 
 #endif

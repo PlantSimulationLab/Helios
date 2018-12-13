@@ -17,6 +17,7 @@
 
 #include "LiDAR.cuh"
 #include "LiDAR.h"
+#include "AerialLiDAR.h"
 
 __host__ __device__ float2 operator+(const float2 &a, const float2 &b) {
 
@@ -1574,7 +1575,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file )
     CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
 
     //copy hit flag back to host
-    CUDA_CHECK_ERROR( cudaMemcpy(bb_hit, d_bb_hit, N*sizeof(int), cudaMemcpyDeviceToHost) );
+    CUDA_CHECK_ERROR( cudaMemcpy(bb_hit, d_bb_hit, N*sizeof(uint), cudaMemcpyDeviceToHost) );
 
     CUDA_CHECK_ERROR( cudaFree(d_hit_xyz) );
     CUDA_CHECK_ERROR( cudaFree(d_bb_hit) );
@@ -1942,3 +1943,1136 @@ __global__ void intersectTriangles( const size_t N, const float3 origin, float3*
 //   d_hit_t[idx] = tmin;
   
 // }
+
+//*************************************************************//
+//              AERIAL LIDAR DEFINITIONS                      //
+//************************************************************//
+
+void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta ){
+  calculateLeafAreaGPU( Gtheta, 1 );
+}
+
+void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVoxelHits ){
+
+  if( printmessages ){
+    std::cout << "Calculating leaf area..." << std::endl;
+  }
+   
+  if( !hitgridcellcomputed ){
+    calculateHitGridCellGPU();
+  }
+  
+  const uint Nscans = getScanCount();
+  const uint Ncells = getGridCellCount();
+
+  //variable aggregates over all scans where we just keep tacking hits on the end for all scans
+  std::vector<float> dr_agg; //dr is path length through grid cell
+  dr_agg.resize(Ncells);
+  std::vector<float> hit_denom_agg; //hit_denom corresponds to total number of scan points that reached a given grid cell
+  hit_denom_agg.resize(Ncells,0);
+  std::vector<float> hit_inside_agg; //hit_inside corresponds to scan points that hit something within a particular grid cell.
+  hit_inside_agg.resize(Ncells,0);
+  
+  // We are going to perform all calculations on a scan-by-scan basis: loop through each scan
+  for( uint s=0; s<Nscans; s++ ){
+
+    // Perform ray-volume intersection tests to determine P
+
+    std::vector<helios::vec3> this_scan_xyz, this_scan_raydir;
+
+    for( size_t r=0; r<getHitCount(); r++ ){
+      if( getHitScanID(r)==s ){
+	this_scan_xyz.push_back( getHitXYZ(r) );
+	this_scan_raydir.push_back( sphere2cart(getHitRaydir(r)) );
+      }
+    }
+
+    size_t Nhits = this_scan_xyz.size();
+
+    float3* scan_xyz = (float3*)malloc( Nhits*sizeof(float3) );
+    float3* scan_raydir = (float3*)malloc( Nhits*sizeof(float3) );
+   
+    for( size_t r=0; r<Nhits; r++ ){
+      scan_xyz[r] = vec3tofloat3(this_scan_xyz.at(r));
+      scan_raydir[r] = vec3tofloat3(this_scan_raydir.at(r));
+    }
+
+    float3* d_scan_xyz;
+    CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_xyz, Nhits*sizeof(float3)) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_scan_xyz, scan_xyz, Nhits*sizeof(float3), cudaMemcpyHostToDevice) );
+
+    float3* d_scan_raydir;
+    CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_raydir, Nhits*sizeof(float3)) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_scan_raydir, scan_raydir, Nhits*sizeof(float3), cudaMemcpyHostToDevice) );
+
+    float* d_dr;
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr, Ncells*sizeof(float)) );
+    float* dr = (float*)malloc( Ncells*sizeof(float) );
+
+    float* d_hit_denom;
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_denom, Ncells*sizeof(float)) );
+    float* hit_denom = (float*)malloc( Ncells*sizeof(float) );
+
+    float* d_hit_inside;
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_inside, Ncells*sizeof(float)) );
+    float* hit_inside = (float*)malloc( Ncells*sizeof(float) );
+
+    float3* d_cell_center;
+    CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_cell_center, Ncells*sizeof(float3)) );
+    float3* cell_center = (float3*)malloc( Ncells*sizeof(float3) );
+
+    float3* d_cell_anchor;
+    CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_cell_anchor, Ncells*sizeof(float3)) );
+    float3* cell_anchor = (float3*)malloc( Ncells*sizeof(float3) );
+
+    float3* d_cell_size;
+    CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_cell_size, Ncells*sizeof(float3)) );
+    float3* cell_size = (float3*)malloc( Ncells*sizeof(float3) );
+
+    float* d_cell_rotation;
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_cell_rotation, Ncells*sizeof(float)) );
+    float* cell_rotation = (float*)malloc( Ncells*sizeof(float) );
+
+    for( uint c=0; c<Ncells; c++ ){
+      
+      //load the attributes of the grid cell
+      cell_center[c] = vec3tofloat3(getCellCenter(c));
+      cell_anchor[c] = vec3tofloat3(getCellGlobalAnchor(c));
+      cell_size[c] = vec3tofloat3(getCellSize(c));
+      cell_rotation[c] = getCellRotation(c);
+
+    }
+
+    CUDA_CHECK_ERROR( cudaMemcpy(d_cell_center, cell_center, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_cell_anchor, cell_anchor, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_cell_size, cell_size, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_cell_rotation, cell_rotation, Ncells*sizeof(float), cudaMemcpyHostToDevice) );
+
+    CUDA_CHECK_ERROR( cudaMemset( d_dr, 0, Ncells*sizeof(float)) );
+    CUDA_CHECK_ERROR( cudaMemset( d_hit_denom, 0, Ncells*sizeof(float)) );
+    CUDA_CHECK_ERROR( cudaMemset( d_hit_inside, 0, Ncells*sizeof(float)) );
+
+    uint3 dimBlock = make_uint3( fmin(16,Nhits), fmin(16,Ncells), 1 );
+    uint3 dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), ceil(float(Ncells)/dimBlock.y), 1  );
+
+    if( dimBlock.x==0 && dimGrid.x==0 && dimGrid.y==0 ){
+      continue;
+    }
+
+    intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, d_scan_xyz, d_scan_raydir, Ncells, d_cell_center, d_cell_anchor, d_cell_size, d_cell_rotation, d_dr, d_hit_denom, d_hit_inside );
+
+    cudaDeviceSynchronize();
+    CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
+    
+    //copy results back to host
+    CUDA_CHECK_ERROR( cudaMemcpy( dr, d_dr, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK_ERROR( cudaMemcpy( hit_denom, d_hit_denom, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK_ERROR( cudaMemcpy( hit_inside, d_hit_inside, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
+
+    for( uint c=0; c<Ncells; c++ ){
+      
+	hit_denom_agg.at(c) += hit_denom[c];
+	hit_inside_agg.at(c) += hit_inside[c];
+
+	dr_agg.at(c) += dr[c]/hit_denom[c];
+	// for( int i=0; i<Nhits; i++ ){
+	//   if( dr[c*Nhits+i]>0 ){
+	//     dr_agg.at(c).push_back( dr[c*Nhits+i] );
+	//   }
+	// }
+    }
+    
+    free( scan_xyz );
+    free( scan_raydir );
+    free( dr );
+    free( hit_denom );
+    free( hit_inside );
+    CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
+    CUDA_CHECK_ERROR( cudaFree(d_scan_raydir) );
+    CUDA_CHECK_ERROR( cudaFree(d_dr) );
+    CUDA_CHECK_ERROR( cudaFree(d_hit_denom) );
+    CUDA_CHECK_ERROR( cudaFree(d_hit_inside) );
+
+ 
+  }//end scan loop
+
+  //------------------ Perform inversion to get LAD --------------------//
+
+  if( printmessages ){
+    std::cout << "Inverting to find LAD..." << std::flush;
+  }
+    
+  // float etol = 5e-5;
+  // uint maxiter = 100;
+    
+  // float error, eold, aold, tmp;
+  // for( uint v=0; v<Ncells; v++ ){
+      
+  //   if( Gtheta[v]==0 || Gtheta[v]!=Gtheta[v] ){
+  //     // if( printmessages ){
+  //     // 	std::cout << "G(theta) value bad for cell " << v << ": " << Gtheta[v] << std::endl;
+  //     // }
+  //     setCellLeafArea(0,v);
+  //     continue;
+  //   }else if( hit_after_agg[v]-hit_before_agg[v]<0 ){
+  //     if( printmessages ){
+  // 	std::cout << "Negative number of rays reaching cell " << v << ": " << hit_after_agg[v] << " " << hit_before_agg[v] << std::endl;
+  //     }
+  //     setCellLeafArea(0,v);
+  //     continue;
+  //   }else if( hit_inside_agg[v]<minVoxelHits ){
+  //     if( printmessages ){
+  // 	std::cout << "Not enough hits in voxel: " << hit_inside_agg[v] << " < " << minVoxelHits << std::endl;
+  //     }
+  //     setCellLeafArea(0,v);
+  //     continue;
+  //   }
+      
+  //   float P = 1.f-float(hit_inside_agg[v])/float(hit_after_agg[v]-hit_before_agg[v]);
+
+  //    //assert(P>0);
+      
+  //   //initial guesses
+  //   float a = 0.1f;
+  //   float h = 0.01f;
+    
+  //   float mean = 0.f;
+  //   uint count=0;
+  //   for( int j=0; j<dr_agg.at(v).size(); j++ ){
+  //     mean += exp(-a*dr_agg.at(v).at(j)*Gtheta[v]);
+  //     count++;
+  //     }
+  //   mean /= float(dr_agg.at(v).size());      
+  //   error = fabs(mean-P)/P;
+    
+  //   tmp = a;
+    
+  //   a = a + h;
+    
+  //   uint iter = 0;
+  //   while( error>etol && iter<maxiter){
+      
+  //     aold = tmp;
+  //     eold = error;
+      
+  //     float mean = 0.f;
+  //     uint count = 0;
+  //     for( int j=0; j<dr_agg.at(v).size(); j++ ){
+  // 	mean += exp(-a*dr_agg.at(v).at(j)*Gtheta[v]);
+  // 	count ++;
+  //     }
+  //     assert( count!=0 );
+  //     mean /= float(count);      
+  //     error = fabs(mean-P)/P;
+      
+  //     tmp = a;
+      
+  //     if( error==eold ){
+  // 	break;
+  //     }
+      
+  //     a = fabs( (aold*error-a*eold)/(error-eold) );
+      
+  //     iter++;
+      
+  //   }
+    
+  //   float dr_bar = 0;
+  //   for( uint i=0; i<dr_agg.at(v).size(); i++ ){
+  //     dr_bar += dr_agg.at(v).at(i);
+  //   }
+  //   dr_bar /= float(dr_agg.at(v).size());
+    
+  //   if( iter>=maxiter-1 || a!=a || a>100 ){
+  //     if( printmessages ){
+  // 	std::cout << "WARNING: LAD inversion failed for volume #" << v << ". Using average dr formulation." << std::endl;
+  //     }
+      
+  //     a = (1.f-P)/(dr_bar*Gtheta[v]);
+      
+  //   }
+
+  //   if( a>5 ){
+  //     a = fmin((1.f-P)/dr_bar/Gtheta[v],-log(P)/dr_bar/Gtheta[v]);
+  //   }
+
+  //   helios::vec3 gridsize = getCellSize(v);
+  //   setCellLeafArea(a*gridsize.x*gridsize.y*gridsize.z,v);
+
+  //   setCellGtheta( Gtheta[v], v );
+
+  //   if( printmessages ){
+  //     std::cout << "Vol #" << v << " mean dr: " << dr_bar << std::endl;
+  //     std::cout << "Vol #" << v << " mean G(theta): " << Gtheta[v] << std::endl;
+  //     //std::cout << "Vol #" << v << " intersections: " << hit_inside_agg[v] << " " << hit_after_agg[v] << " " << hit_before_agg[v] << std::endl;
+      
+  //     std::cout << "Vol #" << v << " LAD: " << a << std::endl;
+  //     //std::cout << "Vol #" << v << " LAD: " << a << std::endl;
+  //     //   cout << "Vol #" << v << " LAD: " << (1.f-P)/(dr_bar[v]*Gthetav]) << " [point quadrat]" << endl;
+  //     //std::cout << "Vol #" << v << " Leaf Area: " << getCellLeafArea(v)*100.f*100.f << " [P = mean(exp(-a*dr*Gtheta))]" << std::endl;
+  //     //std::cout << "Vol #" << v << " Leaf Area: " << -log(P)/(dr_bar*Gtheta[v])*gridsize.x*gridsize.y*gridsize.z*10000.f << " [a = -ln(P)/(dr*Gtheta)]" << std::endl;
+  //     // A_sum += LAD[v]*gridsize.x*gridsize.y*gridsize.z*100.f*100.f;
+  //   }
+      
+  // }
+
+  std::ofstream file_inside;
+  file_inside.open("../output/hit_inside_2D.txt");
+  std::ofstream file_outside;
+  file_outside.open("../output/hit_outside_2D.txt");
+
+  for( uint v=0; v<Ncells; v++ ){
+
+    // float dr_bar = 0;
+    // for( uint i=0; i<dr_agg.at(v).size(); i++ ){
+    //   dr_bar += dr_agg.at(v).at(i);
+    // }
+    // dr_bar /= float(dr_agg.at(v).size());
+    //float dr_bar = dr_agg.at(v)/float(Nscans);
+    float dr_bar = getCellSize(v).z;
+    
+    float P = 1.f-float(hit_inside_agg[v])/float(hit_denom_agg[v]);
+
+    float a = -log(P)/dr_bar/Gtheta;
+
+    helios::vec3 gridsize = getCellSize(v);
+    setCellLeafArea(a*gridsize.x*gridsize.y*gridsize.z,v);
+
+    if( printmessages ){
+      // std::cout << "Vol #" << v << " LAD: " << a << std::endl;
+      //std::cout << "Vol #" << v << " LAI: " << a*gridsize.z << std::endl;
+      //std::cout << "Vol #" << v << " dr: " << dr_bar << std::endl;
+      // std::cout << "Vol #" << v << " P: " << P << std::endl;
+    }
+
+    file_inside << hit_inside_agg[v] << std::endl;
+    file_outside << hit_denom_agg[v] << std::endl;
+    
+  }
+
+  file_inside.close();
+  file_outside.close();
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+  }
+    
+}
+
+void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_file ){
+
+  if( printmessages ){
+    std::cout << "Performing synthetic LiDAR scan..." << std::endl;
+  }
+
+  if( printmessages ){
+    disableMessages();
+    loadXML(xml_file);
+    enableMessages();
+  }else{
+    loadXML(xml_file);
+  }
+  
+  AerialLiDARcloud synthscan;
+
+  if( !printmessages ){
+    synthscan.disableMessages();
+  }
+    
+  //Load the synthetic scan metedata
+  synthscan.loadXML(xml_file);
+
+  //Determine bounding box for Context geometry
+  helios::vec2 xbounds, ybounds, zbounds;
+  context->getDomainBoundingBox(xbounds,ybounds,zbounds);
+
+  if( xbounds.x==xbounds.y ){
+    xbounds.y = xbounds.x+1.f;
+  }
+  if( ybounds.x==ybounds.y ){
+    ybounds.y = ybounds.x+1.f;
+  }
+  if( zbounds.x==zbounds.y ){
+    zbounds.y = zbounds.x+1.f;
+  }
+
+  float3 bb_center = make_float3(xbounds.x+0.5*(xbounds.y-xbounds.x),ybounds.x+0.5*(ybounds.y-ybounds.x),zbounds.x+0.5*(zbounds.y-zbounds.x));
+  float3 bb_size = make_float3(xbounds.y-xbounds.x,ybounds.y-ybounds.x,zbounds.y-zbounds.x);
+
+  //get geometry information and copy to GPU
+
+  size_t c=0;
+
+  //----- PATCHES ----- //
+
+  //figure out how many patches
+  size_t Npatches = 0;
+  for( int p=0; p<context->getPrimitiveCount(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(p);
+    if( prim->getType() == helios::PRIMITIVE_TYPE_PATCH ){
+      Npatches++;
+    }
+  }
+
+  float3* patch_vertex0 = (float3*)malloc(Npatches * sizeof(float3)); //allocate host memory
+  float3* patch_vertex1 = (float3*)malloc(Npatches * sizeof(float3)); //allocate host memory
+  float3* patch_vertex2 = (float3*)malloc(Npatches * sizeof(float3)); //allocate host memory
+  float3* patch_vertex3 = (float3*)malloc(Npatches * sizeof(float3)); //allocate host memory
+
+  c=0;
+  for( int p=0; p<context->getPrimitiveCount(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(p);
+    if( prim->getType() == helios::PRIMITIVE_TYPE_PATCH ){
+      std::vector<helios::vec3> verts = prim->getVertices();
+      patch_vertex0[c] = vec3tofloat3(verts.at(0));
+      patch_vertex1[c] = vec3tofloat3(verts.at(1));
+      patch_vertex2[c] = vec3tofloat3(verts.at(2));
+      patch_vertex3[c] = vec3tofloat3(verts.at(3));
+      c++;
+    }
+  }
+  
+  float3* d_patch_vertex0;
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_patch_vertex0,Npatches*sizeof(float3)) ); //allocate device memory
+  CUDA_CHECK_ERROR( cudaMemcpy(d_patch_vertex0, patch_vertex0, Npatches*sizeof(float3), cudaMemcpyHostToDevice) );
+  float3* d_patch_vertex1;
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_patch_vertex1,Npatches*sizeof(float3)) ); //allocate device memory
+  CUDA_CHECK_ERROR( cudaMemcpy(d_patch_vertex1, patch_vertex1, Npatches*sizeof(float3), cudaMemcpyHostToDevice) );
+  float3* d_patch_vertex2;
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_patch_vertex2,Npatches*sizeof(float3)) ); //allocate device memory
+  CUDA_CHECK_ERROR( cudaMemcpy(d_patch_vertex2, patch_vertex2, Npatches*sizeof(float3), cudaMemcpyHostToDevice) );
+  float3* d_patch_vertex3;
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_patch_vertex3,Npatches*sizeof(float3)) ); //allocate device memory
+  CUDA_CHECK_ERROR( cudaMemcpy(d_patch_vertex3, patch_vertex3, Npatches*sizeof(float3), cudaMemcpyHostToDevice) );
+
+  /** \todo Need to check if patch has a transparency channel, and if so get and store it. */
+
+  //----- TRIANGLES ----- //
+
+  //figure out how many triangles
+  size_t Ntriangles = 0;
+  for( int p=0; p<context->getPrimitiveCount(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(p);
+    if( prim->getType() == helios::PRIMITIVE_TYPE_TRIANGLE ){
+      Ntriangles++;
+    }
+  }
+
+  float3* tri_vertex0 = (float3*)malloc(Ntriangles * sizeof(float3)); //allocate host memory
+  float3* tri_vertex1 = (float3*)malloc(Ntriangles * sizeof(float3)); //allocate host memory
+  float3* tri_vertex2 = (float3*)malloc(Ntriangles * sizeof(float3)); //allocate host memory
+
+  c=0;
+  for( int p=0; p<context->getPrimitiveCount(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(p);
+    if( prim->getType() == helios::PRIMITIVE_TYPE_TRIANGLE ){
+      std::vector<helios::vec3> verts = prim->getVertices();
+      tri_vertex0[c] = vec3tofloat3(verts.at(0));
+      tri_vertex1[c] = vec3tofloat3(verts.at(1));
+      tri_vertex2[c] = vec3tofloat3(verts.at(2));
+      c++;
+    }
+  }
+  
+  float3* d_tri_vertex0;
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_tri_vertex0,Ntriangles*sizeof(float3)) ); //allocate device memory
+  CUDA_CHECK_ERROR( cudaMemcpy(d_tri_vertex0, tri_vertex0, Ntriangles*sizeof(float3), cudaMemcpyHostToDevice) );
+  float3* d_tri_vertex1;
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_tri_vertex1,Ntriangles*sizeof(float3)) ); //allocate device memory
+  CUDA_CHECK_ERROR( cudaMemcpy(d_tri_vertex1, tri_vertex1, Ntriangles*sizeof(float3), cudaMemcpyHostToDevice) );
+  float3* d_tri_vertex2;
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_tri_vertex2,Ntriangles*sizeof(float3)) ); //allocate device memory
+  CUDA_CHECK_ERROR( cudaMemcpy(d_tri_vertex2, tri_vertex2, Ntriangles*sizeof(float3), cudaMemcpyHostToDevice) );
+
+
+  for( int s=0; s<synthscan.getScanCount(); s++ ){
+
+    float coneangle = synthscan.getScanConeAngle(s);
+
+    helios::vec3 center = synthscan.getScanCenter(s);
+
+    helios::vec2 extent = synthscan.getScanExtent(s);
+
+    float scandensity = synthscan.getScanDensity(s);
+
+    size_t N = scandensity*extent.x*extent.y;
+
+    assert( N>0 );
+
+    std::vector<helios::vec3> rayorigin;
+    rayorigin.resize(N);
+    
+    std::vector<helios::vec3> raydir;
+    raydir.resize(N);
+  
+    for (size_t i=0; i<N; i++ ){
+
+      float x = center.x - 0.5*extent.x + context->randu()*extent.x;
+      float y = center.y - 0.5*extent.y + context->randu()*extent.y;
+      float z = center.z;
+
+      rayorigin.at(i) = helios::make_vec3(x,y,z);
+
+      float theta = -0.5f*M_PI+0.5f*coneangle*context->randu();
+      float phi = 2.f*M_PI*context->randu();
+
+      raydir.at(i) = helios::sphere2cart(helios::make_SphericalCoord(theta,phi));
+
+    }
+
+    float3* d_hit_xyz;
+    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_hit_xyz,N*sizeof(float3)) ); //allocate device memory
+
+    float3* d_hit_origin;
+    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_hit_origin,N*sizeof(float3)) ); //allocate device memory
+
+    //copy scan data into the host buffer
+    float3* hit_xyz = (float3*)malloc(N * sizeof(float3)); //allocate host memory
+    float3* hit_origin = (float3*)malloc(N * sizeof(float3)); //allocate host memory
+    for( std::size_t r=0; r<N; r++ ){
+      hit_xyz[r] = vec3tofloat3(rayorigin.at(r)+raydir.at(r)*10000.f);
+      hit_origin[r] = vec3tofloat3(rayorigin.at(r));
+    }
+
+    //copy from host to device memory
+    CUDA_CHECK_ERROR( cudaMemcpy(d_hit_xyz, hit_xyz, N*sizeof(float3), cudaMemcpyHostToDevice) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_hit_origin, hit_origin, N*sizeof(float3), cudaMemcpyHostToDevice) );
+
+    uint* bb_hit = (uint*)malloc(N * sizeof(uint)); //allocate host memory
+    uint* d_bb_hit;
+    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_bb_hit,N*sizeof(uint)) ); //allocate device memory
+    CUDA_CHECK_ERROR( cudaMemset( d_bb_hit, 0, N*sizeof(uint)) ); //initialize to zero, set equal to 1 if the ray is found to intersect bounding box
+    
+    //Launch kernel to determine which rays intersect bounding box
+    uint3 dimBlock = make_uint3( 512, 1, 1 );
+    uint3 dimGrid = make_uint3( ceil(float(N)/float(dimBlock.x)), 1, 1 );
+    intersectBoundingBox<<< dimGrid, dimBlock >>>( N, d_hit_origin, d_hit_xyz, bb_center, bb_size, d_bb_hit );
+
+    cudaDeviceSynchronize();
+    CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
+
+    //copy hit flag back to host
+    CUDA_CHECK_ERROR( cudaMemcpy(bb_hit, d_bb_hit, N*sizeof(uint), cudaMemcpyDeviceToHost) );
+
+    CUDA_CHECK_ERROR( cudaFree(d_hit_xyz) );
+    CUDA_CHECK_ERROR( cudaFree(d_hit_origin) );
+    CUDA_CHECK_ERROR( cudaFree(d_bb_hit) );
+
+    //determine how many rays hit the bounding box
+    uint Nbb = 0;
+    for( int i=0; i<N; i++ ){
+      if( bb_hit[i]==1 ){
+  	Nbb++;
+      }
+    }
+    N = Nbb;
+
+    if( N==0 ){
+      std::cout << "WARNING: Synthetic rays did not hit any primitives for scan " << s << "." << std::endl;
+      continue;
+    }
+
+    //make a new array of ray directions for rays that hit bounding box
+    float3* direction = (float3*)malloc(N * sizeof(float3)); //allocate host memory
+    float3* origin = (float3*)malloc(N * sizeof(float3)); //allocate host memory
+
+    int count=0;
+    for( int i=0; i<N; i++ ){
+      if( bb_hit[i]==1 ){
+  	direction[count] = vec3tofloat3(raydir.at(i));
+	origin[count] = vec3tofloat3(rayorigin.at(i)-raydir.at(i)*1e5);
+  	count++;
+      }
+    }    
+    free(bb_hit);
+
+    float3* d_raydir;
+    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_raydir,N*sizeof(float3)) ); //allocate device memory
+    CUDA_CHECK_ERROR( cudaMemcpy(d_raydir, direction, N*sizeof(float3), cudaMemcpyHostToDevice) );
+
+    float3* d_origin;
+    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_origin,N*sizeof(float3)) ); //allocate device memory
+    CUDA_CHECK_ERROR( cudaMemcpy(d_origin, origin, N*sizeof(float3), cudaMemcpyHostToDevice) );
+
+
+    //Distance to intersection
+    float* d_hit_t;
+    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_hit_t,N*sizeof(float)) ); //allocate device memory
+    float* hit_t = (float*)malloc(N * sizeof(float)); //allocate host memory
+    for( int i=0; i<N; i++ ){
+      hit_t[i] = 1e6;
+    }
+    CUDA_CHECK_ERROR( cudaMemcpy(d_hit_t, hit_t, N*sizeof(float), cudaMemcpyHostToDevice) );
+
+    dimGrid = make_uint3( ceil(float(N)/float(dimBlock.x)), 1, 1 );
+
+    //---- patch kernel ----//
+    intersectPatches<<< dimGrid, dimBlock >>>( N, d_origin, d_raydir, Npatches, d_patch_vertex0, d_patch_vertex1, d_patch_vertex2, d_patch_vertex3, d_hit_t );
+
+    cudaDeviceSynchronize();
+    CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
+      
+    //---- triangle kernel ----//
+    intersectTriangles<<< dimGrid, dimBlock >>>( N, d_origin, d_raydir, Ntriangles, d_tri_vertex0, d_tri_vertex1, d_tri_vertex2, d_hit_t );
+
+    cudaDeviceSynchronize();
+    CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
+    
+    //copy back
+    CUDA_CHECK_ERROR( cudaMemcpy(hit_t, d_hit_t, N*sizeof(float), cudaMemcpyDeviceToHost) );
+
+    size_t Nhits = 0;
+    for( size_t r=0; r<N; r++ ){
+      float t = hit_t[r];
+      if( t<1e6 ){
+	helios::vec3 dir = helios::make_vec3(direction[r].x,direction[r].y,direction[r].z);
+    	helios::vec3 hit_origin = helios::make_vec3(origin[r].x,origin[r].y,origin[r].z);
+    	helios::vec3 p = hit_origin+dir*t;
+    	addHitPoint( s, p, helios::cart2sphere(dir), helios::RGB::red );
+    	Nhits++;
+      }
+    }
+
+    CUDA_CHECK_ERROR( cudaFree(d_hit_t) );
+    CUDA_CHECK_ERROR( cudaFree(d_raydir) );
+    CUDA_CHECK_ERROR( cudaFree(d_origin) );
+    free(hit_xyz);
+    free(direction);
+    free(origin);
+    free(hit_t);
+
+    if( printmessages ){
+      std::cout << "Created synthetic scan #" << s << " with " << Nhits << " hit points." << std::endl;
+    }
+    
+  }
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+  }
+  
+}
+
+void AerialLiDARcloud::calculateSyntheticLeafArea( helios::Context* context ){
+
+  // float3* d_prim_xyz;
+
+  // const uint N = context->getPrimitiveCount();
+  
+  // float3* prim_xyz = (float3*)malloc(N * sizeof(float3)); //allocate host memory
+  // CUDA_CHECK_ERROR( cudaMalloc((void**)&d_prim_xyz,N*sizeof(float3)) ); //allocate device memory
+
+  // //copy scan data into the host buffer
+  // for( std::size_t p=0; p<N; p++ ){
+  //   std::vector<helios::vec3> verts = context->getPrimitivePointer(p)->getVertices();
+  //   prim_xyz[p] = vec3tofloat3( verts.at(0) );
+  // }
+
+  // //copy from host to device memory
+  // CUDA_CHECK_ERROR( cudaMemcpy(d_prim_xyz, prim_xyz, N*sizeof(float3), cudaMemcpyHostToDevice) );
+
+  // // ---- Grid Cells ---- //
+
+  // //! Grid cell centers on device (GPU) memory
+  // float3* d_grid_center;
+
+  // //! Grid cell global anchor on device (GPU) memory
+  // float3* d_grid_anchor;
+
+  // //! Grid sizes on device (GPU) memory
+  // float3* d_grid_size;
+
+  // //! Grid rotations on device (GPU) memory
+  // float* d_grid_rotation;
+
+  // const uint Ncells = getGridCellCount();
+
+  // float3* center = (float3*)malloc(Ncells * sizeof(float3)); //allocate host memory
+  // CUDA_CHECK_ERROR( cudaMalloc((void**)&d_grid_center,Ncells*sizeof(float3)) ); //allocate device memory
+
+  // float3* anchor = (float3*)malloc(Ncells * sizeof(float3)); //allocate host memory
+  // CUDA_CHECK_ERROR( cudaMalloc((void**)&d_grid_anchor,Ncells*sizeof(float3)) ); //allocate device memory
+
+  // float3* size = (float3*)malloc(Ncells * sizeof(float3)); //allocate host memory
+  // CUDA_CHECK_ERROR( cudaMalloc((void**)&d_grid_size,Ncells*sizeof(float3)) ); //allocate device memory
+
+  // float* rotation = (float*)malloc(Ncells * sizeof(float)); //allocate host memory
+  // CUDA_CHECK_ERROR( cudaMalloc((void**)&d_grid_rotation,Ncells*sizeof(float)) ); //allocate device memory
+  
+  // //copy grid data into the host buffer
+  // for( int c=0; c<Ncells; c++ ){
+  //   center[c] = vec3tofloat3(getCellCenter(c));
+  //   anchor[c] = vec3tofloat3(getCellGlobalAnchor(c));
+  //   size[c] = vec3tofloat3(getCellSize(c));
+  //   rotation[c] = getCellRotation(c);
+  // }
+
+  // //copy from host to device memory
+  // CUDA_CHECK_ERROR( cudaMemcpy(d_grid_center, center, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
+  // CUDA_CHECK_ERROR( cudaMemcpy(d_grid_anchor, anchor, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
+  // CUDA_CHECK_ERROR( cudaMemcpy(d_grid_size, size, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
+  // CUDA_CHECK_ERROR( cudaMemcpy(d_grid_rotation, rotation, Ncells*sizeof(float), cudaMemcpyHostToDevice) );
+
+  // free(prim_xyz);
+  // free(center);
+  // free(anchor);
+  // free(size);
+  // free(rotation);
+
+  // // Result buffer
+  // int* prim_vol = (int*)malloc(N * sizeof(int));
+  // int* d_prim_vol;
+  // CUDA_CHECK_ERROR( cudaMalloc(&d_prim_vol,N*sizeof(int)) );
+
+  // dim3 dimBlock( 64, 1 );
+  // dim3 dimGrid( ceil(N/64.f) );
+  // insideVolume <<< dimGrid, dimBlock >>>( N, d_prim_xyz, getGridCellCount(), d_grid_size, d_grid_center, d_grid_anchor, d_grid_rotation, d_prim_vol );
+
+  // CUDA_CHECK_ERROR( cudaPeekAtLastError() );
+  // CUDA_CHECK_ERROR( cudaDeviceSynchronize() );
+  
+  // CUDA_CHECK_ERROR( cudaMemcpy(prim_vol, d_prim_vol, N*sizeof(int), cudaMemcpyDeviceToHost) );
+
+  // std::vector<float> total_area;
+  // total_area.resize(Ncells,0.f);
+  // for( std::size_t p=0; p<N; p++ ){
+  //   if( prim_vol[p]>=0 ){
+  //     uint gridcell = prim_vol[p];
+  //     total_area.at(gridcell) += context->getPrimitivePointer(p)->getArea();
+  //     context->setPrimitiveData(p,"gridCell",helios::HELIOS_TYPE_UINT,1,&gridcell);
+  //   }
+  // }
+
+  // std::ofstream file;
+
+  // file.open("../output/synthetic_leaf_areas.txt");
+  
+  // for( int v=0; v<Ncells; v++ ){
+  //   file << total_area.at(v) << std::endl;
+  // }
+
+  // file.close();
+  
+  // free(prim_vol);
+
+  // CUDA_CHECK_ERROR( cudaFree(d_prim_vol) );
+  // CUDA_CHECK_ERROR( cudaFree(d_prim_xyz) );
+  // CUDA_CHECK_ERROR( cudaFree(d_grid_center) );
+  // CUDA_CHECK_ERROR( cudaFree(d_grid_anchor) );
+  // CUDA_CHECK_ERROR( cudaFree(d_grid_size) );
+  // CUDA_CHECK_ERROR( cudaFree(d_grid_rotation) );  
+
+}
+
+void AerialLiDARcloud::calculateHitGridCellGPU( void ){
+
+  if( printmessages ){
+    std::cout << "Grouping hit points by grid cell..." << std::flush;
+  }
+    
+  // ---- Hit Points ---- //
+
+  float3* d_hit_xyz;
+
+  uint Nscans = getScanCount();
+
+  std::size_t total_hits = getHitCount();
+
+  const uint N = total_hits;
+  
+  float3* hit_xyz = (float3*)malloc(N * sizeof(float3)); //allocate host memory
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_hit_xyz,N*sizeof(float3)) ); //allocate device memory
+
+  //copy scan data into the host buffer
+  for( std::size_t r=0; r<getHitCount(); r++ ){
+    hit_xyz[r] = vec3tofloat3(getHitXYZ(r));
+  }
+
+  //copy from host to device memory
+  CUDA_CHECK_ERROR( cudaMemcpy(d_hit_xyz, hit_xyz, N*sizeof(float3), cudaMemcpyHostToDevice) );
+
+  // ---- Grid Cells ---- //
+
+  //! Grid cell centers on device (GPU) memory
+  float3* d_grid_center;
+
+  //! Grid cell global anchor on device (GPU) memory
+  float3* d_grid_anchor;
+
+  //! Grid sizes on device (GPU) memory
+  float3* d_grid_size;
+
+  //! Grid rotations on device (GPU) memory
+  float* d_grid_rotation;
+
+  const uint Ncells = getGridCellCount();
+
+  float3* center = (float3*)malloc(Ncells * sizeof(float3)); //allocate host memory
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_grid_center,Ncells*sizeof(float3)) ); //allocate device memory
+
+  float3* anchor = (float3*)malloc(Ncells * sizeof(float3)); //allocate host memory
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_grid_anchor,Ncells*sizeof(float3)) ); //allocate device memory
+
+  float3* size = (float3*)malloc(Ncells * sizeof(float3)); //allocate host memory
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_grid_size,Ncells*sizeof(float3)) ); //allocate device memory
+
+  float* rotation = (float*)malloc(Ncells * sizeof(float)); //allocate host memory
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_grid_rotation,Ncells*sizeof(float)) ); //allocate device memory
+  
+  //copy grid data into the host buffer
+  for( int c=0; c<Ncells; c++ ){
+    center[c] = vec3tofloat3(getCellCenter(c));
+    anchor[c] = vec3tofloat3(getCellGlobalAnchor(c));
+    size[c] = vec3tofloat3(getCellSize(c));
+    rotation[c] = getCellRotation(c);
+  }
+
+  //copy from host to device memory
+  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_center, center, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
+  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_anchor, anchor, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
+  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_size, size, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
+  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_rotation, rotation, Ncells*sizeof(float), cudaMemcpyHostToDevice) );
+
+  free(hit_xyz);
+  free(center);
+  free(anchor);
+  free(size);
+  free(rotation);
+
+  // Result buffer
+  int* hit_vol = (int*)malloc(total_hits * sizeof(int));
+  int* d_hit_vol;
+  CUDA_CHECK_ERROR( cudaMalloc(&d_hit_vol,total_hits*sizeof(int)) );
+
+  dim3 dimBlock( 64, 1 );
+  dim3 dimGrid( ceil(total_hits/64.f) );
+  insideVolume <<< dimGrid, dimBlock >>>( total_hits, d_hit_xyz, getGridCellCount(), d_grid_size, d_grid_center, d_grid_anchor, d_grid_rotation, d_hit_vol );
+
+  CUDA_CHECK_ERROR( cudaPeekAtLastError() );
+  CUDA_CHECK_ERROR( cudaDeviceSynchronize() );
+  
+  CUDA_CHECK_ERROR( cudaMemcpy(hit_vol, d_hit_vol, total_hits*sizeof(int), cudaMemcpyDeviceToHost) );
+
+  for( std::size_t r=0; r<getHitCount(); r++ ){
+    setHitGridCell( r, hit_vol[r] );
+  }
+
+  free(hit_vol);
+
+  CUDA_CHECK_ERROR( cudaFree(d_hit_vol) );
+  CUDA_CHECK_ERROR( cudaFree(d_hit_xyz) );
+  CUDA_CHECK_ERROR( cudaFree(d_grid_center) );
+  CUDA_CHECK_ERROR( cudaFree(d_grid_anchor) );
+  CUDA_CHECK_ERROR( cudaFree(d_grid_size) );
+  CUDA_CHECK_ERROR( cudaFree(d_grid_rotation) );  
+
+  hitgridcellcomputed = true;
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+  }
+    
+}
+
+__global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3* center, float3* anchor, float3* size, float* rotation, float* d_dr, float* hit_denom, float* hit_inside ){
+  
+  size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if( idx>=Nhitsbb ){
+    return;
+  }
+
+  size_t cell = blockIdx.y*blockDim.y+threadIdx.y;
+
+  if( cell>=Ncells ){
+    return;
+  }
+
+  float3 scan_xyz = d_scan_xyz[ idx ];
+  float3 direction = d_scan_raydir[ idx ];
+
+  //Inverse rotate the ray
+
+  float3 direction_rot = d_rotatePoint(direction,0,-rotation[cell]);
+  float3 scan_xyz_rot = d_rotatePoint(scan_xyz-anchor[cell],0,-rotation[cell]) + anchor[cell];
+
+  float3 origin = scan_xyz_rot - direction_rot*1e5;
+  
+  float ox = origin.x; float oy = origin.y; float oz = origin.z;
+  float dx = direction_rot.x; float dy = direction_rot.y; float dz = direction_rot.z;
+  
+  float x0 = center[cell].x - 0.5f*size[cell].x; float x1 = center[cell].x + 0.5f*size[cell].x;
+  float y0 = center[cell].y - 0.5f*size[cell].y; float y1 = center[cell].y + 0.5f*size[cell].y;
+  float z0 = center[cell].z - 0.5f*size[cell].z; float z1 = center[cell].z + 0.5f*size[cell].z;
+  
+  float tx_min, ty_min, tz_min;
+  float tx_max, ty_max, tz_max; 
+  
+  float a = 1.0 / dx;
+  if (a >= 0) {
+    tx_min = (x0 - ox) * a;
+    tx_max = (x1 - ox) * a;
+  }
+  else {
+    tx_min = (x1 - ox) * a;
+    tx_max = (x0 - ox) * a;
+  }
+  
+  float b = 1.0 / dy;
+  if (b >= 0) {
+    ty_min = (y0 - oy) * b;
+    ty_max = (y1 - oy) * b;
+  }
+  else {
+    ty_min = (y1 - oy) * b;
+    ty_max = (y0 - oy) * b;
+  }
+  
+  float c = 1.0 / dz;
+  if (c >= 0) {
+    tz_min = (z0 - oz) * c;
+    tz_max = (z1 - oz) * c;
+  }
+  else {
+    tz_min = (z1 - oz) * c;
+    tz_max = (z0 - oz) * c;
+  }
+  
+  float t0, t1;
+    
+  // find largest entering t value
+  
+  if (tx_min > ty_min)
+    t0 = tx_min;
+  else
+    t0 = ty_min;
+  
+  if (tz_min > t0)
+    t0 = tz_min;	
+		
+  // find smallest exiting t value
+    
+  if (tx_max < ty_max)
+    t1 = tx_max;
+  else
+    t1 = ty_max;
+  
+  if (tz_max < t1)
+    t1 = tz_max;
+  
+  if (t0 < t1 && t1 > 1e-6){ //Ray passed through box
+    float t = magnitude( scan_xyz_rot - origin );  //t-distance to hit point
+    
+    if( t>=t0 ){ //hit lies within or beyond the volume
+
+      atomicAdd( &hit_denom[cell], 1.f );
+
+      atomicAdd( &d_dr[ cell ], fabs(t1-t0) );
+
+    }
+	
+    if( t>=t0 && t<=t1 ){ //hit lies inside the volume
+
+      atomicAdd( &hit_inside[cell], 1.f );
+            
+    }
+    
+  }
+
+}
+
+__global__ void intersectBoundingBox( const size_t scanSize, float3* d_hit_origin, const float3* d_scan_xyz, const float3 bbcenter, const float3 bbsize, uint* d_boundingbox_hit ){
+  
+  size_t i = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if( i>=scanSize ){
+    return;
+  }
+
+  float3 scan_xyz = d_scan_xyz[ i ];
+
+  float3 origin = d_hit_origin[i];
+
+  float3 direction = normalize(scan_xyz-origin);
+
+  float ox = origin.x; float oy = origin.y; float oz = origin.z;
+  float dx = direction.x; float dy = direction.y; float dz = direction.z;
+
+  float x0 = bbcenter.x - 0.5f*bbsize.x; float x1 = bbcenter.x + 0.5f*bbsize.x;
+  float y0 = bbcenter.y - 0.5f*bbsize.y; float y1 = bbcenter.y + 0.5f*bbsize.y;
+  float z0 = bbcenter.z - 0.5f*bbsize.z; float z1 = bbcenter.z + 0.5f*bbsize.z;
+
+  //first check if we are inside the bounding box
+
+  if( ox>=x0 && ox<=x1 && oy>=y0 && oy<=y1 && oz>=z0 && oz<=z1 ){
+    d_boundingbox_hit[ i ] = 1;
+    return;
+  }
+
+  //if not inside, intersect bounding box
+  
+  float tx_min, ty_min, tz_min;
+  float tx_max, ty_max, tz_max; 
+
+  float a = 1.0 / dx;
+  if (a >= 0) {
+    tx_min = (x0 - ox) * a;
+    tx_max = (x1 - ox) * a;
+  }
+  else {
+    tx_min = (x1 - ox) * a;
+    tx_max = (x0 - ox) * a;
+  }
+  
+  float b = 1.0 / dy;
+  if (b >= 0) {
+    ty_min = (y0 - oy) * b;
+    ty_max = (y1 - oy) * b;
+  }
+  else {
+    ty_min = (y1 - oy) * b;
+    ty_max = (y0 - oy) * b;
+  }
+  
+  float c = 1.0 / dz;
+  if (c >= 0) {
+    tz_min = (z0 - oz) * c;
+    tz_max = (z1 - oz) * c;
+  }
+  else {
+    tz_min = (z1 - oz) * c;
+    tz_max = (z0 - oz) * c;
+  }
+    
+  float t0, t1;
+    
+  // find largest entering t value
+    
+  if (tx_min > ty_min)
+    t0 = tx_min;
+  else
+    t0 = ty_min;
+    
+  if (tz_min > t0)
+    t0 = tz_min;	
+		
+  // find smallest exiting t value
+    
+  if (tx_max < ty_max)
+    t1 = tx_max;
+  else
+    t1 = ty_max;
+  
+  if (tz_max < t1)
+    t1 = tz_max;
+
+  if (t0 < t1 && t1 > 1e-6){ //Ray passed through box
+    d_boundingbox_hit[ i ] = 1;
+  }
+
+}
+
+__global__ void intersectPatches( const size_t N, float3* d_origin, float3* d_raydir, const int Npatches, float3* d_patch_vertex0, float3* d_patch_vertex1, float3* d_patch_vertex2, float3* d_patch_vertex3, float* d_hit_t ){
+
+  size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if( idx>=N ){
+    return;
+  }
+
+  float3 raydir = d_raydir[idx];
+
+  float3 origin = d_origin[idx];
+
+  float tmin = d_hit_t[idx];
+  for( int p=0; p<Npatches; p++ ){
+
+    float3 v0 = d_patch_vertex0[p];
+    float3 v1 = d_patch_vertex1[p];
+    float3 v2 = d_patch_vertex2[p];
+    float3 v3 = d_patch_vertex3[p];
+
+    float3 anchor = v0;
+    float3 normal = normalize( cross( v1-v0, v2-v0 ) );
+
+    float3 a = v1-v0;
+    float3 b = v3-v0;
+    
+    float t = ((anchor - origin)*normal) / (raydir*normal); 
+    
+    if( t==t && t>1e-8 && t<tmin ){
+			
+      float3 p = origin + raydir * t;
+      float3 d = p - anchor;
+      
+      float ddota = d*a;
+      
+      if (ddota > 0.0 && ddota < a*a ){
+	
+	float ddotb = d*b;
+	
+	if (ddotb > 0.0 && ddotb < b*b ){
+	  tmin = t;
+	}	
+	
+      }
+    }
+  }
+
+  d_hit_t[idx] = tmin;
+  
+}
+
+__global__ void intersectTriangles( const size_t N, float3* d_origin, float3* d_raydir, const int Ntriangles, float3* d_tri_vertex0, float3* d_tri_vertex1, float3* d_tri_vertex2, float* d_hit_t ){
+
+  size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if( idx>=N ){
+    return;
+  }
+
+  float3 raydir = d_raydir[idx];
+
+  float3 origin = d_origin[idx];
+
+  float tmin = d_hit_t[idx];
+  for( int p=0; p<Ntriangles; p++ ){
+
+    float3 v0 = d_tri_vertex0[p];
+    float3 v1 = d_tri_vertex1[p];
+    float3 v2 = d_tri_vertex2[p];
+
+    float a = v0.x - v1.x, b = v0.x - v2.x, c = raydir.x, d = v0.x - origin.x; 
+    float e = v0.y - v1.y, f = v0.y - v2.y, g = raydir.y, h = v0.y - origin.y;
+    float i = v0.z - v1.z, j = v0.z - v2.z, k = raydir.z, l = v0.z - origin.z;
+		
+    float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
+    float q = g * i - e * k, s = e * j - f * i;
+  
+    float inv_denom  = 1.f / (a * m + b * q + c * s);
+  
+    float e1 = d * m - b * n - c * p;
+    float beta = e1 * inv_denom;
+  
+    if (beta > 0.0){
+      
+      float r = r = e * l - h * i;
+      float e2 = a * n + d * q + c * r;
+      float gamma = e2 * inv_denom;
+      
+      if (gamma > 0.0 && beta + gamma < 1.0 ){
+	
+	float e3 = a * p - b * r + d * s;
+	float t = e3 * inv_denom;
+
+	if( t>1e-6 && t<tmin ){
+	  tmin = t;
+	}	
+      
+      }
+    }
+  }
+
+  d_hit_t[idx] = tmin;
+  
+}

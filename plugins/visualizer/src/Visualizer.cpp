@@ -2553,7 +2553,24 @@ void Visualizer::buildContextGeometry_private( void ){
 	if( colorPrimitivesByData.size()!=0 ){
 	  if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0 ){
 	    if( context->doesPrimitiveDataExist( UUID, colorPrimitivesByData.c_str() ) ){
-	      context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), colorValue );
+	      HeliosDataType type = context->getPrimitiveDataType( UUID, colorPrimitivesByData.c_str() );
+	      if( type==HELIOS_TYPE_FLOAT ){
+		context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), colorValue );
+	      }else if( type==HELIOS_TYPE_INT ){
+		int cv;
+		context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), cv );
+		colorValue = float(cv);
+	      }else if( type==HELIOS_TYPE_UINT ){
+		uint cv;
+		context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), cv );
+		colorValue = float(cv);
+	      }else if( type==HELIOS_TYPE_DOUBLE ){
+	        double cv;
+		context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), cv );
+		colorValue = float(cv);
+	      }else{
+		colorValue = 0;
+	      }
 	    }else{
 	      colorValue = 0;
 	    }
@@ -2606,7 +2623,25 @@ void Visualizer::buildContextGeometry_private( void ){
       if( colorPrimitivesByData.size()!=0 ){
 	if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){
 	  if( context->doesPrimitiveDataExist( UUID, colorPrimitivesByData.c_str() ) ){
-	    context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), colorValue );
+	    HeliosDataType type = context->getPrimitiveDataType( UUID, colorPrimitivesByData.c_str() );
+	    if( type==HELIOS_TYPE_FLOAT ){
+	      context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), colorValue );
+	    }else if( type==HELIOS_TYPE_INT ){
+	      int cv;
+	      context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), cv );
+	      colorValue = float(cv);
+	    }else if( type==HELIOS_TYPE_UINT ){
+	      uint cv;
+	      context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), cv );
+	      colorValue = float(cv);
+	    }else if( type==HELIOS_TYPE_DOUBLE ){
+	      double cv;
+	      context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), cv );
+	      colorValue = float(cv);
+	    }else{
+	      colorValue = 0;
+	    }
+	    
 	  }else{
 	    colorValue = 0;
 	  }

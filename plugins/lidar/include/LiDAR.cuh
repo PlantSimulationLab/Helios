@@ -43,8 +43,8 @@ __global__ void insideVolume( const uint Nhits, const float3* d_hit_xyz, const u
 //! Device function to intersect all rays with an axis-aligned bounding box
 __global__ void intersectBoundingBox( const size_t scanSize, const float3 origin, const float3* d_hit_xyz, const float3 bbcenter, const float3 bbsize, uint* d_boundingbox_hit );
 
-
 __global__ void intersectGridcell( const size_t Nhitsbb, const float3 origin, float3* d_scan_xyz, const float3 center, const float3 anchor, const float3 size, const float rotation, float* d_dr, float* hit_before, float* hit_after );
+
 
 __global__ void intersectPatches( const size_t N, const float3 origin, float3* d_raydir, const int Npatches, float3* d_patch_vertex0, float3* d_patch_vertex1, float3* d_patch_vertex2, float3* d_patch_vertex3, float* d_hit_t );
 
@@ -171,3 +171,15 @@ helios::vec3 inline flota3tovec3( float3 f3 ){
   v3.z=f3.z;
   return v3;
 }
+
+//*************************************************************//
+//              AERIAL LIDAR DEFINITIONS                      //
+//************************************************************//
+
+__global__ void intersectBoundingBox( const size_t scanSize, float3* d_hit_origin, const float3* d_scan_xyz, const float3 bbcenter, const float3 bbsize, uint* d_boundingbox_hit );
+
+__global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3* center, float3* anchor, float3* size, float* rotation, float* d_dr, float* hit_denom, float* hit_inside );
+
+__global__ void intersectPatches( const size_t N, float3* origin, float3* d_raydir, const int Npatches, float3* d_patch_vertex0, float3* d_patch_vertex1, float3* d_patch_vertex2, float3* d_patch_vertex3, float* d_hit_t );
+
+__global__ void intersectTriangles( const size_t N, float3* origin, float3* d_raydir, const int Ntriangles, float3* d_tri_vertex0, float3* d_tri_vertex1, float3* d_tri_vertex2, float* d_hit_t );

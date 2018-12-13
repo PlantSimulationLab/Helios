@@ -237,7 +237,7 @@
 
 	<scan>
 	  <filename> /path/to/data/file.xyz </filename>
-	  <ASCII_format> theta phi x y z r255 g255 b255 </ASCII_format>
+	  <ASCII_format> zenith azimuth x y z r255 g255 b255 </ASCII_format>
 	  <origin> 0 0 0 </origin>
 	  <size> 2500 4500 </size>
 	  <thetaMin> 30 </thetaMin> \<!-- OPTIONAL - default: 0 -->
@@ -275,12 +275,12 @@
      <td>None: REQUIRED</td>
    </tr>
    <tr>
-     <td>theta (or theta_rad)</td>
+     <td>zenith (or zenith_rad)</td>
      <td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees.</td>
      <td>Calculated from scan origin and hit (x,y,z).</td>
    </tr>
    <tr>
-     <td>phi (or phi_rad)</td>
+     <td>azimuth (or phi_rad)</td>
      <td>Azithal angle (degrees) of scan ray direction corresponding to the hit point. If "phi_rad" is used, phi has units of radians rather than degrees.</td>
      <td>Calculated from scan origin and hit (x,y,z).</td>
    </tr>

@@ -436,21 +436,6 @@ void LiDARcloud::addScan( const ScanMetadata newscan ){
   scans.push_back(newscan);
 }
 
-void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz ){
-
-  vec3 direction_cart = xyz-scans.at(scanID).origin;
-  SphericalCoord direction_sphere = cart2sphere(direction_cart);
-
-  //default color
-  RGBcolor color = make_RGBcolor(1,0,0);
-
-  //empty data
-  std::map<std::string, float> data;
-  
-  addHitPoint( scanID, xyz, direction_sphere, color, data );
-
-}
-
 void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction ){
 
   //default color
@@ -695,7 +680,6 @@ void LiDARcloud::coordinateShift( const helios::vec3 shift ){
   
   for( uint r=0; r<hits.size(); r++ ){
     hits.at(r).position = hits.at(r).position + shift;
-    hits.at(r).direction = cart2sphere(hits.at(r).position - scans.at( hits.at(r).scanID ).origin);
   }
   
 }
@@ -747,7 +731,7 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
 void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsize, const char* color_value ) const{
 
   if( printmessages && scans.size()==0 ){
-    std::cout << "WARNING (addGeometryToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    std::cout << "WARNING (addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
     return;
   }
 
@@ -797,7 +781,7 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
 void LiDARcloud::addGridToVisualizer( Visualizer* visualizer ) const{
 
   if( printmessages && scans.size()==0 ){
-    std::cout << "WARNING (addGeometryToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    std::cout << "WARNING (addGridToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
     return;
   }
 
@@ -869,7 +853,7 @@ void LiDARcloud::addTrianglesToVisualizer( Visualizer* visualizer ) const{
 void LiDARcloud::addTrianglesToVisualizer( Visualizer* visualizer, const uint gridcell ) const{
 
   if( printmessages && scans.size()==0 ){
-    std::cout << "WARNING (addGeometryToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    std::cout << "WARNING (addTrianglesToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
     return;
   }
 
@@ -983,6 +967,31 @@ std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context )
 
   std::vector<uint> UUIDs;
 
+  size_t Ngroups = reconstructed_alphamasks_center.size();
+
+  for( size_t g=0; g<Ngroups; g++ ){
+
+    helios::RGBcolor color = helios::RGB::red;
+
+    uint zone = reconstructed_alphamasks_gridcell.at(g);
+
+    if( reconstructed_alphamasks_size.at(g).x>0 && reconstructed_alphamasks_size.at(g).y>0 ){
+      UUIDs.push_back( context->addPatch( reconstructed_alphamasks_center.at(g), reconstructed_alphamasks_size.at(g), reconstructed_alphamasks_rotation.at(g), reconstructed_alphamasks_maskfile.c_str() ) );
+      context->setPrimitiveData( UUIDs.back(), "gridCell", HELIOS_TYPE_UINT, 1, &zone );
+      uint flag = uint(reconstructed_alphamasks_direct_flag.at(g));
+      context->setPrimitiveData( UUIDs.back(), "directFlag", HELIOS_TYPE_UINT, 1, &flag);
+    }
+
+  }
+
+  return UUIDs;
+
+}
+
+std::vector<uint> LiDARcloud::addReconstructedTriangleGroupsToContext( helios::Context* context ) const{
+
+  std::vector<uint> UUIDs;
+
   size_t Ngroups = reconstructed_triangles.size();
 
   for( size_t g=0; g<Ngroups; g++ ){
@@ -1007,38 +1016,6 @@ std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context )
     }
 
   }
-
-  Ngroups = reconstructed_alphamasks_center.size();
-
-  for( size_t g=0; g<Ngroups; g++ ){
-
-    helios::RGBcolor color = helios::RGB::red;
-
-    uint zone = reconstructed_alphamasks_gridcell.at(g);
-
-    if( reconstructed_alphamasks_size.at(g).x>0 && reconstructed_alphamasks_size.at(g).y>0 ){
-      UUIDs.push_back( context->addPatch( reconstructed_alphamasks_center.at(g), reconstructed_alphamasks_size.at(g), reconstructed_alphamasks_rotation.at(g), reconstructed_alphamasks_maskfile.c_str() ) );
-      context->setPrimitiveData( UUIDs.back(), "gridCell", HELIOS_TYPE_UINT, 1, &zone );
-    }
-
-  }
-
-  for( size_t v=0; v<reconstructed_trimesh_center.size(); v++ ){
-    for( size_t l=0; l<reconstructed_trimesh_center.at(v).size(); l++ ){
-
-      helios::RGBcolor color = helios::RGB::red;
-
-      std::vector<uint> UUID = context->loadPLY(trimesh_PLY.c_str(),reconstructed_trimesh_center.at(v).at(l), reconstructed_trimesh_size.at(v).at(l),reconstructed_trimesh_rotation.at(v).at(l),color);
-
-      for( int i=0; i<UUID.size(); i++ ){
-  	UUIDs.push_back(UUID.at(i));
-  	context->setPrimitiveData( UUIDs.back(), "gridCell", HELIOS_TYPE_UINT, 1, &v );	
-      }
-    
-    }
-  }
-
-  return UUIDs;
 
 }
 
@@ -1844,6 +1821,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     helios::vec3 normal = cross( reconstructed_triangles.at(group).at(gind).vertex1-reconstructed_triangles.at(group).at(gind).vertex0, reconstructed_triangles.at(group).at(gind).vertex2-reconstructed_triangles.at(group).at(gind).vertex0 );
     reconstructed_alphamasks_rotation.push_back( make_SphericalCoord(cart2sphere(normal).zenith,cart2sphere(normal).azimuth)  );
     reconstructed_alphamasks_gridcell.push_back( reconstructed_triangles.at(group).at(0).gridcell );
+    reconstructed_alphamasks_direct_flag.push_back( true );
   }
 
   if( printmessages ){
@@ -1853,7 +1831,16 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     
   backfillLeavesAlphaMask( Lavg, leaf_aspect_ratio, solidfraction, group_filter_flag );
 
-  reconstructed_triangles.resize(0);
+  for( int group=0; group<reconstructed_triangles.size(); group++ ){
+
+    if( !group_filter_flag.at(group) ){
+      std::swap( reconstructed_triangles.at(group), reconstructed_triangles.back() );
+      reconstructed_triangles.pop_back();
+    }
+
+  }
+  
+  //reconstructed_triangles.resize(0);
   
 }
   
@@ -1941,6 +1928,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	reconstructed_alphamasks_size.push_back( reconstructed_alphamasks_size.at(0) );
 	reconstructed_alphamasks_rotation.push_back( tri_rots.at(randi) );
 	reconstructed_alphamasks_gridcell.push_back( v );
+	reconstructed_alphamasks_direct_flag.push_back( false );
 	
 	leaf_area_current.at(v) += reconstructed_alphamasks_size.back().x*reconstructed_alphamasks_size.back().y*solidfraction;
 	
@@ -1991,6 +1979,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	reconstructed_alphamasks_size.push_back( reconstructed_alphamasks_size.at(group_index) );
 	reconstructed_alphamasks_rotation.push_back( reconstructed_alphamasks_rotation.at(group_index) );
 	reconstructed_alphamasks_gridcell.push_back( v );
+	reconstructed_alphamasks_direct_flag.push_back( false );
 	
 	leaf_area_current.at(v) += reconstructed_alphamasks_size.at(group_index).x*reconstructed_alphamasks_size.at(group_index).y*solidfraction;
 	
@@ -2029,6 +2018,8 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
       reconstructed_alphamasks_rotation.pop_back();
       std::swap( reconstructed_alphamasks_gridcell.at(group_index), reconstructed_alphamasks_gridcell.back() );
       reconstructed_alphamasks_gridcell.pop_back();
+      std::swap( reconstructed_alphamasks_direct_flag.at(group_index), reconstructed_alphamasks_direct_flag.back() );
+      reconstructed_alphamasks_direct_flag.pop_back();
     }
   }
 

@@ -485,13 +485,13 @@ int Context::selfTest(void){
   Date date_ts( 12, 3, 2010 );
   context_ts.setDate( date_ts );
   
-  Time time_ts( 13, 15, 0 );
+  Time time_ts( 13, 15, 39 );
   context_ts.setTime( time_ts );
 
   float T0 = 302.3;
   float T1 = 305.3;
   Time time0_ts = time_ts;
-  Time time1_ts = make_Time( time_ts.hour, 30, 0 );
+  Time time1_ts = make_Time( time_ts.hour, 49, 14 );
 
   context_ts.addTimeseriesData( "timeseries", T0, date_ts, time0_ts );
   context_ts.addTimeseriesData( "timeseries", T1, date_ts, time1_ts );
@@ -558,7 +558,10 @@ int Context::selfTest(void){
     std::cerr << "failed: Timeseries set/query data #1 do not match." << std::endl;
     error_count++;
   }
-  
+
+  context_ts.queryTimeseriesData( "timeseries", date_ts, make_Time(0,0,0) );
+
+  context_ts.queryTimeseriesData( "timeseries", date_ts, make_Time(time0_ts.hour,time0_ts.minute,time0_ts.second+10) );
 
   //------- XML I/O --------//
 
@@ -3508,8 +3511,8 @@ std::vector<uint> Context::getAllUUIDs( void ) const{
 void Context::addTimeseriesData( const char* label, float value, Date date, Time time ){
 
   //floating point value corresponding to date and time
-  double date_value = floor(date.year*365.25) + date.JulianDay();
-  date_value += double(time.hour)/24. + double(time.minute)/1440.;
+  double date_value = floor(date.year*366.25) + date.JulianDay();
+  date_value += double(time.hour)/24. + double(time.minute)/1440. + double(time.second)/86400.;
 
   //Check if data label already exists
   if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
@@ -3584,11 +3587,19 @@ float Context::queryTimeseriesData( const char* label, const Date date, const Ti
     exit(EXIT_FAILURE);
   }
 
-  double date_value = floor(date.year*365.25) + date.JulianDay();
-  date_value += double(time.hour)/24. + double(time.minute)/1440.;
+  double date_value = floor(date.year*366.25) + date.JulianDay();
+  date_value += double(time.hour)/24. + double(time.minute)/1440. + double(time.second)/86400.;
 
   float tmin = timeseries_datevalue.at(label).front();
   float tmax = timeseries_datevalue.at(label).back();
+
+  if( date_value<tmin ){
+    std::cerr << "WARNING (queryTimeseriesData): Timeseries date and time is outside of the range of the data. Using the earliest data point in the timeseries." << std::endl;
+    return timeseries_data.at(label).front();
+  }else if( date_value>tmax ){
+    std::cerr << "WARNING (queryTimeseriesData): Timeseries date and time is outside of the range of the data. Using the latest data point in the timeseries." << std::endl;
+    return timeseries_data.at(label).back();
+  }
 
   if( timeseries_datevalue.at(label).size() == 0 ){
     std::cout << "WARNING (queryTimeseriesData): timeseries " << label << " does not contain any data." << std::endl;
@@ -3597,10 +3608,17 @@ float Context::queryTimeseriesData( const char* label, const Date date, const Ti
     return timeseries_data.at(label).front();
   }else{
     int i;
+    bool success=false;
     for( i=0; i<timeseries_data.at(label).size()-1; i++ ){
       if( date_value>=timeseries_datevalue.at(label).at(i) && date_value<=timeseries_datevalue.at(label).at(i+1) ){
+	success = true;
 	break;
       }
+    }
+
+    if(!success){
+      
+    exit(EXIT_FAILURE);
     }
 
     double xminus = timeseries_data.at(label).at(i);
@@ -3635,25 +3653,30 @@ Time Context::queryTimeseriesTime( const char* label, const uint index ) const{
 
   double dateval = timeseries_datevalue.at(label).at(index);
   
-  int year = floor(dateval/365.25);
+  int year = floor(dateval/366.25);
   assert( year>1000 && year<10000 );
 
-  int JD = floor(dateval-double(year)*365.25);
+  int JD = floor(dateval-floor(double(year)*366.25));
   assert( JD>0 && JD<367 );
 
   int hour = floor((dateval-floor(dateval))*24.);
   assert( hour>=0 && hour<24 );
   
-  int minute = round( ((dateval-floor(dateval))*24.-double(hour))*60. );
+  int minute = floor( ((dateval-floor(dateval))*24.-double(hour))*60. );
   if( minute==60 ){
     minute = 0;
     hour ++;
   }
   assert( minute>=0 && minute<60 );
 
-  int second = round( round(((dateval-floor(dateval))*24.-double(hour))*60.-double(minute))*1440. );
+  int second = round( ( ( ( dateval - floor(dateval) )*24. - double(hour))*60. - double(minute) )*60.);
+  if( second==60 ){
+    second = 0;
+    minute ++;
+  }
+  assert( second>=0 && second<60 );
     
-  return make_Time(hour,minute);
+  return make_Time(hour,minute,second);
   
 }
 
@@ -3666,10 +3689,10 @@ Date Context::queryTimeseriesDate( const char* label, const uint index ) const{
 
   double dateval = timeseries_datevalue.at(label).at(index);
 
-  int year = floor(dateval/365.25);
+  int year = floor(floor(dateval)/366.25);
   assert( year>1000 && year<10000 );
 
-  int JD = floor(dateval-double(year)*365.25);
+  int JD = floor(dateval-floor(double(year)*366.25));
   assert( JD>0 && JD<367 );
 
   Date date = Julian2Calendar(JD,year);
