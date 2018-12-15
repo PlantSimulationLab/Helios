@@ -3653,28 +3653,29 @@ Time Context::queryTimeseriesTime( const char* label, const uint index ) const{
 
   double dateval = timeseries_datevalue.at(label).at(index);
   
-  int year = floor(dateval/366.25);
+  int year = floor(floor(dateval)/366.25);
   assert( year>1000 && year<10000 );
 
   int JD = floor(dateval-floor(double(year)*366.25));
   assert( JD>0 && JD<367 );
 
   int hour = floor((dateval-floor(dateval))*24.);
-  assert( hour>=0 && hour<24 );
-  
   int minute = floor( ((dateval-floor(dateval))*24.-double(hour))*60. );
-  if( minute==60 ){
-    minute = 0;
-    hour ++;
-  }
-  assert( minute>=0 && minute<60 );
-
   int second = round( ( ( ( dateval - floor(dateval) )*24. - double(hour))*60. - double(minute) )*60.);
+  
   if( second==60 ){
     second = 0;
     minute ++;
   }
+  
+  if( minute==60 ){
+    minute = 0;
+    hour ++;
+  }
+  
   assert( second>=0 && second<60 );
+  assert( minute>=0 && minute<60 );
+  assert( hour>=0 && hour<24 );
     
   return make_Time(hour,minute,second);
   
