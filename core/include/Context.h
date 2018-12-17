@@ -546,9 +546,9 @@ namespace helios {
     
   protected:
 
-    //! surface area
-    float area;
-
+    //fraction of surface area that is solid material (i.e., non-transparent)
+    float solid_fraction;
+    
   };
 
   //! Triangular geometric primitive object
@@ -611,9 +611,9 @@ namespace helios {
     //!(x,y,z) coordinates of triangle vertex #2
     helios::vec3 vertex2;
 
-    //!surface area
-    float area;
-
+    //fraction of surface area that is solid material (i.e., non-transparent)
+    float solid_fraction;
+    
     void makeTransformationMatrix( const helios::vec3 vertex0, const helios::vec3 vertex1, const helios::vec3 vertex2 );
     
   };
@@ -666,12 +666,6 @@ namespace helios {
     */
     void rotate( const float rot, const helios::vec3 axis );
     
-  private:
-    
-    float area;
-
-    float volume;
-
   };
 
 //! Stores the state associated with simulation

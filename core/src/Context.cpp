@@ -107,7 +107,7 @@ int Context::selfTest(void){
     error_count++;
     std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getVertices did not return correct value." << std::endl;
   }
-  if( area_r!=size.x*size.y ){
+  if( fabs( area_r - size.x*size.y )>1e-5 ){
     error_count++;
     std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getArea did not return correct value." << std::endl;
   }
@@ -264,6 +264,23 @@ int Context::selfTest(void){
 
   UUID = UUID_cpy;
 
+  //------- Primitive Transformations --------//
+
+  vec2 sz_0(0.5,3.f);
+  float A_0 = sz_0.x*sz_0.y;
+
+  float scale = 2.6f;
+  
+  UUID = context_test.addPatch( make_vec3(0,0,0), sz_0 );
+  context_test.getPrimitivePointer(UUID)->scale( make_vec3(scale,scale,scale) );
+
+  float A_1 = context_test.getPrimitivePointer(UUID)->getArea();
+
+  if( fabs( A_1 - scale*scale*A_0 )>1e-5 ){
+    error_count ++;
+    std::cerr << "failed: Patch scaling - scaled area not correct." << std::endl;
+  }
+
   //------- Primitive Data --------//
 
   float data = 5;
@@ -375,7 +392,7 @@ int Context::selfTest(void){
 
   float area = context_test.getPrimitivePointer(UUIDp2)->getArea();
 
-  if( fabs(area-sizep.x*sizep.y*0.25f)>0.001f ){
+  if( fabs(area-sizep.x*sizep.y)>0.001f ){
     error_count ++;
     std::cerr << "failed: Patch masked with (u,v) coordinates did not return correct area." << std::endl;
   }
@@ -544,7 +561,7 @@ int Context::selfTest(void){
     std::cerr << "failed: Timeseries set/query data #1 do not match." << std::endl;
     error_count++;
   }
-
+  
   T_ts = context_ts.queryTimeseriesData( "timeseries", date_ts, time0_ts );
 
   if( T_ts!=T0 ){
@@ -771,14 +788,38 @@ void Primitive::setTransformationMatrix( float (&T)[16] ){
 }
 
 float Patch::getArea() const{
+
+  vec2 size = getSize();
+  
+  float area = size.x*size.y*solid_fraction;
+
   return area;
+  
 }
 
 float Triangle::getArea() const{
+
+  std::vector<vec3> vertices = getVertices();
+
+  //Heron's formula
+  vec3 A(vertices.at(1)-vertices.at(0));
+  vec3 B(vertices.at(2)-vertices.at(0));
+  vec3 C(vertices.at(2)-vertices.at(1));
+  float a = A.magnitude();
+  float b = B.magnitude();
+  float c = C.magnitude();
+  float s = 0.5f*( a+b+c );
+  float area = sqrtf(s*(s-a)*(s-b)*(s-c))*solid_fraction;
+  
   return area;
 }
 
 float Voxel::getArea() const{
+
+  vec3 size(transform[0],transform[5],transform[10]);
+
+  float area = 2.f*size.x*size.y+2*size.x*size.z+2*size.y*size.z;
+  
   return area;
 }
 
@@ -2896,7 +2937,7 @@ Patch::Patch( const vec3 _center_, const vec2 _size_, const vec3 _rotation_, con
   assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
   UUID = _UUID_;
   prim_type = PRIMITIVE_TYPE_PATCH;
-  area = _size_.x*_size_.y;
+  solid_fraction = 1.f;
   texture = 0;
 
 }
@@ -2908,10 +2949,9 @@ Patch::Patch( const vec3 _center_, const vec2 _size_, const vec3 _rotation_, Tex
   assert( _size_.x>0 && _size_.y>0 );
   UUID = _UUID_;
   prim_type = PRIMITIVE_TYPE_PATCH;
-  area = _size_.x*_size_.y;
-
   texture = _texture_;
-
+  solid_fraction = texture->getSolidFraction();
+  
 }
 
 Patch::Patch( const vec3 _center_, const vec2 _size_, const vec3 _rotation_, Texture* _texture_, const vec2 _uv_center_, const vec2 _uv_size_, const uint _UUID_ ){
@@ -2923,36 +2963,40 @@ Patch::Patch( const vec3 _center_, const vec2 _size_, const vec3 _rotation_, Tex
   prim_type = PRIMITIVE_TYPE_PATCH;
 
   texture = _texture_;
-  
-  uv.push_back( _uv_center_-0.5*_uv_size_ );
-  uv.push_back( _uv_center_+make_vec2(0.5*_uv_size_.x,-0.5*_uv_size_.y) );
-  uv.push_back( _uv_center_+0.5*_uv_size_ );
-  uv.push_back( _uv_center_+make_vec2(-0.5*_uv_size_.x,+0.5*_uv_size_.y) );
 
-  area = _size_.x*_size_.y;
+  uv.resize(4);
+  uv.at(0) = _uv_center_-0.5*_uv_size_;
+  uv.at(1) = _uv_center_+make_vec2(0.5*_uv_size_.x,-0.5*_uv_size_.y);
+  uv.at(2) =  _uv_center_+0.5*_uv_size_;
+  uv.at(3) =  _uv_center_+make_vec2(-0.5*_uv_size_.x,+0.5*_uv_size_.y);
+
   if( hasTexture() && texture->hasTransparencyChannel() ){
-    if( uv.size()==4 ){
-      std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
-      int A = 0;
-      int2 sz = texture->getSize();
-      int2 uv_min( floor(uv.at(0).x*sz.x), floor(uv.at(0).y*sz.y) );
-      int2 uv_max( floor(uv.at(2).x*sz.x), floor(uv.at(2).y*sz.y) );
-      vec2 xy;
-      for( int j=uv_min.y; j<uv_max.y; j++ ){
-	for( int i=uv_min.x; i<uv_max.x; i++ ){
+    std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
+    int A = 0;
+    int At = 0;
+    int2 sz = texture->getSize();
+    int2 uv_min( floor(uv.at(0).x*sz.x), floor(uv.at(0).y*sz.y) );
+    int2 uv_max( floor(uv.at(2).x*sz.x), floor(uv.at(2).y*sz.y) );
+    vec2 xy;
+    for( int j=uv_min.y; j<uv_max.y; j++ ){
+      for( int i=uv_min.x; i<uv_max.x; i++ ){
+	xy.x = float(i)/float(sz.x-1);
+	xy.y = float(j)/float(sz.y-1);
+	if( pointInPolygon( xy, uv ) ){
+	  At += 1;
 	  if( alpha->at(j).at(i) ){
-	    xy.x = float(i)/float(sz.x-1);
-	    xy.y = float(j)/float(sz.y-1);
-	    if( pointInPolygon( xy, uv ) ){
-	      A += 1;
-	    }
+	    A += 1;
 	  }
 	}
       }
-      area = _size_.x*_size_.y*float(A)/float(sz.x*sz.y);
-    }else{
-      area = _size_.x*_size_.y*texture->getSolidFraction();
     }
+    if( At==0 ){
+      solid_fraction = 0;
+    }else{
+      solid_fraction = float(A)/float(At);
+    }
+  }else{
+    solid_fraction = 1.f;
   }
 
 }
@@ -2975,16 +3019,7 @@ Triangle::Triangle(  const vec3 vertex0, const vec3 vertex1, const vec3 vertex2,
   UUID = _UUID_;
   prim_type = PRIMITIVE_TYPE_TRIANGLE;
   texture = 0;
-
-  //Heron's formula
-  vec3 A(vertex1-vertex0);
-  vec3 B(vertex2-vertex0);
-  vec3 C(vertex2-vertex1);
-  float a = A.magnitude();
-  float b = B.magnitude();
-  float c = C.magnitude();
-  float s = 0.5f*( a+b+c );
-  area = sqrtf(s*(s-a)*(s-b)*(s-c));
+  solid_fraction = 1.f;
 
 }
 
@@ -3002,49 +3037,40 @@ Triangle::Triangle( const vec3 vertex0, const vec3 vertex1, const vec3 vertex2, 
 
   texture = _texture_;
 
-  uv.push_back(_uv0_);
-  uv.push_back(_uv1_);
-  uv.push_back(_uv2_);
+  uv.resize(3);
+  uv.at(0) = _uv0_;
+  uv.at(1) = _uv1_;
+  uv.at(2) = _uv2_;
 
   //Heron's formula
-  vec3 A(vertex1-vertex0);
-  vec3 B(vertex2-vertex0);
-  vec3 C(vertex2-vertex1);
-  float a = A.magnitude();
-  float b = B.magnitude();
-  float c = C.magnitude();
-  float s = 0.5f*( a+b+c );
-  float A0 = sqrtf(s*(s-a)*(s-b)*(s-c));
-  if( hasTexture() ){
-    if(  texture->hasTransparencyChannel() && uv.size()==3 ){
-      std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
-      int2 sz = texture->getSize();
-      int2 uv_min( round(fmin(fmin(_uv0_.x,_uv1_.x),_uv2_.x))*sz.x, round(fmin(fmin(_uv0_.y,_uv1_.y),_uv2_.y))*sz.y );
-      int2 uv_max( round(fmax(fmax(_uv0_.x,_uv1_.x),_uv2_.x))*sz.x, round(fmax(fmax(_uv0_.y,_uv1_.y),_uv2_.y))*sz.y );
-      int A = 0;
-      int At = 0;
-      vec2 xy;
-      for( int j=uv_min.y; j<uv_max.y; j++ ){
+  if( hasTexture() &&  texture->hasTransparencyChannel() ){
+    std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
+    int2 sz = texture->getSize();
+    int2 uv_min( round(fmin(fmin(_uv0_.x,_uv1_.x),_uv2_.x))*sz.x, round(fmin(fmin(_uv0_.y,_uv1_.y),_uv2_.y))*sz.y );
+    int2 uv_max( round(fmax(fmax(_uv0_.x,_uv1_.x),_uv2_.x))*sz.x, round(fmax(fmax(_uv0_.y,_uv1_.y),_uv2_.y))*sz.y );
+    int A = 0;
+    int At = 0;
+    vec2 xy;
+    for( int j=uv_min.y; j<uv_max.y; j++ ){
       for( int i=uv_min.x; i<uv_max.x; i++ ){
 	xy.x = float(i+0.5)/float(sz.x-1);
-  	  xy.y = float(j+0.5)/float(sz.y-1);
-      	  if( edgeFunction( uv.at(0), uv.at(1), xy ) && edgeFunction( uv.at(1), uv.at(2), xy )&& edgeFunction( uv.at(2), uv.at(0), xy ) ){
-  	  //if( pointInPolygon( xy, uv ) ){
-      	    At += 1;
-      	    if( alpha->at(j).at(i) ){
-      	       A += 1;
-      	    }
-      	  }
-      	}
-      }
-      if( At==0 ){
-  	A0 = 0;
-      }else{
-  	A0 = A0*float(A)/float(At);
+	xy.y = float(j+0.5)/float(sz.y-1);
+	if( edgeFunction( uv.at(0), uv.at(1), xy ) && edgeFunction( uv.at(1), uv.at(2), xy )&& edgeFunction( uv.at(2), uv.at(0), xy ) ){
+	  At += 1;
+	  if( alpha->at(j).at(i) ){
+	    A += 1;
+	  }
+	}
       }
     }
+    if( At==0 ){
+      solid_fraction = 0;
+    }else{
+      solid_fraction = float(A)/float(At);
+    }
+  }else{
+    solid_fraction = 1.f;
   }
-  area = A0;
 
 }
 
@@ -3079,13 +3105,11 @@ Voxel::Voxel( const vec3 _center_, const vec3 _size_, const float _rotation_, co
   UUID = _UUID_;
   prim_type = PRIMITIVE_TYPE_VOXEL;
   texture = 0;
-  area = 2.f*_size_.x*_size_.y+2*_size_.x*_size_.z+2*_size_.y*_size_.z;
-  volume = _size_.x*_size_.y*_size_.z;
-
 }
 
 float Voxel::getVolume(void){
-  return volume;
+  
+  return transform[0]*transform[5]*transform[10];;
 }
 
 vec3 Voxel::getCenter(void){
@@ -3590,13 +3614,14 @@ float Context::queryTimeseriesData( const char* label, const Date date, const Ti
   double date_value = floor(date.year*366.25) + date.JulianDay();
   date_value += double(time.hour)/24. + double(time.minute)/1440. + double(time.second)/86400.;
 
-  float tmin = timeseries_datevalue.at(label).front();
-  float tmax = timeseries_datevalue.at(label).back();
+  double tmin = timeseries_datevalue.at(label).front();
+  double tmax = timeseries_datevalue.at(label).back();
 
   if( date_value<tmin ){
     std::cerr << "WARNING (queryTimeseriesData): Timeseries date and time is outside of the range of the data. Using the earliest data point in the timeseries." << std::endl;
     return timeseries_data.at(label).front();
   }else if( date_value>tmax ){
+    std::cout << date_value << " " << tmax << std::endl;
     std::cerr << "WARNING (queryTimeseriesData): Timeseries date and time is outside of the range of the data. Using the latest data point in the timeseries." << std::endl;
     return timeseries_data.at(label).back();
   }
