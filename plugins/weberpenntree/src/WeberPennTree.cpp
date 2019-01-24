@@ -99,7 +99,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
   uint stems = parameters.nBranches.at(1);
   
   // Number of stems per trunk segment
-  uint stems_per_segment = round(stems/float(parameters.nCurveRes.at(0)));
+  uint stems_per_segment = round(float(stems)/float(parameters.nCurveRes.at(0)));
 
   //first (0) node of trunk @ ground
   nodes.at(0) = center;
@@ -155,7 +155,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
       helios::SphericalCoord child_rotation = make_SphericalCoord(angle_split,phi_split);
       
-      recursiveBranch( parameters, 0, 0, base_position, current_normal, child_rotation, length0, radius.at(base_nodes-1), offset_child, origin, scale );
+      recursiveBranch( parameters, 0, 0, base_position, current_normal, child_rotation, length0-offset_child, radius.at(base_nodes-1), offset_child, origin, scale );
       
       //phi_split += (20+0.75*120*pow(getVariation(1),2))*M_PI/180.f;
       phi_split += 2.f*M_PI/float(parameters.BaseSplits+1);
@@ -303,11 +303,15 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
     // Maximum length of the branch
     float length_childmax = parameters.nLength.at(n)+getVariation(parameters.nLengthV.at(n));
     
-    assert( length_childmax>0 );
+    if( length_childmax<0 ){
+      length_childmax = parameters.nLength.at(n);
+    }
     
     // Length of the branch
     float length_child;
-    if( n<=1 ){ //first level of branches
+    if( n==0 ){ //trunk splits
+      length_child = length_parent*length_childmax;
+    }else if( n<=1 ){ //first level of branches
       length_child = length_parent*length_childmax*ShapeRatio(parameters.Shape,ratio);
     }else{
       length_child = length_childmax*(length_parent-0.6*offset_child);
@@ -426,11 +430,13 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
       // if nSegSplits>0, split into children and terminate current branch
       if( parameters.nSegSplits.at(n)>0 && i<parameters.nCurveRes.at(n) ){
 
-	float angle_split = (parameters.nSplitAngle.at(n)-getVariation(parameters.nSplitAngleV.at(n)))*M_PI/180.f;
+	float angle_split = (parameters.nSplitAngle.at(n+1)-getVariation(parameters.nSplitAngleV.at(n+1)))*M_PI/180.f;
     
 	vec3 base_position = nodes.back();
     
 	float phi_split = 2.f*M_PI*getVariation(1);
+
+	float radius_p = radius.at(i-seg_start);
     
 	for( uint j=0; j<parameters.nSegSplits.at(n)+1; j++ ){ //looping over clones (splits)
       
@@ -439,7 +445,7 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
 
 	  helios::SphericalCoord rotation = make_SphericalCoord(angle_split,phi_split);
       
-	  recursiveBranch( parameters, n, i, base_position, normal, rotation, length_parent, radius_parent, offset_child, origin, scale );
+	  recursiveBranch( parameters, n, i, base_position, normal, rotation, length_parent, radius_p, offset_child, origin, scale );
       
 	  phi_split += 2.f*M_PI/float(parameters.nSegSplits.at(n)+1);
       

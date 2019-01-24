@@ -4,10 +4,10 @@
 
 <WeberPennTree label="Almond">
   <Shape> 6 </Shape>
-  <BaseSize> 0.23 </BaseSize>
+  <BaseSize> 0.35 </BaseSize>
   <BaseSplits> 3 </BaseSplits>
   <BaseSplitSize> 0.2 </BaseSplitSize>
-  <Scale> 7 </Scale>
+  <Scale> 6 </Scale>
   <ScaleV> 0 </ScaleV>
   <ZScale> 0 </ZScale>
   <ZScaleV> 0 </ZScaleV>
@@ -15,26 +15,26 @@
   <RatioPower> 1.3 </RatioPower>
   <Lobes> 5 </Lobes>
   <LobeDepth> 0.1 </LobeDepth>
-  <Flare> 0.25 </Flare>
+  <Flare> 0.75 </Flare>
   <Levels> 3 </Levels>
   <nSegSplits>0 0 0 0</nSegSplits>
-  <nSplitAngle>45 10 10 0</nSplitAngle>
+  <nSplitAngle>50 0 0 0</nSplitAngle>
   <nSplitAngleV>5 0 0 0</nSplitAngleV>
-  <nCurveRes>10 6 8 5</nCurveRes>
-  <nCurve>-45 40 -60 0</nCurve>
+  <nCurveRes>8 6 6 5</nCurveRes>
+  <nCurve> -85 45 -60 0</nCurve>
   <nCurveV>5 5 5 0</nCurveV>
   <nCurveBack>0 -0 -0 0</nCurveBack>
-  <nLength>1 0.7 0.8 0.3</nLength>
-  <nLengthV>0 0 0.5 0</nLengthV>
+  <nLength>1 0.65 0.55 0.3</nLength>
+  <nLengthV>0 0 0.1 0</nLengthV>
   <nTaper>1 1 1 1</nTaper>
-  <nDownAngle>0 -40 55 130</nDownAngle>
+  <nDownAngle>0 -60 55 130</nDownAngle>
   <nDownAngleV>0 5 5 5</nDownAngleV>
-  <nRotate>140 140 80 140</nRotate>
+  <nRotate>80 80 80 140</nRotate>
   <nRotateV>0 20 20 10</nRotateV>
-  <nBranches>0 24 13 20</nBranches>
-  <Leaves> 16 </Leaves>
+  <nBranches>0 34 25 20</nBranches>
+  <Leaves> 20 </Leaves>
   <LeafFile> plugins/weberpenntree/leaves/AlmondLeaf.png </LeafFile>
-  <LeafScale> 0.2 </LeafScale>
+  <LeafScale> 0.12 </LeafScale>
   <LeafScaleX> 0.25 </LeafScaleX>
   <WoodFile> plugins/visualizer/textures/wood2.jpg </WoodFile>
   <!--
@@ -47,7 +47,7 @@
   <BaseSize> 0.30 </BaseSize>
   <BaseSplits> 4 </BaseSplits>
   <BaseSplitSize> 0.2 </BaseSplitSize>
-  <Scale> 3.75 </Scale>
+  <Scale> 6 </Scale>
   <ScaleV> 0 </ScaleV>
   <ZScale> 1 </ZScale>
   <ZScaleV> 0 </ZScaleV>  <Ratio> 0.05 </Ratio>
@@ -59,65 +59,65 @@
   <nSegSplits> 0 0 0 0 </nSegSplits>
   <nSplitAngle> 50 30 0 0 </nSplitAngle>
   <nSplitAngleV> 0 0 0 0 </nSplitAngleV>
-  <nCurveRes> 8 4 4 0 </nCurveRes>
-  <nCurve> -55 -15 -8 0 </nCurve>
+  <nCurveRes> 5 5 5 0 </nCurveRes>
+  <nCurve> -65 -15 -8 0 </nCurve>
   <nCurveV> 0 0 0 0 </nCurveV>
   <nCurveBack> 0 0 0 0 </nCurveBack>
-  <nLength> 1.6 0.8 0.6 0 </nLength>
-  <nLengthV> 0 0.1 0.4 0 </nLengthV>
+  <nLength> 1. 0.7 0.4 0 </nLength>
+  <nLengthV> 0 0.1 0.2 0 </nLengthV>
   <nTaper> 1 1 1 0 </nTaper>
   <nDownAngle> 70 50 50 45 </nDownAngle>
   <nDownAngleV> 0 0 0 0 </nDownAngleV>
   <nRotate> 140 140 140 140 </nRotate>
   <nRotateV> 0 10 10 0 </nRotateV>
-  <nBranches> 25 10 15 0 </nBranches>
-  <Leaves> 6 </Leaves>
+  <nBranches> 0 30 25 0 </nBranches>
+  <Leaves> 12 </Leaves>
   <LeafFile> plugins/weberpenntree/leaves/AppleLeaf.png </LeafFile>
-  <LeafScale> 0.3 </LeafScale>
+  <LeafScale> 0.15 </LeafScale>
   <LeafScaleX> 0.5 </LeafScaleX>
   <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
 </WeberPennTree>
 
-<WeberPennTree label="Olive">
-  <Shape> 7 </Shape>
-  <BaseSize> 0.15 </BaseSize>
+<WeberPennTree label="Avocado">
+  <Shape> 3 </Shape>
+  <BaseSize> 0.0 </BaseSize>
   <BaseSplits> 4 </BaseSplits>
   <BaseSplitSize> 0.05 </BaseSplitSize>
   <Scale> 8 </Scale>
   <ScaleV> 0 </ScaleV>
   <ZScale> 1 </ZScale>
-  <ZScaleV> 0 </ZScaleV>
-  <Ratio> 0.02 </Ratio>
+  <ZScaleV> 0.5 </ZScaleV>
+  <Ratio> 0.025 </Ratio>
   <RatioPower> 1. </RatioPower>
   <Lobes> 7 </Lobes>
   <LobeDepth> 0.1 </LobeDepth>
-  <Flare> 0.5 </Flare>
+  <Flare> 0.4 </Flare>
   <Levels> 3 </Levels>
   <nSegSplits> 0 0 0 0 </nSegSplits>
-  <nSplitAngle> 35 30 0 0 </nSplitAngle>
-  <nSplitAngleV> 5 0 0 0 </nSplitAngleV>
-  <nCurveRes> 8 4 4 0 </nCurveRes>
-  <nCurve> -20 -20 -10 0 </nCurve>
-  <nCurveV> 5 5 0 0 </nCurveV>
+  <nSplitAngle> 20 0 0 0 </nSplitAngle>
+  <nSplitAngleV> 0 0 0 0 </nSplitAngleV>
+  <nCurveRes> 5 5 5 0 </nCurveRes>
+  <nCurve> -10 50 -50 0 </nCurve>
+  <nCurveV> 0 0 0 0 </nCurveV>
   <nCurveBack> 0 0 0 0 </nCurveBack>
-  <nLength> 1.3 0.6 0.4 0 </nLength>
-  <nLengthV> 0 0.15 0.15 0 </nLengthV>
+  <nLength> 1. 0.25 0.6 0 </nLength>
+  <nLengthV> 0.1 0.1 0.2 0 </nLengthV>
   <nTaper> 1 1 1 0 </nTaper>
-  <nDownAngle> 65 55 50 35 </nDownAngle>
-  <nDownAngleV> 0 0 0 0 </nDownAngleV>
+  <nDownAngle> 70 60 60 120 </nDownAngle>
+  <nDownAngleV> 0 0 30 0 </nDownAngleV>
   <nRotate> 140 140 140 140 </nRotate>
-  <nRotateV> 0 10 10 0 </nRotateV>
-  <nBranches> 40 36 25 0 </nBranches>
+  <nRotateV> 5 5 10 25 </nRotateV>
+  <nBranches> 0 40 30 0 </nBranches>
   <Leaves> 14 </Leaves>
-  <LeafFile> plugins/weberpenntree/leaves/OliveLeaf.png </LeafFile>
-  <LeafScale> 0.3 </LeafScale>
-  <LeafScaleX> 0.2 </LeafScaleX>
+  <LeafFile> plugins/weberpenntree/leaves/AvocadoLeaf.png </LeafFile>
+  <LeafScale> 0.25 </LeafScale>
+  <LeafScaleX> 0.5 </LeafScaleX>
   <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
 </WeberPennTree>
 
 <WeberPennTree label="Lemon">
   <Shape> 7 </Shape>
-  <BaseSize> 0.25 </BaseSize>
+  <BaseSize> 0.2 </BaseSize>
   <BaseSplits> 0 </BaseSplits>
   <BaseSplitSize> 0.2 </BaseSplitSize>
   <Scale> 6.5 </Scale>
@@ -125,7 +125,7 @@
   <ZScale> 1 </ZScale>
   <ZScaleV> 0 </ZScaleV>
   <Ratio> 0.02 </Ratio>
-  <RatioPower> 1 </RatioPower>
+  <RatioPower> 0.15 </RatioPower>
   <Lobes> 5 </Lobes>
   <LobeDepth> 0.07 </LobeDepth>
   <Flare> 0.8 </Flare>
@@ -133,32 +133,68 @@
   <nSegSplits> 0 0 0 0 </nSegSplits>
   <nSplitAngle> 48 0 0 0 </nSplitAngle>
   <nSplitAngleV> 3 0 0 0 </nSplitAngleV>
-  <nCurveRes> 6 4 4 0 </nCurveRes>
-  <nCurve> 0 -10 -10 0 </nCurve>
+  <nCurveRes> 5 5 5 0 </nCurveRes>
+  <nCurve> 0 -70 -70 0 </nCurve>
   <nCurveV> 0 5 5 5 </nCurveV>
   <nCurveBack> 0 0 0 0 </nCurveBack>
-  <nLength> 1 0.6 0.6 0 </nLength>
+  <nLength> 1 0.45 0.4 0 </nLength>
   <nLengthV> 0.1 0.1 0.05 0 </nLengthV>
   <nTaper> 1 1 1 0 </nTaper>
   <nDownAngle> 80 90 70 60 </nDownAngle>
   <nDownAngleV> 5 5 5 5 </nDownAngleV>
   <nRotate> 140 140 140 140 </nRotate>
   <nRotateV> 25 25 25 0 </nRotateV>
-  <nBranches> 45 35 35 0 </nBranches>
+  <nBranches> 0 60 35 0 </nBranches>
   <Leaves> 20 </Leaves>
   <LeafFile> plugins/weberpenntree/leaves/LemonLeaf.png </LeafFile>
-  <LeafScale> 0.4 </LeafScale>
+  <LeafScale> 0.17 </LeafScale>
   <LeafScaleX> 0.5 </LeafScaleX>
   <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
 </WeberPennTree>
 
+<WeberPennTree label="Olive">
+  <Shape> 1 </Shape>
+  <BaseSize> 0.1 </BaseSize>
+  <BaseSplits> 4 </BaseSplits>
+  <BaseSplitSize> 0.05 </BaseSplitSize>
+  <Scale> 7 </Scale>
+  <ScaleV> 0 </ScaleV>
+  <ZScale> 1 </ZScale>
+  <ZScaleV> 0 </ZScaleV>
+  <Ratio> 0.017 </Ratio>
+  <RatioPower> 1. </RatioPower>
+  <Lobes> 7 </Lobes>
+  <LobeDepth> 0.1 </LobeDepth>
+  <Flare> 0.5 </Flare>
+  <Levels> 3 </Levels>
+  <nSegSplits> 0 0 0 0 </nSegSplits>
+  <nSplitAngle> 33 30 0 0 </nSplitAngle>
+  <nSplitAngleV> 5 0 0 0 </nSplitAngleV>
+  <nCurveRes> 4 4 4 0 </nCurveRes>
+  <nCurve> -50 -60 -60 0 </nCurve>
+  <nCurveV> 5 5 5 0 </nCurveV>
+  <nCurveBack> 0 0 0 0 </nCurveBack>
+  <nLength> 1 0.5 0.3 0 </nLength>
+  <nLengthV> 0 0.15 0.15 0 </nLengthV>
+  <nTaper> 1 1 1 0 </nTaper>
+  <nDownAngle> 65 45 45 35 </nDownAngle>
+  <nDownAngleV> 0 0 0 0 </nDownAngleV>
+  <nRotate> 140 140 140 140 </nRotate>
+  <nRotateV> 0 10 10 0 </nRotateV>
+  <nBranches> 40 45 35 0 </nBranches>
+  <Leaves> 25 </Leaves>
+  <LeafFile> plugins/weberpenntree/leaves/OliveLeaf.png </LeafFile>
+  <LeafScale> 0.14 </LeafScale>
+  <LeafScaleX> 0.2 </LeafScaleX>
+  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+</WeberPennTree>
 
 <WeberPennTree label="Orange">
   <Shape> 7 </Shape>
-  <BaseSize> 0.05 </BaseSize>
+  <BaseSize> 0.15 </BaseSize>
   <BaseSplits> 0 </BaseSplits>
   <BaseSplitSize> 0.2 </BaseSplitSize>
-  <Scale> 11 </Scale>
+  <Scale> 10 </Scale>
   <ScaleV> 0 </ScaleV>
   <ZScale> 1 </ZScale>
   <ZScaleV> 0 </ZScaleV>
@@ -169,37 +205,75 @@
   <Flare> 0.6 </Flare>
   <Levels> 3 </Levels>
   <nSegSplits> 0 0 0 0 </nSegSplits>
-  <nSplitAngle> 48 0 0 0 </nSplitAngle>
+  <nSplitAngle> 0 0 0 0 </nSplitAngle>
   <nSplitAngleV> 3 0 0 0 </nSplitAngleV>
-  <nCurveRes> 5 4 4 0 </nCurveRes>
-  <nCurve> 0 -10 -10 0 </nCurve>
+  <nCurveRes> 20 8 8 0 </nCurveRes>
+  <nCurve> 0 -60 -80 0 </nCurve>
   <nCurveV> 0 5 5 5 </nCurveV>
   <nCurveBack> 0 0 0 0 </nCurveBack>
-  <nLength> 1 0.55 0.5 0 </nLength>
+  <nLength> 1 0.5 0.4 0 </nLength>
   <nLengthV> 0 0.05 0.05 0 </nLengthV>
   <nTaper> 1 1 1 0 </nTaper>
-  <nDownAngle> 90 90 70 60 </nDownAngle>
+  <nDownAngle> 120 100 90 60 </nDownAngle>
   <nDownAngleV> 5 5 5 5 </nDownAngleV>
   <nRotate> 140 140 140 140 </nRotate>
   <nRotateV> 45 45 25 0 </nRotateV>
-  <nBranches> 50 45 30 0 </nBranches>
+  <nBranches> 0 70 40 0 </nBranches>
   <Leaves> 20 </Leaves>
   <LeafFile> plugins/weberpenntree/leaves/OrangeLeaf.png </LeafFile>
-  <LeafScale> 0.3 </LeafScale>
+  <LeafScale> 0.2 </LeafScale>
   <LeafScaleX> 0.5 </LeafScaleX>
   <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
 </WeberPennTree>
 
-<WeberPennTree label="Pistachio">
-  <Shape> 3 </Shape>
-  <BaseSize> 0.35 </BaseSize>
-  <BaseSplits> 25 </BaseSplits>
-  <BaseSplitSize> 0.4 </BaseSplitSize>
-  <Scale> 5.5 </Scale>
+<WeberPennTree label="Peach">
+  <Shape> 1 </Shape>
+  <BaseSize> 0.4 </BaseSize>
+  <BaseSplits> 3 </BaseSplits>
+  <BaseSplitSize> 0.1 </BaseSplitSize>
+  <Scale> 6 </Scale>
   <ScaleV> 0 </ScaleV>
   <ZScale> 1 </ZScale>
   <ZScaleV> 0 </ZScaleV>
-  <Ratio> 0.025 </Ratio>
+  <Ratio> 0.02 </Ratio>
+  <RatioPower> 0.5 </RatioPower>
+  <Lobes> 7 </Lobes>
+  <LobeDepth> 0.1 </LobeDepth>
+  <Flare> 0.8 </Flare>
+  <Levels> 3 </Levels>
+  <nSegSplits> 1 0 0 0 </nSegSplits>
+  <nSplitAngle> 10 30 0 0 </nSplitAngle>
+  <nSplitAngleV> 0 0 0 0 </nSplitAngleV>
+  <nCurveRes> 5 5 5 0 </nCurveRes>
+  <nCurve> 30 40 -40 0 </nCurve>
+  <nCurveV> 10 10 10 0 </nCurveV>
+  <nCurveBack> 0 0 0 0 </nCurveBack>
+  <nLength> 1 0.4 0.3 0 </nLength>
+  <nLengthV> 0 0.05 0.05 0 </nLengthV>
+  <nTaper> 1 1 1 0 </nTaper>
+  <nDownAngle> 60 60 60 100 </nDownAngle>
+  <nDownAngleV> 0 0 0 0 </nDownAngleV>
+  <nRotate> 140 140 180 140 </nRotate>
+  <nRotateV> 5 5 40 20 </nRotateV>
+  <nBranches> 0 40 30 0 </nBranches>
+  <Leaves> 10 </Leaves>
+  <LeafFile> plugins/weberpenntree/leaves/AvocadoLeaf.png </LeafFile>
+  <LeafScale> 0.2 </LeafScale>
+  <LeafScaleX> 0.2 </LeafScaleX>
+  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+  <LeafAngleDist>0.0000 0.1910 0.3820 0.5730 0.9549 1.7189 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000</LeafAngleDist>
+</WeberPennTree>
+
+<WeberPennTree label="Pistachio">
+  <Shape> 3 </Shape>
+  <BaseSize> 0.25 </BaseSize>
+  <BaseSplits> 25 </BaseSplits>
+  <BaseSplitSize> 0.3 </BaseSplitSize>
+  <Scale> 7.5 </Scale>
+  <ScaleV> 0 </ScaleV>
+  <ZScale> 1 </ZScale>
+  <ZScaleV> 0 </ZScaleV>
+  <Ratio> 0.027 </Ratio>
   <RatioPower> 1 </RatioPower>
   <Lobes> 5 </Lobes>
   <LobeDepth> 0.07 </LobeDepth>
@@ -207,9 +281,9 @@
   <Levels> 2 </Levels>
   <nSegSplits> 0 0 0 0 </nSegSplits>
   <nSplitAngle> 55 0 0 0 </nSplitAngle>
-  <nSplitAngleV> 22 0 0 0 </nSplitAngleV>
-  <nCurveRes> 10 5 5 0 </nCurveRes>
-  <nCurve> -13 -10 -10 0 </nCurve>
+  <nSplitAngleV> 20 0 0 0 </nSplitAngleV>
+  <nCurveRes> 10 6 6 0 </nCurveRes>
+  <nCurve> -65 -40 -40 0 </nCurve>
   <nCurveV> 0 5 5 5 </nCurveV>
   <nCurveBack> 0 0 0 0 </nCurveBack>
   <nLength> 1 0.1 0 0 </nLength>
@@ -219,123 +293,48 @@
   <nDownAngleV> 5 5 5 5 </nDownAngleV>
   <nRotate> 140 140 140 140 </nRotate>
   <nRotateV> 25 25 25 0 </nRotateV>
-  <nBranches> 35 35 30 0 </nBranches>
-  <Leaves> 12 </Leaves>
+  <nBranches> 0 45 30 0 </nBranches>
+  <Leaves> 16 </Leaves>
   <LeafFile> plugins/weberpenntree/leaves/PistachioLeaf.png </LeafFile>
-  <LeafScale> 0.25 </LeafScale>
+  <LeafScale> 0.15 </LeafScale>
   <LeafScaleX> 0.6 </LeafScaleX>
   <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
 </WeberPennTree>
 
 <WeberPennTree label="Walnut">
-  <Shape> 2 </Shape>
-  <BaseSize> 0.25 </BaseSize>
+  <Shape> 7 </Shape>
+  <BaseSize> 0.15 </BaseSize>
   <BaseSplits> 0 </BaseSplits>
-  <BaseSplitSize> 0.3 </BaseSplitSize>
-  <Scale> 9 </Scale>
+  <BaseSplitSize> 0.1 </BaseSplitSize>
+  <Scale> 10 </Scale>
   <ScaleV> 0 </ScaleV>
   <ZScale> 1 </ZScale>
   <ZScaleV> 0 </ZScaleV>
-  <Ratio> 0.025 </Ratio>
+  <Ratio> 0.0275 </Ratio>
   <RatioPower> 0.2 </RatioPower>
   <Lobes> 5 </Lobes>
   <LobeDepth> 0.07 </LobeDepth>
-  <Flare> 0.2 </Flare>
+  <Flare> 0.01 </Flare>
   <Levels> 3 </Levels>
-  <nSegSplits> 0 0 0 0 </nSegSplits>
-  <nSplitAngle> 48 45 0 0 </nSplitAngle>
+  <nSegSplits> 1 1 0 0 </nSegSplits>
+  <nSplitAngle> 20 20 0 0 </nSplitAngle>
   <nSplitAngleV> 3 0 0 0 </nSplitAngleV>
-  <nCurveRes> 6 8 6 0 </nCurveRes>
+  <nCurveRes> 5 5 5 0 </nCurveRes>
   <nCurve> 0 -75 -50 -50 </nCurve>
-  <nCurveV> 0 0 0 0 </nCurveV>
+  <nCurveV> 0 20 0 0 </nCurveV>
   <nCurveBack> 0 0 0 0 </nCurveBack>
-  <nLength> 1 0.9 0.3 0 </nLength>
-  <nLengthV> 0.1 0.1 0.1 0 </nLengthV>
-  <nTaper> 0.8 1 1 0 </nTaper>
-  <nDownAngle> 90 70 70 55 </nDownAngle>
-  <nDownAngleV> 5 5 10 10 </nDownAngleV>
-  <nRotate> 140 140 140 180 </nRotate>
-  <nRotateV> 25 25 25 50 </nRotateV>
-  <nBranches> 50 50 40 0 </nBranches>
-  <Leaves> 12 </Leaves>
+  <nLength> 1 0.4 0.4 0 </nLength>
+  <nLengthV> 0.1 0.1 0.05 0 </nLengthV>
+  <nTaper> 1 1 1 0 </nTaper>
+  <nDownAngle> 0 70 70 55 </nDownAngle>
+  <nDownAngleV> 0 10 10 10 </nDownAngleV>
+  <nRotate> 0 140 140 180 </nRotate>
+  <nRotateV> 0 25 25 50 </nRotateV>
+  <nBranches> 0 60 15 0 </nBranches>
+  <Leaves> 15 </Leaves>
   <LeafFile> plugins/weberpenntree/leaves/AlmondLeaf.png </LeafFile>
-  <LeafScale> 0.4 </LeafScale>
+  <LeafScale> 0.2 </LeafScale>
   <LeafScaleX> 0.5 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
-</WeberPennTree>
-
-<WeberPennTree label="Peach">
-  <Shape> 6 </Shape>
-  <BaseSize> 0.19 </BaseSize>
-  <BaseSplits> 2 </BaseSplits>
-  <BaseSplitSize> 0.1 </BaseSplitSize>
-  <Scale> 7 </Scale>
-  <ScaleV> 0 </ScaleV>
-  <ZScale> 1 </ZScale>
-  <ZScaleV> 0 </ZScaleV>
-  <Ratio> 0.025 </Ratio>
-  <RatioPower> 0.5 </RatioPower>
-  <Lobes> 7 </Lobes>
-  <LobeDepth> 0.1 </LobeDepth>
-  <Flare> 0.8 </Flare>
-  <Levels> 3 </Levels>
-  <nSegSplits> 0 1 0 0 </nSegSplits>
-  <nSplitAngle> 60 40 0 0 </nSplitAngle>
-  <nSplitAngleV> 0 0 0 0 </nSplitAngleV>
-  <nCurveRes> 6 4 6 0 </nCurveRes>
-  <nCurve> -25 30 20 0 </nCurve>
-  <nCurveV> 0 0 0 0 </nCurveV>
-  <nCurveBack> 0 0 0 0 </nCurveBack>
-  <nLength> 1.6 0.45 0.25 0 </nLength>
-  <nLengthV> 0 0 0 0 </nLengthV>
-  <nTaper> 1 1 1 0 </nTaper>
-  <nDownAngle> 70 80 60 100 </nDownAngle>
-  <nDownAngleV> 0 0 0 0 </nDownAngleV>
-  <nRotate> 140 140 180 140 </nRotate>
-  <nRotateV> 5 5 40 20 </nRotateV>
-  <nBranches> 45 30 20 0 </nBranches>
-  <Leaves> 12 </Leaves>
-  <LeafFile> plugins/weberpenntree/leaves/AvocadoLeaf.png </LeafFile>
-  <LeafScale> 0.5 </LeafScale>
-  <LeafScaleX> 0.2 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
-  <LeafAngleDist>0.0000 0.1910 0.3820 0.5730 0.9549 1.7189 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000</LeafAngleDist>
-</WeberPennTree>
-
-<WeberPennTree label="Avocado">
-  <Shape> 2 </Shape>
-  <BaseSize> 0.1 </BaseSize>
-  <BaseSplits> 4 </BaseSplits>
-  <BaseSplitSize> 0.05 </BaseSplitSize>
-  <Scale> 7.5 </Scale>
-  <ScaleV> 0 </ScaleV>
-  <ZScale> 1 </ZScale>
-  <ZScaleV> 0.5 </ZScaleV>
-  <Ratio> 0.028 </Ratio>
-  <RatioPower> 1. </RatioPower>
-  <Lobes> 7 </Lobes>
-  <LobeDepth> 0.1 </LobeDepth>
-  <Flare> 0.4 </Flare>
-  <Levels> 3 </Levels>
-  <nSegSplits> 0 0 0 0 </nSegSplits>
-  <nSplitAngle> 20 0 0 0 </nSplitAngle>
-  <nSplitAngleV> 0 0 0 0 </nSplitAngleV>
-  <nCurveRes> 6 6 6 0 </nCurveRes>
-  <nCurve> -10 30 -30 0 </nCurve>
-  <nCurveV> 0 0 0 0 </nCurveV>
-  <nCurveBack> 0 0 0 0 </nCurveBack>
-  <nLength> 1. 0.5 0.25 0 </nLength>
-  <nLengthV> 0.1 0.1 0.25 0 </nLengthV>
-  <nTaper> 1 1 1 0 </nTaper>
-  <nDownAngle> 70 60 60 120 </nDownAngle>
-  <nDownAngleV> 0 0 30 0 </nDownAngleV>
-  <nRotate> 140 140 140 360 </nRotate>
-  <nRotateV> 5 5 10 25 </nRotateV>
-  <nBranches> 35 35 20 0 </nBranches>
-  <Leaves> 16 </Leaves>
-  <LeafFile> plugins/weberpenntree/leaves/AvocadoLeaf.png </LeafFile>
-  <LeafScale> 0.5 </LeafScale>
-  <LeafScaleX> 0.3 </LeafScaleX>
   <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
 </WeberPennTree>
 

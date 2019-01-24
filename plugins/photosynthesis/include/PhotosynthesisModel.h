@@ -60,29 +60,54 @@ struct EmpiricalModelCoefficients{
 struct FarquharModelCoefficients{
 
   FarquharModelCoefficients(void){
-    Gamma = 40; //Pa
-    Vcmax = 80; //umol/m^2/s
-    Kco = 750; //Pa
-    Jmax = 200; //umol/m^2/s
-    theta = 0.2; //unitless
-    R = 1.663e5; //umol-K^0.5/m^2-s
-    ER = 3740; //1/K
+    
+    //parameters (at TL = 25C)
+    Vcmax = 78.5; //umol/m^2/s
+    Jmax = 150; //umol/m^2/s
+    alpha = 0.45; //unitless
+    Rd = 2.12; //umol/m^2/s
+
+    O = 213.5; //ambient oxygen concentration (mmol/mol)
+
+    //tempeature parameters
+    c_Rd = 18.72;
+    c_Vcmax = 26.35;
+    c_Jmax = 17.57;
+    c_Gamma = 19.02;
+    c_Kc = 38.05;
+    c_Ko = 20.30;
+
+    dH_Rd = 46.39;
+    dH_Vcmax = 65.33;
+    dH_Jmax = 43.54;
+    dH_Gamma = 37.83;
+    dH_Kc = 79.43;
+    dH_Ko = 36.38;
+
   }
 
-  float Gamma; 
-
-  //light limited coefficients
-  float Vcmax; 
-  float Kco; 
-
-  //CO2 limited coefficients
+  //parameters
+  float Vcmax;
   float Jmax; 
-  float theta; 
+  float Rd;
+  float alpha;
+  float O;
+  
+  //temperature parameters
+  float c_Rd;
+  float c_Vcmax;
+  float c_Jmax;
+  float c_Gamma;
+  float c_Kc;
+  float c_Ko;
 
-  //respiration temperature response coefficients
-  float R;
-  float ER;
-
+  float dH_Rd;
+  float dH_Vcmax;
+  float dH_Jmax;
+  float dH_Gamma;
+  float dH_Kc;
+  float dH_Ko;
+  
 };
 
 class PhotosynthesisModel{
@@ -135,7 +160,7 @@ private:
 
   float evaluateCi_Empirical( const float Ci, const float CO2, const float fL, const float Rd, const float gM );
 
-  float evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float Rd, const float gM );
+  float evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float TL, const float gM, float& A );
 
   float i_PAR_default;
   float TL_default;

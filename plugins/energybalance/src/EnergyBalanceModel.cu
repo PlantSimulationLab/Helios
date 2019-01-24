@@ -217,19 +217,19 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
 
     //Initial guess for surface temperature
     if( prim->doesPrimitiveDataExist("temperature") ){
-      prim->getPrimitiveData("temperature",To[p]);
+      prim->getPrimitiveData("temperature",To[u]);
     }else{
-      To[p] = temperature_default;
+      To[u] = temperature_default;
     }
-    if( To[p]==0 ){//can't have To equal to 0
-      To[p] = 300;
+    if( To[u]==0 ){//can't have To equal to 0
+      To[u] = 300;
     }
 
     //Net absorbed radiation
-    R[p] = Rn.at(u);
+    R[u] = Rn.at(u);
 
     //Emissivity
-    eps[p] = emissivity.at(u);
+    eps[u] = emissivity.at(u);
 
     //Wind speed
     float U;
@@ -252,9 +252,9 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
 
     //Air temperature
     if( prim->doesPrimitiveDataExist("air_temperature") ){
-      prim->getPrimitiveData("air_temperature",Ta[p]);
+      prim->getPrimitiveData("air_temperature",Ta[u]);
     }else{
-      Ta[p] = air_temperature_default;
+      Ta[u] = air_temperature_default;
     }
 
     //Air relative humidity
@@ -266,47 +266,47 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
     }
 
     //Air vapor pressure
-    float esat = 611.f*exp(17.502f*(Ta[p]-273.f)/((Ta[p]-273.f)+240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in degC, and result is in Pascals
-    ea[p] = hr*esat; // Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)
+    float esat = 611.f*exp(17.502f*(Ta[u]-273.f)/((Ta[u]-273.f)+240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in degC, and result is in Pascals
+    ea[u] = hr*esat; // Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)
 
     //Air pressure
     if( prim->doesPrimitiveDataExist("air_pressure") ){
-      prim->getPrimitiveData("air_pressure",pressure[p]);
+      prim->getPrimitiveData("air_pressure",pressure[u]);
     }else{
-      pressure[p] = pressure_default;
+      pressure[u] = pressure_default;
     }
 
     //Boundary-layer conductance to heat
     if( prim->doesPrimitiveDataExist("boundarylayer_conductance") ){
-      prim->getPrimitiveData("boundarylayer_conductance",gH[p]);
+      prim->getPrimitiveData("boundarylayer_conductance",gH[u]);
     }else{
-      gH[p] = 0.135f*sqrt(U/L);
+      gH[u] = 0.135f*sqrt(U/L);
       if( L==0 ){//this causes gH = NaN
-    	gH[p] = 0;
+    	gH[u] = 0;
       }
     }
  
     //Moisture conductance
     if( prim->doesPrimitiveDataExist("moisture_conductance") ){
-      prim->getPrimitiveData("moisture_conductance",gS[p]);
+      prim->getPrimitiveData("moisture_conductance",gS[u]);
     }else{
-      gS[p] = gS_default;
+      gS[u] = gS_default;
     }
       
     //Other fluxes
     if( prim->doesPrimitiveDataExist("other_surface_flux") ){
-      prim->getPrimitiveData("other_surface_flux",Qother[p]);
+      prim->getPrimitiveData("other_surface_flux",Qother[u]);
     }else{
-      Qother[p] = Qother_default;
+      Qother[u] = Qother_default;
     }
     
     //Number of sides emitting radiation
-    Nsides[p] = 1;
+    Nsides[u] = 1;
     if( prim->doesPrimitiveDataExist("twosided_flag") ){
       uint flag;
       prim->getPrimitiveData("twosided_flag",flag);
       if( flag==1 ){
-    	Nsides[p]=2;
+    	Nsides[u]=2;
       }
     }
 
@@ -324,7 +324,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
   CUDA_CHECK_ERROR( cudaMemcpy(d_gS, gS, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
   CUDA_CHECK_ERROR( cudaMemcpy(d_Nsides, Nsides, Nprimitives*sizeof(uint), cudaMemcpyHostToDevice) );
 
-  float * T = (float*)malloc( Nprimitives*sizeof(float) );
+  float* T = (float*)malloc( Nprimitives*sizeof(float) );
   float* d_T;
   CUDA_CHECK_ERROR( cudaMalloc((void**)&d_T, Nprimitives*sizeof(float)) );
 
@@ -343,18 +343,18 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
 
     helios::Primitive* prim = context->getPrimitivePointer(p);  
   
-    if( T[p]!=T[p] ){
-      T[p] = temperature_default;
+    if( T[u]!=T[u] ){
+      T[u] = temperature_default;
     }
     
-    prim->setPrimitiveData("temperature",T[p]);
+    prim->setPrimitiveData("temperature",T[u]);
 
-    float QH = 29.25*gH[p]*(T[p]-Ta[p]);
+    float QH = 29.25*gH[u]*(T[u]-Ta[u]);
     prim->setPrimitiveData("sensible_flux",QH);
 
-    float es = 611.f*exp(17.502f*(T[p]-273.f)/((T[p]-273.f)+240.97f));
-    float gM = 0.97*gH[p]*gS[p]/(0.97*gH[p]+gS[p]);
-    float QL = 44000*gM*(es-ea[p])/pressure[p];
+    float es = 611.f*exp(17.502f*(T[u]-273.f)/((T[u]-273.f)+240.97f));
+    float gM = 0.97*gH[u]*gS[u]/(0.97*gH[u]+gS[u]);
+    float QL = 44000*gM*(es-ea[u])/pressure[u];
     prim->setPrimitiveData("latent_flux",QL);
 
   }

@@ -44,14 +44,6 @@ helios::vec3 inline flota3tovec3( float3 f3 ){
   return v3;
 }
 
-__host__ __device__ float3 operator-(const float3 &a, const float3 &b) {
-  return make_float3(a.x-b.x, a.y-b.y, a.z-b.z);
-}
-
-__host__ __device__ float3 operator+(const float3 &a, const float3 &b) {
-  return make_float3(a.x+b.x, a.y+b.y, a.z+b.z);
-}
-
 __device__ float3 d_rotatePoint(const float3 &position, const float &theta, const float &phi) {
 
   float Ry[3][3], Rz[3][3];
@@ -125,9 +117,20 @@ __global__ void insideVolume( const uint Nhits, const float3* d_hit_xyz, const u
 
     float3 origin = make_float3(0,0,0); 
 
-    float3 hit_xyz_rot = d_rotatePoint(hit_xyz-center,0,-rotation) + center;
+    float3 xyz = hit_xyz;
+    xyz.x -= center.x;
+    xyz.y -= center.y;
+    xyz.z -= center.z;
+    float3 hit_xyz_rot = d_rotatePoint(xyz,0,-rotation);
+    hit_xyz.x += center.x;
+    hit_xyz.y += center.y;
+    hit_xyz.z += center.z;
 
-    float3 direction = hit_xyz_rot-origin;
+    float3 direction = hit_xyz_rot;
+    hit_xyz_rot.x -= origin.x;
+    hit_xyz_rot.y -= origin.y;
+    hit_xyz_rot.z -= origin.z;
+
     float mag = sqrt( direction.x*direction.x + direction.y*direction.y + direction.z*direction.z );
     direction.x = direction.x/mag;
     direction.y = direction.y/mag;

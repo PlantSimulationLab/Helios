@@ -47,7 +47,7 @@ int PhotosynthesisModel::selfTest( void ){
   float Qin[9] = {0, 50, 100, 200, 400, 800, 1200, 1500, 2000};
   A.resize(9);
   
-  //Generate a light response curve using empirical model with default parameters
+  //Generate a light response curve using empirical model with default parmeters
   for( int i=0; i<9; i++ ){
     context_test.setPrimitiveData(UUID,"radiation_flux_PAR",Qin[i]);
     photomodel.run();
@@ -62,6 +62,7 @@ int PhotosynthesisModel::selfTest( void ){
     context_test.setPrimitiveData(UUID,"radiation_flux_PAR",Qin[i]);
     photomodel.run();
     context_test.getPrimitiveData(UUID,"net_photosynthesis",A[i]);
+    printf("light response: Q=%f; A=%f\n",Qin[i],A[i]);
   }
 
   //Generate an A vs Ci curve using empirical model with default parameters
@@ -85,6 +86,31 @@ int PhotosynthesisModel::selfTest( void ){
     context_test.setPrimitiveData(UUID,"air_CO2",CO2[i]);
     photomodel.run();
     context_test.getPrimitiveData(UUID,"net_photosynthesis",A[i]);
+    printf("A-Ci curve: Ci=%f; A=%f\n",CO2[i],A[i]);
+  }
+
+  //Generate an A vs temperature curve using empirical model with default parameters
+
+  float TL[7] = {270, 280, 290, 300, 310, 320, 330};
+  A.resize(7);
+
+  context_test.setPrimitiveData(UUID,"air_CO2",CO2[3]);
+  
+  photomodel.setModelType_Empirical();
+  for( int i=0; i<7; i++ ){
+    context_test.setPrimitiveData(UUID,"temperature",TL[i]);
+    photomodel.run();
+    context_test.getPrimitiveData(UUID,"net_photosynthesis",A[i]);
+  }
+
+  //Generate an A vs temperature curve using Farquhar model with default parameters
+
+  photomodel.setModelType_Farquhar();
+  for( int i=0; i<7; i++ ){
+    context_test.setPrimitiveData(UUID,"temperature",TL[i]);
+    photomodel.run();
+    context_test.getPrimitiveData(UUID,"net_photosynthesis",A[i]);
+    printf("temperature response: TL=%f; A=%f\n",TL[i]-273,A[i]);
   }
   
   return 0;
@@ -119,6 +145,7 @@ void PhotosynthesisModel::run( const std::vector<uint> lUUIDs ){
     float i_PAR;
     if( context->doesPrimitiveDataExist(p,"radiation_flux_PAR") ){
       context->getPrimitiveData(p,"radiation_flux_PAR",i_PAR);
+      i_PAR = i_PAR*4.57; //umol/m^2-s (ref https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf)
       if( i_PAR<0 ){
 	i_PAR = 0;
 	std::cout << "WARNING (runPhotosynthesis): PAR flux value provided was negative.  Clipping to zero." << std::endl;
@@ -262,18 +289,31 @@ float PhotosynthesisModel::evaluateEmpiricalModel( const float i_PAR, const floa
   
 }
 
-float PhotosynthesisModel::evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float Rd, const float gM ){
+float PhotosynthesisModel::evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float TL, const float gM, float& A ){
 
-  float Wc = farquharmodelcoeffs.Vcmax*Ci/(Ci+farquharmodelcoeffs.Kco);
+  //molar gas constant (kJ/K/mol)
+  float R = 0.0083144598;
 
-  float J = farquharmodelcoeffs.Jmax*i_PAR*farquharmodelcoeffs.theta/(i_PAR*farquharmodelcoeffs.theta+farquharmodelcoeffs.Jmax);
-  float Wj = J*Ci/(4.f*Ci+8.f*farquharmodelcoeffs.Gamma);
+  float Rd = farquharmodelcoeffs.Rd*exp(farquharmodelcoeffs.c_Rd-farquharmodelcoeffs.dH_Rd/(R*TL));
+  float Vcmax = farquharmodelcoeffs.Vcmax*exp(farquharmodelcoeffs.c_Vcmax-farquharmodelcoeffs.dH_Vcmax/(R*TL));
+  float Jmax = farquharmodelcoeffs.Jmax*exp(farquharmodelcoeffs.c_Jmax-farquharmodelcoeffs.dH_Jmax/(R*TL));
+
+  float Gamma = exp(farquharmodelcoeffs.c_Gamma-farquharmodelcoeffs.dH_Gamma/(R*TL));
+  float Kc = exp(farquharmodelcoeffs.c_Kc-farquharmodelcoeffs.dH_Kc/(R*TL));
+  float Ko = exp(farquharmodelcoeffs.c_Ko-farquharmodelcoeffs.dH_Ko/(R*TL));
   
-  float A = (1-farquharmodelcoeffs.Gamma/Ci)*fmin(Wc,Wj)-Rd;
+  float Kco = Kc*(1.f+farquharmodelcoeffs.O/Ko);
+
+  float Wc = farquharmodelcoeffs.Vcmax*Ci/(Ci+Kco);
+
+  float J = Jmax*i_PAR*farquharmodelcoeffs.alpha/(i_PAR*farquharmodelcoeffs.alpha+Jmax);
+  float Wj = J*Ci/(4.f*Ci+8.f*Gamma);
+  
+  A = (1-Gamma/Ci)*fmin(Wc,Wj)-Rd;
   
   //--- Calculate error and update --- //
   
-  float resid = 0.75*gM*(CO2-Ci) - A - Rd;
+  float resid = 0.75*gM*(CO2-Ci) - (A + Rd);
 
   return resid;
   
@@ -284,17 +324,14 @@ float PhotosynthesisModel::evaluateFarquharModel( const float i_PAR, const float
   //initial guess for intercellular CO2
   float Ci = CO2;
   
-  
-  //--- Respiration Rate --- //
-  
-  float Rd = farquharmodelcoeffs.R*sqrt(TL-273.f)*exp(-farquharmodelcoeffs.ER/TL);
+  float A;
   
   float Ci_old = Ci;
   float Ci_old_old = 0.95*Ci;
   
-  float resid_old = evaluateCi_Farquhar( Ci_old, CO2, i_PAR, Rd, gM );
-  float resid_old_old = evaluateCi_Farquhar( Ci_old_old, CO2, i_PAR, Rd, gM );
-  
+  float resid_old = evaluateCi_Farquhar( Ci_old, CO2, i_PAR, TL, gM, A );
+  float resid_old_old = evaluateCi_Farquhar( Ci_old_old, CO2, i_PAR, TL, gM, A );
+
   float err = 10000, err_max = 0.01;
   int iter = 0, max_iter = 100;
   float resid;
@@ -306,7 +343,7 @@ float PhotosynthesisModel::evaluateFarquharModel( const float i_PAR, const float
     
     Ci = fabs((Ci_old_old*resid_old-Ci_old*resid_old_old)/(resid_old-resid_old_old));
 
-    resid = evaluateCi_Farquhar( Ci, CO2, i_PAR, Rd, gM );
+    resid = evaluateCi_Farquhar( Ci, CO2, i_PAR, TL, gM, A );
 
     resid_old_old = resid_old;
     resid_old = resid;
@@ -320,18 +357,8 @@ float PhotosynthesisModel::evaluateFarquharModel( const float i_PAR, const float
     
   }
 
-  float A;
   if( err>err_max && resid_old!=0 ){
     A=0;
-  }else{
-    
-    float Wc = farquharmodelcoeffs.Vcmax*Ci/(Ci+farquharmodelcoeffs.Kco);
-    
-    float J = farquharmodelcoeffs.Jmax*i_PAR*farquharmodelcoeffs.theta/(i_PAR*farquharmodelcoeffs.theta+farquharmodelcoeffs.Jmax);
-    float Wj = J*Ci/(4.f*Ci+8.f*farquharmodelcoeffs.Gamma);
-    
-    A = (1-farquharmodelcoeffs.Gamma/Ci)*fmin(Wc,Wj)-Rd;
-
   }
     
   return A;
