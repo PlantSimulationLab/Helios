@@ -122,14 +122,14 @@ __global__ void insideVolume( const uint Nhits, const float3* d_hit_xyz, const u
     xyz.y -= center.y;
     xyz.z -= center.z;
     float3 hit_xyz_rot = d_rotatePoint(xyz,0,-rotation);
-    hit_xyz.x += center.x;
-    hit_xyz.y += center.y;
-    hit_xyz.z += center.z;
+    hit_xyz_rot.x += center.x;
+    hit_xyz_rot.y += center.y;
+    hit_xyz_rot.z += center.z;
 
     float3 direction = hit_xyz_rot;
-    hit_xyz_rot.x -= origin.x;
-    hit_xyz_rot.y -= origin.y;
-    hit_xyz_rot.z -= origin.z;
+    direction.x -= origin.x;
+    direction.y -= origin.y;
+    direction.z -= origin.z;
 
     float mag = sqrt( direction.x*direction.x + direction.y*direction.y + direction.z*direction.z );
     direction.x = direction.x/mag;
