@@ -28,23 +28,9 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
-float3 inline vec3tofloat3( helios::vec3 v3 ){
-  float3 f3;
-  f3.x=v3.x;
-  f3.y=v3.y;
-  f3.z=v3.z;
-  return f3;
-}
 
-helios::vec3 inline flota3tovec3( float3 f3 ){
-  helios::vec3 v3;
-  v3.x=f3.x;
-  v3.y=f3.y;
-  v3.z=f3.z;
-  return v3;
-}
 
-__device__ float3 d_rotatePoint(const float3 &position, const float &theta, const float &phi) {
+__device__ float3 d_rotatePoint_vi(const float3 &position, const float &theta, const float &phi) {
 
   float Ry[3][3], Rz[3][3];
 
@@ -97,7 +83,7 @@ __device__ float3 d_rotatePoint(const float3 &position, const float &theta, cons
 	
 }
 
-__global__ void insideVolume( const uint Nhits, const float3* d_hit_xyz, const uint Ngridcells, const float3* d_grid_size, const float3* d_grid_center, const float* d_grid_rotation, int* d_hit_vol ){
+__global__ void insideVolume_vi( const uint Nhits, const float3* d_hit_xyz, const uint Ngridcells, const float3* d_grid_size, const float3* d_grid_center, const float* d_grid_rotation, int* d_hit_vol ){
   
   uint t = blockIdx.x*blockDim.x+threadIdx.x;
 
@@ -121,7 +107,7 @@ __global__ void insideVolume( const uint Nhits, const float3* d_hit_xyz, const u
     xyz.x -= center.x;
     xyz.y -= center.y;
     xyz.z -= center.z;
-    float3 hit_xyz_rot = d_rotatePoint(xyz,0,-rotation);
+    float3 hit_xyz_rot = d_rotatePoint_vi(xyz,0,-rotation);
     hit_xyz_rot.x += center.x;
     hit_xyz_rot.y += center.y;
     hit_xyz_rot.z += center.z;
@@ -313,7 +299,7 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
 
   dim3 dimBlock( 64, 1 );
   dim3 dimGrid( ceil(N/64.f) );
-  insideVolume <<< dimGrid, dimBlock >>>( N, d_hit_xyz, Ncells, d_grid_size, d_grid_center, d_grid_rotation, d_hit_vol );
+  insideVolume_vi <<< dimGrid, dimBlock >>>( N, d_hit_xyz, Ncells, d_grid_size, d_grid_center, d_grid_rotation, d_hit_vol );
 
   CUDA_CHECK_ERROR( cudaPeekAtLastError() );
   CUDA_CHECK_ERROR( cudaDeviceSynchronize() );

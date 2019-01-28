@@ -35,7 +35,7 @@ int VoxelIntersection::selfTest( void ){
   vec3 vsize = make_vec3(3,2,1);
   uint UUID_v = context_test.addVoxel( vorigin, vsize );
 
-  int3 Ninside = make_int3(5,5,5);
+  helios::int3 Ninside = helios::make_int3(5,5,5);
 
   vec2 psize = make_vec2(0.1,0.1);
 
