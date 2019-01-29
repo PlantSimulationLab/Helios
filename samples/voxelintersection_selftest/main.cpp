@@ -11,3 +11,4 @@ int main( void ){
   return voxelintersection.selfTest();
   
 }
+

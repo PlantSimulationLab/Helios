@@ -20,8 +20,6 @@
 
 #include "Context.h"
 
-#include <cuda_runtime.h>
-
 class VoxelIntersection{
  public:
 
@@ -44,22 +42,6 @@ class VoxelIntersection{
  private:
 
   helios::Context* context;
-
-  float3 inline vec3tofloat3( helios::vec3 v3 ){
-    float3 f3;
-    f3.x=v3.x;
-    f3.y=v3.y;
-    f3.z=v3.z;
-    return f3;
-  }
-
-  helios::vec3 inline float3tovec3( float3 f3 ){
-    helios::vec3 v3;
-    v3.x=f3.x;
-    v3.y=f3.y;
-    v3.z=f3.z;
-    return v3;
-  }
   
 };
 

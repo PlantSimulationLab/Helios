@@ -28,7 +28,21 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
+float3 inline vec3tofloat3( helios::vec3 v3 ){
+  float3 f3;
+  f3.x=v3.x;
+  f3.y=v3.y;
+  f3.z=v3.z;
+  return f3;
+}
 
+helios::vec3 inline float3tovec3( float3 f3 ){
+  helios::vec3 v3;
+  v3.x=f3.x;
+  v3.y=f3.y;
+  v3.z=f3.z;
+  return v3;
+}
 
 __device__ float3 d_rotatePoint_vi(const float3 &position, const float &theta, const float &phi) {
 
