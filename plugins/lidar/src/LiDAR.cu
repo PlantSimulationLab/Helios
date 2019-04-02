@@ -1957,26 +1957,26 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
   if( printmessages ){
     std::cout << "Calculating leaf area..." << std::endl;
   }
-   
-  if( !hitgridcellcomputed ){
-    calculateHitGridCellGPU();
-  }
   
   const uint Nscans = getScanCount();
   const uint Ncells = getGridCellCount();
 
   //variable aggregates over all scans where we just keep tacking hits on the end for all scans
-  std::vector<float> dr_agg; //dr is path length through grid cell
+  std::vector<std::vector<float> > dr_agg; //dr is path length through grid cell
   dr_agg.resize(Ncells);
-  std::vector<float> hit_denom_agg; //hit_denom corresponds to total number of scan points that reached a given grid cell
-  hit_denom_agg.resize(Ncells,0);
+  std::vector<float> G_agg; //G is dot product between ray direction and triangle normal that was hit (only relevant for hits)
+  G_agg.resize(Ncells,0);
+  std::vector<float> hit_before_agg; //hit_before corresponds to scan points that hit something before encountering a particular grid cell
+  hit_before_agg.resize(Ncells,0);
+  std::vector<float> hit_after_agg; //hit_after corresponds to scan points that hit something after encountering a particular grid cell (including something inside that cell)
+  hit_after_agg.resize(Ncells,0);
   std::vector<float> hit_inside_agg; //hit_inside corresponds to scan points that hit something within a particular grid cell.
   hit_inside_agg.resize(Ncells,0);
   
   // We are going to perform all calculations on a scan-by-scan basis: loop through each scan
   for( uint s=0; s<Nscans; s++ ){
 
-    // Perform ray-volume intersection tests to determine P
+    //----------- Calculate dr and number of rays passed through voxels -------------- //
 
     std::vector<helios::vec3> this_scan_xyz, this_scan_raydir;
 
@@ -2005,93 +2005,65 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_raydir, Nhits*sizeof(float3)) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_scan_raydir, scan_raydir, Nhits*sizeof(float3), cudaMemcpyHostToDevice) );
 
+    //Result buffer (path lengths through volume)
+    float* dr = (float*)malloc( Nhits * sizeof(float));
     float* d_dr;
-    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr, Ncells*sizeof(float)) );
-    float* dr = (float*)malloc( Ncells*sizeof(float) );
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr, Nhits*sizeof(float)) );
 
-    float* d_hit_denom;
-    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_denom, Ncells*sizeof(float)) );
-    float* hit_denom = (float*)malloc( Ncells*sizeof(float) );
-
-    float* d_hit_inside;
-    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_inside, Ncells*sizeof(float)) );
-    float* hit_inside = (float*)malloc( Ncells*sizeof(float) );
-
-    float3* d_cell_center;
-    CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_cell_center, Ncells*sizeof(float3)) );
-    float3* cell_center = (float3*)malloc( Ncells*sizeof(float3) );
-
-    float3* d_cell_anchor;
-    CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_cell_anchor, Ncells*sizeof(float3)) );
-    float3* cell_anchor = (float3*)malloc( Ncells*sizeof(float3) );
-
-    float3* d_cell_size;
-    CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_cell_size, Ncells*sizeof(float3)) );
-    float3* cell_size = (float3*)malloc( Ncells*sizeof(float3) );
-
-    float* d_cell_rotation;
-    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_cell_rotation, Ncells*sizeof(float)) );
-    float* cell_rotation = (float*)malloc( Ncells*sizeof(float) );
-
+    float* hit_before = (float*)malloc( sizeof(float));
+    float* hit_after = (float*)malloc( sizeof(float));
+    float* d_hit_before;
+    float* d_hit_after;
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_before, sizeof(float)) );
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_after, sizeof(float)) );
+    
+    // Perform ray-volume intersection tests to determine volumes that rays passed through
     for( uint c=0; c<Ncells; c++ ){
       
       //load the attributes of the grid cell
-      cell_center[c] = vec3tofloat3(getCellCenter(c));
-      cell_anchor[c] = vec3tofloat3(getCellGlobalAnchor(c));
-      cell_size[c] = vec3tofloat3(getCellSize(c));
-      cell_rotation[c] = getCellRotation(c);
+      float3 center = vec3tofloat3(getCellCenter(c));
+      float3 anchor = vec3tofloat3(getCellGlobalAnchor(c));
+      float3 size = vec3tofloat3(getCellSize(c));
+      float rotation = getCellRotation(c);
+
+      CUDA_CHECK_ERROR( cudaMemset( d_dr, 0.f, Nhits*sizeof(float)) );
+      CUDA_CHECK_ERROR( cudaMemset( d_hit_before, 0.f, sizeof(float)) );
+      CUDA_CHECK_ERROR( cudaMemset( d_hit_after, 0.f, sizeof(float)) );
+
+      uint3 dimBlock = make_uint3( 512, 1, 1 );
+      uint3 dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), 1, 1  );
+      intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, d_scan_xyz, d_scan_raydir, Ncells, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after );
+      //intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, d_scan_raydir, d_scan_xyz, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after );
+      //intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3* center, float3* anchor, float3* size, float* rotation, float* d_dr, float* hit_denom, float* hit_inside ){
+
+       cudaDeviceSynchronize();
+       CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
+
+       //copy results back to host
+       CUDA_CHECK_ERROR( cudaMemcpy( dr, d_dr, Nhits*sizeof(float), cudaMemcpyDeviceToHost));
+       CUDA_CHECK_ERROR( cudaMemcpy( hit_before, d_hit_before, sizeof(float), cudaMemcpyDeviceToHost));
+       CUDA_CHECK_ERROR( cudaMemcpy( hit_after, d_hit_after, sizeof(float), cudaMemcpyDeviceToHost));
+
+       for( size_t r=0; r<Nhits; r++ ){
+       	 if( dr[r]>0.f ){
+       	   dr_agg.at(c).push_back(dr[r]);
+       	 }
+       }
+       hit_before_agg.at(c) += *hit_before;
+       hit_after_agg.at(c) += *hit_after;
 
     }
 
-    CUDA_CHECK_ERROR( cudaMemcpy(d_cell_center, cell_center, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
-    CUDA_CHECK_ERROR( cudaMemcpy(d_cell_anchor, cell_anchor, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
-    CUDA_CHECK_ERROR( cudaMemcpy(d_cell_size, cell_size, Ncells*sizeof(float3), cudaMemcpyHostToDevice) );
-    CUDA_CHECK_ERROR( cudaMemcpy(d_cell_rotation, cell_rotation, Ncells*sizeof(float), cudaMemcpyHostToDevice) );
-
-    CUDA_CHECK_ERROR( cudaMemset( d_dr, 0, Ncells*sizeof(float)) );
-    CUDA_CHECK_ERROR( cudaMemset( d_hit_denom, 0, Ncells*sizeof(float)) );
-    CUDA_CHECK_ERROR( cudaMemset( d_hit_inside, 0, Ncells*sizeof(float)) );
-
-    uint3 dimBlock = make_uint3( fmin(16,Nhits), fmin(16,Ncells), 1 );
-    uint3 dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), ceil(float(Ncells)/dimBlock.y), 1  );
-
-    if( dimBlock.x==0 && dimGrid.x==0 && dimGrid.y==0 ){
-      continue;
-    }
-
-    intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, d_scan_xyz, d_scan_raydir, Ncells, d_cell_center, d_cell_anchor, d_cell_size, d_cell_rotation, d_dr, d_hit_denom, d_hit_inside );
-
-    cudaDeviceSynchronize();
-    CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
-    
-    //copy results back to host
-    CUDA_CHECK_ERROR( cudaMemcpy( dr, d_dr, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK_ERROR( cudaMemcpy( hit_denom, d_hit_denom, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK_ERROR( cudaMemcpy( hit_inside, d_hit_inside, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
-
-    for( uint c=0; c<Ncells; c++ ){
-      
-	hit_denom_agg.at(c) += hit_denom[c];
-	hit_inside_agg.at(c) += hit_inside[c];
-
-	dr_agg.at(c) += dr[c]/hit_denom[c];
-	// for( int i=0; i<Nhits; i++ ){
-	//   if( dr[c*Nhits+i]>0 ){
-	//     dr_agg.at(c).push_back( dr[c*Nhits+i] );
-	//   }
-	// }
-    }
-    
     free( scan_xyz );
     free( scan_raydir );
     free( dr );
-    free( hit_denom );
-    free( hit_inside );
+    free( hit_before );
+    free( hit_after );
     CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
     CUDA_CHECK_ERROR( cudaFree(d_scan_raydir) );
     CUDA_CHECK_ERROR( cudaFree(d_dr) );
-    CUDA_CHECK_ERROR( cudaFree(d_hit_denom) );
-    CUDA_CHECK_ERROR( cudaFree(d_hit_inside) );
+    CUDA_CHECK_ERROR( cudaFree(d_hit_before) );
+    CUDA_CHECK_ERROR( cudaFree(d_hit_after) );
 
  
   }//end scan loop
@@ -2102,156 +2074,98 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     std::cout << "Inverting to find LAD..." << std::flush;
   }
     
-  // float etol = 5e-5;
-  // uint maxiter = 100;
+  float etol = 5e-5;
+  uint maxiter = 100;
     
-  // float error, eold, aold, tmp;
-  // for( uint v=0; v<Ncells; v++ ){
-      
-  //   if( Gtheta[v]==0 || Gtheta[v]!=Gtheta[v] ){
-  //     // if( printmessages ){
-  //     // 	std::cout << "G(theta) value bad for cell " << v << ": " << Gtheta[v] << std::endl;
-  //     // }
-  //     setCellLeafArea(0,v);
-  //     continue;
-  //   }else if( hit_after_agg[v]-hit_before_agg[v]<0 ){
-  //     if( printmessages ){
-  // 	std::cout << "Negative number of rays reaching cell " << v << ": " << hit_after_agg[v] << " " << hit_before_agg[v] << std::endl;
-  //     }
-  //     setCellLeafArea(0,v);
-  //     continue;
-  //   }else if( hit_inside_agg[v]<minVoxelHits ){
-  //     if( printmessages ){
-  // 	std::cout << "Not enough hits in voxel: " << hit_inside_agg[v] << " < " << minVoxelHits << std::endl;
-  //     }
-  //     setCellLeafArea(0,v);
-  //     continue;
-  //   }
-      
-  //   float P = 1.f-float(hit_inside_agg[v])/float(hit_after_agg[v]-hit_before_agg[v]);
-
-  //    //assert(P>0);
-      
-  //   //initial guesses
-  //   float a = 0.1f;
-  //   float h = 0.01f;
-    
-  //   float mean = 0.f;
-  //   uint count=0;
-  //   for( int j=0; j<dr_agg.at(v).size(); j++ ){
-  //     mean += exp(-a*dr_agg.at(v).at(j)*Gtheta[v]);
-  //     count++;
-  //     }
-  //   mean /= float(dr_agg.at(v).size());      
-  //   error = fabs(mean-P)/P;
-    
-  //   tmp = a;
-    
-  //   a = a + h;
-    
-  //   uint iter = 0;
-  //   while( error>etol && iter<maxiter){
-      
-  //     aold = tmp;
-  //     eold = error;
-      
-  //     float mean = 0.f;
-  //     uint count = 0;
-  //     for( int j=0; j<dr_agg.at(v).size(); j++ ){
-  // 	mean += exp(-a*dr_agg.at(v).at(j)*Gtheta[v]);
-  // 	count ++;
-  //     }
-  //     assert( count!=0 );
-  //     mean /= float(count);      
-  //     error = fabs(mean-P)/P;
-      
-  //     tmp = a;
-      
-  //     if( error==eold ){
-  // 	break;
-  //     }
-      
-  //     a = fabs( (aold*error-a*eold)/(error-eold) );
-      
-  //     iter++;
-      
-  //   }
-    
-  //   float dr_bar = 0;
-  //   for( uint i=0; i<dr_agg.at(v).size(); i++ ){
-  //     dr_bar += dr_agg.at(v).at(i);
-  //   }
-  //   dr_bar /= float(dr_agg.at(v).size());
-    
-  //   if( iter>=maxiter-1 || a!=a || a>100 ){
-  //     if( printmessages ){
-  // 	std::cout << "WARNING: LAD inversion failed for volume #" << v << ". Using average dr formulation." << std::endl;
-  //     }
-      
-  //     a = (1.f-P)/(dr_bar*Gtheta[v]);
-      
-  //   }
-
-  //   if( a>5 ){
-  //     a = fmin((1.f-P)/dr_bar/Gtheta[v],-log(P)/dr_bar/Gtheta[v]);
-  //   }
-
-  //   helios::vec3 gridsize = getCellSize(v);
-  //   setCellLeafArea(a*gridsize.x*gridsize.y*gridsize.z,v);
-
-  //   setCellGtheta( Gtheta[v], v );
-
-  //   if( printmessages ){
-  //     std::cout << "Vol #" << v << " mean dr: " << dr_bar << std::endl;
-  //     std::cout << "Vol #" << v << " mean G(theta): " << Gtheta[v] << std::endl;
-  //     //std::cout << "Vol #" << v << " intersections: " << hit_inside_agg[v] << " " << hit_after_agg[v] << " " << hit_before_agg[v] << std::endl;
-      
-  //     std::cout << "Vol #" << v << " LAD: " << a << std::endl;
-  //     //std::cout << "Vol #" << v << " LAD: " << a << std::endl;
-  //     //   cout << "Vol #" << v << " LAD: " << (1.f-P)/(dr_bar[v]*Gthetav]) << " [point quadrat]" << endl;
-  //     //std::cout << "Vol #" << v << " Leaf Area: " << getCellLeafArea(v)*100.f*100.f << " [P = mean(exp(-a*dr*Gtheta))]" << std::endl;
-  //     //std::cout << "Vol #" << v << " Leaf Area: " << -log(P)/(dr_bar*Gtheta[v])*gridsize.x*gridsize.y*gridsize.z*10000.f << " [a = -ln(P)/(dr*Gtheta)]" << std::endl;
-  //     // A_sum += LAD[v]*gridsize.x*gridsize.y*gridsize.z*100.f*100.f;
-  //   }
-      
-  // }
-
-  std::ofstream file_inside;
-  file_inside.open("../output/hit_inside_2D.txt");
-  std::ofstream file_outside;
-  file_outside.open("../output/hit_outside_2D.txt");
-
+  float error, eold, aold, tmp;
   for( uint v=0; v<Ncells; v++ ){
+      
+    if( hit_before_agg[v]-hit_after_agg[v]<minVoxelHits ){
+      if( printmessages ){
+	std::cout << "Not enough hits in voxel: " << hit_inside_agg[v] << " < " << minVoxelHits << std::endl;
+      }
+      setCellLeafArea(0,v);
+      continue;
+    }
+      
+    float P = 1.f-float(hit_after_agg[v])/float(hit_before_agg[v]);
 
-    // float dr_bar = 0;
-    // for( uint i=0; i<dr_agg.at(v).size(); i++ ){
-    //   dr_bar += dr_agg.at(v).at(i);
-    // }
-    // dr_bar /= float(dr_agg.at(v).size());
-    //float dr_bar = dr_agg.at(v)/float(Nscans);
-    float dr_bar = getCellSize(v).z;
+     //assert(P>0);
+      
+    //initial guesses
+    float a = 0.1f;
+    float h = 0.01f;
     
-    float P = 1.f-float(hit_inside_agg[v])/float(hit_denom_agg[v]);
+    float mean = 0.f;
+    uint count=0;
+    for( int j=0; j<dr_agg.at(v).size(); j++ ){
+      mean += exp(-a*dr_agg.at(v).at(j)*Gtheta);
+      count++;
+      }
+    mean /= float(dr_agg.at(v).size());      
+    error = fabs(mean-P)/P;
+    
+    tmp = a;
+    
+    a = a + h;
+    
+    uint iter = 0;
+    while( error>etol && iter<maxiter){
+      
+      aold = tmp;
+      eold = error;
+      
+      float mean = 0.f;
+      uint count = 0;
+      for( int j=0; j<dr_agg.at(v).size(); j++ ){
+	mean += exp(-a*dr_agg.at(v).at(j)*Gtheta);
+	count ++;
+      }
+      assert( count!=0 );
+      mean /= float(count);      
+      error = fabs(mean-P)/P;
+      
+      tmp = a;
+      
+      if( error==eold ){
+	break;
+      }
+      
+      a = fabs( (aold*error-a*eold)/(error-eold) );
+      
+      iter++;
+      
+    }
+    
+    float dr_bar = 0;
+    for( uint i=0; i<dr_agg.at(v).size(); i++ ){
+      dr_bar += dr_agg.at(v).at(i);
+    }
+    dr_bar /= float(dr_agg.at(v).size());
+    
+    if( iter>=maxiter-1 || a!=a || a>100 ){
+      if( printmessages ){
+	std::cout << "WARNING: LAD inversion failed for volume #" << v << ". Using average dr formulation." << std::endl;
+      }
+      
+      a = (1.f-P)/(dr_bar*Gtheta);
+      
+    }
 
-    float a = -log(P)/dr_bar/Gtheta;
+    if( a>5 ){
+      a = fmin((1.f-P)/dr_bar/Gtheta,-log(P)/dr_bar/Gtheta);
+    }
 
     helios::vec3 gridsize = getCellSize(v);
     setCellLeafArea(a*gridsize.x*gridsize.y*gridsize.z,v);
 
     if( printmessages ){
-      // std::cout << "Vol #" << v << " LAD: " << a << std::endl;
-      //std::cout << "Vol #" << v << " LAI: " << a*gridsize.z << std::endl;
-      //std::cout << "Vol #" << v << " dr: " << dr_bar << std::endl;
-      // std::cout << "Vol #" << v << " P: " << P << std::endl;
+      std::cout << "Vol #" << v << " mean dr: " << dr_bar << std::endl;
+      std::cout << "Vol #" << v << " intersections: " << hit_after_agg[v] << " " << hit_before_agg[v] << std::endl;
+      std::cout << "Vol #" << v << " LAD: " << a << std::endl;
     }
-
-    file_inside << hit_inside_agg[v] << std::endl;
-    file_outside << hit_denom_agg[v] << std::endl;
-    
+      
   }
-
-  file_inside.close();
-  file_outside.close();
 
   if( printmessages ){
     std::cout << "done." << std::endl;
@@ -2279,7 +2193,7 @@ void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_
     synthscan.disableMessages();
   }
     
-  //Load the synthetic scan metedata
+  //Load the synthetic scan mectedata
   synthscan.loadXML(xml_file);
 
   //Determine bounding box for Context geometry
@@ -2413,9 +2327,14 @@ void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_
 
       rayorigin.at(i) = helios::make_vec3(x,y,z);
 
-      float theta = -0.5f*M_PI+0.5f*coneangle*context->randu();
+      float theta;
+      if( coneangle==0 ){
+	theta = -0.5f*M_PI;
+      }else{
+	theta = -0.5f*M_PI+0.5f*coneangle*context->randu();
+      }
       float phi = 2.f*M_PI*context->randu();
-
+	
       raydir.at(i) = helios::sphere2cart(helios::make_SphericalCoord(theta,phi));
 
     }
@@ -2774,17 +2693,11 @@ void AerialLiDARcloud::calculateHitGridCellGPU( void ){
     
 }
 
-__global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3* center, float3* anchor, float3* size, float* rotation, float* d_dr, float* hit_denom, float* hit_inside ){
+__global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3 center, float3 anchor, float3 size, float rotation, float* d_dr, float* hit_denom, float* hit_inside ){
   
   size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
 
   if( idx>=Nhitsbb ){
-    return;
-  }
-
-  size_t cell = blockIdx.y*blockDim.y+threadIdx.y;
-
-  if( cell>=Ncells ){
     return;
   }
 
@@ -2793,17 +2706,17 @@ __global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, flo
 
   //Inverse rotate the ray
 
-  float3 direction_rot = d_rotatePoint(direction,0,-rotation[cell]);
-  float3 scan_xyz_rot = d_rotatePoint(scan_xyz-anchor[cell],0,-rotation[cell]) + anchor[cell];
+  float3 direction_rot = d_rotatePoint(direction,0,-rotation);
+  float3 scan_xyz_rot = d_rotatePoint(scan_xyz-anchor,0,-rotation) + anchor;
 
   float3 origin = scan_xyz_rot - direction_rot*1e5;
   
   float ox = origin.x; float oy = origin.y; float oz = origin.z;
   float dx = direction_rot.x; float dy = direction_rot.y; float dz = direction_rot.z;
   
-  float x0 = center[cell].x - 0.5f*size[cell].x; float x1 = center[cell].x + 0.5f*size[cell].x;
-  float y0 = center[cell].y - 0.5f*size[cell].y; float y1 = center[cell].y + 0.5f*size[cell].y;
-  float z0 = center[cell].z - 0.5f*size[cell].z; float z1 = center[cell].z + 0.5f*size[cell].z;
+  float x0 = center.x - 0.5f*size.x; float x1 = center.x + 0.5f*size.x;
+  float y0 = center.y - 0.5f*size.y; float y1 = center.y + 0.5f*size.y;
+  float z0 = center.z - 0.5f*size.z; float z1 = center.z + 0.5f*size.z;
   
   float tx_min, ty_min, tz_min;
   float tx_max, ty_max, tz_max; 
@@ -2865,15 +2778,15 @@ __global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, flo
     
     if( t>=t0 ){ //hit lies within or beyond the volume
 
-      atomicAdd( &hit_denom[cell], 1.f );
+      atomicAdd( hit_denom, 1.f );
 
-      atomicAdd( &d_dr[ cell ], fabs(t1-t0) );
+      d_dr[idx] = fabs(t1-t0);
 
     }
 	
-    if( t>=t0 && t<=t1 ){ //hit lies inside the volume
+    if( t>t0 && t<t1 ){ //hit lies inside the volume
 
-      atomicAdd( &hit_inside[cell], 1.f );
+      atomicAdd( hit_inside, 1.f );
             
     }
     

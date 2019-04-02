@@ -110,15 +110,17 @@ void vecmult( const float M[16], const float v[3], float (&result)[3] );
 //! Multiply 4x4 transformation matrix by 3-element vector: T=M*v 
  void vecmult( const float M[16], const helios::vec3 v3, helios::vec3& result );
 
-//! Construct a transformation matrix
-/** 4x4 Affine transformation matrix 
-    \param[in] "translation" Translation distance in x,y,z directions 
-    \param[in] "scale" Scaling factor in x,y,z directions
-    \param[in] "rotation" Rotation angle about axes (rx,ry,rz)
-    \param[out] "transform" Transformation matrix in a 1D array
-    \ingroup functions
-*/
-void makeTransformationMatrix( vec3 translation, vec3 scale, vec3 rotation, float (&transform)[16] );
+/* //! Construct a transformation matrix */
+/* /\** 4x4 Affine transformation matrix  */
+/*     \param[in] "translation" Translation distance in x,y,z directions  */
+/*     \param[in] "scale" Scaling factor in x,y,z directions */
+/*     \param[out] "transform" Transformation matrix in a 1D array */
+/*     \ingroup functions */
+/* *\/ */
+/* void makeTransformationMatrix( const vec3 translation, const vec3 scale, float (&transform)[16] ); */
+
+ //! Construct an identity matrix
+ void makeIdentityMatrix( float (&T)[16] );
 
 //! Convert degrees to radians
 /** \param deg angle in degrees

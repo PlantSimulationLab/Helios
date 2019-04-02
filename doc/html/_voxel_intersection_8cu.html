@@ -84,15 +84,15 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>gpuAssert</b> (cudaEr
 <tr class="memitem:aa90d0cafecc3d921e7d1845fcd99bf6b"><td class="memItemLeft" align="right" valign="top"><a id="aa90d0cafecc3d921e7d1845fcd99bf6b"></a>
 float3&#160;</td><td class="memItemRight" valign="bottom"><b>vec3tofloat3</b> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> v3)</td></tr>
 <tr class="separator:aa90d0cafecc3d921e7d1845fcd99bf6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7b3bdd138d3501b403c9159473e088f5"><td class="memItemLeft" align="right" valign="top"><a id="a7b3bdd138d3501b403c9159473e088f5"></a>
-<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><b>flota3tovec3</b> (float3 f3)</td></tr>
-<tr class="separator:a7b3bdd138d3501b403c9159473e088f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af48d117e18e1319cd61b4af9ef999b01"><td class="memItemLeft" align="right" valign="top"><a id="af48d117e18e1319cd61b4af9ef999b01"></a>
-__device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b>d_rotatePoint</b> (const float3 &amp;position, const float &amp;theta, const float &amp;phi)</td></tr>
-<tr class="separator:af48d117e18e1319cd61b4af9ef999b01"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a845641131fef5027502f55dcc88d359a"><td class="memItemLeft" align="right" valign="top"><a id="a845641131fef5027502f55dcc88d359a"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>insideVolume</b> (const uint Nhits, const float3 *d_hit_xyz, const uint Ngridcells, const float3 *d_grid_size, const float3 *d_grid_center, const float *d_grid_rotation, int *d_hit_vol)</td></tr>
-<tr class="separator:a845641131fef5027502f55dcc88d359a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0f62e8aedb21d83200a8190f593b4bc6"><td class="memItemLeft" align="right" valign="top"><a id="a0f62e8aedb21d83200a8190f593b4bc6"></a>
+<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><b>float3tovec3</b> (float3 f3)</td></tr>
+<tr class="separator:a0f62e8aedb21d83200a8190f593b4bc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a35200012a45ca6589b750b95b1abb6db"><td class="memItemLeft" align="right" valign="top"><a id="a35200012a45ca6589b750b95b1abb6db"></a>
+__device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b>d_rotatePoint_vi</b> (const float3 &amp;position, const float &amp;theta, const float &amp;phi)</td></tr>
+<tr class="separator:a35200012a45ca6589b750b95b1abb6db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f4e0e27b8eddd181a05768eef63d5b7"><td class="memItemLeft" align="right" valign="top"><a id="a4f4e0e27b8eddd181a05768eef63d5b7"></a>
+__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>insideVolume_vi</b> (const uint Nhits, const float3 *d_hit_xyz, const uint Ngridcells, const float3 *d_grid_size, const float3 *d_grid_center, const float *d_grid_rotation, int *d_hit_vol)</td></tr>
+<tr class="separator:a4f4e0e27b8eddd181a05768eef63d5b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>CUDA-related functions for voxel-intersection plug-in</p>

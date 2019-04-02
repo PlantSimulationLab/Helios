@@ -409,124 +409,163 @@ void helios::vecmult( const float M[16], const float v[3], float (&result)[3] ){
 
 }
 
-void helios::makeTransformationMatrix( vec3 anchor, vec3 size, vec3 rotation, float (&transform)[16] ){
+void helios::makeIdentityMatrix( float (&T)[16] ){
 
-  float Rx[3][3], Ry[3][3], Rz[3][3];
-
-  //It causes problems if size=0
-  if( size.x == 0 ){
-    size.x = 1.f;
-  }else if( size.y == 0 ){
-    size.y = 1.f;
-  }else if( size.z == 0 ){
-    size.z = 1.f;
-  }
-
-  float sx = sin(rotation.x);
-  float cx = cos(rotation.x);
-
-  float sy = sin(rotation.y);
-  float cy = cos(rotation.y);
-
-  float sz = sin(rotation.z);
-  float cz = cos(rotation.z);
-	
-  // Setup the rotation matrix, this matrix is based off of the rotation matrix used in glRotatef.
-  Rx[0][0] = 1.f*size.x;
-  Rx[0][1] = 0.f;
-  Rx[0][2] = 0.f;
-  Rx[1][0] = 0.f;
-  Rx[1][1] = cx*size.y;
-  Rx[1][2] = -sx*size.z;
-  Rx[2][0] = 0.f;
-  Rx[2][1] = sx*size.y;
-  Rx[2][2] = cx*size.z;
-
-  Ry[0][0] = cy;
-  Ry[0][1] = 0.f;
-  Ry[0][2] = sy;
-  Ry[1][0] = 0.f;
-  Ry[1][1] = 1.f;
-  Ry[1][2] = 0.f;
-  Ry[2][0] = -sy;
-  Ry[2][1] = 0.f;
-  Ry[2][2] = cy;
-
-  Rz[0][0] = cz;
-  Rz[0][1] = -sz;
-  Rz[0][2] = 0.f;
-  Rz[1][0] = sz;
-  Rz[1][1] = cz;
-  Rz[1][2] = 0.f;
-  Rz[2][0] = 0.f;
-  Rz[2][1] = 0.f;
-  Rz[2][2] = 1.f;
-
-  float R[4][4]={0.f};
-  float Rtemp[4][4]={0.f};
-
-  // Multiply Rx*Ry
-  for( int i=0;i<3;i++){
-    for(int j=0;j<3;j++){
-      for(int k=0;k<3;k++){
-	Rtemp[i][j]=Rtemp[i][j]+Ry[i][k]*Rx[k][j];
-      }
-    }
-  }
-
-  // Multiply Rtemp*Rz
-  for( int i=0;i<3;i++){
-    for(int j=0;j<3;j++){
-      for(int k=0;k<3;k++){
-	R[i][j]=R[i][j]+Rz[i][k]*Rtemp[k][j];
-      }
-    }
-  }
-
-  R[3][3] = 1.f;
-
-  // Translation Matrix
-
-  float T[4][4]={0.f};
-  
-  T[0][0] = T[1][1] = T[2][2] = T[3][3] = 1.f;
-
-  T[0][3] = anchor.x;
-  T[1][3] = anchor.y;
-  T[2][3] = anchor.z;
-
-  // Multiply T*R (should rotate about origin first, then translate)
-
-  float M[4][4]={0.f};
-
-  for( int i=0;i<4;i++){
-    for(int j=0;j<4;j++){
-      for(int k=0;k<4;k++){
-	M[i][j]=M[i][j]+T[i][k]*R[k][j];
-      }
-    }
-  }
-
-
-  // Rearrange 4x4 Matrix into 16x1 Array
-  /* [0,0] */ transform[0] =  M[0][0];
-  /* [0,1] */ transform[1] =  M[0][1];
-  /* [0,2] */ transform[2] =  M[0][2];
-  /* [0,3] */ transform[3] =  M[0][3];
-  /* [1,0] */ transform[4] =  M[1][0];
-  /* [1,1] */ transform[5] =  M[1][1];
-  /* [1,2] */ transform[6] =  M[1][2];
-  /* [1,3] */ transform[7] =  M[1][3];
-  /* [2,0] */ transform[8] =  M[2][0];
-  /* [2,1] */ transform[9] =  M[2][1];
-  /* [2,2] */ transform[10] = M[2][2];
-  /* [2,3] */ transform[11] = M[2][3];
-  /* [3,0] */ transform[12] = M[3][0];
-  /* [3,1] */ transform[13] = M[3][1];
-  /* [3,2] */ transform[14] = M[3][2];
-  /* [3,3] */ transform[15] = M[3][3];
+  /* [0,0] */ T[0] = 1.f; 
+  /* [0,1] */ T[1] = 0.f;
+  /* [0,2] */ T[2] = 0.f;
+  /* [0,3] */ T[3] = 0.f;
+  /* [1,0] */ T[4] = 0.f;
+  /* [1,1] */ T[5] = 1.f;
+  /* [1,2] */ T[6] = 0.f;
+  /* [1,3] */ T[7] = 0.f;
+  /* [2,0] */ T[8] = 0.f;
+  /* [2,1] */ T[9] = 0.f;
+  /* [2,2] */ T[10] = 1.f;
+  /* [2,3] */ T[11] = 0.f;
+  /* [3,0] */ T[12] = 0.f;
+  /* [3,1] */ T[13] = 0.f;
+  /* [3,2] */ T[14] = 0.f;
+  /* [3,3] */ T[15] = 1.f;
 
 }
+
+// void helios::makeTransformationMatrix( const vec3 anchor, const vec3 size, float (&transform)[16] ){
+
+//   float Rx[3][3], Ry[3][3], Rz[3][3];
+
+//   //It causes problems if size=0
+//   vec3 sz = size;
+//   if( size.x == 0 ){
+//     sz.x = 1.f;
+//   }else if( size.y == 0 ){
+//     sz.y = 1.f;
+//   }else if( size.z == 0 ){
+//     sz.z = 1.f;
+//   }
+
+//   // float sx = sin(rotation.x);
+//   // float cx = cos(rotation.x);
+
+//   // float sy = sin(rotation.y);
+//   // float cy = cos(rotation.y);
+
+//   // float sz = sin(rotation.z);
+//   // float cz = cos(rotation.z);
+	
+//   // // Setup the rotation matrix, this matrix is based off of the rotation matrix used in glRotatef.
+//   // Rx[0][0] = 1.f*size.x;
+//   // Rx[0][1] = 0.f;
+//   // Rx[0][2] = 0.f;
+//   // Rx[1][0] = 0.f;
+//   // Rx[1][1] = cx*size.y;
+//   // Rx[1][2] = -sx*size.z;
+//   // Rx[2][0] = 0.f;
+//   // Rx[2][1] = sx*size.y;
+//   // Rx[2][2] = cx*size.z;
+
+//   // Ry[0][0] = cy;
+//   // Ry[0][1] = 0.f;
+//   // Ry[0][2] = sy;
+//   // Ry[1][0] = 0.f;
+//   // Ry[1][1] = 1.f;
+//   // Ry[1][2] = 0.f;
+//   // Ry[2][0] = -sy;
+//   // Ry[2][1] = 0.f;
+//   // Ry[2][2] = cy;
+
+//   // Rz[0][0] = cz;
+//   // Rz[0][1] = -sz;
+//   // Rz[0][2] = 0.f;
+//   // Rz[1][0] = sz;
+//   // Rz[1][1] = cz;
+//   // Rz[1][2] = 0.f;
+//   // Rz[2][0] = 0.f;
+//   // Rz[2][1] = 0.f;
+//   // Rz[2][2] = 1.f;
+
+//   // float R[4][4]={0.f};
+//   // float Rtemp[4][4]={0.f};
+
+//   // // Multiply Rx*Ry
+//   // for( int i=0;i<3;i++){
+//   //   for(int j=0;j<3;j++){
+//   //     for(int k=0;k<3;k++){
+//   // 	Rtemp[i][j]=Rtemp[i][j]+Ry[i][k]*Rx[k][j];
+//   //     }
+//   //   }
+//   // }
+
+//   // // Multiply Rtemp*Rz
+//   // for( int i=0;i<3;i++){
+//   //   for(int j=0;j<3;j++){
+//   //     for(int k=0;k<3;k++){
+//   // 	R[i][j]=R[i][j]+Rz[i][k]*Rtemp[k][j];
+//   //     }
+//   //   }
+//   // }
+
+//   // R[3][3] = 1.f;
+
+//   // // Translation Matrix
+
+//   // float T[4][4]={0.f};
+  
+//   // T[0][0] = T[1][1] = T[2][2] = T[3][3] = 1.f;
+
+//   // T[0][3] = anchor.x;
+//   // T[1][3] = anchor.y;
+//   // T[2][3] = anchor.z;
+
+//   // // Multiply T*R (should rotate about origin first, then translate)
+
+//   // float M[4][4]={0.f};
+
+//   // for( int i=0;i<4;i++){
+//   //   for(int j=0;j<4;j++){
+//   //     for(int k=0;k<4;k++){
+//   // 	M[i][j]=M[i][j]+T[i][k]*R[k][j];
+//   //     }
+//   //   }
+//   // }
+
+
+//   // // Rearrange 4x4 Matrix into 16x1 Array
+//   // /* [0,0] */ transform[0] =  M[0][0];
+//   // /* [0,1] */ transform[1] =  M[0][1];
+//   // /* [0,2] */ transform[2] =  M[0][2];
+//   // /* [0,3] */ transform[3] =  M[0][3];
+//   // /* [1,0] */ transform[4] =  M[1][0];
+//   // /* [1,1] */ transform[5] =  M[1][1];
+//   // /* [1,2] */ transform[6] =  M[1][2];
+//   // /* [1,3] */ transform[7] =  M[1][3];
+//   // /* [2,0] */ transform[8] =  M[2][0];
+//   // /* [2,1] */ transform[9] =  M[2][1];
+//   // /* [2,2] */ transform[10] = M[2][2];
+//   // /* [2,3] */ transform[11] = M[2][3];
+//   // /* [3,0] */ transform[12] = M[3][0];
+//   // /* [3,1] */ transform[13] = M[3][1];
+//   // /* [3,2] */ transform[14] = M[3][2];
+//   // /* [3,3] */ transform[15] = M[3][3];
+
+//   /* [0,0] */ transform[0] = sz.x; 
+//   /* [0,1] */ transform[1] = 0.f;
+//   /* [0,2] */ transform[2] = 0.f;
+//   /* [0,3] */ transform[3] = anchor.x;
+//   /* [1,0] */ transform[4] = 0.f;
+//   /* [1,1] */ transform[5] = sz.y;
+//   /* [1,2] */ transform[6] =  0.f;
+//   /* [1,3] */ transform[7] = anchor.y;
+//   /* [2,0] */ transform[8] = 0.f;
+//   /* [2,1] */ transform[9] = 0.f;
+//   /* [2,2] */ transform[10] = sz.z;
+//   /* [2,3] */ transform[11] = anchor.z;
+//   /* [3,0] */ transform[12] = 0.f;
+//   /* [3,1] */ transform[13] = 0.f;
+//   /* [3,2] */ transform[14] = 0.f;
+//   /* [3,3] */ transform[15] = 1.f;
+
+// }
 
 float helios::deg2rad( const float& deg ){
   return deg*M_PI/180.f;

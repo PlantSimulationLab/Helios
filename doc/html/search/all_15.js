@@ -8,7 +8,7 @@ var searchData=
   ['visualizer',['Visualizer',['../class_visualizer.html',1,'Visualizer'],['../class_visualizer.html#a9277e99596d46d77d31a2249a1406983',1,'Visualizer::Visualizer(uint Wdisplay)'],['../class_visualizer.html#ac39e631c7d248c0e0f4f9ebba58a6dc4',1,'Visualizer::Visualizer(uint Wdisplay, uint Hdisplay)']]],
   ['visualizer_2ecpp',['Visualizer.cpp',['../_visualizer_8cpp.html',1,'']]],
   ['visualizer_2eh',['Visualizer.h',['../_visualizer_8h.html',1,'']]],
-  ['voxel',['Voxel',['../classhelios_1_1_voxel.html',1,'helios::Voxel'],['../classhelios_1_1_voxel.html#a7e68ceedc64f6416198195236e60a195',1,'helios::Voxel::Voxel()']]],
+  ['voxel',['Voxel',['../classhelios_1_1_voxel.html',1,'helios::Voxel'],['../classhelios_1_1_voxel.html#a663aa21eff339f962402ef198d1eed17',1,'helios::Voxel::Voxel()']]],
   ['voxel_5fbounds',['voxel_bounds',['../primitive_intersection_8cu.html#a904cdd1733732aa1a8dbaf2e958176a9',1,'primitiveIntersection.cu']]],
   ['voxel_5fintersect',['voxel_intersect',['../primitive_intersection_8cu.html#ac0a2a895d2e98227a3905e56939228fe',1,'primitiveIntersection.cu']]],
   ['voxelintersection',['VoxelIntersection',['../class_voxel_intersection.html',1,'VoxelIntersection'],['../class_voxel_intersection.html#a45bf9a3a44c9373452753480c8e47c72',1,'VoxelIntersection::VoxelIntersection()']]],

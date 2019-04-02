@@ -501,13 +501,13 @@ namespace helios {
   public:
     
     //! Patch constructor - colored by RGBcolor
-    Patch( const helios::vec3 center, const helios::vec2 size, const helios::vec3 rotation, const helios::RGBAcolor color, const uint UUID );
+    Patch( const helios::RGBAcolor color, const uint UUID );
 
     //! Patch constructor - colored by texture map
-    Patch( const helios::vec3 center, const helios::vec2 size, const helios::vec3 rotation, Texture* texture, const uint UUID );
+    Patch( Texture* texture, const uint UUID );
 
     //! Patch constructor - colored by texture map with custom (u,v) coordinates
-    Patch( const helios::vec3 center, const helios::vec2 size, const helios::vec3 rotation, Texture* texture, const helios::vec2 _uv_center_, const helios::vec2 _uv_size_, const uint UUID );
+    Patch( Texture* texture, const helios::vec2 _uv_center_, const helios::vec2 _uv_size_, const uint UUID );
 
     //! Patch destructor
     ~Patch(){};
@@ -626,7 +626,7 @@ namespace helios {
   public:
   
     //! Voxel constructors 
-    Voxel( const helios::vec3 center, const helios::vec3 size, const float rotation, const helios::RGBAcolor color, const uint UUID );
+    Voxel( const helios::RGBAcolor color, const uint UUID );
 
     //! Voxel destructor
     ~Voxel(){};

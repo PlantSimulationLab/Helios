@@ -178,7 +178,7 @@ helios::vec3 inline flota3tovec3( float3 f3 ){
 
 __global__ void intersectBoundingBox( const size_t scanSize, float3* d_hit_origin, const float3* d_scan_xyz, const float3 bbcenter, const float3 bbsize, uint* d_boundingbox_hit );
 
-__global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3* center, float3* anchor, float3* size, float* rotation, float* d_dr, float* hit_denom, float* hit_inside );
+__global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3 center, float3 anchor, float3 size, float rotation, float* d_dr, float* hit_denom, float* hit_inside );
 
 __global__ void intersectPatches( const size_t N, float3* origin, float3* d_raydir, const int Npatches, float3* d_patch_vertex0, float3* d_patch_vertex1, float3* d_patch_vertex2, float3* d_patch_vertex3, float* d_hit_t );
 

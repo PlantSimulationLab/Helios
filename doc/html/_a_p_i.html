@@ -337,8 +337,9 @@ Patch geometric primitive.</div></div>
 <p> The patch can also be rotated by adding the optional SphericalCoord argument:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> vec3 center = make_vec3(0,0,1);
  vec2 size = make_vec2(1,1);
- SphericalCoord rotation = make_SphericalCoord(0.25*M_PI,M_PI);
- context.addPatch( center, size, rotation );</code></pre> </div><h3><a class="anchor" id="AddingTriangle"></a>
+ SphericalCoord rotation = make_SphericalCoord(0.25*M_PI,0.5*M_PI);
+ context.addPatch( center, size, rotation );</code></pre> </div><p>This will first rotate the patch by 0.25 <img class="formulaInl" alt="$\pi$" src="form_83.png"/> rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 <img class="formulaInl" alt="$\pi$" src="form_83.png"/> rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
+<h3><a class="anchor" id="AddingTriangle"></a>
 Adding Triangles</h3>
 <p>Triangles are added by specifying the (x,y,z) coordinates of the triangle's three vertices, and optionally its r-g-b color. The following is an example of using the 'addTriangle()' function to add a simple triangle:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"

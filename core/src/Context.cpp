@@ -59,10 +59,11 @@ int Context::selfTest(void){
   vec3 center,center_r;
   vec2 size, size_r;
   std::vector<vec3> vertices, vertices_r;
-  SphericalCoord rotation_r;
-  vec3 normal_r;
+  SphericalCoord rotation, rotation_r;
+  vec3 normal, normal_r;
   RGBcolor color, color_r;
   uint UUID;
+  std::vector<uint> UUIDs;
   PrimitiveType type;
   float area_r;
   Primitive* prim;
@@ -167,6 +168,25 @@ int Context::selfTest(void){
 
   UUID = UUID_cpy;
 
+  //------- Add a Rotated Patch --------//
+
+  center = make_vec3(1,2,3);
+  size = make_vec2(1,2);
+  rotation.elevation = 0.15*M_PI;
+  rotation.azimuth = 0.5f*M_PI;;
+  UUID = context_test.addPatch(center,size,rotation);
+  prim = context_test.getPrimitivePointer(UUID);
+  normal_r = prim->getNormal();
+
+  rotation_r = make_SphericalCoord( 0.5*M_PI-asinf( normal_r.z ), atan2(normal_r.x,normal_r.y) );
+
+  context_test.deletePrimitive(UUID);
+
+  if( fabs(rotation_r.elevation-rotation.elevation)>errtol || fabs(rotation_r.azimuth-rotation.azimuth)>errtol ){
+    error_count++;
+    std::cerr << "failed: Rotated patch did not return correct normal vector." << std::endl;
+  }
+
   //------- Add Triangle --------//
 
   vec3 v0,v0_r;
@@ -194,7 +214,7 @@ int Context::selfTest(void){
     error_count++;
     std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getType did not return `PRIMITIVE_TYPE_TRIANGLE'." << std::endl;
   }
-  vec3 normal = cross( v1-v0, v2-v1 );
+  normal = cross( v1-v0, v2-v1 );
   normal.normalize();
   if( normal_r.x!=normal.x || normal_r.y!=normal.y || normal_r.z!=normal.z ){
     error_count++;
@@ -263,6 +283,44 @@ int Context::selfTest(void){
   }
 
   UUID = UUID_cpy;
+
+  //------- Add a Box --------//
+
+  //vector<uint> addBox( const vec3& center, const vec2& size, const int3& subdiv );
+  center = make_vec3(1,2,3);
+  vec3 size3(3,2,1);
+  int3 subdiv(1,1,1);
+  UUIDs = context_test.addBox( center, size3, subdiv );
+  
+  normal_r = context_test.getPrimitivePointer(UUIDs.at(0))->getNormal();
+  rotation_r = make_SphericalCoord( 0.5*M_PI-asinf( normal_r.z ), atan2(normal_r.x,normal_r.y) );
+
+  if( fabs(rotation_r.zenith-0.f)>errtol || fabs(rotation_r.azimuth-0.f)>errtol ){
+    error_count++;
+    std::cerr << "failed: addBox(). Face normals incorrect." << std::endl;
+  }
+
+  normal_r = context_test.getPrimitivePointer(UUIDs.at(2))->getNormal();
+  rotation_r = make_SphericalCoord( 0.5*M_PI-asinf( normal_r.z ), atan2(normal_r.x,normal_r.y) );
+
+  if( fabs(rotation_r.zenith-0.f)>errtol || fabs(rotation_r.azimuth-0.5f*M_PI)>errtol ){
+    error_count++;
+    std::cerr << "failed: addBox(). Face normals incorrect." << std::endl;
+  }
+
+  size_r = context_test.getPatchPointer(UUIDs.at(0))->getSize();
+
+  if( fabs(size_r.x-size3.x)>errtol || fabs(size_r.y-size3.z)>errtol ){
+    error_count++;
+    std::cerr << "failed: addBox(). Face sizes incorrect." << std::endl;
+  }
+
+  size_r = context_test.getPatchPointer(UUIDs.at(2))->getSize();
+
+  if( fabs(size_r.x-size3.y)>errtol || fabs(size_r.y-size3.z)>errtol ){
+    error_count++;
+    std::cerr << "failed: addBox(). Face sizes incorrect." << std::endl;
+  }
 
   //------- Primitive Transformations --------//
 
@@ -561,7 +619,7 @@ int Context::selfTest(void){
     std::cerr << "failed: Timeseries set/query data #1 do not match." << std::endl;
     error_count++;
   }
-  
+
   T_ts = context_ts.queryTimeseriesData( "timeseries", date_ts, time0_ts );
 
   if( T_ts!=T0 ){
@@ -576,7 +634,7 @@ int Context::selfTest(void){
     error_count++;
   }
 
-  context_ts.queryTimeseriesData( "timeseries", date_ts, make_Time(0,0,0) );
+  //context_ts.queryTimeseriesData( "timeseries", date_ts, make_Time(0,0,0) ); //this is to test that querying outside of dataset does not throw a segmentation fault.
 
   context_ts.queryTimeseriesData( "timeseries", date_ts, make_Time(time0_ts.hour,time0_ts.minute,time0_ts.second+10) );
 
@@ -824,9 +882,17 @@ float Voxel::getArea() const{
 }
 
 vec3 Patch::getNormal() const{
-  vec3 norm = make_vec3(0,0,1);
-  vecmult(transform,norm,norm);
-  return norm;
+
+  vec3 normal;
+
+  normal.x = transform[2];
+  normal.y = transform[6];
+  normal.z = transform[10];
+
+  normal.normalize();
+  
+  return normal;
+  
 }
 
 vec3 Triangle::getNormal() const{
@@ -2927,12 +2993,10 @@ bool Context::doesGlobalDataExist( const char* label ) const{
 }
 
 
-Patch::Patch( const vec3 _center_, const vec2 _size_, const vec3 _rotation_, const RGBAcolor _color_, const uint _UUID_ ){
-  
+Patch::Patch( const RGBAcolor _color_, const uint _UUID_ ){
 
-  makeTransformationMatrix( _center_, make_vec3(_size_.x,_size_.y,1), _rotation_, transform );
-  
-  assert( _size_.x>0 && _size_.y>0 );
+  makeIdentityMatrix( transform );
+   
   color = _color_;
   assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
   UUID = _UUID_;
@@ -2942,11 +3006,10 @@ Patch::Patch( const vec3 _center_, const vec2 _size_, const vec3 _rotation_, con
 
 }
 
-Patch::Patch( const vec3 _center_, const vec2 _size_, const vec3 _rotation_, Texture* _texture_, const uint _UUID_ ){
+Patch::Patch( Texture* _texture_, const uint _UUID_ ){
 
-  makeTransformationMatrix( _center_, make_vec3(_size_.x,_size_.y,1), _rotation_, transform );
+  makeIdentityMatrix( transform );
 
-  assert( _size_.x>0 && _size_.y>0 );
   UUID = _UUID_;
   prim_type = PRIMITIVE_TYPE_PATCH;
   texture = _texture_;
@@ -2954,11 +3017,10 @@ Patch::Patch( const vec3 _center_, const vec2 _size_, const vec3 _rotation_, Tex
   
 }
 
-Patch::Patch( const vec3 _center_, const vec2 _size_, const vec3 _rotation_, Texture* _texture_, const vec2 _uv_center_, const vec2 _uv_size_, const uint _UUID_ ){
+Patch::Patch( Texture* _texture_, const vec2 _uv_center_, const vec2 _uv_size_, const uint _UUID_ ){
+
+  makeIdentityMatrix( transform );
   
-  makeTransformationMatrix( _center_, make_vec3(_size_.x,_size_.y,1), _rotation_, transform );
-  
-  assert( _size_.x>0 && _size_.y>0 );
   UUID = _UUID_;
   prim_type = PRIMITIVE_TYPE_PATCH;
 
@@ -3096,10 +3158,10 @@ vec3 Triangle::getVertex( int number ){
   
 }
 
-Voxel::Voxel( const vec3 _center_, const vec3 _size_, const float _rotation_, const RGBAcolor _color_, const uint _UUID_ ){
+Voxel::Voxel( const RGBAcolor _color_, const uint _UUID_ ){
 
-  makeTransformationMatrix( _center_, _size_, make_vec3(0,0,_rotation_), transform );
-  assert( _size_.x>0 && _size_.y>0 && _size_.z>0 );
+  makeIdentityMatrix(transform);
+  
   color = _color_;
   assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
   UUID = _UUID_;
@@ -3109,7 +3171,7 @@ Voxel::Voxel( const vec3 _center_, const vec3 _size_, const float _rotation_, co
 
 float Voxel::getVolume(void){
   
-  return transform[0]*transform[5]*transform[10];;
+  return transform[0]*transform[5]*transform[10];
 }
 
 vec3 Voxel::getCenter(void){
@@ -3298,7 +3360,20 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const RGBAcolor& color ){
 
-  Patch* patch_new = (new Patch( center, size, make_vec3(0,rotation.elevation,rotation.azimuth), color, currentUUID ));
+  Patch* patch_new = (new Patch( color, currentUUID ));
+
+  assert( size.x>0.f && size.y>0.f );
+  patch_new->scale( make_vec3(size.x,size.y,1) );
+  
+  if( rotation.elevation!=0 ){
+    patch_new->rotate(-rotation.elevation, "x");
+  }
+  if( rotation.azimuth!=0 ){
+    patch_new->rotate(-rotation.azimuth, "z");
+  }
+
+  patch_new->translate( center );
+  
   primitives[currentUUID] = patch_new;
   markGeometryDirty();
   currentUUID++;
@@ -3309,7 +3384,20 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
   Texture* texture = addTexture( texture_file );
 
-  Patch* patch_new = (new Patch( center, size, make_vec3(0,rotation.elevation,rotation.azimuth), texture, currentUUID ));
+  Patch* patch_new = (new Patch( texture, currentUUID ));
+
+  assert( size.x>0.f && size.y>0.f );
+  patch_new->scale( make_vec3(size.x,size.y,1) );
+  
+  if( rotation.elevation!=0 ){
+    patch_new->rotate(-rotation.elevation, "x");
+  }
+  if( rotation.azimuth!=0 ){
+    patch_new->rotate(-rotation.azimuth, "z");
+  }
+
+  patch_new->translate( center );
+  
   primitives[currentUUID] = patch_new;
   markGeometryDirty();
   currentUUID++;
@@ -3326,7 +3414,20 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
   Texture* texture = addTexture( texture_file );
   
-  Patch* patch_new = (new Patch( center, size, make_vec3(0,rotation.elevation,rotation.azimuth), texture, uv_center, uv_size, currentUUID ));
+  Patch* patch_new = (new Patch( texture, uv_center, uv_size, currentUUID ));
+
+  assert( size.x>0.f && size.y>0.f );
+  patch_new->scale( make_vec3(size.x,size.y,1) );
+  
+  if( rotation.elevation!=0 ){
+    patch_new->rotate(-rotation.elevation, "x");
+  }
+  if( rotation.azimuth!=0 ){
+    patch_new->rotate(-rotation.azimuth, "z");
+  }
+
+  patch_new->translate( center );
+  
   primitives[currentUUID] = patch_new;
   markGeometryDirty();
   currentUUID++;
@@ -3375,7 +3476,14 @@ uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotat
 
 uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotation, const RGBAcolor& color ){
 
-  Voxel* voxel_new = (new Voxel( center, size, rotation, color, currentUUID ));
+  Voxel* voxel_new = (new Voxel( color, currentUUID ));
+
+  if( rotation!=0 ){
+    voxel_new->rotate( rotation, "z" );
+  }
+
+  voxel_new->translate( center );
+  
   primitives[currentUUID] = voxel_new;
   markGeometryDirty();
   currentUUID++;
@@ -3428,14 +3536,13 @@ uint Context::copyPrimitive( const uint UUID ){
     std::vector<vec2> uv = p->getTextureUV();
     Patch* patch_new;
     if( !p->hasTexture() ){
-      patch_new = (new Patch( make_vec3(0,0,0), make_vec2(1,1), make_vec3(0,0,0), p->getColorRGBA(), currentUUID ));
+      patch_new = (new Patch( p->getColorRGBA(), currentUUID ));
     }else{
       Texture* texture = p->getTexture();
       if( uv.size()==4 ){
-	patch_new = (new Patch( make_vec3(0,0,0), make_vec2(1,1), make_vec3(0,0,0), texture, uv.at(0), uv.at(2)-uv.at(0), currentUUID ));
+	patch_new = (new Patch( texture, uv.at(0), uv.at(2)-uv.at(0), currentUUID ));
       }else{
-	//patch_new = (new Patch( p->getCenter(), p->getSize(), p->getRotation(), texture, make_vec2(0,1), make_vec2(1,1), make_vec2(1,0), make_vec2(0,0), currentUUID ));
-	patch_new = (new Patch( make_vec3(0,0,0), make_vec2(1,1), make_vec3(0,0,0), texture, currentUUID ));
+	patch_new = (new Patch( texture, currentUUID ));
       }
     }
     float transform[16];
@@ -3460,9 +3567,9 @@ uint Context::copyPrimitive( const uint UUID ){
     Voxel* p = getVoxelPointer(UUID);
     Voxel* voxel_new;
     if( !p->hasTexture() ){
-      voxel_new = (new Voxel( make_vec3(0,0,0), make_vec3(1,1,1), 0, p->getColorRGBA(), currentUUID ));
+      voxel_new = (new Voxel( p->getColorRGBA(), currentUUID ));
     }else{
-      voxel_new = (new Voxel(  make_vec3(0,0,0), make_vec3(1,1,1), 0, p->getColorRGBA(), currentUUID ));
+      voxel_new = (new Voxel( p->getColorRGBA(), currentUUID ));
       /* \todo Texture-mapped voxels constructor here */
     }
     float transform[16];
@@ -4120,11 +4227,11 @@ std::vector<uint> Context::addBox( const vec3 center, const vec3 size, const int
 
 	//right
 	subcenter = center + make_vec3(0,0.5*size.y,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.z,subsize.x), make_SphericalCoord(0.5*M_PI,1.5*M_PI), color ) );
+	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.x,subsize.z), make_SphericalCoord(0.5*M_PI,M_PI), color ) );
 	
 	//left
 	subcenter = center - make_vec3(0,0.5*size.y,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.z,subsize.x), make_SphericalCoord(0.5*M_PI,0.5*M_PI), color ) );
+	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.x,subsize.z), make_SphericalCoord(0.5*M_PI,0), color ) );
 	
       }
     }
@@ -4135,11 +4242,11 @@ std::vector<uint> Context::addBox( const vec3 center, const vec3 size, const int
 	
     	//front
     	subcenter = center + make_vec3(0.5*size.x,0,0);
-    	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.z,subsize.y), make_SphericalCoord(0.5*M_PI,M_PI), color ) );
+    	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.y,subsize.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), color ) );
 	
     	//back
     	subcenter = center - make_vec3(0.5*size.x,0,0);
-    	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.z,subsize.y), make_SphericalCoord(0.5*M_PI,0), color ) );
+    	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.y,subsize.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), color ) );
 
       }
     }
@@ -4167,11 +4274,11 @@ std::vector<uint> Context::addBox( const vec3 center, const vec3 size, const int
 	
 	//right
 	subcenter = center + make_vec3(0,0.5*size.y,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.z,subsize.x), make_SphericalCoord(0.5*M_PI,0.5*M_PI), color ) );
+	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.x,subsize.z), make_SphericalCoord(0.5*M_PI,0), color ) );
 	
 	//left
 	subcenter = center - make_vec3(0,0.5*size.y,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.z,subsize.x), make_SphericalCoord(0.5*M_PI,1.5*M_PI), color ) );
+	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.x,subsize.z), make_SphericalCoord(0.5*M_PI,M_PI), color ) );
 	
       }
     }
@@ -4182,11 +4289,11 @@ std::vector<uint> Context::addBox( const vec3 center, const vec3 size, const int
       
 	//front
 	subcenter = center + make_vec3(0.5*size.x,0,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.z,subsize.y), make_SphericalCoord(0.5*M_PI,0), color ) );
+	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.y,subsize.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), color ) );
 	
 	//back
 	subcenter = center - make_vec3(0.5*size.x,0,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.z,subsize.y), make_SphericalCoord(0.5*M_PI,M_PI), color ) );
+	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.y,subsize.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), color ) );
 	
       }
     }

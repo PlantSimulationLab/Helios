@@ -4,7 +4,7 @@ var menudata={children:[
 {text:"Overview",url:"_overview.html"},
 {text:"Dependent Packages",url:"_dependencies.html"},
 {text:"Tutorials",url:"_tutorials.html"},
-{text:"Using the Cronus API",url:"_a_p_i.html"},
+{text:"Using the Helios API",url:"_a_p_i.html"},
 {text:"File I/O",url:"_i_o.html"},
 {text:"Writing Plugins",url:"_plugins.html"}]},
 {text:"Plug-ins",url:"_plug_ins.html"},

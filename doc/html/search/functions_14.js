@@ -5,7 +5,7 @@ var searchData=
   ['vec4',['vec4',['../structhelios_1_1vec4.html#ada43f0f9ffb02027439b8b3a924348a2',1,'helios::vec4::vec4(void)'],['../structhelios_1_1vec4.html#a6e6b72ae1341fa5949344540674fd90c',1,'helios::vec4::vec4(std::vector&lt; float &gt; v)'],['../structhelios_1_1vec4.html#ac6df1ab6c9423dbfe5cd236c8400f9ea',1,'helios::vec4::vec4(float v[4])'],['../structhelios_1_1vec4.html#ade4e8c762963b0ce0a195805f1ebccbd',1,'helios::vec4::vec4(float v0, float v1, float v2, float v3)']]],
   ['vecmult',['vecmult',['../global_8h.html#ae8cc6f4a10a4efab6057ab6c4c114304',1,'helios::vecmult(const float M[16], const float v[3], float(&amp;result)[3])'],['../global_8h.html#ac778a033592139354385089ed3e5687f',1,'helios::vecmult(const float M[16], const helios::vec3 v3, helios::vec3 &amp;result)']]],
   ['visualizer',['Visualizer',['../class_visualizer.html#a9277e99596d46d77d31a2249a1406983',1,'Visualizer::Visualizer(uint Wdisplay)'],['../class_visualizer.html#ac39e631c7d248c0e0f4f9ebba58a6dc4',1,'Visualizer::Visualizer(uint Wdisplay, uint Hdisplay)']]],
-  ['voxel',['Voxel',['../classhelios_1_1_voxel.html#a7e68ceedc64f6416198195236e60a195',1,'helios::Voxel']]],
+  ['voxel',['Voxel',['../classhelios_1_1_voxel.html#a663aa21eff339f962402ef198d1eed17',1,'helios::Voxel']]],
   ['voxel_5fbounds',['voxel_bounds',['../primitive_intersection_8cu.html#a904cdd1733732aa1a8dbaf2e958176a9',1,'primitiveIntersection.cu']]],
   ['voxel_5fintersect',['voxel_intersect',['../primitive_intersection_8cu.html#ac0a2a895d2e98227a3905e56939228fe',1,'primitiveIntersection.cu']]],
   ['voxelintersection',['VoxelIntersection',['../class_voxel_intersection.html#a45bf9a3a44c9373452753480c8e47c72',1,'VoxelIntersection']]]

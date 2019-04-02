@@ -86,7 +86,7 @@ int RadiationModel::selfTest( void ){
   
   Context context_1;
   UUID0 = context_1.addPatch( make_vec3(0,0,0), make_vec2(1,1) );
-  UUID1 = context_1.addPatch( make_vec3(0.5,0,0.5), make_vec2(1,1), make_SphericalCoord(0.5*M_PI,M_PI) );
+  UUID1 = context_1.addPatch( make_vec3(0.5,0,0.5), make_vec2(1,1), make_SphericalCoord(0.5*M_PI,-0.5*M_PI) );
 
   uint ts_flag = 0;
   context_1.setPrimitiveData(UUID0,"twosided_flag",ts_flag);
@@ -320,8 +320,6 @@ int RadiationModel::selfTest( void ){
   // ------ Test #4: Sphere source ------- //
 
   std::cout << "Test #4: Sphere source..." << std::flush;
-
-  error_threshold = 0.003;
 
   uint Ndirect_4 = 10000;
 
