@@ -318,6 +318,12 @@ int JulianDay( Date date );
 /** \ingroup functions */
 float randu( void );
 
+//! arccosine function to handle cases when round-off errors cause an argument <-1 or >1, and thus regular acos() returns NaN
+float acos_safe( float x );
+
+//! arcsine function to handle cases when round-off errors cause an argument <-1 or >1, and thus regular asin() returns NaN
+float asin_safe( float x );
+
 //!Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2).
 bool lineIntersection( const helios::vec2 p1, const helios::vec2 q1, const helios::vec2 p2, const helios::vec2 q2);
 

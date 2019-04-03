@@ -135,7 +135,7 @@ int LiDARcloud::selfTest(void){
 	
        vec3 shift = make_vec3((context_2.randu()+ii)*dx.x,(context_2.randu()+jj)*dx.y,(context_2.randu()+kk)*dx.z);
  
-       float theta = acos(1.f-2.f*context_2.randu());
+       float theta = acos_safe(1.f-2.f*context_2.randu());
        float phi = context_2.randu()*2.f*M_PI;
        
        context_2.addPatch( gcenter - 0.5*gsize + shift + 2.f*make_vec3(diskR,diskR,diskR), 2.f*make_vec2(diskR,diskR), make_SphericalCoord(theta,phi) );
@@ -325,7 +325,7 @@ int LiDARcloud::selfTest(void){
 	vec3 normal = context_4.getPrimitivePointer(p)->getNormal();
 	vec3 raydir = vertices.at(0)-origin;
 	raydir.normalize();
-	float theta = fabs(acos(raydir.z));
+	float theta = fabs(acos_safe(raydir.z));
 
 	if( area==area ){ //in rare cases you can get area=NaN
 	
@@ -1494,7 +1494,7 @@ void LiDARcloud::calculateSyntheticGtheta( helios::Context* context ){
 	vec3 normal = context->getPrimitivePointer(p)->getNormal();
 	vec3 raydir = vertices.at(0)-origin;
 	raydir.normalize();
-	float theta = fabs(acos(raydir.z));
+	float theta = fabs(acos_safe(raydir.z));
 
 	if( area==area ){ //in rare cases you can get area=NaN
 	

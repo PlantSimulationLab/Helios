@@ -173,6 +173,18 @@ float helios::randu( void ){
 
 }
 
+float helios::acos_safe( float x ){
+  if (x < -1.0) x = -1.0 ;
+  else if (x > 1.0) x = 1.0 ;
+  return acosf(x) ;
+}
+
+float helios::asin_safe( float x ){
+  if (x < -1.0) x = -1.0 ;
+  else if (x > 1.0) x = 1.0 ;
+  return asinf(x) ;
+}
+
 bool helios::lineIntersection( const helios::vec2 p1, const helios::vec2 q1, const helios::vec2 p2, const helios::vec2 q2)
 {
  

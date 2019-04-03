@@ -130,6 +130,12 @@ __device__ float3 d_rotatePoint(const float3 &position, const float &theta, cons
 	
 }
 
+__host__ __device__ float acos_safe( float x ){
+  if (x < -1.0) x = -1.0 ;
+  else if (x > 1.0) x = 1.0 ;
+  return acosf(x) ;
+}
+
 void LiDARcloud::calculateHitGridCellGPU( void ){
 
   if( printmessages ){
@@ -597,7 +603,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
     if( getHitGridCell(r)>=0 ){
       helios::vec3 direction = getHitXYZ(r)-getScanOrigin(getHitScanID(r));
       direction.normalize();
-      hit_inside_agg.at(getHitGridCell(r)) += sin(acos(direction.z));
+      hit_inside_agg.at(getHitGridCell(r)) += sin(acos_safe(direction.z));
     }
   }
   
@@ -644,7 +650,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
       helios::vec3 raydir = t0-getScanOrigin( tri.scanID );
       raydir.normalize();
 
-      float theta = fabs(acos(raydir.z));
+      float theta = fabs(acos_safe(raydir.z));
 
       if( area==area ){ //in rare cases you can get area=NaN
 	
@@ -1064,13 +1070,13 @@ __global__ void intersectGridcell( const size_t Nhitsbb, const float3 origin, fl
     
     if( t>=t0 ){ //hit lies within or beyond the volume
 
-      atomicAdd( hit_after, sin(acos(dz)) );
+      atomicAdd( hit_after, sin(acos_safe(dz)) );
 
       d_dr[ idx ] = fabs(t1-t0);
 	
     }else if( t<t0 ){ //hit lies before the volume
 
-      atomicAdd( hit_before, sin(acos(dz)) );
+      atomicAdd( hit_before, sin(acos_safe(dz)) );
             
     }
     

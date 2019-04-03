@@ -3478,6 +3478,8 @@ uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotat
 
   Voxel* voxel_new = (new Voxel( color, currentUUID ));
 
+  voxel_new->scale( size );
+  
   if( rotation!=0 ){
     voxel_new->rotate( rotation, "z" );
   }

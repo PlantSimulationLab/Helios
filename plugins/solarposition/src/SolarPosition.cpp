@@ -170,12 +170,12 @@ SphericalCoord SolarPosition::calculateSunDirection( helios::Time time, helios::
   h=(LST-12.f)*15.f*rad; //hour angle (rad)
     
   //solar zentih angle
-  theta = asin( sin(latitude*rad)*sin(delta) + cos(latitude*rad)*cos(delta)*cos(h) ); //(rad)
+  theta = asin_safe( sin(latitude*rad)*sin(delta) + cos(latitude*rad)*cos(delta)*cos(h) ); //(rad)
 
   assert( theta>-0.5f*M_PI && theta<0.5f*M_PI );
 
   //solar elevation angle
-  phi = acos( (sin(delta) - sin(theta)*sin(latitude*rad))/(cos(theta)*cos(latitude*rad)));
+  phi = acos_safe( (sin(delta) - sin(theta)*sin(latitude*rad))/(cos(theta)*cos(latitude*rad)));
 
   if( LST>12.f ){
     phi=2.f*M_PI-phi;
