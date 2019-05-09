@@ -813,7 +813,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
 
 	temp_xyz = make_vec3(-9999,-9999,-9999);
 	temp_rgb = make_RGBcolor(1,0,0); //default color: red
-	temp_direction = make_SphericalCoord(-9999,-9999);
+	temp_direction = make_SphericalCoord(-0.5*M_PI,0); //default direction: vertical (downward)
 
 	for( uint i=0; i<column_format.size(); i++ ){
 	  if( column_format.at(i).compare("zenith")==0 ){

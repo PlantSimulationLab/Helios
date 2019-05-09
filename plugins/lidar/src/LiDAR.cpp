@@ -239,7 +239,7 @@ int LiDARcloud::selfTest(void){
 	 }
        }
 
-       //theta = acos(1.f-2.f*context_3.randu());
+       //theta = acos_safe(1.f-2.f*context_3.randu());
        float phi = context_3.randu()*2.f*M_PI;
        
        context_3.addPatch( gcenter - 0.5*gsize + shift + 2.f*make_vec3(diskR,diskR,diskR), 2.f*make_vec2(diskR,diskR), make_SphericalCoord(theta,phi) );

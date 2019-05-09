@@ -100,6 +100,10 @@ __host__ __device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b
 <tr class="memitem:af48d117e18e1319cd61b4af9ef999b01"><td class="memItemLeft" align="right" valign="top"><a id="af48d117e18e1319cd61b4af9ef999b01"></a>
 __device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b>d_rotatePoint</b> (const float3 &amp;position, const float &amp;theta, const float &amp;phi)</td></tr>
 <tr class="separator:af48d117e18e1319cd61b4af9ef999b01"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade64e0788d1fbd6e4542b23131ebd60c"><td class="memItemLeft" align="right" valign="top"><a id="ade64e0788d1fbd6e4542b23131ebd60c"></a>
+__host__ __device__ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_li_d_a_r_8cu.html#ade64e0788d1fbd6e4542b23131ebd60c">acos_safe</a> (float x)</td></tr>
+<tr class="memdesc:ade64e0788d1fbd6e4542b23131ebd60c"><td class="mdescLeft">&#160;</td><td class="mdescRight">arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular acos() returns NaN <br /></td></tr>
+<tr class="separator:ade64e0788d1fbd6e4542b23131ebd60c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a02eeed1813b15293980de76e8d28db14"><td class="memItemLeft" align="right" valign="top"><a id="a02eeed1813b15293980de76e8d28db14"></a>
 __global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>insideVolume</b> (const uint Nhits, const float3 *d_hit_xyz, const uint Ngridcells, const float3 *d_grid_size, const float3 *d_grid_center, const float3 *d_grid_anchor, const float *d_grid_rotation, int *d_hit_vol)</td></tr>
 <tr class="separator:a02eeed1813b15293980de76e8d28db14"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -115,9 +119,9 @@ __global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectP
 <tr class="memitem:a3ddfb09a566cd50c5fad1e6b2f78cb4c"><td class="memItemLeft" align="right" valign="top"><a id="a3ddfb09a566cd50c5fad1e6b2f78cb4c"></a>
 __global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectTriangles</b> (const size_t N, const float3 origin, float3 *d_raydir, const int Ntriangles, float3 *d_tri_vertex0, float3 *d_tri_vertex1, float3 *d_tri_vertex2, float *d_hit_t)</td></tr>
 <tr class="separator:a3ddfb09a566cd50c5fad1e6b2f78cb4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa1372176166ec0e8c91e4a65193fda85"><td class="memItemLeft" align="right" valign="top"><a id="aa1372176166ec0e8c91e4a65193fda85"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectGridcell</b> (const size_t Nhitsbb, float3 *d_scan_xyz, float3 *d_scan_raydir, const size_t Ncells, float3 center, float3 anchor, float3 size, float rotation, float *d_dr, float *hit_denom, float *hit_inside)</td></tr>
-<tr class="separator:aa1372176166ec0e8c91e4a65193fda85"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad85f62ff93b9a47a8bc5f8ed1290b97e"><td class="memItemLeft" align="right" valign="top"><a id="ad85f62ff93b9a47a8bc5f8ed1290b97e"></a>
+__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectGridcell</b> (const size_t Nhitsbb, float3 *d_scan_xyz, float3 *d_scan_raydir, const size_t Ncells, float3 *center, float3 *anchor, float3 *size, float *rotation, float *d_dr, float *hit_denom, float *hit_inside)</td></tr>
+<tr class="separator:ad85f62ff93b9a47a8bc5f8ed1290b97e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a48e9db3bb523838c7c33d125977e9e6a"><td class="memItemLeft" align="right" valign="top"><a id="a48e9db3bb523838c7c33d125977e9e6a"></a>
 __global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectBoundingBox</b> (const size_t scanSize, float3 *d_hit_origin, const float3 *d_scan_xyz, const float3 bbcenter, const float3 bbsize, uint *d_boundingbox_hit)</td></tr>
 <tr class="separator:a48e9db3bb523838c7c33d125977e9e6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
