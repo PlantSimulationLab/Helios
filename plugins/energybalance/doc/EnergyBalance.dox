@@ -215,7 +215,7 @@
    
  </table>	
  
- \subsection EBOutputData Output Primitive Data
+ \subsection EBOutputData Default Output Primitive Data
  
  <table>
    <tr>	
@@ -243,6 +243,29 @@
      <td>Latent heat flux.</td>
    </tr>
    
+ </table>
+
+ \subsection EBOptionalOutputData Optional Output Primitive Data
+ 
+ <table>
+   <tr>	
+     <th>Primitive Data</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>boundarylayer_conductance_out</td>
+     <td>mol air/m<sup>2</sup>-s</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Primitive boundary-layer conductance calculated by this plug-in.</td>
+   </tr>
+   <tr>	
+     <td>vapor_pressure_deficit</td>
+     <td>mol/mol</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Surface vapor pressure deficit.</td>
+   </tr>
  </table>
 
  \section EBUse Using the Energy Balance Model Plug-in

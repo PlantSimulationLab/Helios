@@ -45,6 +45,11 @@ public:
    */
   void addRadiationBand( const char* band );
 
+  //! Add optional output primitive data values to the Context
+  /** \param[in] "label" Name of primitive data (e.g., vapor_pressure_deficit)
+  */
+  void optionalOutputPrimitiveData( const char* label );
+
 private:
 
   //! Copy of a pointer to the context
@@ -107,6 +112,9 @@ private:
 
   //! Names of radiation bands to be included in absorbed all-wave radiation flux
   std::vector<std::string> radiation_bands;
+
+  //! Names of additional primitive data to add to the Context
+  std::vector<std::string> output_prim_data;
     
 };
 

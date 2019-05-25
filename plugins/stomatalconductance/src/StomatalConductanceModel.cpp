@@ -119,12 +119,12 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
     }
 
     //boundary-layer conductance
-    float gH = bl_conductance_default;
-    if( context->doesPrimitiveDataExist(p,"boundarylayer_conductance") ){
-      context->getPrimitiveData(p,"boundarylayer_conductance",gH);
-    }else{
-      assumed_default_gH++;
-    }
+    // float gH = bl_conductance_default;
+    // if( context->doesPrimitiveDataExist(p,"boundarylayer_conductance") ){
+    //   context->getPrimitiveData(p,"boundarylayer_conductance",gH);
+    // }else{
+    //   assumed_default_gH++;
+    // }
 
     //model coefficients
     float Em;
@@ -149,8 +149,6 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
     float ea = rh*esat; // Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)
     float es = 611.f*exp(17.502f*(TL-273.f)/((TL-273.f)+240.97f));
     float D = max(0.f,(es-ea)/press*1000);
-
-    float gv = 0.97*gH;
 
     float gs = Em*(i+i0)/(k+b*i+(i+i0)*D);
 

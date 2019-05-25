@@ -43,8 +43,137 @@ AerialLiDARcloud::~AerialLiDARcloud( void ){
 
 int AerialLiDARcloud::selfTest(void){
 
-  return 0;
-  
+  float err_tol = 0.1;
+
+  int fail_count = 0;
+
+  //------- dense vegatation test to check "mean dr" method for calculating LAD -------//
+
+  std::cout << "Running aerial LiDAR dense vegetation test..." << std::flush;
+
+  Context context_1;
+
+  vec3 boxsize(10,10,10);
+
+  int3 Nleaves(100,100,100);
+
+  float L = 0.05;
+
+  for( int k=0; k<Nleaves.z; k++ ){
+    for( int j=0; j<Nleaves.y; j++ ){
+      for( int i=0; i<Nleaves.x; i++ ){
+
+	vec3 x( context_1.randu()*boxsize.x, context_1.randu()*boxsize.y, context_1.randu()*boxsize.z );
+
+	float theta = acos(1.f-context_1.randu());
+	float phi = context_1.randu()*2.f*M_PI;
+
+	context_1.addPatch( x, make_vec2(L,L), make_SphericalCoord(theta,phi) );
+	
+      }
+    }
+  }
+
+  context_1.addPatch( make_vec3(0.5*boxsize.x,0.5*boxsize.y,-0.001), make_vec2( boxsize.x, boxsize.y ) );
+
+  float LAD_exact = float(Nleaves.x*Nleaves.y*Nleaves.z)*L*L/(boxsize.x*boxsize.y*boxsize.z);
+
+  AerialLiDARcloud lidar_1;
+  lidar_1.disableMessages();
+
+  lidar_1.syntheticScan( &context_1, "plugins/lidar/xml/synthetic_aerial_test.xml" );
+
+  lidar_1.calculateLeafAreaGPU( 0.5, 10 );
+
+  bool flag = true;
+  for( int v=0; v<4; v++ ){
+
+    float LAD = lidar_1.getCellLeafAreaDensity(v);
+
+    std::cout << "Cell #" << v << " LAD = " << LAD << std::endl;
+
+    if( LAD!=0 ){
+      flag = false;
+    }
+    
+  }
+
+  for( int v=4; v<8; v++ ){
+
+    float LAD = lidar_1.getCellLeafAreaDensity(v);
+
+    if( fabs(LAD-LAD_exact)/LAD_exact > err_tol ){
+      flag = false;
+    }
+
+  }
+
+  if( flag ){
+    std::cout << "passed." << std::endl;
+  }else{
+    std::cout << "failed." << std::endl;
+    fail_count ++;
+  }
+
+  //------- sparse vegatation test to check "mean P" method for calculating LAD -------//
+
+  std::cout << "Running aerial LiDAR sparse vegetation test..." << std::flush;
+
+  Context context_2;
+
+  Nleaves = make_int3(25,25,25);
+
+  for( int k=0; k<Nleaves.z; k++ ){
+    for( int j=0; j<Nleaves.y; j++ ){
+      for( int i=0; i<Nleaves.x; i++ ){
+
+	vec3 x( context_2.randu()*boxsize.x, context_2.randu()*boxsize.y, context_2.randu()*boxsize.z );
+
+	float theta = acos(1.f-context_2.randu());
+	float phi = context_2.randu()*2.f*M_PI;
+
+	context_2.addPatch( x, make_vec2(L,L), make_SphericalCoord(theta,phi) );
+	
+      }
+    }
+  }
+
+  context_2.addPatch( make_vec3(0.5*boxsize.x,0.5*boxsize.y,-0.001), make_vec2( boxsize.x, boxsize.y ) );
+
+  LAD_exact = float(Nleaves.x*Nleaves.y*Nleaves.z)*L*L/(boxsize.x*boxsize.y*boxsize.z);
+
+  AerialLiDARcloud lidar_2;
+  lidar_2.disableMessages();
+
+  lidar_2.syntheticScan( &context_2, "plugins/lidar/xml/synthetic_aerial_test.xml" );
+
+  lidar_2.calculateLeafAreaGPU( 0.5, 10 );
+
+  flag = true;
+  for( int v=0; v<8; v++ ){
+
+    float LAD = lidar_2.getCellLeafAreaDensity(v);
+
+    if( fabs(LAD-LAD_exact)/LAD_exact > 1.5*err_tol ){
+      flag = false;
+    }
+
+  }
+
+  if( flag ){
+    std::cout << "passed." << std::endl;
+  }else{
+    std::cout << "failed." << std::endl;
+    fail_count ++;
+  }
+
+
+  if( fail_count==0 ){
+    return 0;
+  }else{
+    return 1;
+  }
+    
 }
 
 void AerialLiDARcloud::disableMessages( void ){

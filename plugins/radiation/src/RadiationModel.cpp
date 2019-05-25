@@ -895,6 +895,11 @@ void RadiationModel::setDiffuseRadiationFlux( const char* label, float flux ){
 
 uint RadiationModel::addRadiationBand( const char* label ){
 
+  if( strlen(label)>80 ){
+    std::cerr << "ERROR (addRadiationBand): Name of radiation band cannot exceed 80 characters." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  
   emission_flag.push_back(true);//by default, emission is run
 
   uint band = emission_flag.size()-1; //band index
@@ -1841,7 +1846,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
   
   std::vector<float> rho, tau, eps;
   
-  char prop[20];
+  char prop[100];
 
   size_t Nprimitives = context_UUIDs.size();
 
@@ -2134,7 +2139,7 @@ void RadiationModel::runBand( const char* label ){
       if( emission_flag[band] ){
   	// Update primitive outgoing emission
   	float eps, temperature;
-  	char prop[30];
+  	char prop[100];
   	sprintf(prop,"emissivity_%s",label);
   	for( size_t u=0; u<Nprimitives; u++ ){
 	  uint p = context_UUIDs.at(u);
@@ -2234,7 +2239,7 @@ void RadiationModel::runBand( const char* label ){
   std::vector<float> radiation_flux_data;
   radiation_flux_data=getOptiXbufferData( radiation_in_RTbuffer );
   
-  char prop[30];
+  char prop[100];
   sprintf(prop,"radiation_flux_%s",label);
   for( size_t u=0; u<Nprimitives; u++ ){
     size_t p = context_UUIDs.at(u);
@@ -2374,7 +2379,7 @@ void RadiationModel::runBand_MCRT( const char* label ){
     
     // Update primitive outgoing emission
     float eps, temperature;
-    char prop[30];
+    char prop[100];
     sprintf(prop,"emissivity_%s",label);
     for( size_t u=0; u<Nprimitives; u++ ){
       uint p = context_UUIDs.at(u);
@@ -2422,7 +2427,7 @@ void RadiationModel::runBand_MCRT( const char* label ){
   std::vector<float> radiation_flux_data;
   radiation_flux_data=getOptiXbufferData( radiation_in_RTbuffer );
 
-  char prop[30];
+  char prop[100];
   sprintf(prop,"radiation_flux_%s",label);
   for( size_t u=0; u<context_UUIDs.size(); u++ ){
     size_t p = context_UUIDs.at(u);
@@ -2464,7 +2469,7 @@ std::vector<float> RadiationModel::getTotalAbsorbedFlux( void ){
 
       uint p = context_UUIDs.at(u);
       
-      char str[50];
+      char str[100];
       printf(str,"radiation_flux_%s",label.c_str());
 
       float R;

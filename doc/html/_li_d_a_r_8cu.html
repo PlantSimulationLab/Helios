@@ -119,9 +119,9 @@ __global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectP
 <tr class="memitem:a3ddfb09a566cd50c5fad1e6b2f78cb4c"><td class="memItemLeft" align="right" valign="top"><a id="a3ddfb09a566cd50c5fad1e6b2f78cb4c"></a>
 __global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectTriangles</b> (const size_t N, const float3 origin, float3 *d_raydir, const int Ntriangles, float3 *d_tri_vertex0, float3 *d_tri_vertex1, float3 *d_tri_vertex2, float *d_hit_t)</td></tr>
 <tr class="separator:a3ddfb09a566cd50c5fad1e6b2f78cb4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad85f62ff93b9a47a8bc5f8ed1290b97e"><td class="memItemLeft" align="right" valign="top"><a id="ad85f62ff93b9a47a8bc5f8ed1290b97e"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectGridcell</b> (const size_t Nhitsbb, float3 *d_scan_xyz, float3 *d_scan_raydir, const size_t Ncells, float3 *center, float3 *anchor, float3 *size, float *rotation, float *d_dr, float *hit_denom, float *hit_inside)</td></tr>
-<tr class="separator:ad85f62ff93b9a47a8bc5f8ed1290b97e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8c4de4a0c71b2013b7e8f864bd6b5c05"><td class="memItemLeft" align="right" valign="top"><a id="a8c4de4a0c71b2013b7e8f864bd6b5c05"></a>
+__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectGridcell</b> (const size_t Nhitsbb, float3 *d_scan_xyz, float3 *d_scan_raydir, const size_t Ncells, float3 *center, float3 *anchor, float3 *size, float *rotation, float *d_dr, float *d_dr_hit, float *hit_denom, float *hit_inside)</td></tr>
+<tr class="separator:a8c4de4a0c71b2013b7e8f864bd6b5c05"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a48e9db3bb523838c7c33d125977e9e6a"><td class="memItemLeft" align="right" valign="top"><a id="a48e9db3bb523838c7c33d125977e9e6a"></a>
 __global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectBoundingBox</b> (const size_t scanSize, float3 *d_hit_origin, const float3 *d_scan_xyz, const float3 bbcenter, const float3 bbsize, uint *d_boundingbox_hit)</td></tr>
 <tr class="separator:a48e9db3bb523838c7c33d125977e9e6a"><td class="memSeparator" colspan="2">&#160;</td></tr>

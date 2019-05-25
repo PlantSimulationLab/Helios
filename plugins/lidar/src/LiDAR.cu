@@ -381,6 +381,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
   //variable aggregates over all scans where we just keep tacking hits on the end for all scans
   std::vector<std::vector<float> > dr_agg; //dr is path length through grid cell
   dr_agg.resize(Ncells);
+  dr_agg.resize(Ncells);
   std::vector<float> G_agg; //G is dot product between ray direction and triangle normal that was hit (only relevant for hits)
   G_agg.resize(Ncells,0);
   std::vector<float> hit_before_agg; //hit_before corresponds to scan points that hit something before encountering a particular grid cell
@@ -1974,6 +1975,8 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
   //variable aggregates over all scans where we just keep tacking hits on the end for all scans
   std::vector<float> dr_agg; //dr is path length through grid cell
   dr_agg.resize(Ncells);
+  std::vector<std::vector<float> > dr_hit_agg; //dr_hit is path length between grid cell intersection and hit point
+  dr_hit_agg.resize(Ncells);
   std::vector<float> hit_denom_agg; //hit_denom corresponds to total number of scan points that reached a given grid cell
   hit_denom_agg.resize(Ncells,0);
   std::vector<float> hit_inside_agg; //hit_inside corresponds to scan points that hit something within a particular grid cell.
@@ -2017,6 +2020,10 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr, Ncells*sizeof(float)) );
     float* dr = (float*)malloc( Ncells*sizeof(float) );
 
+    float* d_dr_hit;
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr_hit, Nhits*sizeof(float)) );
+    float* dr_hit = (float*)malloc( Nhits * sizeof(float));
+    
     float* d_hit_denom;
     CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_denom, Ncells*sizeof(float)) );
     float* hit_denom = (float*)malloc( Ncells*sizeof(float) );
@@ -2057,6 +2064,7 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     CUDA_CHECK_ERROR( cudaMemcpy(d_cell_rotation, cell_rotation, Ncells*sizeof(float), cudaMemcpyHostToDevice) );
 
     CUDA_CHECK_ERROR( cudaMemset( d_dr, 0, Ncells*sizeof(float)) );
+    CUDA_CHECK_ERROR( cudaMemset( d_dr_hit, 0, Nhits*sizeof(float)) );
     CUDA_CHECK_ERROR( cudaMemset( d_hit_denom, 0, Ncells*sizeof(float)) );
     CUDA_CHECK_ERROR( cudaMemset( d_hit_inside, 0, Ncells*sizeof(float)) );
 
@@ -2067,13 +2075,14 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
       continue;
     }
 
-    intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, d_scan_xyz, d_scan_raydir, Ncells, d_cell_center, d_cell_anchor, d_cell_size, d_cell_rotation, d_dr, d_hit_denom, d_hit_inside );
+    intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, d_scan_xyz, d_scan_raydir, Ncells, d_cell_center, d_cell_anchor, d_cell_size, d_cell_rotation, d_dr, d_dr_hit, d_hit_denom, d_hit_inside );
 
     cudaDeviceSynchronize();
     CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
     
     //copy results back to host
     CUDA_CHECK_ERROR( cudaMemcpy( dr, d_dr, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK_ERROR( cudaMemcpy( dr_hit, d_dr_hit, Nhits*sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK_ERROR( cudaMemcpy( hit_denom, d_hit_denom, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK_ERROR( cudaMemcpy( hit_inside, d_hit_inside, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
 
@@ -2083,21 +2092,25 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
 	hit_inside_agg.at(c) += hit_inside[c];
 
 	dr_agg.at(c) += dr[c]/hit_denom[c];
-	// for( int i=0; i<Nhits; i++ ){
-	//   if( dr[c*Nhits+i]>0 ){
-	//     dr_agg.at(c).push_back( dr[c*Nhits+i] );
-	//   }
-	// }
+	
+	for( int i=0; i<Nhits; i++ ){
+	  if( dr_hit[i]>0 ){
+	    int cell = getHitGridCell(i);
+	    dr_hit_agg.at(cell).push_back( dr_hit[i] );
+	  }
+	}
     }
     
     free( scan_xyz );
     free( scan_raydir );
     free( dr );
+    free( dr_hit );
     free( hit_denom );
     free( hit_inside );
     CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
     CUDA_CHECK_ERROR( cudaFree(d_scan_raydir) );
     CUDA_CHECK_ERROR( cudaFree(d_dr) );
+    CUDA_CHECK_ERROR( cudaFree(d_dr_hit) );
     CUDA_CHECK_ERROR( cudaFree(d_hit_denom) );
     CUDA_CHECK_ERROR( cudaFree(d_hit_inside) );
 
@@ -2109,7 +2122,7 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
   if( printmessages ){
     std::cout << "Inverting to find LAD..." << std::flush;
   }
-    
+     
   // float etol = 5e-5;
   // uint maxiter = 100;
     
@@ -2224,25 +2237,28 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
       
   // }
 
-  std::ofstream file_inside;
-  file_inside.open("../output/hit_inside_2D.txt");
-  std::ofstream file_outside;
-  file_outside.open("../output/hit_outside_2D.txt");
-
   for( uint v=0; v<Ncells; v++ ){
 
-    // float dr_bar = 0;
-    // for( uint i=0; i<dr_agg.at(v).size(); i++ ){
-    //   dr_bar += dr_agg.at(v).at(i);
-    // }
-    // dr_bar /= float(dr_agg.at(v).size());
-    //float dr_bar = dr_agg.at(v)/float(Nscans);
     float dr_bar = getCellSize(v).z;
     
     float P = 1.f-float(hit_inside_agg[v])/float(hit_denom_agg[v]);
 
-    float a = -log(P)/dr_bar/Gtheta;
+    float a;
+    if( hit_inside_agg[v]<minVoxelHits ){
+      a = 0.f;
+    }else if( P<0.1 ){
 
+      dr_bar = 0;
+      for( uint i=0; i<dr_hit_agg.at(v).size(); i++ ){
+	dr_bar += dr_hit_agg.at(v).at(i);
+      }
+      dr_bar /= float(dr_hit_agg.at(v).size());
+      
+      a = 1.f/dr_bar/Gtheta;
+    }else{
+      a = -log(P)/dr_bar/Gtheta;
+    }
+      
     helios::vec3 gridsize = getCellSize(v);
     setCellLeafArea(a*gridsize.x*gridsize.y*gridsize.z,v);
 
@@ -2252,14 +2268,8 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
       //std::cout << "Vol #" << v << " dr: " << dr_bar << std::endl;
       // std::cout << "Vol #" << v << " P: " << P << std::endl;
     }
-
-    file_inside << hit_inside_agg[v] << std::endl;
-    file_outside << hit_denom_agg[v] << std::endl;
     
   }
-
-  file_inside.close();
-  file_outside.close();
 
   if( printmessages ){
     std::cout << "done." << std::endl;
@@ -2782,7 +2792,7 @@ void AerialLiDARcloud::calculateHitGridCellGPU( void ){
     
 }
 
-__global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3* center, float3* anchor, float3* size, float* rotation, float* d_dr, float* hit_denom, float* hit_inside ){
+__global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3* center, float3* anchor, float3* size, float* rotation, float* d_dr, float* d_dr_hit, float* hit_denom, float* hit_inside ){
   
   size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
 
@@ -2879,9 +2889,11 @@ __global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, flo
 
     }
 	
-    if( t>=t0 && t<=t1 ){ //hit lies inside the volume
+    if( t>=t0 && t<t1 ){ //hit lies inside the volume
 
       atomicAdd( &hit_inside[cell], 1.f );
+
+      d_dr_hit[ idx ] = t-t0;
             
     }
     

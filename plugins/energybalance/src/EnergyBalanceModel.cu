@@ -357,6 +357,15 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
     float QL = 44000*gM*(es-ea[u])/pressure[u];
     prim->setPrimitiveData("latent_flux",QL);
 
+    for( int i=0; i<output_prim_data.size(); i++ ){
+      if( output_prim_data.at(i).compare("boundarylayer_conductance_out")==0 ){
+	prim->setPrimitiveData("boundarylayer_conductance_out",gH[u]);
+      }else if( output_prim_data.at(i).compare("vapor_pressure_deficit")==0 ){
+	float vpd = (es-ea[u])/pressure[u];
+	prim->setPrimitiveData("vapor_pressure_deficit",vpd);
+      }
+    }
+
   }
 
   free( To );

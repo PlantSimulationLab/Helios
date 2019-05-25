@@ -116,7 +116,7 @@
      </tr>
      <tr>	
        <td>moisture_conductance</td>
-       <td>\f$g_M\f$</td>
+       <td>\f$g_s\f$</td>
        <td>mol air/m<sup>2</sup>-sec</td>	  
        <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
        <td>Conductance of water vapor through stomata.</td>	  
@@ -178,6 +178,8 @@
 
   with \f$e_s(T)\f$ calculated according to the <a href="https://en.wikipedia.org/wiki/Tetens_equation">Tetens equation</a>.
 
+  <!--
+
   Finally, the overall conductance to moisture across the stoma and boundary-layer in series is given by
 
   \f$g_M=\dfrac{0.97g_H g_s}{0.97g_H+g_s},\f$
@@ -185,6 +187,8 @@
   with
 
   \f$0.97g_H=g_v\f$
+
+  -->
 
   \section StomatalUse Using the Stomatal Conductance Model
    

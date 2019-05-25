@@ -219,7 +219,30 @@ int EnergyBalanceModel::selfTest( void ){
     std::cout << "failed." << std::endl;
     return 1;
   }
+
+  //---- Optional Primitive Data Output Check -----//
+
+  Context context_4;
+
+  uint UUID_4;
   
+  UUID_4 = context_4.addPatch( make_vec3(1,2,3), make_vec2(3,2) );
+
+  EnergyBalanceModel energymodel_4(&context_4);
+
+  energymodel_4.addRadiationBand("LW");
+
+  energymodel_4.optionalOutputPrimitiveData( "boundarylayer_conductance_out" );
+  energymodel_4.optionalOutputPrimitiveData( "vapor_pressure_deficit" );
+
+  context_4.setPrimitiveData( UUID_4, "radiation_flux_LW", 0.f );
+  
+  energymodel_4.run();
+
+  float vpd, gH;
+
+  context_4.getPrimitiveData( UUID_4, "vapor_pressure_deficit", vpd );
+  context_4.getPrimitiveData( UUID_4, "boundarylayer_conductance_out", gH );
   
   std::cout << "passed." << std::endl;
   return 0;
@@ -228,4 +251,14 @@ int EnergyBalanceModel::selfTest( void ){
 
 void EnergyBalanceModel::addRadiationBand( const char* band ){
   radiation_bands.push_back(band);
+}
+
+void EnergyBalanceModel::optionalOutputPrimitiveData( const char* label ){
+
+  if( strcmp(label,"boundarylayer_conductance_out")==0 || strcmp(label,"vapor_pressure_deficit")==0 ){
+    output_prim_data.push_back( label );
+  }else{
+    std::cout << "WARNING (EnergyBalanceModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+  }
+  
 }

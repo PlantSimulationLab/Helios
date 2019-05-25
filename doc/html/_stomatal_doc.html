@@ -123,7 +123,7 @@ Output Primitive Data</h2>
 <tr>
 <th>Primitive Data Label </th><th>Symbol </th><th>Units </th><th>Data Type </th><th>Description  </th></tr>
 <tr>
-<td>moisture_conductance </td><td><img class="formulaInl" alt="$g_M$" src="form_10.png"/> </td><td>mol air/m<sup>2</sup>-sec </td><td> <font face="courier" color="green">float</font> </td><td>Conductance of water vapor through stomata.  </td></tr>
+<td>moisture_conductance </td><td><img class="formulaInl" alt="$g_s$" src="form_47.png"/> </td><td>mol air/m<sup>2</sup>-sec </td><td> <font face="courier" color="green">float</font> </td><td>Conductance of water vapor through stomata.  </td></tr>
 </table>
 <h1><a class="anchor" id="StomatalIntro"></a>
 Introduction</h1>
@@ -147,10 +147,6 @@ Model Equations</h1>
 <p>The vapor pressure deficit is calculated based on the temperature of the leaf and air, the relative humidity of the air, and the atmospheric pressure</p>
 <p><img class="formulaInl" alt="$D = \dfrac{e_s(T_s)-e_s(T_a)h}{p_{atm}},$" src="form_118.png"/></p>
 <p>with <img class="formulaInl" alt="$e_s(T)$" src="form_11.png"/> calculated according to the <a href="https://en.wikipedia.org/wiki/Tetens_equation">Tetens equation</a>.</p>
-<p>Finally, the overall conductance to moisture across the stoma and boundary-layer in series is given by</p>
-<p><img class="formulaInl" alt="$g_M=\dfrac{0.97g_H g_s}{0.97g_H+g_s},$" src="form_111.png"/></p>
-<p>with</p>
-<p><img class="formulaInl" alt="$0.97g_H=g_v$" src="form_112.png"/></p>
 <h1><a class="anchor" id="StomatalUse"></a>
 Using the Stomatal Conductance Model</h1>
 <h2><a class="anchor" id="StomatalCoeffs"></a>
