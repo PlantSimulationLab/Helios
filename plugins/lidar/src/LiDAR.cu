@@ -566,7 +566,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
       CUDA_CHECK_ERROR( cudaMemset( d_hit_before, 0, sizeof(float)) );
       CUDA_CHECK_ERROR( cudaMemset( d_hit_after, 0, sizeof(float)) );
 
-      dimBlock = make_uint3( fmin(512,Nhits), 1, 1 );
+      dimBlock = make_uint3( min(size_t(512),Nhits), 1, 1 );
       dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), 1, 1  );
       
       if( dimBlock.x==0 && dimGrid.x==0 ){
@@ -2068,7 +2068,7 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     CUDA_CHECK_ERROR( cudaMemset( d_hit_denom, 0, Ncells*sizeof(float)) );
     CUDA_CHECK_ERROR( cudaMemset( d_hit_inside, 0, Ncells*sizeof(float)) );
 
-    uint3 dimBlock = make_uint3( fmin(16,Nhits), fmin(16,Ncells), 1 );
+    uint3 dimBlock = make_uint3( min(size_t(16),Nhits), min(uint(16),Ncells), 1 );
     uint3 dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), ceil(float(Ncells)/dimBlock.y), 1  );
 
     if( dimBlock.x==0 && dimGrid.x==0 && dimGrid.y==0 ){

@@ -4343,9 +4343,9 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
       
       subcenter = make_vec3(-0.5*size.x+float(i)*subsize.x,-0.5*size.y+float(j)*subsize.y,0);
 
-      subcenter = rotatePoint( subcenter, rotation );
+      subcenter = rotatePoint( subcenter, make_SphericalCoord(rotation.elevation,-rotation.azimuth+0.5*M_PI) );
 
-      UUID.push_back( addPatch( center + subcenter, subsize, rotation, color ) );
+       UUID.push_back( addPatch( center + subcenter, subsize, rotation, color ) );
 
     }
   }
@@ -4375,7 +4375,7 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
       
       subcenter = make_vec3(-0.5*size.x+(float(i)+0.5)*subsize.x,-0.5*size.y+(float(j)+0.5)*subsize.y,0);
 
-      subcenter = rotatePoint( subcenter, rotation );
+      subcenter = rotatePoint( subcenter, make_SphericalCoord(rotation.elevation,-rotation.azimuth+0.5*M_PI) );
 
       UUID.push_back( addPatch( center + subcenter, subsize, rotation, texturefile, make_vec2((i+0.5)*uv_sub.x,(j+0.5)*uv_sub.y), uv_sub ) );
 

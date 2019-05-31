@@ -90,8 +90,6 @@ int AerialLiDARcloud::selfTest(void){
 
     float LAD = lidar_1.getCellLeafAreaDensity(v);
 
-    std::cout << "Cell #" << v << " LAD = " << LAD << std::endl;
-
     if( LAD!=0 ){
       flag = false;
     }

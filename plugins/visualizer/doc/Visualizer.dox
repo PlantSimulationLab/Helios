@@ -34,7 +34,7 @@
     <tr>	
       <td>X11/xorg</td>
       <td> <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/xquartz</code></div><!--X11 libraries are available through the XQuartz project.  <br>Download the latest version of XQuartz at <a href="www.xquartz.org">www.xquartz.org</a>.--></td>
-      <td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev</code></div></td>
+      <td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev</code></div></td>
       <td>Unknown</td>
     </tr>
  </table>
