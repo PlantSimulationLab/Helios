@@ -374,8 +374,10 @@ RT_PROGRAM void diffuse_raygen(){
       uint3 ind;
       
       bool solid = false;
+      int count=0;
       while( !solid ){
-
+	count++;
+	
 	float2 uv = make_float2( sp.x+0.5f, 1.f-sp.y-0.5f );
 	if( uvID[UUID]==-1 ){//does not have custom (u,v) coordinates
 	  ind = make_uint3( roundf(float(sz.x-1)*uv.x), roundf(float(sz.y-1)*uv.y), ID );
@@ -388,6 +390,9 @@ RT_PROGRAM void diffuse_raygen(){
 	}
 	solid = maskdata[ind];
 	if( !solid ){
+	  if( count>10 ){
+	    break;
+	  }
 	  sp.x = -0.5f + rnd(prd.seed);
 	  sp.y = -0.5f + rnd(prd.seed);
 	}
@@ -427,7 +432,9 @@ RT_PROGRAM void diffuse_raygen(){
       float i = v0.z - v1.z, j = v0.z - v2.z, l = v0.z;
       
       bool solid = false;
+      int count=0;
       while( !solid ){
+	count++;
 
          float3 R = d_transformPoint(m,sp);
     
@@ -455,6 +462,9 @@ RT_PROGRAM void diffuse_raygen(){
 
 	  solid = maskdata[ind];
 	  if( !solid ){
+	    if( count>10 ){
+	      break;
+	    }
 	    Rx = rnd(prd.seed);
 	    Ry = rnd(prd.seed);
 	    if( Rx<Ry ){
@@ -861,8 +871,10 @@ RT_PROGRAM void emission_raygen_MCRT(){
       uint3 ind;
       
       bool solid = false;
+      int count=0;
       while( !solid ){
-
+	count++;
+	
 	float2 uv = make_float2( sp.x+0.5f, 1.f-sp.y-0.5f );
 	if( uvID[UUID]==-1 ){//does not have custom (u,v) coordinates
 	  ind = make_uint3( roundf(float(sz.x-1)*uv.x), roundf(float(sz.y-1)*uv.y), ID );
@@ -875,6 +887,9 @@ RT_PROGRAM void emission_raygen_MCRT(){
 	}
 	solid = maskdata[ind];
 	if( !solid ){
+	  if( count>10 ){
+	    break;
+	  }
 	  sp.x = -0.5f + rnd(prd.seed);
 	  sp.y = -0.5f + rnd(prd.seed);
 	}
@@ -911,8 +926,10 @@ RT_PROGRAM void emission_raygen_MCRT(){
       float i = v0.z - v1.z, j = v0.z - v2.z, l = v0.z;
       
       bool solid = false;
+      int count=0;
       while( !solid ){
-
+	count++;
+	
          float3 R = d_transformPoint(m,sp);
     
 	 float c = R.x, g = R.y, k = R.z;
@@ -939,6 +956,9 @@ RT_PROGRAM void emission_raygen_MCRT(){
 
 	  solid = maskdata[ind];
 	  if( !solid ){
+	    if( count>10 ){
+	      break;
+	    }
 	    Rx = rnd(prd.seed);
 	    Ry = rnd(prd.seed);
 	    if( Rx<Ry ){

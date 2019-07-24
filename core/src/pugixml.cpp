@@ -7839,8 +7839,8 @@ PUGI__NS_BEGIN
 	{
 	#if defined(PUGI__MSVC_CRT_VERSION) || defined(__BORLANDC__)
 		return !!_isnan(value);
-	#elif defined(fpclassify) && defined(FP_NAN)
-		return fpclassify(value) == FP_NAN;
+	// #elif defined(fpclassify) && defined(FP_NAN)
+	// 	return fpclassify(value) == FP_NAN;
 	#else
 		// fallback
 		const volatile double v = value;
@@ -7854,21 +7854,21 @@ PUGI__NS_BEGIN
 		if (_finite(value)) return (value == 0) ? PUGIXML_TEXT("0") : 0;
 		if (_isnan(value)) return PUGIXML_TEXT("NaN");
 		return value > 0 ? PUGIXML_TEXT("Infinity") : PUGIXML_TEXT("-Infinity");
-	#elif defined(fpclassify) && defined(FP_NAN) && defined(FP_INFINITE) && defined(FP_ZERO)
-		switch (fpclassify(value))
-		{
-		case FP_NAN:
-			return PUGIXML_TEXT("NaN");
+	// #elif defined(fpclassify) && defined(FP_NAN) && defined(FP_INFINITE) && defined(FP_ZERO)
+	// 	switch (fpclassify(value))
+	// 	{
+	// 	case FP_NAN:
+	// 		return PUGIXML_TEXT("NaN");
 
-		case FP_INFINITE:
-			return value > 0 ? PUGIXML_TEXT("Infinity") : PUGIXML_TEXT("-Infinity");
+	// 	case FP_INFINITE:
+	// 		return value > 0 ? PUGIXML_TEXT("Infinity") : PUGIXML_TEXT("-Infinity");
 
-		case FP_ZERO:
-			return PUGIXML_TEXT("0");
+	// 	case FP_ZERO:
+	// 		return PUGIXML_TEXT("0");
 
-		default:
-			return 0;
-		}
+	// 	default:
+	// 		return 0;
+	// 	}
 	#else
 		// fallback
 		const volatile double v = value;

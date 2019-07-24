@@ -4341,11 +4341,17 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
   for( uint j=0; j<subdiv.y; j++ ){
     for( uint i=0; i<subdiv.x; i++ ){
       
-      subcenter = make_vec3(-0.5*size.x+float(i)*subsize.x,-0.5*size.y+float(j)*subsize.y,0);
+      subcenter = make_vec3(-0.5*size.x+(float(i)+0.5)*subsize.x,-0.5*size.y+(float(j)+0.5)*subsize.y,0);
+            
+      UUID.push_back( addPatch( subcenter, subsize, make_SphericalCoord(0,0), color ) );
 
-      subcenter = rotatePoint( subcenter, make_SphericalCoord(rotation.elevation,-rotation.azimuth+0.5*M_PI) );
-
-       UUID.push_back( addPatch( center + subcenter, subsize, rotation, color ) );
+      if( rotation.elevation!=0.f ){
+	getPrimitivePointer( UUID.back() )->rotate( -rotation.elevation, "x" );
+      }
+      if( rotation.azimuth!=0.f ){
+	getPrimitivePointer( UUID.back() )->rotate( -rotation.azimuth, "z" );
+      }
+      getPrimitivePointer( UUID.back() )->translate( center );
 
     }
   }
@@ -4368,16 +4374,22 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
   uv_sub.x = 1.f/float(subdiv.x);
   uv_sub.y = 1.f/float(subdiv.y);
 
-  vec2 uv0, uv1, uv2, uv3;
-
   for( uint j=0; j<subdiv.y; j++ ){
     for( uint i=0; i<subdiv.x; i++ ){
       
       subcenter = make_vec3(-0.5*size.x+(float(i)+0.5)*subsize.x,-0.5*size.y+(float(j)+0.5)*subsize.y,0);
 
-      subcenter = rotatePoint( subcenter, make_SphericalCoord(rotation.elevation,-rotation.azimuth+0.5*M_PI) );
+      vec2 uv = make_vec2((i+0.5)*uv_sub.x,(j+0.5)*uv_sub.y);
+            
+      UUID.push_back( addPatch( subcenter, subsize, make_SphericalCoord(0,0), texturefile, uv, uv_sub ) );
 
-      UUID.push_back( addPatch( center + subcenter, subsize, rotation, texturefile, make_vec2((i+0.5)*uv_sub.x,(j+0.5)*uv_sub.y), uv_sub ) );
+      if( rotation.elevation!=0.f ){
+	getPrimitivePointer( UUID.back() )->rotate( -rotation.elevation, "x" );
+      }
+      if( rotation.azimuth!=0.f ){
+	getPrimitivePointer( UUID.back() )->rotate( -rotation.azimuth, "z" );
+      }
+      getPrimitivePointer( UUID.back() )->translate( center );
 
     }
   }
