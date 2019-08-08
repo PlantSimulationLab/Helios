@@ -507,7 +507,7 @@ namespace helios {
     Patch( Texture* texture, const uint UUID );
 
     //! Patch constructor - colored by texture map with custom (u,v) coordinates
-    Patch( Texture* texture, const helios::vec2 _uv_center_, const helios::vec2 _uv_size_, const uint UUID );
+    Patch( Texture* texture, const std::vector<helios::vec2> _uv_, const float _solid_fraction_, const uint UUID );
 
     //! Patch destructor
     ~Patch(){};

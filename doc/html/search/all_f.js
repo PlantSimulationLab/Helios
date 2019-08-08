@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['patch',['Patch',['../classhelios_1_1_patch.html',1,'helios::Patch'],['../classhelios_1_1_patch.html#a9742993e6ca7e72d4fca6c3f2aff5ae3',1,'helios::Patch::Patch(const helios::RGBAcolor color, const uint UUID)'],['../classhelios_1_1_patch.html#a71bcf83335d97d9a039e8a79417e9d1c',1,'helios::Patch::Patch(Texture *texture, const uint UUID)'],['../classhelios_1_1_patch.html#ae5ca4633a6194fb793c3a376a718e19e',1,'helios::Patch::Patch(Texture *texture, const helios::vec2 _uv_center_, const helios::vec2 _uv_size_, const uint UUID)']]],
+  ['patch',['Patch',['../classhelios_1_1_patch.html',1,'helios::Patch'],['../classhelios_1_1_patch.html#a9742993e6ca7e72d4fca6c3f2aff5ae3',1,'helios::Patch::Patch(const helios::RGBAcolor color, const uint UUID)'],['../classhelios_1_1_patch.html#a71bcf83335d97d9a039e8a79417e9d1c',1,'helios::Patch::Patch(Texture *texture, const uint UUID)'],['../classhelios_1_1_patch.html#a440efda8806c5eb13cf10ab7cbbf3873',1,'helios::Patch::Patch(Texture *texture, const std::vector&lt; helios::vec2 &gt; _uv_, const float _solid_fraction_, const uint UUID)']]],
   ['perraydata',['PerRayData',['../struct_per_ray_data.html',1,'']]],
   ['perraydata_5fmcrt',['PerRayData_MCRT',['../struct_per_ray_data___m_c_r_t.html',1,'']]],
   ['phimax',['phiMax',['../struct_scan_metadata.html#a29f41bdfbec57a32c60755944b4c0a7f',1,'ScanMetadata']]],

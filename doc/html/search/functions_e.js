@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['patch',['Patch',['../classhelios_1_1_patch.html#a9742993e6ca7e72d4fca6c3f2aff5ae3',1,'helios::Patch::Patch(const helios::RGBAcolor color, const uint UUID)'],['../classhelios_1_1_patch.html#a71bcf83335d97d9a039e8a79417e9d1c',1,'helios::Patch::Patch(Texture *texture, const uint UUID)'],['../classhelios_1_1_patch.html#ae5ca4633a6194fb793c3a376a718e19e',1,'helios::Patch::Patch(Texture *texture, const helios::vec2 _uv_center_, const helios::vec2 _uv_size_, const uint UUID)']]],
+  ['patch',['Patch',['../classhelios_1_1_patch.html#a9742993e6ca7e72d4fca6c3f2aff5ae3',1,'helios::Patch::Patch(const helios::RGBAcolor color, const uint UUID)'],['../classhelios_1_1_patch.html#a71bcf83335d97d9a039e8a79417e9d1c',1,'helios::Patch::Patch(Texture *texture, const uint UUID)'],['../classhelios_1_1_patch.html#a440efda8806c5eb13cf10ab7cbbf3873',1,'helios::Patch::Patch(Texture *texture, const std::vector&lt; helios::vec2 &gt; _uv_, const float _solid_fraction_, const uint UUID)']]],
   ['photosynthesismodel',['PhotosynthesisModel',['../class_photosynthesis_model.html#a955195882a3aa7d9f9c092a221ae6142',1,'PhotosynthesisModel']]],
   ['plotdepthmap',['plotDepthMap',['../class_visualizer.html#a5640bb4984f2947bda0d7d6dea34ce75',1,'Visualizer']]],
   ['plotinteractive',['plotInteractive',['../class_visualizer.html#a440ac7246f28448fdb248f537dd8cff5',1,'Visualizer']]],

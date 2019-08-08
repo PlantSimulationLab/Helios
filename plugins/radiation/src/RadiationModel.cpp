@@ -1732,6 +1732,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   	uint ID = maskname.at(maskfile);
   	maskID.at(u) = ID;
       }else{ //mask has not been added
+
   	uint ID = maskdata.size();
   	maskID.at(u) = ID;
   	maskname[maskfile] = maskdata.size();
@@ -1760,6 +1761,24 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   	uvID.at(u) = -1;
       }
       
+    }
+  }
+
+  int2 size_max(0,0);
+  for( int t=0; t<maskdata.size(); t++ ){
+    int2 sz( maskdata.at(t).front().size(), maskdata.at(t).size() );
+    if( sz.x>size_max.x ){
+      size_max.x = sz.x;
+    }
+    if( sz.y>size_max.y ){
+      size_max.y = sz.y;
+    }
+  }
+
+  for( int t=0; t<maskdata.size(); t++ ){
+    maskdata.at(t).resize(size_max.y);
+    for( int j=0; j<size_max.y; j++ ){
+      maskdata.at(t).at(j).resize(size_max.x);
     }
   }
 

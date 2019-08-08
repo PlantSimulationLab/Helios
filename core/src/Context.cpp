@@ -3017,7 +3017,7 @@ Patch::Patch( Texture* _texture_, const uint _UUID_ ){
   
 }
 
-Patch::Patch( Texture* _texture_, const vec2 _uv_center_, const vec2 _uv_size_, const uint _UUID_ ){
+Patch::Patch( Texture* _texture_, const std::vector<vec2> _uv_, const float _solid_fraction_, const uint _UUID_ ){
 
   makeIdentityMatrix( transform );
   
@@ -3025,41 +3025,8 @@ Patch::Patch( Texture* _texture_, const vec2 _uv_center_, const vec2 _uv_size_, 
   prim_type = PRIMITIVE_TYPE_PATCH;
 
   texture = _texture_;
-
-  uv.resize(4);
-  uv.at(0) = _uv_center_-0.5*_uv_size_;
-  uv.at(1) = _uv_center_+make_vec2(0.5*_uv_size_.x,-0.5*_uv_size_.y);
-  uv.at(2) =  _uv_center_+0.5*_uv_size_;
-  uv.at(3) =  _uv_center_+make_vec2(-0.5*_uv_size_.x,+0.5*_uv_size_.y);
-
-  if( hasTexture() && texture->hasTransparencyChannel() ){
-    std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
-    int A = 0;
-    int At = 0;
-    int2 sz = texture->getSize();
-    int2 uv_min( floor(uv.at(0).x*sz.x), floor(uv.at(0).y*sz.y) );
-    int2 uv_max( floor(uv.at(2).x*sz.x), floor(uv.at(2).y*sz.y) );
-    vec2 xy;
-    for( int j=uv_min.y; j<uv_max.y; j++ ){
-      for( int i=uv_min.x; i<uv_max.x; i++ ){
-	xy.x = float(i)/float(sz.x-1);
-	xy.y = float(j)/float(sz.y-1);
-	if( pointInPolygon( xy, uv ) ){
-	  At += 1;
-	  if( alpha->at(j).at(i) ){
-	    A += 1;
-	  }
-	}
-      }
-    }
-    if( At==0 ){
-      solid_fraction = 0;
-    }else{
-      solid_fraction = float(A)/float(At);
-    }
-  }else{
-    solid_fraction = 1.f;
-  }
+  uv = _uv_;
+  solid_fraction = _solid_fraction_;
 
 }
 
@@ -3413,8 +3380,40 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
   }
 
   Texture* texture = addTexture( texture_file );
+
+  std::vector<helios::vec2> uv;
+  uv.resize(4);
+  uv.at(0) = uv_center-0.5*uv_size;
+  uv.at(1) = uv_center+make_vec2(0.5*uv_size.x,-0.5*uv_size.y);
+  uv.at(2) =  uv_center+0.5*uv_size;
+  uv.at(3) =  uv_center+make_vec2(-0.5*uv_size.x,+0.5*uv_size.y);
+
+  float solid_fraction;
+  if( texture->hasTransparencyChannel() ){
+    std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
+    int A = 0;
+    int At = 0;
+    int2 sz = texture->getSize();
+    int2 uv_min( floor(uv.at(0).x*sz.x), floor(uv.at(0).y*sz.y) );
+    int2 uv_max( floor(uv.at(2).x*sz.x), floor(uv.at(2).y*sz.y) );
+    for( int j=uv_min.y; j<uv_max.y; j++ ){
+      for( int i=uv_min.x; i<uv_max.x; i++ ){
+	At += 1;
+	if( alpha->at(j).at(i) ){
+	  A += 1;
+	}
+      }
+    }
+    if( At==0 ){
+      solid_fraction = 0;
+    }else{
+      solid_fraction = float(A)/float(At);
+    }
+  }else{
+    solid_fraction = 1.f;
+  }
   
-  Patch* patch_new = (new Patch( texture, uv_center, uv_size, currentUUID ));
+  Patch* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
 
   assert( size.x>0.f && size.y>0.f );
   patch_new->scale( make_vec3(size.x,size.y,1) );
@@ -3536,13 +3535,15 @@ uint Context::copyPrimitive( const uint UUID ){
   if( type==PRIMITIVE_TYPE_PATCH ){
     Patch* p = getPatchPointer(UUID);
     std::vector<vec2> uv = p->getTextureUV();
+    vec2 size = p->getSize();
+    float solid_fraction = p->getArea()/(size.x*size.y);
     Patch* patch_new;
     if( !p->hasTexture() ){
       patch_new = (new Patch( p->getColorRGBA(), currentUUID ));
     }else{
       Texture* texture = p->getTexture();
       if( uv.size()==4 ){
-	patch_new = (new Patch( texture, uv.at(0), uv.at(2)-uv.at(0), currentUUID ));
+	patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
       }else{
 	patch_new = (new Patch( texture, currentUUID ));
       }
@@ -4364,32 +4365,84 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
 
   std::vector<uint> UUID;
 
-  vec2 subsize;
+  vec2 subsize; 
   subsize.x = size.x/float(subdiv.x);
   subsize.y = size.y/float(subdiv.y);
 
   vec3 subcenter;
 
+  std::vector<helios::vec2> uv;
+  uv.resize(4);
   vec2 uv_sub;
   uv_sub.x = 1.f/float(subdiv.x);
   uv_sub.y = 1.f/float(subdiv.y);
+
+  Texture* texture = addTexture( texturefile );
+  std::vector<std::vector<bool> >* alpha;
+  int2 sz;
+  if( texture->hasTransparencyChannel() ){
+    alpha = texture->getTransparencyData();
+    sz = texture->getSize();
+  }
 
   for( uint j=0; j<subdiv.y; j++ ){
     for( uint i=0; i<subdiv.x; i++ ){
       
       subcenter = make_vec3(-0.5*size.x+(float(i)+0.5)*subsize.x,-0.5*size.y+(float(j)+0.5)*subsize.y,0);
 
-      vec2 uv = make_vec2((i+0.5)*uv_sub.x,(j+0.5)*uv_sub.y);
-            
-      UUID.push_back( addPatch( subcenter, subsize, make_SphericalCoord(0,0), texturefile, uv, uv_sub ) );
+      uv.at(0) = make_vec2(float(i)*uv_sub.x,float(j)*uv_sub.y);
+      uv.at(1) = make_vec2(float(i+1)*uv_sub.x,float(j)*uv_sub.y); 
+      uv.at(2) = make_vec2(float(i+1)*uv_sub.x,float(j+1)*uv_sub.y);
+      uv.at(3) = make_vec2(float(i)*uv_sub.x,float(j+1)*uv_sub.y);
 
-      if( rotation.elevation!=0.f ){
-	getPrimitivePointer( UUID.back() )->rotate( -rotation.elevation, "x" );
+      float solid_fraction;
+      if( texture->hasTransparencyChannel() ){
+	int A = 0;
+	int At = 0;
+	
+	int2 uv_min( floor(uv.at(0).x*(sz.x-1)), floor(uv.at(0).y*(sz.y-1)) );
+	int2 uv_max( floor(uv.at(2).x*(sz.x-1)), floor(uv.at(2).y*(sz.y-1)) );
+
+	assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
+	
+	for( int j=uv_min.y; j<uv_max.y; j++ ){
+	  for( int i=uv_min.x; i<uv_max.x; i++ ){
+	    At += 1;
+	    if( alpha->at(j).at(i) ){
+	      A += 1;
+	    }
+	  }
+	}
+	if( At==0 ){
+	  solid_fraction = 0;
+	}else{
+	  solid_fraction = float(A)/float(At);
+	}
+      }else{
+	solid_fraction = 1.f;
       }
-      if( rotation.azimuth!=0.f ){
-	getPrimitivePointer( UUID.back() )->rotate( -rotation.azimuth, "z" );
+
+      std::cout << "subpatch #" << currentUUID << " solid fraction " << solid_fraction << std::endl;
+  
+      Patch* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
+
+      assert( size.x>0.f && size.y>0.f );
+      patch_new->scale( make_vec3(subsize.x,subsize.y,1) );
+      
+      if( rotation.elevation!=0 ){
+	patch_new->rotate(-rotation.elevation, "x");
       }
-      getPrimitivePointer( UUID.back() )->translate( center );
+      if( rotation.azimuth!=0 ){
+	patch_new->rotate(-rotation.azimuth, "z");
+      }
+      
+      patch_new->translate( center+subcenter );
+  
+      primitives[currentUUID] = patch_new;
+      markGeometryDirty();
+      currentUUID++;
+      UUID.push_back(currentUUID-1);
+
 
     }
   }

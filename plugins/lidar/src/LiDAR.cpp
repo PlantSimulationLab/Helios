@@ -323,7 +323,7 @@ int LiDARcloud::selfTest(void){
 	std::vector<vec3> vertices = context_4.getPrimitivePointer(p)->getVertices();
 	float area = context_4.getPrimitivePointer(p)->getArea();
 	vec3 normal = context_4.getPrimitivePointer(p)->getNormal();
-	vec3 raydir = vertices.at(0)-origin;
+	vec3 raydir = vertices.front()-origin;
 	raydir.normalize();
 	float theta = fabs(acos_safe(raydir.z));
 
@@ -765,6 +765,9 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
       color = getHitColor(i);
     }else if( strcmp(color_value,"gridcell")==0 ){
       color = cmap.query( getHitGridCell(i) );
+      if( getHitGridCell(i)<0 ){
+	color = RGB::red;
+      }
     }else{
       float data = getHitData(i,color_value);
       color = cmap.query( data );
@@ -1492,7 +1495,7 @@ void LiDARcloud::calculateSyntheticGtheta( helios::Context* context ){
 	std::vector<vec3> vertices = context->getPrimitivePointer(p)->getVertices();
 	float area = context->getPrimitivePointer(p)->getArea();
 	vec3 normal = context->getPrimitivePointer(p)->getNormal();
-	vec3 raydir = vertices.at(0)-origin;
+	vec3 raydir = vertices.front()-origin;
 	raydir.normalize();
 	float theta = fabs(acos_safe(raydir.z));
 
@@ -1614,7 +1617,7 @@ void LiDARcloud::leafReconstructionFloodfill( void ){
 
     if( fill_flag.at(t)<0 ){
 
-      floodfill( t, triangles, fill_flag, nodes, current_group, 0, 1e6 );
+      floodfill( t, triangles, fill_flag, nodes, current_group, 0, 1e3 );
 
       current_group ++;
 
@@ -1712,7 +1715,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     std::cerr << "ERROR (leafReconstructionAlphaMask): Could not load mask file " << mask_file << ". It contains no data." << std::endl;
     exit(EXIT_FAILURE);
   }
-  int ix = maskdata.at(0).size();
+  int ix = maskdata.front().size();
   int jy = maskdata.size();
   int2 masksize = make_int2(ix,jy);
   uint Atotal=0;
@@ -1763,7 +1766,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
       //reconstructed_triangles.erase( reconstructed_triangles.begin()+group );
     }else{
       group_filter_flag.at(group) = true;
-      int cell = reconstructed_triangles.at(group).at(0).gridcell;
+      int cell = reconstructed_triangles.at(group).front().gridcell;
       group_areas.at(cell).push_back(garea);
     }
 
@@ -1805,7 +1808,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
       continue;
     }
     
-    int cell = reconstructed_triangles.at(group).at(0).gridcell;
+    int cell = reconstructed_triangles.at(group).front().gridcell;
 
     helios::vec3 position = make_vec3(0,0,0);
     for( int t=0; t<reconstructed_triangles.at(group).size(); t++ ){
@@ -1815,18 +1818,18 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     int gind = round( randu()*(reconstructed_triangles.at(group).size()-1) );
       
     reconstructed_alphamasks_center.push_back( position );
-    float l = Lavg.at(reconstructed_triangles.at(group).at(0).gridcell)*sqrt(leaf_aspect_ratio/solidfraction);
+    float l = Lavg.at(reconstructed_triangles.at(group).front().gridcell)*sqrt(leaf_aspect_ratio/solidfraction);
     float w = l/leaf_aspect_ratio;
     reconstructed_alphamasks_size.push_back( helios::make_vec2(l,w) );
     helios::vec3 normal = cross( reconstructed_triangles.at(group).at(gind).vertex1-reconstructed_triangles.at(group).at(gind).vertex0, reconstructed_triangles.at(group).at(gind).vertex2-reconstructed_triangles.at(group).at(gind).vertex0 );
     reconstructed_alphamasks_rotation.push_back( make_SphericalCoord(cart2sphere(normal).zenith,cart2sphere(normal).azimuth)  );
-    reconstructed_alphamasks_gridcell.push_back( reconstructed_triangles.at(group).at(0).gridcell );
+    reconstructed_alphamasks_gridcell.push_back( reconstructed_triangles.at(group).front().gridcell );
     reconstructed_alphamasks_direct_flag.push_back( true );
   }
 
   if( printmessages ){
     cout << "done." << endl;
-    cout << "Directly reconstructed " << group_count << " leaf groups." << endl;
+    cout << "Directly reconstructed " << reconstructed_alphamasks_center.size() << " leaf groups." << endl;
   }
     
   backfillLeavesAlphaMask( Lavg, leaf_aspect_ratio, solidfraction, group_filter_flag );
@@ -1874,7 +1877,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
   for( uint g=0; g<Ngroups; g++ ){
     if( group_filter_flag.at(g) ){
       if( reconstructed_triangles.at(g).size()>0 ){
-	cell = reconstructed_triangles.at(g).at(0).gridcell;
+	cell = reconstructed_triangles.at(g).front().gridcell;
 	leaf_area_current.at(cell) += leaf_size.at(cell)*leaf_size.at(cell)*solidfraction;
 	group_gridcell.at(cell).push_back(count);
       }
@@ -1883,6 +1886,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
   }
 
   std::vector<int> deleted_groups;
+  int backfill_count = 0;
 
   //Get the total theoretical leaf area for each grid cell based on LiDAR scan
   for( uint v=0; v<Ncells; v++ ){
@@ -1891,7 +1895,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 
     float reconstruct_frac = (leaf_area_total-leaf_area_current.at(v))/leaf_area_total;
  
-    if( leaf_area_total==0 ){//no leaves in gridcell
+    if( leaf_area_total==0 || reconstructed_alphamasks_size.size()==0 ){//no leaves in gridcell
       if( printmessages ){
 	cout << "WARNING: skipping volume #" << v << " because it has no measured leaf area." << endl;
       }
@@ -1925,7 +1929,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	helios::vec3 shift = cellcenter + rotatePoint(helios::make_vec3( (randu()-0.5)*cellsize.x, (randu()-0.5)*cellsize.y, (randu()-0.5)*cellsize.z ),0,rotation);
 	
 	reconstructed_alphamasks_center.push_back( shift );
-	reconstructed_alphamasks_size.push_back( reconstructed_alphamasks_size.at(0) );
+	reconstructed_alphamasks_size.push_back( reconstructed_alphamasks_size.front() );
 	reconstructed_alphamasks_rotation.push_back( tri_rots.at(randi) );
 	reconstructed_alphamasks_gridcell.push_back( v );
 	reconstructed_alphamasks_direct_flag.push_back( false );
@@ -1982,6 +1986,8 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	reconstructed_alphamasks_direct_flag.push_back( false );
 	
 	leaf_area_current.at(v) += reconstructed_alphamasks_size.at(group_index).x*reconstructed_alphamasks_size.at(group_index).y*solidfraction;
+
+	backfill_count++;
 	
       }
 
@@ -2003,7 +2009,8 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
   }
 
   if( printmessages ){
-    cout << "Deleting " << deleted_groups.size() << " total leaf groups." << endl;
+    cout << "Backfilled " << backfill_count << " total leaf groups." << endl;
+    cout << "Deleted " << deleted_groups.size() << " total leaf groups." << endl;
   }
     
   for( int i=deleted_groups.size()-1; i>=0; i-- ){
