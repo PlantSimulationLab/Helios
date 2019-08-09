@@ -322,6 +322,53 @@ int Context::selfTest(void){
     std::cerr << "failed: addBox(). Face sizes incorrect." << std::endl;
   }
 
+  //------- Add a Rotated Tile --------//
+
+  center = make_vec3(1,2,3);
+  size = make_vec2(3,2);
+  int2 subdiv2(3,3);
+  rotation = make_SphericalCoord( 0.25*M_PI, 1.4*M_PI );
+  UUIDs = context_test.addTile( center, size, rotation, subdiv2 );
+
+  for( int p=0; p<UUIDs.size(); p++ ){
+
+      normal_r = context_test.getPrimitivePointer(UUIDs.at(p))->getNormal();
+
+      rotation_r = cart2sphere(normal_r);
+
+      if( fabs(rotation_r.zenith-rotation.zenith)>errtol || fabs(rotation_r.azimuth-rotation.azimuth)>errtol ){
+	error_count++;
+	std::cerr << "failed: addTile(). Sub-patch normals incorrect." << std::endl;
+	break;
+      }
+
+  }
+
+  //------- Add a Textured Tile with Transparency (disk) --------//
+
+  center = make_vec3(1,2,3);
+  size = make_vec2(3,2);
+  subdiv2 = make_int2(5,5);
+  rotation = make_SphericalCoord( 0.1*M_PI, 2.4*M_PI );
+  UUIDs = context_test.addTile( center, size, rotation, subdiv2, "lib/images/disk_texture.png" );
+
+  float At = 0;
+  for( int p=0; p<UUIDs.size(); p++ ){
+
+    float area = context_test.getPrimitivePointer(UUIDs.at(p))->getArea();
+
+    At+=area;
+
+  }
+
+  float area_exact = 0.25*M_PI*size.x*size.y;
+
+  if( fabs(At-area_exact)>0.005 ){
+    error_count++;
+    std::cerr << "failed: addTile(). Texture masked area is incorrect." << std::endl;
+    std::cout << At << " " << area_exact << std::endl;
+  }
+
   //------- Primitive Transformations --------//
 
   vec2 sz_0(0.5,3.f);
@@ -4422,9 +4469,9 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
 	solid_fraction = 1.f;
       }
 
-      std::cout << "subpatch #" << currentUUID << " solid fraction " << solid_fraction << std::endl;
-  
       Patch* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
+
+      patch_new->translate( subcenter );
 
       assert( size.x>0.f && size.y>0.f );
       patch_new->scale( make_vec3(subsize.x,subsize.y,1) );
@@ -4436,7 +4483,7 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
 	patch_new->rotate(-rotation.azimuth, "z");
       }
       
-      patch_new->translate( center+subcenter );
+      patch_new->translate( center );
   
       primitives[currentUUID] = patch_new;
       markGeometryDirty();
