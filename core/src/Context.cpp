@@ -4471,10 +4471,10 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
 
       Patch* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
 
-      patch_new->translate( subcenter );
-
       assert( size.x>0.f && size.y>0.f );
       patch_new->scale( make_vec3(subsize.x,subsize.y,1) );
+
+      patch_new->translate( subcenter );
       
       if( rotation.elevation!=0 ){
 	patch_new->rotate(-rotation.elevation, "x");
