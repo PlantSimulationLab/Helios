@@ -151,6 +151,17 @@ vec3 helios::rotatePointAboutLine(const vec3 point, const vec3 line_base, const 
 	
 }
 
+float helios::calculateTriangleArea( const vec3 v0, const vec3 v1, const vec3 v2 ){
+  vec3 A( v1-v0 );
+  vec3 B( v2-v0 );
+  vec3 C( v2-v1 );
+  float a = A.magnitude();
+  float b = B.magnitude();
+  float c = C.magnitude();
+  float s = 0.5f*( a+b+c );
+  return sqrtf( s*(s-a)*(s-b)*(s-c) );
+}
+
 int helios::Date::JulianDay( void ) const{
 
   int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};

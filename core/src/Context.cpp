@@ -906,15 +906,8 @@ float Triangle::getArea() const{
 
   std::vector<vec3> vertices = getVertices();
 
-  //Heron's formula
-  vec3 A(vertices.at(1)-vertices.at(0));
-  vec3 B(vertices.at(2)-vertices.at(0));
-  vec3 C(vertices.at(2)-vertices.at(1));
-  float a = A.magnitude();
-  float b = B.magnitude();
-  float c = C.magnitude();
-  float s = 0.5f*( a+b+c );
-  float area = sqrtf(s*(s-a)*(s-b)*(s-c))*solid_fraction;
+  float area = calculateTriangleArea( vertices.at(0), vertices.at(1), vertices.at(2) );
+  area = area*solid_fraction;
   
   return area;
 }
@@ -3091,7 +3084,7 @@ helios::vec3 Patch::getCenter(void) const{
 Triangle::Triangle(  const vec3 vertex0, const vec3 vertex1, const vec3 vertex2, const RGBAcolor _color_, const uint _UUID_ ){
 
   makeTransformationMatrix(vertex0,vertex1,vertex2);
-  color = _color_;
+    color = _color_;
   UUID = _UUID_;
   prim_type = PRIMITIVE_TYPE_TRIANGLE;
   texture = 0;
@@ -3099,12 +3092,7 @@ Triangle::Triangle(  const vec3 vertex0, const vec3 vertex1, const vec3 vertex2,
 
 }
 
-bool edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::vec2 &c) 
-{ 
-    return ((c.y - a.y) * (b.x - a.x)-(c.x - a.x) * (b.y - a.y) >= 0); 
-} 
-
-Triangle::Triangle( const vec3 vertex0, const vec3 vertex1, const vec3 vertex2, Texture* _texture_, const vec2 _uv0_, const vec2 _uv1_, const vec2 _uv2_, const uint _UUID_ ){
+Triangle::Triangle( const vec3 vertex0, const vec3 vertex1, const vec3 vertex2, Texture* _texture_, const std::vector<vec2> _uv_, const float _solid_fraction_, const uint _UUID_ ){
 
   makeTransformationMatrix(vertex0,vertex1,vertex2);
   color = make_RGBAcolor(RGB::red,1);
@@ -3112,41 +3100,8 @@ Triangle::Triangle( const vec3 vertex0, const vec3 vertex1, const vec3 vertex2, 
   prim_type = PRIMITIVE_TYPE_TRIANGLE;
 
   texture = _texture_;
-
-  uv.resize(3);
-  uv.at(0) = _uv0_;
-  uv.at(1) = _uv1_;
-  uv.at(2) = _uv2_;
-
-  //Heron's formula
-  if( hasTexture() &&  texture->hasTransparencyChannel() ){
-    std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
-    int2 sz = texture->getSize();
-    int2 uv_min( round(fmin(fmin(_uv0_.x,_uv1_.x),_uv2_.x))*sz.x, round(fmin(fmin(_uv0_.y,_uv1_.y),_uv2_.y))*sz.y );
-    int2 uv_max( round(fmax(fmax(_uv0_.x,_uv1_.x),_uv2_.x))*sz.x, round(fmax(fmax(_uv0_.y,_uv1_.y),_uv2_.y))*sz.y );
-    int A = 0;
-    int At = 0;
-    vec2 xy;
-    for( int j=uv_min.y; j<uv_max.y; j++ ){
-      for( int i=uv_min.x; i<uv_max.x; i++ ){
-	xy.x = float(i+0.5)/float(sz.x-1);
-	xy.y = float(j+0.5)/float(sz.y-1);
-	if( edgeFunction( uv.at(0), uv.at(1), xy ) && edgeFunction( uv.at(1), uv.at(2), xy )&& edgeFunction( uv.at(2), uv.at(0), xy ) ){
-	  At += 1;
-	  if( alpha->at(j).at(i) ){
-	    A += 1;
-	  }
-	}
-      }
-    }
-    if( At==0 ){
-      solid_fraction = 0;
-    }else{
-      solid_fraction = float(A)/float(At);
-    }
-  }else{
-    solid_fraction = 1.f;
-  }
+  uv = _uv_;
+  solid_fraction = _solid_fraction_;
 
 }
 
@@ -3335,10 +3290,10 @@ float Context::randu( float min, float max ){
     std::cerr << "ERROR (randu): Maximum value of range must be greater than minimum value of range." << std::endl;
     exit(EXIT_FAILURE);
   }else if( max==min ){
-    std::cerr << "ERROR (randu): Minimum value of range cannot be equal to maximum value of range." << std::endl;
-    exit(EXIT_FAILURE);
+    return min;
+  }else{
+    return min+unif_distribution(generator)*(max-min);
   }
-  return min+unif_distribution(generator)*(max-min);
 }
 
 int Context::randu( int min, int max ){
@@ -3346,10 +3301,10 @@ int Context::randu( int min, int max ){
     std::cerr << "ERROR (randu): Maximum value of range must be greater than minimum value of range." << std::endl;
     exit(EXIT_FAILURE);
   }else if( max==min ){
-    std::cerr << "ERROR (randu): Minimum value of range cannot be equal to maximum value of range." << std::endl;
-    exit(EXIT_FAILURE);
+    return min;
+  }else{
+    return min+round(unif_distribution(generator)*float(max-min));
   }
-  return min+round(unif_distribution(generator)*float(max-min));
 }
 
 float Context::randn(void){
@@ -3488,6 +3443,11 @@ uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3&
   return addTriangle( vertex0, vertex1, vertex2, make_RGBAcolor(color,1) );
 }
 
+bool edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::vec2 &c) 
+{ 
+    return ((c.y - a.y) * (b.x - a.x)-(c.x - a.x) * (b.y - a.y) >= 0); 
+} 
+
 uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3& vertex2, const RGBAcolor& color ){
 
   Triangle* tri_new = (new Triangle( vertex0, vertex1, vertex2, color, currentUUID ));
@@ -3501,7 +3461,43 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
 
   Texture* texture = addTexture( texture_file );
 
-  Triangle* tri_new = (new Triangle( vertex0, vertex1, vertex2, texture, uv0, uv1, uv2, currentUUID ));
+  std::vector<helios::vec2> uv;
+  uv.resize(3);
+  uv.at(0) = uv0;
+  uv.at(1) = uv1;
+  uv.at(2) = uv2;
+
+  float solid_fraction;
+  if( texture->hasTransparencyChannel() ){
+    std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
+    int2 sz = texture->getSize();
+    int2 uv_min( round(fmin(fmin(uv0.x,uv1.x),uv2.x))*sz.x, round(fmin(fmin(uv0.y,uv1.y),uv2.y))*sz.y );
+    int2 uv_max( round(fmax(fmax(uv0.x,uv1.x),uv2.x))*sz.x, round(fmax(fmax(uv0.y,uv1.y),uv2.y))*sz.y );
+    int A = 0;
+    int At = 0;
+    vec2 xy;
+    for( int j=uv_min.y; j<uv_max.y; j++ ){
+      for( int i=uv_min.x; i<uv_max.x; i++ ){
+	xy.x = float(i+0.5)/float(sz.x-1);
+	xy.y = float(j+0.5)/float(sz.y-1);
+	if( edgeFunction( uv.at(0), uv.at(1), xy ) && edgeFunction( uv.at(1), uv.at(2), xy )&& edgeFunction( uv.at(2), uv.at(0), xy ) ){
+	  At += 1;
+	  if( alpha->at(j).at(i) ){
+	    A += 1;
+	  }
+	}
+      }
+    }
+    if( At==0 ){
+      solid_fraction = 0;
+    }else{
+      solid_fraction = float(A)/float(At);
+    }
+  }else{
+    solid_fraction = 1.f;
+  }
+
+  Triangle* tri_new = (new Triangle( vertex0, vertex1, vertex2, texture, uv, solid_fraction, currentUUID ));
   primitives[currentUUID] = tri_new;
   markGeometryDirty();
   currentUUID++;
@@ -3536,6 +3532,46 @@ uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotat
   markGeometryDirty();
   currentUUID++;
   return currentUUID-1;
+}
+
+void Context::translatePrimitive( const uint UUID, const vec3 shift ){
+  getPrimitivePointer(UUID)->translate(shift);
+}
+
+void Context::translatePrimitive( const std::vector<uint> UUIDs, const vec3 shift ){
+  for( uint p=0; p<UUIDs.size(); p++ ){
+    getPrimitivePointer(UUIDs.at(p))->translate(shift);
+  }
+}
+
+void Context::rotatePrimitive( const uint UUID, const float rot, const char* axis ){
+  getPrimitivePointer(UUID)->rotate(rot,axis);
+}
+
+void Context::rotatePrimitive( const std::vector<uint> UUIDs, const float rot, const char* axis ){
+  for( uint p=0; p<UUIDs.size(); p++ ){
+    getPrimitivePointer(UUIDs.at(p))->rotate(rot,axis);
+  }
+}
+
+void Context::rotatePrimitive( const uint UUID, const float rot, const helios::vec3 axis ){
+  getPrimitivePointer(UUID)->rotate(rot,axis);
+}
+
+void Context::rotatePrimitive( const std::vector<uint> UUIDs, const float rot, helios::vec3 axis ){
+  for( uint p=0; p<UUIDs.size(); p++ ){
+    getPrimitivePointer(UUIDs.at(p))->rotate(rot,axis);
+  }
+}
+
+void Context::scalePrimitive( const uint UUID, const helios::vec3 S ){
+  getPrimitivePointer(UUID)->scale(S);
+}
+
+void Context::scalePrimitive( const std::vector<uint> UUIDs, const helios::vec3 S ){
+  for( uint p=0; p<UUIDs.size(); p++ ){
+    getPrimitivePointer(UUIDs.at(p))->scale(S);
+  }
 }
 
 void Context::deletePrimitive( const std::vector<uint> UUIDs ){
@@ -3601,13 +3637,15 @@ uint Context::copyPrimitive( const uint UUID ){
     primitives[currentUUID] = patch_new;
   }else if( type==PRIMITIVE_TYPE_TRIANGLE ){
     Triangle* p = getTrianglePointer(UUID);
-    std::vector<vec3> vertices = p->getVertices();    std::vector<vec2> uv = p->getTextureUV();
+    std::vector<vec3> vertices = p->getVertices();
+    std::vector<vec2> uv = p->getTextureUV();
     Triangle* tri_new;
     if( !p->hasTexture() ){
       tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), p->getColorRGBA(), currentUUID ));
     }else{
       Texture* texture = p->getTexture();
-      tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), texture, uv.at(0), uv.at(1), uv.at(2), currentUUID ));
+      float solid_fraction = p->getArea()/calculateTriangleArea( vertices.at(0), vertices.at(1), vertices.at(2) );
+      tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), texture, uv, solid_fraction, currentUUID ));
     }
     float transform[16];
     p->getTransformationMatrix(transform);

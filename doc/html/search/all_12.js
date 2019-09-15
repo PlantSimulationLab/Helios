@@ -2,6 +2,7 @@ var searchData=
 [
   ['scalarfilter',['scalarFilter',['../class_aerial_li_d_a_rcloud.html#a4e1870a07129fc6b64427fd36896cb62',1,'AerialLiDARcloud::scalarFilter()'],['../class_li_d_a_rcloud.html#a7e3794b05383a67d7d1b94aa23bb2d66',1,'LiDARcloud::scalarFilter()']]],
   ['scale',['scale',['../classhelios_1_1_primitive.html#a2e21ef582322d72a16f98aec4903289f',1,'helios::Primitive::scale()'],['../structhelios_1_1_r_g_bcolor.html#a771797b0f691366993444b0867710ca8',1,'helios::RGBcolor::scale()'],['../structhelios_1_1_r_g_b_acolor.html#a61e8dfbd88c4afa249997cfc4b02889d',1,'helios::RGBAcolor::scale()']]],
+  ['scaleprimitive',['scalePrimitive',['../classhelios_1_1_context.html#a855b7d9bde57e659c5cbcda9cd99375a',1,'helios::Context::scalePrimitive(const uint UUID, const helios::vec3 S)'],['../classhelios_1_1_context.html#adb7115de7d63964ddfd8d7fa78a99502',1,'helios::Context::scalePrimitive(const std::vector&lt; uint &gt; UUIDs, const helios::vec3 S)']]],
   ['scandensity',['scandensity',['../struct_aerial_scan_metadata.html#ab6e7d1152e1b122a4751c733f04a3803',1,'AerialScanMetadata']]],
   ['scanmetadata',['ScanMetadata',['../struct_scan_metadata.html',1,'ScanMetadata'],['../struct_scan_metadata.html#ad3432a838430c33eaa0b1839e00a70ed',1,'ScanMetadata::ScanMetadata()']]],
   ['scatter_5fdepth',['scatter_depth',['../struct_per_ray_data___m_c_r_t.html#ae30bddce469752f0cba0820d2bed7727',1,'PerRayData_MCRT']]],

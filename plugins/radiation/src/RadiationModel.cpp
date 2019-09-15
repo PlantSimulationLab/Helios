@@ -56,7 +56,7 @@ int RadiationModel::selfTest( void ){
 
   std::cout << "Running radiation model self-test..." << std::endl;
 
-  float error_threshold = 0.004;
+  float error_threshold = 0.005;
   bool failure = false;
 
   int Nensemble = 500;
@@ -842,6 +842,140 @@ int RadiationModel::selfTest( void ){
   }
 
   if( !failure_8 ){
+    std::cout << "passed." << std::endl;
+  }
+
+  // -------- Test #9: homogeneous "canopy" ---------- //
+
+  std::cout << "Test #9: homogeneous 'canopy' of patches..." << std::flush;
+
+  bool failure_9 = false;
+  
+  uint Ndirect_9 = 1000;
+  uint Ndiffuse_9 = 5000;
+
+  float D_9 = 50;          //domain width
+  float D_inc_9 = 40;      //domain size to include in calculations
+  float LAI_9 = 2.0;       //canopy leaf area index
+  float h_9 = 3;           //canopy height
+  float w_leaf_9 = 0.075;    //leaf width
+
+  int Nleaves = round(LAI_9*D_9*D_9/w_leaf_9/w_leaf_9);
+
+  Context context_9;
+
+  std::vector<uint> UUIDs_leaf, UUIDs_inc;
+
+  for( int i=0; i<Nleaves; i++ ){
+
+    vec3 position( (-0.5+context_9.randu())*D_9, (-0.5+context_9.randu())*D_9, 0.5*w_leaf_9+context_9.randu()*h_9 );
+
+    SphericalCoord rotation( 1.f, acos(1.f-context_9.randu()), 2.f*M_PI*context_9.randu() );
+
+    uint UUID = context_9.addPatch( position, make_vec2(w_leaf_9,w_leaf_9), rotation );
+
+    context_9.setPrimitiveData( UUID, "twosided_flag", uint(1) );
+
+    if( fabs(position.x)<=0.5*D_inc_9 && fabs(position.y)<=0.5*D_inc_9 ){
+      UUIDs_inc.push_back( UUID );
+    }
+
+  }
+
+  std::vector<uint> UUIDs_ground = context_9.addTile( make_vec3(0,0,0), make_vec2(D_9,D_9), make_SphericalCoord(0,0), make_int2(100,100) );
+
+  context_9.setPrimitiveData( UUIDs_ground, "twosided_flag", uint(0) );
+
+  RadiationModel radiation_9(&context_9);
+  radiation_9.disableMessages();
+
+  radiation_9.addRadiationBand("direct");
+  radiation_9.disableEmission("direct");
+  radiation_9.setDirectRayCount("direct",Ndirect_9);
+  float theta_s = 0.2*M_PI;
+  uint ID = radiation_9.addCollimatedRadiationSource( make_SphericalCoord(0.5*M_PI-theta_s,0.f) );
+  radiation_9.setSourceFlux(ID,"direct",1.f/cos(theta_s));
+
+  radiation_9.addRadiationBand("diffuse");
+  radiation_9.disableEmission("diffuse");
+  radiation_9.setDiffuseRayCount("diffuse",Ndiffuse_9);
+  radiation_9.setDiffuseRadiationFlux("diffuse",1.f);
+   
+  radiation_9.updateGeometry();
+
+  radiation_9.runBand("direct");
+  radiation_9.runBand("diffuse");
+
+  float intercepted_leaf_direct = 0.f;
+  float intercepted_leaf_diffuse = 0.f;
+  for( int i=0; i<UUIDs_inc.size(); i++ ){
+
+    float area = context_9.getPrimitivePointer( UUIDs_inc.at(i) )->getArea();
+    
+    float flux;
+    
+    context_9.getPrimitiveData( UUIDs_inc.at(i), "radiation_flux_direct", flux );
+    intercepted_leaf_direct += flux*area/D_inc_9/D_inc_9;
+
+    context_9.getPrimitiveData( UUIDs_inc.at(i), "radiation_flux_diffuse", flux );
+    intercepted_leaf_diffuse += flux*area/D_inc_9/D_inc_9;
+
+  }
+
+  float intercepted_ground_direct = 0.f;
+  float intercepted_ground_diffuse = 0.f;
+  for( int i=0; i<UUIDs_ground.size(); i++ ){
+
+    float area = context_9.getPrimitivePointer( UUIDs_ground.at(i) )->getArea();
+    
+    float flux_dir;
+    context_9.getPrimitiveData( UUIDs_ground.at(i), "radiation_flux_direct", flux_dir );
+
+    float flux_diff;
+    context_9.getPrimitiveData( UUIDs_ground.at(i), "radiation_flux_diffuse", flux_diff );
+
+    vec3 position = context_9.getPatchPointer( UUIDs_ground.at(i) )->getCenter();
+
+    if( fabs(position.x)<=0.5*D_inc_9 && fabs(position.y)<=0.5*D_inc_9 ){
+      intercepted_ground_direct += flux_dir*area/D_inc_9/D_inc_9;
+      intercepted_ground_diffuse += flux_diff*area/D_inc_9/D_inc_9;
+    }
+      
+  }
+
+  intercepted_ground_direct = 1.f - intercepted_ground_direct;
+  intercepted_ground_diffuse = 1.f - intercepted_ground_diffuse;
+
+  int N = 50;
+  float dtheta = 0.5*M_PI/float(N);
+  
+  float intercepted_theoretical_diffuse = 0.f;
+  for( int i=0; i<N; i++ ){
+    
+    float theta = (i+0.5f)*dtheta;
+    intercepted_theoretical_diffuse += 2.f*(1.f-exp(-0.5*LAI_9/cos(theta)))*cos(theta)*sin(theta)*dtheta;
+    
+  }
+
+  float intercepted_theoretical_direct = 1.f-exp(-0.5*LAI_9/cos(theta_s));
+
+  if( fabs(intercepted_ground_direct-intercepted_theoretical_direct)>2.f*error_threshold || fabs(intercepted_leaf_direct-intercepted_theoretical_direct)>2.f*error_threshold ){
+     std::cerr << "Test failed for direct radiation calculations." << std::endl;
+    std::cout << intercepted_ground_direct << " " << intercepted_leaf_direct << " " << intercepted_theoretical_direct << std::endl;
+    failure_9 = true;
+    failure=true;
+  }
+
+  if( fabs(intercepted_ground_diffuse-intercepted_theoretical_diffuse)>2.f*error_threshold || fabs(intercepted_leaf_diffuse-intercepted_theoretical_diffuse)>2.f*error_threshold ){
+     std::cerr << "Test failed for diffuse radiation calculations." << std::endl;
+    std::cout << intercepted_ground_diffuse << " " << intercepted_leaf_diffuse << " " << intercepted_theoretical_diffuse << std::endl;
+    failure_9 = true;
+    failure=true;
+  }
+
+  if( failure_9 ){
+    std::cout << "failed." << std::endl;
+  }else{
     std::cout << "passed." << std::endl;
   }
 
@@ -2193,7 +2327,7 @@ void RadiationModel::runBand( const char* label ){
       assert( launch_dim_diff.x>0 && launch_dim_diff.y>0 );
       
       if( message_flag ){
-  	std::cout << "Performing primary diffuse radiation ray trace for band " << label << " ..." << std::flush;
+  	std::cout << "Performing primary diffuse radiation ray trace for band " << label << "..." << std::flush;
       }
       RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
       if( message_flag ){

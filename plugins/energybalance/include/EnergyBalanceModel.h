@@ -33,6 +33,12 @@ public:
   /** \return 0 if test was successful, 1 if test failed. */
   int selfTest( void );
 
+  //! Enable standard output from this plug-in (default)
+  void enableMessages( void );
+
+  //! Disable standard output from this plug-in
+  void disableMessages( void );
+
   //! Function to run the energy balance model for all primitives in the Context
   void run(void) ;
 
@@ -75,6 +81,8 @@ private:
 
   //! Default "other" flux if it was not specified in the context
   float Qother_default;
+
+  bool message_flag;
 
   //! Solve the surface energy balance using Secant method
   /** 

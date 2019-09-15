@@ -37,6 +37,8 @@ EnergyBalanceModel::EnergyBalanceModel( helios::Context* __context ){
 
   Qother_default = 0; //W/m^2
 
+  message_flag = true; //print messages to screen by default
+
   //Copy pointer to the context
   context = __context; 
 
@@ -60,13 +62,12 @@ int EnergyBalanceModel::selfTest( void ){
 
   float Tref = 350;
 
-  context_test.setPrimitiveData( UUIDs, "radiation_flux_LW", float(5.67e-8*pow(Tref,4)) );
+  context_test.setPrimitiveData( UUIDs, "radiation_flux_LW", float(2.f*5.67e-8*pow(Tref,4)) );
 
   context_test.setPrimitiveData( UUIDs, "air_temperature", Tref );
 
-  context_test.setPrimitiveData( UUIDs.at(0), "twosided_flag", uint(1) );
-
   EnergyBalanceModel energymodeltest(&context_test);
+  energymodeltest.disableMessages();
 
   energymodeltest.addRadiationBand("LW");
 
@@ -76,7 +77,7 @@ int EnergyBalanceModel::selfTest( void ){
     float T;
     context_test.getPrimitiveData( UUIDs.at(p), "temperature", T );
     if( fabs(T-Tref)>err_tol ){
-      std::cout << "failed." << std::endl;
+      std::cout << "failed equilibrium test." << std::endl;
       std::cout << T << std::endl;
       return 1;
     }
@@ -94,15 +95,14 @@ int EnergyBalanceModel::selfTest( void ){
 
   float T = 300;
 
-  context_2.setPrimitiveData( UUIDs_2, "radiation_flux_LW", float(5.67e-8*pow(T,4)) );
+  context_2.setPrimitiveData( UUIDs_2, "radiation_flux_LW", float(2.f*5.67e-8*pow(T,4)) );
   context_2.setPrimitiveData( UUIDs_2, "radiation_flux_SW", float(300.f) );
 
   context_2.setPrimitiveData( UUIDs_2, "air_temperature", T );
 
-  context_2.setPrimitiveData( UUIDs_2.at(0), "twosided_flag", uint(1) );
-
   EnergyBalanceModel energymodel_2(&context_2);
-
+  energymodel_2.disableMessages();
+  
   energymodel_2.addRadiationBand("LW");
   energymodel_2.addRadiationBand("SW");
 
@@ -122,10 +122,10 @@ int EnergyBalanceModel::selfTest( void ){
     Rin += R;
     context_2.getPrimitiveData( UUIDs_2.at(p), "temperature", temperature );
     
-    float Rout = 5.67e-8*pow(temperature,4);
+    float Rout = 2.f*5.67e-8*pow(temperature,4);
     float resid = Rin - Rout - sensible_flux - latent_flux;
     if( fabs(resid)>err_tol ){
-      std::cout << "failed." << std::endl;
+      std::cout << "failed energy budget closure test." << std::endl;
       return 1;
     }
   }
@@ -150,10 +150,11 @@ int EnergyBalanceModel::selfTest( void ){
   context_3.setPrimitiveData( UUID_3, "other_surface_flux", float(150.f) );
   context_3.setPrimitiveData( UUID_3, "air_temperature", T );
 
-  context_3.setPrimitiveData( UUID_3, "twosided_flag", uint(1) );
+  context_3.setPrimitiveData( UUID_3, "twosided_flag", uint(0) );
 
   EnergyBalanceModel energymodel_3(&context_3);
-
+  energymodel_3.disableMessages();
+  
   energymodel_3.addRadiationBand("LW");
   energymodel_3.addRadiationBand("SW");
 
@@ -170,7 +171,8 @@ int EnergyBalanceModel::selfTest( void ){
   context_3.getPrimitiveData( UUID_3, "temperature", temperature );
 
   if( fabs(sensible_flux-sensible_flux_exact)/fabs(sensible_flux_exact)>err_tol || fabs(latent_flux-latent_flux_exact)/fabs(latent_flux_exact)>err_tol || fabs(temperature-temperature_exact)/fabs(temperature_exact)>err_tol ){
-    std::cout << "failed." << std::endl;
+    std::cout << "failed temperature solver check #1." << std::endl;
+    std::cout << temperature << std::endl;
     return 1;
   }
 
@@ -193,7 +195,7 @@ int EnergyBalanceModel::selfTest( void ){
   context_3.getPrimitiveData( UUID_3, "temperature", temperature );
 
   if( fabs(sensible_flux-sensible_flux_exact)/fabs(sensible_flux_exact)>err_tol || fabs(latent_flux-latent_flux_exact)/fabs(latent_flux_exact)>err_tol || fabs(temperature-temperature_exact)/fabs(temperature_exact)>err_tol ){
-    std::cout << "failed." << std::endl;
+    std::cout << "failed temperature solver check #2." << std::endl;
     return 1;
   }
   
@@ -216,7 +218,7 @@ int EnergyBalanceModel::selfTest( void ){
   context_3.getPrimitiveData( UUID_3, "temperature", temperature );
 
   if( fabs(sensible_flux-sensible_flux_exact)/fabs(sensible_flux_exact)>err_tol || fabs(latent_flux-latent_flux_exact)/fabs(latent_flux_exact)>err_tol || fabs(temperature-temperature_exact)/fabs(temperature_exact)>err_tol ){
-    std::cout << "failed." << std::endl;
+    std::cout << "failed temperature solver check #3." << std::endl;
     return 1;
   }
 
@@ -229,7 +231,8 @@ int EnergyBalanceModel::selfTest( void ){
   UUID_4 = context_4.addPatch( make_vec3(1,2,3), make_vec2(3,2) );
 
   EnergyBalanceModel energymodel_4(&context_4);
-
+  energymodel_4.disableMessages();
+  
   energymodel_4.addRadiationBand("LW");
 
   energymodel_4.optionalOutputPrimitiveData( "boundarylayer_conductance_out" );
@@ -247,6 +250,14 @@ int EnergyBalanceModel::selfTest( void ){
   std::cout << "passed." << std::endl;
   return 0;
 
+}
+
+void EnergyBalanceModel::enableMessages(void){
+  message_flag = true;
+}
+
+void EnergyBalanceModel::disableMessages(void){
+  message_flag = false;
 }
 
 void EnergyBalanceModel::addRadiationBand( const char* band ){

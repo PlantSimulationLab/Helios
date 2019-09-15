@@ -34,8 +34,8 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 __device__ float evaluateEnergyBalance( float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides ){
 
   //Outgoing emission flux
-  float Rout = eps*5.67e-8*pow(T,4);
-
+  float Rout = float(Nsides)*eps*5.67e-8*pow(T,4);
+    
   //Sensible heat flux
   //float gH = 0.135f*sqrt(U/L); //Convection conductance for flat plate (see Campbell and Norman Eq. 7.30 or Table 7.6). Units: mol/m^2-s
   float cp = 29.25; //Molar specific heat of air. Units: J/mol
@@ -115,8 +115,10 @@ void EnergyBalanceModel::run( void ){
 
 void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
 
-  std::cout << "Running energy balance model..." << std::flush;
-
+  if( message_flag ){
+    std::cout << "Running energy balance model..." << std::flush;
+  }
+    
   // Check that some primitives exist in the context
 
   uint Nprimitives = UUIDs.size();
@@ -301,12 +303,12 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
     }
     
     //Number of sides emitting radiation
-    Nsides[u] = 1;
+    Nsides[u] = 2; //default is 2
     if( prim->doesPrimitiveDataExist("twosided_flag") ){
       uint flag;
       prim->getPrimitiveData("twosided_flag",flag);
-      if( flag==1 ){
-    	Nsides[u]=2;
+      if( flag==0 ){
+    	Nsides[u]=1;
       }
     }
 
@@ -392,7 +394,10 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
   CUDA_CHECK_ERROR( cudaFree(d_Nsides) );
   CUDA_CHECK_ERROR( cudaFree(d_T) );
 
-  std::cout << "done." << std::endl;
+  if( message_flag ){
+    std::cout << "done." << std::endl;
+  }
+    
 }
 
 

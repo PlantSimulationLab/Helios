@@ -583,11 +583,8 @@ RT_PROGRAM void diffuse_raygen(){
     
     ray_direction = d_rotatePoint( ray_direction, acos_safe(normal.z), atan2(normal.y,normal.x) );
 
-    if( twosided_flag[UUID] ){
-      prd.strength = 0.5f/float(dimx);
-    }else{
-      prd.strength = 1.f/float(dimx);
-    }
+    prd.strength = 1.f/float(dimx);
+    
     prd.area = area;
     prd.origin_UUID = UUID;
 

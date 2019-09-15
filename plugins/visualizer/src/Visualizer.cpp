@@ -2646,11 +2646,13 @@ void Visualizer::buildContextGeometry_private( void ){
 	    colorValue = 0;
 	  }
 	  color = make_RGBAcolor(colormap_current.query( colorValue ),1);
+	}else{
+	  color = prim->getColorRGBA();
 	}
       }else{
 	color = prim->getColorRGBA();
       }
-      
+
       if( ptype == helios::PRIMITIVE_TYPE_PATCH  ){
 	
 	if( texture_file.size()==0 ){//Patch does not have an associated texture or we are ignoring texture
@@ -2659,7 +2661,7 @@ void Visualizer::buildContextGeometry_private( void ){
 	  helios::Patch* patch = static_cast<helios::Patch*>(prim);
 	  std::vector<vec2> uvs = patch->getTextureUV();
 	  
-	  if( colorPrimitivesByData.size()==0 ){//coloring primitive based on texture
+	  if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0 ){//coloring primitive based on texture
 	    if( uvs.size()==4 ){//custom (u,v) coordinates
 	      addRectangleByVertices( verts, texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
 	    }else{//default (u,v) coordinates
@@ -2683,7 +2685,7 @@ void Visualizer::buildContextGeometry_private( void ){
 	  helios::Triangle* triangle = static_cast<helios::Triangle*>(prim);
 	  std::vector<vec2> uvs = triangle->getTextureUV();
 	  
-	  if( colorPrimitivesByData.size()==0 ){//coloring primitive based on texture
+	  if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){//coloring primitive based on texture
 	    addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), COORDINATES_CARTESIAN );
 	  }else{//coloring primitive based on primitive data
 	    addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), make_RGBAcolor(color.r,color.g,color.b,1), COORDINATES_CARTESIAN );
@@ -2718,7 +2720,10 @@ void Visualizer::colorContextPrimitivesByData( const char* data_name ){
   colorPrimitivesByData = data_name;
   colorPrimitivesByVariable = "";
   colorPrimitivesByValue = "";
-  colorPrimitives_UUIDs.clear();
+  std::vector<uint> UUIDs = context->getAllUUIDs();
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    colorPrimitives_UUIDs[UUIDs.at(p)] = UUIDs.at(p);
+  }
   enableColorbar();
 }
 

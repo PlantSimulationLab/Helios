@@ -13,7 +13,7 @@ var searchData=
   ['direction2rc',['direction2rc',['../struct_scan_metadata.html#a0eb70c4b0c8aa41d0d25093b381edd49',1,'ScanMetadata']]],
   ['disablecolorbar',['disableColorbar',['../class_visualizer.html#a5c8d26d18bd0bea73272834e8ed1bbe2',1,'Visualizer']]],
   ['disableemission',['disableEmission',['../class_radiation_model.html#a45774805001673a42a94e5cd1e45be4c',1,'RadiationModel']]],
-  ['disablemessages',['disableMessages',['../class_aerial_li_d_a_rcloud.html#aae637046290c1276c8f816d975489b86',1,'AerialLiDARcloud::disableMessages()'],['../class_li_d_a_rcloud.html#a16d21bf11c3c110d516ce97d13d2aab3',1,'LiDARcloud::disableMessages()'],['../class_radiation_model.html#abb85c41f81485d5d00006b3d0dad56e8',1,'RadiationModel::disableMessages()']]],
+  ['disablemessages',['disableMessages',['../class_energy_balance_model.html#a8fc80bfc765733051dc634c51cf1ccdd',1,'EnergyBalanceModel::disableMessages()'],['../class_aerial_li_d_a_rcloud.html#aae637046290c1276c8f816d975489b86',1,'AerialLiDARcloud::disableMessages()'],['../class_li_d_a_rcloud.html#a16d21bf11c3c110d516ce97d13d2aab3',1,'LiDARcloud::disableMessages()'],['../class_radiation_model.html#abb85c41f81485d5d00006b3d0dad56e8',1,'RadiationModel::disableMessages()']]],
   ['disabletextures',['disableTextures',['../struct_shader.html#a94921e991dbaaa5b6d9bad8c7885af0f',1,'Shader']]],
   ['disk_5fbounds',['disk_bounds',['../primitive_intersection_8cu.html#aab2e16ff4d5a4bca2d90c49f777500e9',1,'primitiveIntersection.cu']]],
   ['disk_5fintersect',['disk_intersect',['../primitive_intersection_8cu.html#a45dc4da4927abe579fd24be608e4cd75',1,'primitiveIntersection.cu']]],

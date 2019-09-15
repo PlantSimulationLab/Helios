@@ -131,7 +131,22 @@
  The radiation model class contains functions and data assoicated with the model. To begin, declare an instance of the RadiationModel class. The class constructor takes one argument - a pointer to the Helios context. It uses this pointer to access model geometry and data in the context.
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>%RadiationModel radiationmodel(&context); //declare the model class</code></pre></div>
+   <pre><code>%RadiationModel radiationmodel(&context); //declare the model class</code></pre></div>
+
+ \subsection RadTwoSided Area Basis for Calculating Fluxes
+
+ The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the \ref helios::Primitive::getArea() function).
+
+ By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):
+
+  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+   <pre><code>context.setPrimitiveData( UUID, "twosided-flag", uint(1) );</code></pre></div>
+
+ Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.
+
+  A primitive with "twosided_flag" set to 0 will not absorb any radiation from the back face of the primitive, but it will attenuate radiation. So if a ray hits the back face, the ray trajectory will be terminated, but no energy will be deposited.
+
+  Example: If we had a single patch and a diffuse radiation source with a flux of 1.0, with default behavior the absorbed flux on the patch would be 2.0 because it would absorb energy from both faces, but the end flux would be expressed on a single-sided area basis. If "twosided_flag" was set to 0 for that patch (non-default behavior), then the absorbed flux on the patch would be 1.0. 
 
  \subsection RadBands Defining Wavelength Bands
 
@@ -154,10 +169,10 @@
   uint UUID = context.addPatch( center, size );
 
   float rho = 0.1; //reflectivity value
-  context.setPrimitiveData( UUID, "reflectivity_PAR", HELIOS_TYPE_FLOAT, 1, &rho);
+  context.setPrimitiveData( UUID, "reflectivity_PAR", rho);
 
   float tau = 0.1; //transmissivity value
-  context.setPrimitiveData( UUID, "transmissivity_PAR", HELIOS_TYPE_FLOAT, 1, &tau);</code></pre></div>
+  context.setPrimitiveData( UUID, "transmissivity_PAR", tau);</code></pre></div>
 
  Note that absorptivity is not directly set, rather it is calculated as \f$1-\rho-\tau\f$.  If \f$1-\rho-\tau\f$ is calculated to be negative, an error is thrown.
 
@@ -169,12 +184,6 @@
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
    <pre><code>radiationmodel.disableEmission( "PAR" ); //Disable emission for the 'PAR' band</code></pre></div>
-
- \subsubsection RadTwoSided Single-Sided Emission and Absorption
-
- By default, a planar primitive will emit radiation from both faces. For primitives that only emit from one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0. Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.
-
- A primitive with "twosided_flag" set to 0 will not absorb any radiation from the back face of the primitive, but it will attenuate radiation. So if a ray hits the back face, the ray trajectory will be terminated, but no energy will be deposited.
 
  \subsection RadSources External Radiation Sources
 

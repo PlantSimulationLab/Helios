@@ -284,6 +284,15 @@ vec3 rotatePoint(const vec3 position, const float theta, const float phi);
 */
  vec3 rotatePointAboutLine(const vec3 point, const vec3 line_base, const vec3 line_direction, const float theta);
 
+//! Calculate the area of a triangle given its three vertices
+/** \param[in] "v0" (x,y,z) coordinate of first vertex
+    \param[in] "v1" (x,y,z) coordinate of second vertex
+    \param[in] "v2" (x,y,z) coordinate of third vertex
+    \return One-sided surface area of triangle
+    \ingroup functions
+*/
+float calculateTriangleArea( const vec3 v0, const vec3 v1, const vec3 v2 );
+
 //! Convert Julian day to calendar day (day,month,year)
 /** 
     \param[in] "Julian_day" Julian day of year (1-366)

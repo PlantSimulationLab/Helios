@@ -564,7 +564,7 @@ namespace helios {
     Triangle( const helios::vec3 vertex0, const helios::vec3 vertex1, const helios::vec3 vertex2, const helios::RGBAcolor color, const uint UUID );
 
     //! Triangle constructor 
-    Triangle( const helios::vec3 vertex0, const helios::vec3 vertex1, const helios::vec3 vertex2, Texture* texture, const helios::vec2 uv0, const helios::vec2 uv1, const helios::vec2 uv2, const uint UUID );
+    Triangle( const helios::vec3 vertex0, const helios::vec3 vertex1, const helios::vec3 vertex2, Texture* texture, const std::vector<helios::vec2> uv, const float solid_fraction, const uint UUID );
     
     //! Triangle destructor
     ~Triangle(){};
@@ -926,6 +926,58 @@ public:
       \return UUID of Voxel
   */
   uint addVoxel( const helios::vec3& center, const helios::vec3& size, const float& rotation, const helios::RGBAcolor& color );
+
+  //! Translate a primitive using its UUID
+  /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be translated
+      \param[in] "shift" Distance to translate in (x,y,z) directions
+   */
+  void translatePrimitive( const uint UUID, const vec3 shift );
+
+  //! Translate a group of primitives using a vector of UUIDs
+  /** \param[in] "UUID" Vector of unique universal identifiers (UUIDs) of primitives to be translated
+      \param[in] "shift" Distance to translate in (x,y,z) directions
+   */
+  void translatePrimitive( const std::vector<uint> UUIDs, const vec3 shift );
+
+  //! Rotate a primitive about the x, y, or z axis using its UUID
+  /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be translated
+      \param[in] "rot" Rotation angle in radians
+      \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
+   */
+  void rotatePrimitive( const uint UUID, const float rot, const char* axis );
+
+  //! Rotate a group of primitives about the x, y, or z axis using a vector of UUIDs
+  /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be translated
+      \param[in] "rot" Rotation angle in radians
+      \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
+   */
+  void rotatePrimitive( const std::vector<uint> UUIDs, const float rot, const char* axis );
+
+  //! Rotate a primitive about an arbitrary axis using its UUID
+  /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be translated
+      \param[in] "rot" Rotation angle in radians
+      \param[in] "axis" Vector describing axis about which to rotate
+   */
+  void rotatePrimitive( const uint UUID, const float rot, const helios::vec3 axis );
+
+  //! Rotate a group of primitives about an arbitrary axis using a vector of UUIDs
+  /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be translated
+      \param[in] "rot" Rotation angle in radians
+      \param[in] "axis" Vector describing axis about which to rotate
+   */
+  void rotatePrimitive( const std::vector<uint> UUIDs, const float rot, helios::vec3 axis );
+
+  //! Scale a primitive using its UUID
+  /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be scaled
+      \param[in] "S" Scaling factor
+   */
+  void scalePrimitive( const uint UUID, const helios::vec3 S );
+
+  //! Scale a group of primitives using a vector of UUIDs
+  /** \param[in] "UUID" Vector of unique universal identifiers (UUIDs) of primitives to be scaled
+      \param[in] "S" Scaling factor
+   */
+  void scalePrimitive( const std::vector<uint> UUIDs, const helios::vec3 S );
 
   //! Delete a single primitive from the context
   /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be deleted
