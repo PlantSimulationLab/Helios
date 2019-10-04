@@ -52,6 +52,11 @@ RadiationModel::RadiationModel( helios::Context* __context ){
 
 }
 
+RadiationModel::~RadiationModel(){
+  RT_CHECK_ERROR( rtContextDestroy( OptiX_Context ) );
+}
+  
+
 int RadiationModel::selfTest( void ){
 
   std::cout << "Running radiation model self-test..." << std::endl;
@@ -978,6 +983,209 @@ int RadiationModel::selfTest( void ){
   }else{
     std::cout << "passed." << std::endl;
   }
+
+  // -------- Test #10: gas-filled furnace ---------- //
+  // Case from Chapter 6.2.1 of Mbiock and Weber (2000)
+  // Gass-filled furnace of size 3x1x1 m. Attenuation coefficient is 0.1 1/m,
+  // Temperature of the walls (black) are 1273K, temperature of medium is 1773K.
+  // Small patches are used to create the participating medium.
+
+  std::cout << "Test #10: Gas-filled furnace..." << std::flush;
+
+  bool failure_10 = false;
+
+  float Rref_10 = 33000.f;
+  
+  uint Ndiffuse_10 = 10000;
+
+  float w_10 = 1.f;         //width of box (y-dir)
+  float h_10 = 1.f;         //height of box (z-dir)
+  float d_10 = 3.f;         //depth of box (x-dir)
+
+  float Tw_10 = 1273.f;   //temperature of walls (K)
+  float Tm_10 = 1773.f;   //temperature of mediusm (K)
+   
+  float kappa_10 = 0.1f;  //attenuation coefficient of medium (1/m)
+
+  float eps_m_10 = 1.f;     //emissivity of medium
+
+  float w_patch_10 = 0.01;
+  
+  int Npatches_10 = round(2.f*kappa_10*w_10*h_10*d_10/w_patch_10/w_patch_10);
+  
+  Context context_10;
+
+  std::vector<uint> UUIDs_box = context_10.addBox( make_vec3(0,0,0), make_vec3(d_10,w_10,h_10), make_int3(round(d_10/w_patch_10), round(w_10/w_patch_10), round(h_10/w_patch_10)), RGB::green, true);
+
+  context_10.setPrimitiveData( UUIDs_box, "temperature", Tw_10 );
+  context_10.setPrimitiveData( UUIDs_box, "twosided-flag", uint(0) );
+  
+  std::vector<uint> UUIDs_patches;
+
+  for( int i=0; i<Npatches_10; i++ ){
+
+    float x = -0.5*d_10+0.5*w_patch_10 + (d_10-2*w_patch_10)*context_10.randu();
+    float y = -0.5*w_10+0.5*w_patch_10 + (w_10-2*w_patch_10)*context_10.randu();
+    float z = -0.5*h_10+0.5*w_patch_10 + (h_10-2*w_patch_10)*context_10.randu();
+    
+    float theta = acos(1.f-context_10.randu());
+    float phi = 2.f*M_PI*context_10.randu();
+    
+    UUIDs_patches.push_back(  context_10.addPatch( make_vec3(x,y,z), make_vec2(w_patch_10,w_patch_10), make_SphericalCoord(theta,phi) ) );
+
+  }
+  context_10.setPrimitiveData( UUIDs_patches, "temperature", Tm_10 );
+  context_10.setPrimitiveData( UUIDs_patches, "emissivity_LW", eps_m_10 );
+  context_10.setPrimitiveData( UUIDs_patches, "reflectivity_LW", 1.f-eps_m_10 );
+
+  RadiationModel radiation_10(&context_10);
+  radiation_10.disableMessages();
+
+  radiation_10.addRadiationBand("LW");
+  radiation_10.setDiffuseRayCount( "LW", Ndiffuse_10 );
+  radiation_10.setScatteringDepth( "LW", 0 );
+
+  radiation_10.updateGeometry();
+
+  radiation_10.runBand("LW");
+
+  float R_wall = 0;
+  float A_wall = 0.f;
+  for( int i=0; i<UUIDs_box.size(); i++ ){
+
+    float area = context_10.getPrimitivePointer( UUIDs_box.at(i) )->getArea();
+
+    float flux;
+    context_10.getPrimitiveData( UUIDs_box.at(i), "radiation_flux_LW", flux );
+
+    A_wall += area;
+    R_wall += flux*area;
+
+  }
+  R_wall = R_wall/A_wall-5.67e-8*pow(Tw_10,4);
+
+
+  if( fabs(R_wall-Rref_10)/Rref_10>error_threshold ){
+    failure_10 = true;
+    failure=true;
+  }
+
+  if( failure_10 ){
+    std::cout << R_wall << " " << Rref_10 << std::endl;
+    std::cout << "failed." << std::endl;
+  }else{
+    std::cout << "passed." << std::endl;
+  }
+
+  // -------- Test #11: purely scattering medium between two infinite plates ---------- //
+  // Test case from Francoeur's class - not sure where he got it from
+  // Two infinite horizontal plates are separated by distance h and filled with a purely scattering medium.
+
+  std::cout << "Test #11: Purely scattering medium between infinite plates..." << std::flush;
+
+  bool failure_11 = false;
+
+  float W_11 = 10.f;      //width of entire slab in x and y directions
+  float w_11 = 5.f;       //width of slab to be considered in claculations
+  float h_11 = 1.f;       //height of slab
+
+  float Tw1_11 = 300.f;   //temperature of upper wall (K)
+  float Tw2_11 = 400.f;   //temperature of lower wall (K)
+
+  float epsw1_11 = 0.8f;  //emissivity of upper wall
+  float epsw2_11 = 0.5f;  //emissivity of lower wall
+
+  float omega_11 = 1.f;   //single-scatter albedo
+
+  float tauL_11 = 0.1f;   //optical depth of slab
+
+  float Psi2_exact=0.427; //exact non-dimensional heat flux of lower plate
+  
+  float w_patch_11 = 0.05;  //width of medium patches
+
+
+  float beta = tauL_11/h_11;  //attenuation coefficient
+     
+  int Nleaves_11 = round(2.f*beta*W_11*W_11*h_11/w_patch_11/w_patch_11);
+  
+  Context context_11;
+
+  //top wall
+  std::vector<uint> UUIDs_1 = context_11.addTile( make_vec3(0,0,0.5*h_11), make_vec2(W_11,W_11), make_SphericalCoord(M_PI,0), make_int2(round(W_11/w_patch_11/5), round(W_11/w_patch_11/5) ));
+
+  //bottom wall
+  std::vector<uint> UUIDs_2 = context_11.addTile( make_vec3(0,0,-0.5*h_11), make_vec2(W_11,W_11), make_SphericalCoord(0,0), make_int2(round(W_11/w_patch_11/5), round(W_11/w_patch_11/5) ));
+
+  context_11.setPrimitiveData( UUIDs_1, "temperature", Tw1_11 );
+  context_11.setPrimitiveData( UUIDs_2, "temperature", Tw2_11 );
+  context_11.setPrimitiveData( UUIDs_1, "emissivity_LW", epsw1_11 );
+  context_11.setPrimitiveData( UUIDs_2, "emissivity_LW", epsw2_11 );
+  context_11.setPrimitiveData( UUIDs_1, "reflectivity_LW", 1.f-epsw1_11 );
+  context_11.setPrimitiveData( UUIDs_2, "reflectivity_LW", 1.f-epsw2_11 );
+  context_11.setPrimitiveData( UUIDs_1, "twosided-flag", uint(0) );
+  context_11.setPrimitiveData( UUIDs_2, "twosided-flag", uint(0) );
+
+  std::vector<uint> UUIDs_patches_11;
+
+  for( int i=0; i<Nleaves_11; i++ ){
+
+    float x = -0.5*W_11+0.5*w_patch_11 + (W_11-w_patch_11)*context_11.randu();
+    float y = -0.5*W_11+0.5*w_patch_11 + (W_11-w_patch_11)*context_11.randu();
+    float z = -0.5*h_11+0.5*w_patch_11 + (h_11-w_patch_11)*context_11.randu();
+      
+    float theta = acos(1.f-context_11.randu());
+    float phi = 2.f*M_PI*context_11.randu();
+      
+    UUIDs_patches_11.push_back(  context_11.addPatch( make_vec3(x,y,z), make_vec2(w_patch_11,w_patch_11), make_SphericalCoord(theta,phi) ) );
+
+  }
+  context_11.setPrimitiveData( UUIDs_patches_11, "temperature", 0.f );
+  context_11.setPrimitiveData( UUIDs_patches_11, "emissivity_LW", 1.f-omega_11 );
+  context_11.setPrimitiveData( UUIDs_patches_11, "reflectivity_LW", omega_11 );
+
+  RadiationModel radiation_11(&context_11);
+  radiation_11.disableMessages();
+    
+  radiation_11.addRadiationBand("LW");
+  radiation_11.setDiffuseRayCount( "LW", 10000 );
+  radiation_11.setScatteringDepth( "LW", 4 );
+
+  radiation_11.updateGeometry();
+    
+  radiation_11.runBand("LW");
+
+  float R_wall2 = 0;
+  float A_wall2 = 0.f;
+  for( int i=0; i<UUIDs_1.size(); i++ ){
+
+    vec3 position = context_11.getPatchPointer( UUIDs_1.at(i) )->getCenter();
+
+    if( fabs(position.x)<0.5*w_11 && fabs(position.y)<0.5*w_11 ){
+
+      float area = context_11.getPrimitivePointer( UUIDs_1.at(i) )->getArea();
+
+      float flux;
+      context_11.getPrimitiveData( UUIDs_2.at(i), "radiation_flux_LW", flux );
+      R_wall2 += flux*area;
+	
+      A_wall2 += area;	
+
+    }
+  }
+  R_wall2 = (R_wall2/A_wall2-epsw2_11*5.67e-8*pow(Tw2_11,4))/(5.67e-8*(pow(Tw1_11,4)-pow(Tw2_11,4)));
+
+  if( fabs(R_wall2-Psi2_exact)>10.f*error_threshold ){
+    failure_11 = true;
+    failure=true;
+  }
+
+
+  if( failure_11 ){
+    std::cout << "failed." << std::endl;
+  }else{
+    std::cout << "passed." << std::endl;
+  }
+
 
   // ------------- //
   
@@ -3734,10 +3942,6 @@ float RadiationModel::calculateGtheta( helios::Context* context, const helios::v
 
   return Gtheta/total_area;
   
-}
-
-void RadiationModel::finalize(void){
-  RT_CHECK_ERROR( rtContextDestroy( OptiX_Context ) );
 }
 
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line)

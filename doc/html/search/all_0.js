@@ -40,7 +40,6 @@ var searchData=
   ['aeriallidar_2eh',['AerialLiDAR.h',['../_aerial_li_d_a_r_8h.html',1,'']]],
   ['aeriallidarcloud',['AerialLiDARcloud',['../class_aerial_li_d_a_rcloud.html',1,'AerialLiDARcloud'],['../class_aerial_li_d_a_rcloud.html#acbcca37e844dc4e5e72c703c619d8962',1,'AerialLiDARcloud::AerialLiDARcloud()']]],
   ['aerialscanmetadata',['AerialScanMetadata',['../struct_aerial_scan_metadata.html',1,'AerialScanMetadata'],['../struct_aerial_scan_metadata.html#a98f4c907ebbca5d111af101c3203a9c8',1,'AerialScanMetadata::AerialScanMetadata()']]],
-  ['alpha',['alpha',['../struct_soil_properties.html#a414e4c3e1a35b7b203d5993b43c2c511',1,'SoilProperties']]],
   ['alphamask_5fbounds',['alphamask_bounds',['../primitive_intersection_8cu.html#a0c166eb8e1c3101b9e2c4e8e96987994',1,'primitiveIntersection.cu']]],
   ['alphamask_5fintersect',['alphamask_intersect',['../primitive_intersection_8cu.html#ae71d96ad4ce015409acb904d5f3a3b5e',1,'primitiveIntersection.cu']]],
   ['area',['area',['../struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407',1,'PerRayData']]],

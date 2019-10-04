@@ -77,6 +77,7 @@ var searchData=
   ['gettimeserieslength',['getTimeseriesLength',['../group__timeseries.html#ga56d13f8c949e68137581a3c974790892',1,'helios::Context']]],
   ['gettotalabsorbedflux',['getTotalAbsorbedFlux',['../class_radiation_model.html#ad4d08fdca36b43edb6be7351f9532260',1,'RadiationModel']]],
   ['gettransformationmatrix',['getTransformationMatrix',['../classhelios_1_1_primitive.html#ac2f1ded5ace6e33830a5dc2bdf4e554c',1,'helios::Primitive']]],
+  ['gettreeparameters',['getTreeParameters',['../class_weber_penn_tree.html#aac5619ac480517f8f01cb465d0dc4a6f',1,'WeberPennTree']]],
   ['gettriangle',['getTriangle',['../class_li_d_a_rcloud.html#a0c3b00461bb5fc47696025b0f610f692',1,'LiDARcloud']]],
   ['gettrianglecount',['getTriangleCount',['../class_li_d_a_rcloud.html#aef12803ab2899534072e895697c157d7',1,'LiDARcloud']]],
   ['gettrianglepointer',['getTrianglePointer',['../group__primitives.html#gab16737751d7bfcd72ad94af377acf311',1,'helios::Context']]],

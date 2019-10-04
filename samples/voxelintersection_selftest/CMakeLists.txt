@@ -1,4 +1,4 @@
-# Helios standard CMakeLists.txt file version 1.2
+# Helios standard CMakeLists.txt file version 1.3
 
 #-------- USER INPUTS ---------#
 
@@ -18,11 +18,8 @@ set( PLUGINS "voxelintersection" )
 cmake_minimum_required(VERSION 2.4)
 project(helios)
 SET(CMAKE_CXX_COMPILER_ID "GNU")
-if( CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7 )
-	SET(CMAKE_CXX_FLAGS "-g -std=c++0x")
-else()
-	SET(CMAKE_CXX_FLAGS "-g -std=c++11")
-endif()
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11")	
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 endif()

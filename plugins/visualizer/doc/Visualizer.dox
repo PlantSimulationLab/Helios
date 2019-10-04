@@ -79,7 +79,7 @@
   The visualizer uses two types of coordinate systems to specify the locations of points in space during visualization:
 
   <ol>
-    <li>\ref Visualizer::COORDINATES_WINDOW_NORMALIZED "COORDINATES_WINDOW_NORMALIZED" - Coordinates are normalized to unity and are window-aligned.  The point (x,y)=(0,0) is in the bottom left corner of the window, and (x,y)=(1,1) is in the upper right corner of the window.  The z-coordinate specifies the depth in the screen-normal direction, with values ranging from -1 to 1.  For example, an object at z=0.5 would be in front of an object at z=0.  This coordinate system is typically used when annotating visualizations with text, adding watermarks, or adding objects to the dashboard.</li>
+    <li>\ref Visualizer::COORDINATES_WINDOW_NORMALIZED "COORDINATES_WINDOW_NORMALIZED" - Coordinates are normalized to unity and are window-aligned.  The point (x,y)=(0,0) is in the bottom left corner of the window, and (x,y)=(1,1) is in the upper right corner of the window.  The z-coordinate specifies the depth in the screen-normal direction, with values ranging from -1 to 1.  For example, an object at z=0.5 would be behind an object at z=0.  This coordinate system is typically used when annotating visualizations with text, adding watermarks, or adding objects to the dashboard.</li>
     <li>\ref Visualizer::COORDINATES_CARTESIAN "COORDINATES_CARTESIAN" - Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.  This coordinate system is typically used when adding model geometry or 3D objects.</li>
   </ol>
 
@@ -109,7 +109,7 @@
     }</code></pre>
   </div>
 
-  \subsection Layer Layers
+ <!-- \subsection Layer Layers
 
   Objects in the visualizer are grouped into layers.  This allows modification of a given subset of objects by specifying their layer number.  For example, when adding a triangular primitive to the visualizer, a layer number must be specified which is some nonnegative integer. We could then make that layer invisible by issuing the \ref Visualizer::setLayerVisibility "setLayerVisibility" command:
 
@@ -118,6 +118,8 @@
   </div>
 
   Layers are automatically created as they are referenced.  For example, adding a primitive on layer #1, or making layer #1 visibile would automatically create an additional layer.
+
+-->
 
   \subsection Background Window background
 
@@ -148,22 +150,22 @@
       <td>Rectangle</td>
       <td>Rectangular polygon with coplanar vertices.</td>
       <td><ul>
-	  <li>\ref Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBcolor color, const CoordinateSystem coordFlag, const int layer )</li>
-	  <li>\ref Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBAcolor color, const CoordinateSystem coordFlag, const int layer)</li>
-	  <li>\ref Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const char* texture_file, const CoordinateSystem coordFlag, const int layer  )</li>
-	  <li>\ref Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag, const int layer  )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor color, const CoordinateSystem coordFlag, const int layer )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBAcolor color, const CoordinateSystem coordFlag, const int layer )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const char* texture_file, const CoordinateSystem coordFlag, const int layer )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag, const int layer )</li>
+	  <li>\ref Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBcolor color, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBAcolor color, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const char* texture_file, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor color, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBAcolor color, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const char* texture_file, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag )</li>
       </td>
     </tr>
     <tr>	
       <td>Triangle</td>
       <td>Triangular polygon specified by its three vertices.</td>
       <td><ul>
-	  <li>\ref Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBcolor color, CoordinateSystem coordFlag, int layer )</li>
-	  <li>\ref Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolor color, CoordinateSystem coordFlag, int layer )</li>
+	  <li>\ref Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBcolor color, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolor color, CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
     </tr>
@@ -171,9 +173,9 @@
       <td>Disk</td>
       <td>Ellipsoidal disk.</td>
       <td><ul>
-	  <li>\ref Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, RGBcolor color, CoordinateSystem coordFlag, int layer )</li>
-	  <li>\ref Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, RGBAcolor color, CoordinateSystem coordFlag, int layer )</li>
-	  <li>\ref Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag, int layer )</li>
+	  <li>\ref Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, RGBcolor color, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, RGBAcolor color, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
     </tr>
@@ -181,8 +183,8 @@
       <td>Voxel</td>
       <td>Parallelpiped or rectangular prism.</td>
       <td><ul>
-	  <li>\ref Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const SphericalCoord rotation, const RGBcolor color, const CoordinateSystem coordFlag, const int layer )</li>
-	  <li>\ref Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const SphericalCoord rotation, const RGBAcolor color, const CoordinateSystem coordFlag, const int layer )</li>
+	  <li>\ref Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const SphericalCoord rotation, const RGBcolor color, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const SphericalCoord rotation, const RGBAcolor color, const CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
     </tr>
@@ -190,8 +192,8 @@
       <td>Sphere</td>
       <td>Tesselated sphere composed of triangles.</td>
       <td><ul>
-	  <li>\ref Visualizer::addSphereByCenter( const float radius, const vec3 center, const uint Ndivisions, const RGBcolor color, const CoordinateSystem coordFlag, const int layer )</li>
-	  <li>\ref Visualizer::addSphereByCenter( const float radius, const vec3 center, const uint Ndivisions, const RGBAcolor color, const CoordinateSystem coordFlag, const int layer )</li>
+	  <li>\ref Visualizer::addSphereByCenter( const float radius, const vec3 center, const uint Ndivisions, const RGBcolor color, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addSphereByCenter( const float radius, const vec3 center, const uint Ndivisions, const RGBAcolor color, const CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
     </tr>
@@ -199,8 +201,8 @@
       <td>Line</td>
       <td>Linear segment between two points.</td>
       <td><ul>
-	  <li>\ref Visualizer::addLine( const vec3 start, const vec3 end, const RGBcolor color, const uint linewidth, const CoordinateSystem coordFlag, const int layer )</li>
-	  <li>\ref Visualizer::addLine( const vec3 start, const vec3 end, const RGBAcolor color, const uint linewidth, const CoordinateSystem coordFlag, const int layer )</li>
+	  <li>\ref Visualizer::addLine( const vec3 start, const vec3 end, const RGBcolor color, const uint linewidth, const CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addLine( const vec3 start, const vec3 end, const RGBAcolor color, const uint linewidth, const CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
     </tr>
@@ -209,19 +211,14 @@
       <td>Textbox</td>
       <td>Box of text.</td>
       <td><ul>
-	  <li>\ref Visualizer::addTextboxByCenter( const char* textstring, const vec3 center, SphericalCoord rotation, const RGBcolor fontcolor, const uint fontsize, const char* fontname, CoordinateSystem coordFlag, int layer )</li>
+	  <li>\ref Visualizer::addTextboxByCenter( const char* textstring, const vec3 center, SphericalCoord rotation, const RGBcolor fontcolor, const uint fontsize, const char* fontname, CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
     </tr>
     <tr>	
   </table>
 
-  Each object can be added by calling one of the associated functions listed in the table above.  The syntax is usually fairly similar to how gometry is added in the Helios context, with a few notable additions:
-
-  <ul>
-    <li>You must specify a coordinate system (see \ref coord).</li>
-    <li>You must specify a layer.  Layers help group objects, allowing for example to remove groups of objects from the visualization.  The layer number starts at 0 and counts up.</li>
-  </ul>
+  Each object can be added by calling one of the associated functions listed in the table above.  The syntax is usually fairly similar to how gometry is added in the Helios context, except that you must specify a coordinate system (see \ref coord).
   
   The code sample below gives an example of how to add a horizontal rectangle to the visualizer by providing the coordinates of its center:
   
@@ -234,13 +231,13 @@
       vec3 center = make_vec3(0,0,0);
       vec2 size = make_vec2(1,1);
       SphericalCoord rotation = make_SphericalCoord(0,0);
-      vis.addRectangleByCenter(center,size,rotation,RGB::red,Visualizer::COORDINATES_CARTESIAN,0);
+      vis.addRectangleByCenter(center,size,rotation,RGB::red,Visualizer::COORDINATES_CARTESIAN);
    }</code></pre>
   </div>
 
   \subsubsection ContextGeom Automatically importing Context geometry
 
-  The visualizer can automatically import some or all geometry from the Context.  This is accomplished using the \ref buildContextGeometry command.  To add all primitives in the Context, the \ref buildContextGeometry command would be issued, which is passed the Context.  By default, the Context geometry is added to layer 0.  We can also pass an additional argument to the \ref buildContextGeometry command to specify the layer to which the geometry should be added.  Finally, we can add a subset of the Context geometry through an additional argument which takes a vector of UUID's.
+  The visualizer can automatically import some or all geometry from the Context.  This is accomplished using the \ref buildContextGeometry command.  To add all primitives in the Context, the \ref buildContextGeometry command would be issued, which is passed the Context. We can add a subset of the Context geometry through an additional argument which takes a vector of UUID's.
 
   <table>
     <tr>	
@@ -249,19 +246,15 @@
     </tr>
     <tr>	
       <td>\ref Visualizer::buildContextGeometry( helios::Context* context ) "buildContextGeometry( Context* context )"</td>
-      <td>Add all primitives in the Context to the %Visualizer on layer 0.</td>
+      <td>Add all primitives in the Context to the %Visualizer.</td>
     </tr>
     <tr>	
-      <td>\ref Visualizer::buildContextGeometry( helios::Context* context, int layer ) "buildContextGeometry( Context* context, int layer )"</td>
-      <td>Add all primitives in the Context to the %Visualizer on a specified layer.</td>
-    </tr>
-    <tr>	
-      <td>\ref Visualizer::buildContextGeometry( helios::Context* context, int layer, std::vector<uint> UUIDs ) "buildContextGeometry( Context* context, int layer, std::vector<uint> UUIDs )"</td>
-      <td>Add a subset of primitives in the Context to the %Visualizer on a specified layer.</td>
+      <td>\ref Visualizer::buildContextGeometry( helios::Context* context, std::vector<uint> UUIDs ) "buildContextGeometry( Context* context, std::vector<uint> UUIDs )"</td>
+      <td>Add a subset of primitives in the Context to the %Visualizer.</td>
     </tr>
   </table>
 
-  The example below shows how to add all Context geometry to the visualizer on the default layer (0).
+  The example below shows how to add all Context geometry to the visualizer.
 
   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.1">
    <pre><code> #include "Context.h"

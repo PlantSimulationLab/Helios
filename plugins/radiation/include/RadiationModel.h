@@ -32,6 +32,9 @@ class RadiationModel{
   //! Default constructor
   RadiationModel( helios::Context* context );
 
+  //! Destructor
+  ~RadiationModel();
+
   //! Self-test
   /** \return 0 if test was successful, 1 if test failed */
   int selfTest(void);
@@ -177,9 +180,6 @@ class RadiationModel{
       \return Projected area fraction G(theta)
   */
   float calculateGtheta( helios::Context* context, const helios::vec3 view_direction );
-  
-  //! Free all resources
-  void finalize(void);
 
 protected:
 

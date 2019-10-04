@@ -1,15 +1,6 @@
 var searchData=
 [
-  ['writing_20plugins',['Writing Plugins',['../_plugins.html',1,'']]],
-  ['w',['w',['../structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f',1,'helios::int4::w()'],['../structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937',1,'helios::vec4::w()']]],
-  ['wait',['wait',['../group__functions.html#gad28da0b06687dc68c1212c1624e54bd0',1,'helios']]],
-  ['weber_2dpenn_20tree_20plugin_20documentation',['Weber-Penn Tree Plugin Documentation',['../_weber_penn_doc.html',1,'PlugIns']]],
-  ['weberpenntree',['WeberPennTree',['../class_weber_penn_tree.html',1,'WeberPennTree'],['../class_weber_penn_tree.html#a5b949a2008b9e4817f2df4b5861c49b5',1,'WeberPennTree::WeberPennTree()']]],
-  ['weberpenntree_2ecpp',['WeberPennTree.cpp',['../_weber_penn_tree_8cpp.html',1,'']]],
-  ['weberpenntree_2eh',['WeberPennTree.h',['../_weber_penn_tree_8h.html',1,'']]],
-  ['weberpenntreeparameters',['WeberPennTreeParameters',['../struct_weber_penn_tree_parameters.html',1,'']]],
-  ['write_5fjpeg_5ffile',['write_JPEG_file',['../_visualizer_8h.html#aa76cea0b174f9557bffe7e6a57d65b87',1,'write_JPEG_file(const char *filename, uint width, uint height):&#160;Visualizer.cpp'],['../_visualizer_8cpp.html#aa76cea0b174f9557bffe7e6a57d65b87',1,'write_JPEG_file(const char *filename, uint width, uint height):&#160;Visualizer.cpp']]],
-  ['writeobj',['writeOBJ',['../classhelios_1_1_context.html#ab8e4192dda89caff1d678a5411b42c71',1,'helios::Context']]],
-  ['writeply',['writePLY',['../classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7',1,'helios::Context']]],
-  ['writexml',['writeXML',['../classhelios_1_1_context.html#a9e8c0878f34db3fb5d6cbd4e61d2f2a4',1,'helios::Context']]]
+  ['x',['x',['../structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7',1,'helios::int2::x()'],['../structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50',1,'helios::int3::x()'],['../structhelios_1_1int4.html#a1ac3b0b91901dc1d1497267bd3f3b4c3',1,'helios::int4::x()'],['../structhelios_1_1vec2.html#a8dda241c2560b203a3b0a479d1c9e12e',1,'helios::vec2::x()'],['../structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1',1,'helios::vec3::x()'],['../structhelios_1_1vec4.html#a96036e1d3ac15f03190a7bbf74ce0d73',1,'helios::vec4::x()']]],
+  ['xy',['xy',['../structhelios_1_1vec3.html#a4f219078142a5c963fc0c7bdcc733903',1,'helios::vec3']]],
+  ['xz',['xz',['../structhelios_1_1vec3.html#a3a64c5b4f9df8de364539f01e1932241',1,'helios::vec3']]]
 ];

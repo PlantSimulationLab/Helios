@@ -2,13 +2,6 @@ cmake_minimum_required(VERSION 2.0)
 
 project(helios)
 
-SET(CMAKE_CXX_COMPILER_ID "GNU")
-if( CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7 )
-    SET(CMAKE_CXX_FLAGS "-g -std=c++0x")
-else()
-    SET(CMAKE_CXX_FLAGS "-g -std=c++11")	
-endif()
-
 include_directories(include)
 include_directories(../../core/include)
 

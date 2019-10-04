@@ -2516,7 +2516,13 @@ void Visualizer::buildContextGeometry_private( void ){
 
   uint psize = contextPrimitiveIDs.size();
   if( psize>0 ){
-    std::cout << "Adding " << psize << " Context primitives to visualizer...." << std::flush;
+    if( psize>=1e3 && psize<1e6 ){
+      std::cout << "Adding " << psize/1e3 << "K Context primitives to visualizer...." << std::flush;
+    }else if( psize>=1e6 ){
+      std::cout << "Adding " << psize/1e6 << "M Context primitives to visualizer...." << std::flush;
+    }else{
+      std::cout << "Adding " << psize << " Context primitives to visualizer...." << std::flush;
+    }
   }else{
     std::cout << "WARNING: No primitives were found in the Context..." << std::endl;
   }

@@ -148,6 +148,35 @@ class WeberPennTree{
   */ 
   void setBranchRecursionLevel( const uint level );
 
+  //! Set the radial triangle subdivisions for trunks.
+  /** For example, if trunk_segs = 3 the trunk would be a triangular prism, if trunk_segs=4 the trunk would be a rectangular prism, if trunk_segs=5 the trunk cross-section would be a pentagon, and so on. Note that trunk_segs must be greater than 2.
+      \param[in] "trunk_segs" Number of radial triangle subdivisions for the trunk.
+  */
+  void setTrunkSegmentResolution( const uint trunk_segs );
+
+  //! Set the radial triangle subdivisions for branches.
+  /** For example, if branch_segs = 3 the branches would be a triangular prism, if branch_segs=4 the branches would be a rectangular prism, if branch_segs=5 the branch cross-section would be a pentagon, and so on. Note that branch_segs must be greater than 2.
+      \param[in] "branch_segs" Number of radial triangle subdivisions for branches.
+  */
+  void setBranchSegmentResolution( const uint branch_segs );
+
+  //! Set the number of sub-patch divisions for leaves.
+  /** \param[in] "leaf_segs" Number of leaf sub-patches in the (x,y) directions.
+  */
+  void setLeafSubdivisions( const helios::int2 leaf_segs );
+
+  //! Get the architectural parameters for a tree in the currently loaded library
+  /** \param[in] "treename" Name of a tree in the library.
+      \return Set of tree parameters.
+   */
+  WeberPennTreeParameters getTreeParameters( const char* treename );
+
+  //! Set the architectural parameters for a tree in the currently loaded library
+  /** \param[in] "treename" Name of a tree in the library.
+      \param[in] "parameters" Set of tree parameters.
+   */
+  void setTreeParameters( const char* treename, const WeberPennTreeParameters parameters );
+
  private:
 
   helios::Context* context;
@@ -183,5 +212,11 @@ class WeberPennTree{
   float ShapeRatio( uint shape, float ratio );
 
   uint branchLevels;
+
+  uint trunk_segs;
+
+  uint branch_segs;
+
+  helios::int2 leaf_segs;
 
 };

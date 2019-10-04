@@ -1,9 +1,11 @@
 var searchData=
 [
-  ['wait',['wait',['../group__functions.html#gad28da0b06687dc68c1212c1624e54bd0',1,'helios']]],
-  ['weberpenntree',['WeberPennTree',['../class_weber_penn_tree.html#a5b949a2008b9e4817f2df4b5861c49b5',1,'WeberPennTree']]],
-  ['write_5fjpeg_5ffile',['write_JPEG_file',['../_visualizer_8h.html#aa76cea0b174f9557bffe7e6a57d65b87',1,'write_JPEG_file(const char *filename, uint width, uint height):&#160;Visualizer.cpp'],['../_visualizer_8cpp.html#aa76cea0b174f9557bffe7e6a57d65b87',1,'write_JPEG_file(const char *filename, uint width, uint height):&#160;Visualizer.cpp']]],
-  ['writeobj',['writeOBJ',['../classhelios_1_1_context.html#ab8e4192dda89caff1d678a5411b42c71',1,'helios::Context']]],
-  ['writeply',['writePLY',['../classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7',1,'helios::Context']]],
-  ['writexml',['writeXML',['../classhelios_1_1_context.html#a9e8c0878f34db3fb5d6cbd4e61d2f2a4',1,'helios::Context']]]
+  ['_7eaeriallidarcloud',['~AerialLiDARcloud',['../class_aerial_li_d_a_rcloud.html#acdf5d5239f43e8809a615d4c6e1323e3',1,'AerialLiDARcloud']]],
+  ['_7econtext',['~Context',['../classhelios_1_1_context.html#a4c146723cbd2daa6ceb6c095274a6ca7',1,'helios::Context']]],
+  ['_7elidarcloud',['~LiDARcloud',['../class_li_d_a_rcloud.html#abd5040ee6cd5008a6c74e24068b77b81',1,'LiDARcloud']]],
+  ['_7epatch',['~Patch',['../classhelios_1_1_patch.html#ad752072d536a72f4e8a7c6b0d6b5a0aa',1,'helios::Patch']]],
+  ['_7eprimitive',['~Primitive',['../classhelios_1_1_primitive.html#a9169f50665f6634ac3d22030f4069462',1,'helios::Primitive']]],
+  ['_7eradiationmodel',['~RadiationModel',['../class_radiation_model.html#aeae03b4de9b9c57ac987407fdfd6afa4',1,'RadiationModel']]],
+  ['_7etriangle',['~Triangle',['../classhelios_1_1_triangle.html#ac3ab4ba024c6edbf54b100d6e0a0dbe4',1,'helios::Triangle']]],
+  ['_7evoxel',['~Voxel',['../classhelios_1_1_voxel.html#a61eb465eff4071cd8994cae08a7cf036',1,'helios::Voxel']]]
 ];

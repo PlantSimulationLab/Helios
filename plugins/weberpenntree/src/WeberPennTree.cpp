@@ -29,6 +29,12 @@ WeberPennTree::WeberPennTree( helios::Context* __context ){
 
   branchLevels = 2; //default number of branching levels for which primitives should be generated
 
+  trunk_segs = 30; //default number of radial triangular subdivisions of the trunk
+  
+  branch_segs = 6; //default number of radial triangular subdivisions of branches
+
+  leaf_segs = make_int2(1,1); //default number of patch subdivisions of each leaf
+
   //seed the random number generator
   unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
   generator.seed(seed);
@@ -242,9 +248,9 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
   //draw the trunk
   if( strcmp(parameters.WoodFile.c_str(),"none")==0 || parameters.WoodFile.size()==0 ){
-    UUID_trunk.back() = context->addTube(40,nodes,radius,color);
+    UUID_trunk.back() = context->addTube(trunk_segs,nodes,radius,color);
   }else{
-    UUID_trunk.back() = context->addTube(40,nodes,radius,parameters.WoodFile.c_str());
+    UUID_trunk.back() = context->addTube(trunk_segs,nodes,radius,parameters.WoodFile.c_str());
   }
 
   uint flag=1;
@@ -465,9 +471,9 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
       //add to context
       std::vector<uint> branches;
       if( strcmp(parameters.WoodFile.c_str(),"none")==0 ){
-	branches = context->addTube(7,nodes,radius,color);
+	branches = context->addTube(branch_segs,nodes,radius,color);
       }else{
-	branches = context->addTube(7,nodes,radius,parameters.WoodFile.c_str());
+	branches = context->addTube(branch_segs,nodes,radius,parameters.WoodFile.c_str());
       }
       UUID_branch.back().insert(UUID_branch.back().end(),branches.begin(),branches.end());
     }
@@ -499,20 +505,28 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
     }
 
     //add to Context
-     uint UUID = context->addPatch( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), parameters.LeafFile.c_str() );
-    UUID_leaf.back().push_back(UUID);
-
-    //perform transformations
-    if( parameters.leafAngleCDF.size()>0 ){
-      context->getPrimitivePointer(UUID)->rotate( rotation.elevation, "y" );
-      context->getPrimitivePointer(UUID)->rotate( rotation.azimuth, "z" );
-      context->getPrimitivePointer(UUID)->translate(position);
+    std::vector<uint> UUIDs;
+    if( leaf_segs.x==1 && leaf_segs.y==1 ){
+      UUIDs.push_back(context->addPatch( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), parameters.LeafFile.c_str() ));
+      UUID_leaf.back().push_back(UUIDs.front());
     }else{
-      context->getPrimitivePointer(UUID)->rotate( downangle-cart2sphere(parent_normal).elevation, "y" );
-      context->getPrimitivePointer(UUID)->translate( make_vec3(0,0,-0.55*parameters.LeafScale*sin(downangle)) );
-      context->getPrimitivePointer(UUID)->rotate( 0.5*M_PI-rotation.azimuth, "z" );
-      context->getPrimitivePointer(UUID)->rotate( phi, parent_normal );
-      context->getPrimitivePointer(UUID)->translate(position);
+      UUIDs = context->addTile( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), leaf_segs, parameters.LeafFile.c_str() );
+    }
+      
+    //perform transformations
+    for( int p=0; p<UUIDs.size(); p++ ){
+      uint UUID = UUIDs.at(p);
+      if( parameters.leafAngleCDF.size()>0 ){
+	context->getPrimitivePointer(UUID)->rotate( rotation.elevation, "y" );
+	context->getPrimitivePointer(UUID)->rotate( rotation.azimuth, "z" );
+	context->getPrimitivePointer(UUID)->translate(position);
+      }else{
+	context->getPrimitivePointer(UUID)->rotate( downangle-cart2sphere(parent_normal).elevation, "y" );
+	context->getPrimitivePointer(UUID)->translate( make_vec3(0,0,-0.55*parameters.LeafScale*sin(downangle)) );
+	context->getPrimitivePointer(UUID)->rotate( 0.5*M_PI-rotation.azimuth, "z" );
+	context->getPrimitivePointer(UUID)->rotate( phi, parent_normal );
+	context->getPrimitivePointer(UUID)->translate(position);
+      }
     }
       
   }
@@ -595,6 +609,52 @@ std::vector<uint> WeberPennTree::getAllUUIDs( const uint TreeID ){
 
 void WeberPennTree::setBranchRecursionLevel( const uint level ){
   branchLevels = level;
+}
+
+void WeberPennTree::setTrunkSegmentResolution( const uint segs ){
+  if( segs<3 ){
+    std::cout << "WARNING (WeberPennTree::setTrunkSegmentResolution): cannot set trunk segment resolution less than 3. Ignoring this command." << std::endl;
+  }else{
+    trunk_segs=segs;
+  }
+}
+
+void WeberPennTree::setBranchSegmentResolution( const uint segs ){
+  if( segs<3 ){
+    std::cout << "WARNING (WeberPennTree::setBranchSegmentResolution): cannot set branch segment resolution less than 3. Ignoring this command." << std::endl;
+  }else{
+    branch_segs=segs;
+  }
+}
+
+void WeberPennTree::setLeafSubdivisions( const helios::int2 segs ){
+  if( segs.x<1 || segs.y<1 ){
+    std::cout << "WARNING (WeberPennTree::setLeafSubdivisions): cannot set number of leaf subdivisions to less than 1. Ignoring this command." << std::endl;
+  }else{
+    leaf_segs=segs;
+  }
+}
+
+WeberPennTreeParameters WeberPennTree::getTreeParameters( const char* treename ){
+
+  if( trees_library.find(treename)==trees_library.end() ){
+    std::cerr << "ERROR (WeberPennTree::getTreeParameters): Tree " << treename << " does not exist in the tree library." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  return trees_library.at(treename);
+
+}
+
+void WeberPennTree::setTreeParameters( const char* treename, const WeberPennTreeParameters parameters ){
+
+  if( trees_library.find(treename)==trees_library.end() ){
+    std::cerr << "ERROR (WeberPennTree::setTreeParameters): Tree " << treename << " does not exist in the tree library." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  trees_library.at(treename) = parameters;
+
 }
 
 void WeberPennTree::loadXML( const char* filename ){

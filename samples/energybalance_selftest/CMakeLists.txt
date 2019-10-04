@@ -1,4 +1,4 @@
-# Helios standard CMakeLists.txt file version 1.1
+# Helios standard CMakeLists.txt file version 1.3
 #-------- USER INPUTS ---------#
 
 #provide the path to Helios base directory, either as an absolut path or a path relative to the location of this file
@@ -19,11 +19,9 @@ cmake_minimum_required(VERSION 2.4)
 project(helios)
 
 SET(CMAKE_CXX_COMPILER_ID "GNU")
-if( CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7 )
-    SET(CMAKE_CXX_FLAGS "-g -std=c++0x -fsignaling-nans")
-else()
-    SET(CMAKE_CXX_FLAGS "-g -std=c++11 -fsignaling-nans")	
-endif()
+
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11")	
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )
 
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
     set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")

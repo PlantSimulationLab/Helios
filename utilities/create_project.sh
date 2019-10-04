@@ -35,7 +35,7 @@ fi
 
 #----- build the CMakeLists.txt file ------#
 
-echo -e '# Helios standard CMakeLists.txt file version 1.2\n' > CMakeLists.txt
+echo -e '# Helios standard CMakeLists.txt file version 1.3\n' > CMakeLists.txt
 
 echo -e '#-------- USER INPUTS ---------#\n' >> CMakeLists.txt
 
@@ -68,7 +68,7 @@ fi
 
 echo -e '#-------- MAIN CODE (Dont Modify) ---------#\ncmake_minimum_required(VERSION 2.4)\nproject(helios)' >> CMakeLists.txt
 
-echo -e 'SET(CMAKE_CXX_COMPILER_ID "GNU")\nif( CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7 )\n\tSET(CMAKE_CXX_FLAGS "-g -std=c++0x")\nelse()\n\tSET(CMAKE_CXX_FLAGS "-g -std=c++11")\nendif()' >> CMakeLists.txt
+echo -e 'SET(CMAKE_CXX_COMPILER_ID "GNU")\nSET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11")\nSET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )' >> CMakeLists.txt
 
 echo -e 'if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)\nset(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")\nendif()' >> CMakeLists.txt
 

@@ -7,7 +7,8 @@
  <table>
    <tr>	
      <th>Dependencies</th>
-     <td>NVIDIA CUDA 6.0+</td>
+     <td>NVIDIA CUDA 9.0+ <p>
+         gcc/g++ 5.5+</td>
    </tr>
    <tr>	
      <th>CMakeLists.txt</th>

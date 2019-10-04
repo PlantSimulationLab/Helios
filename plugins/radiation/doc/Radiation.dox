@@ -9,7 +9,8 @@
  <table>
    <tr>	
       <th>Dependencies</th>
-      <td>NVIDIA CUDA 5.0+</td>
+      <td>NVIDIA CUDA 9.0+ <br>
+          gcc/g++ 5.5+</td>
    </tr>
    <tr>	
      <th>CMakeLists.txt</th>
@@ -105,6 +106,14 @@
      <td>N/A</td>
      <td>1.0</td>
    </tr>
+   <tr>
+     <td>twosided-flag</td>
+     <td>N/A</td>
+     <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td>
+     <td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. ``\ref RadTwoSided" below for more information.</td>
+     <td>N/A</td>
+     <td>1</td>
+   </tr>
  </table>	
  
  \subsection RadOutputData Output Primitive Data
@@ -198,20 +207,33 @@
  Below is an example of adding a collimated source oriented in the direction of the sun, with a flux of 800 and using 200 rays per primitive:
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>vec3 sun_dir(0,0,1);
+ <pre><code> vec3 sun_dir(0,0,1);
  uint SunSource = radiationmodel.addCollimatedRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'SunSource' variable
-  radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source
-  radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div>
+ radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source
+ radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div>
 
- \subsubsection PointSource Adding Point Sources
+ \subsubsection SunSphereSource Adding Spherical Sun Source
 
- Adding point sources is similar to adding collimated sources. Point sources are added using the \ref addPointRadiationSource() function, which takes an (x,y,z) location of the point source as its argument. This function returns a uint which specifies the identifier for the point source, similar to a collimated source. The flux emanating from the source can also be set using the source identifier.
+ To represent penumbral effects, a spherical radiation source can be used to represent the sun. The sun is represented by a sphere, which has the same diameter and distance from the earth as the sun.
+
+The spherical sun source is defined in a similar manner as the collimated radiation source, but using the \ref addSunSphereRadiationSource() function. Below is an example of adding a spherical sun source, with a flux of 800 and using 200 rays per primitive:
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>vec3 sun_dir(0,0,1);
- uint PointSource = radiationmodel.addPointRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'PointSource' variable
- radiationmodel.setSourceFlux(PointSource,"PAR",800); //set the flux of the source
- radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources</code></pre></div>
+ <pre><code> vec3 sun_dir(0,0,1);
+ uint SunSource = radiationmodel.addSunSphereRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'SunSource' variable
+ radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source
+ radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div>
+
+ \subsubsection PointSource Adding Spherical Sources
+
+ More general spherical radiation sources can be added to represent sources such as a lamp. Spherical sources are added using the \ref addSphereRadiationSource() function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the source can also be set using the source identifier.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> vec3 sun_dir(0,0,1);
+ float sphere_radius = 1.0;
+ uint SphereSource = radiationmodel.addSphereRadiationSource( sun_dir, sphere_radius ); //add the source, whose identifier is stored in the 'SphereSource' variable
+ radiationmodel.setSourceFlux(SphereSource,"PAR",800); //set the flux of the source
+ radiationmodel.setDirectRayCount("PAR",200); //set the ray count for source</code></pre></div>
 	 
  \subsubsection AmbSource Adding Diffuse/Ambient Sources
 
@@ -250,7 +272,7 @@
  A common task when using the radiation model is to integrate with the \ref SolarPosition plug-in to set the position of a collimated radiation source (i.e., the sun), potentially at several different times of the day.  In this case, one would initialize the SolarPosition and RadiationModel classes and set up relevant inputs, then execute a for-loop over each time of the day. For each time iteration, the current time is set in the Context, the direction of the sun is calculated for that particular time, then the sun direction is passed to the radiation model. An example is illustrated in the code below.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> #include "Context.h"
+ <pre><code>  #include "Context.h"
   #include "Visualizer.h"
   #include "SolarPosition.h"
   #include "RadiationModel.h"
@@ -360,7 +382,7 @@
  It could also be possible to visualize the net all-wave radiation flux by summing multiple band fluxes. The following example assumes that there are bands created in the model for shortwave radiation called "SW" and for longwave radiation called "LW", and that the model has been run for each of these bands.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> %Visualizer vis(1000);
+ <pre><code>  %Visualizer vis(1000);
 
   vis.buildContextGeometry( &context );
 
