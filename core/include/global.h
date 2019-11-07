@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -326,6 +325,10 @@ int JulianDay( Date date );
 //! Random number from a uniform distribution between 0 and 1
 /** \ingroup functions */
 float randu( void );
+
+//! Random integer from a uniform distribution between imin and imax
+/** \ingroup functions */
+int randu( int imin, int imax  );
 
 //! arccosine function to handle cases when round-off errors cause an argument <-1 or >1, and thus regular acos() returns NaN
 float acos_safe( float x );

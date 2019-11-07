@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -166,24 +165,28 @@ struct GridCell{
   helios::vec3 center;
   helios::vec3 global_anchor;
   helios::vec3 size;
+  helios::vec3 global_size;
+  helios::int3 global_ijk;
+  helios::int3 global_count;
   float azimuthal_rotation;
   float leaf_area;
   float Gtheta;
-  GridCell(void){
-    center = helios::make_vec3(0,0,0);
-    global_anchor = helios::make_vec3(0,0,0);
-    size = helios::make_vec3(0,0,0);
-    azimuthal_rotation = 0;
-    leaf_area = 0;
-    Gtheta = 0;
-  }
-  GridCell( helios::vec3 __center, helios::vec3 __global_anchor, helios::vec3 __size, float __azimuthal_rotation ){
+  float ground_height;
+  float vegetation_height;
+  float maximum_height;
+  GridCell( helios::vec3 __center, helios::vec3 __global_anchor, helios::vec3 __size, helios::vec3 __global_size, float __azimuthal_rotation, helios::int3 __global_ijk, helios::int3 __global_count ){
     center = __center;
     global_anchor = __global_anchor;
     size = __size;
+    global_size = __global_size;
     azimuthal_rotation = __azimuthal_rotation;
+    global_ijk = __global_ijk;
+    global_count = __global_count;
     leaf_area = 0;
     Gtheta = 0;
+    ground_height = 0;
+    vegetation_height = 0;
+    maximum_height = 0;
   }
 };
 
@@ -425,6 +428,12 @@ class LiDARcloud{
       \param[in] "label" Label of the data value (e.g., "reflectance").
   */
   void setHitData( const uint index, const char* label, const float value );
+
+  //! Check if scalar data exists for a hit point
+  /** \param[in] "index" Hit number.
+      \param[in] "label" Label of the data value (e.g., "reflectance").
+  */
+  bool doesHitDataExist( const uint index, const char* label ) const;
   
   //! Get color of hit point
   /** \param[in] "index" Hit number */
@@ -593,6 +602,13 @@ class LiDARcloud{
    */
   std::vector<uint> addLeafReconstructionToContext( helios::Context* context ) const;
 
+  //! Add reconstructed leaves (texture-masked patches) to the Context with leaves divided into sub-patches (tiled)
+  /** \param[in] "context" Pointer to the Helios context
+      \param[in] "subpatches" Number of leaf sub-patches (tiles) in the x- and y- directions.
+      \note This function creates the following primitive data for each patch 1) ``gridCell" which indicates the index of the gridcell that contains the patch, 2) ``directFlag" which equals 1 if the leaf was part of the direct reconstruction, and 0 if the leaf was backfilled.
+   */
+  std::vector<uint> addLeafReconstructionToContext( helios::Context* context, const helios::int2 subpatches ) const;
+
   //! Add triangle groups used in the direct reconstruction to the Context
   /** \param[in] "context" Pointer to the Helios context
       \note This function creates primitive data called ``leafGroup" which provides an identifier for each triangle based on the fill group it is in.
@@ -655,16 +671,20 @@ ection
   //! Add a cell to the grid
   /** \param [in] "center" (x,y,z) coordinate of grid center
       \param [in] "size" size of the grid cell in the x,y,z directions
+      \param [in] "rotation" rotation angle (in radians) of the grid cell about the z-axis
   */
-  void addGridCell( const helios::vec3 center, const helios::vec3 size );
+  void addGridCell( const helios::vec3 center, const helios::vec3 size, const float rotation );
 
-  //! Add a cell to the grid
+  //! Add a cell to the grid, where the cell is part of a larger global rectangular grid
   /** \param [in] "center" (x,y,z) coordinate of grid center
       \param [in] "global_anchor" (x,y,z) coordinate of grid global anchor, i.e., this is the 'center' coordinate entered in the xml file.  If grid Nx=Ny=Nz=1, global_anchor=center
       \param [in] "size" size of the grid cell in the x,y,z directions
+      \param [in] "global_size" size of the global grid in the x,y,z directions
       \param [in] "rotation" rotation angle (in radians) of the grid cell about the z-axis
+      \param [in] "global_ijk" index within the global grid in the x,y,z directions
+      \param [in] "global_count" total number of cells in global grid in the x,y,z directions
   */
-  void addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const float rotation );
+  void addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const helios::vec3 global_size, const float rotation, const helios::int3 global_ijk, const helios::int3 global_count );
 
   //! Get the (x,y,z) coordinate of a grid cell by its index
   /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */

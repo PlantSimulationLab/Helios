@@ -13,7 +13,7 @@ var searchData=
   ['clamp',['clamp',['../group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4',1,'helios']]],
   ['cleargeometry',['clearGeometry',['../class_visualizer.html#a2ce92a62a3fc1dbfae4ffdc1fca3e703',1,'Visualizer']]],
   ['closewindow',['closeWindow',['../class_visualizer.html#a5e26e469e396ba9b802640fc02f461e8',1,'Visualizer']]],
-  ['colorcontextprimitivesbydata',['colorContextPrimitivesByData',['../class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234',1,'Visualizer::colorContextPrimitivesByData(const char *data_name)'],['../class_visualizer.html#ae8b2b21dee5bc06d1ebc4bc9ad0e2e5b',1,'Visualizer::colorContextPrimitivesByData(const char *data_name, const std::vector&lt; uint &gt; UUIDs)']]],
+  ['colorcontextprimitivesbydata',['colorContextPrimitivesByData',['../class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234',1,'Visualizer::colorContextPrimitivesByData(const char *data_name)'],['../class_visualizer.html#ac9b9fb0076f62a9a06542d876db34563',1,'Visualizer::colorContextPrimitivesByData(const char *data_name, const std::vector&lt; uint &gt; &amp;UUIDs)']]],
   ['context',['Context',['../classhelios_1_1_context.html#a5dd483a8c3183056682ebaa945acdc6d',1,'helios::Context']]],
   ['coordinaterotation',['coordinateRotation',['../class_li_d_a_rcloud.html#ab10da5ef855211e466a5d1c3ea87b600',1,'LiDARcloud::coordinateRotation(const helios::SphericalCoord rotation)'],['../class_li_d_a_rcloud.html#af3565c390a695b282627e9dbbd9c4b22',1,'LiDARcloud::coordinateRotation(const float rotation, const helios::vec3 line_base, const helios::vec3 line_direction)']]],
   ['coordinateshift',['coordinateShift',['../class_li_d_a_rcloud.html#a590e3ba6e7592d75e30d28a0260a1295',1,'LiDARcloud']]],

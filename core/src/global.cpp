@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -182,6 +181,18 @@ float helios::randu( void ){
 
   return float(rand()) / float(RAND_MAX + 1.); 
 
+}
+
+int helios::randu( int imin, int imax  ){
+
+  float ru = randu();
+
+  if( imin==imax || imin>imax ){
+    return imin;
+  }else{
+    return imin + round(float(imax-imin)*ru);
+  }
+    
 }
 
 float helios::acos_safe( float x ){

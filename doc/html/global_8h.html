@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.0.15</span>
+   &#160;<span id="projectnumber">v1.0.16</span>
    </div>
   </td>
  </tr>
@@ -238,6 +238,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
 <tr class="memitem:ga9e6645ace6ed01e2d414198b2a7d2e72"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga9e6645ace6ed01e2d414198b2a7d2e72">helios::randu</a> (void)</td></tr>
 <tr class="memdesc:ga9e6645ace6ed01e2d414198b2a7d2e72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Random number from a uniform distribution between 0 and 1.  <a href="group__functions.html#ga9e6645ace6ed01e2d414198b2a7d2e72">More...</a><br /></td></tr>
 <tr class="separator:ga9e6645ace6ed01e2d414198b2a7d2e72"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad8ccb7b3d22876e477b80d5c2bdb94c1"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gad8ccb7b3d22876e477b80d5c2bdb94c1">helios::randu</a> (int imin, int imax)</td></tr>
+<tr class="memdesc:gad8ccb7b3d22876e477b80d5c2bdb94c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Random integer from a uniform distribution between imin and imax.  <a href="group__functions.html#gad8ccb7b3d22876e477b80d5c2bdb94c1">More...</a><br /></td></tr>
+<tr class="separator:gad8ccb7b3d22876e477b80d5c2bdb94c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9f732ec5c2153020247c879034f81432"><td class="memItemLeft" align="right" valign="top"><a id="a9f732ec5c2153020247c879034f81432"></a>
 float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a9f732ec5c2153020247c879034f81432">helios::acos_safe</a> (float x)</td></tr>
 <tr class="memdesc:a9f732ec5c2153020247c879034f81432"><td class="mdescLeft">&#160;</td><td class="mdescRight">arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular acos() returns NaN <br /></td></tr>
@@ -267,7 +270,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Header file for all global function/object definitions. </p><dl class="section author"><dt>Author</dt><dd>Brian Bailey</dd></dl>
 <p>Copyright (C) 2018 Brian Bailey</p>
-<p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.</p>
+<p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. </p>
 
 <p class="definition">Definition in file <a class="el" href="global_8h_source.html">global.h</a>.</p>
@@ -308,7 +311,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
 <dl class="section return"><dt>Returns</dt><dd>int3, with int3::x = day, int3::y = month, int3::z = year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a7a889dd38f803c031f3e2ce6936b1cdc">JulianDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00921">921</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00932">932</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -338,7 +341,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
 <dl class="section return"><dt>Returns</dt><dd>SphericalCoord vector. </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a97e12cf9fda6bf8b65b3ccc17e788c12">sphere2cart()</a>, SphericalCoord </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00627">627</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00638">638</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -386,7 +389,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a35cf3fa6f900627c962472dd550e3d39">CalendarDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00965">965</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00976">976</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -414,7 +417,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01052">1052</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01063">1063</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -443,7 +446,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>2D mask, where false denotes no material </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01103">1103</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01114">1114</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -496,7 +499,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00123">123</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00122">122</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -526,7 +529,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
 <dl class="section return"><dt>Returns</dt><dd>vec3 vector of Cartesian coordinates </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a32a34b00e0a28f4b35e501b8b34cfccd">cart2sphere()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00643">643</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00654">654</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

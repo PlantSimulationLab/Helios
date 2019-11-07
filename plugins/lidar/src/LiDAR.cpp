@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -608,6 +607,21 @@ float LiDARcloud::getHitData( const uint index, const char* label ) const{
 
 }
 
+bool LiDARcloud::doesHitDataExist( const uint index, const char* label ) const{
+
+  if( index>=hits.size() ){
+    return false;
+  }
+
+  std::map<std::string, float> hit_data = hits.at(index).data;
+  if( hit_data.find(label) == hit_data.end() ){
+    return false;
+  }else{
+    return true;
+  }
+
+}
+
 RGBcolor LiDARcloud::getHitColor( const uint index ) const{
 
   if( index>=hits.size() ){
@@ -743,12 +757,14 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
     maxval = getGridCellCount()-1;
   }else if( strcmp(color_value,"")!=0 ){
     for( uint i=0; i<getHitCount(); i++ ){
-      float data = getHitData(i,color_value);
-      if( data<minval ){
-	minval = data;
-      }
-      if( data>maxval ){
-	maxval = data;
+      if( doesHitDataExist(i,color_value) ){
+	float data = getHitData(i,color_value);
+	if( data<minval ){
+	  minval = data;
+	}
+	if( data>maxval ){
+	  maxval = data;
+	}
       }
     }
   }
@@ -764,13 +780,18 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
     if( strcmp(color_value,"")==0 ){
       color = getHitColor(i);
     }else if( strcmp(color_value,"gridcell")==0 ){
-      color = cmap.query( getHitGridCell(i) );
       if( getHitGridCell(i)<0 ){
 	color = RGB::red;
+      }else{
+	color = cmap.query( getHitGridCell(i) );
       }
     }else{
-      float data = getHitData(i,color_value);
-      color = cmap.query( data );
+      if( !doesHitDataExist(i,color_value) ){
+	color = RGB::red;
+      }else{
+	float data = getHitData(i,color_value);
+	color = cmap.query( data );
+      }
     }
 
     vec3 center = getHitXYZ(i);
@@ -967,6 +988,10 @@ void LiDARcloud::addTrunkReconstructionToVisualizer( Visualizer* visualizer, con
 }
 
 std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context ) const{
+  return addLeafReconstructionToContext( context, helios::make_int2(1,1) );
+}
+
+std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context, const helios::int2 subpatches ) const{
 
   std::vector<uint> UUIDs;
 
@@ -979,10 +1004,11 @@ std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context )
     uint zone = reconstructed_alphamasks_gridcell.at(g);
 
     if( reconstructed_alphamasks_size.at(g).x>0 && reconstructed_alphamasks_size.at(g).y>0 ){
-      UUIDs.push_back( context->addPatch( reconstructed_alphamasks_center.at(g), reconstructed_alphamasks_size.at(g), reconstructed_alphamasks_rotation.at(g), reconstructed_alphamasks_maskfile.c_str() ) );
-      context->setPrimitiveData( UUIDs.back(), "gridCell", HELIOS_TYPE_UINT, 1, &zone );
+      std::vector<uint> UUIDs_tile = context->addTile( reconstructed_alphamasks_center.at(g), reconstructed_alphamasks_size.at(g), reconstructed_alphamasks_rotation.at(g), subpatches, reconstructed_alphamasks_maskfile.c_str() );
+      context->setPrimitiveData( UUIDs_tile, "gridCell", zone );
       uint flag = uint(reconstructed_alphamasks_direct_flag.at(g));
-      context->setPrimitiveData( UUIDs.back(), "directFlag", HELIOS_TYPE_UINT, 1, &flag);
+      context->setPrimitiveData( UUIDs_tile, "directFlag", flag);
+      UUIDs.insert( UUIDs.end(), UUIDs_tile.begin(), UUIDs_tile.end() );
     }
 
   }
@@ -1406,13 +1432,13 @@ uint LiDARcloud::getGridCellCount( void ) const{
   return grid_cells.size();
 }
 
-void LiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 size ){
-  addGridCell(center,center,size,0.f);
+void LiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 size, const float rotation ){
+  addGridCell(center,center,size,size,rotation,make_int3(1,1,1), make_int3(1,1,1));
 }
 
-void LiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const float rotation ){
+void LiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const helios::vec3 global_size, const float rotation, const helios::int3 global_ijk, const helios::int3 global_count ){
 
-  GridCell newcell( center, global_anchor, size, rotation );
+  GridCell newcell( center, global_anchor, size, global_size, rotation, global_ijk, global_count );
 
   grid_cells.push_back(newcell);
   

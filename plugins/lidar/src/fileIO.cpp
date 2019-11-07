@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -436,7 +435,7 @@ void LiDARcloud::loadXML( const char* filename ){
 	    cout << "Adding grid cell #" << count << " with center " << subcenter_rot.x+center.x << "," << subcenter_rot.y+center.y << "," << subcenter.z+center.z << " and size " << gsubsize.x << " x " << gsubsize.y << " x " << gsubsize.z << endl;
 	  }
 	    
-  	  addGridCell( subcenter+center, center, gsubsize, rotation*M_PI/180.f );
+  	  addGridCell( subcenter+center, center, gsubsize, gsize, rotation*M_PI/180.f, make_int3(i,j,k), make_int3(Nx,Ny,Nz) );
 
   	  count++;
 	  
@@ -995,7 +994,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
 	    cout << "Adding grid cell #" << count << " with center " << subcenter_rot.x+center.x << "," << subcenter_rot.y+center.y << "," << subcenter.z+center.z << " and size " << gsubsize.x << " x " << gsubsize.y << " x " << gsubsize.z << endl;
 	  }
 	    
-  	  addGridCell( subcenter+center, center, gsubsize, rotation*M_PI/180.f );
+  	  addGridCell( subcenter+center, center, gsubsize, gsize, rotation*M_PI/180.f, make_int3(i,j,k), make_int3(Nx,Ny,Nz) );
 
   	  count++;
 	  

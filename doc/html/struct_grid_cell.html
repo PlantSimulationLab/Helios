@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.0.15</span>
+   &#160;<span id="projectnumber">v1.0.16</span>
    </div>
   </td>
  </tr>
@@ -70,9 +70,9 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a055f5a3173d99aeeccf8a1ea28125102"><td class="memItemLeft" align="right" valign="top"><a id="a055f5a3173d99aeeccf8a1ea28125102"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>GridCell</b> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __center, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __global_anchor, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __size, float __azimuthal_rotation)</td></tr>
-<tr class="separator:a055f5a3173d99aeeccf8a1ea28125102"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae93a6dc42e53b59195ee846f2fa68a06"><td class="memItemLeft" align="right" valign="top"><a id="ae93a6dc42e53b59195ee846f2fa68a06"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>GridCell</b> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __center, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __global_anchor, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __size, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __global_size, float __azimuthal_rotation, <a class="el" href="structhelios_1_1int3.html">helios::int3</a> __global_ijk, <a class="el" href="structhelios_1_1int3.html">helios::int3</a> __global_count)</td></tr>
+<tr class="separator:ae93a6dc42e53b59195ee846f2fa68a06"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -85,6 +85,15 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a5b7191cc823fef97cb124b1713c244a8"><td class="memItemLeft" align="right" valign="top"><a id="a5b7191cc823fef97cb124b1713c244a8"></a>
 <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><b>size</b></td></tr>
 <tr class="separator:a5b7191cc823fef97cb124b1713c244a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d86ebef980547c72dedd03c67837427"><td class="memItemLeft" align="right" valign="top"><a id="a2d86ebef980547c72dedd03c67837427"></a>
+<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><b>global_size</b></td></tr>
+<tr class="separator:a2d86ebef980547c72dedd03c67837427"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a700c94f58e36d4abded86401373c11b1"><td class="memItemLeft" align="right" valign="top"><a id="a700c94f58e36d4abded86401373c11b1"></a>
+<a class="el" href="structhelios_1_1int3.html">helios::int3</a>&#160;</td><td class="memItemRight" valign="bottom"><b>global_ijk</b></td></tr>
+<tr class="separator:a700c94f58e36d4abded86401373c11b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d59b64325d139b6cce1efb39c75f327"><td class="memItemLeft" align="right" valign="top"><a id="a0d59b64325d139b6cce1efb39c75f327"></a>
+<a class="el" href="structhelios_1_1int3.html">helios::int3</a>&#160;</td><td class="memItemRight" valign="bottom"><b>global_count</b></td></tr>
+<tr class="separator:a0d59b64325d139b6cce1efb39c75f327"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa84d4202f19a779ae0638e4dd4196a7e"><td class="memItemLeft" align="right" valign="top"><a id="aa84d4202f19a779ae0638e4dd4196a7e"></a>
 float&#160;</td><td class="memItemRight" valign="bottom"><b>azimuthal_rotation</b></td></tr>
 <tr class="separator:aa84d4202f19a779ae0638e4dd4196a7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -94,10 +103,19 @@ float&#160;</td><td class="memItemRight" valign="bottom"><b>leaf_area</b></td></
 <tr class="memitem:ac637438a8fc2f2d4df29b33be2cc56de"><td class="memItemLeft" align="right" valign="top"><a id="ac637438a8fc2f2d4df29b33be2cc56de"></a>
 float&#160;</td><td class="memItemRight" valign="bottom"><b>Gtheta</b></td></tr>
 <tr class="separator:ac637438a8fc2f2d4df29b33be2cc56de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae4d5172d7ff2e3e9f6cdd07bee533c02"><td class="memItemLeft" align="right" valign="top"><a id="ae4d5172d7ff2e3e9f6cdd07bee533c02"></a>
+float&#160;</td><td class="memItemRight" valign="bottom"><b>ground_height</b></td></tr>
+<tr class="separator:ae4d5172d7ff2e3e9f6cdd07bee533c02"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a46d503ec367277ca956cd348f46fe0db"><td class="memItemLeft" align="right" valign="top"><a id="a46d503ec367277ca956cd348f46fe0db"></a>
+float&#160;</td><td class="memItemRight" valign="bottom"><b>vegetation_height</b></td></tr>
+<tr class="separator:a46d503ec367277ca956cd348f46fe0db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a34c5c6c51d1e33429c5ee16ba6bc836a"><td class="memItemLeft" align="right" valign="top"><a id="a34c5c6c51d1e33429c5ee16ba6bc836a"></a>
+float&#160;</td><td class="memItemRight" valign="bottom"><b>maximum_height</b></td></tr>
+<tr class="separator:a34c5c6c51d1e33429c5ee16ba6bc836a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00165">165</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00164">164</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>plugins/lidar/include/<a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a></li>
 </ul>

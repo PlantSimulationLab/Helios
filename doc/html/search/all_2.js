@@ -14,7 +14,7 @@ var searchData=
   ['clamp',['clamp',['../group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4',1,'helios']]],
   ['cleargeometry',['clearGeometry',['../class_visualizer.html#a2ce92a62a3fc1dbfae4ffdc1fca3e703',1,'Visualizer']]],
   ['closewindow',['closeWindow',['../class_visualizer.html#a5e26e469e396ba9b802640fc02f461e8',1,'Visualizer']]],
-  ['colorcontextprimitivesbydata',['colorContextPrimitivesByData',['../class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234',1,'Visualizer::colorContextPrimitivesByData(const char *data_name)'],['../class_visualizer.html#ae8b2b21dee5bc06d1ebc4bc9ad0e2e5b',1,'Visualizer::colorContextPrimitivesByData(const char *data_name, const std::vector&lt; uint &gt; UUIDs)']]],
+  ['colorcontextprimitivesbydata',['colorContextPrimitivesByData',['../class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234',1,'Visualizer::colorContextPrimitivesByData(const char *data_name)'],['../class_visualizer.html#ac9b9fb0076f62a9a06542d876db34563',1,'Visualizer::colorContextPrimitivesByData(const char *data_name, const std::vector&lt; uint &gt; &amp;UUIDs)']]],
   ['colormap',['Colormap',['../struct_colormap.html',1,'']]],
   ['colormap_5fcool',['COLORMAP_COOL',['../class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba65fd6eb9eefd4fbd10caa6ccceb689f5',1,'Visualizer']]],
   ['colormap_5fcustom',['COLORMAP_CUSTOM',['../class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7',1,'Visualizer']]],

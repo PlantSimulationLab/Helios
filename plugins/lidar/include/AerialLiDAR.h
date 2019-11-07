@@ -55,6 +55,16 @@ struct AerialScanMetadata{
 class AerialLiDARcloud{
  private:
 
+  //! Use RANSAC algorithm to separate a set of hit points into outliers and inliers based on proximity to a best-fit plane
+  /** \param[in] "maxIter" Maximum number of iterations to find best fit plane.
+      \param[in] "threshDist" Maximum distance from fitted plane to be considered an inlier.
+      \param[in] "inlierRatio" Minimum fraction of total points that must be inliers to consider the fitted plane valid.
+      \param[in] "hits" Vector of (x,y,z) positions for hit points.
+      \param[out] "inliers" Vector of flags denoting points as inliers or outliers (value=false means an outlier, value=true means an inlier).
+      \return Best fit plane to the set of inliers. The vec4 contains the four coefficients of the fitted plane equation Ax+By+Cz+D=0. (x=A, y=B, z=C, w=D)
+  */
+  helios::vec4 RANSAC( const int maxIter, const float threshDist, const float inlierRatio, const std::vector<helios::vec3>& hits, std::vector<bool>& inliers );
+
   std::vector<AerialScanMetadata> scans;
 
   std::vector<HitPoint> hits;
@@ -176,18 +186,24 @@ class AerialLiDARcloud{
   /** \param [in] "index" Hit number */
   helios::SphericalCoord getHitRaydir( const uint index ) const;
 
-  //! Set floating point data value associated with a hit point.
+  //! Get floating point data value associated with a hit point.
   /** \param[in] "index" Hit number.
       \param[in] "label" Label of the data value (e.g., "reflectance").
       \param[in] "value" Value of scalar data.
   */
   float getHitData( const uint index, const char* label ) const;
 
-  //! Get floating point data value associated with a hit point.
+  //! Set floating point data value associated with a hit point.
   /** \param[in] "index" Hit number.
       \param[in] "label" Label of the data value (e.g., "reflectance").
   */
   void setHitData( const uint index, const char* label, const float value );
+
+  //! Check if scalar data exists for a hit point
+  /** \param[in] "index" Hit number.
+      \param[in] "label" Label of the data value (e.g., "reflectance").
+  */
+  bool doesHitDataExist( const uint index, const char* label ) const;
   
   //! Get color of hit point
   /** \param[in] "index" Hit number */
@@ -280,22 +296,43 @@ ection
 
   // -------- GRID ----------- //
 
-  //! Get the number of cells in the grid
+  //! Get the total number of cells in the grid
   uint getGridCellCount() const;
 
-  //! Add a cell to the grid
-  /** \param [in] "center" (x,y,z) coordinate of grid center
-      \param [in] "size" size of the grid cell in the x,y,z directions
-  */
-  void addGridCell( const helios::vec3 center, const helios::vec3 size );
+  //! Get the index of the cell in the x-, y-, and z-directions within the global grid
+  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
+  helios::int3 getGlobalGridIndex( const uint index ) const;
+
+  //! Get the number of cells in the global grid in the x-, y-, and z-directions
+  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
+  helios::int3 getGlobalGridCount( const uint index ) const;
+
+  //! Get the size of the global grid in the x-, y-, and z-directions
+  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
+  helios::vec3 getGlobalGridExtent( const uint index ) const;
 
   //! Add a cell to the grid
   /** \param [in] "center" (x,y,z) coordinate of grid center
-      \param [in] "global_anchor" (x,y,z) coordinate of grid global anchor, i.e., this is the 'center' coordinate entered in the xml file.  If grid Nx=Ny=Nz=1, global_anchor=center
       \param [in] "size" size of the grid cell in the x,y,z directions
       \param [in] "rotation" rotation angle (in radians) of the grid cell about the z-axis
   */
-  void addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const float rotation );
+  void addGridCell( const helios::vec3 center, const helios::vec3 size, const float rotation );
+
+  //! Add a cell to the grid, where the cell is part of a larger global rectangular grid
+  /** \param [in] "center" (x,y,z) coordinate of grid center
+      \param [in] "global_anchor" (x,y,z) coordinate of grid global anchor, i.e., this is the 'center' coordinate entered in the xml file.  If grid Nx=Ny=Nz=1, global_anchor=center
+      \param [in] "size" size of the grid cell in the x,y,z directions
+      \param [in] "global_size" size of the global grid in the x,y,z directions
+      \param [in] "rotation" rotation angle (in radians) of the grid cell about the z-axis
+      \param [in] "global_ijk" index within the global grid in the x,y,z directions
+      \param [in] "global_count" total number of cells in global grid in the x,y,z directions
+  */
+  void addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const helios::vec3 global_size, const float rotation, const helios::int3 global_ijk, const helios::int3 global_count );
+
+  //! Get the global 1D index of a gridcell based on its (x,y,z) index in the global grid
+  /** \param[in] "global_ijk" Index of grid cell in (x,y,z) direction.
+   */
+  uint getCellGlobalIndex( const helios::int3 global_ijk );
 
   //! Get the (x,y,z) coordinate of a grid cell by its index
   /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
@@ -356,6 +393,55 @@ d the last cell's index is Ncells-1. */
   //! Calculate the leaf area for each grid volume
   /** \param [in] "minVoxelHits" Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than minVoxelHits, the calculated leaf area will be set to zero. */
   void calculateLeafAreaGPU( const float Gtheta, const int minVoxelHits );
+
+  // -------- HEIGHT MODEL -------- //
+  
+  //! Determine the ground and vegetation height for each x-y grid cell. Inputs to this function are parameters for applying the RANSAC algorithm.
+  /** \param[in] "maxIter" Maximum number of iterations to find best fit plane.
+      \param[in] "threshDist_ground" Maximum distance from fitted plane to be considered an inlier - for ground surface model.
+      \param[in] "inlierRatio_ground" Minimum fraction of total points that must be inliers to consider the fitted plane valid - for ground surface model.
+\param[in] "threshDist_vegetation" Maximum distance from fitted plane to be considered an inlier - for vegetation height model.
+      \param[in] "inlierRatio_vegetation" Minimum fraction of total points that must be inliers to consider the fitted plane valid - for vegetation height model.
+  */
+  void generateHeightModel( const int maxIter, const float threshDist_ground, const float inlierRatio_ground, const float threshDist_vegetation, const float inlierRatio_vegetation );
+
+  void alignGridToGround( void );
+
+  //! Set the height of the vegetation at the (x,y) location of this gridcell. 
+  /** \param[in] "height" Average height of vegetation measured from the ground in meters.
+      \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+  */
+  void setCellVegetationHeight( const float height, const uint index );
+
+  //! Get the height of the vegetation at the (x,y) location of this gridcell. 
+  /** \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+      \return Average height of vegetation measured from the ground in meters.
+  */
+  float getCellVegetationHeight( const uint index );
+
+  //! Set the height of the highest hit point at the (x,y) location of this gridcell. 
+  /** \param[in] "height" Maximum height of hit points at the (x,y) location of this gridcell.
+      \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+  */
+  void setCellMaximumHitHeight( const float height, const uint index );
+
+  //! Get the height of the highest hit point at the (x,y) location of this gridcell.
+  /** \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+      \return Average height of vegetation measured from the ground in meters.
+  */
+  float getCellMaximumHitHeight( const uint index );
+
+  //! Set the height of the ground at the (x,y) location of this gridcell. 
+  /** \param[in] "height" Height of the ground in meters (in the coordinate system of the point cloud).
+      \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+  */
+  void setCellGroundHeight( const float height, const uint index );
+
+  //! Get the height of the ground at the (x,y) location of this gridcell. 
+  /** \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+      \return Height of the ground in meters (in the coordinate system of the point cloud).
+  */
+  float getCellGroundHeight( const uint index );
   
 };
 

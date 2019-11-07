@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.0.15</span>
+   &#160;<span id="projectnumber">v1.0.16</span>
    </div>
   </td>
  </tr>
@@ -109,6 +109,9 @@ __device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b>d_rotate
 __host__ __device__ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_li_d_a_r_8cu.html#ade64e0788d1fbd6e4542b23131ebd60c">acos_safe</a> (float x)</td></tr>
 <tr class="memdesc:ade64e0788d1fbd6e4542b23131ebd60c"><td class="mdescLeft">&#160;</td><td class="mdescRight">arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular acos() returns NaN <br /></td></tr>
 <tr class="separator:ade64e0788d1fbd6e4542b23131ebd60c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad8ccb7b3d22876e477b80d5c2bdb94c1"><td class="memItemLeft" align="right" valign="top">__host__ int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gad8ccb7b3d22876e477b80d5c2bdb94c1">randu</a> (int imin, int imax)</td></tr>
+<tr class="memdesc:gad8ccb7b3d22876e477b80d5c2bdb94c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Random integer from a uniform distribution between imin and imax.  <a href="group__functions.html#gad8ccb7b3d22876e477b80d5c2bdb94c1">More...</a><br /></td></tr>
+<tr class="separator:gad8ccb7b3d22876e477b80d5c2bdb94c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a02eeed1813b15293980de76e8d28db14"><td class="memItemLeft" align="right" valign="top"><a id="a02eeed1813b15293980de76e8d28db14"></a>
 __global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>insideVolume</b> (const uint Nhits, const float3 *d_hit_xyz, const uint Ngridcells, const float3 *d_grid_size, const float3 *d_grid_center, const float3 *d_grid_anchor, const float *d_grid_rotation, int *d_hit_vol)</td></tr>
 <tr class="separator:a02eeed1813b15293980de76e8d28db14"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -140,7 +143,7 @@ __global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectT
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>CUDA-related LiDAR plug-in functions </p><dl class="section author"><dt>Author</dt><dd>Brian Bailey</dd></dl>
 <p>Copyright (C) 2018 Brian Bailey</p>
-<p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.</p>
+<p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. </p>
 
 <p class="definition">Definition in file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>

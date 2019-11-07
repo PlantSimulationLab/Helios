@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.0.15</span>
+   &#160;<span id="projectnumber">v1.0.16</span>
    </div>
   </td>
  </tr>
@@ -63,6 +63,9 @@ $(function() {
 &#160;
 
 <h3><a id="index_g"></a>- g -</h3><ul>
+<li>generateHeightModel()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#afc44503e2a6eb986fa79b5af56069468">AerialLiDARcloud</a>
+</li>
 <li>getAllUUIDs()
 : <a class="el" href="classhelios_1_1_context.html#a255b76955afa40ae9325f930eb28c984">helios::Context</a>
 , <a class="el" href="class_weber_penn_tree.html#a19e16f9a51493680afebc38f3c434400">WeberPennTree</a>
@@ -87,6 +90,12 @@ $(function() {
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#ab180b200230bc16c4edc335fc49f0c78">AerialLiDARcloud</a>
 , <a class="el" href="class_li_d_a_rcloud.html#ad774ea05eb72d786e401483a4f9c9d34">LiDARcloud</a>
 </li>
+<li>getCellGlobalIndex()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#a16f193012935917a2dfd822fb4a3618f">AerialLiDARcloud</a>
+</li>
+<li>getCellGroundHeight()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#afb3480d257dfefe24e0a5063b396869b">AerialLiDARcloud</a>
+</li>
 <li>getCellGtheta()
 : <a class="el" href="class_li_d_a_rcloud.html#a4002361272fc08c608c8ac4772d65168">LiDARcloud</a>
 </li>
@@ -98,6 +107,9 @@ $(function() {
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#a3ffb13abb7616bb779af6bd3688fc8bb">AerialLiDARcloud</a>
 , <a class="el" href="class_li_d_a_rcloud.html#adb05b0907f3bf4c7415085ab2011edf9">LiDARcloud</a>
 </li>
+<li>getCellMaximumHitHeight()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#ad332469fa66eff79f27462cc17520422">AerialLiDARcloud</a>
+</li>
 <li>getCellRotation()
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#aedcb9b90904c87fde6fe48c14d50b055">AerialLiDARcloud</a>
 , <a class="el" href="class_li_d_a_rcloud.html#a036bca337b5855d09a32f7a27a4790d4">LiDARcloud</a>
@@ -105,6 +117,9 @@ $(function() {
 <li>getCellSize()
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#a4dc9024ea0d41b24cc7b608f401cbfc1">AerialLiDARcloud</a>
 , <a class="el" href="class_li_d_a_rcloud.html#a79311110be2b8ebd9bd41638f4b3624d">LiDARcloud</a>
+</li>
+<li>getCellVegetationHeight()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#aa5254c0c5209147b1e2d0f5f0abf6317">AerialLiDARcloud</a>
 </li>
 <li>getCenter()
 : <a class="el" href="classhelios_1_1_patch.html#a49fb42f2fb1e9a5587467725eb9e8d0c">helios::Patch</a>
@@ -148,13 +163,22 @@ $(function() {
 : <a class="el" href="class_photosynthesis_model.html#ab2b6cf047dcab3b2e880b1f1f7d6b8a7">PhotosynthesisModel</a>
 </li>
 <li>getGlobalData()
-: <a class="el" href="classhelios_1_1_context.html#a972fa4a45b2775f6047d41b88dc69d03">helios::Context</a>
+: <a class="el" href="classhelios_1_1_context.html#a890583b0897bfcd730d137838fa7e155">helios::Context</a>
 </li>
 <li>getGlobalDataSize()
 : <a class="el" href="classhelios_1_1_context.html#ad58820f9cb6a406749e6f21f19b1959d">helios::Context</a>
 </li>
 <li>getGlobalDataType()
 : <a class="el" href="classhelios_1_1_context.html#aae71191b60c30a4f7fc46678769f6e7a">helios::Context</a>
+</li>
+<li>getGlobalGridCount()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#a77f2c5a8f0802382c6316f0091ab88ec">AerialLiDARcloud</a>
+</li>
+<li>getGlobalGridExtent()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#a591be5bdc8dc1964355dc09e19be9895">AerialLiDARcloud</a>
+</li>
+<li>getGlobalGridIndex()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#a932c08f2750c34722dd6140bb140ad82">AerialLiDARcloud</a>
 </li>
 <li>getGridBoundingBox()
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#ac8b8b37729e0f2b4caf6c9400400a6cd">AerialLiDARcloud</a>
@@ -224,8 +248,8 @@ $(function() {
 : <a class="el" href="group__primitives.html#gaf61c469d9b9eaae68fbef8b3d2b7ef78">helios::Context</a>
 </li>
 <li>getPrimitiveData()
-: <a class="el" href="classhelios_1_1_context.html#ac824d3600f781572f69d90d779a8ab58">helios::Context</a>
-, <a class="el" href="classhelios_1_1_primitive.html#a2de33a53e890fae4d1571c6b4b7f9835">helios::Primitive</a>
+: <a class="el" href="classhelios_1_1_context.html#a3db86ed9beff495d1cdf95c202311dd5">helios::Context</a>
+, <a class="el" href="classhelios_1_1_primitive.html#a96c2322a6b1f0808b02e68a471f56ea8">helios::Primitive</a>
 </li>
 <li>getPrimitiveDataSize()
 : <a class="el" href="classhelios_1_1_context.html#a7b8a8bb7691aaee72e30f98e15bff7ca">helios::Context</a>
@@ -271,6 +295,7 @@ $(function() {
 </li>
 <li>getSize()
 : <a class="el" href="classhelios_1_1_patch.html#aa0c937c9a01cb1240b64b559926d6a20">helios::Patch</a>
+, <a class="el" href="classhelios_1_1_texture.html#a482187538266814c773b121bd967137c">helios::Texture</a>
 , <a class="el" href="classhelios_1_1_voxel.html#ac4814476c2ff5245ac681b4feb6c53e6">helios::Voxel</a>
 </li>
 <li>getSkyEnergy()
@@ -278,6 +303,9 @@ $(function() {
 </li>
 <li>getSolarFlux()
 : <a class="el" href="class_solar_position.html#a9554c28073bba07add08b1f0e034490f">SolarPosition</a>
+</li>
+<li>getSolidFraction()
+: <a class="el" href="classhelios_1_1_texture.html#a9c2323a7695784864768dc93f39e8440">helios::Texture</a>
 </li>
 <li>getSunAzimuth()
 : <a class="el" href="class_solar_position.html#aef04bff9d7cb8d05bdd672f403ce8e1f">SolarPosition</a>
@@ -305,6 +333,7 @@ $(function() {
 </li>
 <li>getTextureFile()
 : <a class="el" href="classhelios_1_1_primitive.html#a6a082e3b08e374cb38145cb7ea863e2b">helios::Primitive</a>
+, <a class="el" href="classhelios_1_1_texture.html#ad041dd6bd2c5fb5da1d93a02a6935e93">helios::Texture</a>
 </li>
 <li>getTextureUV()
 : <a class="el" href="classhelios_1_1_primitive.html#a170665146a2c97b97de42d81cbb9115a">helios::Primitive</a>
@@ -320,6 +349,9 @@ $(function() {
 </li>
 <li>getTransformationMatrix()
 : <a class="el" href="classhelios_1_1_primitive.html#ac2f1ded5ace6e33830a5dc2bdf4e554c">helios::Primitive</a>
+</li>
+<li>getTransparencyData()
+: <a class="el" href="classhelios_1_1_texture.html#ae25a8184dcc02b357e6045fc5d0408f2">helios::Texture</a>
 </li>
 <li>getTreeParameters()
 : <a class="el" href="class_weber_penn_tree.html#aac5619ac480517f8f01cb465d0dc4a6f">WeberPennTree</a>

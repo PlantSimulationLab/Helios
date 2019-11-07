@@ -136,7 +136,7 @@ for i in "${SAMPLES[@]}";do
     ./${i} &> /dev/null
 
     if (( $? == 0 ));then
-	echo -e "\r\e[32mRunning sample ${i}...done.\e[39m"
+	echo -e "\r\e[32mRunning sample ${i}...passed.\e[39m"
     else
 	echo -e "\r\e[31mRunning sample ${i}...failed.\e[39m"
 	ERROR_CASE=1

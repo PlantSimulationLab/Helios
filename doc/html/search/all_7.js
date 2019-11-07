@@ -1,6 +1,7 @@
 var searchData=
 [
   ['hastexture',['hasTexture',['../classhelios_1_1_primitive.html#a779603c54cb46b81ea7cc63bb70be17e',1,'helios::Primitive']]],
+  ['hastransparencychannel',['hasTransparencyChannel',['../classhelios_1_1_texture.html#a6eeb7ad5d7994e8a93355aa09278da9b',1,'helios::Texture']]],
   ['helios_5ftype_5fdouble',['HELIOS_TYPE_DOUBLE',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a520daf05a1b3086aabd6cbe6a712c1c3',1,'helios']]],
   ['helios_5ftype_5ffloat',['HELIOS_TYPE_FLOAT',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0',1,'helios']]],
   ['helios_5ftype_5fint',['HELIOS_TYPE_INT',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a7a7039490fc92b5d76ca18b70563ed52',1,'helios']]],
@@ -18,5 +19,5 @@ var searchData=
   ['hitpoint',['HitPoint',['../struct_hit_point.html',1,'']]],
   ['hittable',['HitTable',['../class_hit_table.html',1,'']]],
   ['hour',['hour',['../structhelios_1_1_time.html#a6ec639cf61cf283c5e999d152d27839f',1,'helios::Time']]],
-  ['helios_20documentation_20v1_2e0_2e15',['Helios Documentation v1.0.15',['../index.html',1,'']]]
+  ['helios_20documentation_20v1_2e0_2e16',['Helios Documentation v1.0.16',['../index.html',1,'']]]
 ];

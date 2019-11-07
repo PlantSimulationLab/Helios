@@ -38,7 +38,7 @@
       <td>Unknown</td>
     </tr>
  </table>
-
+ 
  \section VisIssues Known Issues
 
  - The visualizer does not work well for visualizing very large point clouds, as it will be very slow to respond.
@@ -586,7 +586,38 @@
 
   \image html CameraSchematic.jpeg
 
-  
+  \section VisAcklowledgements Acknowledgements
+
+ This plug-in uses all or parts of the following open-sourced software libraries:
+
+ The OpenGL Extension Wrangler Library:
+ Copyright (C) 2008-2016, Nigel Stewart <nigels[]users sourceforge net>
+ Copyright (C) 2002-2008, Milan Ikits <milan ikits[]ieee org>
+ Copyright (C) 2002-2008, Marcelo E. Magallon <mmagallo[]debian org>
+ Copyright (C) 2002, Lev Povalahev
+ All rights reserved.
+ 
+ The FreeType Project:
+ Portions of this software are copyright © 2019 The FreeType
+ Project (www.freetype.org).  All rights reserved.
+
+ GLFW:
+ Copyright © 2002-2006 Marcus Geelnard
+ Copyright © 2006-2019 Camilla Löwy
+
+ OpenGL Mathematics (GLM):
+ Copyright (c) 2005 - 2014 G-Truc Creation
+
+ libjpeg:
+ This software is copyright (C) 1991-2016, Thomas G. Lane, Guido Vollbeding.
+ All Rights Reserved except as specified below.
+
+ libpng:
+ Copyright (c) 1995-2019 The PNG Reference Library Authors.
+ Copyright (c) 2018-2019 Cosmin Truta.
+ Copyright (c) 2000-2002, 2004, 2006-2018 Glenn Randers-Pehrson.
+ Copyright (c) 1996-1997 Andreas Dilger.
+ Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
 
   
 

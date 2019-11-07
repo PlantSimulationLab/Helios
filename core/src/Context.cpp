@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -1047,6 +1046,14 @@ std::string Primitive::getTextureFile() const{
 
 std::vector<vec2> Primitive::getTextureUV( void ){
   return uv;
+}
+
+void Primitive::overrideTextureColor( void ){
+  texturecoloroverridden = true;
+}
+
+bool Primitive::isTextureColorOverridden( void ) const{
+  return texturecoloroverridden;
 }
 
 void Primitive::scale( const vec3 S ){
@@ -3043,6 +3050,7 @@ Patch::Patch( const RGBAcolor _color_, const uint _UUID_ ){
   prim_type = PRIMITIVE_TYPE_PATCH;
   solid_fraction = 1.f;
   texture = 0;
+  texturecoloroverridden = false;
 
 }
 
@@ -3054,6 +3062,7 @@ Patch::Patch( Texture* _texture_, const uint _UUID_ ){
   prim_type = PRIMITIVE_TYPE_PATCH;
   texture = _texture_;
   solid_fraction = texture->getSolidFraction();
+  texturecoloroverridden = false;
   
 }
 
@@ -3067,6 +3076,7 @@ Patch::Patch( Texture* _texture_, const std::vector<vec2> _uv_, const float _sol
   texture = _texture_;
   uv = _uv_;
   solid_fraction = _solid_fraction_;
+  texturecoloroverridden = false;
 
 }
 
@@ -3089,6 +3099,7 @@ Triangle::Triangle(  const vec3 vertex0, const vec3 vertex1, const vec3 vertex2,
   prim_type = PRIMITIVE_TYPE_TRIANGLE;
   texture = 0;
   solid_fraction = 1.f;
+  texturecoloroverridden = false;
 
 }
 
@@ -3102,6 +3113,7 @@ Triangle::Triangle( const vec3 vertex0, const vec3 vertex1, const vec3 vertex2, 
   texture = _texture_;
   uv = _uv_;
   solid_fraction = _solid_fraction_;
+  texturecoloroverridden = false;
 
 }
 
@@ -3136,6 +3148,8 @@ Voxel::Voxel( const RGBAcolor _color_, const uint _UUID_ ){
   UUID = _UUID_;
   prim_type = PRIMITIVE_TYPE_VOXEL;
   texture = 0;
+  texturecoloroverridden = false;
+  
 }
 
 float Voxel::getVolume(void){
@@ -3944,11 +3958,44 @@ void Context::getDomainBoundingBox( vec2& xbounds, vec2& ybounds, vec2& zbounds 
 
   for( std::map<uint,Primitive*>::const_iterator iter = primitives.begin(); iter != primitives.end(); ++iter ){
 
-    uint p = iter->first;
+    std::vector<vec3> verts = getPrimitivePointer(iter->first)->getVertices();
+    
+    for( int j=0; j<verts.size(); j++ ){
+      if( verts[j].x<xbounds.x ){
+	xbounds.x = verts[j].x;
+      }else if( verts[j].x>xbounds.y ){
+	xbounds.y = verts[j].x;
+      }
+      if( verts[j].y<ybounds.x ){
+	ybounds.x = verts[j].y;
+      }else if( verts[j].y>ybounds.y ){
+	ybounds.y = verts[j].y;
+      }
+      if( verts[j].z<zbounds.x ){
+	zbounds.x = verts[j].z;
+      }else if( verts[j].z>zbounds.y ){
+	zbounds.y = verts[j].z;
+      }
+    }
 
-    Primitive* P = getPrimitivePointer(p);
+  }
 
-    std::vector<vec3> verts = P->getVertices();
+  return;
+
+}
+
+void Context::getDomainBoundingBox( const std::vector<uint>& UUIDs, vec2& xbounds, vec2& ybounds, vec2& zbounds ) const{
+
+  xbounds.x = 1e8;
+  xbounds.y = -1e8;
+  ybounds.x = 1e8;
+  ybounds.y = -1e8;
+  zbounds.x = 1e8;
+  zbounds.y = -1e8;
+
+  for( int p=0; p<UUIDs.size(); p++ ){
+
+    std::vector<vec3> verts = getPrimitivePointer(p)->getVertices();
     
     for( int j=0; j<verts.size(); j++ ){
       if( verts[j].x<xbounds.x ){
@@ -3978,6 +4025,20 @@ void Context::getDomainBoundingSphere( vec3& center, float& radius ) const{
 
   vec2 xbounds, ybounds, zbounds;
   getDomainBoundingBox( xbounds, ybounds, zbounds );
+
+  center.x = xbounds.x+0.5f*(xbounds.y - xbounds.x);
+  center.y = ybounds.x+0.5f*(ybounds.y - ybounds.x);
+  center.z = zbounds.x+0.5f*(zbounds.y - zbounds.x);
+
+  radius = 0.5f*sqrtf( pow(xbounds.y-xbounds.x,2) + pow(ybounds.y-ybounds.x,2) + pow((zbounds.y-zbounds.x),2) );
+
+
+}
+
+void Context::getDomainBoundingSphere( const std::vector<uint>& UUIDs, vec3& center, float& radius ) const{
+
+  vec2 xbounds, ybounds, zbounds;
+  getDomainBoundingBox( UUIDs, xbounds, ybounds, zbounds );
 
   center.x = xbounds.x+0.5f*(xbounds.y - xbounds.x);
   center.y = ybounds.x+0.5f*(ybounds.y - ybounds.x);

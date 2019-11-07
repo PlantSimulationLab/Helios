@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -59,16 +58,19 @@ int AerialLiDARcloud::selfTest(void){
 
   float L = 0.05;
 
+  bool flag;
+  float LAD_exact;
+
   for( int k=0; k<Nleaves.z; k++ ){
     for( int j=0; j<Nleaves.y; j++ ){
       for( int i=0; i<Nleaves.x; i++ ){
 
-	vec3 x( context_1.randu()*boxsize.x, context_1.randu()*boxsize.y, context_1.randu()*boxsize.z );
+  	vec3 x( context_1.randu()*boxsize.x, context_1.randu()*boxsize.y, context_1.randu()*boxsize.z );
 
-	float theta = acos(1.f-context_1.randu());
-	float phi = context_1.randu()*2.f*M_PI;
+  	float theta = acos(1.f-context_1.randu());
+  	float phi = context_1.randu()*2.f*M_PI;
 
-	context_1.addPatch( x, make_vec2(L,L), make_SphericalCoord(theta,phi) );
+  	context_1.addPatch( x, make_vec2(L,L), make_SphericalCoord(theta,phi) );
 	
       }
     }
@@ -76,7 +78,7 @@ int AerialLiDARcloud::selfTest(void){
 
   context_1.addPatch( make_vec3(0.5*boxsize.x,0.5*boxsize.y,-0.001), make_vec2( boxsize.x, boxsize.y ) );
 
-  float LAD_exact = float(Nleaves.x*Nleaves.y*Nleaves.z)*L*L/(boxsize.x*boxsize.y*boxsize.z);
+  LAD_exact = float(Nleaves.x*Nleaves.y*Nleaves.z)*L*L/(boxsize.x*boxsize.y*boxsize.z);
 
   AerialLiDARcloud lidar_1;
   lidar_1.disableMessages();
@@ -85,7 +87,7 @@ int AerialLiDARcloud::selfTest(void){
 
   lidar_1.calculateLeafAreaGPU( 0.5, 10 );
 
-  bool flag = true;
+  flag = true;
   for( int v=0; v<4; v++ ){
 
     float LAD = lidar_1.getCellLeafAreaDensity(v);
@@ -125,12 +127,12 @@ int AerialLiDARcloud::selfTest(void){
     for( int j=0; j<Nleaves.y; j++ ){
       for( int i=0; i<Nleaves.x; i++ ){
 
-	vec3 x( context_2.randu()*boxsize.x, context_2.randu()*boxsize.y, context_2.randu()*boxsize.z );
+  	vec3 x( context_2.randu()*boxsize.x, context_2.randu()*boxsize.y, context_2.randu()*boxsize.z );
 
-	float theta = acos(1.f-context_2.randu());
-	float phi = context_2.randu()*2.f*M_PI;
+  	float theta = acos(1.f-context_2.randu());
+  	float phi = context_2.randu()*2.f*M_PI;
 
-	context_2.addPatch( x, make_vec2(L,L), make_SphericalCoord(theta,phi) );
+  	context_2.addPatch( x, make_vec2(L,L), make_SphericalCoord(theta,phi) );
 	
       }
     }
@@ -156,6 +158,93 @@ int AerialLiDARcloud::selfTest(void){
       flag = false;
     }
 
+  }
+
+  if( flag ){
+    std::cout << "passed." << std::endl;
+  }else{
+    std::cout << "failed." << std::endl;
+    fail_count ++;
+  }
+
+  //------- sparse vegatation ground and canopy height estimation -------//
+
+  std::cout << "Running aerial LiDAR ground and canopy height test..." << std::flush;
+
+  Context context_3;
+
+  Nleaves = make_int3(25,25,35);
+
+  for( int k=0; k<Nleaves.z; k++ ){
+    for( int j=0; j<Nleaves.y; j++ ){
+      for( int i=0; i<Nleaves.x; i++ ){
+
+	vec3 x( context_3.randu()*boxsize.x, context_3.randu()*boxsize.y, context_3.randu()*boxsize.z );
+
+	float theta = acos(1.f-context_3.randu());
+	float phi = context_3.randu()*2.f*M_PI;
+
+	context_3.addPatch( x, make_vec2(L,L), make_SphericalCoord(theta,phi) );
+	
+      }
+    }
+  }
+
+  float zground = 0.2;
+
+  context_3.addPatch( make_vec3(0.5*boxsize.x,0.5*boxsize.y,zground), make_vec2( boxsize.x, boxsize.y ) );
+
+  AerialLiDARcloud lidar_3;
+  lidar_3.disableMessages();
+
+  lidar_3.syntheticScan( &context_3, "plugins/lidar/xml/synthetic_aerial_test.xml" );
+
+  for( int r=0; r<lidar_3.getHitCount(); r++ ){
+
+    lidar_3.setHitData( r, "target_index", 1 );
+    lidar_3.setHitData( r, "target_count", 1 ); 
+        
+  }
+  
+  lidar_3.generateHeightModel( 100, 0.5, 0.1, 0.5, 0.1 );
+
+  flag = true;
+  for( int v=0; v<8; v++ ){
+
+    float zg = lidar_3.getCellGroundHeight(v);
+
+    if( fabs(zg-zground)/fabs(zground) > 1.5*err_tol ){
+      flag = false;
+    }
+
+  }
+
+  for( int r=0; r<lidar_3.getHitCount(); r++ ){
+
+    vec3 xyz = lidar_3.getHitXYZ(r);
+
+    if( fabs(xyz.z-zground)>9 ){
+      lidar_3.setHitData( r, "target_index", 1 );
+    }else{
+      lidar_3.setHitData( r, "target_index", 2 );
+    }
+    lidar_3.setHitData( r, "target_count", 2 ); 
+    
+  }
+
+  lidar_3.generateHeightModel( 400, 0.5, 0.1, 1.0, 0.2 );
+
+  for( int v=0; v<8; v++ ){
+
+    float zc = lidar_3.getCellVegetationHeight(v);
+    float zm = lidar_3.getCellMaximumHitHeight(v);
+
+    if( fabs(zc-(boxsize.z-0.5))/fabs(boxsize.z-0.5) > 1.5*err_tol ){
+      flag = false;
+    }else if( fabs(zm-boxsize.z)/fabs(boxsize.z) > err_tol ){
+      flag = false;
+    }
+      
   }
 
   if( flag ){
@@ -354,6 +443,21 @@ void AerialLiDARcloud::setHitData( const uint index, const char* label, const fl
   
 }
 
+bool AerialLiDARcloud::doesHitDataExist( const uint index, const char* label ) const{
+
+  if( index>=hits.size() ){
+    return false;
+  }
+
+  std::map<std::string, float> hit_data = hits.at(index).data;
+  if( hit_data.find(label) == hit_data.end() ){
+    return false;
+  }else{
+    return true;
+  }
+
+}
+
 RGBcolor AerialLiDARcloud::getHitColor( const uint index ) const{
 
   if( index>=hits.size() ){
@@ -436,12 +540,14 @@ void AerialLiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint p
     maxval = getGridCellCount()-1;
   }else if( strcmp(color_value,"")!=0 ){
     for( uint i=0; i<getHitCount(); i++ ){
-      float data = getHitData(i,color_value);
-      if( data<minval ){
-	minval = data;
-      }
-      if( data>maxval ){
-	maxval = data;
+      if( doesHitDataExist(i,color_value) ){
+	float data = getHitData(i,color_value);
+	if( data<minval ){
+	  minval = data;
+	}
+	if( data>maxval ){
+	  maxval = data;
+	}
       }
     }
   }
@@ -457,10 +563,18 @@ void AerialLiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint p
     if( strcmp(color_value,"")==0 ){
       color = getHitColor(i);
     }else if( strcmp(color_value,"gridcell")==0 ){
-      color = cmap.query( getHitGridCell(i) );
+      if( getHitGridCell(i)<0 ){
+	color = RGB::red;
+      }else{
+	color = cmap.query( getHitGridCell(i) );
+      }
     }else{
-      float data = getHitData(i,color_value);
-      color = cmap.query( data );
+      if( !doesHitDataExist(i,color_value) ){
+	color = RGB::red;
+      }else{
+	float data = getHitData(i,color_value);
+	color = cmap.query( data );
+      }
     }
 
     vec3 center = getHitXYZ(i);
@@ -664,22 +778,76 @@ uint AerialLiDARcloud::getGridCellCount( void ) const{
   return grid_cells.size();
 }
 
-void AerialLiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 size ){
-  addGridCell(center,center,size,0.f);
+helios::int3 AerialLiDARcloud::getGlobalGridIndex( const uint index ) const{
+
+  if( index>=getGridCellCount() ){
+    cout << "ERROR (getGlobalGridIndex): grid cell index out of range.  Requested center of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    exit(EXIT_FAILURE);
+  }
+  
+  return grid_cells.at(index).global_ijk;
 }
 
-void AerialLiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const float rotation ){
+helios::int3 AerialLiDARcloud::getGlobalGridCount( const uint index ) const{
 
-  GridCell newcell( center, global_anchor, size, rotation );
+  if( index>=getGridCellCount() ){
+    cout << "ERROR (getGlobalGridCount): grid cell index out of range.  Requested center of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    exit(EXIT_FAILURE);
+  }
+  
+  return grid_cells.at(index).global_count;
+}
+
+helios::vec3 AerialLiDARcloud::getGlobalGridExtent( const uint index ) const{
+
+  if( index>=getGridCellCount() ){
+    cout << "ERROR (getGlobalGridExtent): grid cell index out of range.  Requested center of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    exit(EXIT_FAILURE);
+  }
+  
+  return grid_cells.at(index).global_size;
+
+}
+
+void AerialLiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 size, const float rotation ){
+  addGridCell(center,size,rotation);
+}
+
+void AerialLiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const helios::vec3 global_size, const float rotation, const helios::int3 global_ijk, const helios::int3 global_count  ){
+
+  GridCell newcell( center, global_anchor, size, global_size, rotation, global_ijk, global_count );
 
   grid_cells.push_back(newcell);
+  
+}
+
+uint AerialLiDARcloud::getCellGlobalIndex( const helios::int3 global_ijk ){
+
+  if( getGridCellCount()==0 ){
+    std::cerr << "ERROR (getCellGlobalIndex): There are no grid cells currently added to the aerial lidar cloud." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  helios::int3 global_count = getGlobalGridCount(0);
+
+  int index = global_ijk.x+global_ijk.y*global_count.x+global_ijk.z*global_count.x*global_count.y;
+
+  if( index<0 || index>=getGridCellCount() ){
+    std::cerr << "ERROR (getCellGlobalIndex): Grid cell at position (" << global_ijk.x << "," << global_ijk.y << "," << global_ijk.z << ") is out of range." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  //helios::int3 global_ijk_check = getGlobalGridIndex(index);
+  //assert( global_ijk.x==global_ijk_check.x && global_ijk.y==global_ijk_check.y && global_ijk.z==global_ijk_check.z );
+
+  return uint(index);
   
 }
 
 helios::vec3 AerialLiDARcloud::getCellCenter( const uint index ) const{
 
   if( index>=getGridCellCount() ){
-    cout << "ERROR (getCellCenter): grid cell index out of range.  Requested center of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    cerr << "ERROR (getCellCenter): grid cell index out of range.  Requested center of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -690,7 +858,7 @@ helios::vec3 AerialLiDARcloud::getCellCenter( const uint index ) const{
 void AerialLiDARcloud::setCellCenter( const uint index, const helios::vec3 center ){
 
   if( index>=getGridCellCount() ){
-    cout << "ERROR (setCellCenter): grid cell index out of range.  Requested to set center of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    cerr << "ERROR (setCellCenter): grid cell index out of range.  Requested to set center of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -701,7 +869,7 @@ void AerialLiDARcloud::setCellCenter( const uint index, const helios::vec3 cente
 helios::vec3 AerialLiDARcloud::getCellGlobalAnchor( const uint index ) const{
 
   if( index>=getGridCellCount() ){
-    cout << "ERROR (getCellGlobalAnchor): grid cell index out of range.  Requested anchor of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    cerr << "ERROR (getCellGlobalAnchor): grid cell index out of range.  Requested anchor of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -712,7 +880,7 @@ helios::vec3 AerialLiDARcloud::getCellGlobalAnchor( const uint index ) const{
 helios::vec3 AerialLiDARcloud::getCellSize( const uint index ) const{
 
   if( index>=getGridCellCount() ){
-    cout << "ERROR (getCellCenter): grid cell index out of range.  Requested size of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    cerr << "ERROR (getCellCenter): grid cell index out of range.  Requested size of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -723,7 +891,7 @@ helios::vec3 AerialLiDARcloud::getCellSize( const uint index ) const{
 float AerialLiDARcloud::getCellRotation( const uint index ) const{
 
   if( index>=getGridCellCount() ){
-    cout << "ERROR (getCellRotation): grid cell index out of range.  Requested rotation of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    cerr << "ERROR (getCellRotation): grid cell index out of range.  Requested rotation of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -734,7 +902,7 @@ float AerialLiDARcloud::getCellRotation( const uint index ) const{
 void AerialLiDARcloud::setCellLeafArea( const float area, const uint index ){
 
   if( index>getGridCellCount() ){
-    cout << "ERROR (setCellLeafArea): grid cell index out of range." << endl;
+    cerr << "ERROR (setCellLeafArea): grid cell index out of range." << endl;
   }
 
   grid_cells.at(index).leaf_area = area;
@@ -744,7 +912,7 @@ void AerialLiDARcloud::setCellLeafArea( const float area, const uint index ){
 float AerialLiDARcloud::getCellLeafArea( const uint index ) const{
 
   if( index>=getGridCellCount() ){
-    cout << "ERROR (getCellLeafArea): grid cell index out of range. Requested leaf area of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    cerr << "ERROR (getCellLeafArea): grid cell index out of range. Requested leaf area of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -755,11 +923,77 @@ float AerialLiDARcloud::getCellLeafArea( const uint index ) const{
 float AerialLiDARcloud::getCellLeafAreaDensity( const uint index ) const{
 
   if( index>=getGridCellCount() ){
-    cout << "ERROR (getCellLeafAreaDensity): grid cell index out of range. Requested leaf area density of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
+    cerr << "ERROR (getCellLeafAreaDensity): grid cell index out of range. Requested leaf area density of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
     exit(EXIT_FAILURE);
   }
 
   helios::vec3 gridsize = grid_cells.at(index).size;
   return grid_cells.at(index).leaf_area/(gridsize.x*gridsize.y*gridsize.z);
 
+}
+
+void AerialLiDARcloud::setCellVegetationHeight( const float height, const uint index ){
+
+  if( index>=getGridCellCount() ){
+    cerr << "ERROR (setCellVegetationHeight): grid cell index out of range." << endl;
+    exit(EXIT_FAILURE);
+  }
+  
+  grid_cells.at(index).vegetation_height = height;
+  
+}
+
+float AerialLiDARcloud::getCellVegetationHeight( const uint index ){
+
+  if( index>=getGridCellCount() ){
+    cerr << "ERROR (getCellVegetationHeight): grid cell index out of range." << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  return grid_cells.at(index).vegetation_height;
+  
+}
+
+void AerialLiDARcloud::setCellMaximumHitHeight( const float height, const uint index ){
+
+  if( index>=getGridCellCount() ){
+    cerr << "ERROR (setCellMaximumHitHeight): grid cell index out of range." << endl;
+    exit(EXIT_FAILURE);
+  }
+  
+  grid_cells.at(index).maximum_height = height;
+  
+}
+
+float AerialLiDARcloud::getCellMaximumHitHeight( const uint index ){
+
+  if( index>=getGridCellCount() ){
+    cerr << "ERROR (getCellMaximumHitHeight): grid cell index out of range." << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  return grid_cells.at(index).maximum_height;
+  
+}
+
+void AerialLiDARcloud::setCellGroundHeight( const float height, const uint index ){
+
+  if( index>=getGridCellCount() ){
+    cerr << "ERROR (setCellGroundHeight): grid cell index out of range." << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  grid_cells.at(index).ground_height = height;
+  
+}
+
+float AerialLiDARcloud::getCellGroundHeight( const uint index ){
+
+  if( index>=getGridCellCount() ){
+    cerr << "ERROR (getCellGroundHeight): grid cell index out of range." << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  return grid_cells.at(index).ground_height;
+  
 }

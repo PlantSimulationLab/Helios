@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -76,14 +75,19 @@ namespace helios {
     */
     Texture( const char* texture_file );
 
+    //! Get the name/path of the texture map file
     std::string getTextureFile( void ) const;
 
+    //! Get the size of the texture in pixels (horizontal x vertical)
     helios::int2 getSize( void ) const;
-
+    
+    //! Check whether the texture has a transparency channel
     bool hasTransparencyChannel( void ) const;
 
+    //! Get the data in the texture transparency channel (if it exists)
     std::vector<std::vector<bool> >* getTransparencyData( void );
 
+    //! Get the solid fraction of the texture transparency channel (if it exists)
     float getSolidFraction( void ) const;
     
   private:
@@ -183,6 +187,12 @@ namespace helios {
 	\return 2D vector of u-v texture coordinates
     */
     std::vector<vec2> getTextureUV( void );
+
+    //! Override the color in the texture map, in which case the primitive will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
+    void overrideTextureColor( void );
+
+    //! Check if color of texture map is overridden by the diffuse R-G-B color of the primitive
+    bool isTextureColorOverridden( void ) const;
 
     //! Function to translate/shift a Primitive
     /** \param[in] "shift" Distance to translate in (x,y,z) directions.
@@ -486,6 +496,8 @@ namespace helios {
     std::map<std::string, std::vector<int4> > primitive_data_int4;
     std::map<std::string, std::vector<std::string> > primitive_data_string;
     std::map<std::string, std::vector<bool> > primitive_data_bool;
+
+    bool texturecoloroverridden;
     
   };
 
@@ -1954,11 +1966,33 @@ public:
   uint getTimeseriesLength( const char* label ) const;
 
   //! Get a box that bounds all primitives in the domain
+  /** \param[out] "xbounds" Domain bounds in x-direction (xbounds.x=min bound, xbounds.y=max bound)
+      \param[out] "ybounds" Domain bounds in x-direction (ybounds.x=min bound, ybounds.y=max bound)
+      \param[out] "zbounds" Domain bounds in x-direction (zbounds.x=min bound, zbounds.y=max bound)
+  */
   void getDomainBoundingBox( helios::vec2& xbounds, helios::vec2& ybounds, helios::vec2& zbounds ) const;
 
+  //! Get a box that bounds a subset of primitives
+  /** \param[in] "UUIDs" Subset of primitive UUIDs for bounding box calculation.
+      \param[out] "xbounds" Domain bounds in x-direction (xbounds.x=min bound, xbounds.y=max bound)
+      \param[out] "ybounds" Domain bounds in x-direction (ybounds.x=min bound, ybounds.y=max bound)
+      \param[out] "zbounds" Domain bounds in x-direction (zbounds.x=min bound, zbounds.y=max bound)
+  */
+  void getDomainBoundingBox( const std::vector<uint>& UUIDs, helios::vec2& xbounds, helios::vec2& ybounds, helios::vec2& zbounds ) const;
+
   //! Get the center and radius of a sphere that bounds all primitives in the domain
+  /** \param[out] "center" Center of domain bounding sphere.
+      \param[out] "radius" Radius of domain bounding sphere.
+  */
   void getDomainBoundingSphere( helios::vec3& center, float& radius ) const;
 
+  //! Get the center and radius of a sphere that bounds a subset of primitives
+  /** \param[in] "UUIDs" Subset of primitive UUIDs for bounding sphere calculation.
+      \param[out] "center" Center of primitive bounding sphere.
+      \param[out] "radius" Radius of primitive bounding sphere.
+  */
+  void getDomainBoundingSphere( const std::vector<uint>& UUIDs, helios::vec3& center, float& radius ) const;
+  
   //! Load inputs specified in an XML file. 
   /** \param[in] "filename" name of XML file.
       \note This function is based on the pugi xml parser.  See <a href="www.pugixml.org">pugixml.org</a>

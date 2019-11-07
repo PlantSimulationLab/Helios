@@ -21,6 +21,7 @@ var searchData=
   ['disk_5fintersect',['disk_intersect',['../primitive_intersection_8cu.html#a45dc4da4927abe579fd24be608e4cd75',1,'primitiveIntersection.cu']]],
   ['distancefilter',['distanceFilter',['../class_aerial_li_d_a_rcloud.html#acc26240eea9ec98c6b354041cd9b9efc',1,'AerialLiDARcloud::distanceFilter()'],['../class_li_d_a_rcloud.html#a9f56f3f5420d1d912356299e1cf91efd',1,'LiDARcloud::distanceFilter()']]],
   ['doesglobaldataexist',['doesGlobalDataExist',['../classhelios_1_1_context.html#a65ad9cb057b0cb2be3ef2734847608cc',1,'helios::Context']]],
+  ['doeshitdataexist',['doesHitDataExist',['../class_aerial_li_d_a_rcloud.html#a9b5aa652c94d4dee19a4f956a62f2ab1',1,'AerialLiDARcloud::doesHitDataExist()'],['../class_li_d_a_rcloud.html#a52938795d12a60a6883d83cc84dd85c1',1,'LiDARcloud::doesHitDataExist()']]],
   ['doesprimitivedataexist',['doesPrimitiveDataExist',['../classhelios_1_1_primitive.html#aa2241f7d999a12a9b47949116a3ff886',1,'helios::Primitive::doesPrimitiveDataExist()'],['../classhelios_1_1_context.html#ac844863f18c44e30e6cfd87ce3a14a79',1,'helios::Context::doesPrimitiveDataExist()']]],
   ['doesprimitiveexist',['doesPrimitiveExist',['../classhelios_1_1_context.html#aaca46eebf33b002a3a8258225003b9b7',1,'helios::Context']]],
   ['dummy_20model_20plugin_20documentation',['Dummy Model Plugin Documentation',['../_dummy.html',1,'']]],

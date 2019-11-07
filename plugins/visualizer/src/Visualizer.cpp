@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -320,7 +319,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay ){
     exit(EXIT_FAILURE);
   }
 
-  glfwWindowHint(GLFW_SAMPLES, 16); // antialiasing
+  glfwWindowHint(GLFW_SAMPLES, 16 ); // antialiasing
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
@@ -2491,18 +2490,16 @@ void Visualizer::buildContextGeometry( helios::Context* __context ){
   buildContextGeometry(__context,UUIDs);
 }
 
-void Visualizer::buildContextGeometry( helios::Context* __context, std::vector<uint> UUIDs ){
+void Visualizer::buildContextGeometry( helios::Context* __context, const std::vector<uint>& UUIDs ){
   context = __context;
   contextGeomNeedsUpdate = true;
 
-  for( uint i=0; i<UUIDs.size(); i++ ){
-    contextPrimitiveIDs.push_back( UUIDs.at(i) );
-  }
+  contextPrimitiveIDs.insert(contextPrimitiveIDs.begin(), UUIDs.begin(), UUIDs.end() );
 
   //Set the view to fit window
   vec3 center;
   float radius;
-  context->getDomainBoundingSphere( center, radius );
+  context->getDomainBoundingSphere( UUIDs, center, radius );
   center.z = 0.f;
   eye = center + sphere2cart( make_SphericalCoord(1.5f*radius,20.f*M_PI/180.f,0) );
 
@@ -2669,9 +2666,17 @@ void Visualizer::buildContextGeometry_private( void ){
 	  
 	  if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0 ){//coloring primitive based on texture
 	    if( uvs.size()==4 ){//custom (u,v) coordinates
-	      addRectangleByVertices( verts, texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
+	      if( prim->isTextureColorOverridden() ){
+		addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
+	      }else{
+		addRectangleByVertices( verts, texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
+	      }
 	    }else{//default (u,v) coordinates
-	      addRectangleByVertices( verts, texture_file.c_str(), COORDINATES_CARTESIAN );
+	      if( prim->isTextureColorOverridden() ){
+		addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	      }else{
+		addRectangleByVertices( verts, texture_file.c_str(), COORDINATES_CARTESIAN );
+	      }
 	    }
 	  }else{//coloring primitive based on primitive data
 	    if( uvs.size()==4 ){//custom (u,v) coordinates
@@ -2692,7 +2697,11 @@ void Visualizer::buildContextGeometry_private( void ){
 	  std::vector<vec2> uvs = triangle->getTextureUV();
 	  
 	  if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){//coloring primitive based on texture
-	    addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), COORDINATES_CARTESIAN );
+	    if( prim->isTextureColorOverridden() ){
+	      addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), make_RGBAcolor(color.r,color.g,color.b,1), COORDINATES_CARTESIAN );
+	    }else{
+	      addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), COORDINATES_CARTESIAN );
+	    }
 	  }else{//coloring primitive based on primitive data
 	    addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), make_RGBAcolor(color.r,color.g,color.b,1), COORDINATES_CARTESIAN );
 	  }
@@ -2733,7 +2742,7 @@ void Visualizer::colorContextPrimitivesByData( const char* data_name ){
   enableColorbar();
 }
 
-void Visualizer::colorContextPrimitivesByData( const char* data_name, const std::vector<uint> UUIDs ){
+void Visualizer::colorContextPrimitivesByData( const char* data_name, const std::vector<uint>& UUIDs ){
   colorPrimitivesByData = data_name;
   colorPrimitivesByVariable = "";
   colorPrimitivesByValue = "";
@@ -2752,6 +2761,8 @@ void Visualizer::plotInteractive( void ){
   //Update the Context geometry (if needed)
   if( contextGeomNeedsUpdate ){
     buildContextGeometry_private();
+  }else{
+    colormap_current.setRange( colorbar_min, colorbar_max );
   }
 
   //Update 
@@ -3011,6 +3022,8 @@ void Visualizer::plotUpdate( void ){
   //Update the Context geometry (if needed)
   if( contextGeomNeedsUpdate ){
     buildContextGeometry_private();
+  }else{
+    colormap_current.setRange( colorbar_min, colorbar_max );
   }
 
   //Update 

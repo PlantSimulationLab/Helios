@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -134,6 +133,18 @@ __host__ __device__ float acos_safe( float x ){
   if (x < -1.0) x = -1.0 ;
   else if (x > 1.0) x = 1.0 ;
   return acosf(x) ;
+}
+
+__host__ int randu( int imin, int imax  ){
+
+  float ru = float(rand()) / float(RAND_MAX + 1.); 
+
+  if( imin==imax || imin>imax ){
+    return imin;
+  }else{
+    return imin + round(float(imax-imin)*ru);
+  }
+    
 }
 
 void LiDARcloud::calculateHitGridCellGPU( void ){
@@ -1974,9 +1985,9 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
 
   //variable aggregates over all scans where we just keep tacking hits on the end for all scans
   std::vector<float> dr_agg; //dr is path length through grid cell
-  dr_agg.resize(Ncells);
-  std::vector<std::vector<float> > dr_hit_agg; //dr_hit is path length between grid cell intersection and hit point
-  dr_hit_agg.resize(Ncells);
+  dr_agg.resize(Ncells,0);
+  std::vector<float> dr_hit_agg; //dr_hit is path length between grid cell intersection and hit point
+  dr_hit_agg.resize(Ncells,0);
   std::vector<float> hit_denom_agg; //hit_denom corresponds to total number of scan points that reached a given grid cell
   hit_denom_agg.resize(Ncells,0);
   std::vector<float> hit_inside_agg; //hit_inside corresponds to scan points that hit something within a particular grid cell.
@@ -1991,8 +2002,17 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
 
     for( size_t r=0; r<getHitCount(); r++ ){
       if( getHitScanID(r)==s ){
-	this_scan_xyz.push_back( getHitXYZ(r) );
-	this_scan_raydir.push_back( sphere2cart(getHitRaydir(r)) );
+
+	helios::vec3 xyz=getHitXYZ(r);
+	helios::vec3 raydir=sphere2cart(getHitRaydir(r));
+
+	//if it is a ground point, extend it downward to way below the grid
+	if( doesHitDataExist( r, "ground_flag" ) && getHitData( r, "ground_flag" )==1 ){
+	  xyz = xyz + 1000.f*raydir;
+	}
+	
+	this_scan_xyz.push_back( xyz );
+	this_scan_raydir.push_back( raydir );
 	//this_scan_raydir.push_back( helios::make_vec3(0,0,-1) );//assuming rays are vertical
       }
     }
@@ -2021,8 +2041,8 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     float* dr = (float*)malloc( Ncells*sizeof(float) );
 
     float* d_dr_hit;
-    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr_hit, Nhits*sizeof(float)) );
-    float* dr_hit = (float*)malloc( Nhits * sizeof(float));
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr_hit, Ncells*sizeof(float)) );
+    float* dr_hit = (float*)malloc( Ncells * sizeof(float));
     
     float* d_hit_denom;
     CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_denom, Ncells*sizeof(float)) );
@@ -2064,15 +2084,20 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     CUDA_CHECK_ERROR( cudaMemcpy(d_cell_rotation, cell_rotation, Ncells*sizeof(float), cudaMemcpyHostToDevice) );
 
     CUDA_CHECK_ERROR( cudaMemset( d_dr, 0, Ncells*sizeof(float)) );
-    CUDA_CHECK_ERROR( cudaMemset( d_dr_hit, 0, Nhits*sizeof(float)) );
+    CUDA_CHECK_ERROR( cudaMemset( d_dr_hit, 0, Ncells*sizeof(float)) );
     CUDA_CHECK_ERROR( cudaMemset( d_hit_denom, 0, Ncells*sizeof(float)) );
     CUDA_CHECK_ERROR( cudaMemset( d_hit_inside, 0, Ncells*sizeof(float)) );
 
-    uint3 dimBlock = make_uint3( min(size_t(16),Nhits), min(uint(16),Ncells), 1 );
+    uint3 dimBlock = make_uint3( min(size_t(32),Nhits), min(uint(32),Ncells), 1 );
     uint3 dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), ceil(float(Ncells)/dimBlock.y), 1  );
 
-    if( dimBlock.x==0 && dimGrid.x==0 && dimGrid.y==0 ){
+    if( dimBlock.x==0 || dimGrid.x==0 || dimBlock.y==0 || dimGrid.y==0 ){
       continue;
+    }
+
+    if( dimGrid.y>65535 ){
+      std::cerr << "ERROR: Maximum supported number of gridcells is " << 65535*32 << "." << std::endl;
+      return;
     }
 
     intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, d_scan_xyz, d_scan_raydir, Ncells, d_cell_center, d_cell_anchor, d_cell_size, d_cell_rotation, d_dr, d_dr_hit, d_hit_denom, d_hit_inside );
@@ -2082,7 +2107,7 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     
     //copy results back to host
     CUDA_CHECK_ERROR( cudaMemcpy( dr, d_dr, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK_ERROR( cudaMemcpy( dr_hit, d_dr_hit, Nhits*sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK_ERROR( cudaMemcpy( dr_hit, d_dr_hit, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK_ERROR( cudaMemcpy( hit_denom, d_hit_denom, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK_ERROR( cudaMemcpy( hit_inside, d_hit_inside, Ncells*sizeof(float), cudaMemcpyDeviceToHost));
 
@@ -2091,14 +2116,10 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
 	hit_denom_agg.at(c) += hit_denom[c];
 	hit_inside_agg.at(c) += hit_inside[c];
 
-	dr_agg.at(c) += dr[c]/hit_denom[c];
+	dr_agg.at(c) += dr[c];
 	
-	for( int i=0; i<Nhits; i++ ){
-	  if( dr_hit[i]>0 ){
-	    int cell = getHitGridCell(i);
-	    dr_hit_agg.at(cell).push_back( dr_hit[i] );
-	  }
-	}
+	dr_hit_agg.at(c) += dr_hit[c];
+
     }
     
     free( scan_xyz );
@@ -2239,6 +2260,9 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
 
   for( uint v=0; v<Ncells; v++ ){
 
+    dr_agg.at(v) /= float(hit_denom_agg.at(v));
+    dr_hit_agg.at(v) /= float(hit_inside_agg.at(v));
+
     float dr_bar = getCellSize(v).z;
     
     float P = 1.f-float(hit_inside_agg[v])/float(hit_denom_agg[v]);
@@ -2248,11 +2272,7 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
       a = 0.f;
     }else if( P<0.1 ){
 
-      dr_bar = 0;
-      for( uint i=0; i<dr_hit_agg.at(v).size(); i++ ){
-	dr_bar += dr_hit_agg.at(v).at(i);
-      }
-      dr_bar /= float(dr_hit_agg.at(v).size());
+      dr_bar = dr_hit_agg.at(v);
       
       a = 1.f/dr_bar/Gtheta;
     }else{
@@ -2275,6 +2295,430 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     std::cout << "done." << std::endl;
   }
     
+}
+
+helios::vec4 AerialLiDARcloud::RANSAC( const int maxIter, const float threshDist, const float inlierRatio, const std::vector<helios::vec3>& hits, std::vector<bool>& inliers ){
+
+  int N = hits.size();
+
+  //trying to find a model in the form of Ax+By+Cz+D=0
+  //bestModel.x = A, bestModel.y = B, bestModel.z = C, bestModel.w = D 
+  helios::vec4 bestModel;
+  float bestError = 1e20;
+  
+  for( int iter=0; iter<maxIter; iter++ ){
+
+    helios::vec4 maybeModel;
+	
+    //generate 3 random points
+    int i0 = randu(0,N-1);
+    int i1 = randu(0,N-1);
+    int i2 = randu(0,N-1);
+
+    //get x,y,z coordinates for these points
+    helios::vec3 x0 = hits.at(i0);
+    helios::vec3 x1 = hits.at(i1);
+    helios::vec3 x2 = hits.at(i2);
+    
+    //determine 'maybeModel' for these three points
+    helios::vec3 n = cross( x2-x0, x1-x0 );
+    maybeModel.x = n.x;
+    maybeModel.y = n.y;
+    maybeModel.z = n.z;
+    
+    maybeModel.w = -(n*x2);
+
+    //loop over all other points
+    float errsum = 0.f;
+    int Ninlier = 0;
+    for( int p=0; p<N; p++ ){
+      
+      if( p!=i0 && p!=i1 && p!=i2 ){
+
+	helios::vec3 point = hits.at(p);
+	    
+	float zplane = -(maybeModel.x*point.x+maybeModel.y*point.y+maybeModel.w)/maybeModel.z;
+	float zerr = fabs( zplane - point.z ); //NOTE: since we know the plane will be somewhat close to horizontal, we're only using the vertical distance to calculate the error of fit.
+
+	if( zerr<=threshDist ){
+	  errsum += zerr;
+	  Ninlier += 1;
+	}
+	
+      }
+
+    }
+
+    //check if this model is better than the current 'best' model
+    if( errsum/float(Ninlier)<bestError && float(Ninlier)/float(N)>inlierRatio ){
+
+      //update the 'best' model
+      bestModel = maybeModel;
+      bestError = errsum/float(Ninlier);
+      
+    }
+
+  }//end iterations loop (iter)
+
+  //separate inliers and outliers based on 'best' model
+  inliers.resize(N,0);
+  for( int p=0; p<N; p++ ){
+
+    helios::vec3 point = hits.at(p);
+	    
+    float zplane = -(bestModel.x*point.x+bestModel.y*point.y+bestModel.w)/bestModel.z;
+    float zerr = fabs( zplane - point.z );
+    
+    if( zerr<=threshDist ){
+      inliers.at(p) = true;
+    }
+      
+  }
+  
+  return bestModel;
+  
+}
+
+void AerialLiDARcloud::generateHeightModel( const int maxIter, const float threshDist_ground, const float inlierRatio_ground, const float threshDist_vegetation, const float inlierRatio_vegetation ){
+
+  if( printmessages ){
+    std::cout << "Calculating ground and vegetation heights..." << std::endl;
+  }
+   
+  if( !hitgridcellcomputed ){
+    calculateHitGridCellGPU();
+  }
+
+  std::srand(time(NULL));
+
+  const uint Nscans = getScanCount();
+  const uint Ncells = getGridCellCount();
+  size_t Nhits = getHitCount();
+
+  if( Ncells==0 ){
+    std::cerr << "ERROR (generateHeightModel): There are no grid cells in the point cloud." << std::endl;
+    exit(EXIT_FAILURE);
+  }else if( Nhits==0 ){
+    std::cerr << "ERROR (generateHeightModel): There are no hits in the point cloud." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  //aggregate all points in a given x,y column
+
+  std::vector<std::vector<std::vector<int> > > first_hits_ind; //first index are hit indices, second index is grid cell in x-dir, third index is grid cell in y-dir
+  std::vector<std::vector<std::vector<int> > > last_hits_ind; //first index are hit indices, second index is grid cell in x-dir, third index is grid cell in y-dir
+  std::vector<std::vector<std::vector<float> > > max_height_xy;
+  
+  helios::int3 gsize3 = getGlobalGridCount(0);
+
+  first_hits_ind.resize(gsize3.y);
+  last_hits_ind.resize(gsize3.y);
+  for( int j=0; j<gsize3.y; j++ ){
+    first_hits_ind.at(j).resize(gsize3.x);
+    last_hits_ind.at(j).resize(gsize3.x);
+  }
+
+  max_height_xy.resize(3);
+  for( int k=0; k<max_height_xy.size(); k++ ){
+    max_height_xy.at(k).resize(gsize3.y);
+    for( int j=0; j<gsize3.y; j++ ){
+      max_height_xy.at(k).at(j).resize(gsize3.x);
+      for( int i=0; i<gsize3.x; i++ ){
+	max_height_xy.at(k).at(j).at(i) = -9999999;
+      }
+    }
+  }
+
+  //do an initial pass to see whether "target_index" starts at 0 or 1
+  float target_offset = 0;
+  for( size_t r=0; r<Nhits; r++ ){
+
+    if( doesHitDataExist(r,"target_index") ){
+      float target_index = getHitData(r,"target_index");
+      if( target_index==0 ){
+	target_offset=1;
+	break;
+      }
+    }
+
+  }
+
+  for( size_t r=0; r<Nhits; r++ ){
+
+    setHitData( r, "ground_flag", 0 );
+
+    if( !doesHitDataExist(r,"target_index") || !doesHitDataExist(r,"target_count") ){
+	continue;
+    }
+
+    int cell = getHitGridCell(r);
+
+    if( cell>=0 ){
+
+      float target_index = getHitData(r,"target_index")+target_offset;
+      float target_count = getHitData(r,"target_count");
+      
+      helios::int3 index3 = getGlobalGridIndex(cell);
+
+      float height = getHitXYZ(r).z;
+
+      for( int k=max_height_xy.size()-1; k>=0; k-- ){
+	if( height>max_height_xy.at(k).at(index3.y).at(index3.x) ){//&& target_index==1 ){
+	  max_height_xy.at(k).at(index3.y).at(index3.x) = height;
+	  break;
+	}
+      }
+
+      if( target_index==target_count ){
+	last_hits_ind.at(index3.y).at(index3.x).push_back( r );
+      }else if( target_index==1 ){
+	first_hits_ind.at(index3.y).at(index3.x).push_back( r );
+      }
+
+    }
+
+  }
+
+  //apply RANSAC to first and last hits for each x,y colum to determine ground and vegetation height
+
+  std::vector<std::vector<float> > ground_height_xy, canopy_height_xy;
+
+  ground_height_xy.resize(gsize3.y);
+  canopy_height_xy.resize(gsize3.y);
+
+  for( int j=0; j<gsize3.y; j++ ){
+    
+    ground_height_xy.at(j).resize(gsize3.x);
+    canopy_height_xy.at(j).resize(gsize3.x);
+    
+    for( int i=0; i<gsize3.x; i++ ){
+
+      float canopy_height = nanf("");
+      float ground_height = nanf("");
+
+      ground_height_xy.at(j).at(i) = ground_height;
+      canopy_height_xy.at(j).at(i) = canopy_height;
+
+      if( last_hits_ind.at(j).at(i).size()==0 ){ //no hits in this column
+	continue;
+      }
+
+      int cell = getHitGridCell( last_hits_ind.at(j).at(i).front() );
+
+      helios::vec3 center = getCellCenter( cell ); 
+
+      //compute ground height
+      if( last_hits_ind.at(j).at(i).size()>3 ){
+	
+	std::vector<helios::vec3> last_hits_xyz;
+	last_hits_xyz.resize( last_hits_ind.at(j).at(i).size() );
+	for( int r=0; r<last_hits_xyz.size(); r++ ){
+	  last_hits_xyz.at(r) = getHitXYZ( last_hits_ind.at(j).at(i).at(r) );
+	}   
+	
+	//ground planes
+	std::vector<bool> ground_inliers;
+	helios::vec4 groundModel = RANSAC( maxIter, threshDist_ground, inlierRatio_ground, last_hits_xyz, ground_inliers );
+	
+	for( int r=0; r<ground_inliers.size(); r++ ){
+	  if( ground_inliers.at(r) ){
+	    setHitData( last_hits_ind.at(j).at(i).at(r), "ground_flag", float(1) ); 
+	  }
+	}
+
+	ground_height = -(groundModel.x*center.x+groundModel.y*center.y+groundModel.w)/groundModel.z;
+
+      }
+
+      //compute canopy height
+      if( first_hits_ind.at(j).at(i).size()>=3 ){
+
+	std::vector<helios::vec3> first_hits_xyz;
+	first_hits_xyz.resize( first_hits_ind.at(j).at(i).size() );
+	for( int r=0; r<first_hits_xyz.size(); r++ ){
+	  first_hits_xyz.at(r) = getHitXYZ( first_hits_ind.at(j).at(i).at(r) );
+	}
+
+	//canopy top planes
+	std::vector<bool> canopy_inliers;
+	helios::vec4 canopyModel = RANSAC( maxIter, threshDist_vegetation, inlierRatio_vegetation, first_hits_xyz, canopy_inliers );
+
+	canopy_height = -(canopyModel.x*center.x+canopyModel.y*center.y+canopyModel.w)/canopyModel.z;
+
+	if( canopy_height<ground_height ){
+	  canopy_height = ground_height;
+	}else if( canopy_height>max_height_xy.front().at(j).at(i) ){
+	  canopy_height = max_height_xy.front().at(j).at(i);
+	}
+	  
+      }
+
+      ground_height_xy.at(j).at(i) = ground_height;
+      canopy_height_xy.at(j).at(i) = canopy_height;
+      
+    }//end i (x,y) loop  
+  }//end j (x,y) loop
+
+  //fill any holes in the ground height model
+  std::vector<std::vector<float> > ground_height_filled;
+  ground_height_filled.resize(gsize3.y);
+  for( int j=0; j<gsize3.y; j++ ){
+    ground_height_filled.at(j).insert(ground_height_filled.at(j).begin(), ground_height_xy.at(j).begin(), ground_height_xy.at(j).end() );
+  }
+  
+  for( int j=1; j<gsize3.y-1; j++ ){
+    for( int i=1; i<gsize3.x-1; i++ ){
+
+      if( ground_height_xy.at(j).at(i)!=ground_height_xy.at(j).at(i) ){ //NaN
+
+	int count=0;
+	float mean=0;
+	for( int jj=-1; jj<2; jj+=2 ){
+	  for( int ii=-1; ii<2; ii+=2 ){
+	    if( ground_height_xy.at(j+jj).at(i+ii)==ground_height_xy.at(j+jj).at(i+ii) ){
+	      mean += ground_height_xy.at(j+jj).at(i+ii);
+	      count ++;
+	    }
+	  }
+	}
+
+	if( count>0 ){
+	  ground_height_filled.at(j).at(i) = mean/float(count);
+	}
+	  
+      }
+      
+    }
+  }
+
+  //remove outliers in the ground height model
+  int stencil_half_size = 4;
+  float std_fact = 0.5;
+
+  for( int j=0; j<gsize3.y; j++ ){
+    for( int i=0; i<gsize3.x; i++ ){
+      ground_height_xy.at(j).at(i) = ground_height_filled.at(j).at(i);
+    }
+  }
+  
+  for( int j=stencil_half_size; j<gsize3.y-stencil_half_size; j++ ){
+    for( int i=stencil_half_size; i<gsize3.x-stencil_half_size; i++ ){
+
+      if( ground_height_filled.at(j).at(i)!=ground_height_filled.at(j).at(i) ){
+	continue;
+      }
+
+      int count=0;
+      float mean=0;
+      float var=0;
+      for( int jj=-stencil_half_size; jj<=stencil_half_size; jj++ ){
+	for( int ii=-stencil_half_size; ii<=stencil_half_size; ii++ ){
+	  if( ii==0 || jj==0 ){
+	    continue;
+	  }
+
+	  if( ground_height_filled.at(j+jj).at(i+ii)==ground_height_filled.at(j+jj).at(i+ii) ){
+	    mean += ground_height_filled.at(j+jj).at(i+ii);
+	    var += pow( ground_height_filled.at(j+jj).at(i+ii)-ground_height_filled.at(j).at(i), 2);
+	    count ++;
+	  }
+	}
+      }
+
+      float std = sqrt(var/float(count));
+      mean = mean/float(count);
+
+      if( fabs(ground_height_filled.at(j).at(i)-mean)>std_fact*std ){
+            
+	float mean_new=0;
+	count = 0;
+	for( int jj=-stencil_half_size; jj<=stencil_half_size; jj++ ){
+	  for( int ii=-stencil_half_size; ii<=stencil_half_size; ii++ ){
+	    if( ii==0 || jj==0 ){
+	      continue;
+	    }
+	    if( fabs(ground_height_filled.at(j+jj).at(i+ii)-mean)<std_fact*std ){
+	      mean_new += ground_height_filled.at(j+jj).at(i+ii);
+	      count ++;
+	    }
+	  }
+	}
+        
+	if( count>0 ){
+	  ground_height_xy.at(j).at(i) = mean_new/float(count);
+	}
+      }
+    }
+  }
+
+  //set the values for all grid cells
+  for( int k=0; k<gsize3.z; k++ ){
+    for( int j=0; j<gsize3.y; j++ ){
+      for( int i=0; i<gsize3.x; i++ ){
+
+	uint cell = getCellGlobalIndex( helios::make_int3(i,j,k) );
+
+	setCellGroundHeight( ground_height_xy.at(j).at(i), cell );
+	setCellVegetationHeight( canopy_height_xy.at(j).at(i), cell );
+	if( max_height_xy.front().at(j).at(i)==-9999999 ){
+	  setCellMaximumHitHeight( nanf(""), cell );
+	}else{
+	  setCellMaximumHitHeight( max_height_xy.front().at(j).at(i), cell );
+	}
+	
+      }
+    }
+  }
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+  }
+
+}
+
+void AerialLiDARcloud::alignGridToGround( void ){
+
+  size_t Nc = getGridCellCount();
+
+  if( Nc==0 ){
+    std::cout << "WARNING (alignGridToGround): No grid cells added to the point cloud." << std::endl;
+    return;
+  }
+  
+  helios::int3 gsize3 = getGlobalGridCount(0);
+
+  float zbase = getCellGlobalAnchor(0).z-0.5*getGlobalGridExtent(0).z;
+
+  int shift_count = 0;
+  for( int k=0; k<gsize3.z; k++ ){
+    for( int j=0; j<gsize3.y; j++ ){
+      for( int i=0; i<gsize3.x; i++ ){
+
+	uint index = getCellGlobalIndex( helios::make_int3(i,j,k) );
+
+	helios::vec3 center = getCellCenter(index);
+
+	if( doesHitDataExist( index, "ground_flag" ) ){
+
+	  float ground_height = getCellGroundHeight( index );
+
+	  setCellCenter( index, helios::make_vec3(center.x,center.y,center.z-zbase+ground_height) );
+
+	  shift_count++;
+
+	}
+	
+      }
+    }
+  }
+
+  if( shift_count==0 ){
+    std::cout << "WARNING (alignGridToGround): No grid cells were aligned to the ground because ground heights were not set. You probably forgot to run the generateHeightModel() function first." << std::endl;
+  }
+
+  hitgridcellcomputed=false;
+  
+  
 }
 
 void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_file ){
@@ -2893,7 +3337,7 @@ __global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, flo
 
       atomicAdd( &hit_inside[cell], 1.f );
 
-      d_dr_hit[ idx ] = t-t0;
+      atomicAdd( &d_dr_hit[ cell ], fabs(t-t0) );
             
     }
     

@@ -5,8 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 2.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -688,7 +687,7 @@ public:
   /** \param[in] "context" Pointer to the simulation context 
       \param[in] "UUIDs" UUIDs of Context primitives to be added to the visualizer
   */
-  void buildContextGeometry( helios::Context* context, std::vector<uint> UUIDs );
+  void buildContextGeometry( helios::Context* context, const std::vector<uint>& UUIDs );
 
   //! Color primitives from Context by color mapping their `Primitive Data'
   /** \param[in] "data_name" Name of `Primitive Data'
@@ -701,7 +700,7 @@ public:
       \param[in] "UUIDs" UUID's of primitives to be colored by data
       \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
   */
-  void colorContextPrimitivesByData( const char* data_name, const std::vector<uint> UUIDs );
+  void colorContextPrimitivesByData( const char* data_name, const std::vector<uint>& UUIDs );
 
   //! Make Helios logo watermark invisible
   void hideWatermark( void );
