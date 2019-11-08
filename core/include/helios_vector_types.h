@@ -420,13 +420,6 @@ public:
   //! Third element in vector
   float z;
 
-  //! Swizzle xy
-  vec2 xy;
-  //! Swizzle xz
-  vec2 xz;
-  //! Swizzle yz
-  vec2 yz;
-
   //! Normalize vector components such that the magnitue is unity.
   void normalize(void){
     float mag = sqrt( x*x + y*y + z*z );
@@ -445,9 +438,6 @@ public:
   /** initializes to zero */
   vec3( void ){
     x=y=z=0;
-    xy=make_vec2(0,0);
-    xz=make_vec2(0,0);
-    yz=make_vec2(0,0);
   }
   //! Initialize vec3 using a vector of floats
   vec3( std::vector<float> v ){
@@ -458,27 +448,18 @@ public:
     x=v.at(0);
     y=v.at(1);
     z=v.at(2);
-    xy=make_vec2(x,y);
-    xz=make_vec2(x,z);
-    yz=make_vec2(y,z);
   }
   //! Initialize vec3 using an array of floats
   vec3( float v[3] ){
     x=v[0];
     y=v[1];
     z=v[2];
-    xy=make_vec2(x,y);
-    xz=make_vec2(x,z);
-    yz=make_vec2(y,z);
   }
   //! Initialize vec3 using three floats
   vec3( float v0, float v1, float v2 ){
     x=v0;
     y=v1;
     z=v2;
-    xy=make_vec2(x,y);
-    xz=make_vec2(x,z);
-    yz=make_vec2(y,z);
   }
 
   //! Dot (scalar) product of two vec3 vectors

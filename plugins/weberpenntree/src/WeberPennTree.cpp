@@ -68,6 +68,11 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
     exit(EXIT_FAILURE);
   }
 
+  std::vector<uint> UUID_leaf_template;
+  if( leaf_segs.x>1 || leaf_segs.y>1 ){
+    UUID_leaf_template = context->addTile( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), leaf_segs, parameters.LeafFile.c_str() );
+  }
+    
   uint base_nodes = 20;
 
   vec3 center = make_vec3(0,0,0);
@@ -160,7 +165,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
       helios::SphericalCoord child_rotation = make_SphericalCoord(angle_split,phi_split);
       
-      recursiveBranch( parameters, 0, 0, base_position, current_normal, child_rotation, length0-offset_child, radius.at(base_nodes-1), offset_child, origin, scale );
+      recursiveBranch( parameters, 0, 0, base_position, current_normal, child_rotation, length0-offset_child, radius.at(base_nodes-1), offset_child, origin, scale, UUID_leaf_template );
       
       //phi_split += (20+0.75*120*pow(getVariation(1),2))*M_PI/180.f;
       phi_split += 2.f*M_PI/float(parameters.BaseSplits+1);
@@ -228,7 +233,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 	  phi_child += (parameters.nRotate.at(1)+getVariation(parameters.nRotateV.at(1)))*M_PI/180.f;
 
 	  if( offset_child>0 ){
-	    recursiveBranch( parameters, 1, 0, base_position, current_normal, child_rotation, length0, radius_parent, offset_child, origin, scale );
+	    recursiveBranch( parameters, 1, 0, base_position, current_normal, child_rotation, length0, radius_parent, offset_child, origin, scale, UUID_leaf_template );
 	  }
 	  
 	}
@@ -252,6 +257,8 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
     UUID_trunk.back() = context->addTube(trunk_segs,nodes,radius,parameters.WoodFile.c_str());
   }
 
+  context->deletePrimitive( UUID_leaf_template );
+
   uint flag=1;
   for( size_t i=0; i<UUID_leaf.at(TreeID).size(); i++ ){
     context->setPrimitiveData(UUID_leaf.at(TreeID).at(i),"twosided_flag",HELIOS_TYPE_UINT,1,&flag);
@@ -267,7 +274,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
 }
 
-void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale ){
+void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale, const std::vector<uint>& leaf_template ){
 
   if( n<parameters.Levels ){ //Branches
 
@@ -422,7 +429,7 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
       	float downangle = (parameters.nDownAngle.at(n+1)+getVariation(parameters.nDownAngleV.at(n+1)))*M_PI/180.f;
       	SphericalCoord rotation = make_SphericalCoord(downangle,phi_child);
 	
-      	recursiveBranch( parameters, n+1, 0, base_position, normal, rotation, length_child, radius_p, offset_child, origin, scale );
+      	recursiveBranch( parameters, n+1, 0, base_position, normal, rotation, length_child, radius_p, offset_child, origin, scale, leaf_template );
 
 	if( n == parameters.Levels-1 ){//leaves
 	  phi_child += (parameters.nRotate.at(n+1)+getVariation(parameters.nRotateV.at(n+1)))*M_PI/180.f;
@@ -450,7 +457,7 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
 
 	  helios::SphericalCoord rotation = make_SphericalCoord(angle_split,phi_split);
       
-	  recursiveBranch( parameters, n, i, base_position, normal, rotation, length_parent, radius_p, offset_child, origin, scale );
+	  recursiveBranch( parameters, n, i, base_position, normal, rotation, length_parent, radius_p, offset_child, origin, scale, leaf_template );
       
 	  phi_split += 2.f*M_PI/float(parameters.nSegSplits.at(n)+1);
       
@@ -509,7 +516,8 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
       UUIDs.push_back(context->addPatch( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), parameters.LeafFile.c_str() ));
       UUID_leaf.back().push_back(UUIDs.front());
     }else{
-      UUIDs = context->addTile( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), leaf_segs, parameters.LeafFile.c_str() );
+      UUIDs = context->copyPrimitive( leaf_template );
+      //UUIDs = context->addTile( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), leaf_segs, parameters.LeafFile.c_str() );
       UUID_leaf.back().insert( UUID_leaf.back().end(), UUIDs.begin(), UUIDs.end() ); 
     }
       

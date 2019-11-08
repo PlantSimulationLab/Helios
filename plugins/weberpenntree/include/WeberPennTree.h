@@ -202,7 +202,7 @@ class WeberPennTree{
       \param[in] "phirot" Angle of rotation of child about parent's z-axis
       \param[in] "scale" Tree scaling factor
   */
-  void recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale );
+  void recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale, const std::vector<uint>& leaf_template );
 
   float getVariation( float V );
  

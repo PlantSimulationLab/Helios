@@ -995,6 +995,11 @@ std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context, 
 
   std::vector<uint> UUIDs;
 
+  std::vector<uint> UUID_leaf_template;
+  if( subpatches.x>1 || subpatches.y>1 ){
+    UUID_leaf_template = context->addTile( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), subpatches, reconstructed_alphamasks_maskfile.c_str() );
+  }
+
   size_t Ngroups = reconstructed_alphamasks_center.size();
 
   for( size_t g=0; g<Ngroups; g++ ){
@@ -1004,14 +1009,25 @@ std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context, 
     uint zone = reconstructed_alphamasks_gridcell.at(g);
 
     if( reconstructed_alphamasks_size.at(g).x>0 && reconstructed_alphamasks_size.at(g).y>0 ){
-      std::vector<uint> UUIDs_tile = context->addTile( reconstructed_alphamasks_center.at(g), reconstructed_alphamasks_size.at(g), reconstructed_alphamasks_rotation.at(g), subpatches, reconstructed_alphamasks_maskfile.c_str() );
-      context->setPrimitiveData( UUIDs_tile, "gridCell", zone );
+      std::vector<uint> UUIDs_leaf;
+      if( subpatches.x==1 && subpatches.y==1 ){
+	UUIDs_leaf.push_back( context->addPatch( reconstructed_alphamasks_center.at(g), reconstructed_alphamasks_size.at(g), reconstructed_alphamasks_rotation.at(g), reconstructed_alphamasks_maskfile.c_str() ) );
+      }else{
+	UUIDs_leaf = context->copyPrimitive( UUID_leaf_template );
+	context->scalePrimitive( UUIDs_leaf, make_vec3(reconstructed_alphamasks_size.at(g).x,reconstructed_alphamasks_size.at(g).y,1)  );
+	context->rotatePrimitive( UUIDs_leaf, -reconstructed_alphamasks_rotation.at(g).elevation, "x" );
+	context->rotatePrimitive( UUIDs_leaf, -reconstructed_alphamasks_rotation.at(g).azimuth, "z" );
+	context->translatePrimitive( UUIDs_leaf, reconstructed_alphamasks_center.at(g) );
+      }
+      context->setPrimitiveData( UUIDs_leaf, "gridCell", zone );
       uint flag = uint(reconstructed_alphamasks_direct_flag.at(g));
-      context->setPrimitiveData( UUIDs_tile, "directFlag", flag);
-      UUIDs.insert( UUIDs.end(), UUIDs_tile.begin(), UUIDs_tile.end() );
+      context->setPrimitiveData( UUIDs_leaf, "directFlag", flag);
+      UUIDs.insert( UUIDs.end(), UUIDs_leaf.begin(), UUIDs_leaf.end() );
     }
 
   }
+
+  context->deletePrimitive( UUID_leaf_template );
 
   return UUIDs;
 

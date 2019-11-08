@@ -3995,7 +3995,7 @@ void Context::getDomainBoundingBox( const std::vector<uint>& UUIDs, vec2& xbound
 
   for( int p=0; p<UUIDs.size(); p++ ){
 
-    std::vector<vec3> verts = getPrimitivePointer(p)->getVertices();
+    std::vector<vec3> verts = getPrimitivePointer( UUIDs.at(p) )->getVertices();
     
     for( int j=0; j<verts.size(); j++ ){
       if( verts[j].x<xbounds.x ){
