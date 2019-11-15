@@ -26,6 +26,7 @@ rtDeclareVariable(unsigned int,  direct_ray_type_MCRT, , );
 rtDeclareVariable(unsigned int,  diffuse_ray_type_MCRT, , );
 rtDeclareVariable(unsigned int,  emission_ray_type_MCRT, , );
 rtDeclareVariable(unsigned int,  random_seed, , );
+rtDeclareVariable(unsigned int,  launch_offset, , );
 
 rtDeclareVariable(uint3, launch_index, rtLaunchIndex, );
 rtDeclareVariable(uint3, launch_dim,   rtLaunchDim, );
@@ -67,7 +68,7 @@ RT_PROGRAM void direct_raygen()
   prd.seed = tea<16>(indx+dimx*launch_index.z,random_seed);
   
   //Primitive UUID for this launch
-  uint UUID = launch_index.z;
+  uint UUID = launch_offset+launch_index.z;
 
   float3 sp;
   float r, p;
@@ -329,7 +330,7 @@ RT_PROGRAM void diffuse_raygen(){
   prd.seed = tea<16>(indx+dimx*launch_index.z,random_seed);
      
   //Primitive UUID for this launch
-  uint UUID = launch_index.z;
+  uint UUID = launch_offset+launch_index.z;
 
   //transformation matrix
   float m[16];
@@ -830,7 +831,7 @@ RT_PROGRAM void emission_raygen_MCRT(){
   prd.seed = tea<16>(indx+dimx*launch_index.z,random_seed);
 
   //Primitive UUID for this launch
-  uint UUID = launch_index.z;
+  uint UUID = launch_offset+launch_index.z;
 
   //transformation matrix
   float m[16];

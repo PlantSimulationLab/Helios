@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.0.17</span>
+   &#160;<span id="projectnumber">v1.0.18</span>
    </div>
   </td>
  </tr>
@@ -170,6 +170,10 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hre
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#af3bc5cfcd979e7b110176cf611581abd">overrideTextureColor</a> (void)</td></tr>
 <tr class="memdesc:af3bc5cfcd979e7b110176cf611581abd inherit pub_methods_classhelios_1_1_primitive"><td class="mdescLeft">&#160;</td><td class="mdescRight">Override the color in the texture map, in which case the primitive will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape. <br /></td></tr>
 <tr class="separator:af3bc5cfcd979e7b110176cf611581abd inherit pub_methods_classhelios_1_1_primitive"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a25f09161124f184246db99a0a82d69b6 inherit pub_methods_classhelios_1_1_primitive"><td class="memItemLeft" align="right" valign="top"><a id="a25f09161124f184246db99a0a82d69b6"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#a25f09161124f184246db99a0a82d69b6">useTextureColor</a> (void)</td></tr>
+<tr class="memdesc:a25f09161124f184246db99a0a82d69b6 inherit pub_methods_classhelios_1_1_primitive"><td class="mdescLeft">&#160;</td><td class="mdescRight">Use the texture map to color the primitive rather than the constant RGB color. This is function reverses a previous call to <a class="el" href="classhelios_1_1_primitive.html#af3bc5cfcd979e7b110176cf611581abd" title="Override the color in the texture map, in which case the primitive will be colored by the constant RG...">overrideTextureColor()</a>. Note that using the texture color is the default behavior. <br /></td></tr>
+<tr class="separator:a25f09161124f184246db99a0a82d69b6 inherit pub_methods_classhelios_1_1_primitive"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a209c6d8ff4bce55abdc732452e222835 inherit pub_methods_classhelios_1_1_primitive"><td class="memItemLeft" align="right" valign="top"><a id="a209c6d8ff4bce55abdc732452e222835"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#a209c6d8ff4bce55abdc732452e222835">isTextureColorOverridden</a> (void) const</td></tr>
 <tr class="memdesc:a209c6d8ff4bce55abdc732452e222835 inherit pub_methods_classhelios_1_1_primitive"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if color of texture map is overridden by the diffuse R-G-B color of the primitive. <br /></td></tr>
@@ -307,7 +311,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <div class="caption">
 Sample image of a Triangle.</div></div>
  
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00572">572</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00575">575</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="aa3f268ac0b3ec5a12e9cb5e6b38d1eb9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa3f268ac0b3ec5a12e9cb5e6b38d1eb9">&#9670;&nbsp;</a></span>getArea()</h2>
@@ -400,7 +404,7 @@ Sample image of a Triangle.</div></div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>(x,y,z) coordinates of triangle vertex </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03120">3120</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03124">3124</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -482,7 +486,7 @@ Sample image of a Triangle.</div></div>
 
 <p>Implements <a class="el" href="classhelios_1_1_primitive.html#a9dcc7eeae008fbb7757e05dfb64e4866">helios::Primitive</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01098">1098</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01102">1102</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -531,7 +535,7 @@ Sample image of a Triangle.</div></div>
 
 <p>Implements <a class="el" href="classhelios_1_1_primitive.html#a09e84a33a3fecb2f21f27188ebb0101b">helios::Primitive</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01119">1119</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01123">1123</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

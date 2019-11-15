@@ -273,14 +273,18 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
 }
 
 Visualizer::Visualizer( uint __Wdisplay ){
-  initialize(__Wdisplay,__Wdisplay*0.8);
+  initialize(__Wdisplay,__Wdisplay*0.8,16);
 }
   
 Visualizer::Visualizer( uint __Wdisplay, uint __Hdisplay ){
-  initialize(__Wdisplay,__Hdisplay);
+  initialize(__Wdisplay,__Hdisplay,16);
 }
 
-void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay ){
+Visualizer::Visualizer( uint __Wdisplay, uint __Hdisplay, int aliasing_samples ){
+  initialize(__Wdisplay,__Hdisplay,aliasing_samples);
+}
+
+void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samples ){
   
   Wdisplay = __Wdisplay;
   Hdisplay = __Hdisplay;
@@ -319,7 +323,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay ){
     exit(EXIT_FAILURE);
   }
 
-  glfwWindowHint(GLFW_SAMPLES, 16 ); // antialiasing
+  glfwWindowHint(GLFW_SAMPLES, aliasing_samples ); // antialiasing
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
@@ -397,10 +401,12 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay ){
   glActiveTexture(GL_TEXTURE1);
   glGenTextures(1, &depthTexture);
   glBindTexture(GL_TEXTURE_2D, depthTexture);
-  glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 8192, 8192, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-  //glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 2048, 2048, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  //glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 8192, 8192, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 16384, 16384, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
@@ -413,7 +419,13 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay ){
   glDrawBuffer(GL_NONE); // No color buffer is drawn to.
 
   // Always check that our framebuffer is ok
+  int max_checks=100000;
+  int checks = 0;
+  while( glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks<max_checks ){
+    checks++;
+  }
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+    std::cout << "Problem with framebuffer." << std::endl;
     exit(EXIT_FAILURE);
   }
 
@@ -541,7 +553,26 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay ){
 
 }
 
-Visualizer::~Visualizer(){}
+Visualizer::~Visualizer(){
+  glDeleteFramebuffers(1, &framebufferID);
+  glDeleteTextures( 1, &depthTexture);
+  glDeleteBuffers( 1, &positionBuffer);
+  glDeleteBuffers(1, &colorBuffer);
+  glDeleteBuffers(1, &normalBuffer);
+  glDeleteBuffers(1, &uvBuffer);
+  glDeleteBuffers(1, &textureFlagBuffer);
+  glDeleteBuffers(1, &coordinateFlagBuffer);
+
+  for( std::map<std::string,std::vector<int> >::iterator iter=textureIDData.begin(); iter!=textureIDData.end(); ++iter ){
+    std::vector<int> ID = textureIDData.at(iter->first);
+    for( int i=0; i<ID.size(); i++ ){
+      uint IDu = uint(ID.at(i));
+      glDeleteTextures(1, &IDu );
+    }
+  }
+  
+  glfwTerminate();
+}
 
 int Visualizer::selfTest( void ){
 
@@ -724,12 +755,18 @@ void Visualizer::printWindow( void ){
     sprintf(outfile,"frame%d.jpg",frame_counter);
   }
   frame_counter++;
-  std::cout << "frame_counter = " << frame_counter << std::endl;
   
-  write_JPEG_file( outfile, Wdisplay, Hdisplay );
+  printWindow( outfile );
 }
 
 void Visualizer::printWindow( const char* outfile ){
+
+  int max_checks=100000;
+  int checks = 0;
+  while( glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks<max_checks ){
+    checks++;
+  }
+  
   write_JPEG_file( outfile, Wdisplay, Hdisplay );
 }
 
@@ -2783,7 +2820,7 @@ void Visualizer::plotInteractive( void ){
 
   glm::vec3 view_center = glm::vec3( xbounds.x+0.5*(xbounds.y-xbounds.x), ybounds.x+0.5*(ybounds.y-ybounds.x), zbounds.x+0.5*(zbounds.y-zbounds.x) );
   //float bound_R = 2.f*fmax(xbounds.y-xbounds.x,fmax(ybounds.y-ybounds.x,zbounds.y-zbounds.x));
-  float bound_R = sqrtf( pow(xbounds.y-xbounds.x,2) + pow(ybounds.y-ybounds.x,2) + pow(zbounds.y-zbounds.x,2) );
+  float bound_R = 0.6*sqrtf( pow(xbounds.y-xbounds.x,2) + pow(ybounds.y-ybounds.x,2) + pow(zbounds.y-zbounds.x,2) );
 
   glm::vec3 lightInvDir = view_center + glm::vec3(light_direction.x,light_direction.y,light_direction.z);
 
@@ -2801,7 +2838,8 @@ void Visualizer::plotInteractive( void ){
 
     // Depth buffer for shadows
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
-    glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    //glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    glViewport(0,0,16384,16384); // Render on the whole framebuffer, complete from the lower left corner to the upper right
 
     // Clear the screen
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -3017,7 +3055,9 @@ void Visualizer::plotUpdate( void ){
 
   std::cout << "Updating the plot..." << std::flush;
 
+  //if( glfwGetWindowAttrib( (GLFWwindow*) window, GLFW_VISIBLE)==0 ){
   glfwShowWindow( (GLFWwindow*) window);
+  //}
   
   //Update the Context geometry (if needed)
   if( contextGeomNeedsUpdate ){
@@ -3061,7 +3101,8 @@ void Visualizer::plotUpdate( void ){
 
     // Depth buffer for shadows
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
-    glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    //glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    glViewport(0,0,16384,16384); // Render on the whole framebuffer, complete from the lower left corner to the upper right
 
     // Clear the screen
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -3418,7 +3459,6 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
   assert( checkerrors() );
 
   // ~~~~~~~~~~~ Create a Vertex Array Object (VAO) ~~~~~~~~~~//
-  uint VertexArrayID;
   glGenVertexArrays(1, &VertexArrayID);
   glBindVertexArray(VertexArrayID);
 
@@ -3457,6 +3497,11 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
 
   assert( checkerrors() );
   
+}
+
+Shader::~Shader( void ){
+  glDeleteVertexArrays( 1, &VertexArrayID);
+  glDeleteProgram(shaderID);
 }
 
 void Shader::disableTextures( void ) const{
@@ -3550,8 +3595,10 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
 void Shader::enableTextureMaps( void ) const{
   glActiveTexture(GL_TEXTURE0);
   glUniform1i(textureUniform,0);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
@@ -3664,8 +3711,10 @@ void Shader::setTextureMask( const char* texture_file, uint& textureID, int2& te
 void Shader::enableTextureMasks( void ) const{
   glActiveTexture(GL_TEXTURE0);
   glUniform1i(textureUniform,0);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }

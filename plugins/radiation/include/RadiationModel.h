@@ -442,6 +442,9 @@ protected:
   //! Random number generator seed
   RTvariable random_seed_RTvariable;
 
+  //! Primitive offset used for tiling ray launches
+  RTvariable launch_offset_RTvariable;
+
   //! Maximum scattering depth
   RTvariable max_scatters_RTvariable;
   

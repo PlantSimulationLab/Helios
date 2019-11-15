@@ -1017,7 +1017,7 @@ int RadiationModel::selfTest( void ){
   std::vector<uint> UUIDs_box = context_10.addBox( make_vec3(0,0,0), make_vec3(d_10,w_10,h_10), make_int3(round(d_10/w_patch_10), round(w_10/w_patch_10), round(h_10/w_patch_10)), RGB::green, true);
 
   context_10.setPrimitiveData( UUIDs_box, "temperature", Tw_10 );
-  context_10.setPrimitiveData( UUIDs_box, "twosided-flag", uint(0) );
+  context_10.setPrimitiveData( UUIDs_box, "twosided_flag", uint(0) );
   
   std::vector<uint> UUIDs_patches;
 
@@ -1121,8 +1121,8 @@ int RadiationModel::selfTest( void ){
   context_11.setPrimitiveData( UUIDs_2, "emissivity_LW", epsw2_11 );
   context_11.setPrimitiveData( UUIDs_1, "reflectivity_LW", 1.f-epsw1_11 );
   context_11.setPrimitiveData( UUIDs_2, "reflectivity_LW", 1.f-epsw2_11 );
-  context_11.setPrimitiveData( UUIDs_1, "twosided-flag", uint(0) );
-  context_11.setPrimitiveData( UUIDs_2, "twosided-flag", uint(0) );
+  context_11.setPrimitiveData( UUIDs_1, "twosided_flag", uint(0) );
+  context_11.setPrimitiveData( UUIDs_2, "twosided_flag", uint(0) );
 
   std::vector<uint> UUIDs_patches_11;
 
@@ -1876,6 +1876,10 @@ void RadiationModel::initializeOptiX( void ){
   RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "random_seed", &random_seed_RTvariable ) );
   RT_CHECK_ERROR( rtVariableSet1ui( random_seed_RTvariable, std::chrono::system_clock::now().time_since_epoch().count() ) );
 
+  //launch offset
+  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "launch_offset", &launch_offset_RTvariable ) );
+  RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, 0 ) );
+
   //maximum scattering depth
   RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "max_scatters", &max_scatters_RTvariable ) );
   RT_CHECK_ERROR( rtVariableSet1ui( max_scatters_RTvariable, 0 ) );
@@ -2420,6 +2424,8 @@ void RadiationModel::runBand( const char* label ){
   TBS_top.resize(context->getPrimitiveCount(),0.f);
   TBS_bottom = TBS_top;
 
+  size_t maxRays = 50e9; //maximum number of total rays in a launch
+
   // -- Direct launch --//
 
   optix::int3 launch_dim_dir;
@@ -2452,18 +2458,36 @@ void RadiationModel::runBand( const char* label ){
       
       // Compute direct launch dimension
       size_t n = ceil(sqrt(double(directRayCount[band])));
-      launch_dim_dir = optix::make_int3( round(n), round(n), Nprimitives );
+
+      size_t maxPrims = maxRays/float(n*n);
       
-      assert( launch_dim_dir.x>0 && launch_dim_dir.y>0 );
-      
-      if( message_flag ){
-    	std::cout << "Performing primary direct radiation ray trace for band " << label << "..." << std::flush;
+      int Nlaunches = ceil( n*n*Nprimitives/float(maxRays) );
+
+      size_t prims_per_launch = fmin( Nprimitives, maxPrims );
+
+      for( uint launch=0; launch<Nlaunches; launch++ ){
+
+	size_t prims_this_launch;
+	if( (launch+1)*prims_per_launch > Nprimitives ){
+	  prims_this_launch = Nprimitives-launch*prims_per_launch;
+	}else{
+	  prims_this_launch = prims_per_launch;
+	}
+
+	RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, launch*prims_per_launch ) );
+
+	launch_dim_dir = optix::make_int3( round(n), round(n), prims_this_launch );
+
+	if( message_flag ){
+	  std::cout << "Performing primary direct radiation ray trace for band " << label << " (batch " << launch+1 << " of " << Nlaunches << ")..." << std::flush;
+	}
+	RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIRECT , launch_dim_dir.x, launch_dim_dir.y, launch_dim_dir.z ) );
+	if( message_flag ){
+	  std::cout << "done." << std::endl;
+	}
+
       }
-      RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIRECT , launch_dim_dir.x, launch_dim_dir.y, launch_dim_dir.z ) );
-      if( message_flag ){
-    	std::cout << "done." << std::endl;
-      }
-      
+	
       if( scatteringDepth.at(band)==0 ){
     	to_be_scattered = false;
 	//deposit rest of energy
@@ -2530,15 +2554,34 @@ void RadiationModel::runBand( const char* label ){
       
       // Compute diffuse launch dimension
       size_t n = ceil(sqrt(double(diffuseRayCount[band])));
-      optix::int3 launch_dim_diff = optix::make_int3( round(n), round(n), Nprimitives );
-      assert( launch_dim_diff.x>0 && launch_dim_diff.y>0 );
+
+      size_t maxPrims = maxRays/float(n*n);
       
-      if( message_flag ){
-  	std::cout << "Performing primary diffuse radiation ray trace for band " << label << "..." << std::flush;
-      }
-      RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
-      if( message_flag ){
-  	std::cout << "done." << std::endl;
+      int Nlaunches = ceil( n*n*Nprimitives/float(maxRays) );
+
+      size_t prims_per_launch = fmin( Nprimitives, maxPrims );
+
+      for( uint launch=0; launch<Nlaunches; launch++ ){
+
+	size_t prims_this_launch;
+	if( (launch+1)*prims_per_launch > Nprimitives ){
+	  prims_this_launch = Nprimitives-launch*prims_per_launch;
+	}else{
+	  prims_this_launch = prims_per_launch;
+	}
+
+	RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, launch*prims_per_launch ) );
+
+	optix::int3 launch_dim_diff = optix::make_int3( round(n), round(n), prims_this_launch );
+	assert( launch_dim_diff.x>0 && launch_dim_diff.y>0 );
+      
+	if( message_flag ){
+	  std::cout << "Performing primary diffuse radiation ray trace for band " << label << " (batch " << launch+1 << " of " << Nlaunches << ")..." << std::flush;
+	}
+	RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
+	if( message_flag ){
+	  std::cout << "done." << std::endl;
+	}
       }
     }
     
@@ -2547,7 +2590,13 @@ void RadiationModel::runBand( const char* label ){
       RT_CHECK_ERROR( rtVariableSet1f( diffuseFlux_RTvariable, 0.f ));
 
       size_t n = ceil(sqrt(double(diffuseRayCount[band])));
-      optix::int3 launch_dim_diff = optix::make_int3( round(n), round(n), Nprimitives );
+
+      size_t maxPrims = maxRays/float(n*n);
+      
+      int Nlaunches = ceil( n*n*Nprimitives/float(maxRays) );
+
+      size_t prims_per_launch = fmin( Nprimitives, maxPrims );
+
       uint s;
       for( s=0; s<scatteringDepth.at(band); s++ ){
     	if( message_flag ){
@@ -2572,7 +2621,22 @@ void RadiationModel::runBand( const char* label ){
     	zeroBuffer1D( scatter_buff_top_RTbuffer, Nprimitives );
     	copyBuffer1D( scatter_buff_bottom_RTbuffer, radiation_out_bottom_RTbuffer );
     	zeroBuffer1D( scatter_buff_bottom_RTbuffer, Nprimitives );
-    	RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
+
+	for( uint launch=0; launch<Nlaunches; launch++ ){
+
+	  size_t prims_this_launch;
+	  if( (launch+1)*prims_per_launch > Nprimitives ){
+	    prims_this_launch = Nprimitives-launch*prims_per_launch;
+	  }else{
+	    prims_this_launch = prims_per_launch;
+	  }
+	  optix::int3 launch_dim_diff = optix::make_int3( round(n), round(n), prims_this_launch );
+
+	  RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, launch*prims_per_launch ) );
+	
+	  RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
+
+	}
     	if( message_flag ){
     	  std::cout << "\r                                                                            \r" << std::flush;
     	}

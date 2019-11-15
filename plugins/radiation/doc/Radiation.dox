@@ -107,7 +107,7 @@
      <td>1.0</td>
    </tr>
    <tr>
-     <td>twosided-flag</td>
+     <td>twosided_flag</td>
      <td>N/A</td>
      <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td>
      <td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. ``\ref RadTwoSided" below for more information.</td>
@@ -149,7 +149,7 @@
  By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):
 
   <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code>context.setPrimitiveData( UUID, "twosided-flag", uint(1) );</code></pre></div>
+   <pre><code>context.setPrimitiveData( UUID, "twosided_flag", uint(1) );</code></pre></div>
 
  Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.
 

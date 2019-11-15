@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.0.17</span>
+   &#160;<span id="projectnumber">v1.0.18</span>
    </div>
   </td>
  </tr>
@@ -158,7 +158,7 @@ Input Primitive Data</h2>
 <tr>
 <td>emissivity_* </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Primitive emissivity for band * (i.e., emissivity for band 'PAR' would be 'emissivity_PAR'). <b>NOTE: Only needed if performing emission calculations.</b> </td><td>N/A </td><td>1.0  </td></tr>
 <tr>
-<td>twosided-flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. ``<a class="el" href="_radiation_doc.html#RadTwoSided">Area Basis for Calculating Fluxes</a>" below for more information. </td><td>N/A </td><td>1  </td></tr>
+<td>twosided_flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. ``<a class="el" href="_radiation_doc.html#RadTwoSided">Area Basis for Calculating Fluxes</a>" below for more information. </td><td>N/A </td><td>1  </td></tr>
 </table>
 <h2><a class="anchor" id="RadOutputData"></a>
 Output Primitive Data</h2>
@@ -177,7 +177,7 @@ Model Class Constructor</h2>
 Area Basis for Calculating Fluxes</h2>
 <p>The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the <a class="el" href="classhelios_1_1_primitive.html#a2e140af864e6dcb56d6ea5f85fef8f49">helios::Primitive::getArea()</a> function).</p>
 <p>By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):</p>
-<div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>context.setPrimitiveData( UUID, "twosided-flag", uint(1) );</code></pre></div><p>Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.</p>
+<div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>context.setPrimitiveData( UUID, "twosided_flag", uint(1) );</code></pre></div><p>Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.</p>
 <p>A primitive with "twosided_flag" set to 0 will not absorb any radiation from the back face of the primitive, but it will attenuate radiation. So if a ray hits the back face, the ray trajectory will be terminated, but no energy will be deposited.</p>
 <p>Example: If we had a single patch and a diffuse radiation source with a flux of 1.0, with default behavior the absorbed flux on the patch would be 2.0 because it would absorb energy from both faces, but the end flux would be expressed on a single-sided area basis. If "twosided_flag" was set to 0 for that patch (non-default behavior), then the absorbed flux on the patch would be 1.0.</p>
 <h2><a class="anchor" id="RadBands"></a>

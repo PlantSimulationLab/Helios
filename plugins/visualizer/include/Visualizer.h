@@ -107,6 +107,8 @@ public:
   */
   void initialize( const char* vertex_shader_file, const char* fragment_shader_file );
 
+  ~Shader();
+  
   //Primary Shader
   uint shaderID;  
   uint textureUniform;
@@ -116,6 +118,7 @@ public:
   uint lightDirectionUniform;
   uint lightingModelUniform;
   uint RboundUniform;
+  uint VertexArrayID;
   
 private:
 
@@ -250,6 +253,8 @@ public:
       \param[in] "Hdisplay" Height of the display window in pixels
   */
   Visualizer( uint Wdisplay, uint Hdisplay );
+
+  Visualizer( uint Wdisplay, uint Hdisplay, int aliasing_samples );
 
   // !Visualizer destructor
   ~Visualizer(void);
@@ -756,7 +761,7 @@ public:
 
 private:
 
-  void initialize( uint Wdisplay, uint Hdisplay );
+  void initialize( uint Wdisplay, uint Hdisplay, int aliasing_samples );
 
   void render( bool shadow );
 

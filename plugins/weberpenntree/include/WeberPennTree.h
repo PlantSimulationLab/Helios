@@ -176,6 +176,10 @@ class WeberPennTree{
    */
   void setTreeParameters( const char* treename, const WeberPennTreeParameters parameters );
 
+  //! Seed the random number generator. This can be useful for generating repeatable trees, say, within a loop.
+  /** \param[in] "seed" Random number seed */
+  void seedRandomGenerator( const uint seed );
+
  private:
 
   helios::Context* context;

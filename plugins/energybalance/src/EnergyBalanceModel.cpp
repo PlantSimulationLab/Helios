@@ -36,6 +36,10 @@ EnergyBalanceModel::EnergyBalanceModel( helios::Context* __context ){
 
   Qother_default = 0; //W/m^2
 
+  objectdensity_default=1; //kg/m^2
+
+  dt_default=0; //sec
+
   message_flag = true; //print messages to screen by default
 
   //Copy pointer to the context
@@ -241,10 +245,88 @@ int EnergyBalanceModel::selfTest( void ){
   
   energymodel_4.run();
 
-  float vpd, gH;
+  if( !context_4.doesPrimitiveDataExist( UUID_4, "vapor_pressure_deficit" ) || !context_4.doesPrimitiveDataExist( UUID_4, "boundarylayer_conductance_out" ) ){
+    std::cout << "failed optional primitive data output check #4." << std::endl;
+    return 1;
+  }
 
-  context_4.getPrimitiveData( UUID_4, "vapor_pressure_deficit", vpd );
-  context_4.getPrimitiveData( UUID_4, "boundarylayer_conductance_out", gH );
+  //---- Dynamic Model Check -----//
+
+  Context context_5;
+
+  float dt_5 = 1.f;      //sec
+  float T_5 = 3600;    //sec
+  float To_5 = 300.f;  // K
+  float rho_5 = 0.5;   // kg/m^2
+
+  float Rlow = 50.f;
+  float Rhigh = 500.f;
+  
+  uint UUID_5 = context_5.addPatch( make_vec3(0,0,0), make_vec2(1,1) );
+
+  context_5.setPrimitiveData( UUID_5, "radiation_flux_SW", Rlow );
+  context_5.setPrimitiveData( UUID_5, "temperature", To_5 );
+  context_5.setPrimitiveData( UUID_5, "object_density", rho_5 );
+  context_5.setPrimitiveData( UUID_5, "twosided_flag", uint(0) );
+  context_5.setPrimitiveData( UUID_5, "emissivity_SW", 0.f );
+
+  EnergyBalanceModel energybalance_5(&context_5);
+  energybalance_5.disableMessages();
+
+  energybalance_5.addRadiationBand("SW");
+
+  energybalance_5.optionalOutputPrimitiveData( "boundarylayer_conductance_out" );
+
+  std::vector<float> temperature_dyn;
+
+  int N = round(T_5/dt_5);
+  for( int t=0; t<N; t++ ){
+
+    if( t>0.5f*N ){
+      context_5.setPrimitiveData( UUID_5, "radiation_flux_SW", Rhigh );
+    }
+
+    energybalance_5.run( dt_5 );
+
+    float temp;
+    context_5.getPrimitiveData( UUID_5, "temperature", temp );
+    temperature_dyn.push_back(temp);
+      
+  }
+
+  float gH_5;
+  context_5.getPrimitiveData( UUID_5, "boundarylayer_conductance_out", gH_5 );
+
+  float tau_5 = rho_5*4190.f/gH_5/29.25f;
+
+  context_5.setPrimitiveData( UUID_5, "radiation_flux_SW", Rlow );
+  energybalance_5.run();
+  float Tlow;
+  context_5.getPrimitiveData( UUID_5, "temperature", Tlow );
+
+  context_5.setPrimitiveData( UUID_5, "radiation_flux_SW", Rhigh );
+  energybalance_5.run();
+  float Thigh;
+  context_5.getPrimitiveData( UUID_5, "temperature", Thigh );
+
+  float err=0;
+  for( int t=round(0.5f*N); t<N; t++ ){
+
+    float time = dt_5*(t-round(0.5f*N));
+
+    float temperature_ref = Tlow+(Thigh-Tlow)*(1.f-exp(-time/tau_5));
+
+    err += pow( temperature_ref-temperature_dyn.at(t), 2 );
+
+  }
+
+  err = sqrt(err/float(N));
+
+  if( err>0.2f ){
+    std::cout << "failed dynamic energy balance check #5." << std::endl;
+    return 1;
+  }
+  
   
   std::cout << "passed." << std::endl;
   return 0;

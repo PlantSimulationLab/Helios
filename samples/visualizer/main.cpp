@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
   //note that since we have used the `helios' namespace above, we do not need to declare the context as: helios::Context
   Context context;
 
-  float D = 70; //width of the ground surface
+  float D = 50; //width of the ground surface
   vec2 dx(1,1); //lenght and width of chess board squares and grass patches
   int2 size(floor(D/dx.x),floor(D/dx.y));
 

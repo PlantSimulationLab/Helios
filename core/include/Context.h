@@ -191,6 +191,9 @@ namespace helios {
     //! Override the color in the texture map, in which case the primitive will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
     void overrideTextureColor( void );
 
+    //! Use the texture map to color the primitive rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
+    void useTextureColor( void );
+
     //! Check if color of texture map is overridden by the diffuse R-G-B color of the primitive
     bool isTextureColorOverridden( void ) const;
 
@@ -1802,6 +1805,18 @@ public:
       \param[in] "center" 3D coordinates of box center
       \param[in] "size" Size of the box in the x-, y-, and z-directions
       \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions 
+      \param[in] "texturefile" Name of image file for texture map
+      \return Vector of UUIDs for each sub-patch
+      \note This version of addBox assumes that all surface normal vectors point away from the box
+      \ingroup compoundobjects
+  */
+  std::vector<uint> addBox( const vec3 center, const vec3 size, const int3 subdiv, const char* texturefile );
+
+  //! Add a rectangular prism tesselated with Patch primitives
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x-, y-, and z-directions
+      \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions 
       \param[in] "color" r-g-b color of box
       \param[in] "reverse_normals" Flip all surface normals so that patch normals point inside the box
       \return Vector of UUIDs for each sub-patch
@@ -1809,6 +1824,18 @@ public:
       \ingroup compoundobjects
   */
   std::vector<uint> addBox( const vec3 center, const vec3 size, const int3 subdiv, const helios::RGBcolor color, const bool reverse_normals );
+
+  //! Add a rectangular prism tesselated with Patch primitives
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x-, y-, and z-directions
+      \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions 
+      \param[in] "texturefile" Name of image file for texture map
+      \return Vector of UUIDs for each sub-patch
+      \note This version of addBox assumes that all surface normal vectors point away from the box
+      \ingroup compoundobjects
+  */
+  std::vector<uint> addBox( const vec3 center, const vec3 size, const int3 subdiv, const char* texturefile, const bool reverse_normals );
 
   //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
   /** 

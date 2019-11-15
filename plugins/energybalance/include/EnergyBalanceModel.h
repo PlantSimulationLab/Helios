@@ -41,9 +41,19 @@ public:
   //! Function to run the energy balance model for all primitives in the Context
   void run(void) ;
 
+  //! Function to run the dynamic /non steady state energy balance model
+   /** \param[in] "dt" Time step. */
+  void run( const float dt ) ;
+
   //! Function to run the energy balance model for a select set of primitives
   /** \param[in] "UUIDs" Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.*/
   void run( std::vector<uint> UUIDs );
+
+  //! Function to run the energy balance model for a select set of primitives
+  /** \param[in] "UUIDs"  Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
+     \param[in] "dt" Time step. 
+  */
+  void run( std::vector<uint> UUIDs, const float dt );
 
   //! Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of the absorbed all-wave radiation flux
   /** \param[in] "band" Name of radiation band (e.g., PAR, NIR, LW, etc.)
@@ -77,6 +87,12 @@ private:
 
   //! Default stomatal conductance if it was not specified in the context
   float gS_default;
+
+  //! Default objectdensity if it was not specified in the context
+  float objectdensity_default;
+  
+  //! Default time step if it was not specified in the context
+  float dt_default;
 
   //! Default "other" flux if it was not specified in the context
   float Qother_default;

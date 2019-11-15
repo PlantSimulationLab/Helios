@@ -1052,6 +1052,10 @@ void Primitive::overrideTextureColor( void ){
   texturecoloroverridden = true;
 }
 
+void Primitive::useTextureColor( void ){
+  texturecoloroverridden = false;
+}
+
 bool Primitive::isTextureColorOverridden( void ) const{
   return texturecoloroverridden;
 }
@@ -4357,6 +4361,10 @@ std::vector<uint> Context::addBox( const vec3 center, const vec3 size, const int
   return addBox(center,size,subdiv,color,false);
 }
 
+std::vector<uint> Context::addBox( const vec3 center, const vec3 size, const int3 subdiv, const char* texturefile ){
+  return addBox(center,size,subdiv,texturefile,false);
+}
+
 std::vector<uint> Context::addBox( const vec3 center, const vec3 size, const int3 subdiv, const RGBcolor color, const bool reverse_normals ){
 
   std::vector<uint> UUID;
@@ -4367,100 +4375,177 @@ std::vector<uint> Context::addBox( const vec3 center, const vec3 size, const int
   subsize.z = size.z/float(subdiv.z);
 
   vec3 subcenter;
+  std::vector<uint> U;
 
   if( reverse_normals ){ //normals point inward
 
     // x-z faces (vertical)
-    for( uint k=0; k<subdiv.z; k++ ){
-      for( uint i=0; i<subdiv.x; i++ ){
 
-	//right
-	subcenter = center + make_vec3(0,0.5*size.y,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.x,subsize.z), make_SphericalCoord(0.5*M_PI,M_PI), color ) );
+    //right
+    subcenter = center + make_vec3(0,0.5*size.y,0);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 	
-	//left
-	subcenter = center - make_vec3(0,0.5*size.y,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.x,subsize.z), make_SphericalCoord(0.5*M_PI,0), color ) );
-	
-      }
-    }
+    //left
+    subcenter = center - make_vec3(0,0.5*size.y,0);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 
     // y-z faces (vertical)
-    for( uint k=0; k<subdiv.z; k++ ){
-      for( uint j=0; j<subdiv.y; j++ ){
 	
-    	//front
-    	subcenter = center + make_vec3(0.5*size.x,0,0);
-    	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.y,subsize.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), color ) );
+    //front
+    subcenter = center + make_vec3(0.5*size.x,0,0);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 	
-    	//back
-    	subcenter = center - make_vec3(0.5*size.x,0,0);
-    	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.y,subsize.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), color ) );
-
-      }
-    }
+    //back
+    subcenter = center - make_vec3(0.5*size.x,0,0);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
     
     // x-y faces (horizontal)
-    for( uint j=0; j<subdiv.y; j++ ){
-      for( uint i=0; i<subdiv.x; i++ ){
-	
-    	//top
-    	subcenter = center + make_vec3(0,0,0.5*size.z);
-    	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, -0.5*size.y+(float(j)+0.5f)*subsize.y, 0), make_vec2(subsize.x,subsize.y), make_SphericalCoord(M_PI,0), color ) );
 
-    	//bottom
-    	subcenter = center - make_vec3(0,0,0.5*size.z);
-    	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, -0.5*size.y+(float(j)+0.5f)*subsize.y, 0), make_vec2(subsize.x,subsize.y), make_SphericalCoord(0,0), color ) );
+    //top
+    subcenter = center + make_vec3(0,0,0.5*size.z);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 
-      }
-    }
+    //bottom
+    subcenter = center - make_vec3(0,0,0.5*size.z);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 
   }else{ //normals point outward
 
     // x-z faces (vertical)
-    for( uint k=0; k<subdiv.z; k++ ){
-      for( uint i=0; i<subdiv.x; i++ ){
+ 	
+    //right
+    subcenter = center + make_vec3(0,0.5*size.y,0);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 	
-	//right
-	subcenter = center + make_vec3(0,0.5*size.y,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.x,subsize.z), make_SphericalCoord(0.5*M_PI,0), color ) );
-	
-	//left
-	subcenter = center - make_vec3(0,0.5*size.y,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, 0, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.x,subsize.z), make_SphericalCoord(0.5*M_PI,M_PI), color ) );
-	
-      }
-    }
-    
+    //left
+    subcenter = center - make_vec3(0,0.5*size.y,0);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+	    
     // y-z faces (vertical)
-    for( uint k=0; k<subdiv.z; k++ ){
-      for( uint j=0; j<subdiv.y; j++ ){
       
-	//front
-	subcenter = center + make_vec3(0.5*size.x,0,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.y,subsize.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), color ) );
+    //front
+    subcenter = center + make_vec3(0.5*size.x,0,0);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
+    //back
+    subcenter = center - make_vec3(0.5*size.x,0,0);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+	    
+    // x-y faces (horizontal)
 	
-	//back
-	subcenter = center - make_vec3(0.5*size.x,0,0);
-	UUID.push_back( addPatch( subcenter + make_vec3( 0, -0.5*size.y+(float(j)+0.5f)*subsize.y, -0.5*size.z+(float(k)+0.5f)*subsize.z), make_vec2(subsize.y,subsize.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), color ) );
+    //top
+    subcenter = center + make_vec3(0,0,0.5*size.z);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
+    //bottom
+    subcenter = center - make_vec3(0,0,0.5*size.z);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+
+  }
+  
+  return UUID;
+
+}
+
+std::vector<uint> Context::addBox( const vec3 center, const vec3 size, const int3 subdiv, const char* texturefile, const bool reverse_normals ){
+
+  std::vector<uint> UUID;
+
+  vec3 subsize;
+  subsize.x = size.x/float(subdiv.x);
+  subsize.y = size.y/float(subdiv.y);
+  subsize.z = size.z/float(subdiv.z);
+
+  vec3 subcenter;
+  std::vector<uint> U;
+
+  if( reverse_normals ){ //normals point inward
+
+    // x-z faces (vertical)
+
+    //right
+    subcenter = center + make_vec3(0,0.5*size.y,0);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 	
-      }
-    }
+    //left
+    subcenter = center - make_vec3(0,0.5*size.y,0);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+
+    // y-z faces (vertical)
+	
+    //front
+    subcenter = center + make_vec3(0.5*size.x,0,0);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+	
+    //back
+    subcenter = center - make_vec3(0.5*size.x,0,0);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
     
     // x-y faces (horizontal)
-    for( uint j=0; j<subdiv.y; j++ ){
-      for( uint i=0; i<subdiv.x; i++ ){
-	
-	//top
-	subcenter = center + make_vec3(0,0,0.5*size.z);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, -0.5*size.y+(float(j)+0.5f)*subsize.y, 0), make_vec2(subsize.x,subsize.y), make_SphericalCoord(0,0), color ) );
-	
-	//bottom
-	subcenter = center - make_vec3(0,0,0.5*size.z);
-	UUID.push_back( addPatch( subcenter + make_vec3( -0.5*size.x+(float(i)+0.5f)*subsize.x, -0.5*size.y+(float(j)+0.5f)*subsize.y, 0), make_vec2(subsize.x,subsize.y), make_SphericalCoord(M_PI,0), color ) );
 
-      }
-    }
+    //top
+    subcenter = center + make_vec3(0,0,0.5*size.z);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+
+    //bottom
+    subcenter = center - make_vec3(0,0,0.5*size.z);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+
+  }else{ //normals point outward
+
+    // x-z faces (vertical)
+ 	
+    //right
+    subcenter = center + make_vec3(0,0.5*size.y,0);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+	
+    //left
+    subcenter = center - make_vec3(0,0.5*size.y,0);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+	    
+    // y-z faces (vertical)
+      
+    //front
+    subcenter = center + make_vec3(0.5*size.x,0,0);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
+    //back
+    subcenter = center - make_vec3(0.5*size.x,0,0);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+	    
+    // x-y faces (horizontal)
+	
+    //top
+    subcenter = center + make_vec3(0,0,0.5*size.z);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
+    //bottom
+    subcenter = center - make_vec3(0,0,0.5*size.z);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 
   }
   

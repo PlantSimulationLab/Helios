@@ -577,21 +577,9 @@ float WeberPennTree::ShapeRatio( uint shape, float ratio ){
 
 float WeberPennTree::getVariation( float V ){
 
-  //std::uniform_real_distribution<float> unif_distribution;
+  std::uniform_real_distribution<float> unif_distribution;
 
-  // float sign;
-  // float ri = context->randn();
-  // if( ri>0.5 ){
-  //   sign = 1;
-  // }else{
-  //   sign = -1;
-  // }
-
-  //std::normal_distribution<float> distribution (0.0,V);
-
-  //return sign*distribution(generator);
-
-  return -V + 2.f*context->randu()*V;
+  return -V + 2.f*unif_distribution(generator)*V;
   
 }
 
@@ -663,6 +651,10 @@ void WeberPennTree::setTreeParameters( const char* treename, const WeberPennTree
 
   trees_library.at(treename) = parameters;
 
+}
+
+void WeberPennTree::seedRandomGenerator( const uint seed ){
+  generator.seed(seed);
 }
 
 void WeberPennTree::loadXML( const char* filename ){
