@@ -1,10 +1,12 @@
 var searchData=
 [
   ['calculategtheta',['calculateGtheta',['../class_radiation_model.html#ab3b95f32608f6a2ce826a9b79901f725',1,'RadiationModel']]],
-  ['calculatehitgridcellgpu',['calculateHitGridCellGPU',['../class_aerial_li_d_a_rcloud.html#ab86ca5b845e407b73d27a120d226fb2f',1,'AerialLiDARcloud::calculateHitGridCellGPU()'],['../class_li_d_a_rcloud.html#aa197a754f5540c1c20312a0775d16d63',1,'LiDARcloud::calculateHitGridCellGPU()']]],
+  ['calculatehitgridcell',['calculateHitGridCell',['../class_aerial_li_d_a_rcloud.html#a9ba6ff2d445498e3297fa1dccfc636c5',1,'AerialLiDARcloud']]],
+  ['calculatehitgridcellgpu',['calculateHitGridCellGPU',['../class_li_d_a_rcloud.html#aa197a754f5540c1c20312a0775d16d63',1,'LiDARcloud']]],
   ['calculateleafareagpu',['calculateLeafAreaGPU',['../class_aerial_li_d_a_rcloud.html#a5dd671b27dbc6f27e19c66a5ee15934d',1,'AerialLiDARcloud::calculateLeafAreaGPU(const float Gtheta)'],['../class_aerial_li_d_a_rcloud.html#a2b334f5eb21554cfab456808e669322b',1,'AerialLiDARcloud::calculateLeafAreaGPU(const float Gtheta, const int minVoxelHits)'],['../class_li_d_a_rcloud.html#af80467b249dbd2cba9e5bf6cd10a2510',1,'LiDARcloud::calculateLeafAreaGPU(void)'],['../class_li_d_a_rcloud.html#a76d34ff6c9e914f56f28e2507f76ee5b',1,'LiDARcloud::calculateLeafAreaGPU(const int minVoxelHits)']]],
+  ['calculateleafareagpu_5ftesting',['calculateLeafAreaGPU_testing',['../class_li_d_a_rcloud.html#a7605ef9d6ad51dec0161466f2877f331',1,'LiDARcloud']]],
   ['calculateprimitivevoxelintersection',['calculatePrimitiveVoxelIntersection',['../class_voxel_intersection.html#a11089d71d85cd247bd281edd664052fb',1,'VoxelIntersection::calculatePrimitiveVoxelIntersection(void)'],['../class_voxel_intersection.html#ab8514a6e5868e77b6074bcd15bda831f',1,'VoxelIntersection::calculatePrimitiveVoxelIntersection(std::vector&lt; uint &gt; UUIDs)']]],
-  ['calculatesyntheticgtheta',['calculateSyntheticGtheta',['../class_li_d_a_rcloud.html#a1f41078ed3979e3bb735e86d7dfc2537',1,'LiDARcloud']]],
+  ['calculatesyntheticgtheta',['calculateSyntheticGtheta',['../class_li_d_a_rcloud.html#a07554b982e1e267ad5e2fe7ee0b7c9eb',1,'LiDARcloud']]],
   ['calculatesyntheticleafarea',['calculateSyntheticLeafArea',['../class_aerial_li_d_a_rcloud.html#ab5fec2c248d5889adf521cac3bb107b3',1,'AerialLiDARcloud::calculateSyntheticLeafArea()'],['../class_li_d_a_rcloud.html#add370491dfabbb513986979f0f0c1a4d',1,'LiDARcloud::calculateSyntheticLeafArea()']]],
   ['calculatetrianglearea',['calculateTriangleArea',['../group__functions.html#gacf10c719aa4db1dd993dc5dd36db657b',1,'helios']]],
   ['calendar2julian',['Calendar2Julian',['../group__vectors.html#gada57ce3d59ce227448a97e8631a4430e',1,'helios']]],

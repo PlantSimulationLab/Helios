@@ -101,6 +101,9 @@ class WeberPennTree{
   */
   WeberPennTree( helios::Context* context );
 
+  //! Unit testing routine
+  int selfTest( void );
+
   //! Load tree library from an XML file
   /** \param[in] "filename" XML file with path relative to build directory 
    */

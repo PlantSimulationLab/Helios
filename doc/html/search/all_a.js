@@ -1,5 +1,6 @@
 var searchData=
 [
+  ['lasthitfilter',['lastHitFilter',['../class_li_d_a_rcloud.html#a89d1481795aa5129b580eca78e02a02d',1,'LiDARcloud']]],
   ['leafreconstructionalphamask',['leafReconstructionAlphaMask',['../class_li_d_a_rcloud.html#af06629427920ce2863ee2a2dbb29c825',1,'LiDARcloud::leafReconstructionAlphaMask(const float minimum_leaf_group_area, const float maximum_leaf_group_area, const float leaf_aspect_ratio, const char *mask_file)'],['../class_li_d_a_rcloud.html#a7a04a2273bb81026c17235f23bb24c91',1,'LiDARcloud::leafReconstructionAlphaMask(const float minimum_leaf_group_area, const float maximum_leaf_group_area, const float leaf_aspect_ratio, const float leaf_length_constant, const char *mask_file)']]],
   ['lidar_2ecpp',['LiDAR.cpp',['../_li_d_a_r_8cpp.html',1,'']]],
   ['lidar_2ecu',['LiDAR.cu',['../_li_d_a_r_8cu.html',1,'']]],

@@ -101,7 +101,7 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 
 	  float amag = d_magnitude(a);
 	  float bmag = d_magnitude(b);
-	  float2 uv = make_float2( ddota/amag/amag, 1.f-ddotb/bmag/bmag );
+	  float2 uv = make_float2( 1.f-ddota/amag/amag, ddotb/bmag/bmag );
 	  uint ID = maskID[U];
 	  int2 sz = masksize[ID];
 	  uint3 ind;
@@ -199,6 +199,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 	  float2 uv2 = uvdata[ make_uint2(2,uvID[U]) ];
 
 	  float2 uv = uv0 + beta*(uv1-uv0) + gamma*(uv2-uv0);
+	  uv.x = 1.f-uv.x;
 
 	  uint3 ind = make_uint3( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)), ID );
 	  if( ind.x>=sz.x || ind.y>=sz.y ){

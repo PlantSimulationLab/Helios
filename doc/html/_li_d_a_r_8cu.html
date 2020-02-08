@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.0.18</span>
+   &#160;<span id="projectnumber">v1.1.0</span>
    </div>
   </td>
  </tr>
@@ -64,82 +64,14 @@ $(function() {
 </div>
 </div><!-- top -->
 <div class="header">
-  <div class="summary">
-<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">LiDAR.cu File Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &quot;LiDAR.cuh&quot;</code><br />
 <code>#include &quot;<a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="_aerial_li_d_a_r_8h_source.html">AerialLiDAR.h</a>&quot;</code><br />
 </div>
 <p><a href="_li_d_a_r_8cu_source.html">Go to the source code of this file.</a></p>
-<table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
-Functions</h2></td></tr>
-<tr class="memitem:a51776519fd7f57e7a12d16931203d277"><td class="memItemLeft" align="right" valign="top"><a id="a51776519fd7f57e7a12d16931203d277"></a>
-__host__ __device__ float2&#160;</td><td class="memItemRight" valign="bottom"><b>operator+</b> (const float2 &amp;a, const float2 &amp;b)</td></tr>
-<tr class="separator:a51776519fd7f57e7a12d16931203d277"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a47c9aa42b2bfd43efd8ef3e8ec81972d"><td class="memItemLeft" align="right" valign="top"><a id="a47c9aa42b2bfd43efd8ef3e8ec81972d"></a>
-__host__ __device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b>operator+</b> (const float3 &amp;a, const float3 &amp;b)</td></tr>
-<tr class="separator:a47c9aa42b2bfd43efd8ef3e8ec81972d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1654801f9ac0d60d8851fa0a14cc0de1"><td class="memItemLeft" align="right" valign="top"><a id="a1654801f9ac0d60d8851fa0a14cc0de1"></a>
-__host__ __device__ float2&#160;</td><td class="memItemRight" valign="bottom"><b>operator-</b> (const float2 &amp;a, const float2 &amp;b)</td></tr>
-<tr class="separator:a1654801f9ac0d60d8851fa0a14cc0de1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e55052c2d61217ba0280cc895aeebeb"><td class="memItemLeft" align="right" valign="top"><a id="a7e55052c2d61217ba0280cc895aeebeb"></a>
-__host__ __device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b>operator-</b> (const float3 &amp;a, const float3 &amp;b)</td></tr>
-<tr class="separator:a7e55052c2d61217ba0280cc895aeebeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa1f1bc548f20476bea34a44cef5fb42a"><td class="memItemLeft" align="right" valign="top"><a id="aa1f1bc548f20476bea34a44cef5fb42a"></a>
-__host__ __device__ float&#160;</td><td class="memItemRight" valign="bottom"><b>operator*</b> (const float2 &amp;a, const float2 &amp;b)</td></tr>
-<tr class="separator:aa1f1bc548f20476bea34a44cef5fb42a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8033d863b61ae4ee0627e24453487da2"><td class="memItemLeft" align="right" valign="top"><a id="a8033d863b61ae4ee0627e24453487da2"></a>
-__host__ __device__ float&#160;</td><td class="memItemRight" valign="bottom"><b>operator*</b> (const float3 &amp;a, const float3 &amp;b)</td></tr>
-<tr class="separator:a8033d863b61ae4ee0627e24453487da2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa21bc96d502b65a34415f01bb2bfac71"><td class="memItemLeft" align="right" valign="top"><a id="aa21bc96d502b65a34415f01bb2bfac71"></a>
-__host__ __device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b>operator*</b> (const float3 &amp;a, const float &amp;b)</td></tr>
-<tr class="separator:aa21bc96d502b65a34415f01bb2bfac71"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f9dae8a7334eadc7bf8764814661a04"><td class="memItemLeft" align="right" valign="top"><a id="a1f9dae8a7334eadc7bf8764814661a04"></a>
-__host__ __device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b>operator/</b> (const float3 &amp;a, const float &amp;b)</td></tr>
-<tr class="separator:a1f9dae8a7334eadc7bf8764814661a04"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af48d117e18e1319cd61b4af9ef999b01"><td class="memItemLeft" align="right" valign="top"><a id="af48d117e18e1319cd61b4af9ef999b01"></a>
-__device__ float3&#160;</td><td class="memItemRight" valign="bottom"><b>d_rotatePoint</b> (const float3 &amp;position, const float &amp;theta, const float &amp;phi)</td></tr>
-<tr class="separator:af48d117e18e1319cd61b4af9ef999b01"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ade64e0788d1fbd6e4542b23131ebd60c"><td class="memItemLeft" align="right" valign="top"><a id="ade64e0788d1fbd6e4542b23131ebd60c"></a>
-__host__ __device__ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_li_d_a_r_8cu.html#ade64e0788d1fbd6e4542b23131ebd60c">acos_safe</a> (float x)</td></tr>
-<tr class="memdesc:ade64e0788d1fbd6e4542b23131ebd60c"><td class="mdescLeft">&#160;</td><td class="mdescRight">arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular acos() returns NaN <br /></td></tr>
-<tr class="separator:ade64e0788d1fbd6e4542b23131ebd60c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gad8ccb7b3d22876e477b80d5c2bdb94c1"><td class="memItemLeft" align="right" valign="top">__host__ int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gad8ccb7b3d22876e477b80d5c2bdb94c1">randu</a> (int imin, int imax)</td></tr>
-<tr class="memdesc:gad8ccb7b3d22876e477b80d5c2bdb94c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Random integer from a uniform distribution between imin and imax.  <a href="group__functions.html#gad8ccb7b3d22876e477b80d5c2bdb94c1">More...</a><br /></td></tr>
-<tr class="separator:gad8ccb7b3d22876e477b80d5c2bdb94c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a02eeed1813b15293980de76e8d28db14"><td class="memItemLeft" align="right" valign="top"><a id="a02eeed1813b15293980de76e8d28db14"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>insideVolume</b> (const uint Nhits, const float3 *d_hit_xyz, const uint Ngridcells, const float3 *d_grid_size, const float3 *d_grid_center, const float3 *d_grid_anchor, const float *d_grid_rotation, int *d_hit_vol)</td></tr>
-<tr class="separator:a02eeed1813b15293980de76e8d28db14"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af35ea82b7d586e23d08d2800959c22fb"><td class="memItemLeft" align="right" valign="top"><a id="af35ea82b7d586e23d08d2800959c22fb"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectBoundingBox</b> (const size_t scanSize, const float3 origin, const float3 *d_scan_xyz, const float3 bbcenter, const float3 bbsize, uint *d_boundingbox_hit)</td></tr>
-<tr class="separator:af35ea82b7d586e23d08d2800959c22fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a55029677a5e00a632c9d33d18859bbf9"><td class="memItemLeft" align="right" valign="top"><a id="a55029677a5e00a632c9d33d18859bbf9"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectGridcell</b> (const size_t Nhitsbb, const float3 origin, float3 *d_scan_xyz, const float3 center, const float3 anchor, const float3 size, const float rotation, float *d_dr, float *hit_before, float *hit_after)</td></tr>
-<tr class="separator:a55029677a5e00a632c9d33d18859bbf9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adcff0006fabd89ec4b9dfdb8ee7250ec"><td class="memItemLeft" align="right" valign="top"><a id="adcff0006fabd89ec4b9dfdb8ee7250ec"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectPatches</b> (const size_t N, const float3 origin, float3 *d_raydir, const int Npatches, float3 *d_patch_vertex0, float3 *d_patch_vertex1, float3 *d_patch_vertex2, float3 *d_patch_vertex3, float *d_hit_t)</td></tr>
-<tr class="separator:adcff0006fabd89ec4b9dfdb8ee7250ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3ddfb09a566cd50c5fad1e6b2f78cb4c"><td class="memItemLeft" align="right" valign="top"><a id="a3ddfb09a566cd50c5fad1e6b2f78cb4c"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectTriangles</b> (const size_t N, const float3 origin, float3 *d_raydir, const int Ntriangles, float3 *d_tri_vertex0, float3 *d_tri_vertex1, float3 *d_tri_vertex2, float *d_hit_t)</td></tr>
-<tr class="separator:a3ddfb09a566cd50c5fad1e6b2f78cb4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8c4de4a0c71b2013b7e8f864bd6b5c05"><td class="memItemLeft" align="right" valign="top"><a id="a8c4de4a0c71b2013b7e8f864bd6b5c05"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectGridcell</b> (const size_t Nhitsbb, float3 *d_scan_xyz, float3 *d_scan_raydir, const size_t Ncells, float3 *center, float3 *anchor, float3 *size, float *rotation, float *d_dr, float *d_dr_hit, float *hit_denom, float *hit_inside)</td></tr>
-<tr class="separator:a8c4de4a0c71b2013b7e8f864bd6b5c05"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a48e9db3bb523838c7c33d125977e9e6a"><td class="memItemLeft" align="right" valign="top"><a id="a48e9db3bb523838c7c33d125977e9e6a"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectBoundingBox</b> (const size_t scanSize, float3 *d_hit_origin, const float3 *d_scan_xyz, const float3 bbcenter, const float3 bbsize, uint *d_boundingbox_hit)</td></tr>
-<tr class="separator:a48e9db3bb523838c7c33d125977e9e6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1ad26b55bbfda77f4b7e7c27dc894935"><td class="memItemLeft" align="right" valign="top"><a id="a1ad26b55bbfda77f4b7e7c27dc894935"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectPatches</b> (const size_t N, float3 *d_origin, float3 *d_raydir, const int Npatches, float3 *d_patch_vertex0, float3 *d_patch_vertex1, float3 *d_patch_vertex2, float3 *d_patch_vertex3, float *d_hit_t)</td></tr>
-<tr class="separator:a1ad26b55bbfda77f4b7e7c27dc894935"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a25685eea8907c2c5843e4d063b417d01"><td class="memItemLeft" align="right" valign="top"><a id="a25685eea8907c2c5843e4d063b417d01"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>intersectTriangles</b> (const size_t N, float3 *d_origin, float3 *d_raydir, const int Ntriangles, float3 *d_tri_vertex0, float3 *d_tri_vertex1, float3 *d_tri_vertex2, float *d_hit_t)</td></tr>
-<tr class="separator:a25685eea8907c2c5843e4d063b417d01"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>CUDA-related LiDAR plug-in functions </p><dl class="section author"><dt>Author</dt><dd>Brian Bailey</dd></dl>
 <p>Copyright (C) 2018 Brian Bailey</p>

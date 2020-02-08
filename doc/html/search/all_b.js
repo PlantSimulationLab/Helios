@@ -21,8 +21,10 @@ var searchData=
   ['markgeometrydirty',['markGeometryDirty',['../classhelios_1_1_context.html#a7f80add96f745ec9dd02bcb731da113e',1,'helios::Context']]],
   ['matmult',['matmult',['../global_8h.html#a2404c4bfe8b03cdbde4421a2e0be2b19',1,'helios']]],
   ['max',['max',['../group__functions.html#ga1bf8edfac149ac1f3accdcf9025d0e9b',1,'helios::max(std::vector&lt; float &gt; vect)'],['../group__functions.html#ga6a0bc5e488af02d3dd424f777a1b12ae',1,'helios::max(std::vector&lt; int &gt; vect)'],['../group__functions.html#gade1ca1f0e3785c8ead0609cbb5b41024',1,'helios::max(std::vector&lt; vec3 &gt; vect)']]],
+  ['maxpulsefilter',['maxPulseFilter',['../class_li_d_a_rcloud.html#aa5c2bd82b67b3e84069090d75ed2973d',1,'LiDARcloud']]],
   ['mean',['mean',['../group__functions.html#ga1e5d03afec5bdaa7baaf4808bc40600a',1,'helios']]],
   ['min',['min',['../group__functions.html#ga9054f1b079fe2994e78e4af4d19b6c6b',1,'helios::min(std::vector&lt; float &gt; vect)'],['../group__functions.html#ga80782fb7d7807065319c3beb3b1ea983',1,'helios::min(std::vector&lt; int &gt; vect)'],['../group__functions.html#ga372cf2ea1196ab92eccda876dda59143',1,'helios::min(std::vector&lt; vec3 &gt; vect)']]],
+  ['minpulsefilter',['minPulseFilter',['../class_li_d_a_rcloud.html#a530582b532eb13ca938d5e843d902327',1,'LiDARcloud']]],
   ['minute',['minute',['../structhelios_1_1_time.html#a744b90da076192b90a3ee4ce2ff3743a',1,'helios::Time']]],
   ['month',['month',['../structhelios_1_1_date.html#a5d75f8c8616d778e470a59e0b3e890a3',1,'helios::Date']]],
   ['my_5ferror_5fmgr',['my_error_mgr',['../structmy__error__mgr.html',1,'']]]

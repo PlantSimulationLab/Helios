@@ -1,4 +1,4 @@
-/** \file "AerialLiDAR.h" Header file for LiDAR plug-in dealing with aerial scans.
+/** \file "AerialLiDAR.h" Header file for Aerial LiDAR plug-in dealing with aerial scans.
     \author Brian Bailey
 
     Copyright (C) 2018  Brian Bailey
@@ -18,9 +18,8 @@
 #ifndef __AERIALLIDAR__
 #define __AERIALLIDAR__
 
-#include "LiDAR.h"
-
-
+#include "Context.h"
+#include "Visualizer.h"
 
 //! Structure containing metadata for an aerial scan
 /** A scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of azimuthal scan directions (see \ref Nphi), 5) the range of azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint() function. There are various functions to query the scan data.
@@ -32,7 +31,7 @@ struct AerialScanMetadata{
       \param[in] "extent" (x,y) size/extent of scan surface
       \param[in] "coneangle" Width of scan cone in degrees
   */
-  AerialScanMetadata( const helios::vec3 __center, const helios::vec2 __extent, const float __coneangle, const float __scandensity );
+  AerialScanMetadata( const helios::vec3 __center, const helios::vec2 __extent, const float __coneangle, const float __scandensity, const float __exitDiameter, const float __beamDivergence );
 
   //! Number of laser pulses in scan
   std::size_t Nrays;  
@@ -48,7 +47,38 @@ struct AerialScanMetadata{
 
   //! Scan density in points/m^2
   float scandensity;
+
+  //! Diameter of laser pulse at exit from the scanner
+  /** \note This is not needed for discrete return instruments. */
+  float exitDiameter;
+
+  //! Divergence angle of the laser beam in radians
+  /** \note This is not needed for discrete return instruments. */
+  float beamDivergence;
   
+};
+
+struct AerialHitPoint{
+  helios::vec3 position;
+  helios::SphericalCoord direction;
+  helios::RGBcolor color;
+  std::map<std::string, float> data;
+  helios::int3 gridcell;
+  int scanID;
+  AerialHitPoint(void){
+    position = helios::make_vec3(0,0,0);
+    direction = helios::make_SphericalCoord(0,0);
+    color = helios::RGB::red;
+    gridcell = helios::make_int3(-2,-2,-2);
+    scanID = -1;
+  }
+  AerialHitPoint( int __scanID, helios::vec3 __position, helios::SphericalCoord __direction, helios::int2 __row_column, helios::RGBcolor __color, std::map<std::string, float> __data ){
+    scanID = __scanID;
+    position = __position;
+    direction = __direction;
+    color = __color;
+    data = __data;
+  }
 };
 
 //! Primary class for aerial LiDAR scan
@@ -67,15 +97,37 @@ class AerialLiDARcloud{
 
   std::vector<AerialScanMetadata> scans;
 
-  std::vector<HitPoint> hits;
-
-  std::vector<GridCell> grid_cells;
-
-  //! Flag denoting whether \ref LiDARcloud::calculateHitGridCell[*]() has been called previously.
-  bool hitgridcellcomputed;
+  std::vector<AerialHitPoint> hits;
   
   //! Flag denoting whether messages should be printed to screen
   bool printmessages;
+
+  // --- grid --- //
+
+  //! Flag denoting whether \ref LiDARcloud::calculateHitGridCell[*]() has been called previously.
+  bool hitgridcellcomputed;
+
+  helios::vec3 gridcenter;
+
+  helios::vec3 gridextent;
+  
+  float gridrotation;
+
+  helios::int3 gridresolution;
+
+  std::vector<std::vector<std::vector<float> > > leaf_area;
+
+  bool groundheightcomputed;
+
+  std::vector<std::vector<float> > ground_height;
+
+  std::vector<std::vector<float> > vegetation_height;
+
+  std::vector<std::vector<float> > maxhit_height;
+
+  std::vector<std::vector<float> > cover_fraction;
+
+  helios::vec2 rotatePoint2D( const helios::vec2 point, const float theta ) const;
   
  public:
 
@@ -178,6 +230,18 @@ class AerialLiDARcloud{
   //! Get the scan point density in points/m^2
   float getScanDensity( const uint scanID ) const;
 
+  //! Get the diameter of the laser beam at exit from the instrument
+  /** \param[in] "scanID" ID of scan.
+      \return Diameter of the beam at exit.
+  */
+  float getScanBeamExitDiameter( const uint scanID ) const;
+
+  //! Divergence angle of the laser beam in radians
+   /** \param[in] "scanID" ID of scan.
+      \return Divergence angle of the beam.
+  */
+  float getScanBeamDivergence( const uint scanID ) const;
+
   //! Get (x,y,z) coordinate of hit point by index
   /** \param [in] "index" Hit number */
   helios::vec3 getHitXYZ( uint index ) const;
@@ -215,15 +279,15 @@ class AerialLiDARcloud{
   
   //! Get the grid cell in which the hit point resides
   /** \param[in] "index" Hit number 
-      \note If the point does not reside in any grid cells, this function returns `-1'.
+      \note If the point does not reside in any grid cells, this function returns `(-1,-1,-1)'.
       \note Calling this function requires that the function calculateHitGridCell[*]() has been called previously.  */
-  int getHitGridCell( const uint index ) const;
+  helios::int3 getHitGridCell( const uint index ) const;
 
   //! Set the grid cell in which the hit point resides
   /** \param[in] "index" Hit number 
-      \param[in] "cell" 
+      \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions.
   */
-  void setHitGridCell( const uint index, const int cell );
+  void setHitGridCell( const uint index, const helios::int3 ijk );
 
   void coordinateShift( const helios::vec3 shift );
   
@@ -269,13 +333,6 @@ class AerialLiDARcloud{
   */
   void getHitBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax ) const;
 
-  //! Form an axis-aligned bounding box for all grid cells in the point cloud
-  /** \param[out] "boxmin" Coordinates of the bounding box vertex in the (-x,-y,-z) direction
-      \param[out] "boxmax" Coordinates of the bounding box vertex in the (+x,+y,+z) dir
-ection
-  */
-  void getGridBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax ) const;
-
   //! Filter scan by imposing a maximum distance from the scanner
   /** \param[in] "maxdistance" Maximum hit point distance from scanner */
   void distanceFilter( const float maxdistance );
@@ -296,79 +353,56 @@ ection
 
   // -------- GRID ----------- //
 
-  //! Get the total number of cells in the grid
-  uint getGridCellCount() const;
+  //! Use a global index of a grid cell (ranging from 0 to Ncells-1) to retrieve the local index in the x-, y-, and z-directions
+  /** \param[in] "index" Global grid cell index - ranges from 0 to Ncells-1 */
+  helios::int3 gridindex2ijk( const int index ) const;
 
-  //! Get the index of the cell in the x-, y-, and z-directions within the global grid
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  helios::int3 getGlobalGridIndex( const uint index ) const;
+  //! Use a grid cell's local index in the x-, y-, and z-directions to retrieve the cells' global index (ranging from 0 to Ncells-1)
+  /** \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions. */
+  int gridijk2index( const helios::int3 ijk ) const;
 
-  //! Get the number of cells in the global grid in the x-, y-, and z-directions
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  helios::int3 getGlobalGridCount( const uint index ) const;
+  //! Get the (x,y,z) coordinate of the grid center
+  helios::vec3 getGridCenter( void ) const;
 
   //! Get the size of the global grid in the x-, y-, and z-directions
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  helios::vec3 getGlobalGridExtent( const uint index ) const;
+  helios::vec3 getGridExtent( void ) const;
+  
+  //! Get the total number of cells in the grid
+  helios::int3 getGridResolution( void ) const;
 
-  //! Add a cell to the grid
-  /** \param [in] "center" (x,y,z) coordinate of grid center
-      \param [in] "size" size of the grid cell in the x,y,z directions
-      \param [in] "rotation" rotation angle (in radians) of the grid cell about the z-axis
-  */
-  void addGridCell( const helios::vec3 center, const helios::vec3 size, const float rotation );
+  //! Get the azimuthal rotation angle of the grid about its center point
+  float getGridRotation( void ) const;
 
-  //! Add a cell to the grid, where the cell is part of a larger global rectangular grid
-  /** \param [in] "center" (x,y,z) coordinate of grid center
-      \param [in] "global_anchor" (x,y,z) coordinate of grid global anchor, i.e., this is the 'center' coordinate entered in the xml file.  If grid Nx=Ny=Nz=1, global_anchor=center
-      \param [in] "size" size of the grid cell in the x,y,z directions
-      \param [in] "global_size" size of the global grid in the x,y,z directions
-      \param [in] "rotation" rotation angle (in radians) of the grid cell about the z-axis
-      \param [in] "global_ijk" index within the global grid in the x,y,z directions
-      \param [in] "global_count" total number of cells in global grid in the x,y,z directions
-  */
-  void addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const helios::vec3 global_size, const float rotation, const helios::int3 global_ijk, const helios::int3 global_count );
+  //! Get the center of the (i,j,k)th grid cell
+  /** \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions. */
+  helios::vec3 getCellCenter( const helios::int3 ijk ) const;
 
-  //! Get the global 1D index of a gridcell based on its (x,y,z) index in the global grid
-  /** \param[in] "global_ijk" Index of grid cell in (x,y,z) direction.
-   */
-  uint getCellGlobalIndex( const helios::int3 global_ijk );
+  //! Get the size of grid cells 
+  helios::vec3 getCellSize( void ) const;
 
-  //! Get the (x,y,z) coordinate of a grid cell by its index
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  helios::vec3 getCellCenter( const uint index ) const;
-
-  //! Set the (x,y,z) coordinate of a grid cell by its index
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  void setCellCenter( const uint index, const helios::vec3 center );
-
-  //! Get the (x,y,z) coordinate of a grid global anchor by its index
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  helios::vec3 getCellGlobalAnchor( const uint index ) const;
-
-  //! Get the size of a grid cell by its index
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, an
-d the last cell's index is Ncells-1. */
-  helios::vec3 getCellSize( const uint index ) const;
-
-  //! Get the size of a grid cell by its index
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  float getCellRotation( const uint index ) const;
-
-  //! Determine the grid cell in which each hit point resides for the whole point cloud - GPU accelerated version */
+  //! Determine the grid cell in which each hit point resides for the whole point cloud */
 /*   /\** \note This function does not return a value, rather, it set the Scan variable `hit_vol' which is queried by the function `Scan::getHitGridCell()'. *\/ */
-  void calculateHitGridCellGPU( void );
+  void calculateHitGridCell( void );
 
   // ------- SYNTHETIC SCAN ------ //
 
-  //! Run a synthetic LiDAR scan based on scan parameters given in an XML file
-  /** \param[in] "context" Pointer to the Helios context 
-      \param[in] "xml_file" Path to an XML file with LiDAR scan and grid information 
+  //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file
+  /** \param[in] "context" Pointer to the Helios context
+      \param[in] "xml_file" Path to an XML file with LiDAR scan and grid information
   */
   void syntheticScan( helios::Context* context, const char* xml_file );
 
+  //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hit points per pulse)
+  /** \param[in] "context" Pointer to the Helios context
+      \param[in] "xml_file" Path to an XML file with LiDAR scan and grid information
+      \param[in] "rays_per_pulse" Number of ray launches per laser pulse direction
+      \param[in] "pulse_distance_threshold" Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
+      \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
+  */
+  void syntheticScan( helios::Context* context, const char* xml_file, const int rays_per_pulse, const float pulse_distance_threshold );
+
   //! Calculate the surface area of all primitives in the context
-  /** \param[in] "context" Pointer to the Helios context 
+  /** \param[in] "context" Pointer to the Helios context
   */
   void calculateSyntheticLeafArea( helios::Context* context );
 
@@ -376,22 +410,24 @@ d the last cell's index is Ncells-1. */
 
   //! Set the leaf area of a grid cell in m^2
   /** \param[in] "area" Leaf area in cell in m^2
-      \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  void setCellLeafArea( const float area, const uint index );
+      \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions. */
+  void setCellLeafArea( const float area, const helios::int3 ijk );
 
   //! Get the leaf area of a grid cell in m^2
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  float getCellLeafArea( const uint index ) const;
+  /** \param [in] "index" Index of a grid cell in the x-, y-, and z-directions. */
+  float getCellLeafArea( const helios::int3 ijk ) const;
 
   //! Get the leaf area density of a grid cell in 1/m
-  /** \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1. */
-  float getCellLeafAreaDensity( const uint index ) const;
+  /** \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions. */
+  float getCellLeafAreaDensity( const helios::int3 ijk ) const;
 
   //! Calculate the leaf area for each grid volume
+  /** \param[in] "Gtheta" G-function value to be assumed constant across all cells. */
   void calculateLeafAreaGPU( const float Gtheta );
 
   //! Calculate the leaf area for each grid volume
-  /** \param [in] "minVoxelHits" Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than minVoxelHits, the calculated leaf area will be set to zero. */
+  /** \param[in] "Gtheta" G-function value to be assumed constant across all cells.
+      \param [in] "minVoxelHits" Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than minVoxelHits, the calculated leaf area will be set to zero. */
   void calculateLeafAreaGPU( const float Gtheta, const int minVoxelHits );
 
   // -------- HEIGHT MODEL -------- //
@@ -405,43 +441,56 @@ d the last cell's index is Ncells-1. */
   */
   void generateHeightModel( const int maxIter, const float threshDist_ground, const float inlierRatio_ground, const float threshDist_vegetation, const float inlierRatio_vegetation );
 
-  void alignGridToGround( void );
-
   //! Set the height of the vegetation at the (x,y) location of this gridcell. 
   /** \param[in] "height" Average height of vegetation measured from the ground in meters.
-      \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+      \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions.
   */
-  void setCellVegetationHeight( const float height, const uint index );
+  void setCellVegetationHeight( const float height, const helios::int2 ij );
 
   //! Get the height of the vegetation at the (x,y) location of this gridcell. 
-  /** \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+  /** \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions.
       \return Average height of vegetation measured from the ground in meters.
   */
-  float getCellVegetationHeight( const uint index );
+  float getCellVegetationHeight( const helios::int2 ij )const;
 
   //! Set the height of the highest hit point at the (x,y) location of this gridcell. 
   /** \param[in] "height" Maximum height of hit points at the (x,y) location of this gridcell.
-      \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+      \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions.
   */
-  void setCellMaximumHitHeight( const float height, const uint index );
+  void setCellMaximumHitHeight( const float height, const helios::int2 ij );
 
   //! Get the height of the highest hit point at the (x,y) location of this gridcell.
-  /** \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+  /** \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions.
       \return Average height of vegetation measured from the ground in meters.
   */
-  float getCellMaximumHitHeight( const uint index );
+  float getCellMaximumHitHeight( const helios::int2 ij ) const;
 
   //! Set the height of the ground at the (x,y) location of this gridcell. 
   /** \param[in] "height" Height of the ground in meters (in the coordinate system of the point cloud).
-      \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+      \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions.
   */
-  void setCellGroundHeight( const float height, const uint index );
+  void setCellGroundHeight( const float height, const helios::int2 ij );
 
   //! Get the height of the ground at the (x,y) location of this gridcell. 
-  /** \param[in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+  /** \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions.
       \return Height of the ground in meters (in the coordinate system of the point cloud).
   */
-  float getCellGroundHeight( const uint index );
+  float getCellGroundHeight( const helios::int2 ij ) const;
+
+  //Run calculations for ground cover fraction
+  void calculateCoverFraction( void );
+
+  //! Set the ground cover fraction at the (x,y) location of this gridcell. 
+  /** \param[in] "cover_fraction" Ground cover fraction.
+      \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions.
+  */
+  void setCellCoverFraction( const float cover_fraction, const helios::int2 ij );
+
+  //! Get the height of the ground at the (x,y) location of this gridcell. 
+  /** \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions.
+      \return Ground cover fraction.
+  */
+  float getCellCoverFraction( const helios::int2 ij ) const;
   
 };
 

@@ -40,6 +40,43 @@ WeberPennTree::WeberPennTree( helios::Context* __context ){
 
 }
 
+int WeberPennTree::selfTest( void ){
+
+  std::cout << "Building trees in the default library..." << std::flush;
+
+  float spacing = 5;
+
+  std::vector<std::string> trees;
+  trees.push_back("Almond");
+  trees.push_back("Apple");
+  trees.push_back("Avocado");
+  trees.push_back("Lemon");
+  trees.push_back("Olive");
+  trees.push_back("Orange");
+  trees.push_back("Peach");
+  trees.push_back("Pistachio");
+  trees.push_back("Walnut");
+  
+  Context context_1;
+
+  WeberPennTree weberpenntree_1( &context_1 );
+
+  weberpenntree_1.setBranchRecursionLevel(1);
+  weberpenntree_1.setLeafSubdivisions( make_int2(3,3) );
+
+  for( int i=0; i<trees.size(); i++ ){
+
+    vec3 origin(i*spacing,0,0);
+    
+    weberpenntree_1.buildTree( trees.at(i).c_str(), origin, 0.75f );
+
+  }
+
+  std::cout << "done." << std::endl;
+  return 0;
+  
+}
+
 uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin  ){
   return buildTree(treename,origin,1);
 }

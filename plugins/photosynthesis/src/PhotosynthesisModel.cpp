@@ -186,10 +186,11 @@ void PhotosynthesisModel::run( const std::vector<uint> lUUIDs ){
       gM = gM_default;
     }
 
-    float A;
+    float A, Ci;
+    int limitation_state;
 
     if( model_flag==2 ){ //Farquhar-von Caemmerer-Berry Model
-      A = evaluateFarquharModel( i_PAR, TL, CO2, gM );
+      A = evaluateFarquharModel( i_PAR, TL, CO2, gM, Ci, limitation_state );
     }else{ //Empirical Model
       A = evaluateEmpiricalModel( i_PAR, TL, CO2, gM );
     }
@@ -199,6 +200,14 @@ void PhotosynthesisModel::run( const std::vector<uint> lUUIDs ){
     }
 
     context->setPrimitiveData(p,"net_photosynthesis",HELIOS_TYPE_FLOAT,1,&A);
+
+    for( int i=0; i<output_prim_data.size(); i++ ){
+      if( output_prim_data.at(i).compare("Ci")==0 && model_flag==2 ){
+	context->setPrimitiveData(p,"Ci",Ci);
+      }else if( output_prim_data.at(i).compare("limitation_state")==0 && model_flag==2 ){
+	context->setPrimitiveData(p,"limitation_state",limitation_state);
+      }
+    }
 
   }
   
@@ -288,7 +297,7 @@ float PhotosynthesisModel::evaluateEmpiricalModel( const float i_PAR, const floa
   
 }
 
-float PhotosynthesisModel::evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float TL, const float gM, float& A ){
+float PhotosynthesisModel::evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float TL, const float gM, float& A, int& limitation_state ){
 
   //molar gas constant (kJ/K/mol)
   float R = 0.0083144598;
@@ -303,12 +312,18 @@ float PhotosynthesisModel::evaluateCi_Farquhar( const float Ci, const float CO2,
   
   float Kco = Kc*(1.f+farquharmodelcoeffs.O/Ko);
 
-  float Wc = farquharmodelcoeffs.Vcmax*Ci/(Ci+Kco);
+  float Wc = Vcmax*Ci/(Ci+Kco);
 
   float J = Jmax*i_PAR*farquharmodelcoeffs.alpha/(i_PAR*farquharmodelcoeffs.alpha+Jmax);
   float Wj = J*Ci/(4.f*Ci+8.f*Gamma);
   
   A = (1-Gamma/Ci)*fmin(Wc,Wj)-Rd;
+
+  if( Wj<Wc ){ //light limited
+    limitation_state = 0;
+  }else{ //CO2 limited
+    limitation_state = 1;
+  }
   
   //--- Calculate error and update --- //
   
@@ -318,18 +333,18 @@ float PhotosynthesisModel::evaluateCi_Farquhar( const float Ci, const float CO2,
   
 }
 
-float PhotosynthesisModel::evaluateFarquharModel( const float i_PAR, const float TL, const float CO2, const float gM ){
+float PhotosynthesisModel::evaluateFarquharModel( const float i_PAR, const float TL, const float CO2, const float gM, float& Ci, int& limitation_state ){
 
   //initial guess for intercellular CO2
-  float Ci = CO2;
+  Ci = 1.f;
   
   float A;
   
   float Ci_old = Ci;
   float Ci_old_old = 0.95*Ci;
   
-  float resid_old = evaluateCi_Farquhar( Ci_old, CO2, i_PAR, TL, gM, A );
-  float resid_old_old = evaluateCi_Farquhar( Ci_old_old, CO2, i_PAR, TL, gM, A );
+  float resid_old = evaluateCi_Farquhar( Ci_old, CO2, i_PAR, TL, gM, A, limitation_state );
+  float resid_old_old = evaluateCi_Farquhar( Ci_old_old, CO2, i_PAR, TL, gM, A, limitation_state );
 
   float err = 10000, err_max = 0.01;
   int iter = 0, max_iter = 100;
@@ -337,20 +352,24 @@ float PhotosynthesisModel::evaluateFarquharModel( const float i_PAR, const float
   while( err>err_max && iter<max_iter ){
 
     if( resid_old==resid_old_old ){//this condition will cause NaN
+      err = 0.f;
       break;
     }
     
     Ci = fabs((Ci_old_old*resid_old-Ci_old*resid_old_old)/(resid_old-resid_old_old));
 
-    resid = evaluateCi_Farquhar( Ci, CO2, i_PAR, TL, gM, A );
+    resid = evaluateCi_Farquhar( Ci, CO2, i_PAR, TL, gM, A, limitation_state );
 
     resid_old_old = resid_old;
     resid_old = resid;
     
-    err = fabs(resid);
+    //err = fabs(resid_old-resid_old_old)/fabs(resid_old_old);
     
     Ci_old_old = Ci_old;
     Ci_old = Ci;
+
+    //err = fabs(Ci_old-Ci_old_old)/fabs(Ci_old_old);
+    err = fabs(resid);
     
     iter++;
     
@@ -370,4 +389,14 @@ EmpiricalModelCoefficients PhotosynthesisModel::getEmpiricalModelCoefficients( v
 
 FarquharModelCoefficients PhotosynthesisModel::getFarquharModelCoefficients( void ){
   return farquharmodelcoeffs;
+}
+
+void PhotosynthesisModel::optionalOutputPrimitiveData( const char* label ){
+
+  if( strcmp(label,"Ci")==0 || strcmp(label,"limitation_state")==0 ){
+    output_prim_data.push_back( label );
+  }else{
+    std::cout << "WARNING (PhotosynthesisModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+  }
+  
 }

@@ -19,7 +19,7 @@
 using namespace std;
 using namespace helios;
 
-ScanMetadata::ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax ){
+ScanMetadata::ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax, const float __exitDiameter, const float __beamDivergence ){
 
   //Copy arguments into structure variables
   origin = __origin;
@@ -29,6 +29,8 @@ ScanMetadata::ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, co
   Nphi = __Nphi;
   phiMin = __phiMin;
   phiMax = __phiMax;
+  exitDiameter = __exitDiameter;
+  beamDivergence = __beamDivergence;
 
 }
 
@@ -71,6 +73,7 @@ helios::int2 ScanMetadata::direction2rc( const helios::SphericalCoord direction 
  
 LiDARcloud::LiDARcloud( void ){
 
+  Nhits=0;
   hitgridcellcomputed = false;
   triangulationcomputed = false;
   printmessages = true;
@@ -280,8 +283,8 @@ int LiDARcloud::selfTest(void){
   
   synthetic_4.syntheticScan( &context_4, "plugins/lidar/xml/almond.xml" );
 
-  //synthetic_4.calculateSyntheticLeafArea( &context_4 );
-  //synthetic_4.calculateSyntheticGtheta( &context_4 );
+  synthetic_4.calculateSyntheticLeafArea( &context_4 );
+  synthetic_4.calculateSyntheticGtheta( &context_4 );
 
   synthetic_4.triangulateHitPoints( 0.05, 5 );
   synthetic_4.calculateLeafAreaGPU();
@@ -363,7 +366,7 @@ int LiDARcloud::selfTest(void){
   RMSE_LAD = sqrt(RMSE_LAD);
   RMSE_Gtheta = sqrt(RMSE_Gtheta);
 
-  if( RMSE_LAD>0.25 || bias_LAD>0 || RMSE_Gtheta>0.15 ){
+  if( RMSE_LAD>0.25 || bias_LAD>0 || RMSE_Gtheta>0.15 || RMSE_LAD==0.f ){
     std::cout << "failed." << std::endl;
     std::cout << "RMSE_LAD: " << RMSE_LAD << std::endl;
     std::cout << "bias_LAD: " << bias_LAD << std::endl;
@@ -478,7 +481,7 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 
   HitPoint hit( scanID, xyz, direction, row_column, color, data ); 
 
-  hits.push_back( hit );
+  hits.push_back(hit);
 
 }
 
@@ -489,15 +492,15 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 
   HitPoint hit( scanID, xyz, direction, row_column, color, data ); 
 
-  hits.push_back( hit );
+  hits.push_back(hit);
 
 }
 
 void LiDARcloud::deleteHitPoint( const uint index ){
 
   if( index>=hits.size() ){
-    cerr << "ERROR (deleteHitPoint): Hit point #" << index << " cannot be deleted from the scan because there have only been " << hits.size() << " hit points added." << endl;
-    exit(EXIT_FAILURE);
+    cerr << "WARNING (deleteHitPoint): Hit point #" << index << " cannot be deleted from the scan because there have only been " << hits.size() << " hit points added." << endl;
+    return;
   }
   
   HitPoint hit = hits.at(index);
@@ -507,7 +510,7 @@ void LiDARcloud::deleteHitPoint( const uint index ){
   //erase from vector of hits (use swap-and-pop method)
   std::swap( hits.at(index), hits.back() );
   hits.pop_back();
-  
+    
 }
 
 uint LiDARcloud::getHitCount( void ) const{
@@ -552,6 +555,22 @@ helios::vec2 LiDARcloud::getScanRangePhi( const uint scanID ) const{
     exit(EXIT_FAILURE);
   }
   return helios::make_vec2(scans.at(scanID).phiMin,scans.at(scanID).phiMax);
+}
+
+float LiDARcloud::getScanBeamExitDiameter( const uint scanID ) const{
+  if( scanID>=scans.size() ){
+    cerr << "ERROR (getScanBeamExitDiameter): Cannot get exit diameter for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
+    exit(EXIT_FAILURE);
+  }
+  return scans.at(scanID).exitDiameter;
+}
+
+float LiDARcloud::getScanBeamDivergence( const uint scanID ) const{
+  if( scanID>=scans.size() ){
+    cerr << "ERROR (getScanBeamDivergence): Cannot get beam divergence for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
+    exit(EXIT_FAILURE);
+  }
+  return scans.at(scanID).beamDivergence;
 }
 
 helios::vec3 LiDARcloud::getHitXYZ( const uint index ) const{
@@ -1041,7 +1060,7 @@ std::vector<uint> LiDARcloud::addReconstructedTriangleGroupsToContext( helios::C
 
   for( size_t g=0; g<Ngroups; g++ ){
 
-    uint leafGroup = round(context->randu()*(Ngroups-1));
+    int leafGroup = round(context->randu()*(Ngroups-1));
 
     for( size_t t=0; t<reconstructed_triangles.at(g).size(); t++ ){
 
@@ -1244,6 +1263,230 @@ void LiDARcloud::scalarFilter( const char* scalar_field, const float threshold, 
 
   if( printmessages ){
     std::cout << "Removed " << delete_count << " hit points based on scalar filter." << std::endl;
+  }
+  
+}
+
+bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 ){
+  return v0.at(0)<v1.at(0);
+}
+
+bool sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 ){
+  return v0.at(1)<v1.at(1);
+}
+
+void LiDARcloud::maxPulseFilter( const char* scalar ){
+
+  if( printmessages ){
+    std::cout << "Filtering point cloud by maximum " << scalar << " per pulse..." << std::flush;
+  }
+
+  std::vector<std::vector<float> > timestamps;
+  timestamps.resize(getHitCount());
+  
+  std::size_t delete_count = 0;
+  for( std::size_t r=0; r<getHitCount(); r++ ){
+
+    if( !doesHitDataExist(r,"timestamp") ){
+      std::cout << "ERROR (maxPulseFilter): Hit point " << r << " does not have scalar data ""timestamp""." << std::endl;
+      return;
+    }else if( !doesHitDataExist(r,scalar) ){
+      std::cout << "ERROR (maxPulseFilter): Hit point " << r << " does not have scalar data """ << scalar << """." << std::endl;
+      return;
+    }
+
+    std::vector<float> v{getHitData(r,"timestamp"),getHitData(r,scalar),float(r)};
+
+    timestamps.at(r) = v;
+
+  }
+
+  std::sort( timestamps.begin(), timestamps.end(), sortcol0 );
+
+  std::vector<std::vector<float> > isort;
+  std::vector<int> to_delete;
+  float time_old = timestamps.at(0).at(0);
+  for( std::size_t r=0; r<timestamps.size(); r++ ){
+
+    if( timestamps.at(r).at(0)!=time_old ){
+
+      if( isort.size()>1 ){
+      
+	std::sort( isort.begin(), isort.end(), sortcol1 );
+	
+	for( int i=0; i<isort.size()-1; i++ ){
+	  to_delete.push_back( int(isort.at(i).at(2)) );
+	}
+
+      }
+	
+      isort.resize(0);
+      time_old = timestamps.at(r).at(0);
+    }
+
+    isort.push_back(timestamps.at(r));
+      
+  }
+
+  std::sort( to_delete.begin(), to_delete.end() );
+
+  for( int i=to_delete.size()-1; i>=0; i-- ){
+    deleteHitPoint( to_delete.at(i) );
+  }
+    
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+  }
+  
+  
+}
+
+void LiDARcloud::minPulseFilter( const char* scalar ){
+
+  if( printmessages ){
+    std::cout << "Filtering point cloud by minimum " << scalar << " per pulse..." << std::flush;
+  }
+
+  std::vector<std::vector<float> > timestamps;
+  timestamps.resize(getHitCount());
+  
+  std::size_t delete_count = 0;
+  for( std::size_t r=0; r<getHitCount(); r++ ){
+
+    if( !doesHitDataExist(r,"timestamp") ){
+      std::cout << "ERROR (minPulseFilter): Hit point " << r << " does not have scalar data ""timestamp""." << std::endl;
+      return;
+    }else if( !doesHitDataExist(r,scalar) ){
+      std::cout << "ERROR (minPulseFilter): Hit point " << r << " does not have scalar data """ << scalar << """." << std::endl;
+      return;
+    }
+
+    std::vector<float> v{getHitData(r,"timestamp"),getHitData(r,scalar),float(r)};
+
+    timestamps.at(r) = v;
+
+  }
+
+  std::sort( timestamps.begin(), timestamps.end(), sortcol0 );
+
+  std::vector<std::vector<float> > isort;
+  std::vector<int> to_delete;
+  float time_old = timestamps.at(0).at(0);
+  for( std::size_t r=0; r<timestamps.size(); r++ ){
+
+    if( timestamps.at(r).at(0)!=time_old ){
+
+      if( isort.size()>1 ){
+      
+	std::sort( isort.begin(), isort.end(), sortcol1 );
+
+	for( int i=1; i<isort.size(); i++ ){
+	  to_delete.push_back( int(isort.at(i).at(2)) );
+	}
+
+      }
+	
+      isort.resize(0);
+      time_old = timestamps.at(r).at(0);
+    }
+
+    isort.push_back(timestamps.at(r));
+      
+  }
+
+  std::sort( to_delete.begin(), to_delete.end() );
+
+  for( int i=to_delete.size()-1; i>=0; i-- ){
+    deleteHitPoint( to_delete.at(i) );
+  }
+    
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+  }
+  
+  
+}
+
+void LiDARcloud::firstHitFilter( void ){
+
+  if( printmessages ){
+    std::cout << "Filtering point cloud to only first hits per pulse..." << std::flush;
+  }
+
+  std::vector<float> target_index;
+  target_index.resize(getHitCount());
+  int min_tindex = 1;
+  
+  for( std::size_t r=0; r<target_index.size(); r++ ){
+
+    if( !doesHitDataExist(r,"target_index") ){
+      std::cout << "ERROR (firstHitFilter): Hit point " << r << " does not have scalar data ""target_index""." << std::endl;
+      return;
+    }
+
+    target_index.at(r) = getHitData(r,"target_index");
+
+    if( target_index.at(r) == 0 ){
+      min_tindex = 0;
+    }
+
+  }
+
+  for( int r=target_index.size()-1; r>=0; r-- ){
+
+    if( target_index.at(r)!=min_tindex ){
+      deleteHitPoint(r);
+    }
+    
+  }
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+  }
+
+
+}
+
+void LiDARcloud::lastHitFilter( void ){
+
+  if( printmessages ){
+    std::cout << "Filtering point cloud to only last hits per pulse..." << std::flush;
+  }
+
+  std::vector<float> target_index;
+  target_index.resize(getHitCount());
+  int min_tindex = 1;
+  
+  for( std::size_t r=0; r<target_index.size(); r++ ){
+
+    if( !doesHitDataExist(r,"target_index") ){
+      std::cout << "ERROR (lastHitFilter): Hit point " << r << " does not have scalar data ""target_index""." << std::endl;
+      return;
+    }else if( !doesHitDataExist(r,"target_count") ){
+      std::cout << "ERROR (lastHitFilter): Hit point " << r << " does not have scalar data ""target_count""." << std::endl;
+      return;
+    }
+
+    target_index.at(r) = getHitData(r,"target_index");
+
+    if( target_index.at(r) == 0 ){
+      min_tindex = 0;
+    }
+
+  }
+
+  for( int r=target_index.size()-1; r>=0; r-- ){
+
+    float target_count = getHitData(r,"target_count");
+
+    if( target_index.at(r)==target_count-1+min_tindex ){
+      deleteHitPoint(r);
+    }
+    
+  }
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
   }
   
 }
@@ -1504,7 +1747,7 @@ float LiDARcloud::getCellRotation( const uint index ) const{
   
 }
 
-void LiDARcloud::calculateSyntheticGtheta( helios::Context* context ){
+void LiDARcloud::calculateSyntheticGtheta( const helios::Context* context ){
 
   size_t Nprims = context->getPrimitiveCount();
 
@@ -1630,7 +1873,7 @@ float LiDARcloud::getCellGtheta( const uint index ) const{
 void LiDARcloud::leafReconstructionFloodfill( void ){
   
   size_t group_count = 0;
-  int current_group;
+  int current_group = 0;
 
   vector<vector<int> > nodes;
   nodes.resize(getHitCount());
@@ -1653,7 +1896,10 @@ void LiDARcloud::leafReconstructionFloodfill( void ){
   }
 
   std::vector<int> fill_flag;
-  fill_flag.resize(Ntri,-1);
+  fill_flag.resize(Ntri);
+  for( size_t t=0; t<Ntri; t++ ){
+    fill_flag.at(t)=-1;
+  }
 
   for( size_t t=0; t<Ntri; t++ ){//looping through all triangles
 
@@ -1687,47 +1933,45 @@ void LiDARcloud::leafReconstructionFloodfill( void ){
 void LiDARcloud::floodfill( size_t t, std::vector<Triangulation> &t_triangles, std::vector<int> &fill_flag, std::vector<std::vector<int> > &nodes, const int tag, const int depth, const int maxdepth ){
 
   Triangulation tri = t_triangles.at(t);
-
-  std::map<int,int> connection_list;
   
   int verts[3] = {tri.ID0, tri.ID1, tri.ID2};
 
-  //loop through all vertices of current triangle (#t)
+  std::vector<int> connection_list;
+
   for( int i=0; i<3; i++ ){
-
     std::vector<int> connected_tris = nodes.at(verts[i]);
-
-    //loop through all triangles connected to vertex #i
-    for( int tt=0; tt<connected_tris.size(); tt++ ){
-
-      if( t==connected_tris.at(tt) ){ //skip self (triangle #t)
-	continue;
-      }
-      
-      if( connection_list.find(connected_tris.at(tt)) == connection_list.end() ){
-	connection_list.insert( std::make_pair(connected_tris.at(tt),1) );
-	//connection_list.insert( std::pair<int,int>(connected_tris.at(tt),1) );
-      }else{
-	connection_list.at(connected_tris.at(tt)) += 1;
-      }
-      
-    }
-
+    connection_list.insert( connection_list.begin(), connected_tris.begin(),connected_tris.end());
   }
 
-  for( auto const &tt : connection_list ){
-    int index = tt.first;
-    int count = tt.second;
-    if( index!=t && count>1 && fill_flag.at(index)<0 ){
+  std::sort( connection_list.begin(), connection_list.end() );
 
-      fill_flag.at(index) = tag;
+  int count = 0;
+  for( int tt=1; tt<connection_list.size(); tt++ ){
+    if( connection_list.at(tt-1)!=connection_list.at(tt) ){
 
-      if( depth<maxdepth ){
-	floodfill( index, t_triangles, fill_flag, nodes, tag, depth+1, maxdepth );
-      }
+      if( count>=2 ){
+
+  	int index = connection_list.at(tt-1);
+
+  	if( fill_flag.at(index)==-1 && index!=t ){
 	
+  	  fill_flag.at(index) = tag;
+
+  	  if( depth<maxdepth ){
+  	    floodfill( index, t_triangles, fill_flag, nodes, tag, depth+1, maxdepth );
+  	  }
+	  
+  	}
+	  
+      }
+      
+      count = 1;
+    }else{
+      count++;
     }
+    
   }
+
   
 }
 
@@ -1862,7 +2106,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     reconstructed_alphamasks_center.push_back( position );
     float l = Lavg.at(reconstructed_triangles.at(group).front().gridcell)*sqrt(leaf_aspect_ratio/solidfraction);
     float w = l/leaf_aspect_ratio;
-    reconstructed_alphamasks_size.push_back( helios::make_vec2(l,w) );
+    reconstructed_alphamasks_size.push_back( helios::make_vec2(w,l) );
     helios::vec3 normal = cross( reconstructed_triangles.at(group).at(gind).vertex1-reconstructed_triangles.at(group).at(gind).vertex0, reconstructed_triangles.at(group).at(gind).vertex2-reconstructed_triangles.at(group).at(gind).vertex0 );
     reconstructed_alphamasks_rotation.push_back( make_SphericalCoord(cart2sphere(normal).zenith,cart2sphere(normal).azimuth)  );
     reconstructed_alphamasks_gridcell.push_back( reconstructed_triangles.at(group).front().gridcell );
@@ -1927,7 +2171,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
     }
   }
 
-  std::vector<int> deleted_groups;
+  std::vector<int> deleted_groups; 
   int backfill_count = 0;
 
   //Get the total theoretical leaf area for each grid cell based on LiDAR scan

@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.0.18</span>
+   &#160;<span id="projectnumber">v1.1.0</span>
    </div>
   </td>
  </tr>
@@ -75,9 +75,9 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ad3432a838430c33eaa0b1839e00a70ed"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#ad3432a838430c33eaa0b1839e00a70ed">ScanMetadata</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax)</td></tr>
-<tr class="memdesc:ad3432a838430c33eaa0b1839e00a70ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a LiDAR scan data structure.  <a href="#ad3432a838430c33eaa0b1839e00a70ed">More...</a><br /></td></tr>
-<tr class="separator:ad3432a838430c33eaa0b1839e00a70ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77923cb21a65a5e6f08e9381dd66e255"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a77923cb21a65a5e6f08e9381dd66e255">ScanMetadata</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax, const float __exitDiameter, const float __beamDivergence)</td></tr>
+<tr class="memdesc:a77923cb21a65a5e6f08e9381dd66e255"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a LiDAR scan data structure.  <a href="#a77923cb21a65a5e6f08e9381dd66e255">More...</a><br /></td></tr>
+<tr class="separator:a77923cb21a65a5e6f08e9381dd66e255"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1ac75dd11e32061c999525651160b519"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a1ac75dd11e32061c999525651160b519">rc2direction</a> (const uint row, const uint column) const</td></tr>
 <tr class="memdesc:a1ac75dd11e32061c999525651160b519"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert the (row,column) of hit point in a scan to a direction vector.  <a href="#a1ac75dd11e32061c999525651160b519">More...</a><br /></td></tr>
 <tr class="separator:a1ac75dd11e32061c999525651160b519"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -115,6 +115,12 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a200bf65b728866855ace6456365d66a3">origin</a></td></tr>
 <tr class="memdesc:a200bf65b728866855ace6456365d66a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">(x,y,z) coordinate of scanner location <br /></td></tr>
 <tr class="separator:a200bf65b728866855ace6456365d66a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a86d36162498a4de96a04ce83976c8e22"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a86d36162498a4de96a04ce83976c8e22">exitDiameter</a></td></tr>
+<tr class="memdesc:a86d36162498a4de96a04ce83976c8e22"><td class="mdescLeft">&#160;</td><td class="mdescRight">Diameter of laser pulse at exit from the scanner.  <a href="#a86d36162498a4de96a04ce83976c8e22">More...</a><br /></td></tr>
+<tr class="separator:a86d36162498a4de96a04ce83976c8e22"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acec69b1556a96236c0702f03b231d008"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#acec69b1556a96236c0702f03b231d008">beamDivergence</a></td></tr>
+<tr class="memdesc:acec69b1556a96236c0702f03b231d008"><td class="mdescLeft">&#160;</td><td class="mdescRight">Divergence angle of the laser beam in radians.  <a href="#acec69b1556a96236c0702f03b231d008">More...</a><br /></td></tr>
+<tr class="separator:acec69b1556a96236c0702f03b231d008"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Structure containing metadata for a terrestrial scan. </p>
@@ -122,8 +128,8 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00196">196</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="ad3432a838430c33eaa0b1839e00a70ed"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad3432a838430c33eaa0b1839e00a70ed">&#9670;&nbsp;</a></span>ScanMetadata()</h2>
+<a id="a77923cb21a65a5e6f08e9381dd66e255"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a77923cb21a65a5e6f08e9381dd66e255">&#9670;&nbsp;</a></span>ScanMetadata()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -168,7 +174,19 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>__phiMax</em>&#160;</td>
+          <td class="paramname"><em>__phiMax</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>__exitDiameter</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>__beamDivergence</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -222,7 +240,7 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>(row,column) table index for the given hit point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00045">45</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00047">47</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -263,11 +281,49 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 <dl class="section return"><dt>Returns</dt><dd>Spherical vector corresponding to the ray direction for the given hit point. </dd></dl>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000001">Todo:</a></b></dt><dd>Add in support for clockwise-rotating scanners </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00035">35</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00037">37</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Field Documentation</h2>
+<a id="acec69b1556a96236c0702f03b231d008"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acec69b1556a96236c0702f03b231d008">&#9670;&nbsp;</a></span>beamDivergence</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float ScanMetadata::beamDivergence</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Divergence angle of the laser beam in radians. </p>
+<dl class="section note"><dt>Note</dt><dd>This is not needed for discrete return instruments. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00252">252</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+
+</div>
+</div>
+<a id="a86d36162498a4de96a04ce83976c8e22"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a86d36162498a4de96a04ce83976c8e22">&#9670;&nbsp;</a></span>exitDiameter</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float ScanMetadata::exitDiameter</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Diameter of laser pulse at exit from the scanner. </p>
+<dl class="section note"><dt>Note</dt><dd>This is not needed for discrete return instruments. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00248">248</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+
+</div>
+</div>
 <a id="a29f41bdfbec57a32c60755944b4c0a7f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a29f41bdfbec57a32c60755944b4c0a7f">&#9670;&nbsp;</a></span>phiMax</h2>
 

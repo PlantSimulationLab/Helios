@@ -86,7 +86,7 @@
    </tr>
  </table>	
  
- \subsection PhotoOutputData Output Primitive Data
+ \subsection PhotoOutputData Default Output Primitive Data
 
  <table>
    <tr>	
@@ -102,6 +102,32 @@
      <td>\f$\mu\f$mol CO<sub>2</sub>/m<sup>2</sup>-sec</td>
      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
      <td>Net rate of carbon transfer per unit one-sided area.</td>
+   </tr>
+ </table>
+
+ \subsection PhotoOptionalOutputData Optional Output Primitive Data
+
+ <table>
+   <tr>	
+     <th>Primitive Data Label</th>
+     <th>Symbol</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>Ci</td>
+     <td>\f$C_i\f$</td>
+     <td>\f$\mu\f$mol CO<sub>2</sub>/mol</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Intercellular CO<sub>2</sub> concentration.</td>
+   </tr>
+   <tr>	
+     <td>limitation_state</td>
+     <td>N/A</td>
+     <td>N/A</td>
+     <td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td>
+     <td>Photosynthesis limitation state. limitation_state=0 if photosynthesis is Rubisco-limited, limitation_state=1 if photosynthesis is electron transport limited.</td>
    </tr>
  </table>
 

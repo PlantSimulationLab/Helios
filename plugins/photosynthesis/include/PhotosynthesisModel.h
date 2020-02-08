@@ -145,6 +145,11 @@ public:
   //! Get the current model coefficients for the Farquhar-von Caemmerer-Berry model
   FarquharModelCoefficients getFarquharModelCoefficients( void );
 
+  //! Add optional output primitive data values to the Context
+  /** \param[in] "label" Name of primitive data (e.g., Ci)
+  */
+  void optionalOutputPrimitiveData( const char* label );
+
 private:
 
   //! Pointer to the Helios context
@@ -155,11 +160,11 @@ private:
 
   float evaluateEmpiricalModel( const float i_PAR, const float TL, const float CO2, const float gM );
 
-  float evaluateFarquharModel( const float i_PAR, const float TL, const float CO2, const float gM );
+  float evaluateFarquharModel( const float i_PAR, const float TL, const float CO2, const float gM, float& Ci, int& limitation_state );
 
   float evaluateCi_Empirical( const float Ci, const float CO2, const float fL, const float Rd, const float gM );
 
-  float evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float TL, const float gM, float& A );
+  float evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float TL, const float gM, float& A, int& limitation_state );
 
   float i_PAR_default;
   float TL_default;
@@ -167,6 +172,9 @@ private:
   float gM_default;
 
   int model_flag;
+
+  //! Names of additional primitive data to add to the Context
+  std::vector<std::string> output_prim_data;
   
 };
 

@@ -16,6 +16,9 @@
 
 #include <cuda_runtime.h>
 #include "helios_vector_types.h"
+#include "random.h"
+
+namespace LIDAR_CUDA {
 
 #define CUDA_CHECK_ERROR(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -26,32 +29,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
       if (abort) exit(code);
    }
 }
-
-//! Device function to determine the grid cell in which a hit point resides.
-/** \param[in] "Nhits" Total number of hit points
-    \param[in] "d_hit_xyz" (x,y,z) coordinates of hit point - resides in GPU memory and has size Nhits
-    \param[in] "Ngridcells" Total number of grid cells
-    \param[in] "d_grid_size" Size of each grid cell in x-, y-, and z-directions - resides in GPU memory and has size Ngricells
-    \param[in] "d_grid_center" (x,y,z) coordinates of each grid cell center point - resides in GPU memory and has size Ngricells
-    \param[in] "d_grid_anchor" If grid cell is a subcell of a larger grid that was rotated about its center, d_grid_anchor contains the (x,y,z) coordinates of the points about which the cell was rotated.  If the above conditions are not true, d_grid_anchor is equal to d_grid_center. - resides in GPU memory and has size Ngricells
-    \param[in] "d_grid_rotation" angle in radians of grid cell azimuthal rotation - resides in GPU memory and has size Ngricells
-    \param[out] "d_hit_vol" Index of grid cell that hit point resides in.  If the hit point does not reside in any grid cells, d_hit_vol[] = -1. - resides in GPU memory and has size Ngricells
-*/
-__global__ void insideVolume( const uint Nhits, const float3* d_hit_xyz, const uint Ngridcells, const float3* d_grid_size, const float3* d_grid_center, const float3* d_grid_anchor, const float* d_grid_rotation, int* d_hit_vol );
-
-//! Device function to intersect all rays with an axis-aligned bounding box
-__global__ void intersectBoundingBox( const size_t scanSize, const float3 origin, const float3* d_hit_xyz, const float3 bbcenter, const float3 bbsize, uint* d_boundingbox_hit );
-
-__global__ void intersectGridcell( const size_t Nhitsbb, const float3 origin, float3* d_scan_xyz, const float3 center, const float3 anchor, const float3 size, const float rotation, float* d_dr, float* hit_before, float* hit_after );
-
-
-__global__ void intersectPatches( const size_t N, const float3 origin, float3* d_raydir, const int Npatches, float3* d_patch_vertex0, float3* d_patch_vertex1, float3* d_patch_vertex2, float3* d_patch_vertex3, float* d_hit_t );
-
-__global__ void intersectTriangles( const size_t N, const float3 origin, float3* d_raydir, const int Ntriangles, float3* d_tri_vertex0, float3* d_tri_vertex1, float3* d_tri_vertex2, float* d_hit_t );
-
-__global__ void intersectDisks( const size_t N, const float3 origin, float3* d_raydir, const int Ndisks, float3* d_disk_center, float* d_disk_radius, float3* d_disk_normal, float* d_hit_t );
-
-__global__ void intersectAlphaMasks( const size_t N, const float3 origin, float3* d_raydir, const int Namasks, float3* d_patch_vertex0, float3* d_patch_vertex1, float3* d_patch_vertex2, float3* d_patch_vertex3, bool* d_amask_maskdata, int* d_amask_masksize, float* d_hit_t );
 
 /** Function to rotate a 3D vector given spherical angles elevation and azimuth ON THE GPU. */
 /** \param[in] "position" 3D coordinate of point to be rotated. 
@@ -139,46 +116,43 @@ __host__ __device__ float3 operator/(const float3 &a, const float& b);
     \param b float3 vector
     \return cross product
 */
-__host__ __device__ inline float3 cross(const float3 &a, const float3 &b){
-  float3 c;
-  c.x=a.y*b.z - b.y*a.z;
-  c.y=b.x*a.z - a.x*b.z;
-  c.z=a.x*b.y - b.x*a.y;
-  return c;
+__host__ __device__ float3 cross(const float3 &a, const float3 &b);
+
+__host__ __device__ float magnitude(const float3 &a);
+
+__host__ __device__ float3 normalize(const float3 &a);
+
+float2 vec2tofloat2( helios::vec2 v2 );
+
+helios::vec2 float2tovec2( float2 f2 );
+
+float3 vec3tofloat3( helios::vec3 v3 );
+
+helios::vec3 float3tovec3( float3 f3 );
+
+__device__ float3 d_sphere2cart( float radius, float elevation, float azimuth );
+
+  __host__ __device__ float atan2_2pi( const float& y, const float& x);
+
+  __host__ __device__ float acos_safe( float x );
+
+  __host__ int randu( int imin, int imax  );
+
+  __device__ float2 d_sampleDisk( float radius, uint seed );
+
+  __host__ bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 );
+
+  __host__ bool sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 );
+
+__global__ void insideVolume( const uint Nhits, const float3* d_hit_xyz, const uint Ngridcells, const float3* d_grid_size, const float3* d_grid_center, const float3* d_grid_anchor, const float* d_grid_rotation, int* d_hit_vol );
+
+//! Device function to intersect all rays with an axis-aligned bounding box
+__global__ void intersectBoundingBox( const size_t scanSize, const float3 origin, const float3* d_hit_xyz, const float3 bbcenter, const float3 bbsize, uint* d_boundingbox_hit );
+
+__global__ void intersectGridcell( const size_t Nhitsbb, const float3 origin, float3* d_scan_xyz, const float3 center, const float3 anchor, const float3 size, const float rotation, float* d_dr, float* hit_before, float* hit_after );
+
+__global__ void intersectPatches( const size_t N, const int rays_per_pulse, const float3 origin, float3* d_raydir, const float exit_diameter, const float beam_divergence, const int Npatches, float3* d_patch_vertex, int* d_patch_textureID, const int Ntextures, int2* d_masksize, const int2 masksize_max, bool* d_maskdata, float2* d_patch_uv, float* d_hit_t, float* d_hit_fnorm );
+
+__global__ void intersectTriangles( const size_t Npulse, const int rays_per_pulse, const float3 origin, float3* d_raydir, const float exit_diameter, const float beam_divergence, const int Ntriangles, float3* d_tri_vertex, int* d_tri_textureID, const int Ntextures, int2* d_masksize, const int2 masksize_max, bool* d_maskdata, float2* d_tri_uv, float* d_hit_t, float* d_hit_fnorm );
+
 }
-
-__host__ __device__ inline float magnitude(const float3 &a){
-  return sqrt( a.x*a.x + a.y*a.y + a.z*a.z );
-}
-
-__host__ __device__ inline float3 normalize(const float3 &a){
-  return a/magnitude(a);
-}
-
-float3 inline vec3tofloat3( helios::vec3 v3 ){
-  float3 f3;
-  f3.x=v3.x;
-  f3.y=v3.y;
-  f3.z=v3.z;
-  return f3;
-}
-
-helios::vec3 inline flota3tovec3( float3 f3 ){
-  helios::vec3 v3;
-  v3.x=f3.x;
-  v3.y=f3.y;
-  v3.z=f3.z;
-  return v3;
-}
-
-//*************************************************************//
-//              AERIAL LIDAR DEFINITIONS                      //
-//************************************************************//
-
-__global__ void intersectBoundingBox( const size_t scanSize, float3* d_hit_origin, const float3* d_scan_xyz, const float3 bbcenter, const float3 bbsize, uint* d_boundingbox_hit );
-
-__global__ void intersectGridcell( const size_t Nhitsbb, float3* d_scan_xyz, float3* d_scan_raydir, const size_t Ncells, float3* center, float3* anchor, float3* size, float* rotation, float* d_dr, float* d_dr_hit, float* hit_denom, float* hit_inside );
-
-__global__ void intersectPatches( const size_t N, float3* origin, float3* d_raydir, const int Npatches, float3* d_patch_vertex0, float3* d_patch_vertex1, float3* d_patch_vertex2, float3* d_patch_vertex3, float* d_hit_t );
-
-__global__ void intersectTriangles( const size_t N, float3* origin, float3* d_raydir, const int Ntriangles, float3* d_tri_vertex0, float3* d_tri_vertex1, float3* d_tri_vertex2, float* d_hit_t );

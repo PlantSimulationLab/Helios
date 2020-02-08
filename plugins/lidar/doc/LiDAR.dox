@@ -30,7 +30,6 @@
   \section LiDARissues Known Issues
 
   - The LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file. 
-  - Synthetic scans do not support primitives with a transparency mask.
 
   \section LiDARintro Introduction
 

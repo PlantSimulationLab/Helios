@@ -19,5 +19,5 @@ var searchData=
   ['hitpoint',['HitPoint',['../struct_hit_point.html',1,'']]],
   ['hittable',['HitTable',['../class_hit_table.html',1,'']]],
   ['hour',['hour',['../structhelios_1_1_time.html#a6ec639cf61cf283c5e999d152d27839f',1,'helios::Time']]],
-  ['helios_20documentation_20v1_2e0_2e18',['Helios Documentation v1.0.18',['../index.html',1,'']]]
+  ['helios_20documentation_20v1_2e1_2e0',['Helios Documentation v1.1.0',['../index.html',1,'']]]
 ];

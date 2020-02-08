@@ -3403,10 +3403,10 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
   std::vector<helios::vec2> uv;
   uv.resize(4);
-  uv.at(0) = uv_center-0.5*uv_size;
-  uv.at(1) = uv_center+make_vec2(0.5*uv_size.x,-0.5*uv_size.y);
-  uv.at(2) =  uv_center+0.5*uv_size;
-  uv.at(3) =  uv_center+make_vec2(-0.5*uv_size.x,+0.5*uv_size.y);
+  uv.at(0) = uv_center+make_vec2(+0.5*uv_size.x,-0.5*uv_size.y);
+  uv.at(1) = uv_center+make_vec2(-0.5*uv_size.x,-0.5*uv_size.y);
+  uv.at(2) =  uv_center+make_vec2(-0.5*uv_size.x,+0.5*uv_size.y);
+  uv.at(3) =  uv_center+make_vec2(+0.5*uv_size.x,+0.5*uv_size.y);
 
   float solid_fraction;
   if( texture->hasTransparencyChannel() ){
@@ -3489,8 +3489,8 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
   if( texture->hasTransparencyChannel() ){
     std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
     int2 sz = texture->getSize();
-    int2 uv_min( round(fmin(fmin(uv0.x,uv1.x),uv2.x))*sz.x, round(fmin(fmin(uv0.y,uv1.y),uv2.y))*sz.y );
-    int2 uv_max( round(fmax(fmax(uv0.x,uv1.x),uv2.x))*sz.x, round(fmax(fmax(uv0.y,uv1.y),uv2.y))*sz.y );
+    int2 uv_min( round(fmin(fmin(uv0.x,uv1.x),uv2.x)*sz.x), round(fmin(fmin(uv0.y,uv1.y),uv2.y)*sz.y) );
+    int2 uv_max( round(fmax(fmax(uv0.x,uv1.x),uv2.x)*sz.x), round(fmax(fmax(uv0.y,uv1.y),uv2.y)*sz.y) );
     int A = 0;
     int At = 0;
     vec2 xy;
@@ -4621,10 +4621,10 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
       
       subcenter = make_vec3(-0.5*size.x+(float(i)+0.5)*subsize.x,-0.5*size.y+(float(j)+0.5)*subsize.y,0);
 
-      uv.at(0) = make_vec2(float(i)*uv_sub.x,float(j)*uv_sub.y);
-      uv.at(1) = make_vec2(float(i+1)*uv_sub.x,float(j)*uv_sub.y); 
-      uv.at(2) = make_vec2(float(i+1)*uv_sub.x,float(j+1)*uv_sub.y);
-      uv.at(3) = make_vec2(float(i)*uv_sub.x,float(j+1)*uv_sub.y);
+      uv.at(0) = make_vec2(1.f-float(i)*uv_sub.x,float(j)*uv_sub.y);
+      uv.at(1) = make_vec2(1.f-float(i+1)*uv_sub.x,float(j)*uv_sub.y); 
+      uv.at(2) = make_vec2(1.f-float(i+1)*uv_sub.x,float(j+1)*uv_sub.y);
+      uv.at(3) = make_vec2(1.f-float(i)*uv_sub.x,float(j+1)*uv_sub.y);
 
       float solid_fraction;
       if( texture->hasTransparencyChannel() ){
@@ -6864,7 +6864,7 @@ void Context::writeOBJ( const char* filename ) const{
       }
 
       std::vector<vec2> uv_v = getTrianglePointer(p)->getTextureUV();
-      if( uv_v.size()>0 ){
+      if( getTrianglePointer(p)->hasTexture() ){
 	uv_inds.push_back( make_int3(uv_count, uv_count+1, uv_count+2) );
 	textures.push_back(getTrianglePointer(p)->getTextureFile());
 	for( int i=0; i<3; i++ ){
@@ -6892,14 +6892,22 @@ void Context::writeOBJ( const char* filename ) const{
       uv_v = getPatchPointer(p)->getTextureUV();
       texturefile = getPatchPointer(p)->getTextureFile();
 
-      if( uv_v.size()>0 ){
+      if( getPatchPointer(p)->hasTexture() ){
 	textures.push_back(texturefile);
 	textures.push_back(texturefile);
 	uv_inds.push_back( make_int3(uv_count, uv_count+1, uv_count+2) );
 	uv_inds.push_back( make_int3(uv_count, uv_count+2, uv_count+3) );
-	for( int i=0; i<4; i++ ){
-	  uv.push_back( uv_v.at(i) );
-	  uv_count ++;
+	if( uv_v.size()==0 ){//default (u,v)
+	  uv.push_back( make_vec2(0,1) );
+	  uv.push_back( make_vec2(1,1) );
+	  uv.push_back( make_vec2(1,0) );
+	  uv.push_back( make_vec2(0,0) );
+	  uv_count+=4;
+	}else{//custom (u,v)
+	  for( int i=0; i<4; i++ ){
+	    uv.push_back( uv_v.at(i) );
+	    uv_count ++;
+	  }
 	}
       }else{
 	textures.push_back("");

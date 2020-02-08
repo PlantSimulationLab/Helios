@@ -204,7 +204,7 @@ struct ScanMetadata{
       \param[in] "phimin" Minimum scan angle in the phi (azimuthal) direction
       \param[in] "phimax" Maximum scan angle in the phi (azimuthal) direction
   */
-  ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax );
+  ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax, const float __exitDiameter, const float __beamDivergence );
 
   //! Convert the (row,column) of hit point in a scan to a direction vector
   /** \param[in] "row" Index of hit point in the theta (zenithal) direction.
@@ -241,7 +241,15 @@ struct ScanMetadata{
   float phiMax;
   
   //!(x,y,z) coordinate of scanner location
-  helios::vec3 origin;                               
+  helios::vec3 origin;
+
+  //! Diameter of laser pulse at exit from the scanner
+  /** \note This is not needed for discrete return instruments. */
+  float exitDiameter;
+
+  //! Divergence angle of the laser beam in radians
+  /** \note This is not needed for discrete return instruments. */
+  float beamDivergence;
 
   
 };
@@ -249,6 +257,8 @@ struct ScanMetadata{
 //! Primary class for terrestrial LiDAR scan
 class LiDARcloud{
  private:
+
+  size_t Nhits;
 
   std::vector<ScanMetadata> scans;
 
@@ -407,6 +417,18 @@ class LiDARcloud{
       \return vec2.x is the minimum scan azimuthal angle, and vec2.y is the maximum scan azimuthal angle, both in radians 
   */
   helios::vec2 getScanRangePhi( const uint scanID ) const;
+
+  //! Get the diameter of the laser beam at exit from the instrument
+  /** \param[in] "scanID" ID of scan.
+      \return Diameter of the beam at exit.
+  */
+  float getScanBeamExitDiameter( const uint scanID ) const;
+
+  //! Divergence angle of the laser beam in radians
+   /** \param[in] "scanID" ID of scan.
+      \return Divergence angle of the beam.
+  */
+  float getScanBeamDivergence( const uint scanID ) const;
 
   //! Get (x,y,z) coordinate of hit point by index
   /** \param [in] "index" Hit number */
@@ -633,6 +655,8 @@ ection
   */
   void getGridBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax ) const;
 
+  // --------- POINT FILTERING ----------- //
+
   //! Filter scan by imposing a maximum distance from the scanner
   /** \param[in] "maxdistance" Maximum hit point distance from scanner */
   void distanceFilter( const float maxdistance );
@@ -650,6 +674,28 @@ ection
       \note As an example, imagine we wanted to remove all hit points where the reflectance is less than -10. In this case we would call scalarFilter( "reflectance", -10, "<" );
   */
   void scalarFilter( const char* scalar_field, const float threshold, const char* comparator );
+
+  //! Filter full-waveform data according to the maximum scalar value along each pulse. Any scalar value can be used, provided it is a column in the ASCII hit point data file. The resulting point cloud will have only one hit point per laser pulse.
+  /* \param[in] "scalar" Name of hit point scalar data in the ASCII hit data file. 
+     \note This function is only applicable for full-waveform data and requires that the scalar field "timestamp" is provided in the ASCII hit point data file.
+  */
+  void maxPulseFilter( const char* scalar );
+
+  //! Filter full-waveform data according to the minimum scalar value along each pulse. Any scalar value can be used, provided it is a column in the ASCII hit point data file. The resulting point cloud will have only one hit point per laser pulse.
+  /* \param[in] "scalar" Name of hit point scalar data in the ASCII hit data file. 
+     \note This function is only applicable for full-waveform data and requires that the scalar field "timestamp" is provided in the ASCII hit point data file.
+  */
+  void minPulseFilter( const char* scalar );
+
+  //! Filter full-waveform data to include only the first hit per laser pulse. The resulting point cloud will have only one hit point per laser pulse (first hits).
+  /* \note This function is only applicable for full-waveform data and requires that the scalar field "target_index" is provided in the ASCII hit point data file. The "target_index" values can start at 0 or 1 for first hits as long as it is consistent throughout the point cloud.
+  */
+  void firstHitFilter( void );
+
+  //! Filter full-waveform data to include only the last hit per laser pulse. The resulting point cloud will have only one hit point per laser pulse (last hits).
+  /* \note This function is only applicable for full-waveform data and requires that the scalar fields "target_index" and "target_count" are provided in the ASCII hit point data file. The "target_index" values can start at 0 or 1 for first hits as long as it is consistent throughout the point cloud.
+  */
+  void lastHitFilter( void );
 
   // ------- TRIANGULATION --------- //
   
@@ -709,11 +755,20 @@ d the last cell's index is Ncells-1. */
 
   // ------- SYNTHETIC SCAN ------ //
 
-  //! Run a synthetic LiDAR scan based on scan parameters given in an XML file
+  //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
   /** \param[in] "context" Pointer to the Helios context 
       \param[in] "xml_file" Path to an XML file with LiDAR scan and grid information 
   */
   void syntheticScan( helios::Context* context, const char* xml_file );
+
+  //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
+  /** \param[in] "context" Pointer to the Helios context 
+      \param[in] "xml_file" Path to an XML file with LiDAR scan and grid information
+      \param[in] "rays_per_pulse" Number of ray launches per laser pulse direction
+      \param[in] "pulse_distance_threshold" Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
+      \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
+  */
+  void syntheticScan( helios::Context* context, const char* xml_file, const int rays_per_pulse, const float pulse_distance_threshold );
 
   //! Calculate the surface area of all primitives in the context
   /** \param[in] "context" Pointer to the Helios context 
@@ -723,7 +778,7 @@ d the last cell's index is Ncells-1. */
   //! Calculate the G(theta) of all primitives in the context
   /** \param[in] "context" Pointer to the Helios context 
   */
-  void calculateSyntheticGtheta( helios::Context* context );
+  void calculateSyntheticGtheta( const helios::Context* context );
 
   // -------- LEAF AREA -------- //
 
@@ -758,6 +813,10 @@ d the last cell's index is Ncells-1. */
   /** \param [in] "minVoxelHits" Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than minVoxelHits, the calculated leaf area will be set to zero. */
   void calculateLeafAreaGPU( const int minVoxelHits );
 
+  //! Calculate the leaf area for each grid volume - testing version to investigate new scheme for filling in missing hit points that hit the sky
+  /** \param [in] "minVoxelHits" Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than minVoxelHits, the calculated leaf area will be set to zero. */
+  void calculateLeafAreaGPU_testing( const int minVoxelHits );
+
   // -------- RECONSTRUCTION --------- //
 
   //! Perform a leaf reconstruction based on texture-masked Patches within each gridcell.  The reconstruction produces Patches for each reconstructed leaf surface, with leaf size automatically estimated algorithmically.  
@@ -786,5 +845,9 @@ d the last cell's index is Ncells-1. */
   void trunkReconstruction( const helios::vec3 box_center, const helios::vec3 box_size, const float Lmax, const float max_aspect_ratio );
   
 };
+
+bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 );
+
+bool sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 );
 
 #endif

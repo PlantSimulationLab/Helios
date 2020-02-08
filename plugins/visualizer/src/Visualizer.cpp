@@ -760,12 +760,6 @@ void Visualizer::printWindow( void ){
 }
 
 void Visualizer::printWindow( const char* outfile ){
-
-  int max_checks=100000;
-  int checks = 0;
-  while( glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks<max_checks ){
-    checks++;
-  }
   
   write_JPEG_file( outfile, Wdisplay, Hdisplay );
 }
@@ -853,16 +847,24 @@ void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const
   vertices.resize(4);
 
   vec3 v0 = make_vec3( -0.5f*size.x, - 0.5f*size.y, 0.f );
-  vertices.at(0) = center + rotatePoint( v0, rotation );
+  v0 = rotatePointAboutLine( v0, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v0 = rotatePointAboutLine( v0, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(0) = center + v0;
   
   vec3 v1 = make_vec3( +0.5f*size.x, - 0.5f*size.y, 0.f );
-  vertices.at(1) = center + rotatePoint( v1, rotation );
+  v1 = rotatePointAboutLine( v1, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v1 = rotatePointAboutLine( v1, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(1) = center + v1;
   
   vec3 v2 = make_vec3( +0.5f*size.x, +0.5f*size.y, 0.f );
-  vertices.at(2) = center + rotatePoint( v2, rotation );
+  v2 = rotatePointAboutLine( v2, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v2 = rotatePointAboutLine( v2, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(2) = center + v2;
 
   vec3 v3 = make_vec3( -0.5f*size.x, +0.5f*size.y, 0.f );
-  vertices.at(3) = center + rotatePoint( v3, rotation );
+  v3 = rotatePointAboutLine( v3, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v3 = rotatePointAboutLine( v3, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(3) = center + v3;
 
   addRectangleByVertices( vertices, color, coordFlag );
 
@@ -874,16 +876,24 @@ void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const
   vertices.resize(4);
 
   vec3 v0 = make_vec3( -0.5f*size.x, - 0.5f*size.y, 0.f );
-  vertices.at(0) = center + rotatePoint( v0, rotation );
+  v0 = rotatePointAboutLine( v0, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v0 = rotatePointAboutLine( v0, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(0) = center + v0;
   
   vec3 v1 = make_vec3( +0.5f*size.x, - 0.5f*size.y, 0.f );
-  vertices.at(1) = center + rotatePoint( v1, rotation );
+  v1 = rotatePointAboutLine( v1, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v1 = rotatePointAboutLine( v1, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(1) = center + v1;
   
   vec3 v2 = make_vec3( +0.5f*size.x, +0.5f*size.y, 0.f );
-  vertices.at(2) = center + rotatePoint( v2, rotation );
+  v2 = rotatePointAboutLine( v2, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v2 = rotatePointAboutLine( v2, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(2) = center + v2;
 
   vec3 v3 = make_vec3( -0.5f*size.x, +0.5f*size.y, 0.f );
-  vertices.at(3) = center + rotatePoint( v3, rotation );
+  v3 = rotatePointAboutLine( v3, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v3 = rotatePointAboutLine( v3, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(3) = center + v3;
 
   addRectangleByVertices( vertices, texture_file, coordFlag );
   
@@ -895,16 +905,24 @@ void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const
   vertices.resize(4);
 
   vec3 v0 = make_vec3( -0.5f*size.x, - 0.5f*size.y, 0.f );
-  vertices.at(0) = center + rotatePoint( v0, rotation );
+  v0 = rotatePointAboutLine( v0, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v0 = rotatePointAboutLine( v0, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(0) = center + v0;
   
   vec3 v1 = make_vec3( +0.5f*size.x, - 0.5f*size.y, 0.f );
-  vertices.at(1) = center + rotatePoint( v1, rotation );
+  v1 = rotatePointAboutLine( v1, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v1 = rotatePointAboutLine( v1, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(1) = center + v1;
   
   vec3 v2 = make_vec3( +0.5f*size.x, +0.5f*size.y, 0.f );
-  vertices.at(2) = center + rotatePoint( v2, rotation );
+  v2 = rotatePointAboutLine( v2, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v2 = rotatePointAboutLine( v2, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(2) = center + v2;
 
   vec3 v3 = make_vec3( -0.5f*size.x, +0.5f*size.y, 0.f );
-  vertices.at(3) = center + rotatePoint( v3, rotation );
+  v3 = rotatePointAboutLine( v3, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v3 = rotatePointAboutLine( v3, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(3) = center + v3;
 
   addRectangleByVertices( vertices, color, texture_file, coordFlag );
   
@@ -916,16 +934,24 @@ void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const
   vertices.resize(4);
 
   vec3 v0 = make_vec3( -0.5f*size.x, - 0.5f*size.y, 0.f );
-  vertices.at(0) = center + rotatePoint( v0, rotation );
+  v0 = rotatePointAboutLine( v0, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v0 = rotatePointAboutLine( v0, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(0) = center + v0;
   
   vec3 v1 = make_vec3( +0.5f*size.x, - 0.5f*size.y, 0.f );
-  vertices.at(1) = center + rotatePoint( v1, rotation );
+  v1 = rotatePointAboutLine( v1, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v1 = rotatePointAboutLine( v1, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(1) = center + v1;
   
   vec3 v2 = make_vec3( +0.5f*size.x, +0.5f*size.y, 0.f );
-  vertices.at(2) = center + rotatePoint( v2, rotation );
+  v2 = rotatePointAboutLine( v2, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v2 = rotatePointAboutLine( v2, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(2) = center + v2;
 
   vec3 v3 = make_vec3( -0.5f*size.x, +0.5f*size.y, 0.f );
-  vertices.at(3) = center + rotatePoint( v3, rotation );
+  v3 = rotatePointAboutLine( v3, make_vec3(0,0,0), make_vec3(1,0,0), -rotation.elevation );
+  v3 = rotatePointAboutLine( v3, make_vec3(0,0,0), make_vec3(0,0,1), -rotation.azimuth );
+  vertices.at(3) = center + v3;
 
   addRectangleByVertices( vertices, color, glyph, coordFlag );
   
@@ -1027,10 +1053,10 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
 void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const char* texture_file, const CoordinateSystem coordFlag ){
   std::vector<vec2> uvs;
   uvs.resize(4);
-  uvs.at(0) = make_vec2(0,1);
-  uvs.at(1) = make_vec2(1,1);
-  uvs.at(2) = make_vec2(1,0);
-  uvs.at(3) = make_vec2(0,0);
+  uvs.at(0) = make_vec2(1,0);
+  uvs.at(1) = make_vec2(0,0);
+  uvs.at(2) = make_vec2(0,1);
+  uvs.at(3) = make_vec2(1,1);
   addRectangleByVertices(vertices,texture_file,uvs,coordFlag);
 }
 
@@ -1139,10 +1165,10 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
 void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag ){
   std::vector<vec2> uvs;
   uvs.resize(4);
-  uvs.at(0) = make_vec2(0,1);
-  uvs.at(1) = make_vec2(1,1);
-  uvs.at(2) = make_vec2(1,0);
-  uvs.at(3) = make_vec2(0,0);
+  uvs.at(0) = make_vec2(1,0);
+  uvs.at(1) = make_vec2(0,0);
+  uvs.at(2) = make_vec2(0,1);
+  uvs.at(3) = make_vec2(1,1);
   addRectangleByVertices( vertices, color, texture_file, uvs, coordFlag );
 
   // std::vector<vec3> v = vertices; //make a copy so we can modify
@@ -1606,8 +1632,8 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   position_data[0] = v.at(0).x;
   position_data[1] = v.at(0).y;
   position_data[2] = v.at(0).z;
-  uv_data[0] = uv0.x*texture_size.x;
-  uv_data[1] = (1.f-uv0.y)*texture_size.y;
+  uv_data[0] = (1.f-uv0.x)*texture_size.x;
+  uv_data[1] = uv0.y*texture_size.y;
   normal_data[0] = normal.x;
   normal_data[1] = normal.y;
   normal_data[2] = normal.z;
@@ -1616,8 +1642,8 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   position_data[3] = v.at(1).x;
   position_data[4] = v.at(1).y;
   position_data[5] = v.at(1).z;
-  uv_data[2] = uv1.x*texture_size.x;
-  uv_data[3] = (1.f-uv1.y)*texture_size.y;
+  uv_data[2] = (1.f-uv1.x)*texture_size.x;
+  uv_data[3] = uv1.y*texture_size.y;
   normal_data[3] = normal.x;
   normal_data[4] = normal.y;
   normal_data[5] = normal.z;
@@ -1626,8 +1652,8 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   position_data[6] = v.at(2).x;
   position_data[7] = v.at(2).y;
   position_data[8] = v.at(2).z;
-  uv_data[4] = uv2.x*texture_size.x;
-  uv_data[5] = (1.f-uv2.y)*texture_size.y;
+  uv_data[4] = (1.f-uv2.x)*texture_size.x;
+  uv_data[5] = uv2.y*texture_size.y;
   normal_data[6] = normal.x;
   normal_data[7] = normal.y;
   normal_data[8] = normal.z;
@@ -1694,12 +1720,8 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   position_data[0] = v.at(0).x;
   position_data[1] = v.at(0).y;
   position_data[2] = v.at(0).z;
-  color_data[0] = color.r;
-  color_data[1] = color.g;
-  color_data[2] = color.b;
-  color_data[3] = color.a;
-  uv_data[0] = uv0.x*texture_size.x;
-  uv_data[1] = (1.f-uv0.y)*texture_size.y;
+  uv_data[0] = (1.f-uv0.x)*texture_size.x;
+  uv_data[1] = uv0.y*texture_size.y;
   normal_data[0] = normal.x;
   normal_data[1] = normal.y;
   normal_data[2] = normal.z;
@@ -1708,12 +1730,8 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   position_data[3] = v.at(1).x;
   position_data[4] = v.at(1).y;
   position_data[5] = v.at(1).z;
-  color_data[4] = color.r;
-  color_data[5] = color.g;
-  color_data[6] = color.b;
-  color_data[7] = color.a;
-  uv_data[2] = uv1.x*texture_size.x;
-  uv_data[3] = (1.f-uv1.y)*texture_size.y;
+  uv_data[2] = (1.f-uv1.x)*texture_size.x;
+  uv_data[3] = uv1.y*texture_size.y;
   normal_data[3] = normal.x;
   normal_data[4] = normal.y;
   normal_data[5] = normal.z;
@@ -1722,12 +1740,8 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   position_data[6] = v.at(2).x;
   position_data[7] = v.at(2).y;
   position_data[8] = v.at(2).z;
-  color_data[8] = color.r;
-  color_data[9] = color.g;
-  color_data[10] = color.b;
-  color_data[11] = color.a;
-  uv_data[4] = uv2.x*texture_size.x;
-  uv_data[5] = (1.f-uv2.y)*texture_size.y;
+  uv_data[4] = (1.f-uv2.x)*texture_size.x;
+  uv_data[5] = uv2.y*texture_size.y;
   normal_data[6] = normal.x;
   normal_data[7] = normal.y;
   normal_data[8] = normal.z;
@@ -1759,17 +1773,17 @@ void Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const Sph
 
   float az = rotation.azimuth;
 
-  vec3 c0 = center + rotatePoint(make_vec3(-0.5f*size.x, 0, 0.f),0,az) + eps;
-  addRectangleByCenter( c0, make_vec2(size.z,size.y), make_SphericalCoord(-0.5*M_PI,az), color, coordFlag );
+  vec3 c0 = center + rotatePoint(make_vec3(0,-0.5f*size.y, 0.f),0,az) + eps;
+  addRectangleByCenter( c0, make_vec2(size.x,size.z), make_SphericalCoord(-0.5*M_PI,az), color, coordFlag );
 
-  vec3 c1 = center + rotatePoint(make_vec3(0.5f*size.x, 0.f, 0.f),0,az) + eps;
-  addRectangleByCenter( c1, make_vec2(size.z,size.y), make_SphericalCoord(0.5*M_PI,az), color, coordFlag );
+  vec3 c1 = center + rotatePoint(make_vec3(0, 0.5f*size.y, 0.f),0,az) + eps;
+  addRectangleByCenter( c1, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,az), color, coordFlag );
 
-  vec3 c2 = center + rotatePoint(make_vec3(0.f, -0.5f*size.y, 0.f),0,az) + eps;
-  addRectangleByCenter( c2, make_vec2(size.z,size.x), make_SphericalCoord(0.5*M_PI,0.5*M_PI+az), color, coordFlag );
+  vec3 c2 = center + rotatePoint(make_vec3(0.5f*size.x, 0.f, 0.f),0,az) + eps;
+  addRectangleByCenter( c2, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI+az), color, coordFlag );
 
-  vec3 c3 = center + rotatePoint(make_vec3(0.f, 0.5f*size.y, 0.f),0,az) + eps;
-  addRectangleByCenter( c3, make_vec2(size.z,size.x), make_SphericalCoord(0.5*M_PI,0.5*M_PI+az), color, coordFlag );
+  vec3 c3 = center + rotatePoint(make_vec3(-0.5f*size.x, 0.f, 0.f),0,az) + eps;
+  addRectangleByCenter( c3, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI+az), color, coordFlag );
 
   vec3 c4 = center + make_vec3(0.f, 0.f, -0.5f*size.z) + eps;
   addRectangleByCenter( c4, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,az), color, coordFlag );
@@ -2749,15 +2763,90 @@ void Visualizer::buildContextGeometry_private( void ){
 	
 	helios::Voxel* voxel = static_cast<helios::Voxel*>(prim);
 	
-	float transform[16];
-	voxel->getTransformationMatrix(transform);
+	std::vector<vec3> v_vertices = voxel->getVertices();
+
+	std::vector<vec3> bottom_vertices, top_vertices, mx_vertices, px_vertices, my_vertices, py_vertices;
+	bottom_vertices.resize(4);
+	top_vertices.resize(4);
+	mx_vertices.resize(4);
+	px_vertices.resize(4);
+	my_vertices.resize(4);
+	py_vertices.resize(4);
+
+	//bottom
+	bottom_vertices.at(0) = v_vertices.at(0);
+	bottom_vertices.at(1) = v_vertices.at(1);
+	bottom_vertices.at(2) = v_vertices.at(2);
+	bottom_vertices.at(3) = v_vertices.at(3);
 	
-	//vec3 center = make_vec3(
-	// vec3 size = voxel->getSize();
-	// float rotation = voxel->getRotation();
+	//top
+	top_vertices.at(0) = v_vertices.at(4);
+	top_vertices.at(1) = v_vertices.at(5);
+        top_vertices.at(2) = v_vertices.at(6);
+	top_vertices.at(3) = v_vertices.at(7);
+
+	//-x
+	mx_vertices.at(0) = v_vertices.at(0);
+	mx_vertices.at(1) = v_vertices.at(3);
+	mx_vertices.at(2) = v_vertices.at(7);
+	mx_vertices.at(3) = v_vertices.at(4);
+
+	//+x
+	px_vertices.at(0) = v_vertices.at(1);
+	px_vertices.at(1) = v_vertices.at(2);
+	px_vertices.at(2) = v_vertices.at(6);
+	px_vertices.at(3) = v_vertices.at(5);
 	
-	// addVoxelByCenter( center, size, make_SphericalCoord(0,rotation), color, COORDINATES_CARTESIAN );
-	/** \todo Figure out voxel parameters from vertices or transformation matrix */
+	//-y
+	my_vertices.at(0) = v_vertices.at(0);
+	my_vertices.at(1) = v_vertices.at(1);
+	my_vertices.at(2) = v_vertices.at(5);
+	my_vertices.at(3) = v_vertices.at(4);
+	  
+	//+y
+	py_vertices.at(0) = v_vertices.at(2);
+	py_vertices.at(1) = v_vertices.at(3);
+	py_vertices.at(2) = v_vertices.at(7);
+	py_vertices.at(3) = v_vertices.at(6);
+	 
+	if( texture_file.size()==0 ){//Voxel does not have an associated texture or we are ignoring texture
+
+	  addRectangleByVertices( bottom_vertices, color, COORDINATES_CARTESIAN );
+	  addRectangleByVertices( top_vertices, color, COORDINATES_CARTESIAN );
+	  addRectangleByVertices( mx_vertices, color, COORDINATES_CARTESIAN );
+	  addRectangleByVertices( px_vertices, color, COORDINATES_CARTESIAN );
+	  addRectangleByVertices( my_vertices, color, COORDINATES_CARTESIAN );
+	  addRectangleByVertices( py_vertices, color, COORDINATES_CARTESIAN );
+	  
+	}else{ //Voxel has a texture
+
+	  if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){//coloring primitive based on texture
+	    if( prim->isTextureColorOverridden() ){
+	      addRectangleByVertices( bottom_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( top_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( mx_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( px_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( my_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( py_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	    }else{
+	      addRectangleByVertices( bottom_vertices, texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( top_vertices, texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( mx_vertices, texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( px_vertices, texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( my_vertices, texture_file.c_str(), COORDINATES_CARTESIAN );
+	      addRectangleByVertices( py_vertices, texture_file.c_str(), COORDINATES_CARTESIAN );
+	    }
+	  }else{//coloring primitive based on primitive data
+	    addRectangleByVertices( bottom_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	    addRectangleByVertices( top_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	    addRectangleByVertices( mx_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	    addRectangleByVertices( px_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	    addRectangleByVertices( my_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	    addRectangleByVertices( py_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
+	  }
+
+	}
+
 	
       }
       
@@ -2820,7 +2909,7 @@ void Visualizer::plotInteractive( void ){
 
   glm::vec3 view_center = glm::vec3( xbounds.x+0.5*(xbounds.y-xbounds.x), ybounds.x+0.5*(ybounds.y-ybounds.x), zbounds.x+0.5*(zbounds.y-zbounds.x) );
   //float bound_R = 2.f*fmax(xbounds.y-xbounds.x,fmax(ybounds.y-ybounds.x,zbounds.y-zbounds.x));
-  float bound_R = 0.6*sqrtf( pow(xbounds.y-xbounds.x,2) + pow(ybounds.y-ybounds.x,2) + pow(zbounds.y-zbounds.x,2) );
+  float bound_R = 0.75*sqrtf( pow(xbounds.y-xbounds.x,2) + pow(ybounds.y-ybounds.x,2) + pow(zbounds.y-zbounds.x,2) );
 
   glm::vec3 lightInvDir = view_center + glm::vec3(light_direction.x,light_direction.y,light_direction.z);
 
@@ -2909,7 +2998,7 @@ void Visualizer::plotInteractive( void ){
     
     glfwPollEvents();
     getViewKeystrokes( eye, center );
-    
+
     glfwSwapBuffers((GLFWwindow*)window);
 
     glfwWaitEvents();
@@ -3083,7 +3172,8 @@ void Visualizer::plotUpdate( void ){
   getDomainBoundingBox( xbounds, ybounds, zbounds );
 
   glm::vec3 view_center = glm::vec3( xbounds.x+0.5*(xbounds.y-xbounds.x), ybounds.x+0.5*(ybounds.y-ybounds.x), zbounds.x+0.5*(zbounds.y-zbounds.x) );
-  float bound_R = 1.4f*0.5f*fmax(xbounds.y-xbounds.x,fmax(ybounds.y-ybounds.x,zbounds.y-zbounds.x));
+  //float bound_R = 2.f*fmax(xbounds.y-xbounds.x,fmax(ybounds.y-ybounds.x,zbounds.y-zbounds.x));
+  float bound_R = 0.75*sqrtf( pow(xbounds.y-xbounds.x,2) + pow(ybounds.y-ybounds.x,2) + pow(zbounds.y-zbounds.x,2) );
 
   glm::vec3 lightInvDir = view_center + glm::vec3(light_direction.x,light_direction.y,light_direction.z);
 
@@ -3172,7 +3262,7 @@ void Visualizer::plotUpdate( void ){
   getViewKeystrokes( eye, center );
   
   glfwSwapBuffers((GLFWwindow*)window);
-  
+
   std::cout << "done." << std::endl;
   
 }

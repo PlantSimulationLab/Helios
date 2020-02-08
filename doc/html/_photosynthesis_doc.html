@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.0.18</span>
+   &#160;<span id="projectnumber">v1.1.0</span>
    </div>
   </td>
  </tr>
@@ -71,7 +71,8 @@ $(function() {
 <div class="toc"><h3>Table of Contents</h3>
 <ul><li class="level1"><a href="#PhotoConstructor">Class Constructor</a></li>
 <li class="level1"><a href="#VarsAndProps">Primitive Data</a><ul><li class="level2"><a href="#PhotoInputData">Input Primitive Data</a></li>
-<li class="level2"><a href="#PhotoOutputData">Output Primitive Data</a></li>
+<li class="level2"><a href="#PhotoOutputData">Default Output Primitive Data</a></li>
+<li class="level2"><a href="#PhotoOptionalOutputData">Optional Output Primitive Data</a></li>
 </ul>
 </li>
 <li class="level1"><a href="#PhotoDescription">Introduction</a></li>
@@ -134,12 +135,22 @@ Input Primitive Data</h2>
 <td>moisture_conductance </td><td><img class="formulaInl" alt="$g_M$" src="form_10.png"/> </td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Overall conductance to moisture between substomatal cells and outside of boundary-layer. </td><td>Can be computed by <a class="el" href="class_stomatal_conductance_model.html">StomatalConductanceModel</a> plug-in. </td><td>0.25 mol/m<sup>2</sup>-s  </td></tr>
 </table>
 <h2><a class="anchor" id="PhotoOutputData"></a>
-Output Primitive Data</h2>
+Default Output Primitive Data</h2>
 <table class="doxtable">
 <tr>
 <th>Primitive Data Label </th><th>Symbol </th><th>Units </th><th>Data Type </th><th>Description  </th></tr>
 <tr>
 <td>net_photosynthesis </td><td><img class="formulaInl" alt="$A$" src="form_42.png"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_24.png"/>mol CO<sub>2</sub>/m<sup>2</sup>-sec </td><td> <font face="courier" color="green">float</font> </td><td>Net rate of carbon transfer per unit one-sided area.  </td></tr>
+</table>
+<h2><a class="anchor" id="PhotoOptionalOutputData"></a>
+Optional Output Primitive Data</h2>
+<table class="doxtable">
+<tr>
+<th>Primitive Data Label </th><th>Symbol </th><th>Units </th><th>Data Type </th><th>Description  </th></tr>
+<tr>
+<td>Ci </td><td><img class="formulaInl" alt="$C_i$" src="form_40.png"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_24.png"/>mol CO<sub>2</sub>/mol </td><td> <font face="courier" color="green">float</font> </td><td>Intercellular CO<sub>2</sub> concentration.  </td></tr>
+<tr>
+<td>limitation_state </td><td>N/A </td><td>N/A </td><td> <font face="courier" color="green">int</font> </td><td>Photosynthesis limitation state. limitation_state=0 if photosynthesis is Rubisco-limited, limitation_state=1 if photosynthesis is electron transport limited.  </td></tr>
 </table>
 <h1><a class="anchor" id="PhotoDescription"></a>
 Introduction</h1>

@@ -25,7 +25,7 @@ LIST( APPEND CUDA_NVCC_FLAGS "-D_MWAITXINTRIN_H_INCLUDED -D__STRICT_ANSI__" )
 
 SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
-CUDA_ADD_LIBRARY( lidar STATIC "src/LiDAR.cu" "src/LiDAR.cpp" "src/AerialLiDAR.cpp" "src/fileIO.cpp" "../../core/src/pugixml.cpp" "lib/s_hull_pro/s_hull_pro.cpp" )
+CUDA_ADD_LIBRARY( lidar STATIC "src/LiDAR.cu" "src/LiDAR.cpp" "src/fileIO.cpp" "../../core/src/pugixml.cpp" "lib/s_hull_pro/s_hull_pro.cpp" )
 
 include_directories("${CUDA_INCLUDE_DIRS}")
 include_directories("lib/s_hull_pro")
