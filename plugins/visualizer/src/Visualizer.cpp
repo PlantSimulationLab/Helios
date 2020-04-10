@@ -1053,10 +1053,17 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
 void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const char* texture_file, const CoordinateSystem coordFlag ){
   std::vector<vec2> uvs;
   uvs.resize(4);
-  uvs.at(0) = make_vec2(1,0);
-  uvs.at(1) = make_vec2(0,0);
-  uvs.at(2) = make_vec2(0,1);
-  uvs.at(3) = make_vec2(1,1);
+  if( coordFlag==COORDINATES_CARTESIAN ){
+    uvs.at(0) = make_vec2(1,0);
+    uvs.at(1) = make_vec2(0,0);
+    uvs.at(2) = make_vec2(0,1);
+    uvs.at(3) = make_vec2(1,1);
+  }else{
+    uvs.at(0) = make_vec2(0,1);
+    uvs.at(1) = make_vec2(1,1);
+    uvs.at(2) = make_vec2(1,0);
+    uvs.at(3) = make_vec2(0,0);
+  }
   addRectangleByVertices(vertices,texture_file,uvs,coordFlag);
 }
 
@@ -1165,10 +1172,17 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
 void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag ){
   std::vector<vec2> uvs;
   uvs.resize(4);
-  uvs.at(0) = make_vec2(1,0);
-  uvs.at(1) = make_vec2(0,0);
-  uvs.at(2) = make_vec2(0,1);
-  uvs.at(3) = make_vec2(1,1);
+  if( coordFlag==COORDINATES_CARTESIAN ){
+    uvs.at(0) = make_vec2(1,0);
+    uvs.at(1) = make_vec2(0,0);
+    uvs.at(2) = make_vec2(0,1);
+    uvs.at(3) = make_vec2(1,1);
+  }else{
+    uvs.at(0) = make_vec2(0,1);
+    uvs.at(1) = make_vec2(1,1);
+    uvs.at(2) = make_vec2(1,0);
+    uvs.at(3) = make_vec2(0,0);
+  }
   addRectangleByVertices( vertices, color, texture_file, uvs, coordFlag );
 
   // std::vector<vec3> v = vertices; //make a copy so we can modify
@@ -1720,6 +1734,10 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   position_data[0] = v.at(0).x;
   position_data[1] = v.at(0).y;
   position_data[2] = v.at(0).z;
+  color_data[0] = color.r;
+  color_data[1] = color.g;
+  color_data[2] = color.b;
+  color_data[3] = color.a;
   uv_data[0] = (1.f-uv0.x)*texture_size.x;
   uv_data[1] = uv0.y*texture_size.y;
   normal_data[0] = normal.x;
@@ -1730,6 +1748,10 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   position_data[3] = v.at(1).x;
   position_data[4] = v.at(1).y;
   position_data[5] = v.at(1).z;
+  color_data[4] = color.r;
+  color_data[5] = color.g;
+  color_data[6] = color.b;
+  color_data[7] = color.a;
   uv_data[2] = (1.f-uv1.x)*texture_size.x;
   uv_data[3] = uv1.y*texture_size.y;
   normal_data[3] = normal.x;
@@ -1740,6 +1762,10 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   position_data[6] = v.at(2).x;
   position_data[7] = v.at(2).y;
   position_data[8] = v.at(2).z;
+  color_data[8] = color.r;
+  color_data[9] = color.g;
+  color_data[10] = color.b;
+  color_data[11] = color.a;
   uv_data[4] = (1.f-uv2.x)*texture_size.x;
   uv_data[5] = uv2.y*texture_size.y;
   normal_data[6] = normal.x;

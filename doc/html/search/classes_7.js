@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['hitpoint',['HitPoint',['../struct_hit_point.html',1,'']]],
-  ['hittable',['HitTable',['../class_hit_table.html',1,'']]]
+  ['hitpoint_561',['HitPoint',['../struct_hit_point.html',1,'']]],
+  ['hittable_562',['HitTable',['../class_hit_table.html',1,'']]]
 ];
