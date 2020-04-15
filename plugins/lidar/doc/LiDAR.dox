@@ -9,7 +9,7 @@
   <table>
     <tr>	
       <th>Dependencies</th>
-      <td>NVIDIA CUDA 6.0+ <p>
+      <td>NVIDIA CUDA 9.0+ <p>
           gcc/g++ 5.5+ <p>
       	  Visualizer plug-in</td>
     </tr>
@@ -45,7 +45,7 @@
       <td>\image html windows-logo.jpg</td>
     </tr>
     <tr>	
-      <td>NVIDIA CUDA 5.0+</td>
+      <td>NVIDIA CUDA 9.0+</td>
       <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
       <td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cuda</code></div></td>
       <td>Unknown</td>
@@ -366,7 +366,7 @@
    </tr>
  </table>
 
- The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells.  For example, Nx=Ny=Nz would create 27 grid cells similar to a "Rubik's cube".
+ The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells.  For example, Nx=Ny=Nz=3 would create 27 grid cells similar to a "Rubik's cube".
 
  Grid cell options can be specified in an XML file using the tags listed in the table above.  Multiple grid cells are added by simply adding more <grid>...</grid> groups to the XML file.
 

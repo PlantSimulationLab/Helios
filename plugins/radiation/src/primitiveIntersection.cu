@@ -49,6 +49,10 @@ rtBuffer<unsigned int, 1> alphamask_UUID;
 rtBuffer<float3, 2> voxel_vertices;
 rtBuffer<unsigned int, 1> voxel_UUID;
 
+//--- Bounding Box ---//
+rtBuffer<float3, 2> bbox_vertices;
+rtBuffer<unsigned int, 1> bbox_UUID;
+
 //--- Masks ---//
 rtBuffer<bool, 3>   maskdata;
 rtBuffer<int2, 1>   masksize;
@@ -436,5 +440,63 @@ RT_PROGRAM void voxel_bounds (int objID, float result[6])
   optix::Aabb* aabb = (optix::Aabb*)result;
   float3 min = voxel_vertices[ make_uint2(0, objID) ];
   float3 max = voxel_vertices[ make_uint2(1, objID) ];
+  aabb->set(min, max);
+}
+
+//----------------- Bounding Box Primitive ----------------------//
+
+/** OptiX ray-rectangle intersection program. */
+
+RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometric object.*/)
+{
+
+  float3 v0 = bbox_vertices[ make_uint2(0, objID) ];
+  float3 v1 = bbox_vertices[ make_uint2(1, objID) ];
+  float3 v2 = bbox_vertices[ make_uint2(2, objID) ];
+  float3 v3 = bbox_vertices[ make_uint2(3, objID) ];
+
+  float3 anchor = v0;
+  float3 normal = normalize( cross( v1-v0, v2-v0 ) );
+
+  float3 a = v1-v0;
+  float3 b = v3-v0;
+  
+  float t = dot(anchor - ray.origin, normal) / dot(ray.direction, normal); 
+
+  if( t==t && t>1e-8 && t<1e8 ){
+			
+    float3 p = ray.origin + ray.direction * t;
+    float3 d = p - anchor;
+	
+    float ddota = dot(d,a);
+	
+    if (ddota > 0.0 && ddota < dot(a,a) ){
+		
+      float ddotb = dot(d, b);
+  
+      if (ddotb > 0.0 && ddotb < dot(b,b) ){
+	
+	if( rtPotentialIntersection( t ) ) {
+	  UUID = bbox_UUID[objID];
+	  rtReportIntersection(0);
+	}	  
+
+      }
+    }
+  }
+
+}
+
+/** Axis-aligned bounding box program for bounding box rectangle primitives. */
+
+RT_PROGRAM void bbox_bounds (int objID, float result[6])
+{
+  optix::Aabb* aabb = (optix::Aabb*)result;
+  float3 v0 = bbox_vertices[ make_uint2(0, objID) ];
+  float3 v1 = bbox_vertices[ make_uint2(1, objID) ];
+  float3 v2 = bbox_vertices[ make_uint2(2, objID) ];
+  float3 v3 = bbox_vertices[ make_uint2(3, objID) ];
+  float3 min = make_float3( fmin(fmin(v0.x,v1.x),fmin(v2.x,v3.x)), fmin(fmin(v0.y,v1.y),fmin(v2.y,v3.y)), fmin(fmin(v0.z,v1.z),fmin(v2.z,v3.z)) );
+  float3 max = make_float3( fmax(fmax(v0.x,v1.x),fmax(v2.x,v3.x)), fmax(fmax(v0.y,v1.y),fmax(v2.y,v3.y)), fmax(fmax(v0.z,v1.z),fmax(v2.z,v3.z)) );
   aabb->set(min, max);
 }

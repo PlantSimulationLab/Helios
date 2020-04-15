@@ -45,6 +45,8 @@ RadiationModel::RadiationModel( helios::Context* __context ){
 
   temperature_default = 300;
 
+  periodic_flag = make_vec2(0,0);
+
   initializeOptiX();
 
   return;
@@ -1185,6 +1187,137 @@ int RadiationModel::selfTest( void ){
     std::cout << "passed." << std::endl;
   }
 
+    // -------- Test #12: homogeneous "canopy" with periodic boundaries---------- //
+
+  std::cout << "Test #12: homogeneous 'canopy' of patches with periodic boundaries..." << std::flush;
+
+  bool failure_12 = false;
+  
+  uint Ndirect_12 = 1000;
+  uint Ndiffuse_12 = 5000;
+
+  float D_12 = 20;          //domain width
+  float LAI_12 = 2.0;       //canopy leaf area index
+  float h_12 = 3;           //canopy height
+  float w_leaf_12 = 0.05;    //leaf width
+
+  int Nleaves_12 = round(LAI_12*D_12*D_12/w_leaf_12/w_leaf_12);
+
+  Context context_12;
+
+  std::vector<uint> UUIDs_leaf_12;
+
+  for( int i=0; i<Nleaves_12; i++ ){
+
+    vec3 position( (-0.5+context_12.randu())*D_12, (-0.5+context_12.randu())*D_12, 0.5*w_leaf_12+context_12.randu()*h_12 );
+
+    SphericalCoord rotation( 1.f, acos(1.f-context_12.randu()), 2.f*M_PI*context_12.randu() );
+
+    uint UUID = context_12.addPatch( position, make_vec2(w_leaf_12,w_leaf_12), rotation );
+
+    context_12.setPrimitiveData( UUID, "twosided_flag", uint(1) );
+
+    UUIDs_leaf_12.push_back( UUID );
+
+  }
+
+  std::vector<uint> UUIDs_ground_12 = context_12.addTile( make_vec3(0,0,0), make_vec2(D_12,D_12), make_SphericalCoord(0,0), make_int2(100,100) );
+
+  context_12.setPrimitiveData( UUIDs_ground_12, "twosided_flag", uint(0) );
+
+  RadiationModel radiation_12(&context_12);
+  radiation_12.disableMessages();
+
+  radiation_12.addRadiationBand("direct");
+  radiation_12.disableEmission("direct");
+  radiation_12.setDirectRayCount("direct",Ndirect_12);
+  theta_s = 0.2*M_PI;
+  ID = radiation_12.addCollimatedRadiationSource( make_SphericalCoord(0.5*M_PI-theta_s,0.f) );
+  radiation_12.setSourceFlux(ID,"direct",1.f/cos(theta_s));
+
+  radiation_12.addRadiationBand("diffuse");
+  radiation_12.disableEmission("diffuse");
+  radiation_12.setDiffuseRayCount("diffuse",Ndiffuse_12);
+  radiation_12.setDiffuseRadiationFlux("diffuse",1.f);
+
+  radiation_12.enforcePeriodicBoundary("xy");
+   
+  radiation_12.updateGeometry();
+
+  radiation_12.runBand("direct");
+  radiation_12.runBand("diffuse");
+
+  float intercepted_leaf_direct_12 = 0.f;
+  float intercepted_leaf_diffuse_12 = 0.f;
+  for( int i=0; i<UUIDs_leaf_12.size(); i++ ){
+
+    float area = context_12.getPrimitivePointer( UUIDs_leaf_12.at(i) )->getArea();
+    
+    float flux;
+    
+    context_12.getPrimitiveData( UUIDs_leaf_12.at(i), "radiation_flux_direct", flux );
+    intercepted_leaf_direct_12 += flux*area/D_12/D_12;
+
+    context_12.getPrimitiveData( UUIDs_leaf_12.at(i), "radiation_flux_diffuse", flux );
+    intercepted_leaf_diffuse_12 += flux*area/D_12/D_12;
+
+  }
+
+  float intercepted_ground_direct_12 = 0.f;
+  float intercepted_ground_diffuse_12 = 0.f;
+  for( int i=0; i<UUIDs_ground_12.size(); i++ ){
+
+    float area = context_12.getPrimitivePointer( UUIDs_ground_12.at(i) )->getArea();
+    
+    float flux_dir;
+    context_12.getPrimitiveData( UUIDs_ground_12.at(i), "radiation_flux_direct", flux_dir );
+
+    float flux_diff;
+    context_12.getPrimitiveData( UUIDs_ground_12.at(i), "radiation_flux_diffuse", flux_diff );
+
+    vec3 position = context_12.getPatchPointer( UUIDs_ground_12.at(i) )->getCenter();
+
+    intercepted_ground_direct_12 += flux_dir*area/D_12/D_12;
+    intercepted_ground_diffuse_12 += flux_diff*area/D_12/D_12;
+      
+  }
+
+  intercepted_ground_direct_12 = 1.f - intercepted_ground_direct_12;
+  intercepted_ground_diffuse_12 = 1.f - intercepted_ground_diffuse_12;
+
+  N = 50;
+  dtheta = 0.5*M_PI/float(N);
+  
+  float intercepted_theoretical_diffuse_12 = 0.f;
+  for( int i=0; i<N; i++ ){
+    
+    float theta = (i+0.5f)*dtheta;
+    intercepted_theoretical_diffuse_12 += 2.f*(1.f-exp(-0.5*LAI_12/cos(theta)))*cos(theta)*sin(theta)*dtheta;
+    
+  }
+
+  float intercepted_theoretical_direct_12 = 1.f-exp(-0.5*LAI_12/cos(theta_s));
+
+  if( fabs(intercepted_ground_direct_12-intercepted_theoretical_direct_12)>2.f*error_threshold || fabs(intercepted_leaf_direct_12-intercepted_theoretical_direct_12)>2.f*error_threshold ){
+     std::cerr << "Test failed for direct radiation calculations." << std::endl;
+    std::cout << intercepted_ground_direct_12 << " " << intercepted_leaf_direct_12 << " " << intercepted_theoretical_direct_12 << std::endl;
+    failure_12 = true;
+    failure=true;
+  }
+
+  if( fabs(intercepted_ground_diffuse_12-intercepted_theoretical_diffuse_12)>2.f*error_threshold || fabs(intercepted_leaf_diffuse_12-intercepted_theoretical_diffuse_12)>2.f*error_threshold ){
+     std::cerr << "Test failed for diffuse radiation calculations." << std::endl;
+    std::cout << intercepted_ground_diffuse_12 << " " << intercepted_leaf_diffuse_12 << " " << intercepted_theoretical_diffuse_12 << std::endl;
+    failure_12 = true;
+    failure=true;
+  }
+
+  if( failure_12 ){
+    std::cout << "failed." << std::endl;
+  }else{
+    std::cout << "passed." << std::endl;
+  }
+
 
   // ------------- //
   
@@ -1432,6 +1565,29 @@ void RadiationModel::setMinScatterEnergy( const char* label, uint energy ){
   
 }
 
+void RadiationModel::enforcePeriodicBoundary( const char* boundary ){
+
+  if( !strcmp(boundary,"x") ){
+ 
+    periodic_flag.x = 1;
+    
+  }else if( !strcmp(boundary,"y") ){
+ 
+    periodic_flag.y = 1;
+    
+  }else if( !strcmp(boundary,"xy") ){
+
+    periodic_flag.x = 1;
+    periodic_flag.y = 1;
+
+  }else{
+
+    std::cout << "WARNING (RadiationModel::enforcePeriodicBoundary()): unknown boundary of """ << boundary << """. Possible choices are ""x"", ""y"", or ""xy""." << std::endl;
+
+  }
+
+}
+
 
 void RadiationModel::initializeOptiX( void ){
     
@@ -1596,6 +1752,7 @@ void RadiationModel::initializeOptiX( void ){
   RT_CHECK_ERROR( rtVariableSetObject( source_types_RTvariable, source_types_RTbuffer ) );
   zeroBuffer1D( source_types_RTbuffer, 1 );
 
+  
   //External radiation source fluxes
   RT_CHECK_ERROR( rtBufferCreate( OptiX_Context, RT_BUFFER_INPUT, &source_fluxes_RTbuffer ) );
   RT_CHECK_ERROR( rtBufferSetFormat( source_fluxes_RTbuffer, RT_FORMAT_FLOAT ) );
@@ -1615,6 +1772,13 @@ void RadiationModel::initializeOptiX( void ){
   RT_CHECK_ERROR( rtVariableSet1f( bound_sphere_radius_RTvariable, 0.f ));
   RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "bound_sphere_center", &bound_sphere_center_RTvariable ) );
   RT_CHECK_ERROR( rtVariableSet3f( bound_sphere_center_RTvariable, 0.f, 0.f, 0.f ));
+
+  //Bounding Box
+  addBuffer( "bbox_UUID", bbox_UUID_RTbuffer, bbox_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+  addBuffer( "bbox_vertices", bbox_vertices_RTbuffer, bbox_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
+  
+  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "periodic_flag", &periodic_flag_RTvariable ) );
+  RT_CHECK_ERROR( rtVariableSet2f( periodic_flag_RTvariable, 0.f, 0.f ));
 
   //Texture mask data
   RT_CHECK_ERROR( rtBufferCreate( OptiX_Context, RT_BUFFER_INPUT, &maskdata_RTbuffer ) );
@@ -1775,6 +1939,29 @@ void RadiationModel::initializeOptiX( void ){
   RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_DIFFUSE_MCRT, closest_hit_MCRT ) );
   RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_EMISSION_MCRT, closest_hit_MCRT ) );
 
+  /* Initialize Bounding Box Geometry */
+
+  RTprogram  bbox_intersection_program;
+  RTprogram  bbox_bounding_box_program;
+
+  RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &bbox ) );
+
+  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "bbox_bounds", &bbox_bounding_box_program ) );
+  RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( bbox, bbox_bounding_box_program ) );
+  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "bbox_intersect", &bbox_intersection_program ) );
+  RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( bbox, bbox_intersection_program ) );
+
+  /* Create Bounding Box Material */
+  
+  RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &bbox_material ) );
+  
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_DIRECT, closest_hit_direct ) );
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
+  //MCRT
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_DIRECT_MCRT, closest_hit_MCRT ) );
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_DIFFUSE_MCRT, closest_hit_MCRT ) );
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_EMISSION_MCRT, closest_hit_MCRT ) );
+
   /* Miss Program */
   RTprogram miss_program_direct;
   RTprogram miss_program_diffuse;
@@ -1800,6 +1987,7 @@ void RadiationModel::initializeOptiX( void ){
   RTgeometryinstance disk_instance;
   RTgeometryinstance alphamask_instance;
   RTgeometryinstance voxel_instance;
+  RTgeometryinstance bbox_instance;
 
   /* Create top level group and associated (dummy) acceleration */
   RT_CHECK_ERROR( rtGroupCreate( OptiX_Context, &top_level_group ) );
@@ -1825,7 +2013,7 @@ void RadiationModel::initializeOptiX( void ){
   
   /* Create geometry group and associated acceleration*/
   RT_CHECK_ERROR( rtGeometryGroupCreate( OptiX_Context, &geometry_group ) );
-  RT_CHECK_ERROR( rtGeometryGroupSetChildCount( geometry_group, 5 ) );
+  RT_CHECK_ERROR( rtGeometryGroupSetChildCount( geometry_group, 6 ) );
   RT_CHECK_ERROR( rtTransformSetChild( transform, geometry_group ) );
 
   //create acceleration object for group and specify some build hints
@@ -1867,6 +2055,13 @@ void RadiationModel::initializeOptiX( void ){
   RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( voxel_instance, 0, voxel_material ) );
   RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 4, voxel_instance ) );
 
+  //voxels
+  RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &bbox_instance ) );
+  RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( bbox_instance, bbox ) );
+  RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( bbox_instance, 1 ) );
+  RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( bbox_instance, 0, bbox_material ) );
+  RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 5, bbox_instance ) );
+  
   /* Set the top_object variable */
   //NOTE: Not sure exactly where this has to be set
   RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "top_object", &top_object ) );
@@ -2031,22 +2226,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
       voxel_count ++;
     }
 
-  }
-
-  initializeBuffer2Df( transform_matrix_RTbuffer, m_global );
-  initializeBuffer1Dui( primitive_type_RTbuffer, ptype_global );
-  initializeBuffer1Df( primitive_area_RTbuffer, area_global );
-  initializeBuffer1Dbool( twosided_flag_RTbuffer, twosided_flag_global );
-  initializeBuffer2Dfloat3( patch_vertices_RTbuffer, patch_vertices );
-  initializeBuffer2Dfloat3( triangle_vertices_RTbuffer, triangle_vertices );
-  initializeBuffer2Dfloat3( alphamask_vertices_RTbuffer, alphamask_vertices );
-  initializeBuffer2Dfloat3( voxel_vertices_RTbuffer, voxel_vertices );
-  
-  initializeBuffer1Dui( patch_UUID_RTbuffer, patch_UUID );
-  initializeBuffer1Dui( triangle_UUID_RTbuffer, triangle_UUID );
-  initializeBuffer1Dui( disk_UUID_RTbuffer, disk_UUID );
-  initializeBuffer1Dui( alphamask_UUID_RTbuffer, alphamask_UUID );
-  initializeBuffer1Dui( voxel_UUID_RTbuffer, voxel_UUID );
+  }      
 
   //Texture mask data
   std::vector<std::vector<std::vector<bool> > > maskdata;
@@ -2134,11 +2314,95 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   initializeBuffer2Dfloat2( uvdata_RTbuffer, uvdata );
   initializeBuffer1Di( uvID_RTbuffer, uvID );
 
+  //Bounding box
+  helios::vec2 xbounds, ybounds, zbounds;
+  context->getDomainBoundingBox( xbounds, ybounds, zbounds );
+
+  xbounds.x -= 1e-5;
+  xbounds.y += 1e-5;
+  ybounds.x -= 1e-5;
+  ybounds.y += 1e-5;
+  
+  std::vector<uint> bbox_UUID;
+  int bbox_face_count = 0;
+  
+  std::vector<std::vector<optix::float3> > bbox_vertices;
+  
+  //primitive type
+      
+  std::vector<optix::float3> v;
+  v.resize(4);
+
+  if( periodic_flag.x==1 ){
+
+    // -x facing
+    v.at(0) = optix::make_float3(xbounds.x,ybounds.x,zbounds.x);
+    v.at(1) = optix::make_float3(xbounds.x,ybounds.y,zbounds.x);
+    v.at(2) = optix::make_float3(xbounds.x,ybounds.y,zbounds.y);
+    v.at(3) = optix::make_float3(xbounds.x,ybounds.x,zbounds.y);
+    bbox_vertices.push_back(v);
+    bbox_UUID.push_back(Nprimitives+bbox_face_count);
+    ptype_global.push_back(5);
+    bbox_face_count++;
+
+    // +x facing
+    v.at(0) = optix::make_float3(xbounds.y,ybounds.x,zbounds.x);
+    v.at(1) = optix::make_float3(xbounds.y,ybounds.y,zbounds.x);
+    v.at(2) = optix::make_float3(xbounds.y,ybounds.y,zbounds.y);
+    v.at(3) = optix::make_float3(xbounds.y,ybounds.x,zbounds.y);
+    bbox_vertices.push_back(v);
+    bbox_UUID.push_back(Nprimitives+bbox_face_count);
+    ptype_global.push_back(5);
+    bbox_face_count++;
+
+  }
+  if( periodic_flag.y==1 ){
+
+    // -y facing
+    v.at(0) = optix::make_float3(xbounds.x,ybounds.x,zbounds.x);
+    v.at(1) = optix::make_float3(xbounds.y,ybounds.x,zbounds.x);
+    v.at(2) = optix::make_float3(xbounds.y,ybounds.x,zbounds.y);
+    v.at(3) = optix::make_float3(xbounds.x,ybounds.x,zbounds.y);
+    bbox_vertices.push_back(v);
+    bbox_UUID.push_back(Nprimitives+bbox_face_count);
+    ptype_global.push_back(5);
+    bbox_face_count++;
+
+    // +y facing
+    v.at(0) = optix::make_float3(xbounds.x,ybounds.y,zbounds.x);
+    v.at(1) = optix::make_float3(xbounds.y,ybounds.y,zbounds.x);
+    v.at(2) = optix::make_float3(xbounds.y,ybounds.y,zbounds.y);
+    v.at(3) = optix::make_float3(xbounds.x,ybounds.y,zbounds.y);
+    bbox_vertices.push_back(v);
+    bbox_UUID.push_back(Nprimitives+bbox_face_count);
+    ptype_global.push_back(5);
+    bbox_face_count++;
+
+  }
+
+  initializeBuffer2Df( transform_matrix_RTbuffer, m_global );
+  initializeBuffer1Dui( primitive_type_RTbuffer, ptype_global );
+  initializeBuffer1Df( primitive_area_RTbuffer, area_global );
+  initializeBuffer1Dbool( twosided_flag_RTbuffer, twosided_flag_global );
+  initializeBuffer2Dfloat3( patch_vertices_RTbuffer, patch_vertices );
+  initializeBuffer2Dfloat3( triangle_vertices_RTbuffer, triangle_vertices );
+  initializeBuffer2Dfloat3( alphamask_vertices_RTbuffer, alphamask_vertices );
+  initializeBuffer2Dfloat3( voxel_vertices_RTbuffer, voxel_vertices );
+  initializeBuffer2Dfloat3( bbox_vertices_RTbuffer, bbox_vertices );
+  
+  initializeBuffer1Dui( patch_UUID_RTbuffer, patch_UUID );
+  initializeBuffer1Dui( triangle_UUID_RTbuffer, triangle_UUID );
+  initializeBuffer1Dui( disk_UUID_RTbuffer, disk_UUID );
+  initializeBuffer1Dui( alphamask_UUID_RTbuffer, alphamask_UUID );
+  initializeBuffer1Dui( voxel_UUID_RTbuffer, voxel_UUID );
+  initializeBuffer1Dui( bbox_UUID_RTbuffer, bbox_UUID );
+
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( patch, patch_count ) );
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( triangle, triangle_count ) );
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( disk, disk_count ) );
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( alphamask, alphamask_count ) );
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( voxel, voxel_count ) );
+  RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( bbox, bbox_face_count ) );
 
   RT_CHECK_ERROR( rtAccelerationMarkDirty( geometry_acceleration ) );
   
@@ -2406,6 +2670,9 @@ void RadiationModel::runBand( const char* label ){
   //Number of external radiation sources for this band
   uint Nsources = source_fluxes.at(label).size();
   RT_CHECK_ERROR( rtVariableSet1ui( Nsources_RTvariable, Nsources ) );
+
+  //Set periodic boundary condition (if applicable)
+  RT_CHECK_ERROR( rtVariableSet2f( periodic_flag_RTvariable, periodic_flag.x, periodic_flag.y ));
   
   updateRadiativeProperties(label);
 

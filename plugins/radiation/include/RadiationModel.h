@@ -142,6 +142,11 @@ class RadiationModel{
   */
   void setMinScatterEnergy( const char* label, uint energy );
 
+  //! Use a periodic boundary condition in one or more lateral directions
+  /** \param[in] "boundary" Lateral direction to enforce periodic boundary - choices are "x" (periodic only in x-direction), "y" (periodic only in y-direction), or "xy" (periodic in both x- and y-directions).
+  */ 
+  void enforcePeriodicBoundary( const char* boundary );
+
   //! Adds all geometric primitives from the Context to OptiX
   /** This function should be called anytime Context geometry is created or modified
       \note \ref updateGeometry() must be called before simulation can be run
@@ -482,9 +487,9 @@ protected:
   //! Bounding sphere center
   RTvariable bound_sphere_center_RTvariable;
 
-  RTvariable bound_box_x_RTvariable;
-  RTvariable bound_box_y_RTvariable;
-  RTvariable bound_box_z_RTvariable;
+  //! Periodic boundary condition
+  helios::vec2 periodic_flag;
+  RTvariable periodic_flag_RTvariable;
 
   //! Energy absorbed by the "sky"
   RTvariable Rsky_RTvariable;
@@ -518,12 +523,14 @@ protected:
   RTbuffer disk_UUID_RTbuffer;
   RTbuffer alphamask_UUID_RTbuffer;
   RTbuffer voxel_UUID_RTbuffer;
+  RTbuffer bbox_UUID_RTbuffer;
   //! Primitive UUIDs - RTvariable object
   RTvariable patch_UUID_RTvariable;
   RTvariable triangle_UUID_RTvariable;
   RTvariable disk_UUID_RTvariable;
   RTvariable alphamask_UUID_RTvariable;
   RTvariable voxel_UUID_RTvariable;
+  RTvariable bbox_UUID_RTvariable;
 
   //! Primitive two-sided flag - RTbuffer object
   RTbuffer twosided_flag_RTbuffer;
@@ -556,6 +563,10 @@ protected:
   //-- Voxel Buffers --//
   RTbuffer voxel_vertices_RTbuffer;
   RTvariable voxel_vertices_RTvariable;
+
+  //-- Bounding Box Buffers --//
+  RTbuffer bbox_vertices_RTbuffer;
+  RTvariable bbox_vertices_RTvariable;
 
   /* Output Buffers */
 
@@ -633,11 +644,13 @@ protected:
   RTgeometry disk;
   RTgeometry alphamask;
   RTgeometry voxel;
+  RTgeometry bbox;
   RTmaterial patch_material;
   RTmaterial triangle_material;
   RTmaterial disk_material;
   RTmaterial alphamask_material;
   RTmaterial voxel_material;
+  RTmaterial bbox_material;
 
   RTgroup         top_level_group;
   RTacceleration  top_level_acceleration;

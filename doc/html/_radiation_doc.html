@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.1</span>
+   &#160;<span id="projectnumber">v1.1.2</span>
    </div>
   </td>
  </tr>
@@ -89,6 +89,7 @@ $(function() {
 </ul>
 </li>
 <li class="level2"><a href="#RadScatter">Scattering Iterations</a></li>
+<li class="level2"><a href="#RadPeriodic">Periodic Boundary Conditions</a></li>
 <li class="level2"><a href="#RadRun">Running Simulations</a></li>
 <li class="level2"><a href="#RadSolar">Integrating with the SolarPosition Plug-in</a></li>
 <li class="level2"><a href="#RadVis">Visualizing Model Outputs</a></li>
@@ -216,13 +217,13 @@ Adding Collimated Sources</h3>
  radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div><h3><a class="anchor" id="SunSphereSource"></a>
 Adding Spherical Sun Source</h3>
 <p>To represent penumbral effects, a spherical radiation source can be used to represent the sun. The sun is represented by a sphere, which has the same diameter and distance from the earth as the sun.</p>
-<p>The spherical sun source is defined in a similar manner as the collimated radiation source, but using the addSunSphereRadiationSource() function. Below is an example of adding a spherical sun source, with a flux of 800 and using 200 rays per primitive:</p>
+<p>The spherical sun source is defined in a similar manner as the collimated radiation source, but using the <a class="el" href="class_radiation_model.html#a6178ae419617c091dc7202d6d4cf248c">addSunSphereRadiationSource()</a> function. Below is an example of adding a spherical sun source, with a flux of 800 and using 200 rays per primitive:</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> vec3 sun_dir(0,0,1);
  uint SunSource = radiationmodel.addSunSphereRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'SunSource' variable
  radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source
  radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div><h3><a class="anchor" id="PointSource"></a>
 Adding Spherical Sources</h3>
-<p>More general spherical radiation sources can be added to represent sources such as a lamp. Spherical sources are added using the addSphereRadiationSource() function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the source can also be set using the source identifier.</p>
+<p>More general spherical radiation sources can be added to represent sources such as a lamp. Spherical sources are added using the <a class="el" href="class_radiation_model.html#adc26a37949e004de563d80fe44c8dac0">addSphereRadiationSource()</a> function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the source can also be set using the source identifier.</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> vec3 sun_dir(0,0,1);
  float sphere_radius = 1.0;
  uint SphereSource = radiationmodel.addSphereRadiationSource( sun_dir, sphere_radius ); //add the source, whose identifier is stored in the 'SphereSource' variable
@@ -238,7 +239,14 @@ Scattering Iterations</h2>
 <p>If the reflectivity or tranmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport. These scattering calculations are performed iteratively until there is no energy left to be scattered. The number of scattering iterations is defined using:</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>radiationmodel.setScatteringDepth(5); //set the number of scattering iterations</code></pre></div><p> <br  />
 </p>
-<h2><a class="anchor" id="RadRun"></a>
+<h2><a class="anchor" id="RadPeriodic"></a>
+Periodic Boundary Conditions</h2>
+<p>By default, the radiation model does not enforce any boundary conditions on the edge of the domain (other than being a diffuse ambient radiation source if one has been added). Optionally, users can specify to enforce a periodic boundary in the horizontal in either the x- or y-direction or both. This effectively means that the domain repeats indefintely, and that any radiation leaving the domain on one boundary will re-enter the domain on the opposite boundary. This is useful for eliminating domain edge effects.</p>
+<div class="image">
+<img src="PeriodicBC.png" alt=""/>
+</div>
+<p>A periodic boundary condition is specified using the <a class="el" href="class_radiation_model.html#a07986ba42a24c97635a315c7982040be">enforcePeriodicBoundary()</a> function. The argument to this function is the lateral boundary that should be considered periodic: one of "x" (periodic in x-direction), "y" (periodic in y-direction), or "xy" (periodic in both x- and y-directions).</p>
+<div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>radiationmodel.enforcePeriodicBoundary("xy"); //enforce periodic boundaries in horizontal</code></pre></div><h2><a class="anchor" id="RadRun"></a>
 Running Simulations</h2>
 <p>Before simulations are run, we must update the context geometry within the radiation model using the <a class="el" href="class_radiation_model.html#a0f55795694c31a0568e606c73f9d945a">updateGeometry()</a> command. The geometry update can be somewhat costly, so it should only be done whenever geometry changes.</p>
 <p>Simulations for each band are run separately via the <a class="el" href="class_radiation_model.html#a7f43a8453667e3314aef36d6b5c416ed">runBand()</a> command:</p>

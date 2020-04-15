@@ -34,7 +34,7 @@
      <td>\image html unix-logo.png</td>
    </tr>
    <tr>	
-     <td>NVIDIA CUDA 5.0+</td>
+     <td>NVIDIA CUDA 9.0+</td>
      <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
      <td>Debian/Ubuntu:**<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install nvidia-cuda-toolkit</code></div></td>
    </tr>
@@ -216,7 +216,7 @@
 
  To represent penumbral effects, a spherical radiation source can be used to represent the sun. The sun is represented by a sphere, which has the same diameter and distance from the earth as the sun.
 
-The spherical sun source is defined in a similar manner as the collimated radiation source, but using the \ref addSunSphereRadiationSource() function. Below is an example of adding a spherical sun source, with a flux of 800 and using 200 rays per primitive:
+The spherical sun source is defined in a similar manner as the collimated radiation source, but using the \ref RadiationModel::addSunSphereRadiationSource() "addSunSphereRadiationSource()" function. Below is an example of adding a spherical sun source, with a flux of 800 and using 200 rays per primitive:
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code> vec3 sun_dir(0,0,1);
@@ -226,7 +226,7 @@ The spherical sun source is defined in a similar manner as the collimated radiat
 
  \subsubsection PointSource Adding Spherical Sources
 
- More general spherical radiation sources can be added to represent sources such as a lamp. Spherical sources are added using the \ref addSphereRadiationSource() function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the source can also be set using the source identifier.
+ More general spherical radiation sources can be added to represent sources such as a lamp. Spherical sources are added using the \ref RadiationModel::addSphereRadiationSource() "addSphereRadiationSource()" function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the source can also be set using the source identifier.
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code> vec3 sun_dir(0,0,1);
@@ -253,6 +253,17 @@ The spherical sun source is defined in a similar manner as the collimated radiat
  
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>radiationmodel.setScatteringDepth(5); //set the number of scattering iterations</code></pre></div>	
+
+ \subsection RadPeriodic Periodic Boundary Conditions
+
+ By default, the radiation model does not enforce any boundary conditions on the edge of the domain (other than being a diffuse ambient radiation source if one has been added). Optionally, users can specify to enforce a periodic boundary in the horizontal in either the x- or y-direction or both. This effectively means that the domain repeats indefintely, and that any radiation leaving the domain on one boundary will re-enter the domain on the opposite boundary. This is useful for eliminating domain edge effects.
+
+ \image html PeriodicBC.png
+
+ A periodic boundary condition is specified using the \ref RadiationModel::enforcePeriodicBoundary() "enforcePeriodicBoundary()" function. The argument to this function is the lateral boundary that should be considered periodic: one of "x" (periodic in x-direction), "y" (periodic in y-direction), or "xy" (periodic in both x- and y-directions).
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>radiationmodel.enforcePeriodicBoundary("xy"); //enforce periodic boundaries in horizontal</code></pre></div>
 
  \subsection RadRun Running Simulations
 

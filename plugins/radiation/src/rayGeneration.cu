@@ -580,7 +580,7 @@ RT_PROGRAM void diffuse_raygen(){
     }
 
   }else{ //other
-    
+
     ray_direction = d_rotatePoint( ray_direction, acos_safe(normal.z), atan2(normal.y,normal.x) );
 
     prd.strength = 1.f/float(dimx);

@@ -1,58 +1,65 @@
 /*! \page "AerialLiDARDoc" Aerial %LiDAR Point Cloud Plugin Documentation
 
- \image html LiDAR.png
+ \image html AerialLiDAR.png
 
  \tableofcontents
 
-  <p> <br><br> </p>
+ <p> <br><br> </p>
 
-  <table>
-    <tr>	
+ <table>
+   <tr>	
       <th>Dependencies</th>
-      <td>NVIDIA CUDA 6.0+ <p>
-          gcc/g++ 5.5+ <p>
-      	  Visualizer plug-in</td>
-    </tr>
-    <tr>	
+      <td>NVIDIA CUDA 9.0+ <p>
+         gcc/g++ 5.5+ <p>
+    	 Visualizer plug-in</td>
+   </tr>
+   <tr>	
       <th>CMakeLists.txt</th>
       <td>set( PLUGINS "aeriallidar" )</td>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <th>Header File</th>
       <td>#include "AerialLiDAR.h"</td>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <th>Class</th>
       <td>\ref AerialLiDARcloud</td>
-    </tr>
-  </table>
+   </tr>
+ </table>
 
-  \section Aerial LiDARissues Known Issues
+ \section AerialLiDARissues Known Issues 
 
-  - The Aerial LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file. 
+ - The Aerial LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file. 
 
-  \section AerialLiDARintro Introduction
+ \section AerialLiDARintro Introduction
 
-  The LiDAR plugin is used to process terrestrial LiDAR data into information that is useful for plant models.  For example, this may be to determine leaf area and angle distributions at the voxel scale, or to reconstruct individual leaves and add them to the Context.
+ The Aerial LiDAR plugin is used to process LiDAR data collected from an airborne platform into 2D and 3D raster data. The plugin is able to create the following data products on an arbitrary raster grid:
 
-  \section AerialLiDARdepends Dependencies
+ - Ground height (2D)
+ - Maximum vegetation height (2D)
+ - "Effective" vegetation height (2D)
+ - Ground cover fraction (2D)
+ - Leaf area index (2D)
+ - Leaf area density (3D)
 
-  <table>
-    <tr>	
+ \section AerialLiDARdepends Dependencies
+
+ <table>
+   <tr>	
       <th>Package</th>
       <td>\image html apple-logo.jpg</td>
       <td>\image html unix-logo.png</td>
       <td>\image html windows-logo.jpg</td>
-    </tr>
-    <tr>	
-      <td>NVIDIA CUDA 6.0+</td>
+   </tr>
+   <tr>	
+      <td>NVIDIA CUDA 9.0+</td>
       <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
       <td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cuda</code></div></td>
       <td>Unknown</td>
-    </tr>
-  </table>
+   </tr>
+ </table>
 
-  \section AerialLiDARConstructor Class Constructor
+ \section AerialLiDARConstructor Class Constructor
 
  <table>
    <tr>	
@@ -69,112 +76,34 @@
   
  \subsection AerialLiDARcoord Coordinates and scan pattern
 
+ The plug-in assumes that laser pulses are launched from some surface above the canopy downward. When processing LiDAR data, each laser pulse is defined by 1) the (x,y,z) coordinates of the laser-object intersection point, and 2) the angle of the laser traversal direction in spherical coordinates (e.g., for a laser pulse traveling directly downward, the zenith angle is \f$\theta=\pi\f$ and azimuth \f$\varphi\f$ is arbitrary).
+
+ \image html LaunchSchematic.jpeg
  
  \subsection AerialLiDARreturn Difference between discrete-return and full-waveform LiDAR data
- 
 
- \subsection AerialScanMetadata Scan metadata
+ The laser beam emitted from a LiDAR instrument has some finite diameter, which increases with distance from the scanner. In many cases, the beam diameter may be larger than the width of individual leaves by the time it reaches the canopy. This means that a single laser pulse may intersect multiple objects along its path to the ground.
 
- Each scan has a set of parameters or "metadata" that must be specified in order to process the data.  Some parameters are optional, while some are required.  The following metadata is needed to define the overall scan itself, in addition to individual scan hit points:
+ For a "discrete-return" instrument, only one hit point is recorded per laser pulse. The distance from the scanner recorded for the hit point is an effective average distance to all objects intersected by the beam.
 
- <table>
-   <tr>	
-     <th>Metadata</th>
-     <th>Description</th>
-     <th>Default behavior</th>
-   </tr>
-   <tr>
-     <td>center</td>
-     <td>(x,y,z) coordinate of the center of the surface from which ra</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>N<sub>theta</sub></td>
-     <td>Number of scan points in the theta (zenithal) direction, i.e., number of rows in scan point table.</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>\f$\theta\f$<sub>min</sub> (degrees)</td>
-     <td>Minimum scan theta (zenital) angle. \f$\theta\f$<sub>min</sub>=0 if the scan starts from upward vertical, \f$\theta\f$<sub>min</sub>=90 is the scan starts from horizontal, etc. </td>
-     <td>0</td>
-   </tr>
-   <tr>
-     <td>\f$\theta\f$<sub>max</sub> (degrees)</td>
-     <td>Maximum scan theta (zenital) angle. \f$\theta\f$<sub>max</sub>=90 if the scan ends at horizontal, \f$\theta\f$<sub>min</sub>=180 is the scan ends at downward vertical, etc. </td>
-     <td>180</td>
-   </tr>
-   <tr>
-     <td>N<sub>phi</sub></td>
-     <td>Number of scan points in the phi (azimuthal) direction, i.e., number of rows in scan point table.</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>\f$\varphi\f$<sub>min</sub> (degrees)</td>
-     <td>Minimum scan phi (azimuthal) angle. \f$\varphi\f$<sub>min</sub>=0 if the scan starts pointing in the +x direction, \f$\varphi\f$<sub>min</sub>=90 if the scan starts pointing in the +y direction, etc. </td>
-     <td>0</td>
-   </tr>
-   <tr>
-     <td>\f$\varphi\f$<sub>max</sub> (degrees)</td>
-     <td>Maximum scan phi (azimuthal) angle. \f$\varphi\f$<sub>max</sub>=90 if the scan ends pointing in the +y direction, \f$\varphi\f$<sub>min</sub>=180 if the scan ends pointing in the -x direction, etc. NOTE: \f$\varphi\f$<sub>max</sub> could be greater than 360 if \f$\varphi\f$<sub>min</sub>>0 and the scanner makes a full rotation in the in the azimuthal direction, in which case \f$\varphi\f$<sub>max</sub>=\f$\varphi\f$<sub>min</sub>+360.</td>
-     <td>360</td>
-   </tr>
-   <tr>
-     <td>translation</td>
-     <td>Global (x,y,z) translation to be applied to entire scan, including the origin and all hit ponts.</td>
-     <td>No translation.</td>
-   </tr>
-   <tr>
-     <td>rotation (degrees)</td>
-     <td>Global spherical rotation (theta,phi) to be applied to the entire scan, including the origin and all hit ponts.</td>
-     <td>No rotation.</td>
-   </tr>
- </table>
+ By contrast "full-waveform" instruments are able to record multiple hit point locations along a single laser pulse. This class of instruments is able to process the timeseries of pulse returns into separate distances. Full-waveform instruments are preferred because they provide more information, particularly in dense canopies where a discrete-return instrument would rarely record the location of the ground.
 
- \subsection AddHits Hit point data
+ \image html WaveformSchematic.jpeg
 
- The point cloud data collected by the scanner is read by the plug-in through an ASCII text file, where each row corresponds to the data associated with each laser hit point.  At a minimum, this consists of the Cartesian (x,y,z) coordinates of each hit in the scan.  Additionally, hit points may also have an associated r-g-b color value, the target index/count if it is waveform data, or some other scalar data value such as reflectance.  For the processing algorithms to work, the scan direction associated with each hit point must also be known.  This can be specified as a (\f$\theta\f$,\f$\varphi\f$) spherical coordinate, or using the row (i.e., index in the scanline: 1...\f$\mathrm{N}_\theta\f$) and column (i.e., scanline index: 1...\f$\mathrm{N}_\varphi\f$).
- 
- <table>
-   <tr>	
-     <th>Data</th>
-     <th>Description</th>
-     <th>Default behavior</th>
-   </tr>
-   <tr>
-     <td>(x,y,z) position</td>
-     <td>(x,y,z) coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>ray direction</td>
-     <td>Spherical direction (theta, phi) of the ray.  Ray directions are used to construct the scan hit table.  There could be multiple hits for a given ray direction if a full-waveform instrument is used in multiple return mode.</td>
-     <td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td>
-   </tr>
-   <tr>
-     <td>color</td>
-     <td>r-g-b color of scan hit point.</td>
-     <td>red</td>
-   </tr>
-   <tr>
-     <td>data</td>
-     <td>Floating point data values associated with the hit point.  This could be reflectance, temperature, etc.</td>
-     <td>No data created.</td>
-   </tr>
- </table>
- 
-
+ \section AerialSetup Data processing setup
 
  \section AerialScanIO Loading scan data from file
 
- Scan metadata is typically specified by loading an XML file containing the relevant metadata for each scan.  The XML file specifies the path to an ASCII text file that contains the data for each scan.  The code below gives a sample XML file for loading multiple scans.  As specified in the metadata table above, not all entries are required.
+ Scan metadata is typically specified by loading an XML file containing the relevant metadata for each scan.  The XML file specifies the path to an ASCII text file that contains the data for each scan.  The code below gives a sample XML file for loading multiple scans.  Not all entries are required. At a minimum, this consists of the Cartesian (x,y,z) coordinates of each hit in the scan.  Additional optional information can be specified for each hit point, as given in the table below.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
   <pre><code> <helios>
 
 	<scan>
 	  <filename> /path/to/data/file.xyz </filename>
-	  <ASCII_format> zenith azimuth x y z target_count target_index </ASCII_format>
+	  <ASCII_format> x y z zenith azimuth target_count target_index </ASCII_format>
 	</scan>
+	
  </helios></code></pre></div>
 
  The ASCII text file containing the data is a plain text file, where each row corresponds to a hit point and each column is some data value associated with that hit point.  The "ASCII_format" tag defines the column format of the ASCII text file (in this case, file.xyz).  Each entry in the list specifies the meaning of each column.  Possible fields are listed in the table below:
@@ -201,14 +130,24 @@
      <td>None: REQUIRED</td>
    </tr>
    <tr>
+     <td>target_count</td>
+     <td>Total number of returns/hits along the hit's beam path.</td>
+     <td>REQUIRED for full-waveform; N/A for discrete-return</td>
+   </tr>
+   <tr>
+     <td>target_index</td>
+     <td>Index of returns/hits along the hit's beam path (target_index=0 for first return, =1 for second return, =target_count-1 for last return). NOTE: target indices can start at 0 or 1 for the first return as long as it is consitent throughout.</td>
+     <td>REQUIRED for full-waveform; N/A for discrete-return</td>
+   </tr>
+   <tr>
      <td>zenith (or zenith_rad)</td>
      <td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees.</td>
-     <td>Calculated from scan origin and hit (x,y,z).</td>
+     <td>180 (or \f$\pi\f$)</td>
    </tr>
    <tr>
      <td>azimuth (or phi_rad)</td>
      <td>Azithal angle (degrees) of scan ray direction corresponding to the hit point. If "phi_rad" is used, phi has units of radians rather than degrees.</td>
-     <td>Calculated from scan origin and hit (x,y,z).</td>
+     <td>0</td>
    </tr>
    <tr>
      <td>r (or r255)</td>
@@ -235,7 +174,7 @@
  The XML file can be automatically loaded into the point cloud using the \ref loadXML() function, as illustrated below.
   
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> #include "Context.h"
+ <pre><code>  #include "Context.h"
    #include "LiDAR.h"
 
    using namespace helios;
@@ -248,9 +187,9 @@
       
   }</code></pre></div>
 
- \section LiDARgrid Establishing grid cells
+ \section AerialLiDARgrid Establishing grid cells
 
- Rectangular grid cells are used as the basis for processing point cloud data.  For example, total leaf area (or leaf area density) may be calculated for each grid cell. Grid cells or "voxels" are parallelpiped volumes.  The top and bottom faces are always horizontal, but the cells can be rotated in the azimuthal direction.
+ Rectangular grid cells are used as the basis for processing point cloud data.  For example, total leaf area (or leaf area density) may be calculated for each grid cell. Grid cells or "voxels" are parallelpiped volumes.  The top and bottom faces are always horizontal, but the cells can be rotated in the azimuthal direction. 2D raster data such as the ground height is given on a rectangular grid.
 
  Grid cells are defined by specifying the (x,y,z) position of its center, and the size of the cell in the x, y, and z directions.  Additional optional information can also be provided for grid cells, which are detailed below.
 
@@ -262,17 +201,17 @@
    </tr>
    <tr>
      <td>center</td>
-     <td>(x,y,z) Cartesian coordinates of cell center.</td>
+     <td>(x,y,z) Cartesian coordinates of grid center.</td>
      <td>None: required.</td>
    </tr>
    <tr>
      <td>size</td>
-     <td>Length of cell sides in x, y, and z directions.</td>
+     <td>Size of the grid in x, y, and z directions.</td>
      <td>None: required.</td>
    </tr>
    <tr>
      <td>rotation</td>
-     <td>Azimuthal rotation of the cell in degrees.</td>
+     <td>Azimuthal rotation of the grid in degrees.</td>
      <td>0</td>
     </tr>
    <tr>
@@ -292,21 +231,31 @@
    </tr>
  </table>
 
- The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells.  For example, Nx=Ny=Nz would create 27 grid cells similar to a "Rubik's cube".
+ The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells.  For example, Nx=Ny=Nz=3 would create 27 grid cells similar to a "Rubik's cube".
 
  Grid cell options can be specified in an XML file using the tags listed in the table above.  Multiple grid cells are added by simply adding more <grid>...</grid> groups to the XML file.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
   <pre><code> <grid>
 	 \<center> 0 0 0.5 \</center>
-	 \<size> 1 1 1 </size>
-	 \<rotation> 30 </rotation> \<!-- OPTIONAL - default: 0 -->
-	 \<Nx> 3 </Nx> \<!-- OPTIONAL - default: 1 -->
-	 \<Ny> 3 </Ny> \<!-- OPTIONAL - default: 1 -->
-	 \<Nz> 3 </Nz> \<!-- OPTIONAL - default: 1 -->
+	 \<size> 100 100 10 </size>
+	 \<rotation> 30 </rotation> 
+	 \<Nx> 3 </Nx> 
+	 \<Ny> 3 </Ny> 
+	 \<Nz> 3 </Nz> 
   </grid></code></pre></div>
-  
- \section LiDARprocess Processing LiDAR data
+
+ \section AerialLiDARprocess Processing LiDAR data
+
+ \subsection AerialRasters 2D raster height maps
+
+ \subsection AerialGroundCover 2D raster ground cover fraction
+
+ \subsection AerialLeafArea Leaf area
+
+ \image html UnderConstruction.png
+
+<!--
   
   \subsection LiDARtri Hit point triangulation
 
@@ -336,11 +285,9 @@
 
   
 
-  <!--
       \image html HitTable.png "The rectangular scan pattern creates a two-dimensional table of scan directions in spherical space (left).  If an object was hit by the scanner at a given scan direction, the instrument records the Cartesian coordinate of that hit location (right)."
-   -->
 
-  \subsection LiDARleafarea Calculating leaf area for each grid cell
+\subsection LiDARleafarea Calculating leaf area for each grid cell
 
   Using the triangulation and defined grid cells, the plug-in can calculate the leaf area (and leaf area density) for each grid cell.  The algorithm for calculating leaf area is described in detail in <a href="dx.doi.org/doi:10.1088/1361-6501/aa5cfd">Bailey and Mahaffee (2017b)</a>.
 
@@ -452,9 +399,7 @@
       
    }</code></pre></div>
 
-  <!--
   \section LiDARcontext Adding geometry to the Context
-  -->
 
   \section LiDARoutput Writing results to file
 
@@ -522,5 +467,66 @@
       pointcloud.exportLeafAreaDensities( "../output/leaf_area_densities.txt" );
       
    }</code></pre></div>
-  
+
+   \section AerialSynth Generating synthetic aerial LiDAR data
+
+   \subsection AerialScanMetadata Synthetic scan metadata
+
+ Each scan has a set of parameters or "metadata" that must be specified in order to process the data.  Some parameters are optional, while some are required.  The following metadata is needed to define the overall scan itself, in addition to individual scan hit points:
+
+ <table>
+   <tr>	
+     <th>Metadata</th>
+     <th>Description</th>
+     <th>Default behavior</th>
+   </tr>
+   <tr>
+     <td>center</td>
+     <td>(x,y,z) coordinate of the center of the surface from which ra</td>
+     <td>None: REQUIRED</td>
+   </tr>
+   <tr>
+     <td>N<sub>theta</sub></td>
+     <td>Number of scan points in the theta (zenithal) direction, i.e., number of rows in scan point table.</td>
+     <td>None: REQUIRED</td>
+   </tr>
+   <tr>
+     <td>\f$\theta\f$<sub>min</sub> (degrees)</td>
+     <td>Minimum scan theta (zenital) angle. \f$\theta\f$<sub>min</sub>=0 if the scan starts from upward vertical, \f$\theta\f$<sub>min</sub>=90 is the scan starts from horizontal, etc. </td>
+     <td>0</td>
+   </tr>
+   <tr>
+     <td>\f$\theta\f$<sub>max</sub> (degrees)</td>
+     <td>Maximum scan theta (zenital) angle. \f$\theta\f$<sub>max</sub>=90 if the scan ends at horizontal, \f$\theta\f$<sub>min</sub>=180 is the scan ends at downward vertical, etc. </td>
+     <td>180</td>
+   </tr>
+   <tr>
+     <td>N<sub>phi</sub></td>
+     <td>Number of scan points in the phi (azimuthal) direction, i.e., number of rows in scan point table.</td>
+     <td>None: REQUIRED</td>
+   </tr>
+   <tr>
+     <td>\f$\varphi\f$<sub>min</sub> (degrees)</td>
+     <td>Minimum scan phi (azimuthal) angle. \f$\varphi\f$<sub>min</sub>=0 if the scan starts pointing in the +x direction, \f$\varphi\f$<sub>min</sub>=90 if the scan starts pointing in the +y direction, etc. </td>
+     <td>0</td>
+   </tr>
+   <tr>
+     <td>\f$\varphi\f$<sub>max</sub> (degrees)</td>
+     <td>Maximum scan phi (azimuthal) angle. \f$\varphi\f$<sub>max</sub>=90 if the scan ends pointing in the +y direction, \f$\varphi\f$<sub>min</sub>=180 if the scan ends pointing in the -x direction, etc. NOTE: \f$\varphi\f$<sub>max</sub> could be greater than 360 if \f$\varphi\f$<sub>min</sub>>0 and the scanner makes a full rotation in the in the azimuthal direction, in which case \f$\varphi\f$<sub>max</sub>=\f$\varphi\f$<sub>min</sub>+360.</td>
+     <td>360</td>
+   </tr>
+   <tr>
+     <td>translation</td>
+     <td>Global (x,y,z) translation to be applied to entire scan, including the origin and all hit ponts.</td>
+     <td>No translation.</td>
+   </tr>
+   <tr>
+     <td>rotation (degrees)</td>
+     <td>Global spherical rotation (theta,phi) to be applied to the entire scan, including the origin and all hit ponts.</td>
+     <td>No rotation.</td>
+   </tr>
+ </table>
+
+-->
+
 */

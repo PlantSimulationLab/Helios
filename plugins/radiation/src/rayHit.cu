@@ -32,6 +32,8 @@ rtDeclareVariable( unsigned int, UUID, attribute UUID, );
 
 rtDeclareVariable(float, diffuseFlux,, );
 
+rtDeclareVariable(float2, periodic_flag,, );
+
 rtBuffer<float, 1> rho, tau, eps;
 
 rtBuffer<unsigned int, 1> primitive_type;
@@ -47,11 +49,84 @@ rtBuffer<float, 1>   Rsky;
 
 rtBuffer<float, 2>  transform_matrix;
 
+rtBuffer<float3, 2> bbox_vertices;
+
 RT_PROGRAM void closest_hit_direct(){
+
+  if( (periodic_flag.x==1 || periodic_flag.y==1) && primitive_type[UUID] == 5 ){ //periodic boundary condition
+
+    float3 ray_origin = ray.origin + t_hit*ray.direction;
+
+    float eps=1e-4;
+    
+    if( periodic_flag.x==1 ){
+      float2 xbounds = make_float2(bbox_vertices[make_uint2(0,0)].x,bbox_vertices[make_uint2(1,1)].x);
+      if( fabs(ray_origin.x-xbounds.x)<1e-4 ){//-x facing boundary
+  	ray_origin.x = xbounds.y - eps;
+      }else if( fabs(ray_origin.x-xbounds.y)<1e-4 ){//+x facing boundary
+  	ray_origin.x = xbounds.x + eps;
+      }
+    }
+    if( periodic_flag.y==1 ){
+      float2 ybounds = make_float2(bbox_vertices[make_uint2(0,0)].y,bbox_vertices[make_uint2(1,1)].y);
+      if( fabs(ray_origin.y-ybounds.x)<1e-4 ){//-y facing boundary
+  	ray_origin.y = ybounds.y - eps;
+      }else if( fabs(ray_origin.y-ybounds.y)<1e-4 ){//+y facing boundary
+  	ray_origin.y = ybounds.x + eps;
+      }
+    }
+
+    float3 ray_direction = ray.direction;
+
+    if( ray_direction.z<0.05 ){//if ray is close to horizontal it causes problems
+      ray_direction.z=0.05;
+    }
+
+    optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
+
+    rtTrace( top_object, ray_periodic, prd);
+
+  }
+  
 };
 
 RT_PROGRAM void closest_hit_diffuse()
 {
+
+  if( (periodic_flag.x==1 || periodic_flag.y==1) && primitive_type[UUID] == 5 ){ //periodic boundary condition
+
+    float3 ray_origin = ray.origin + t_hit*ray.direction;
+
+    float eps=1e-4;
+    
+    if( periodic_flag.x==1 ){
+      float2 xbounds = make_float2(bbox_vertices[make_uint2(0,0)].x,bbox_vertices[make_uint2(1,1)].x);
+      if( fabs(ray_origin.x-xbounds.x)<1e-4 ){//-x facing boundary
+  	ray_origin.x = xbounds.y - eps;
+      }else if( fabs(ray_origin.x-xbounds.y)<1e-4 ){//+x facing boundary
+  	ray_origin.x = xbounds.x + eps;
+      }
+    }
+    if( periodic_flag.y==1 ){
+      float2 ybounds = make_float2(bbox_vertices[make_uint2(0,0)].y,bbox_vertices[make_uint2(1,1)].y);
+      if( fabs(ray_origin.y-ybounds.x)<1e-4 ){//-y facing boundary
+  	ray_origin.y = ybounds.y - eps;
+      }else if( fabs(ray_origin.y-ybounds.y)<1e-4 ){//+y facing boundary
+  	ray_origin.y = ybounds.x + eps;
+      }
+    }
+
+    float3 ray_direction = ray.direction;
+
+    if( ray_direction.z<0.05 ){//if ray is close to horizontal it causes problems
+      ray_direction.z=0.05;
+    }
+
+    optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
+
+    rtTrace( top_object, ray_periodic, prd);
+
+  }else{
 
   //Note: UUID corresponds to the object that the ray hit (i.e., where we are recieving energy from), and UUID_origin is the object the ray originated from (i.e., where the energy is being recieved)
 
@@ -121,11 +196,11 @@ RT_PROGRAM void closest_hit_diffuse()
     if( (t_rho>0 || t_tau>0) && strength>0 ){
       
       if( prd.face ){//reflection from top, transmission from bottom
-	atomicFloatAdd( &scatter_buff_top[origin_UUID], strength*t_rho ); //reflection
-	atomicFloatAdd( &scatter_buff_bottom[origin_UUID], strength*t_tau ); //transmission
+  	atomicFloatAdd( &scatter_buff_top[origin_UUID], strength*t_rho ); //reflection
+  	atomicFloatAdd( &scatter_buff_bottom[origin_UUID], strength*t_tau ); //transmission
       }else{//reflection from bottom, transmission from top
-	atomicFloatAdd( &scatter_buff_bottom[origin_UUID], strength*t_rho ); //reflection
-	atomicFloatAdd( &scatter_buff_top[origin_UUID], strength*t_tau ); //transmission
+  	atomicFloatAdd( &scatter_buff_bottom[origin_UUID], strength*t_rho ); //reflection
+  	atomicFloatAdd( &scatter_buff_top[origin_UUID], strength*t_tau ); //transmission
       }
     }
     
@@ -137,7 +212,9 @@ RT_PROGRAM void closest_hit_diffuse()
     float beta = rho[UUID]+tau[UUID];
     prd_transmit.strength = prd.strength*(1.f-exp(-beta*0.5*prd.area));
     rtTrace( top_object, ray_transmit, prd_transmit);
-  } 
+  }
+
+  }
 
 }
 
