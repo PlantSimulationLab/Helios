@@ -449,12 +449,12 @@ int Context::selfTest(void){
   
   const char* texture = "lib/images/disk_texture.png";
 
-  vec2 uv0(0,0);
-  vec2 uv1(1,0);
-  vec2 uv2(1,1);
-  vec2 uv3(0,1);
-  
-  uint UUIDp = context_test.addPatch( make_vec3(2,3,4), sizep, make_SphericalCoord(0,0), texture, 0.5*(uv2+uv0), uv2-uv0 );
+  vec2 uv0(1,0);
+  vec2 uv1(0,0);
+  vec2 uv2(0,1);
+  vec2 uv3(1,1);
+
+  uint UUIDp = context_test.addPatch( make_vec3(2,3,4), sizep, make_SphericalCoord(0,0), texture, 0.5*(uv3+uv1), uv3-uv1 );
 
   if( !context_test.getPrimitivePointer(UUIDp)->hasTexture() ){
     error_count ++;
@@ -3414,8 +3414,8 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
     int A = 0;
     int At = 0;
     int2 sz = texture->getSize();
-    int2 uv_min( floor(uv.at(0).x*sz.x), floor(uv.at(0).y*sz.y) );
-    int2 uv_max( floor(uv.at(2).x*sz.x), floor(uv.at(2).y*sz.y) );
+    int2 uv_min( floor(uv.at(1).x*sz.x), floor(uv.at(1).y*sz.y) );
+    int2 uv_max( floor(uv.at(3).x*sz.x), floor(uv.at(3).y*sz.y) );
     for( int j=uv_min.y; j<uv_max.y; j++ ){
       for( int i=uv_min.x; i<uv_max.x; i++ ){
 	At += 1;
@@ -4631,8 +4631,8 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
 	int A = 0;
 	int At = 0;
 	
-	int2 uv_min( floor(uv.at(0).x*(sz.x-1)), floor(uv.at(0).y*(sz.y-1)) );
-	int2 uv_max( floor(uv.at(2).x*(sz.x-1)), floor(uv.at(2).y*(sz.y-1)) );
+	int2 uv_min( floor(uv.at(1).x*(sz.x-1)), floor(uv.at(1).y*(sz.y-1)) );
+	int2 uv_max( floor(uv.at(3).x*(sz.x-1)), floor(uv.at(3).y*(sz.y-1)) );
 
 	assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
 	

@@ -95,7 +95,7 @@ struct HitPoint{
   helios::SphericalCoord direction;
   helios::int2 row_column;
   helios::RGBcolor color;
-  std::map<std::string, float> data;
+  std::map<std::string, double> data;
   int gridcell;
   int scanID;
   HitPoint(void){
@@ -106,7 +106,7 @@ struct HitPoint{
     gridcell = -2;
     scanID = -1;
   }
-  HitPoint( int __scanID, helios::vec3 __position, helios::SphericalCoord __direction, helios::int2 __row_column, helios::RGBcolor __color, std::map<std::string, float> __data ){
+  HitPoint( int __scanID, helios::vec3 __position, helios::SphericalCoord __direction, helios::int2 __row_column, helios::RGBcolor __color, std::map<std::string, double> __data ){
     scanID = __scanID;
     position = __position;
     direction = __direction;
@@ -356,7 +356,7 @@ class LiDARcloud{
       \param[in] "direction" Spherical coordinate cooresponding to the scanner ray direction for the hit point.
       \param[in] "data" Map data structure containing floating point data values for the hit point.  E.g., "reflectance" could be mapped to a value of 965.2.
   */
-  void addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const std::map<std::string, float> data );
+  void addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const std::map<std::string, double> data );
     
   //! Specify a scan point as a hit by providing the (x,y,z) coordinates  and scan ray direction
   /** 
@@ -366,7 +366,7 @@ class LiDARcloud{
       \param[in] "color" r-g-b color of the hit point
       \param[in] "data" Map data structure containing floating point data values for the hit point.  E.g., "reflectance" could be mapped to a value of 965.2.
   */
-  void addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const helios::RGBcolor color, const std::map<std::string, float> data );
+  void addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const helios::RGBcolor color, const std::map<std::string, double> data );
   
   //! Specify a scan point as a hit by providing the (x,y,z) coordinates and row,column in scan table
   /** 
@@ -376,7 +376,7 @@ class LiDARcloud{
       \param[in] "color" r-g-b color of the hit point
       \param[in] "data" Map data structure containing floating point data values for the hit point.  E.g., "reflectance" could be mapped to a value of 965.2.
   */
-  void addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::int2 row_column, const helios::RGBcolor color, const std::map<std::string, float> data );
+  void addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::int2 row_column, const helios::RGBcolor color, const std::map<std::string, double> data );
 
   //! Delete a hit point in the scan
   /** 
@@ -443,13 +443,13 @@ class LiDARcloud{
       \param[in] "label" Label of the data value (e.g., "reflectance").
       \param[in] "value" Value of scalar data.
   */
-  float getHitData( const uint index, const char* label ) const;
+  double getHitData( const uint index, const char* label ) const;
 
   //! Get floating point data value associated with a hit point.
   /** \param[in] "index" Hit number.
       \param[in] "label" Label of the data value (e.g., "reflectance").
   */
-  void setHitData( const uint index, const char* label, const float value );
+  void setHitData( const uint index, const char* label, const double value );
 
   //! Check if scalar data exists for a hit point
   /** \param[in] "index" Hit number.
@@ -806,6 +806,8 @@ d the last cell's index is Ncells-1. */
 
   void sourcesInsideGridCellGPU( void );
 
+  std::vector<helios::vec3> gapfillMisses( const int source );
+
   //! Calculate the leaf area for each grid volume
   void calculateLeafAreaGPU( void );
 
@@ -846,8 +848,12 @@ d the last cell's index is Ncells-1. */
   
 };
 
-bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 );
+//bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 );
 
-bool sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 );
+//bool sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 );
+
+bool sortcol0( const std::vector<double>& v0, const std::vector<double>& v1 );
+
+bool sortcol1( const std::vector<double>& v0, const std::vector<double>& v1 );
 
 #endif

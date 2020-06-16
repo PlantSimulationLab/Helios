@@ -132,24 +132,28 @@ helios::vec3 float3tovec3( float3 f3 );
 
 __device__ float3 d_sphere2cart( float radius, float elevation, float azimuth );
 
-  __host__ __device__ float atan2_2pi( const float& y, const float& x);
+__host__ __device__ float atan2_2pi( const float& y, const float& x);
+  
+__host__ __device__ float acos_safe( float x );
+  
+__host__ int randu( int imin, int imax  );
 
-  __host__ __device__ float acos_safe( float x );
+__device__ float2 d_sampleDisk( float radius, uint seed );
 
-  __host__ int randu( int imin, int imax  );
+__host__ bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 );
 
-  __device__ float2 d_sampleDisk( float radius, uint seed );
+  //__host__ bool sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 );
 
-  __host__ bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 );
+  //__host__ bool sortcol0( const std::vector<double>& v0, const std::vector<double>& v1 );
 
-  __host__ bool sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 );
+__host__ bool sortcol1( const std::vector<double>& v0, const std::vector<double>& v1 );
 
 __global__ void insideVolume( const uint Nhits, const float3* d_hit_xyz, const uint Ngridcells, const float3* d_grid_size, const float3* d_grid_center, const float3* d_grid_anchor, const float* d_grid_rotation, int* d_hit_vol );
 
 //! Device function to intersect all rays with an axis-aligned bounding box
 __global__ void intersectBoundingBox( const size_t scanSize, const float3 origin, const float3* d_hit_xyz, const float3 bbcenter, const float3 bbsize, uint* d_boundingbox_hit );
 
-__global__ void intersectGridcell( const size_t Nhitsbb, const float3 origin, float3* d_scan_xyz, const float3 center, const float3 anchor, const float3 size, const float rotation, float* d_dr, float* hit_before, float* hit_after );
+ __global__ void intersectGridcell( const size_t Nhitsbb, const float3 origin, float3* d_scan_xyz, float* d_scan_weight, const float3 center, const float3 anchor, const float3 size, const float rotation, float* d_dr, float* hit_before, float* hit_after );
 
 __global__ void intersectPatches( const size_t N, const int rays_per_pulse, const float3 origin, float3* d_raydir, const float exit_diameter, const float beam_divergence, const int Npatches, float3* d_patch_vertex, int* d_patch_textureID, const int Ntextures, int2* d_masksize, const int2 masksize_max, bool* d_maskdata, float2* d_patch_uv, float* d_hit_t, float* d_hit_fnorm );
 

@@ -22,12 +22,16 @@ VoxelIntersection::VoxelIntersection( helios::Context* __context ){
 
   context = __context;
 
+  printmessages=true;
+
 }
 
 int VoxelIntersection::selfTest( void ){
 
-  std::cout << "Running self-test for VoxelIntersection plug-in..." << std::flush;
-
+  if( printmessages ){
+    std::cout << "Running self-test for VoxelIntersection plug-in..." << std::flush;
+  }
+    
   Context context_test;
 
   vec3 vorigin = make_vec3(1,2,3);
@@ -110,10 +114,14 @@ int VoxelIntersection::selfTest( void ){
   }
 
   if( test_pass ){
-    std::cout << "passed." << std::endl;
+    if( printmessages ){
+      std::cout << "passed." << std::endl;
+    }
     return 0;
   }else{
-    std::cout << "failed." << std::endl;
+    if( printmessages ){
+      std::cout << "failed." << std::endl;
+    }
     return 1;
   }
   

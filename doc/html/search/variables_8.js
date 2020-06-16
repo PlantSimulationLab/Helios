@@ -1,5 +1,11 @@
 var searchData=
 [
-  ['minute_1040',['minute',['../structhelios_1_1_time.html#a744b90da076192b90a3ee4ce2ff3743a',1,'helios::Time']]],
-  ['month_1041',['month',['../structhelios_1_1_date.html#a5d75f8c8616d778e470a59e0b3e890a3',1,'helios::Date']]]
+  ['leaf_5farea_5fdensity_1094',['leaf_area_density',['../struct_spherical_crowns_canopy_parameters.html#ab625b07dbc7f73b11d4af2932e96158d',1,'SphericalCrownsCanopyParameters']]],
+  ['leaf_5farea_5findex_1095',['leaf_area_index',['../struct_homogeneous_canopy_parameters.html#ae8880f6cbbdd6c69caee3cedba4ef542',1,'HomogeneousCanopyParameters']]],
+  ['leaf_5fcolor_1096',['leaf_color',['../struct_homogeneous_canopy_parameters.html#a3fc69732f3f0790dc858fe4ed8abf3fd',1,'HomogeneousCanopyParameters::leaf_color()'],['../struct_spherical_crowns_canopy_parameters.html#a7d08f35ed3ce045b74bd4479ca4cb5b4',1,'SphericalCrownsCanopyParameters::leaf_color()']]],
+  ['leaf_5fsize_1097',['leaf_size',['../struct_homogeneous_canopy_parameters.html#a2edb9f81abc15976ca0d338677105b06',1,'HomogeneousCanopyParameters::leaf_size()'],['../struct_spherical_crowns_canopy_parameters.html#a48c2ab4110bc38b4f412250d8e3e8051',1,'SphericalCrownsCanopyParameters::leaf_size()']]],
+  ['leaf_5fspacing_5ffraction_1098',['leaf_spacing_fraction',['../struct_grapevine_canopy_parameters.html#a2eac65844b10285df9d4d873fab786ba',1,'GrapevineCanopyParameters']]],
+  ['leaf_5fsubdivisions_1099',['leaf_subdivisions',['../struct_homogeneous_canopy_parameters.html#a7e385ca3b257c8012d8336c03a617b31',1,'HomogeneousCanopyParameters::leaf_subdivisions()'],['../struct_spherical_crowns_canopy_parameters.html#aa7ddee04ae15e0aa0814702a0ef4a034',1,'SphericalCrownsCanopyParameters::leaf_subdivisions()'],['../struct_grapevine_canopy_parameters.html#a297d402ebb7f99f27725a5fb4f318692',1,'GrapevineCanopyParameters::leaf_subdivisions()']]],
+  ['leaf_5ftexture_5ffile_1100',['leaf_texture_file',['../struct_homogeneous_canopy_parameters.html#ada090628a7e4d792005768eef445658d',1,'HomogeneousCanopyParameters::leaf_texture_file()'],['../struct_spherical_crowns_canopy_parameters.html#a6b01f45dcaefadaf8bb4ebd67b92197b',1,'SphericalCrownsCanopyParameters::leaf_texture_file()'],['../struct_grapevine_canopy_parameters.html#a5488dc23c699a399bfd0903372eff5c1',1,'GrapevineCanopyParameters::leaf_texture_file()']]],
+  ['leaf_5fwidth_1101',['leaf_width',['../struct_grapevine_canopy_parameters.html#ab5ddeefdaf4c8ce6c43cac1a89c05afd',1,'GrapevineCanopyParameters']]]
 ];

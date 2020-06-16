@@ -444,13 +444,13 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
   RGBcolor color = make_RGBcolor(1,0,0);
 
   //empty data
-  std::map<std::string, float> data;
+  std::map<std::string, double> data;
   
   addHitPoint( scanID, xyz, direction, color, data );
 
 }
 
-void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const std::map<std::string, float> data ){
+void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const std::map<std::string, double> data ){
 
   //default color
   RGBcolor color = make_RGBcolor(1,0,0);
@@ -462,13 +462,13 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const helios::RGBcolor color ){
 
   //empty data
-  std::map<std::string, float> data;
+  std::map<std::string, double> data;
   
   addHitPoint( scanID, xyz, direction, color, data );
   
 }
 
-void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const helios::RGBcolor color, const std::map<std::string, float> data ){
+void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const helios::RGBcolor color, const std::map<std::string, double> data ){
 
   //error checking
   if( scanID>=scans.size() ){
@@ -485,7 +485,7 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 
 }
 
-void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::int2 row_column, const helios::RGBcolor color, const std::map<std::string, float> data ){
+void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::int2 row_column, const helios::RGBcolor color, const std::map<std::string, double> data ){
 
   ScanMetadata scan = scans.at(scanID);
   SphericalCoord direction = scan.rc2direction( row_column.x, row_column.y );
@@ -598,7 +598,7 @@ helios::SphericalCoord LiDARcloud::getHitRaydir( const uint index ) const{
 
 }
 
-void LiDARcloud::setHitData( const uint index, const char* label, const float value ){
+void LiDARcloud::setHitData( const uint index, const char* label, const double value ){
 
   if( index>=hits.size() ){
     cerr << "ERROR (setHitScalarData): Hit point index out of bounds. Tried to set hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -609,14 +609,14 @@ void LiDARcloud::setHitData( const uint index, const char* label, const float va
   
 }
 
-float LiDARcloud::getHitData( const uint index, const char* label ) const{
+double LiDARcloud::getHitData( const uint index, const char* label ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitData): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
     exit(EXIT_FAILURE);
   }
 
-  std::map<std::string, float> hit_data = hits.at(index).data;
+  std::map<std::string, double> hit_data = hits.at(index).data;
   if( hit_data.find(label) == hit_data.end() ){
     cerr << "ERROR (getHitData): Data value ``" << label << "'' does not exist." << std::endl;
     exit(EXIT_FAILURE);
@@ -632,7 +632,7 @@ bool LiDARcloud::doesHitDataExist( const uint index, const char* label ) const{
     return false;
   }
 
-  std::map<std::string, float> hit_data = hits.at(index).data;
+  std::map<std::string, double> hit_data = hits.at(index).data;
   if( hit_data.find(label) == hit_data.end() ){
     return false;
   }else{
@@ -777,7 +777,7 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
   }else if( strcmp(color_value,"")!=0 ){
     for( uint i=0; i<getHitCount(); i++ ){
       if( doesHitDataExist(i,color_value) ){
-	float data = getHitData(i,color_value);
+	float data = float(getHitData(i,color_value));
 	if( data<minval ){
 	  minval = data;
 	}
@@ -808,7 +808,7 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
       if( !doesHitDataExist(i,color_value) ){
 	color = RGB::red;
       }else{
-	float data = getHitData(i,color_value);
+	float data = float(getHitData(i,color_value));
 	color = cmap.query( data );
       }
     }
@@ -1222,7 +1222,7 @@ void LiDARcloud::reflectanceFilter( const float minreflectance ){
   std::size_t delete_count = 0;
   for( std::size_t r=0; r<getHitCount(); r++ ){
     if( hits.at(r).data.find("reflectance") != hits.at(r).data.end() ){
-      float R = getHitData(r,"reflectance");
+      double R = getHitData(r,"reflectance");
       if( R<minreflectance ){
 	deleteHitPoint(r);
 	delete_count++;
@@ -1241,7 +1241,7 @@ void LiDARcloud::scalarFilter( const char* scalar_field, const float threshold, 
   std::size_t delete_count = 0;
   for( std::size_t r=0; r<getHitCount(); r++ ){
     if( hits.at(r).data.find(scalar_field) != hits.at(r).data.end() ){
-      float R = getHitData(r,scalar_field);
+      double R = getHitData(r,scalar_field);
       if( strcmp(comparator,"<")==0 ){
 	if( R<threshold ){
 	  deleteHitPoint(r);
@@ -1267,11 +1267,19 @@ void LiDARcloud::scalarFilter( const char* scalar_field, const float threshold, 
   
 }
 
-bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 ){
+// bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 ){
+//   return v0.at(0)<v1.at(0);
+// }
+
+// bool sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 ){
+//   return v0.at(1)<v1.at(1);
+// }
+
+bool sortcol0( const std::vector<double>& v0, const std::vector<double>& v1 ){
   return v0.at(0)<v1.at(0);
 }
 
-bool sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 ){
+bool sortcol1( const std::vector<double>& v0, const std::vector<double>& v1 ){
   return v0.at(1)<v1.at(1);
 }
 
@@ -1281,7 +1289,7 @@ void LiDARcloud::maxPulseFilter( const char* scalar ){
     std::cout << "Filtering point cloud by maximum " << scalar << " per pulse..." << std::flush;
   }
 
-  std::vector<std::vector<float> > timestamps;
+  std::vector<std::vector<double> > timestamps;
   timestamps.resize(getHitCount());
   
   std::size_t delete_count = 0;
@@ -1295,7 +1303,7 @@ void LiDARcloud::maxPulseFilter( const char* scalar ){
       return;
     }
 
-    std::vector<float> v{getHitData(r,"timestamp"),getHitData(r,scalar),float(r)};
+    std::vector<double> v{getHitData(r,"timestamp"),getHitData(r,scalar),double(r)};
 
     timestamps.at(r) = v;
 
@@ -1303,9 +1311,9 @@ void LiDARcloud::maxPulseFilter( const char* scalar ){
 
   std::sort( timestamps.begin(), timestamps.end(), sortcol0 );
 
-  std::vector<std::vector<float> > isort;
+  std::vector<std::vector<double> > isort;
   std::vector<int> to_delete;
-  float time_old = timestamps.at(0).at(0);
+  double time_old = timestamps.at(0).at(0);
   for( std::size_t r=0; r<timestamps.size(); r++ ){
 
     if( timestamps.at(r).at(0)!=time_old ){
@@ -1347,7 +1355,7 @@ void LiDARcloud::minPulseFilter( const char* scalar ){
     std::cout << "Filtering point cloud by minimum " << scalar << " per pulse..." << std::flush;
   }
 
-  std::vector<std::vector<float> > timestamps;
+  std::vector<std::vector<double> > timestamps;
   timestamps.resize(getHitCount());
   
   std::size_t delete_count = 0;
@@ -1361,7 +1369,7 @@ void LiDARcloud::minPulseFilter( const char* scalar ){
       return;
     }
 
-    std::vector<float> v{getHitData(r,"timestamp"),getHitData(r,scalar),float(r)};
+    std::vector<double> v{getHitData(r,"timestamp"),getHitData(r,scalar),float(r)};
 
     timestamps.at(r) = v;
 
@@ -1369,9 +1377,9 @@ void LiDARcloud::minPulseFilter( const char* scalar ){
 
   std::sort( timestamps.begin(), timestamps.end(), sortcol0 );
 
-  std::vector<std::vector<float> > isort;
+  std::vector<std::vector<double> > isort;
   std::vector<int> to_delete;
-  float time_old = timestamps.at(0).at(0);
+  double time_old = timestamps.at(0).at(0);
   for( std::size_t r=0; r<timestamps.size(); r++ ){
 
     if( timestamps.at(r).at(0)!=time_old ){

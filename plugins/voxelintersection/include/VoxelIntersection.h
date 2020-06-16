@@ -38,9 +38,17 @@ class VoxelIntersection{
    */
   void calculatePrimitiveVoxelIntersection( std::vector<uint> UUIDs );
 
+  //! Disable output messages (enabled by default)
+  void disableMessages( void );
+
+  //! Re-enable output messages
+  void enableMessages( void );
+
  private:
 
   helios::Context* context;
+
+  bool printmessages;
   
 };
 

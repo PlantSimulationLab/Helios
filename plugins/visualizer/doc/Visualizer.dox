@@ -10,33 +10,33 @@
       <td>X11/xorg</td>
    </tr>
    <tr>	
-     <th>CMakeLists.txt</th>
-     <td>set( PLUGINS "visualizer" )</td>
+      <th>CMakeLists.txt</th>
+      <td>set( PLUGINS "visualizer" )</td>
    </tr>
    <tr>	
-     <th>Header File</th>
-     <td>#include "Visualizer.h"</td>
+      <th>Header File</th>
+      <td>#include "Visualizer.h"</td>
    </tr>
    <tr>	
-     <th>Class</th>
-     <td>\ref Visualizer</td>
+      <th>Class</th>
+      <td>\ref Visualizer</td>
    </tr>
  </table>
 
  <table>
  <caption>Installing dependent packages</caption>
-    <tr>	
+   <tr>	
       <th>Package</th>
       <td>\image html apple-logo.jpg</td>
       <td>\image html unix-logo.png</td>
       <td>\image html windows-logo.jpg</td>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>X11/xorg</td>
       <td> <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/xquartz</code></div><!--X11 libraries are available through the XQuartz project.  <br>Download the latest version of XQuartz at <a href="www.xquartz.org">www.xquartz.org</a>.--></td>
       <td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev</code></div></td>
       <td>Unknown</td>
-    </tr>
+   </tr>
  </table>
  
  \section VisIssues Known Issues
@@ -55,10 +55,10 @@
       <th>Constructors</th>
    </tr>
    <tr>	
-     <td>\ref Visualizer::Visualizer( uint Wdisplay ) "Visualizer( uint Wdisplay )"</td>
+      <td>\ref Visualizer::Visualizer( uint Wdisplay ) "Visualizer( uint Wdisplay )"</td>
    </tr>
    <tr>	
-     <td>\ref Visualizer::Visualizer( uint Wdisplay, uint Hdisplay ) "Visualizer( uint Wdisplay, uint Hdisplay )"</td>
+      <td>\ref Visualizer::Visualizer( uint Wdisplay, uint Hdisplay ) "Visualizer( uint Wdisplay, uint Hdisplay )"</td>
    </tr>
  </table>
  
@@ -140,13 +140,13 @@
 
   Next, we will learn how to add objects to the visualization.  The visualizer supports the following objects:
   
-  <table>
-    <tr>	
+ <table>
+   <tr>	
       <th>Primitive</th>
       <th>Description</th>
       <th>Add Functions</th>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>Rectangle</td>
       <td>Rectangular polygon with coplanar vertices.</td>
       <td><ul>
@@ -159,17 +159,17 @@
 	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const char* texture_file, const CoordinateSystem coordFlag )</li>
 	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag )</li>
       </td>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>Triangle</td>
       <td>Triangular polygon specified by its three vertices.</td>
       <td><ul>
 	  <li>\ref Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBcolor color, CoordinateSystem coordFlag )</li>
 	  <li>\ref Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolor color, CoordinateSystem coordFlag )</li>
-	</ul>
+     	  </ul>
       </td>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>Disk</td>
       <td>Ellipsoidal disk.</td>
       <td><ul>
@@ -178,8 +178,8 @@
 	  <li>\ref Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>Voxel</td>
       <td>Parallelpiped or rectangular prism.</td>
       <td><ul>
@@ -187,8 +187,8 @@
 	  <li>\ref Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const SphericalCoord rotation, const RGBAcolor color, const CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>Sphere</td>
       <td>Tesselated sphere composed of triangles.</td>
       <td><ul>
@@ -196,27 +196,26 @@
 	  <li>\ref Visualizer::addSphereByCenter( const float radius, const vec3 center, const uint Ndivisions, const RGBAcolor color, const CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>Line</td>
       <td>Linear segment between two points.</td>
-      <td><ul>
+       <td><ul>
 	  <li>\ref Visualizer::addLine( const vec3 start, const vec3 end, const RGBcolor color, const uint linewidth, const CoordinateSystem coordFlag )</li>
 	  <li>\ref Visualizer::addLine( const vec3 start, const vec3 end, const RGBAcolor color, const uint linewidth, const CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
-    </tr>
+   </tr>
     
-    <tr>	
+   <tr>	
       <td>Textbox</td>
       <td>Box of text.</td>
       <td><ul>
 	  <li>\ref Visualizer::addTextboxByCenter( const char* textstring, const vec3 center, SphericalCoord rotation, const RGBcolor fontcolor, const uint fontsize, const char* fontname, CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
-    </tr>
-    <tr>	
-  </table>
+   </tr>	
+ </table>
 
   Each object can be added by calling one of the associated functions listed in the table above.  The syntax is usually fairly similar to how gometry is added in the Helios context, except that you must specify a coordinate system (see \ref coord).
   
@@ -239,20 +238,20 @@
 
   The visualizer can automatically import some or all geometry from the Context.  This is accomplished using the \ref buildContextGeometry command.  To add all primitives in the Context, the \ref buildContextGeometry command would be issued, which is passed the Context. We can add a subset of the Context geometry through an additional argument which takes a vector of UUID's.
 
-  <table>
-    <tr>	
+ <table>
+   <tr>	
       <th>Command</th>
       <th>Description</th>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>\ref Visualizer::buildContextGeometry( helios::Context* context ) "buildContextGeometry( Context* context )"</td>
       <td>Add all primitives in the Context to the %Visualizer.</td>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>\ref Visualizer::buildContextGeometry( helios::Context* context, std::vector<uint> UUIDs ) "buildContextGeometry( Context* context, std::vector<uint> UUIDs )"</td>
       <td>Add a subset of primitives in the Context to the %Visualizer.</td>
-    </tr>
-  </table>
+   </tr>
+ </table>
 
   The example below shows how to add all Context geometry to the visualizer.
 
@@ -308,44 +307,44 @@
 
   In an interactive plot, the view can be modified via various keystrokes, which are detailed in the table below.
 
-  <table>
-    <tr>
+ <table>
+   <tr>
       <th>Key</th>
       <th>Action</th>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>up arrow</td>
       <td>increase the viewing elevation angle</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>down arrow</td>
       <td>decrease the viewing elevation angle</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>left arrow</td>
       <td>rotate camera left (clockwise)</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>right arrow</td>
       <td>rotate camera right (counter-clockwise)</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>spacebar+up arrow</td>
       <td>move the camera position upward</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>spacebar+down arrow</td>
       <td>move the camera position downward</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>+</td>
       <td>zoom in</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>-</td>
       <td>zoom out</td>
-    </tr>
-  </table>
+   </tr>
+ </table>
   
   \subsubsection PlotUpdate plotUpdate()
 
@@ -390,40 +389,40 @@
 
   Primitives can be colored by mapping associated data values to a color table.  Given some range of data values, each value is normalized by this range and used to look up an associated color in the color table.  The available predefined color tables are shown below.  There is also the capability of defining custom color tables.
 
-  <table>
-    <tr>
+ <table>
+   <tr>
       <th>Enumeration</th>
       <th>Example</th>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::COLORMAP_HOT</td>
       <td>\image html colormap_hot.png</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::COLORMAP_COOL</td>
       <td>\image html colormap_cool.png</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::COLORMAP_RAINBOW</td>
       <td>\image html colormap_rainbow.png</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::COLORMAP_LAVA</td>
       <td>\image html colormap_lava.png</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::COLORMAP_PARULA</td>
       <td>\image html colormap_parula.png</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::COLORMAP_GRAY</td>
       <td>\image html colormap_gray.png</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::COLORMAP_CUSTOM</td>
       <td>N/A</td>
-    </tr>
-  </table>
+   </tr>
+ </table>
 
   The colormap to be used is set using the following command \ref setColormap( Ctable colormap_name ), where `colormap_name' is one of the enumerations in the table above.  For example, to set the `hot' colormap one would use:
 
@@ -433,32 +432,32 @@
 
   To set a custom color table, the same command is used with the \ref Visualizer::COLORMAP_CUSTOM argument, plus additional arguments that define the custom color table.  These arguments are 1) a vector of r-g-b colors defining various colors in the color table, and 2) a vector of values between 0 and 1 defining the relative positions of the colors in the table. The first position value must always be 0, and the last value must be 1. The visualizer interpolates between colors to populate the full color table. The table below shows how the `hot' color table is defined:
 
-  <table>
-    <tr>
+ <table>
+   <tr>
       <th>RGBcolor</th>
       <th>relative position</th>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>(0, 0, 0) <div style="width:50px;height:30px;background-color:rgb(0,0,0);"></div></td>
       <td>0</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>(0.5, 0, 0.5) <div style="width:50px;height:30px;background-color:rgb(127,0,127);"></div></td>
       <td>0.25</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>(1, 0, 0) <div style="width:50px;height:30px;background-color:rgb(255,0,0);"></div></td>
       <td>0.5</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>(1, 0.5, 0) <div style="width:50px;height:30px;background-color:rgb(255,127,0);"></div></td>
       <td>0.75</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>(1, 1, 0) <div style="width:50px;height:30px;background-color:rgb(255,255,0);"></div></td>
       <td>1</td>
-    </tr>
-  </table>
+   </tr>
+ </table>
 
   Example code on how to implement the color table creation is given below:
 
@@ -486,48 +485,48 @@
 
   The colorbar is the legend showing how values are mapped to the color table.  The table below gives functions for customizing colorbar behavior, including for example its position, size, and visibility.
 
-  <table>
-    <tr>
+ <table>
+   <tr>
       <th>Function</th>
       <th>Description</th>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::enableColorbar( void ) "enableColorbar(void)"</td>
       <td>Make the colorbar visible.</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::disableColorbar( void ) "disableColorbar(void)"</td>
       <td>Make the colorbar invisible.</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::setColorbarPosition( helios::vec3 position ) "setColorbarPosition( vec3 position )"</td>
       <td>Set the position of the colorbar. Note that position.z gives the depth of the colorbar.</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::setColorbarSize( helios::vec2 size ) "setColorbarSize( vec2 size )" </td>
       <td>Set the size of the colorbar.</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::setColorbarRange( float cmin, float cmax ) "setColorbarRange( float cmin, float cmax )" </td>
       <td>Set the range of data values for the colorbar/colormap.</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::setColorbarTicks( std::vector<float> ticks ) "setColorbarTicks( std::vector<float> ticks )" </td>
       <td>Set locations of data tick along colorbar.</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::setColorbarTitle( const char* title ) "setColorbarTitle( const char* title )" </td>
       <td>Set the title text displayed above the colorbar.</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::setColorbarFontColor( helios::RGBcolor color ) "setColorbarFontColor( RGBcolor color )" </td>
       <td>Set the color of text in the colorbar.</td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>\ref Visualizer::setColorbarFontSize( uint font_size ) "setColorbarFontSize( uint font_size )" </td>
       <td>Set the size of the colorbar text in points.</td>
-    </tr>
-  </table>
+   </tr>
+ </table>
 
   \image html vineyard_PAR_cmap.png
   
@@ -535,28 +534,28 @@
 
   To allow for more realistic visualizations, the Phong shading model can be enabled.  The Phong shading model can be enabled with or without shadows.  The shading options and their enumeration for specifying them are detailed in the table below.  The appropriate enumeration is passed to the \ref Visualizer::setLightingModel command to enable the specified shading model.
 
-  <table>
-    <tr>
+ <table>
+   <tr>
       <th>Shading Model</th>
       <th>Enumeration</th>
       <th>Example</th>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>No shading is applied.  Objects are colored only according to the r-g-b(-a) color code or texture map.</td>
       <td>\ref Visualizer::LIGHTING_NONE</td>
       <td></td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>Phong shading model</td>
       <td>\ref Visualizer::LIGHTING_PHONG</td>
       <td></td>
-    </tr>
-    <tr>
+   </tr>
+   <tr>
       <td>Phong shading model with shadows.</td>
       <td>\ref Visualizer::LIGHTING_PHONG_SHADOWED</td>
       <td></td>
-    </tr>
-  </table>
+   </tr>
+ </table>
 
   If the Phong shading model is used, the position of the light source should be specified.  This is accomplished through the \ref Visualizer::setLightDirection( vec3 direction ) command, which takes a unit vector pointing toward the light source.  The example below shows how to enable the Phong lighting model with shadows, with the light position set according to the position of the sun.
 

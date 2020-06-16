@@ -12,7 +12,7 @@ set( EXECUTABLE_NAME "aeriallidar_selftest" )
 set( SOURCE_FILES "main.cpp" )
 
 #specify which plug-ins to use (separate plug-in names with semicolon)
-set( PLUGINS "visualizer;lidar;" )
+set( PLUGINS "visualizer;aeriallidar;" )
 
 #-------- MAIN CODE (Dont Modify) ---------#
 cmake_minimum_required(VERSION 2.4)

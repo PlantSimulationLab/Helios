@@ -1,4 +1,4 @@
-/*! \page EnergyBalanceDoc Energy Balance Model Plugin Documentation
+/*! \page "EnergyBalanceDoc" Energy Balance Model Plugin Documentation
 
  \image html EnergyBalance.jpg
 
@@ -7,24 +7,27 @@
  <p> <br><br> </p>
 
  <table>
-   <tr>	
-      <th>Dependencies</th>
-      <td>NVIDIA CUDA 9.0+ </p>
-          gcc/g++ 5.5+</td>
-   </tr>
-   <tr>	
-     <th>CMakeLists.txt</th>
-     <td>set( PLUGINS "energybalancemodel" )</td>
-   </tr>
-   <tr>	
-     <th>Header File</th>
-     <td>#include "EnergyBalanceModel.h"</td>
-   </tr>
-   <tr>	
-     <th>Class</th>
-     <td>\ref EnergyBalanceModel</td>
-   </tr>
+ <tr><th>Dependencies <td>NVIDIA CUDA 9.0+ <br>gcc/g++ 5.5+
+ <tr><th>CMakeLists.txt <td>set( PLUGINS "energybalancemodel" )
+ <tr><th>Header File <td>#include "EnergyBalanceModel.h"
+ <tr><th>Class <td>\ref EnergyBalanceModel
  </table>
+
+ \section EBDepends Dependencies
+
+  <table>
+  <caption>Installing dependent packages</caption>
+  <tr>
+	<th>Package</th><td>\image html apple-logo.jpg</td>
+	<td>\image html unix-logo.png</td>
+	<td>\image html windows-logo.jpg</td>
+  </tr>
+  <tr>
+	<td>NVIDIA CUDA 5.0+</td>
+	<td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+	<td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cuda</code></div></td><td>Unknown</td>
+  </tr>
+  </table>
 
  \section EBissues Known Issues
 
@@ -36,86 +39,37 @@
 
  The model is solving the steady-state budget between absorbed radiation, emitted radiation, sensible heat exchange, and latent heat exchange, which is written as
 
- \f$ R-\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\dfrac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+Q_{other}\f$
+ \f[ R-\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+Q_{other}\f]
 
  Variables in this equation are listed in this table:
 
  <table>
-   <tr>	
-     <th>Variable (units)</th>
-     <th>Description</th>
-   </tr>
-   <tr>	
-     <td>\f$R\f$ (W/m<sup>2</sup>)</td>
-     <td>Absorbed all-wave radiation flux (shortwave+longwave).</td>
-   </tr>
-   <tr>	
-     <td>\f$T_s\f$ (K)</td>
-     <td>Primitive surface temperature.</td>
-   </tr>
-   <tr>	
-     <td>\f$g_H\f$ (mol air/m<sup>2</sup>-s)</td>
-     <td>Conductance to heat from primitive surface to outside of boundary-layer.</td>
-   </tr>
-   <tr>	
-     <td>\f$T_a\f$ (K)</td>
-     <td>Air temperature just outside primitive boundary-layer.</td>
-   </tr>
-   <tr>	
-     <td>\f$g_M\f$ (mol air/m<sup>2</sup>-s)</td>
-     <td>Conductance to moisture from primitive surface to outside of boundary-layer.</td>
-   </tr>
-   <tr>	
-     <td>\f$e_s(T)\f$ (Pa)</td>
-     <td>Saturation vapor pressure at temperature T. Calculated from Tetens equation (see <a href="https://en.wikipedia.org/wiki/Tetens_equation">en.wikipedia.org/wiki/Tetens_equation</a>)</td>
-   </tr>
-   <tr>	
-     <td>\f$f_s\f$</td>
-     <td>Relative humidity of air at primitive surface.</td>
-   </tr>
-   <tr>	
-     <td>\f$h\f$</td>
-     <td>Relative humidity of air outside of boundary-layer.</td>
-   </tr>
-   <tr>	
-     <td>\f$p_{atm}\f$ (Pa)</td>
-     <td>Atmospheric pressure.</td>
-   </tr>
-   <tr>	
-     <td>\f$Q_{other}\f$ (W/m<sup>2</sup>)</td>
-     <td>Any surface fluxes other than radiation, convection, or latent (e.g., storage).</td>
-   </tr>
+ <tr><th>Variable (units)</th><th>Description</th></tr>
+ <tr><td>\f$R\f$ (W/m<sup>2</sup>)</td><td>Absorbed all-wave radiation flux (shortwave+longwave).</td></tr>
+ <tr><td>\f$T_s\f$ (K)</td><td>Primitive surface temperature.
+ <tr><td>\f$g_H\f$ (mol air/m<sup>2</sup>-s)</td><td>Conductance to heat from primitive surface to outside of boundary-layer.</td></tr>
+ <tr><td>\f$T_a\f$ (K)</td><td>Air temperature just outside primitive boundary-layer.</td></tr>
+ <tr><td>\f$g_M\f$ (mol air/m<sup>2</sup>-s)</td><td>Conductance to moisture from primitive surface to outside of boundary-layer.</td></tr>
+ <tr><td>\f$e_s(T)\f$ (Pa)</td><td>Saturation vapor pressure at temperature T. Calculated from Tetens equation (see <a href="https://en.wikipedia.org/wiki/Tetens_equation">en.wikipedia.org/wiki/Tetens_equation</a>)</td></tr>
+ <tr><td>\f$f_s\f$</td><td>Relative humidity of air at primitive surface.</td></tr>
+ <tr><td>\f$h\f$</td><td>Relative humidity of air outside of boundary-layer.</td></tr>
+ <tr><td>\f$p_{atm}\f$ (Pa)</td><td>Atmospheric pressure.</td></tr>
+ <tr><td>\f$Q_{other}\f$ (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, or latent (e.g., storage).</td></tr>
  </table>
 
  Constants are given by:
 
  <table>
-   <tr>	
-     <th>Constant (units)</th>
-     <th>Value</th>
-     <th>Description</th>
-   </tr>
-   <tr>	
-     <td>\f$c_p\f$ (J/mol/K)</td>
-     <td>29.25</td>
-     <td>Heat capacity of air.</td>
-   </tr>
-   <tr>	
-     <td>\f$\lambda\f$ (J/mol)</td>
-     <td>44,000</td>
-     <td>Latent heat of vaporization of air.</td>
-   </tr>
+ <tr><th>Constant (units) <th>Value <th>Description</th>
+ <tr><td>\f$c_p\f$ (J/mol/K) <td>29.25 <td>Heat capacity of air.
+ <tr><td>\f$\lambda\f$ (J/mol) <td>44,000 <td> Latent heat of vaporization of air.
  </table>
 
  \section EBConstructor EnergyBalanceModel Class Constructor
 
  <table>
-   <tr>	
-      <th>Constructors</th>
-   </tr>
-   <tr>	
-     <td>\ref EnergyBalanceModel::EnergyBalanceModel( helios::Context* context) "EnergyBalanceModel( helios::Context* context)"</td>
-   </tr>
+ <tr><th>Constructors
+ <tr><td>\ref EnergyBalanceModel::EnergyBalanceModel( helios::Context* context) "EnergyBalanceModel( helios::Context* context)"
  </table>
 
  The \ref EnergyBalanceModel class is initialized by simply passing a pointer to the Helios context as an argument to the constructor. 
@@ -125,148 +79,33 @@
  \subsection EBInputData Input Primitive Data
 
  <table>
-   <tr>	
-     <th>Primitive Data</th>
-     <th>Units</th>
-     <th>Data Type</th>
-     <th>Description</th>
-     <th>Available Plug-ins</th>
-     <th>Default Value</th>
-   </tr>
-   <tr>
-     <td>radiation_flux_[*]</td>
-     <td>W/m<sup>2</sup></td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Net absorbed radiation flux for band [*] (e.g., direct_flux_PAR).</td>
-     <td>Can be computed by \ref RadiationModel plug-in.</td>
-     <td>0</td>
-   </tr>
-   <tr>
-     <td>wind_speed</td>
-     <td>m/s</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Air wind speed just outside of primitive boundary-layer.</td>
-     <td>N/A</td>
-     <td>1 m/s</td>
-   </tr>
-   <tr>
-     <td>object_length</td>
-     <td>m</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Characteristic dimension of object formed by primitive.</td>
-     <td>N/A</td>
-     <td>Square root of primitive surface area</td>
-   </tr>
-   <tr>
-     <td>boundarylayer_conductance</td>
-     <td>mol air/m<sup>2</sup>-s</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Leaf boundary-layer conductance to heat.</td>
-     <td>N/A</td>
-     <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$</td>
-   </tr>
-   <tr>
-     <td>air_temperature</td>
-     <td>Kelvin</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Ambient air temperature outside of surface boundary layer.</td>
-     <td>N/A</td>
-     <td>300 K</td>
-   </tr>
-   <tr>
-     <td>moisture_conductance</td>
-     <td>mol air/m<sup>2</sup>-s</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Leaf boundary-layer conductance to moisture.</td>
-     <td>Can be computed by \ref StomatalConductanceModel plug-in.</td>
-     <td>0.1 mol/m<sup>2</sup>-s</td>
-   </tr>
-   <tr>
-     <td>surface_humidity</td>
-     <td>unitless</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Relative humidity of air immediately above surface evaporating site.</td>
-     <td>N/A</td>
-     <td>1.0 (saturated)</td>
-   </tr>
-   <tr>
-     <td>air_humidity</td>
-     <td>unitless</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Ambient air relative humidity outside of surface boundary layer.</td>
-     <td>N/A</td>
-     <td>0.5</td>
-   </tr>
-   <tr>
-     <td>air_pressure</td>
-     <td>Pascals</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Atmospheric pressure.</td>
-     <td>N/A</td>
-     <td>101,000 Pa</td>
-   </tr>
-   <tr>
-     <td>other_surface_flux</td>
-     <td>W/m<sup>2</sup></td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Other surface energy fluxes, e.g., storage flux.</td>
-     <td>N/A</td>
-     <td>0</td>
-   </tr>
-   
- </table>	
+ <tr><th>Primitive Data <th>Units <th>Data Type <th>Description <th>Available Plug-ins <th>Default Value
+ <tr><td>radiation_flux_[*] <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Net absorbed radiation flux for band [*] (e.g., direct_flux_PAR). <td>Can be computed by \ref RadiationModel plug-in. <td>0
+  <tr><td>wind_speed <td>m/s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
+  <tr><td>object_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
+ <tr><td>boundarylayer_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>N/A <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
+ <tr><td>air_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>300 K
+ <tr><td>moisture_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to moisture. <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0.1 mol/m<sup>2</sup>-s
+ <tr><td>surface_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Relative humidity of air immediately above surface evaporating site. <td>N/A <td>1.0 (saturated)
+ <tr><td>air_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air relative humidity outside of surface boundary layer. <td>N/A <td>0.5
+ <tr><td>air_pressure <td>Pascals <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Atmospheric pressure. <td>N/A <td>101,000 Pa
+ <tr><td>other_surface_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Other surface energy fluxes, e.g., storage flux. <td>N/A <td>0  </table>	
  
  \subsection EBOutputData Default Output Primitive Data
  
  <table>
-   <tr>	
-     <th>Primitive Data</th>
-     <th>Units</th>
-     <th>Data Type</th>
-     <th>Description</th>
-   </tr>
-   <tr>	
-     <td>temperature</td>
-     <td>Kelvin</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Primitive surface temperature.</td>
-   </tr>
-   <tr>	
-     <td>sensible_flux</td>
-     <td>W/m<sup>2</sup></td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Sensible heat flux.</td>
-   </tr>
-   <tr>	
-     <td>latent_flux</td>
-     <td>W/m<sup>2</sup></td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Latent heat flux.</td>
-   </tr>
-   
+ <tr><th>Primitive Data <th>Units <th>Data Type <th>Description
+ <tr><td>temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive surface temperature.
+ <tr><td>sensible_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Sensible heat flux.
+ <tr><td>latent_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Latent heat flux.
  </table>
 
  \subsection EBOptionalOutputData Optional Output Primitive Data
  
  <table>
-   <tr>	
-     <th>Primitive Data</th>
-     <th>Units</th>
-     <th>Data Type</th>
-     <th>Description</th>
-   </tr>
-   <tr>	
-     <td>boundarylayer_conductance_out</td>
-     <td>mol air/m<sup>2</sup>-s</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Primitive boundary-layer conductance calculated by this plug-in.</td>
-   </tr>
-   <tr>	
-     <td>vapor_pressure_deficit</td>
-     <td>mol/mol</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Surface vapor pressure deficit.</td>
-   </tr>
+ <tr><th>Primitive Data <th>Units <th>Data Type <th>Description
+ <tr><td>boundarylayer_conductance_out <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive boundary-layer conductance calculated by this plug-in.
+ <tr><td>vapor_pressure_deficit <td>mol/mol <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Surface vapor pressure deficit.
  </table>
 
  \section EBUse Using the Energy Balance Model Plug-in
@@ -291,7 +130,7 @@
 
  The boundary-layer conductance is calculated as
 
- \f$g_H = 0.135\sqrt{\dfrac{U}{L}}\f$,
+ \f$g_H = 0.135\sqrt{\frac{U}{L}}\f$,
 
  where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. If the primitive was a triangle that forms the surface of a sphere, \f$L\f$ could be assumed to be the diameter of the sphere.
 
@@ -302,19 +141,10 @@
  The model is run using the \ref EnergyBalanceModel::run() function, which will run the model for all primitives in the Context if no argument is give, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.
 
  <table>
-   <caption>Functions to run the energy balance model.</caption>
-   <tr>	
-     <th>Model Run Function</th>
-     <th>Description</th>
-   </tr>
-   <tr>	
-     <td>\ref EnergyBalanceModel::run( void )</td>
-     <td>Run the model for all primitives in the Context.</td>
-   </tr>
-   <tr>	
-     <td>\ref EnergyBalanceModel::run( std::vector<uint> UUIDs )</td>
-     <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs.</td>
-   </tr>
+ <caption>Functions to run the energy balance model.</caption>
+ <tr><th>Model Run Function <th>Description
+ <tr><td>\ref EnergyBalanceModel::run( void ) <td>Run the model for all primitives in the Context.
+ <tr><td>\ref EnergyBalanceModel::run( std::vector<uint> UUIDs ) <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs.
  </table>
 
  <p> <br><br> </p>

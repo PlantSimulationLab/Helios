@@ -1,141 +1,141 @@
-/*! \page StomatalDoc Stomatal Conductance Model Plugin Documentation
+/*! \page "StomatalDoc" Stomatal Conductance Model Plugin Documentation
 
-  \tableofcontents
+ \tableofcontents
 
-  <p> <br><br> </p>
+ <p> <br><br> </p>
 
-  <table>
+ <table>
    <tr>	
-     <th>Dependencies</th>
-     <td>None</td>
+      <th>Dependencies</th>
+      <td>None</td>
    </tr>
    <tr>	
-     <th>CMakeLists.txt</th>
-     <td>set( PLUGINS "stomatalconductance" )</td>
+      <th>CMakeLists.txt</th>
+      <td>set( PLUGINS "stomatalconductance" )</td>
    </tr>
    <tr>	
-     <th>Header File</th>
-     <td>#include "StomatalConductanceModel.h"</td>
+      <th>Header File</th>
+      <td>#include "StomatalConductanceModel.h"</td>
    </tr>
    <tr>	
-     <th>Class</th>
-     <td>\ref StomatalConductanceModel</td>
+      <th>Class</th>
+      <td>\ref StomatalConductanceModel</td>
    </tr>
  </table>
 
   \section StomataConstructor Class Constructor
 
-  <table>
-    <tr>	
+ <table>
+   <tr>	
       <th>Constructors</th>
-    </tr>
-    <tr>	
+   </tr>
+   <tr>	
       <td>\ref StomatalConductanceModel( helios::Context* )</td>
-    </tr>
-   </table>
+   </tr>
+ </table>
 
-   \section VarsAndProps Primitive Data
+\section VarsAndProps Primitive Data
 
-   \subsection StomatalInputData Input Primitive Data
+ \subsection StomatalInputData Input Primitive Data
 
-   <table>
-     <tr>	
-       <th>Primitive Data Label</th>
-       <th>Symbol</th>
-       <th>Units</th>
-       <th>Data Type</th>
-       <th>Description</th>
-       <th>Available Plug-ins</th>
-       <th>Default Value</th>
-     </tr>
-     <tr>
-       <td>radiation_flux_PAR</td>
-       <td>\f$i\f$</td>
-       <td>W/m<sup>2</sup></td>
-       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-       <td>PAR photon flux density</td>
-       <td>Can be computed by \ref RadiationModel plug-in.</td>
-       <td>0</td>
-     </tr>
-     <tr>
-       <td>temperature</td>
-       <td>\f$T_s\f$</td>
-       <td>Kelvin</td>
-       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-       <td>Primitive surface temperature.</td>
-       <td>Can be computed by \ref EnergyBalanceModel plug-in.</td>
-       <td>300 K</td>
-     </tr>
-     <tr>
-       <td>air_pressure</td>
-       <td>\f$p_{atm}\f$</td>
-       <td>Pascals</td>
-       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-       <td>Atmospheric pressure.</td>
-       <td>N/A</td>
-       <td>101,000 Pa</td>
-     </tr> 
-     <tr>
-       <td>air_temperature</td>
-       <td>\f$T_a\f$</td>
-       <td>Kelvin</td>
-       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-       <td>Temperature of air outside of primitive boundary-layer.</td>
-       <td>N/A</td>
-       <td>300 K</td>
-     </tr> 
-     <tr>
-       <td>air_humidity</td>
-       <td>\f$h\f$</td>
-       <td>Unitless</td>
-       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-       <td>Relative humidity of air outside of primitive boundary-layer.</td>
-       <td>N/A</td>
-       <td>0.5</td>
-     </tr>
-     <tr>
-       <td>boundarylayer_conductance</td>
-       <td>\f$g_H\f$</td>
-       <td>mol air/m<sup>2</sup>-s</td>
-       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-       <td>Boundary-layer conductance to heat.</td>
-       <td>N/A</td>
-       <td>0.1 mol/m<sup>2</sup>-s</td>
-     </tr>  	   
-   </table>	
+ <table>
+   <tr>	
+      <th>Primitive Data Label</th>
+      <th>Symbol</th>
+      <th>Units</th>
+      <th>Data Type</th>
+      <th>Description</th>
+      <th>Available Plug-ins</th>
+      <th>Default Value</th>
+   </tr>
+   <tr>
+      <td>radiation_flux_PAR</td>
+      <td>\f$i\f$</td>
+      <td>W/m<sup>2</sup></td>
+      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>PAR photon flux density</td>
+      <td>Can be computed by \ref RadiationModel plug-in.</td>
+      <td>0</td>
+   </tr>
+   <tr>
+      <td>temperature</td>
+      <td>\f$T_s\f$</td>
+      <td>Kelvin</td>
+      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>Primitive surface temperature.</td>
+      <td>Can be computed by \ref EnergyBalanceModel plug-in.</td>
+      <td>300 K</td>
+   </tr>
+   <tr>
+      <td>air_pressure</td>
+      <td>\f$p_{atm}\f$</td>
+      <td>Pascals</td>
+      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>Atmospheric pressure.</td>
+      <td>N/A</td>
+      <td>101,000 Pa</td>
+   </tr> 
+   <tr>
+      <td>air_temperature</td>
+      <td>\f$T_a\f$</td>
+      <td>Kelvin</td>
+      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>Temperature of air outside of primitive boundary-layer.</td>
+      <td>N/A</td>
+      <td>300 K</td>
+   </tr> 
+   <tr>
+      <td>air_humidity</td>
+      <td>\f$h\f$</td>
+      <td>Unitless</td>
+      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>Relative humidity of air outside of primitive boundary-layer.</td>
+      <td>N/A</td>
+      <td>0.5</td>
+   </tr>
+   <tr>
+      <td>boundarylayer_conductance</td>
+      <td>\f$g_H\f$</td>
+      <td>mol air/m<sup>2</sup>-s</td>
+      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>Boundary-layer conductance to heat.</td>
+      <td>N/A</td>
+      <td>0.1 mol/m<sup>2</sup>-s</td>
+   </tr>  	   
+ </table>	
    
-   \subsection StomatalOutputData Output Primitive Data
+ \subsection StomatalOutputData Output Primitive Data
 
-   <table>
-     <tr>	
-       <th>Primitive Data Label</th>
-       <th>Symbol</th>
-       <th>Units</th>
-       <th>Data Type</th>
-       <th>Description</th>
-     </tr>
-     <tr>	
-       <td>moisture_conductance</td>
-       <td>\f$g_s\f$</td>
-       <td>mol air/m<sup>2</sup>-sec</td>	  
-       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-       <td>Conductance of water vapor through stomata.</td>	  
-     </tr>
-   </table>
+ <table>
+   <tr>	
+     <th>Primitive Data Label</th>
+     <th>Symbol</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>moisture_conductance</td>
+     <td>\f$g_s\f$</td>
+     <td>mol air/m<sup>2</sup>-sec</td>	  
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Conductance of water vapor through stomata.</td>	  
+   </tr>
+ </table>
 
-   \section StomatalIntro Introduction
+ \section StomatalIntro Introduction
 
-  This plugin implements the stomatal conductance model of Buckley, Turnbill, and Adams (2012).  Click <a href="http://onlinelibrary.wiley.com/doi/10.1111/j.1365-3040.2012.02515.x/full">here</a> for the publication fully describing the model. A brief description is given in this documentation below.
+ This plugin implements the stomatal conductance model of Buckley, Turnbill, and Adams (2012).  Click <a href="http://onlinelibrary.wiley.com/doi/10.1111/j.1365-3040.2012.02515.x/full">here</a> for the publication fully describing the model. A brief description is given in this documentation below.
 
-   \section StomatalTheory Model Equations
+ \section StomatalTheory Model Equations
 
-   Stomatal conductance is calculated using the following equation
+ Stomatal conductance is calculated using the following equation
 
-  \f$g_s = \dfrac{E_m(i+i_0)}{k+bi+(i+i_0)D}\f$
+ \f[g_s = \frac{E_m(i+i_0)}{k+bi+(i+i_0)D}\f]
 
-  Variables in this equation are listed in this table:
+ Variables in this equation are listed in this table:
 
-  <table>
+ <table>
    <tr>	
      <th>Variable</th>
      <th>Units</th>
@@ -156,117 +156,117 @@
      <td>mmol water/mol air</td>
      <td>Molar concentration of water vapor at leaf surface.</td>
    </tr>
-  </table>
+ </table>
 
-  There are four additional empirical parameters: \f$E_m,\,i_0,\,k,\f$ and \f$b\f$, which are further described below.
+ There are four additional empirical parameters: \f$E_m,\,i_0,\,k,\f$ and \f$b\f$, which are further described below.
 
-  <!--
+ <!--
   
-  The vapor concentration deficit at the leaf surface is related to the deficit outside the leaf boundary-layer using the following equation, which is found by equating the water flux across the stoma and the water flux across the stoma and boundary layer in series:
+ The vapor concentration deficit at the leaf surface is related to the deficit outside the leaf boundary-layer using the following equation, which is found by equating the water flux across the stoma and the water flux across the stoma and boundary layer in series:
 
-  \f$E = \dfrac{g_v g_s}{g_v+g_s}D = g_s D_s,\f$
+  \f[E = \frac{g_v g_s}{g_v+g_s}D = g_s D_s,\f]
 
   where \f$g_v\f$ is the boundary-layer conductance to water vapor. Solving for \f$D_s\f$ yields
 
-  \f$D_s = \dfrac{g_v}{g_v+g_s}D\f$
+  \f[D_s = \frac{g_v}{g_v+g_s}D\f]
 
-  -->
+ -->
      
-  The vapor pressure deficit is calculated based on the temperature of the leaf and air, the relative humidity of the air, and the atmospheric pressure
+ The vapor pressure deficit is calculated based on the temperature of the leaf and air, the relative humidity of the air, and the atmospheric pressure
 
-  \f$D = \dfrac{e_s(T_s)-e_s(T_a)h}{p_{atm}},\f$
+ \f[D = \frac{e_s(T_s)-e_s(T_a)h}{p_{atm}},\f]
 
-  with \f$e_s(T)\f$ calculated according to the <a href="https://en.wikipedia.org/wiki/Tetens_equation">Tetens equation</a>.
+ with \f$e_s(T)\f$ calculated according to the <a href="https://en.wikipedia.org/wiki/Tetens_equation">Tetens equation</a>.
 
-  <!--
+ <!--
 
-  Finally, the overall conductance to moisture across the stoma and boundary-layer in series is given by
+ Finally, the overall conductance to moisture across the stoma and boundary-layer in series is given by
 
-  \f$g_M=\dfrac{0.97g_H g_s}{0.97g_H+g_s},\f$
+  \f[g_M=\frac{0.97g_H g_s}{0.97g_H+g_s},\f]
 
   with
 
   \f$0.97g_H=g_v\f$
 
-  -->
+ -->
 
-  \section StomatalUse Using the Stomatal Conductance Model
+ \section StomatalUse Using the Stomatal Conductance Model
    
-  \subsection StomatalCoeffs Setting the Model Coefficients
+ \subsection StomatalCoeffs Setting the Model Coefficients
 
-   The model coefficients \f$E_m,\,i_0,\,k,\f$ and \f$b\f$ are set using the structure \ref BMFcoefficients. This structure has four member elements of type float (Em, i0, k, and b), each corresponding to the respective model coefficents (\f$E_m,\,i_0,\,k,\f$ and \f$b\f$). Default values are listed in the table below.
+ The model coefficients \f$E_m,\,i_0,\,k,\f$ and \f$b\f$ are set using the structure \ref BMFcoefficients. This structure has four member elements of type float (Em, i0, k, and b), each corresponding to the respective model coefficents (\f$E_m,\,i_0,\,k,\f$ and \f$b\f$). Default values are listed in the table below.
 
-   In order to modify model coefficients from the default values, one should 1) declare and instance of the \ref BMFcoefficients structure, 2) modify the appropriate data elements of the data structure, and 3) pass the data structure to the \ref StomatalConductanceModel::setModelCoefficients() function. Example code is given below
+ In order to modify model coefficients from the default values, one should 1) declare and instance of the \ref BMFcoefficients structure, 2) modify the appropriate data elements of the data structure, and 3) pass the data structure to the \ref StomatalConductanceModel::setModelCoefficients() function. Example code is given below
 
-   <table>
-     <tr>	
-       <th>Parameter</th>
-       <th>Units</th>
-       <th>Default Value</th>
-     </tr>
-     <tr>	
-       <td>\f$E_m\f$</td>
-       <td>mmol/m<sup>2</sup>-s</td>
-       <td>7.0</td>
-     </tr>
-     <tr>	
-       <td>\f$i_0\f$</td>
-       <td>\f$\mu\f$mol/m<sup>2</sup>-s</td>
-       <td>6.6</td>
-     </tr>
-     <tr>	
-       <td>\f$k\f$</td>
-       <td>\f$\mu\f$mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup></td>
-       <td>496</td>
-     </tr>
-     <tr>	
-       <td>\f$b\f$</td>
-       <td>mmol/mol</td>
-       <td>6.1</td>
-     </tr>
-   </table>
+ <table>
+   <tr>	
+     <th>Parameter</th>
+     <th>Units</th>
+     <th>Default Value</th>
+   </tr>
+   <tr>	
+     <td>\f$E_m\f$</td>
+     <td>mmol/m<sup>2</sup>-s</td>
+     <td>7.0</td>
+   </tr>
+   <tr>	
+     <td>\f$i_0\f$</td>
+     <td>\f$\mu\f$mol/m<sup>2</sup>-s</td>
+     <td>6.6</td>
+   </tr>
+   <tr>	
+     <td>\f$k\f$</td>
+     <td>\f$\mu\f$mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup></td>
+     <td>496</td>
+   </tr>
+   <tr>	
+     <td>\f$b\f$</td>
+     <td>mmol/mol</td>
+     <td>6.1</td>
+   </tr>
+ </table>
 
-   <p> <br> </p>
+ <p> <br> </p>
 
-   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code>  %BMFcoefficients modelcoeffs;
-   modelcoeffs.Em = 9.3;
-   modelcoeffs.i0 = 5.3;
-   modelcoeffs.k = 672;
-   modelcoeffs.b = 6.7;</code></pre></div>
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> %BMFcoefficients modelcoeffs;
+ modelcoeffs.Em = 9.3;
+ modelcoeffs.i0 = 5.3;
+ modelcoeffs.k = 672;
+ modelcoeffs.b = 6.7;</code></pre></div>
    
-   \subsection StomatalRun Running the Model
+ \subsection StomatalRun Running the Model
 
-   There are two possible functions to run the model: one to run the model for all primitives in the Context (see \ref StomatalConductanceModel::run()), and another to run the model only for a subset of primitives given their UUIDs (see \ref StomatalConductanceModel::run( std::vector<uint> UUIDs )). 
+ There are two possible functions to run the model: one to run the model for all primitives in the Context (see \ref StomatalConductanceModel::run()), and another to run the model only for a subset of primitives given their UUIDs (see \ref StomatalConductanceModel::run( std::vector<uint> UUIDs )). 
 
-   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code>   #include "Context.h"
-    #include "StomatalConductanceModel.h"
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  #include "Context.h"
+  #include "StomatalConductanceModel.h"
 
-    using namespace helios;
+  using namespace helios;
 
-    int main( void ){
+  int main( void ){
 
-       \c//Initialize the Context and add some geometry
-       Context context;
+     \c//Initialize the Context and add some geometry
+     Context context;
 
-       context.addPatch( make_vec3(0,0,0), make_vec2(1,1) );
+     context.addPatch( make_vec3(0,0,0), make_vec2(1,1) );
 
-       \c//Initialize the stomatal conductance model
-       %StomatalConductanceModel stomatalmodel( &context );
+     \c//Initialize the stomatal conductance model
+     %StomatalConductanceModel stomatalmodel( &context );
 
-       \c//Initialize model coefficients and modify their values
-       %BMFcoefficients modelcoeffs;
-       modelcoeffs.Em = 9.3;
-       modelcoeffs.i0 = 5.3;
-       modelcoeffs.k = 672;
-       modelcoeffs.b = 6.7;
+     \c//Initialize model coefficients and modify their values
+     %BMFcoefficients modelcoeffs;
+     modelcoeffs.Em = 9.3;
+     modelcoeffs.i0 = 5.3;
+     modelcoeffs.k = 672;
+     modelcoeffs.b = 6.7;
 
-       \c//-- Normally you would initialize and run some other models (e.g., radiation, energybalance) here --//
+     \c//-- Normally you would initialize and run some other models (e.g., radiation, energybalance) here --//
 
-       \c//Run the stomatal conductance model (for all primitives)
-       stomatalmodel.run();
+     \c//Run the stomatal conductance model (for all primitives)
+     stomatalmodel.run();
 
-    }</code></pre></div>
+  }</code></pre></div>
     
 */

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['helios_20documentation_20v1_2e1_2e0_1107',['Helios Documentation v1.1.0',['../index.html',1,'']]]
+  ['helios_20documentation_20v1_2e1_2e3_1177',['Helios Documentation v1.1.3',['../index.html',1,'']]]
 ];

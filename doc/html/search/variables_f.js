@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['w_1059',['w',['../structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f',1,'helios::int4::w()'],['../structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937',1,'helios::vec4::w()']]]
+  ['thetamax_1125',['thetaMax',['../struct_scan_metadata.html#a2654da6ef2d7d383ba912cbc6cbfeedf',1,'ScanMetadata']]],
+  ['thetamin_1126',['thetaMin',['../struct_scan_metadata.html#a1b5a4f80f3d64d54755d2b6499f3863f',1,'ScanMetadata']]],
+  ['trunk_5fheight_1127',['trunk_height',['../struct_grapevine_canopy_parameters.html#af91221814bd27b84af3196e66eea0e8c',1,'GrapevineCanopyParameters']]]
 ];

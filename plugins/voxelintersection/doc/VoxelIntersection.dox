@@ -1,44 +1,30 @@
-/*! \page VoxelIntersectionDoc Voxel Intersection Plugin Documentation
+/*! \page "VoxelIntersectionDoc" Voxel Intersection Plugin Documentation
 
  \tableofcontents
 
  <p> <br><br> </p>
 
  <table>
-   <tr>	
-     <th>Dependencies</th>
-     <td>NVIDIA CUDA 9.0+ <p>
-         gcc/g++ 5.5+</td>
-   </tr>
-   <tr>	
-     <th>CMakeLists.txt</th>
-     <td>set( PLUGINS "voxelintersection" )</td>
-   </tr>
-   <tr>	
-     <th>Header File</th>
-     <td>#include "VoxelIntersection.h"</td>
-   </tr>
-   <tr>	
-     <th>Class</th>
-     <td>\ref VoxelIntersection</td>
-   </tr>
+ <tr><th>Dependencies</th><td>NVIDIA CUDA 9.0+ <p>gcc/g++ 5.5+</td></tr>
+ <tr><th>CMakeLists.txt</th><td>set( PLUGINS "voxelintersection" )</td></tr>
+ <tr><th>Header File</th><td>#include "VoxelIntersection.h"</td></tr>
+ <tr><th>Class</th><td>\ref VoxelIntersection</td></tr>
  </table>
 
  \section VoxelIntersectionDepends Dependencies
 
   <table>
-    <tr>	
-      <th>Package</th>
-      <td>\image html apple-logo.jpg</td>
-      <td>\image html unix-logo.png</td>
-      <td>\image html windows-logo.jpg</td>
-    </tr>
-    <tr>	
-      <td>NVIDIA CUDA 5.0+</td>
-      <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
-      <td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cuda</code></div></td>
-      <td>Unknown</td>
-    </tr>
+  <caption>Installing dependent packages</caption>
+  <tr>
+	<th>Package</th><td>\image html apple-logo.jpg</td>
+	<td>\image html unix-logo.png</td>
+	<td>\image html windows-logo.jpg</td>
+  </tr>
+  <tr>
+	<td>NVIDIA CUDA 5.0+</td>
+	<td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+	<td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cuda</code></div></td><td>Unknown</td>
+  </tr>
   </table>
 
  \section VoxelIssues Known Issues
@@ -48,12 +34,8 @@
  \section VoxelIntersectionConstructor Class Constructor
 
  <table>
-   <tr>	
-      <th>Constructors</th>
-   </tr>
-   <tr>	
-     <td>\ref VoxelIntersection( helios::Context* )</td>
-   </tr>
+ <tr><th>Constructors</th></tr>
+ <tr><td>\ref VoxelIntersection( helios::Context* )</td></tr>
  </table>
 
  \section VarsAndProps Variables and Primitive Data
@@ -61,16 +43,8 @@
  \subsection VoxelIntersectionOutputData Output Primitive Data
 
  <table>
-   <tr>	
-     <th>Variable</th>
-     <th>Data Type</th>
-     <th>Description</th>
-   </tr>
-   <tr>	
-     <td>inside_UUIDs</td>
-     <td>std::vector\<uint></td>
-     <td>Vector of UUIDs of planar primitives (patches and triangles) contained within the given voxel. Thus, the primitive data "inside_UUIDs" is defined only for voxels. If no elements are contained within the voxel, the vector is empty.</td>
-   </tr>
+ <tr><th>Variable</th><th>Data Type</th><th>Description</th></tr>
+ <tr><td>inside_UUIDs</td><td>std::vector\<uint></td><td>Vector of UUIDs of planar primitives (patches and triangles) contained within the given voxel. Thus, the primitive data "inside_UUIDs" is defined only for voxels. If no elements are contained within the voxel, the vector is empty.</td></tr>
  </table>
 
  \section VoxelIntersectionIntro Introduction

@@ -275,7 +275,15 @@ bool LIDAR_CUDA::sortcol0( const std::vector<float>& v0, const std::vector<float
   return v0.at(0)<v1.at(0);
 }
 
-bool LIDAR_CUDA::sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 ){
+// bool LIDAR_CUDA::sortcol1( const std::vector<float>& v0, const std::vector<float>& v1 ){
+//   return v0.at(1)<v1.at(1);
+// }
+
+// bool LIDAR_CUDA::sortcol0( const std::vector<double>& v0, const std::vector<double>& v1 ){
+//   return v0.at(0)<v1.at(0);
+// }
+
+bool LIDAR_CUDA::sortcol1( const std::vector<double>& v0, const std::vector<double>& v1 ){
   return v0.at(1)<v1.at(1);
 }
 
@@ -503,6 +511,275 @@ void LiDARcloud::sourcesInsideGridCellGPU( void ){
     
 }
 
+std::vector<helios::vec3> LiDARcloud::gapfillMisses( const int scan ){
+
+  helios::vec3 origin = getScanOrigin(scan);
+  std::vector<helios::vec3> xyz_filled;
+
+  // Populating a hit table for each scan:
+  // Column 0 - hit index; Column 1 - timestamp; Column 2 - ray zenith; Column 3 - ray azimuth
+  std::vector<std::vector<double> > hit_table;
+  for( size_t r=0; r<getHitCount(); r++ ){
+    if( getHitScanID(r)==scan ){
+      
+      helios::SphericalCoord raydir = getHitRaydir(r);
+
+      if( !doesHitDataExist(r,"timestamp") ){
+	std::cerr << "ERROR (LiDARcloud::gapfillMisses): timestamp value is missing for hit " << r << ". Cannot gapfill. Skipping..." << std::endl;
+	return xyz_filled;
+      }
+      
+      double timestamp = getHitData(r,"timestamp");
+      std::vector<double> data;
+      data.resize(4);
+      data.at(0) = float(r);
+      data.at(1) = timestamp;
+      data.at(2) = raydir.zenith;
+      data.at(3) = raydir.azimuth;
+      hit_table.push_back( data );
+      
+    }
+  }
+  
+  // sorting, initial dt and dtheta calculations, and determining minimum target index in the scan
+
+  //sort the hit table by column 1 (timestamp)
+  std::sort( hit_table.begin(), hit_table.end(), LIDAR_CUDA::sortcol1 );
+    
+  int min_tindex = 1;
+  for( size_t r=0; r<hit_table.size()-1; r++ ){
+    
+    //this is to figure out if target indexing uses 0 or 1 offset
+    if( min_tindex==1 && doesHitDataExist(hit_table.at(r).at(0),"target_index") && doesHitDataExist(hit_table.at(r).at(0),"target_count") ){
+      if( getHitData(hit_table.at(r).at(0),"target_index")==0 ){
+	    min_tindex=0;
+      }
+    }
+    
+  }
+  
+  // getting rid of points with target index greater than the minimum
+    
+  int ndup_target = 0;
+  // create new array without duplicate timestamps
+  std::vector<std::vector<double> > hit_table_semiclean;
+  for( size_t r=0; r<hit_table.size()-1; r++ ){    
+    
+    //only consider first hits
+    if( doesHitDataExist(hit_table.at(r).at(0),"target_index") && doesHitDataExist(hit_table.at(r).at(0),"target_count") ){
+      if( getHitData(hit_table.at(r).at(0),"target_index")>min_tindex ){
+	ndup_target ++;
+	continue;
+      }
+    }
+    
+    hit_table_semiclean.push_back(hit_table.at(r));
+    
+  }
+
+  //  re-calculating dt
+
+  std::vector<double> dt_semiclean;
+  dt_semiclean.resize(hit_table_semiclean.size());
+  for( size_t r=0; r<hit_table_semiclean.size()-1; r++ ){
+    
+    dt_semiclean.at(r) = hit_table_semiclean.at(r+1).at(1)-hit_table_semiclean.at(r).at(1);
+    // set the hit index of the new array
+    hit_table_semiclean.at(r).at(0) = r; 
+    
+  }
+
+  //  checking for duplicate timestamps in the remaining data
+
+  int ndup = 0;
+  // create new array without duplicate timestamps
+  std::vector<std::vector<double> > hit_table_clean;
+  for( size_t r=0; r<hit_table_semiclean.size()-1; r++ ){    
+    
+    // if there are still rows with duplicate timestamps, it probably means there is no "target_index" column, but multiple hits per timestamp are still included
+    // proceed using this assumption, just get rid of the rows where dt = 0 for simplicity (last hits probably are what remain). 
+    if( dt_semiclean.at(r)==0){
+      ndup ++;
+      continue;
+    }
+        
+    hit_table_clean.push_back(hit_table_semiclean.at(r));
+  }
+
+  // recalculate dt and dtheta with only first hits  
+  std::vector<double> dt_clean;
+  std::vector<float> dtheta_clean;
+  dt_clean.resize(hit_table_clean.size());
+  dtheta_clean.resize(hit_table_clean.size());
+    
+  double dt_clean_min = 1e6;
+  for( size_t r=0; r<hit_table_clean.size()-1; r++ ){
+    
+    dt_clean.at(r) = hit_table_clean.at(r+1).at(1)-hit_table_clean.at(r).at(1);
+    dtheta_clean.at(r) = hit_table_clean.at(r+1).at(2)-hit_table_clean.at(r).at(2);
+    // set the hit index of the new array
+    hit_table_clean.at(r).at(0) = r; 
+    
+    if( dt_clean.at(r)<dt_clean_min){
+      dt_clean_min = dt_clean.at(r);
+    }
+    
+  }
+  
+  // configuration of 2D map
+  
+  //reconfigure hit table into 2D (theta,phi) map
+  std::vector<std::vector<std::vector<double> > > hit_table2D;
+  
+  int column = 0;
+  hit_table2D.resize(1);
+  for( size_t r=0; r<hit_table_clean.size()-1; r++ ){
+    
+    hit_table2D.at(column).push_back( hit_table_clean.at(r) );
+    //ERK
+    //for small scans (like the rectangle test case, this needs to change to < 0 or some smaller angle (that is larger than noise))
+    // if( dtheta_clean.at(r) < 0 ){
+    // for normal scans, this threshold allows for 10 degrees drops in theta within a given sweep as noise. This can be adjusted as appropriate. 
+    if( dtheta_clean.at(r) < -0.1745329f ){
+      column++;
+      hit_table2D.resize(column+1);
+    }
+    
+  }
+  
+  // calculate average dt and dtheta for subsequent points
+ 
+  //calculate average dt
+  float dt_avg = 0;
+  int dt_sum = 0;
+  
+  //calculate the average dtheta to use for extrapolation
+  float dtheta_avg = 0;
+  int dtheta_sum = 0;
+  
+  for( int j=0; j<hit_table2D.size(); j++ ){
+    for( int i=0; i<hit_table2D.at(j).size(); i++ ){
+      int r = int(hit_table2D.at(j).at(i).at(0));
+      if( dt_clean.at(r)>=dt_clean_min && dt_clean.at(r)<1.5*dt_clean_min ){
+	dt_avg += dt_clean.at(r);
+    	dt_sum ++;
+    	
+	//calculate the average dtheta to use for extrapolation
+    	dtheta_avg += dtheta_clean.at(r);
+    	dtheta_sum ++;
+    	
+      }
+    }
+  }
+  
+  dt_avg = dt_avg/float(dt_sum);
+  //ERK calculate the average dtheta to use for extrapolation
+  dtheta_avg = dtheta_avg/float(dtheta_sum);
+  
+  //identify gaps and fill
+  for( int j=0; j<hit_table2D.size(); j++ ){
+    for( int i=0; i<hit_table2D.at(j).size()-1; i++ ){
+      
+      double dt = hit_table2D.at(j).at(i+1).at(1)-hit_table2D.at(j).at(i).at(1);
+      
+      if( dt>1.5f*dt_clean_min ){ //missing hit(s)
+	
+	//calculate number of missing hits
+	int Ngap = round(dt/dt_avg)-1;
+	
+	//fill missing points
+	for( int k=1; k<=Ngap; k++ ){
+	
+	  float timestep = hit_table2D.at(j).at(i).at(1) + dt_avg*float(k);
+	
+	  //interpolate theta and phi
+	  float theta = hit_table2D.at(j).at(i).at(2) + (hit_table2D.at(j).at(i+1).at(2)-hit_table2D.at(j).at(i).at(2))*float(k)/float(Ngap+1);
+	  float phi = hit_table2D.at(j).at(i).at(3) + (hit_table2D.at(j).at(i+1).at(3)-hit_table2D.at(j).at(i).at(3))*float(k)/float(Ngap+1);
+	  if( phi>2.f*M_PI ){
+	    phi = phi-2.f*M_PI;
+	  }
+	  
+	  //calculate the (x,y,z) position of the filled hit point
+	  helios::SphericalCoord spherical(1e6,0.5*M_PI-theta,phi);
+	  helios::vec3 xyz = origin+helios::sphere2cart(spherical);
+	  
+	  xyz_filled.push_back(xyz);
+	
+	}
+      
+      }
+    }
+
+  }
+
+  /// /extrapolate missing points
+  helios::vec2 theta_range = getScanRangeTheta(scan);
+  
+  for( int j=0; j<hit_table2D.size(); j++ ){
+
+    //upward edge points
+    if( hit_table2D.at(j).front().at(2)>theta_range.x ){
+
+      //  float dtheta = hit_table2D.at(j).at(1).at(2)-hit_table2D.at(j).at(0).at(2);
+      float dtheta = dtheta_avg;
+      float theta = hit_table2D.at(j).at(0).at(2) - dtheta;
+      // this commented out section extrapolates based on the last dphi - this can cause intersections of the different sweeps
+      // float dphi = hit_table2D.at(j).at(1).at(3)-hit_table2D.at(j).at(0).at(3);
+      //float phi = hit_table2D.at(j).at(0).at(3) - dphi;
+      //ERK just use the the last value of phi in the sweep instead
+      float phi =  hit_table2D.at(j).at(0).at(3);
+
+      if( dtheta==0 ){
+	continue;
+      }
+      
+      while( theta>theta_range.x ){
+	
+	helios::SphericalCoord spherical(50,0.5*M_PI-theta,phi);
+	helios::vec3 xyz = origin+helios::sphere2cart(spherical);
+	
+	xyz_filled.push_back(xyz);
+	
+	theta = theta - dtheta;
+	// only needed if extrapolating based on dphi above
+	//phi = phi - dphi;
+
+      }
+    }
+
+    //downward edge points
+    //ERK changed .x to .y here
+    if( hit_table2D.at(j).back().at(2)<theta_range.y ){
+      
+      int sz = hit_table2D.at(j).size();
+      // same concept as above for downward edge points
+      // float dtheta = hit_table2D.at(j).at(sz-1).at(2)-hit_table2D.at(j).at(sz-2).at(2);
+      float dtheta = dtheta_avg;
+      float theta = hit_table2D.at(j).at(sz-1).at(2) + dtheta;
+      float dphi = hit_table2D.at(j).at(sz-1).at(3)-hit_table2D.at(j).at(sz-2).at(3);
+      //float phi = hit_table2D.at(j).at(sz-1).at(3) + dphi;
+      float phi = hit_table2D.at(j).at(sz-1).at(3);
+      while( theta<theta_range.y ){
+	
+	helios::SphericalCoord spherical(50,0.5*M_PI-theta,phi);
+	helios::vec3 xyz = origin+helios::sphere2cart(spherical);
+	
+	xyz_filled.push_back(xyz);
+	
+	theta = theta + dtheta;
+	// same concept as above for downward edge points
+	//	phi = phi + dphi;
+	
+      }
+    }
+    
+  }
+  
+  return xyz_filled;
+    
+}
+  
+
 void LiDARcloud::calculateLeafAreaGPU( void ){
   calculateLeafAreaGPU( 1 );
 }
@@ -556,6 +833,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
     // First, we are going to perform a preliminary ray trace to filter out rays that do not intersect any grid volumes.  This will speed up calculations overall. Consider all rays in scan to start.
 
     float3* scan_xyz = (float3*)malloc( Nmisses*sizeof(float3) );
+    float* scan_weight = (float*)malloc( Nmisses*sizeof(float) );
     float3 xyz;
 
     //populate misses
@@ -565,12 +843,18 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
     	xyz = origin + direction*10000.f;
   	
     	scan_xyz[j*Nt+i] = xyz;
+
+	scan_weight[j*Nt+i] = 1.f;
       }
     }
     
     float3* d_scan_xyz;
     CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_xyz, Nmisses*sizeof(float3)) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_scan_xyz, scan_xyz, Nmisses*sizeof(float3), cudaMemcpyHostToDevice) );
+
+    float* d_scan_weight;
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_scan_weight, Nmisses*sizeof(float)) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_scan_weight, scan_weight, Nmisses*sizeof(float), cudaMemcpyHostToDevice) );
 
     //set up an axis-aligned bounding box that encompasses all grid cells
     uint* boundingbox_hit = (uint*)malloc( Nmisses * sizeof(uint));
@@ -656,7 +940,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
 
       dimBlock = make_uint3( 512, 1, 1 );
       dimGrid = make_uint3( ceil(float(Nmissesbb)/dimBlock.x), 1, 1  );
-      intersectGridcell <<< dimGrid, dimBlock >>>( Nmissesbb, origin, d_scan_xyz, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after );
+      intersectGridcell <<< dimGrid, dimBlock >>>( Nmissesbb, origin, d_scan_xyz, d_scan_weight, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after );
 
        cudaDeviceSynchronize();
        CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
@@ -677,10 +961,18 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
     // Perform ray-volume intersection to determine rays that intersected a leaf BEFORE passing through the volume
 
     std::vector<helios::vec3> this_scan_xyz;
+    std::vector<float> this_scan_weight;
 
     for( size_t r=0; r<getHitCount(); r++ ){
       if( getHitScanID(r)==s ){
 	this_scan_xyz.push_back( getHitXYZ(r) );
+
+	if( doesHitDataExist(r,"target_count") ){
+	  this_scan_weight.push_back( 1.f/getHitData(r,"target_count") );
+	}else{
+	  this_scan_weight.push_back(1.f);
+	}
+	
       }
     }
 
@@ -688,14 +980,21 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
 
     free( scan_xyz );
     scan_xyz = (float3*)malloc( Nhits*sizeof(float3) );
+    free( scan_weight );
+    scan_weight = (float*)malloc( Nhits*sizeof(float) );
    
     for( size_t r=0; r<Nhits; r++ ){
       scan_xyz[r] = vec3tofloat3(this_scan_xyz.at(r));
+      scan_weight[r] = this_scan_weight.at(r);
     }
 
     CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
     CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_xyz, Nhits*sizeof(float3)) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_scan_xyz, scan_xyz, Nhits*sizeof(float3), cudaMemcpyHostToDevice) );
+
+    CUDA_CHECK_ERROR( cudaFree(d_scan_weight) );
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_scan_weight, Nhits*sizeof(float)) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_scan_weight, scan_weight, Nhits*sizeof(float), cudaMemcpyHostToDevice) );
 
     CUDA_CHECK_ERROR( cudaFree(d_dr) );
     CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr, Nhits*sizeof(float)) );
@@ -719,7 +1018,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
 	continue;
       }
       
-      intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, origin, d_scan_xyz, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after );
+      intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, origin, d_scan_xyz, d_scan_weight, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after );
 
       cudaDeviceSynchronize();
       CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
@@ -732,10 +1031,12 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
     }
     
     free( scan_xyz );
+    free( scan_weight );
     free( dr );
     free( hit_before );
     free( hit_after );
     CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
+    CUDA_CHECK_ERROR( cudaFree(d_scan_weight) );
     CUDA_CHECK_ERROR( cudaFree(d_dr) );
     CUDA_CHECK_ERROR( cudaFree(d_hit_before) );
     CUDA_CHECK_ERROR( cudaFree(d_hit_after) );
@@ -992,14 +1293,20 @@ void LiDARcloud::calculateLeafAreaGPU_testing( const int minVoxelHits ){
       }
     }
 
+    std::vector<helios::vec3> xyz_filled = gapfillMisses(s);
+    this_scan_xyz.insert( this_scan_xyz.end(), xyz_filled.begin(), xyz_filled.end() );
+
     size_t Nhits = this_scan_xyz.size();
 
     const float3 origin = vec3tofloat3(getScanOrigin(s));
 
     float3* scan_xyz = (float3*)malloc( Nhits*sizeof(float3) );
+
+    float* scan_weight = (float*)malloc( Nhits*sizeof(float) );
    
     for( size_t r=0; r<Nhits; r++ ){
       scan_xyz[r] = vec3tofloat3(this_scan_xyz.at(r));
+      scan_weight[r] = 1.f;
     }
 
     float* hit_before = (float*)malloc( sizeof(float));
@@ -1012,6 +1319,10 @@ void LiDARcloud::calculateLeafAreaGPU_testing( const int minVoxelHits ){
     float3* d_scan_xyz;
     CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_xyz, Nhits*sizeof(float3)) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_scan_xyz, scan_xyz, Nhits*sizeof(float3), cudaMemcpyHostToDevice) );
+
+    float* d_scan_weight;
+    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_scan_weight, Nhits*sizeof(float)) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_scan_weight, scan_weight, Nhits*sizeof(float), cudaMemcpyHostToDevice) );
 
     float* dr = (float*)malloc( Nhits*sizeof(float));
     float* d_dr;
@@ -1036,7 +1347,7 @@ void LiDARcloud::calculateLeafAreaGPU_testing( const int minVoxelHits ){
 	continue;
       }
       
-      intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, origin, d_scan_xyz, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after );
+      intersectGridcell <<< dimGrid, dimBlock >>>( Nhits, origin, d_scan_xyz, d_scan_weight, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after );
 
       cudaDeviceSynchronize();
       CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
@@ -1058,10 +1369,12 @@ void LiDARcloud::calculateLeafAreaGPU_testing( const int minVoxelHits ){
     }
     
     free( scan_xyz );
+    free( scan_weight );
     free( dr );
     free( hit_before );
     free( hit_after );
     CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
+    CUDA_CHECK_ERROR( cudaFree(d_scan_weight) );
     CUDA_CHECK_ERROR( cudaFree(d_dr) );
     CUDA_CHECK_ERROR( cudaFree(d_hit_before) );
     CUDA_CHECK_ERROR( cudaFree(d_hit_after) );
@@ -1453,7 +1766,7 @@ __global__ void LIDAR_CUDA::intersectBoundingBox( const size_t scanSize, const f
 
 }
 
-__global__ void LIDAR_CUDA::intersectGridcell( const size_t Nhitsbb, const float3 origin, float3* d_scan_xyz, const float3 center, const float3 anchor, const float3 size, const float rotation, float* d_dr, float* hit_before, float* hit_after ){
+__global__ void LIDAR_CUDA::intersectGridcell( const size_t Nhitsbb, const float3 origin, float3* d_scan_xyz, float* d_scan_weight, const float3 center, const float3 anchor, const float3 size, const float rotation, float* d_dr, float* hit_before, float* hit_after ){
   
   size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
 
@@ -1537,13 +1850,13 @@ __global__ void LIDAR_CUDA::intersectGridcell( const size_t Nhitsbb, const float
     
     if( t>=t0 ){ //hit lies within or beyond the volume
 
-      atomicAdd( hit_after, sin(acos_safe(dz)) );
+      atomicAdd( hit_after, sin(acos_safe(dz))*d_scan_weight[idx] );
 
       d_dr[ idx ] = fabs(t1-t0);
 	
     }else if( t<t0 ){ //hit lies before the volume
 
-      atomicAdd( hit_before, sin(acos_safe(dz)) );
+      atomicAdd( hit_before, sin(acos_safe(dz))*d_scan_weight[idx] );
             
     }
     
@@ -2228,7 +2541,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
 
       for( size_t hit=0; hit<t_hit.size(); hit++ ){
 	
-    	std::map<std::string,float> data;
+    	std::map<std::string,double> data;
     	data["target_index"] = hit;
     	data["target_count"] = t_hit.size();
 	data["deviation"] = fabs(t_hit.at(hit).at(0)-average);

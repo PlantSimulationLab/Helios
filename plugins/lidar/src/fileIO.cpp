@@ -257,8 +257,9 @@ void LiDARcloud::loadXML( const char* filename ){
       vec3 temp_xyz;
       SphericalCoord temp_direction;
       RGBcolor temp_rgb;
-      float temp_row, temp_column, temp_data;
-      std::map<std::string, float> data;
+      float temp_row, temp_column;
+      double temp_data;
+      std::map<std::string, double> data;
       int direction_flag = 0;
 
       vector<unsigned int> row, column;
@@ -309,9 +310,9 @@ void LiDARcloud::loadXML( const char* filename ){
 	  }else if( column_format.at(i).compare("b255")==0 ){
 	    datafile >> temp_rgb.b;
 	    temp_rgb.b/=255.f;
-	  }else{ //assume that rest is floating point data
+	  }else{ //assume that rest is data
 	    datafile >> temp_data;
-	    data[ column_format.at(i) ] = temp_data; 
+	    data[ column_format.at(i) ] = temp_data;
 	  }
 	}
 	
@@ -626,8 +627,8 @@ void LiDARcloud::exportPointCloud( const char* filename ){
 
   std::vector<std::string> hit_data;
   for( int r=0; r<getHitCount(); r++ ){
-    std::map<std::string,float> data = hits.at(r).data;
-    for( std::map<std::string,float>::iterator iter=data.begin(); iter!=data.end(); ++iter ){
+    std::map<std::string,double> data = hits.at(r).data;
+    for( std::map<std::string,double>::iterator iter=data.begin(); iter!=data.end(); ++iter ){
       std::vector<std::string>::iterator it = find(hit_data.begin(),hit_data.end(),iter->first);
       if( it==hit_data.end() ){
 	hit_data.push_back(iter->first);
@@ -644,7 +645,7 @@ void LiDARcloud::exportPointCloud( const char* filename ){
 
     for( int i=0; i<hit_data.size(); i++ ){
       std::string label = hit_data.at(i);
-      std::map<std::string, float> hit_data = hits.at(i).data;
+      std::map<std::string, double> hit_data = hits.at(i).data;
       if( hit_data.find(label) != hit_data.end() ){
 	file << " " << getHitData(r,label.c_str());
       }else{

@@ -209,14 +209,24 @@ __global__ void insideVolume_vi( const uint Nhits, const float3* d_hit_xyz, cons
 
 }
 
+void VoxelIntersection::disableMessages( void ){
+  printmessages=false;
+}
+
+void VoxelIntersection::enableMessages( void ){
+  printmessages=true;
+}
+
 void VoxelIntersection::calculatePrimitiveVoxelIntersection( void ){
   calculatePrimitiveVoxelIntersection( context->getAllUUIDs() );
 }
 
 void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> UUIDs ){
 
-  std::cout << "Calculating primitive-voxel intersections..." << std::flush;
-  
+  if( printmessages ){
+    std::cout << "Calculating primitive-voxel intersections..." << std::flush;
+  }
+    
   std::vector<uint> UUIDs_voxels;
   std::vector<uint> UUIDs_prims;
 
@@ -242,9 +252,15 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
   }
 
   if( Nvoxels==0 ){
-    std::cout << "done. WARNING: no voxels found in Context, nothing to intersect." << std::endl;
+    if( printmessages ){
+      std::cout << "done. ";
+    }
+    std::cout << "WARNING: no voxels found in Context, nothing to intersect." << std::endl;
   }else if( Nprims==0 ){
-    std::cout << "done. WARNING: no planar primitives found in Context, nothing to intersect." << std::endl;
+    if( printmessages ){
+      std::cout << "done. ";
+    }
+    std::cout << "WARNING: no planar primitives found in Context, nothing to intersect." << std::endl;
   }
 
   UUIDs_voxels.resize(Nvoxels);
@@ -339,7 +355,8 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
   CUDA_CHECK_ERROR( cudaFree(d_grid_size) );
 
   
-
-  std::cout << "done." << std::endl;
-  
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+  }
+    
 }

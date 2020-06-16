@@ -7,22 +7,10 @@
  <p> <br><br> </p>
 
  <table>
-   <tr>	
-      <th>Dependencies</th>
-      <td>None.</td>
-   </tr>
-   <tr>	
-     <th>CMakeLists.txt</th>
-     <td>set( PLUGINS "weberpenntree" )</td>
-   </tr>
-   <tr>	
-     <th>Header File</th>
-     <td>#include "WeberPennTree.h"</td>
-   </tr>
-   <tr>	
-     <th>Class</th>
-     <td>\ref WeberPennTree</td>
-   </tr>
+ <tr><th>Dependencies</th><td>None.</td></tr>
+ <tr><th>CMakeLists.txt</th><td>set( PLUGINS "weberpenntree" )</td></tr>
+ <tr><th>Header File</th><td>#include "WeberPennTree.h"</td></tr>
+ <tr><th>Class</th><td>\ref WeberPennTree</td></tr>
  </table>
 
  \section WPTissues Known Issues
@@ -36,12 +24,8 @@
  \section WPTConstructor WeberPennTree Class Constructor
 
  <table>
-   <tr>	
-      <th>Constructors</th>
-   </tr>
-   <tr>	
-     <td>\ref WeberPennTree::WeberPennTree( helios::Context* context) "WeberPennTree( helios::Context* context)"</td>
-   </tr>
+ <tr><th>Constructors</th></tr>
+ <tr><td>\ref WeberPennTree::WeberPennTree( helios::Context* context) "WeberPennTree( helios::Context* context)"</td></tr>
  </table>
 
  The \ref WeberPennTree class is initialized by simply passing a pointer to the Helios context as an argument to the constructor. This gives the class the ability to automatically add geometry to the context.
@@ -55,46 +39,16 @@
  <!-- convert Pistachio.jpeg -crop 320x360+290+225 foo.jpeg -->
  
  <table>
-   <tr>	
-     <th>Tree type</th>
-     <th>Sample Image</th>
-   </tr>
-   <tr>	
-     <td>Almond</td>
-     <td>\image html "images/Almond.jpeg"</td>
-   </tr>
-   <tr>	
-     <td>Apple</td>
-     <td>\image html "images/Apple.jpeg"</td>
-   </tr>
-   <tr>	
-     <td>Avocado</td>
-     <td>\image html "images/Avocado.jpeg"</td>
-   </tr>
-   <tr>	
-     <td>Lemon</td>
-     <td>\image html "images/Lemon.jpeg"</td>
-   </tr>
-   <tr>	
-     <td>Olive</td>
-     <td>\image html "images/Olive.jpeg"</td>
-   </tr>
-   <tr>	
-     <td>Orange</td>
-     <td>\image html "images/Orange.jpeg"</td>
-   </tr>
-   <tr>	
-     <td>Peach</td>
-     <td>\image html "images/Peach.jpeg"</td>
-   </tr>
-   <tr>	
-     <td>Pistachio</td>
-     <td>\image html "images/Pistachio.jpeg"</td>
-   </tr>
-   <tr>	
-     <td>Walnut</td>
-     <td>\image html "images/Walnut.jpeg"</td>
-   </tr>
+ <tr><th>Tree type</th><th>Sample Image</th></tr>
+ <tr><td>Almond</td><td>\image html "images/Almond.jpeg"</td></tr>
+ <tr><td>Apple</td><td>\image html "images/Apple.jpeg"</td></tr>
+ <tr><td>Avocado</td><td>\image html "images/Avocado.jpeg"</td></tr>
+ <tr><td>Lemon</td><td>\image html "images/Lemon.jpeg"</td></tr>
+ <tr><td>Olive</td><td>\image html "images/Olive.jpeg"</td></tr>
+ <tr><td>Orange</td><td>\image html "images/Orange.jpeg"</td></tr>
+ <tr><td>Peach</td><td>\image html "images/Peach.jpeg"</td></tr>
+ <tr><td>Pistachio</td><td>\image html "images/Pistachio.jpeg"</td></tr>
+ <tr><td>Walnut</td><td>\image html "images/Walnut.jpeg"</td></tr>
  </table>
 
  <p><p><p>
@@ -151,15 +105,9 @@
  The tree building process involves adding primitives to the Helios context that comprise a particular tree geometry. The UUIDs for the primitives that comprise trees can be queried via the functions \ref getTrunkUUIDs(), \ref getBranchUUIDs(), and \ref getLeafUUIDs() along with the identifier of the tree.
 
  <table>
-   <tr>	
-      <th>Tree Building Functions</th>
-   </tr>
-   <tr>	
-     <td>\ref WeberPennTree::buildTree(	const char* treename, helios::vec3 origin ) "uint buildTree(	const char* treename, helios::vec3 origin )"</td>
-   </tr>
-   <tr>	
-     <td>\ref WeberPennTree::buildTree(	const char* treename, helios::vec3 origin, float scale ) "uint buildTree( const char* treename, helios::vec3 origin, float scale )"</td>
-   </tr>
+ <tr><th>Tree Building Functions</th></tr>
+ <tr><td>\ref WeberPennTree::buildTree(	const char* treename, helios::vec3 origin ) "uint buildTree(	const char* treename, helios::vec3 origin )"</td></tr>
+ <tr><td>\ref WeberPennTree::buildTree(	const char* treename, helios::vec3 origin, float scale ) "uint buildTree( const char* treename, helios::vec3 origin, float scale )"</td></tr>
  </table>
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2">
@@ -204,51 +152,18 @@
  \image html "images/Sketch_0Trunk.jpeg"
 
  <table>
-   <caption>Parameters related to the trunk and overall tree shape.</caption>
-   <tr>	
-     <th>Parameter</th>
-     <th>Description</th>
-   </tr>
-   <tr>	
-     <td>Scale</td>
-     <td>Scaling factor to specify overall tree size.  Scale is generally the height of the tree.</td>
-   </tr>
-   <tr>	
-     <td>0Length</td>
-     <td>Length of the tree trunk as a fraction of scale.  Usually, 0Length is set to 1 (i.e., 100%).</td>
-   </tr>
-   <tr>	
-     <td>BaseSize</td>
-     <td>Percentage of the tree height before vegetation/branches start (0<BaseSize<1). For a tree with no trunk, BaseSize=0. For a tree where vegetation is only present in the upper half of the tree, BaseSize=0.5. </td>
-											</tr>
-   <tr>	
-     <td>Ratio</td>
-     <td>Specifies the trunk radius at the base as a fraction of the length of the trunk.  So Ratio=0.01 would have a trunk with radius at base of 1% of the trunk length.</td>
-   </tr>
-   <tr>	
-     <td>0Taper</td>
-     <td>Reduction factor for trunk radius moving away from base (0<=0Taper<=1).  Setting 0Taper to 0 results in a cylindrical trunk, setting 0Taper to 1 results in a conical trunk, and setting 0Taper between 0 and 1 gives a combination of the two.</td>
-										  </tr>
-   <tr>	
-     <td>Flare</td>
-     <td>Expansion of the trunk radius at the base by a factor of 1+Flare.</td>
-   </tr>
-   <tr>	
-     <td>Shape</td>
-     <td>Flag corresponding to desired tree crown shape.  See table below for available tree crown shapes.</td>
-   </tr>
-   <tr>	
-     <td>BaseSplits</td>
-     <td>Number of trunk splits.  For example, BaseSplits=1 gives on split and two distinct "scaffolds" or secondary trunks.  BaseSplits=2 gives three distinct secondary trunk branches.</td>
-   </tr>
-   <tr>	
-     <td>BaseSplitSize</td>
-     <td>If BaseSplits>0, BaseSplitSize is the distance from the base of the tree to the split as a fraction of the height of the tree (0<=BaseSplitSize<=1).</td>
-											  </tr>
-   <tr>	
-     <td>0SplitAngle</td>
-     <td>Angle from vertical (degrees) of the split branch with respect to vertical.</td>
-   </tr>
+ <caption>Parameters related to the trunk and overall tree shape.</caption>
+ <tr><th>Parameter</th><th>Description</th></tr>
+ <tr><td>Scale</td><td>Scaling factor to specify overall tree size.  Scale is generally the height of the tree.</td></tr>
+ <tr><td>0Length</td><td>Length of the tree trunk as a fraction of scale.  Usually, 0Length is set to 1 (i.e., 100%).</td></tr>
+ <tr><td>BaseSize</td><td>Percentage of the tree height before vegetation/branches start (0<BaseSize<1). For a tree with no trunk, BaseSize=0. For a tree where vegetation is only present in the upper half of the tree, BaseSize=0.5. </td></tr>
+ <tr><td>Ratio</td><td>Specifies the trunk radius at the base as a fraction of the length of the trunk.  So Ratio=0.01 would have a trunk with radius at base of 1% of the trunk length.</td></tr>
+ <tr><td>0Taper</td><td>Reduction factor for trunk radius moving away from base (0<=0Taper<=1).  Setting 0Taper to 0 results in a cylindrical trunk, setting 0Taper to 1 results in a conical trunk, and setting 0Taper between 0 and 1 gives a combination of the two.</td></tr>
+ <tr><td>Flare</td><td>Expansion of the trunk radius at the base by a factor of 1+Flare.</td></tr>
+ <tr><td>Shape</td><td>Flag corresponding to desired tree crown shape.  See table below for available tree crown shapes.</td></tr>
+ <tr><td>BaseSplits</td><td>Number of trunk splits.  For example, BaseSplits=1 gives on split and two distinct "scaffolds" or secondary trunks.  BaseSplits=2 gives three distinct secondary trunk branches.</td></tr>
+ <tr><td>BaseSplitSize</td><td>If BaseSplits>0, BaseSplitSize is the distance from the base of the tree to the split as a fraction of the height of the tree (0<=BaseSplitSize<=1).</td></tr>
+ <tr><td>0SplitAngle</td><td>Angle from vertical (degrees) of the split branch with respect to vertical.</td></tr>
  </table>
 
  Creating new tree geometries typically starts by considering the overall size and shape of the tree.  The above image shows a schematic sketch of the relevant parameters used to define these features.
@@ -261,60 +176,26 @@
 
  <table>
  <caption>Available tree crown shapes</caption>
- <tr>
-   <th>Shape</th>
-   <th>Description</th>
-   <th>Sketch</th>
- </tr>
- <tr>
-   <td>0</td>
-   <td>Conical</td>
-   <td>\image html ShapeConical.png</td>
- </tr>
- <tr>
-   <td>1</td>
-   <td>Spherical/Ellipsoidal</td>
-   <td>\image html ShapeSpherical.png</td>
- </tr>
- <tr>
-   <td>2</td>
-   <td>Hemispherical</td>
-   <td>\image html ShapeHemispherical.png</td>
- </tr>
- <tr>
-   <td>3</td>
-   <td>Cylindrical</td>
-   <td>\image html ShapeCylindrical.png</td>
- </tr>
- <tr>
-   <td>4</td>
-   <td>Tapered Cylindrical</td>
-   <td>\image html ShapeTaperedCylindrical.png</td>
- </tr>
- <tr>
-   <td>5</td>
-   <td>Flame</td>
-   <td>\image html ShapeFlame.png</td>
- </tr>
- <tr>
-   <td>6</td>
-   <td>Inverse Conical</td>
-   <td>\image html ShapeInverseConical.png</td>
- </tr>
- <tr>
-   <td>7</td>
-   <td>Tend Flame</td>
-   <td>\image html ShapeTendFlame.png</td>
- </tr>
+ <tr><th>Shape</th><th>Description</th><th>Sketch</th></tr>
+ <tr><td>0</td><td>Conical</td><td>\image html ShapeConical.png</td></tr>
+ <tr><td>1</td><td>Spherical/Ellipsoidal</td><td>\image html ShapeSpherical.png</td></tr>
+ <tr><td>2</td><td>Hemispherical</td><td>\image html ShapeHemispherical.png</td></tr>
+ <tr><td>3</td><td>Cylindrical</td><td>\image html ShapeCylindrical.png</td></tr>
+ <tr><td>4</td><td>Tapered Cylindrical</td><td>\image html ShapeTaperedCylindrical.png</td></tr>
+ <tr><td>5</td><td>Flame</td><td>\image html ShapeFlame.png</td></tr>
+ <tr><td>6</td><td>Inverse Conical</td><td>\image html ShapeInverseConical.png</td></tr>
+ <tr><td>7</td><td>Tend Flame</td><td>\image html ShapeTendFlame.png</td></tr>
  </table>
-																						\subsection WPTreeR1 Recursive Branches
-																						\image html "images/Sketch_1Level.jpeg"
 
-  \subsection WPTreeLeaves Leaves
+ \subsection WPTreeR1 Recursive Branches
 
-  \image html "images/Sketch_Leaves.jpeg"
+ \image html "images/Sketch_1Level.jpeg"
+
+ \subsection WPTreeLeaves Leaves
+
+ \image html "images/Sketch_Leaves.jpeg"
 	
-  \subsubsection WPTreeMask Leaf mask
+ \subsubsection WPTreeMask Leaf mask
 
  The tree model uses a PNG texture mask to visualize leaves.  This is a PNG image of the leaf with a transparent background.  An example leaf mask is given in the image below.  New leaf masks can be created using Gimp fairly easily.  Simply find an image of the leaf, open in Gimp, add an alpha channel to the image, use the `Fuzzy Select Tool' to select the background, then go to Edit->Clear, and export in .png format.  There are many tutorials online describing how to do this in more detail.  Note that the leaf should be oriented as shown in the image below for consistency: petiole pointing to the left.  Also note that the petiole is typically cropped out of the image.
 
@@ -335,47 +216,17 @@
 
   <center>
   <table>
-    <caption>Typical leaf angle distribution for almond</caption>
-    <tr>
-      <th>\f$\theta_L\f$ bin (degrees)</th>
-      <th>\f$g_L(\theta_L)\f$</th>
-    </tr>
-    <tr>
-      <td>0-10</td>
-      <td>0.229</td>
-    </tr>
-    <tr>
-      <td>10-20</td>
-      <td>0.665</td>
-    </tr>
-    <tr>
-      <td>20-30</td>
-      <td>0.917</td>
-    </tr>
-    <tr>
-      <td>30-40</td>
-      <td>0.945</td>
-    </tr>
-    <tr>
-      <td>40-50</td>
-      <td>0.865</td>
-    </tr>
-    <tr>
-      <td>50-60</td>
-      <td>0.745</td>
-    </tr>
-    <tr>
-      <td>60-70</td>
-      <td>0.619</td>
-    </tr>
-    <tr>
-      <td>70-80</td>
-      <td>0.424</td>
-    </tr>
-    <tr>
-      <td>80-90</td>
-      <td>0.315</td>
-    </tr>
+  <caption>Typical leaf angle distribution for almond</caption>
+  <tr><th>\f$\theta_L\f$ bin (degrees)</th><th>\f$g_L(\theta_L)\f$</th></tr>
+  <tr><td>0-10</td><td>0.229</td></tr>
+  <tr><td>10-20</td><td>0.665</td></tr>
+  <tr><td>20-30</td><td>0.917</td></tr>
+  <tr><td>30-40</td><td>0.945</td></tr>
+  <tr><td>40-50</td><td>0.865</td></tr>
+  <tr><td>50-60</td><td>0.745</td></tr>
+  <tr><td>60-70</td><td>0.619</td></tr>
+  <tr><td>70-80</td><td>0.424</td></tr>
+  <tr><td>80-90</td><td>0.315</td></tr>
   </table>
   </center>
 

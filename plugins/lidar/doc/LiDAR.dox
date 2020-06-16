@@ -7,24 +7,10 @@
   <p> <br><br> </p>
 
   <table>
-    <tr>	
-      <th>Dependencies</th>
-      <td>NVIDIA CUDA 9.0+ <p>
-          gcc/g++ 5.5+ <p>
-      	  Visualizer plug-in</td>
-    </tr>
-    <tr>	
-      <th>CMakeLists.txt</th>
-      <td>set( PLUGINS "lidar" )</td>
-    </tr>
-    <tr>	
-      <th>Header File</th>
-      <td>#include "LiDAR.h"</td>
-    </tr>
-    <tr>	
-      <th>Class</th>
-      <td>\ref LiDARcloud</td>
-    </tr>
+  <tr><th>Dependencies</th><td>NVIDIA CUDA 9.0+ <br>gcc/g++ 5.5+ <br>Visualizer plug-in</td></tr>
+  <tr><th>CMakeLists.txt</th><td>set( PLUGINS "lidar" )</td></tr>
+  <tr><th>Header File</th><td>#include "LiDAR.h"</td></tr>
+  <tr><th>Class</th><td>\ref LiDARcloud</td></tr>
   </table>
 
   \section LiDARissues Known Issues
@@ -38,29 +24,24 @@
   \section LiDARdepends Dependencies
 
   <table>
-    <tr>	
-      <th>Package</th>
-      <td>\image html apple-logo.jpg</td>
-      <td>\image html unix-logo.png</td>
-      <td>\image html windows-logo.jpg</td>
-    </tr>
-    <tr>	
-      <td>NVIDIA CUDA 9.0+</td>
-      <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
-      <td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cuda</code></div></td>
-      <td>Unknown</td>
-    </tr>
+  <caption>Installing dependent packages</caption>
+  <tr>
+	<th>Package</th><td>\image html apple-logo.jpg</td>
+	<td>\image html unix-logo.png</td>
+	<td>\image html windows-logo.jpg</td>
+  </tr>
+  <tr>
+	<td>NVIDIA CUDA 5.0+</td>
+	<td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+	<td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cuda</code></div></td><td>Unknown</td>
+  </tr>
   </table>
 
   \section LiDARConstructor Class Constructor
 
  <table>
-   <tr>	
-      <th>Constructors</th>
-   </tr>
-   <tr>	
-     <td>\ref LiDARcloud( void )</td>
-   </tr>
+ <tr><th>Constructors</th></tr>
+ <tr><td>\ref LiDARcloud( void )</td></tr>
  </table>
 
  The \ref LiDARcloud class contains point cloud data, and is used to perform processing operations on the data. The class constructor does not take any arguments.
@@ -86,56 +67,16 @@
  Each scan has a set of parameters or "metadata" that must be specified in order to process the data.  Some parameters are optional, while some are required.  The following metadata is needed to define the overall scan itself, in addition to individual scan hit points:
 
  <table>
-   <tr>	
-     <th>Metadata</th>
-     <th>Description</th>
-     <th>Default behavior</th>
-   </tr>
-   <tr>
-     <td>Origin</td>
-     <td>(x,y,z) coordinate of the scanner.  This is the position where the scanner rays are sent from.</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>N<sub>theta</sub></td>
-     <td>Number of scan points in the theta (zenithal) direction, i.e., number of rows in scan point table.</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>\f$\theta\f$<sub>min</sub> (degrees)</td>
-     <td>Minimum scan theta (zenital) angle. \f$\theta\f$<sub>min</sub>=0 if the scan starts from upward vertical, \f$\theta\f$<sub>min</sub>=90 is the scan starts from horizontal, etc. </td>
-     <td>0</td>
-   </tr>
-   <tr>
-     <td>\f$\theta\f$<sub>max</sub> (degrees)</td>
-     <td>Maximum scan theta (zenital) angle. \f$\theta\f$<sub>max</sub>=90 if the scan ends at horizontal, \f$\theta\f$<sub>min</sub>=180 is the scan ends at downward vertical, etc. </td>
-     <td>180</td>
-   </tr>
-   <tr>
-     <td>N<sub>phi</sub></td>
-     <td>Number of scan points in the phi (azimuthal) direction, i.e., number of rows in scan point table.</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>\f$\varphi\f$<sub>min</sub> (degrees)</td>
-     <td>Minimum scan phi (azimuthal) angle. \f$\varphi\f$<sub>min</sub>=0 if the scan starts pointing in the +x direction, \f$\varphi\f$<sub>min</sub>=90 if the scan starts pointing in the +y direction, etc. </td>
-     <td>0</td>
-   </tr>
-   <tr>
-     <td>\f$\varphi\f$<sub>max</sub> (degrees)</td>
-     <td>Maximum scan phi (azimuthal) angle. \f$\varphi\f$<sub>max</sub>=90 if the scan ends pointing in the +y direction, \f$\varphi\f$<sub>min</sub>=180 if the scan ends pointing in the -x direction, etc. NOTE: \f$\varphi\f$<sub>max</sub> could be greater than 360 if \f$\varphi\f$<sub>min</sub>>0 and the scanner makes a full rotation in the in the azimuthal direction, in which case \f$\varphi\f$<sub>max</sub>=\f$\varphi\f$<sub>min</sub>+360.</td>
-     <td>360</td>
-   </tr>
-   <tr>
-     <td>translation</td>
-     <td>Global (x,y,z) translation to be applied to entire scan, including the origin and all hit ponts.</td>
-     <td>No translation.</td>
-   </tr>
-   <tr>
-     <td>rotation (degrees)</td>
-     <td>Global spherical rotation (theta,phi) to be applied to the entire scan, including the origin and all hit ponts.</td>
-     <td>No rotation.</td>
-   </tr>
+ <tr><th>Metadata</th><th>Description</th><th>Default behavior</th></tr>
+ <tr><td>Origin</td><td>(x,y,z) coordinate of the scanner.  This is the position where the scanner rays are sent from.</td><td>None: REQUIRED</td></tr>
+ <tr><td>N<sub>theta</sub></td><td>Number of scan points in the theta (zenithal) direction, i.e., number of rows in scan point table.</td><td>None: REQUIRED</td></tr>
+ <tr><td>\f$\theta\f$<sub>min</sub> (degrees)</td><td>Minimum scan theta (zenital) angle. \f$\theta\f$<sub>min</sub>=0 if the scan starts from upward vertical, \f$\theta\f$<sub>min</sub>=90 is the scan starts from horizontal, etc. </td><td>0</td></tr>
+ <tr><td>\f$\theta\f$<sub>max</sub> (degrees)</td><td>Maximum scan theta (zenital) angle. \f$\theta\f$<sub>max</sub>=90 if the scan ends at horizontal, \f$\theta\f$<sub>min</sub>=180 is the scan ends at downward vertical, etc. </td><td>180</td></tr>
+ <tr><td>N<sub>phi</sub></td><td>Number of scan points in the phi (azimuthal) direction, i.e., number of rows in scan point table.</td><td>None: REQUIRED</td></tr>
+ <tr><td>\f$\varphi\f$<sub>min</sub> (degrees)</td><td>Minimum scan phi (azimuthal) angle. \f$\varphi\f$<sub>min</sub>=0 if the scan starts pointing in the +x direction, \f$\varphi\f$<sub>min</sub>=90 if the scan starts pointing in the +y direction, etc. </td><td>0</td></tr>
+ <tr><td>\f$\varphi\f$<sub>max</sub> (degrees)</td><td>Maximum scan phi (azimuthal) angle. \f$\varphi\f$<sub>max</sub>=90 if the scan ends pointing in the +y direction, \f$\varphi\f$<sub>min</sub>=180 if the scan ends pointing in the -x direction, etc. NOTE: \f$\varphi\f$<sub>max</sub> could be greater than 360 if \f$\varphi\f$<sub>min</sub>>0 and the scanner makes a full rotation in the in the azimuthal direction, in which case \f$\varphi\f$<sub>max</sub>=\f$\varphi\f$<sub>min</sub>+360.</td><td>360</td></tr>
+ <tr><td>translation</td><td>Global (x,y,z) translation to be applied to entire scan, including the origin and all hit ponts.</td><td>No translation.</td></tr>
+ <tr><td>rotation (degrees)</td><td>Global spherical rotation (theta,phi) to be applied to the entire scan, including the origin and all hit ponts.</td><td>No rotation.</td></tr>
  </table>
 
  \subsection AddHits Hit point data
@@ -143,31 +84,11 @@
  In addition to scan metadata, the data collected by the scan itself must also be added to the plug-in.  At a minimum, this consists of the Cartesian (x,y,z) coordinates of each hit in the scan.  Additionally, hit points may also have an associated r-g-b color value, or some other scalar data value such as reflectance or temperature.  For the processing algorithms to work, the scan direction associated with each hit point must also be known.  This can be specified as a (\f$\theta\f$,\f$\varphi\f$) spherical coordinate, or using the row (i.e., index in the scanline: 1...\f$\mathrm{N}_\theta\f$) and column (i.e., scanline index: 1...\f$\mathrm{N}_\varphi\f$).
  
  <table>
-   <tr>	
-     <th>Data</th>
-     <th>Description</th>
-     <th>Default behavior</th>
-   </tr>
-   <tr>
-     <td>(x,y,z) position</td>
-     <td>(x,y,z) coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>ray direction</td>
-     <td>Spherical direction (theta, phi) of the ray.  Ray directions are used to construct the scan hit table.  There could be multiple hits for a given ray direction if a full-waveform instrument is used in multiple return mode.</td>
-     <td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td>
-   </tr>
-   <tr>
-     <td>color</td>
-     <td>r-g-b color of scan hit point.</td>
-     <td>red</td>
-   </tr>
-   <tr>
-     <td>data</td>
-     <td>Floating point data values associated with the hit point.  This could be reflectance, temperature, etc.</td>
-     <td>No data created.</td>
-   </tr>
+ <tr><th>Data</th><th>Description</th><th>Default behavior</th></tr>
+ <tr><td>(x,y,z) position</td><td>(x,y,z) coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td><td>None: REQUIRED</td></tr>
+ <tr><td>ray direction</td><td>Spherical direction (theta, phi) of the ray.  Ray directions are used to construct the scan hit table.  There could be multiple hits for a given ray direction if a full-waveform instrument is used in multiple return mode.</td><td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td></tr>
+ <tr><td>color</td><td>r-g-b color of scan hit point.</td><td>red</td></tr>
+ <tr><td>data</td><td>Floating point data values associated with the hit point.  This could be reflectance, temperature, etc.</td><td>No data created.</td></tr>
  </table>
  
 
@@ -254,56 +175,16 @@
  The ASCII text file containing the data is a plain text file, where each row corresponds to a hit point and each column is some data value associated with that hit point.  The "ASCII_format" tag defines the column format of the ASCII text file (in this case, file.xyz).  Each entry in the list specifies the meaning of each column.  Possible fields are listed in the table below:
 
  <table>
-   <tr>	
-     <th>Label</th>
-     <th>Description</th>
-     <th>Default behavior</th>
-   </tr>
-   <tr>
-     <td>x</td>
-     <td>x-component of the (x,y,z) Cartesian coordinate of the hit point.</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>y</td>
-     <td>y-component of the (x,y,z) Cartesian coordinate of the hit point.</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>z</td>
-     <td>z-component of the (x,y,z) Cartesian coordinate of the hit point.</td>
-     <td>None: REQUIRED</td>
-   </tr>
-   <tr>
-     <td>zenith (or zenith_rad)</td>
-     <td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees.</td>
-     <td>Calculated from scan origin and hit (x,y,z).</td>
-   </tr>
-   <tr>
-     <td>azimuth (or phi_rad)</td>
-     <td>Azithal angle (degrees) of scan ray direction corresponding to the hit point. If "phi_rad" is used, phi has units of radians rather than degrees.</td>
-     <td>Calculated from scan origin and hit (x,y,z).</td>
-   </tr>
-   <tr>
-     <td>r (or r255)</td>
-     <td>red component of (r,g,b) hit color.  If "r" tag is used, r is a floating point value and 0<r<1.  If "r255" is used, r is an integer and 0<r<255.</td>
-											    <td>r=1 or r255=255</td>
-   </tr>
-   <tr>
-     <td>g (or g255)</td>
-     <td>green component of (r,g,b) hit color.  If "g" tag is used, g is a floating point value and 0<g<1.  If "g255" is used, g is an integer and 0<g<255.</td>
-     <td>g=0 or g255=0</td>
-   </tr>
-   <tr>
-     <td>b (or b255)</td>
-     <td>blue component of (r,g,b) hit color.  If "b" tag is used, b is a floating point value and 0<b<1.  If "b255" is used, b is an integer and 0<b<255.</td>
-      <td>b=0 or b255=0</td>
-    </tr>
-    <tr>
-      <td>(label)</td>
-      <td>User-defined floating-point data value.  "label" can be any string describing data.  For example, "reflectance", "temperature", etc. </td>
-      <td>N/A</td>
-    </tr>
+ <tr><th>Label</th><th>Description</th><th>Default behavior</th></tr>
+ <tr><td>x</td><td>x-component of the (x,y,z) Cartesian coordinate of the hit point.</td><td>None: REQUIRED</td></tr>
+ <tr><td>y</td><td>y-component of the (x,y,z) Cartesian coordinate of the hit point.</td><td>None: REQUIRED</td></tr>
+ <tr><td>z</td><td>z-component of the (x,y,z) Cartesian coordinate of the hit point.</td><td>None: REQUIRED</td></tr>
+ <tr><td>zenith (or zenith_rad)</td><td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees.</td><td>Calculated from scan origin and hit (x,y,z).</td></tr>
+ <tr><td>azimuth (or phi_rad)</td><td>Azithal angle (degrees) of scan ray direction corresponding to the hit point. If "phi_rad" is used, phi has units of radians rather than degrees.</td><td>Calculated from scan origin and hit (x,y,z).</td></tr>
+ <tr><td>r (or r255)</td><td>red component of (r,g,b) hit color.  If "r" tag is used, r is a floating point value and 0<r<1.  If "r255" is used, r is an integer and 0<r<255.</td><td>r=1 or r255=255</td></tr>
+ <tr><td>g (or g255)</td><td>green component of (r,g,b) hit color.  If "g" tag is used, g is a floating point value and 0<g<1.  If "g255" is used, g is an integer and 0<g<255.</td><td>g=0 or g255=0</td></tr>
+ <tr><td>b (or b255)</td><td>blue component of (r,g,b) hit color.  If "b" tag is used, b is a floating point value and 0<b<1.  If "b255" is used, b is an integer and 0<b<255.</td><td>b=0 or b255=0</td></tr>
+ <tr><td>(label)</td><td>User-defined floating-point data value.  "label" can be any string describing data.  For example, "reflectance", "temperature", etc. </td><td>N/A</td></tr>
  </table>
 
  The XML file can be automatically loaded into the point cloud using the \ref loadXML() function, as illustrated below.
@@ -329,41 +210,13 @@
  Grid cells are defined by specifying the (x,y,z) position of its center, and the size of the cell in the x, y, and z directions.  Additional optional information can also be provided for grid cells, which are detailed below.
 
  <table>
-   <tr>	
-     <th>Tag</th>
-     <th>Description</th>
-     <th>Default behavior</th>
-   </tr>
-   <tr>
-     <td>center</td>
-     <td>(x,y,z) Cartesian coordinates of cell center.</td>
-     <td>None: required.</td>
-   </tr>
-   <tr>
-     <td>size</td>
-     <td>Length of cell sides in x, y, and z directions.</td>
-     <td>None: required.</td>
-   </tr>
-   <tr>
-     <td>rotation</td>
-     <td>Azimuthal rotation of the cell in degrees.</td>
-     <td>0</td>
-    </tr>
-   <tr>
-     <td>Nx</td>
-     <td>Grid cell subdivisions in the x-direction.</td>
-     <td>1</td>
-   </tr>
-   <tr>
-     <td>Ny</td>
-     <td>Grid cell subdivisions in the y-direction.</td>
-     <td>1</td>
-    </tr>
-   <tr>
-     <td>Nz</td>
-     <td>Grid cell subdivisions in the z-direction.</td>
-     <td>1</td>
-   </tr>
+ <tr><th>Tag</th><th>Description</th><th>Default behavior</th></tr>
+ <tr><td>center</td><td>(x,y,z) Cartesian coordinates of cell center.</td><td>None: required.</td></tr>
+ <tr><td>size</td><td>Length of cell sides in x, y, and z directions.</td><td>None: required.</td></tr>
+ <tr><td>rotation</td><td>Azimuthal rotation of the cell in degrees.</td><td>0</td></tr>
+ <tr><td>Nx</td><td>Grid cell subdivisions in the x-direction.</td><td>1</td></tr>
+ <tr><td>Ny</td><td>Grid cell subdivisions in the y-direction.</td><td>1</td></tr>
+ <tr><td>Nz</td><td>Grid cell subdivisions in the z-direction.</td><td>1</td></tr>
  </table>
 
  The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells.  For example, Nx=Ny=Nz=3 would create 27 grid cells similar to a "Rubik's cube".
@@ -480,28 +333,13 @@
 
   The second option is to add any geometry directly to the Visualizer.  There are several functions build in to the LiDAR plug-in that can to this automatically, which are listed below.
 
-  <table>
-    <tr>	
-      <th>Function</th>
-      <th>Description</th>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::addHitsToVisualizer( Visualizer * visualizer, const uint pointsize )</td>
-      <td>Add all hits in the point cloud to the visualizer.</td>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::addGridToVisualizer( Visualizer * visualizer )</td>
-      <td>Add all grid cells to the visualizer, which are displayed as translucent voxels.</td>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::addTrianglesToVisualizer( Visualizer * visualizer )</td>
-      <td>Add all triangles to the visualizer, which are colored by the r-g-b color value.</td>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::addTrianglesToVisualizer( Visualizer * visualizer, const uint gridcell )</td>
-      <td>Add triangles from a specified grid cell to the visualizer, which are colored by the r-g-b color value.</td>
-    </tr>
-  </table>
+ <table>
+ <tr><th>Function</th><th>Description</th></tr>
+ <tr><td>\ref LiDARcloud::addHitsToVisualizer( Visualizer * visualizer, const uint pointsize )</td><td>Add all hits in the point cloud to the visualizer.</td></tr>
+ <tr><td>\ref LiDARcloud::addGridToVisualizer( Visualizer * visualizer )</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels.</td></tr>
+ <tr><td>\ref LiDARcloud::addTrianglesToVisualizer( Visualizer * visualizer )</td><td>Add all triangles to the visualizer, which are colored by the r-g-b color value.</td></tr>
+ <tr><td>\ref LiDARcloud::addTrianglesToVisualizer( Visualizer * visualizer, const uint gridcell )</td><td>Add triangles from a specified grid cell to the visualizer, which are colored by the r-g-b color value.</td></tr>
+ </table>
 
   The following code sample illustrates how to visualize the point cloud.
 
@@ -534,36 +372,15 @@
 
   Results of data processing can be easily written to file for external analysis.  The following table lists these functions.  Data is written to an ASCII text file, where each line in the file corresponds to a different data point (e.g., hit point, triangle, etc.).
 
-  <table>
-    <tr>	
-      <th>Function</th>
-      <th>Description</th>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::exportTriangleNormals( const char* filename ) </td>
-      <td>Write the unit normal vectors [nx ny nz] of all triangles formed from triangulation.</td>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::exportTriangleNormals( const char* filename, const int gridcell ) </td>
-      <td>Write the unit normal vectors of triangles formed from triangulation that reside in a specified grid cell.</td>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::exportTriangleAreas( const char* filename ) </td>
-      <td>Write the areas of all triangles formed from triangulation.</td>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::exportTriangleAreas( const char* filename, const int gridcell ) </td>
-      <td>Write the areas of triangles formed from triangulation that reside in a specified grid cell.</td>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::exportLeafAreas( const char* filename ) </td>
-      <td>Write the leaf area contained within each voxel.  Each line of the output file corresponds to the total leaf area within each voxel.</td>
-    </tr>
-    <tr>
-      <td>\ref LiDARcloud::exportLeafAreaDensities( const char* filename ) </td>
-      <td>Write the leaf area density of each voxel.  Each line of the output file corresponds to the leaf area density of each voxel.</td>
-    </tr>
-  </table>
+ <table>
+ <tr><th>Function</th><th>Description</th></tr>
+ <tr><td>\ref LiDARcloud::exportTriangleNormals( const char* filename ) </td><td>Write the unit normal vectors [nx ny nz] of all triangles formed from triangulation.</td></tr>
+ <tr><td>\ref LiDARcloud::exportTriangleNormals( const char* filename, const int gridcell ) </td><td>Write the unit normal vectors of triangles formed from triangulation that reside in a specified grid cell.</td></tr>
+ <tr><td>\ref LiDARcloud::exportTriangleAreas( const char* filename ) </td><td>Write the areas of all triangles formed from triangulation.</td></tr>
+ <tr><td>\ref LiDARcloud::exportTriangleAreas( const char* filename, const int gridcell ) </td><td>Write the areas of triangles formed from triangulation that reside in a specified grid cell.</td></tr>
+ <tr><td>\ref LiDARcloud::exportLeafAreas( const char* filename ) </td><td>Write the leaf area contained within each voxel.  Each line of the output file corresponds to the total leaf area within each voxel.</td></tr>
+ <tr><td>\ref LiDARcloud::exportLeafAreaDensities( const char* filename ) </td><td>Write the leaf area density of each voxel.  Each line of the output file corresponds to the leaf area density of each voxel.</td></tr>
+ </table>
 
   The following code sample illustrates an example of how to write results to file.
 
