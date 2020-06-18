@@ -898,6 +898,114 @@ float AerialLiDARcloud::getCellLeafAreaDensity( const int3 ijk ) const{
 
 }
 
+void AerialLiDARcloud::setCellTransmissionProbability( const int P_denom, const int P_trans, const int3 ijk ){
+
+  if( ijk.x<0 || ijk.x>=gridresolution.x ){
+    cerr << "ERROR (setCellTransmissionProbability): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if( ijk.y<0 || ijk.y>=gridresolution.y ){
+    cerr << "ERROR (setCellTransmissionProbability): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if( ijk.z<0 || ijk.z>=gridresolution.z ){
+    cerr << "ERROR (setCellTransmissionProbability): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  if( P_counts.size()!=gridresolution.z ){
+    P_counts.resize(gridresolution.z);
+  }
+  if( P_counts.at(ijk.z).size()!=gridresolution.y ){
+    P_counts.at(ijk.z).resize(gridresolution.y);
+  }
+  if( P_counts.at(ijk.z).at(ijk.y).size()!=gridresolution.x ){
+    P_counts.at(ijk.z).at(ijk.y).resize(gridresolution.x);
+  }
+
+  P_counts.at(ijk.z).at(ijk.y).at(ijk.x) = make_int2(P_denom,P_trans);
+
+}
+
+void AerialLiDARcloud::getCellTransmissionProbability( const int3 ijk, int& P_denom, int& P_trans ) const{
+
+  if( P_counts.size()!=gridresolution.z ){
+    cerr << "ERROR (getCellTransmissionProbability): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  if( ijk.x<0 || ijk.x>=gridresolution.x ){
+    cerr << "ERROR (getCellTransmissionProbabilit): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if( ijk.y<0 || ijk.y>=gridresolution.y ){
+    cerr << "ERROR (getCellTransmissionProbabilit): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if( ijk.z<0 || ijk.z>=gridresolution.z ){
+    cerr << "ERROR (getCellTransmissionProbabilit): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  
+  
+  P_denom = P_counts.at(ijk.z).at(ijk.y).at(ijk.x).x;
+  P_trans = P_counts.at(ijk.z).at(ijk.y).at(ijk.x).y;
+
+}
+
+void AerialLiDARcloud::setCellRbar( const float rbar, const int3 ijk ){
+
+  if( ijk.x<0 || ijk.x>=gridresolution.x ){
+    cerr << "ERROR (setCellRbar): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if( ijk.y<0 || ijk.y>=gridresolution.y ){
+    cerr << "ERROR (setCellRbar): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if( ijk.z<0 || ijk.z>=gridresolution.z ){
+    cerr << "ERROR (setCellRbar): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  if( r_bar.size()!=gridresolution.z ){
+    r_bar.resize(gridresolution.z);
+  }
+  if( r_bar.at(ijk.z).size()!=gridresolution.y ){
+    r_bar.at(ijk.z).resize(gridresolution.y);
+  }
+  if( r_bar.at(ijk.z).at(ijk.y).size()!=gridresolution.x ){
+    r_bar.at(ijk.z).at(ijk.y).resize(gridresolution.x);
+  }
+
+  r_bar.at(ijk.z).at(ijk.y).at(ijk.x) = rbar;
+
+}
+
+float AerialLiDARcloud::getCellRbar( const int3 ijk ) const{
+
+  if( r_bar.size()!=gridresolution.z ){
+    cerr << "ERROR (getCellRbar): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  if( ijk.x<0 || ijk.x>=gridresolution.x ){
+    cerr << "ERROR (getCellRbar): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if( ijk.y<0 || ijk.y>=gridresolution.y ){
+    cerr << "ERROR (getCellRbar): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if( ijk.z<0 || ijk.z>=gridresolution.z ){
+    cerr << "ERROR (getCellRbar): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z-1 << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  
+  return r_bar.at(ijk.z).at(ijk.y).at(ijk.x);
+
+}
+
 helios::vec4 AerialLiDARcloud::RANSAC( const int maxIter, const float threshDist, const float inlierRatio, const std::vector<helios::vec3>& hits, std::vector<bool>& inliers ){
 
   int N = hits.size();

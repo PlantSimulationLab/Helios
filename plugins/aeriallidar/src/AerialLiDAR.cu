@@ -591,17 +591,22 @@ void AerialLiDARcloud::calculateLeafAreaGPU( const float Gtheta, const int minVo
     float a;
     if( hit_inside_agg[v]<minVoxelHits ){
       a = 0.f;
-    }else if( P<0.1 ){
+    // }else if( P<0.1 ){
 
-      dr_bar = dr_hit_agg.at(v);
+    //   dr_bar = dr_hit_agg.at(v);
       
-      a = 1.f/dr_bar/Gtheta;
+    //   a = 1.f/dr_bar/Gtheta;
     }else{
       a = -log(P)/dr_bar/Gtheta;
     }
-      
+
     helios::vec3 gridsize = getCellSize();
     setCellLeafArea(a*gridsize.x*gridsize.y*gridsize.z, gridindex2ijk(v) );
+
+    setCellRbar( dr_hit_agg.at(v), gridindex2ijk(v) );
+
+    setCellTransmissionProbability( hit_denom_agg[v], hit_denom_agg[v]-hit_inside_agg[v],gridindex2ijk(v) );
+
 
     if( printmessages ){
       // std::cout << "Vol #" << v << " LAD: " << a << std::endl;

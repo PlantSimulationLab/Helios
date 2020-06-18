@@ -117,6 +117,10 @@ class AerialLiDARcloud{
 
   std::vector<std::vector<std::vector<float> > > leaf_area;
 
+  std::vector<std::vector<std::vector<float> > > r_bar;
+
+  std::vector<std::vector<std::vector<helios::int2> > > P_counts;
+
   bool groundheightcomputed;
 
   std::vector<std::vector<float> > ground_height;
@@ -420,6 +424,28 @@ class AerialLiDARcloud{
   //! Get the leaf area density of a grid cell in 1/m
   /** \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions. */
   float getCellLeafAreaDensity( const helios::int3 ijk ) const;
+
+  //! Set the cell transmission probability counts
+  /** \param[in] "P_denom" Number of rays reaching voxel (denominator of P)
+      \param[in] "P_trans" Number of rays transmitted through voxel (numerator of P)
+      \param[in] "ijk" Index of a grid cell in the x-, y-, and z-directions. */
+  void setCellTransmissionProbability( const int P_denom, const int P_trans, const helios::int3 ijk );
+
+  //! Get the cell transmission probability counts
+  /** \param[in] "index" Index of a grid cell in the x-, y-, and z-directions. 
+      \param[out] "P_denom" Number of rays reaching voxel (denominator of P)
+      \param[out] "P_trans" Number of rays transmitted through voxel (numerator of P)
+  */
+  void getCellTransmissionProbability( const helios::int3 ijk, int& P_denom, int& P_trans ) const;
+
+  //! Set the average ray propagation distance in meters
+  /** \param[in] "r_bar" Average ray propagation distance
+      \param [in] "ijk" Index of a grid cell in the x-, y-, and z-directions. */
+  void setCellRbar( const float r_bar, const helios::int3 ijk );
+
+  //! Get the average ray propagation distance in meters
+  /** \param [in] "index" Index of a grid cell in the x-, y-, and z-directions. */
+  float getCellRbar( const helios::int3 ijk ) const;
 
   //! Calculate the leaf area for each grid volume
   /** \param[in] "Gtheta" G-function value to be assumed constant across all cells. */
