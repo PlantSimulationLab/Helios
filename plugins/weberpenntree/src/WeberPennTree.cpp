@@ -551,6 +551,7 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
     std::vector<uint> UUIDs;
     if( leaf_segs.x==1 && leaf_segs.y==1 ){
       UUIDs.push_back(context->addPatch( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), parameters.LeafFile.c_str() ));
+      //UUIDs.push_back(context->addPatch( make_vec3(0,0,0), make_vec2(parameters.LeafScale*parameters.LeafScaleX*scale, parameters.LeafScale*scale), make_SphericalCoord(0,0), parameters.LeafFile.c_str() ));
       UUID_leaf.back().push_back(UUIDs.front());
     }else{
       UUIDs = context->copyPrimitive( leaf_template );
@@ -566,11 +567,17 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
 	context->getPrimitivePointer(UUID)->rotate( rotation.azimuth, "z" );
 	context->getPrimitivePointer(UUID)->translate(position);
       }else{
-	context->getPrimitivePointer(UUID)->rotate( downangle-cart2sphere(parent_normal).elevation, "y" );
-	context->getPrimitivePointer(UUID)->translate( make_vec3(0,0,-0.55*parameters.LeafScale*sin(downangle)) );
-	context->getPrimitivePointer(UUID)->rotate( 0.5*M_PI-rotation.azimuth, "z" );
+	context->getPrimitivePointer(UUID)->rotate( M_PI, "x" );
+	context->getPrimitivePointer(UUID)->rotate( M_PI-rotation.zenith-(0.5*M_PI-downangle), "y" );
+	context->getPrimitivePointer(UUID)->rotate( -0.5*M_PI - rotation.azimuth, "z" );
+	
+	vec3 tvec( parent_normal.x, parent_normal.y, 0 );
+	tvec.normalize();
+	context->getPrimitivePointer(UUID)->translate( -0.55*parameters.LeafScale*tvec );
+     
 	context->getPrimitivePointer(UUID)->rotate( phi, parent_normal );
 	context->getPrimitivePointer(UUID)->translate(position);
+	
       }
     }
       

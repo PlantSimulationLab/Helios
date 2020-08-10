@@ -327,7 +327,7 @@ float PhotosynthesisModel::evaluateCi_Farquhar( const float Ci, const float CO2,
   
   //--- Calculate error and update --- //
   
-  float resid = 0.75*gM*(CO2-Ci) - (A + Rd);
+  float resid = 0.75*gM*(CO2-Ci) - A;
 
   return resid;
   

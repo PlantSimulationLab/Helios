@@ -1305,7 +1305,7 @@ int RadiationModel::selfTest( void ){
     failure=true;
   }
 
-  if( fabs(intercepted_ground_diffuse_12-intercepted_theoretical_diffuse_12)>2.f*error_threshold || fabs(intercepted_leaf_diffuse_12-intercepted_theoretical_diffuse_12)>2.f*error_threshold ){
+  if( fabs(intercepted_ground_diffuse_12-intercepted_theoretical_diffuse_12)>2.f*error_threshold || fabs(intercepted_leaf_diffuse_12-intercepted_theoretical_diffuse_12)>4.f*error_threshold ){
      std::cerr << "Test failed for diffuse radiation calculations." << std::endl;
     std::cout << intercepted_ground_diffuse_12 << " " << intercepted_leaf_diffuse_12 << " " << intercepted_theoretical_diffuse_12 << std::endl;
     failure_12 = true;

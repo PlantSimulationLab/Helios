@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.3</span>
+   &#160;<span id="projectnumber">v1.1.5</span>
    </div>
   </td>
  </tr>
@@ -121,12 +121,18 @@ $(function() {
 <li>getCellMaximumHitHeight()
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#a00f6479153ac2025031b70bd5637b65b">AerialLiDARcloud</a>
 </li>
+<li>getCellRbar()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#ae35261c7fc1553cb15fb318a2b14a3b2">AerialLiDARcloud</a>
+</li>
 <li>getCellRotation()
 : <a class="el" href="class_li_d_a_rcloud.html#a036bca337b5855d09a32f7a27a4790d4">LiDARcloud</a>
 </li>
 <li>getCellSize()
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#a37d5eec1dec60c9ddef91713344b635a">AerialLiDARcloud</a>
 , <a class="el" href="class_li_d_a_rcloud.html#a79311110be2b8ebd9bd41638f4b3624d">LiDARcloud</a>
+</li>
+<li>getCellTransmissionProbability()
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#a98770b70c510e7611fb171d3fe920554">AerialLiDARcloud</a>
 </li>
 <li>getCellVegetationHeight()
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#a12fe426a267cbef9982138537198558a">AerialLiDARcloud</a>
@@ -172,8 +178,11 @@ $(function() {
 <li>getFarquharModelCoefficients()
 : <a class="el" href="class_photosynthesis_model.html#ab2b6cf047dcab3b2e880b1f1f7d6b8a7">PhotosynthesisModel</a>
 </li>
+<li>getFruitUUIDs()
+: <a class="el" href="class_canopy_generator.html#ad3e977b6342ed000902b2becf000675b">CanopyGenerator</a>
+</li>
 <li>getGlobalData()
-: <a class="el" href="classhelios_1_1_context.html#abbc6d463f6d722fca56ad219c8278c16">helios::Context</a>
+: <a class="el" href="classhelios_1_1_context.html#aea16d4845e23fe44ae1da4c032ea57e3">helios::Context</a>
 </li>
 <li>getGlobalDataSize()
 : <a class="el" href="classhelios_1_1_context.html#ad58820f9cb6a406749e6f21f19b1959d">helios::Context</a>
@@ -238,7 +247,7 @@ $(function() {
 : <a class="el" href="classhelios_1_1_context.html#ae2f4d95c61e09a62a9ed6dd997c3f113">helios::Context</a>
 </li>
 <li>getLeafUUIDs()
-: <a class="el" href="class_canopy_generator.html#a659ac89a7dd35edef3b8b56fd4e9c144">CanopyGenerator</a>
+: <a class="el" href="class_canopy_generator.html#a3939fe3099132913ad5bebd9793da611">CanopyGenerator</a>
 , <a class="el" href="class_weber_penn_tree.html#af4368c1f900503f6d72f0c0e569fe8e5">WeberPennTree</a>
 </li>
 <li>getLoadedXMLFiles()
@@ -256,12 +265,15 @@ $(function() {
 <li>getPatchPointer()
 : <a class="el" href="group__primitives.html#ga0e3ac5f6948b1207d1fd2a9c3a1f6bb7">helios::Context</a>
 </li>
+<li>getPlantCount()
+: <a class="el" href="class_canopy_generator.html#a3d722a76c842ed4304fa2584a00cce2b">CanopyGenerator</a>
+</li>
 <li>getPrimitiveCount()
 : <a class="el" href="group__primitives.html#gaf61c469d9b9eaae68fbef8b3d2b7ef78">helios::Context</a>
 </li>
 <li>getPrimitiveData()
-: <a class="el" href="classhelios_1_1_context.html#a297ca8b00eac37a8fd20881d265fe5ad">helios::Context</a>
-, <a class="el" href="classhelios_1_1_primitive.html#aadcce3e9c78678df7d1ef6dfae2cc7a2">helios::Primitive</a>
+: <a class="el" href="classhelios_1_1_context.html#a9d3bec19ecfed99f1fee4c25ac7f37a4">helios::Context</a>
+, <a class="el" href="classhelios_1_1_primitive.html#aa2c07270e12bc1ac1a0e0dbc2772cfd2">helios::Primitive</a>
 </li>
 <li>getPrimitiveDataSize()
 : <a class="el" href="classhelios_1_1_context.html#a7b8a8bb7691aaee72e30f98e15bff7ca">helios::Context</a>
@@ -416,8 +428,26 @@ $(function() {
 <li>getWindowSize()
 : <a class="el" href="class_visualizer.html#a2d2d5e7e4b616b4df0a965b98f8497cc">Visualizer</a>
 </li>
-<li>GrapevineCanopyParameters()
-: <a class="el" href="struct_grapevine_canopy_parameters.html#a3c9da3f6473b7f804ef6cf65938f0242">GrapevineCanopyParameters</a>
+<li>GobletGrapevineParameters()
+: <a class="el" href="struct_goblet_grapevine_parameters.html#a953cddc31d7ae9b9f5da09e7b4c5bec2">GobletGrapevineParameters</a>
+</li>
+<li>grape_radius
+: <a class="el" href="struct_goblet_grapevine_parameters.html#a963b1adc4dae772a2f34baeb62b8a431">GobletGrapevineParameters</a>
+, <a class="el" href="struct_split_grapevine_parameters.html#a3a617d032dcb2a5e0556c6b7d9cdb1d7">SplitGrapevineParameters</a>
+, <a class="el" href="struct_unilateral_grapevine_parameters.html#a6d8ff0d8ad8666b00214802fc0531c0a">UnilateralGrapevineParameters</a>
+, <a class="el" href="struct_v_s_p_grapevine_parameters.html#a7a5c2d109286fb621250bff69311254a">VSPGrapevineParameters</a>
+</li>
+<li>grapevineGoblet()
+: <a class="el" href="class_canopy_generator.html#ac3c2fe3428cfcc223f65759a0a63e3d8">CanopyGenerator</a>
+</li>
+<li>grapevineSplit()
+: <a class="el" href="class_canopy_generator.html#af9bfd1e58438d2e0ee06eecc6457fc4f">CanopyGenerator</a>
+</li>
+<li>grapevineUnilateral()
+: <a class="el" href="class_canopy_generator.html#ae7160d098e823832641ab79500445f86">CanopyGenerator</a>
+</li>
+<li>grapevineVSP()
+: <a class="el" href="class_canopy_generator.html#a6fe10ba7d9112d7fa6035ef2bb04d1a4">CanopyGenerator</a>
 </li>
 <li>gridijk2index()
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#a35c81e8cda423b84c94fc33ee4163d47">AerialLiDARcloud</a>

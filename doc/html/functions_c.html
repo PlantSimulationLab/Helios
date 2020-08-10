@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.3</span>
+   &#160;<span id="projectnumber">v1.1.5</span>
    </div>
   </td>
  </tr>
@@ -94,6 +94,7 @@ $(function() {
 </li>
 <li>canopy_configuration
 : <a class="el" href="struct_spherical_crowns_canopy_parameters.html#acb6042ba8355cae63a24a1b98ca3aa58">SphericalCrownsCanopyParameters</a>
+, <a class="el" href="struct_white_spruce_canopy_parameters.html#aff224456a6befb2203c9f225ad6e4fe7">WhiteSpruceCanopyParameters</a>
 </li>
 <li>canopy_extent
 : <a class="el" href="struct_homogeneous_canopy_parameters.html#a68c488e6bd2f209af3a46ce8aca4bf60">HomogeneousCanopyParameters</a>
@@ -102,13 +103,21 @@ $(function() {
 : <a class="el" href="struct_homogeneous_canopy_parameters.html#a80df27cc13e2b7f113d52e405ddb2737">HomogeneousCanopyParameters</a>
 </li>
 <li>canopy_origin
-: <a class="el" href="struct_grapevine_canopy_parameters.html#a4c2e5e287af251a5f1016409bf05b4e8">GrapevineCanopyParameters</a>
+: <a class="el" href="struct_goblet_grapevine_parameters.html#a6d6d0534978a5e800824e6b45c6f6f8a">GobletGrapevineParameters</a>
 , <a class="el" href="struct_homogeneous_canopy_parameters.html#a19656c3205fa6cc4a0e1c1d4b63745bc">HomogeneousCanopyParameters</a>
 , <a class="el" href="struct_spherical_crowns_canopy_parameters.html#aff30a0fd6051103d2dc04afab4c007ed">SphericalCrownsCanopyParameters</a>
+, <a class="el" href="struct_split_grapevine_parameters.html#af16710ec6bec329d99ca32c163221623">SplitGrapevineParameters</a>
+, <a class="el" href="struct_unilateral_grapevine_parameters.html#aa092043916ed3a2841460fa12513b55f">UnilateralGrapevineParameters</a>
+, <a class="el" href="struct_v_s_p_grapevine_parameters.html#af7b782871a2c7a50ba4a8b5d66b6fa41">VSPGrapevineParameters</a>
+, <a class="el" href="struct_white_spruce_canopy_parameters.html#ad8e645564ccc45909980951bb7edd0ec">WhiteSpruceCanopyParameters</a>
 </li>
 <li>canopy_rotation
-: <a class="el" href="struct_grapevine_canopy_parameters.html#ad07b10f058da3d96e0f17526a7b254da">GrapevineCanopyParameters</a>
+: <a class="el" href="struct_goblet_grapevine_parameters.html#afbd521db2fa0f11696ae0ab6fc20a64c">GobletGrapevineParameters</a>
 , <a class="el" href="struct_spherical_crowns_canopy_parameters.html#a4e7f0bde2d0ecb09d0aa994bc4cc331b">SphericalCrownsCanopyParameters</a>
+, <a class="el" href="struct_split_grapevine_parameters.html#a3c0e54e19c2c7bcebb7c3f28906c942a">SplitGrapevineParameters</a>
+, <a class="el" href="struct_unilateral_grapevine_parameters.html#af1a5ea6382f7ee5d5ef3d76efcf114be">UnilateralGrapevineParameters</a>
+, <a class="el" href="struct_v_s_p_grapevine_parameters.html#a4053e2613b8fe1e5402285cf8e8d93d5">VSPGrapevineParameters</a>
+, <a class="el" href="struct_white_spruce_canopy_parameters.html#a62381a12e783f7cfba1671da57075f3c">WhiteSpruceCanopyParameters</a>
 </li>
 <li>CanopyGenerator()
 : <a class="el" href="class_canopy_generator.html#ac146e7630eb8d80fb91a3795d7b9f9f4">CanopyGenerator</a>
@@ -122,8 +131,14 @@ $(function() {
 <li>closeWindow()
 : <a class="el" href="class_visualizer.html#a5e26e469e396ba9b802640fc02f461e8">Visualizer</a>
 </li>
+<li>cluster_radius
+: <a class="el" href="struct_goblet_grapevine_parameters.html#a1ea79777b6a5f6b5cb440195193526a7">GobletGrapevineParameters</a>
+, <a class="el" href="struct_split_grapevine_parameters.html#a9003058a7bd7185ee69d37671da708c2">SplitGrapevineParameters</a>
+, <a class="el" href="struct_unilateral_grapevine_parameters.html#a3437a73b11fc5d10f68555c895a188ef">UnilateralGrapevineParameters</a>
+, <a class="el" href="struct_v_s_p_grapevine_parameters.html#a49fefb97bd4aa38ce244093ef18f5944">VSPGrapevineParameters</a>
+</li>
 <li>colorContextPrimitivesByData()
-: <a class="el" href="class_visualizer.html#ac9b9fb0076f62a9a06542d876db34563">Visualizer</a>
+: <a class="el" href="class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234">Visualizer</a>
 </li>
 <li>COLORMAP_COOL
 : <a class="el" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba65fd6eb9eefd4fbd10caa6ccceb689f5">Visualizer</a>
@@ -153,7 +168,7 @@ $(function() {
 : <a class="el" href="classhelios_1_1_context.html#a5dd483a8c3183056682ebaa945acdc6d">helios::Context</a>
 </li>
 <li>coordinateRotation()
-: <a class="el" href="class_li_d_a_rcloud.html#af3565c390a695b282627e9dbbd9c4b22">LiDARcloud</a>
+: <a class="el" href="class_li_d_a_rcloud.html#ab10da5ef855211e466a5d1c3ea87b600">LiDARcloud</a>
 </li>
 <li>COORDINATES_CARTESIAN
 : <a class="el" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4">Visualizer</a>
@@ -171,13 +186,23 @@ $(function() {
 : <a class="el" href="classhelios_1_1_context.html#ac77adbb252eaf407a102614928bdb4e0">helios::Context</a>
 </li>
 <li>cordon_height
-: <a class="el" href="struct_grapevine_canopy_parameters.html#a90a0f4efdb9c1f4d696e118ba8986fed">GrapevineCanopyParameters</a>
+: <a class="el" href="struct_goblet_grapevine_parameters.html#aef1d6a2943225e611583401b430638f4">GobletGrapevineParameters</a>
+, <a class="el" href="struct_split_grapevine_parameters.html#a9882c13b4c624e4230c6c90439ff5197">SplitGrapevineParameters</a>
+, <a class="el" href="struct_unilateral_grapevine_parameters.html#a9d5b22655b461f4674267a408d5617ff">UnilateralGrapevineParameters</a>
+, <a class="el" href="struct_v_s_p_grapevine_parameters.html#a211fd722df7cb282528887b014aea03c">VSPGrapevineParameters</a>
 </li>
 <li>cordon_radius
-: <a class="el" href="struct_grapevine_canopy_parameters.html#a1aa07a98a9d754b05300785358905207">GrapevineCanopyParameters</a>
+: <a class="el" href="struct_goblet_grapevine_parameters.html#a0f96eff96e78879a2609e7f05eaa58e5">GobletGrapevineParameters</a>
+, <a class="el" href="struct_split_grapevine_parameters.html#af72cf718828d5cddc4c35bf3f0619a0a">SplitGrapevineParameters</a>
+, <a class="el" href="struct_unilateral_grapevine_parameters.html#afc30bd6b71abeb87ae977081cd2f1e5e">UnilateralGrapevineParameters</a>
+, <a class="el" href="struct_v_s_p_grapevine_parameters.html#aa55fefcdc0be07885ea6a390e614b491">VSPGrapevineParameters</a>
+</li>
+<li>cordon_spacing
+: <a class="el" href="struct_split_grapevine_parameters.html#a6d65cd7d6a101ce083020c08f7237dcb">SplitGrapevineParameters</a>
 </li>
 <li>crown_radius
 : <a class="el" href="struct_spherical_crowns_canopy_parameters.html#abee7f26557098103dbce8cf7cd18af33">SphericalCrownsCanopyParameters</a>
+, <a class="el" href="struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592">WhiteSpruceCanopyParameters</a>
 </li>
 <li>Ctable
 : <a class="el" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194b">Visualizer</a>

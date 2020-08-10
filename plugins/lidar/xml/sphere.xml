@@ -3,28 +3,28 @@
 <helios>
 
 <scan>
-  <filename> ../data/sphere_scan0.xyz </filename>
+  <filename> plugins/lidar/data/sphere_scan0.xyz </filename>
   <ASCII_format > row column x y z r g b reflectance </ASCII_format>
   <origin> -2.000000 0.000000 0.500000 </origin>
   <size> 100 200 </size>
 </scan>
 
 <scan>
-  <filename> ../data/sphere_scan1.xyz </filename>
+  <filename> plugins/lidar/data/sphere_scan1.xyz </filename>
   <ASCII_format > row column x y z r g b reflectance </ASCII_format>
   <origin> 0.000000 -2.000000 0.500000 </origin>
   <size> 100 200 </size>
 </scan>
 
 <scan>
-  <filename> ../data/sphere_scan2.xyz </filename>
+  <filename> plugins/lidar/data/sphere_scan2.xyz </filename>
   <ASCII_format > row column x y z r g b reflectance </ASCII_format>
   <origin> 2.000000 0.000000 0.500000 </origin>
   <size> 100 200 </size>
 </scan>
 
 <scan>
-  <filename> ../data/sphere_scan3.xyz </filename>
+  <filename> plugins/lidar/data/sphere_scan3.xyz </filename>
   <ASCII_format > row column x y z r g b reflectance </ASCII_format>
   <origin> 0.000000 2.000000 0.500000 </origin>
   <size> 100 200 </size>

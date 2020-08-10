@@ -419,7 +419,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   glDrawBuffer(GL_NONE); // No color buffer is drawn to.
 
   // Always check that our framebuffer is ok
-  int max_checks=100000;
+  int max_checks=10000;
   int checks = 0;
   while( glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks<max_checks ){
     checks++;
@@ -2924,7 +2924,8 @@ void Visualizer::plotInteractive( void ){
 
   //Watermark
   if( isWatermarkVisible ){
-    addRectangleByCenter( make_vec3(0.15,0.95f,0), make_vec2(0.2389,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
+    float hratio = float(Wdisplay)/(Hdisplay); 
+    addRectangleByCenter( make_vec3(0.15,0.95f,0), make_vec2(0.2389/0.8/hratio,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
   }
 
   setupPlot();
@@ -3188,7 +3189,8 @@ void Visualizer::plotUpdate( void ){
 
   //Watermark
   if( isWatermarkVisible ){
-    addRectangleByCenter( make_vec3(0.15,0.95f,0), make_vec2(0.2389,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
+    float hratio = float(Wdisplay)/(Hdisplay); 
+    addRectangleByCenter( make_vec3(0.15,0.95f,0), make_vec2(0.2389/0.8/hratio,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
   }
 
   setupPlot();

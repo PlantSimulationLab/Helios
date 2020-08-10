@@ -30,6 +30,8 @@ struct PerRayData
   float area;
   //! Seed for curand random number generator
   uint seed;
+  //! Number of periodic boundary intersections for ray
+  unsigned char periodic_depth;
 
 };
 

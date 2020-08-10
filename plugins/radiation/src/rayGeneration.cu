@@ -308,6 +308,7 @@ RT_PROGRAM void direct_raygen()
     optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, direct_ray_type, 1e-4, ray_magnitude);
 
     prd.origin_UUID = UUID;
+    prd.periodic_depth = 0;
 
     if( dot( ray_direction, normal )>0 ){
       prd.face = 1;
@@ -564,6 +565,7 @@ RT_PROGRAM void diffuse_raygen(){
     prd.area = 0.1;
     prd.origin_UUID = UUID;
     prd.face = 0;
+    prd.periodic_depth = 0;
 
     ray_origin = d_transformPoint(m,sp);
 
@@ -587,6 +589,7 @@ RT_PROGRAM void diffuse_raygen(){
     
     prd.area = area;
     prd.origin_UUID = UUID;
+    prd.periodic_depth = 0;
 
     // ---- "top" surface launch -------
     ray_origin = d_transformPoint(m,sp);

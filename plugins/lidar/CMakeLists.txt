@@ -38,4 +38,5 @@ add_dependencies( lidar visualizer )
 set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_SOURCE_DIR}/lib/s_hull_pro;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
 
 file( COPY xml DESTINATION ${CMAKE_BINARY_DIR}/plugins/lidar/ )
+file( COPY data DESTINATION ${CMAKE_BINARY_DIR}/plugins/lidar/ )
 

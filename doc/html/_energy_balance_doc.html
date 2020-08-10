@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.3</span>
+   &#160;<span id="projectnumber">v1.1.5</span>
    </div>
   </td>
  </tr>
@@ -134,41 +134,41 @@ Introduction</h1>
 <p>This model plugin calculates a local energy balance for every primitive, and ultimately predics sensible, latent, and longwave fluxes as well as surface temperature. The energy balance equation is solved in parallel on the GPU to accelerate calculations.</p>
 <p>The model is solving the steady-state budget between absorbed radiation, emitted radiation, sensible heat exchange, and latent heat exchange, which is written as</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[ R-\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+Q_{other}\]" src="form_7.png" width="0" height="38"/>
+<img class="formulaDsp" alt="\[ R-\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+Q_{other}\]" src="form_8.png" width="435" height="38"/>
 </p>
 <p>Variables in this equation are listed in this table:</p>
 <table class="doxtable">
 <tr>
 <th>Variable (units)</th><th>Description </th></tr>
 <tr>
-<td><img class="formulaInl" alt="$R$" src="form_8.png" width="0" height="12"/> (W/m<sup>2</sup>)</td><td>Absorbed all-wave radiation flux (shortwave+longwave). </td></tr>
+<td><img class="formulaInl" alt="$R$" src="form_9.png" width="12" height="12"/> (W/m<sup>2</sup>)</td><td>Absorbed all-wave radiation flux (shortwave+longwave). </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$T_s$" src="form_9.png" width="0" height="14"/> (K)</td><td>Primitive surface temperature. </td></tr>
+<td><img class="formulaInl" alt="$T_s$" src="form_10.png" width="15" height="14"/> (K)</td><td>Primitive surface temperature. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$g_H$" src="form_10.png" width="0" height="11"/> (mol air/m<sup>2</sup>-s)</td><td>Conductance to heat from primitive surface to outside of boundary-layer. </td></tr>
+<td><img class="formulaInl" alt="$g_H$" src="form_11.png" width="20" height="11"/> (mol air/m<sup>2</sup>-s)</td><td>Conductance to heat from primitive surface to outside of boundary-layer. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$T_a$" src="form_11.png" width="0" height="14"/> (K)</td><td>Air temperature just outside primitive boundary-layer. </td></tr>
+<td><img class="formulaInl" alt="$T_a$" src="form_12.png" width="17" height="14"/> (K)</td><td>Air temperature just outside primitive boundary-layer. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$g_M$" src="form_12.png" width="0" height="11"/> (mol air/m<sup>2</sup>-s)</td><td>Conductance to moisture from primitive surface to outside of boundary-layer. </td></tr>
+<td><img class="formulaInl" alt="$g_M$" src="form_13.png" width="21" height="11"/> (mol air/m<sup>2</sup>-s)</td><td>Conductance to moisture from primitive surface to outside of boundary-layer. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$e_s(T)$" src="form_13.png" width="0" height="17"/> (Pa)</td><td>Saturation vapor pressure at temperature T. Calculated from Tetens equation (see <a href="https://en.wikipedia.org/wiki/Tetens_equation">en.wikipedia.org/wiki/Tetens_equation</a>) </td></tr>
+<td><img class="formulaInl" alt="$e_s(T)$" src="form_14.png" width="35" height="17"/> (Pa)</td><td>Saturation vapor pressure at temperature T. Calculated from Tetens equation (see <a href="https://en.wikipedia.org/wiki/Tetens_equation">en.wikipedia.org/wiki/Tetens_equation</a>) </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$f_s$" src="form_14.png" width="0" height="15"/></td><td>Relative humidity of air at primitive surface. </td></tr>
+<td><img class="formulaInl" alt="$f_s$" src="form_15.png" width="12" height="15"/></td><td>Relative humidity of air at primitive surface. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$h$" src="form_15.png" width="0" height="12"/></td><td>Relative humidity of air outside of boundary-layer. </td></tr>
+<td><img class="formulaInl" alt="$h$" src="form_16.png" width="9" height="12"/></td><td>Relative humidity of air outside of boundary-layer. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$p_{atm}$" src="form_16.png" width="0" height="11"/> (Pa)</td><td>Atmospheric pressure. </td></tr>
+<td><img class="formulaInl" alt="$p_{atm}$" src="form_17.png" width="30" height="11"/> (Pa)</td><td>Atmospheric pressure. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$Q_{other}$" src="form_17.png" width="0" height="15"/> (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, or latent (e.g., storage). </td></tr>
+<td><img class="formulaInl" alt="$Q_{other}$" src="form_18.png" width="41" height="15"/> (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, or latent (e.g., storage). </td></tr>
 </table>
 <p>Constants are given by:</p>
 <table class="doxtable">
 <tr>
 <th>Constant (units) </th><th>Value </th><th>Description </th></tr>
 <tr>
-<td><img class="formulaInl" alt="$c_p$" src="form_18.png" width="0" height="12"/> (J/mol/K) </td><td>29.25 </td><td>Heat capacity of air. </td></tr>
+<td><img class="formulaInl" alt="$c_p$" src="form_19.png" width="12" height="12"/> (J/mol/K) </td><td>29.25 </td><td>Heat capacity of air. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$\lambda$" src="form_19.png" width="0" height="12"/> (J/mol) </td><td>44,000 </td><td>Latent heat of vaporization of air. </td></tr>
+<td><img class="formulaInl" alt="$\lambda$" src="form_20.png" width="9" height="12"/> (J/mol) </td><td>44,000 </td><td>Latent heat of vaporization of air. </td></tr>
 </table>
 <h1><a class="anchor" id="EBConstructor"></a>
 EnergyBalanceModel Class Constructor</h1>
@@ -193,7 +193,7 @@ Input Primitive Data</h2>
 <tr>
 <td>object_length </td><td>m </td><td> <font face="courier" color="green">float</font> </td><td>Characteristic dimension of object formed by primitive. </td><td>N/A </td><td>Square root of primitive surface area </td></tr>
 <tr>
-<td>boundarylayer_conductance</td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Leaf boundary-layer conductance to heat. </td><td>N/A </td><td>Try calculating from model <img class="formulaInl" alt="$0.135\sqrt{\frac{U}{L}}$" src="form_20.png" width="0" height="29"/> </td></tr>
+<td>boundarylayer_conductance</td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Leaf boundary-layer conductance to heat. </td><td>N/A </td><td>Try calculating from model <img class="formulaInl" alt="$0.135\sqrt{\frac{U}{L}}$" src="form_21.png" width="63" height="29"/> </td></tr>
 <tr>
 <td>air_temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Ambient air temperature outside of surface boundary layer. </td><td>N/A </td><td>300 K </td></tr>
 <tr>
@@ -245,9 +245,9 @@ Input Radiative Bands</h2>
  energybalance.addRadiationBand("LW");</code></pre></div><h2><a class="anchor" id="EBblc"></a>
 Boundary-layer Conductance Model</h2>
 <p>The boundary-layer conductance is calculated as</p>
-<p><img class="formulaInl" alt="$g_H = 0.135\sqrt{\frac{U}{L}}$" src="form_21.png" width="0" height="29"/>,</p>
-<p>where <img class="formulaInl" alt="$U$" src="form_22.png" width="0" height="12"/> is the wind speed just outside of the primitive boundary-layer, and <img class="formulaInl" alt="$L$" src="form_23.png" width="0" height="12"/> is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, <img class="formulaInl" alt="$L$" src="form_23.png" width="0" height="12"/> could be assumed to be the length of the primitive. If the primitive was a triangle that forms the surface of a sphere, <img class="formulaInl" alt="$L$" src="form_23.png" width="0" height="12"/> could be assumed to be the diameter of the sphere.</p>
-<p>Users can override this model by directly providing a value for <img class="formulaInl" alt="$g_H$" src="form_10.png" width="0" height="11"/> by setting the value of primitive data labeled &lsquo;boundarylayer_conductance&rsquo;.</p>
+<p><img class="formulaInl" alt="$g_H = 0.135\sqrt{\frac{U}{L}}$" src="form_22.png" width="102" height="29"/>,</p>
+<p>where <img class="formulaInl" alt="$U$" src="form_23.png" width="12" height="12"/> is the wind speed just outside of the primitive boundary-layer, and <img class="formulaInl" alt="$L$" src="form_24.png" width="11" height="12"/> is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, <img class="formulaInl" alt="$L$" src="form_24.png" width="11" height="12"/> could be assumed to be the length of the primitive. If the primitive was a triangle that forms the surface of a sphere, <img class="formulaInl" alt="$L$" src="form_24.png" width="11" height="12"/> could be assumed to be the diameter of the sphere.</p>
+<p>Users can override this model by directly providing a value for <img class="formulaInl" alt="$g_H$" src="form_11.png" width="20" height="11"/> by setting the value of primitive data labeled &lsquo;boundarylayer_conductance&rsquo;.</p>
 <h2><a class="anchor" id="EBRun"></a>
 Running the Model</h2>
 <p>The model is run using the <a class="el" href="class_energy_balance_model.html#a63363c02792f13aa0056c1a30276c6ba">EnergyBalanceModel::run()</a> function, which will run the model for all primitives in the Context if no argument is give, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.</p>

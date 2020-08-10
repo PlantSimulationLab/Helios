@@ -1062,10 +1062,8 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
 
   const size_t Ntri = getTriangleCount();
 
-  std::vector<float> area_sum;
-  area_sum.resize(Ncells,0.f);
-  std::vector<float> sin_sum;
-  sin_sum.resize(Ncells,0.f);
+  std::vector<float> denom_sum;
+  denom_sum.resize(Ncells,0.f);
   std::vector<uint> cell_tri_count;
   cell_tri_count.resize(Ncells,0);
   
@@ -1104,8 +1102,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
 	
 	Gtheta.at(cell) += fabs(normal*raydir)*area*fabs(sin(theta));
       
-	area_sum.at(cell) += area;
-	sin_sum.at(cell) += fabs(sin(theta));
+	denom_sum.at(cell) += fabs(sin(theta))*area;
 	cell_tri_count.at(cell) += 1;
 
       }
@@ -1114,7 +1111,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
   }
   for( uint v=0; v<Ncells; v++ ){
     if( cell_tri_count[v]>0 ){
-      Gtheta[v] *= float(cell_tri_count[v])/(area_sum[v]*sin_sum[v]);
+      Gtheta[v] = Gtheta[v]/denom_sum[v];
       Gtheta_bar[v] += Gtheta[v]/float(Nscans);
     }
   }
