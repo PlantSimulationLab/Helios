@@ -403,10 +403,10 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   glBindTexture(GL_TEXTURE_2D, depthTexture);
   //glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 8192, 8192, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
   glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 16384, 16384, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
@@ -1115,43 +1115,43 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
   position_data.at(0) = v.at(0).x;
   position_data.at(1) = v.at(0).y;
   position_data.at(2) = v.at(0).z;
-  uv_data.at(0) = uvs.at(0).x*(texture_size.x);
-  uv_data.at(1) = uvs.at(0).y*(texture_size.y);
+  uv_data.at(0) = uvs.at(0).x*(texture_size.x-1);
+  uv_data.at(1) = uvs.at(0).y*(texture_size.y-1);
 
   //Lower right vertex
   position_data.at(3) = v.at(1).x;
   position_data.at(4) = v.at(1).y;
   position_data.at(5) = v.at(1).z;
-  uv_data.at(2) = uvs.at(1).x*(texture_size.x);
-  uv_data.at(3) = uvs.at(1).y*(texture_size.y);
+  uv_data.at(2) = uvs.at(1).x*(texture_size.x-1);
+  uv_data.at(3) = uvs.at(1).y*(texture_size.y-1);
 
   //Upper right vertex
   position_data.at(6) = v.at(2).x;
   position_data.at(7) = v.at(2).y;
   position_data.at(8) = v.at(2).z;
-  uv_data.at(4) = uvs.at(2).x*(texture_size.x);
-  uv_data.at(5) = uvs.at(2).y*(texture_size.y);
+  uv_data.at(4) = uvs.at(2).x*(texture_size.x-1);
+  uv_data.at(5) = uvs.at(2).y*(texture_size.y-1);
 
   //Lower left vertex
   position_data.at(9) = v.at(0).x;
   position_data.at(10) = v.at(0).y;
   position_data.at(11) = v.at(0).z;
-  uv_data.at(6) = uvs.at(0).x*(texture_size.x);
-  uv_data.at(7) = uvs.at(0).y*(texture_size.y);
+  uv_data.at(6) = uvs.at(0).x*(texture_size.x-1);
+  uv_data.at(7) = uvs.at(0).y*(texture_size.y-1);
 
   //Upper right vertex
   position_data.at(12) = v.at(2).x;
   position_data.at(13) = v.at(2).y;
   position_data.at(14) = v.at(2).z;
-  uv_data.at(8) = uvs.at(2).x*(texture_size.x);
-  uv_data.at(9) = uvs.at(2).y*(texture_size.y);
+  uv_data.at(8) = uvs.at(2).x*(texture_size.x-1);
+  uv_data.at(9) = uvs.at(2).y*(texture_size.y-1);
 
   //Upper left vertex
   position_data.at(15) = v.at(3).x;
   position_data.at(16) = v.at(3).y;
   position_data.at(17) = v.at(3).z;
-  uv_data.at(10) = uvs.at(3).x*(texture_size.x);
-  uv_data.at(11) = uvs.at(3).y*(texture_size.y);
+  uv_data.at(10) = uvs.at(3).x*(texture_size.x-1);
+  uv_data.at(11) = uvs.at(3).y*(texture_size.y-1);
 
   positionData["triangle"].insert( positionData["triangle"].end(), position_data.begin(), position_data.end() ); 
   colorData["triangle"].insert( colorData["triangle"].end(), color_data.begin(), color_data.end() ); 
@@ -1344,43 +1344,43 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
   position_data.at(0) = v.at(0).x;
   position_data.at(1) = v.at(0).y;
   position_data.at(2) = v.at(0).z;
-  uv_data.at(0) = uvs.at(0).x*(texture_size.x);
-  uv_data.at(1) = uvs.at(0).y*(texture_size.y);
+  uv_data.at(0) = uvs.at(0).x*(texture_size.x-1);
+  uv_data.at(1) = uvs.at(0).y*(texture_size.y-1);
 
   //Lower right vertex
   position_data.at(3) = v.at(1).x;
   position_data.at(4) = v.at(1).y;
   position_data.at(5) = v.at(1).z;
-  uv_data.at(2) = uvs.at(1).x*(texture_size.x);
-  uv_data.at(3) = uvs.at(1).y*(texture_size.y);
+  uv_data.at(2) = uvs.at(1).x*(texture_size.x-1);
+  uv_data.at(3) = uvs.at(1).y*(texture_size.y-1);
 
   //Upper right vertex
   position_data.at(6) = v.at(2).x;
   position_data.at(7) = v.at(2).y;
   position_data.at(8) = v.at(2).z;
-  uv_data.at(4) = uvs.at(2).x*(texture_size.x);
-  uv_data.at(5) = uvs.at(2).y*(texture_size.y);
+  uv_data.at(4) = uvs.at(2).x*(texture_size.x-1);
+  uv_data.at(5) = uvs.at(2).y*(texture_size.y-1);
 
   //Lower left vertex
   position_data.at(9) = v.at(0).x;
   position_data.at(10) = v.at(0).y;
   position_data.at(11) = v.at(0).z;
-  uv_data.at(6) = uvs.at(0).x*(texture_size.x);
-  uv_data.at(7) = uvs.at(0).y*(texture_size.y);
+  uv_data.at(6) = uvs.at(0).x*(texture_size.x-1);
+  uv_data.at(7) = uvs.at(0).y*(texture_size.y-1);
 
   //Upper right vertex
   position_data.at(12) = v.at(2).x;
   position_data.at(13) = v.at(2).y;
   position_data.at(14) = v.at(2).z;
-  uv_data.at(8) = uvs.at(2).x*(texture_size.x);
-  uv_data.at(9) = uvs.at(2).y*(texture_size.y);
+  uv_data.at(8) = uvs.at(2).x*(texture_size.x-1);
+  uv_data.at(9) = uvs.at(2).y*(texture_size.y-1);
 
   //Upper left vertex
   position_data.at(15) = v.at(3).x;
   position_data.at(16) = v.at(3).y;
   position_data.at(17) = v.at(3).z;
-  uv_data.at(10) = uvs.at(3).x*(texture_size.x);
-  uv_data.at(11) = uvs.at(3).y*(texture_size.y);
+  uv_data.at(10) = uvs.at(3).x*(texture_size.x-1);
+  uv_data.at(11) = uvs.at(3).y*(texture_size.y-1);
 
   positionData["triangle"].insert( positionData["triangle"].end(), position_data.begin(), position_data.end() ); 
   colorData["triangle"].insert( colorData["triangle"].end(), color_data.begin(), color_data.end() ); 
@@ -3699,11 +3699,11 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_RECTANGLE,textureID);
   glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RGBA, texture_size_POT.x, texture_size_POT.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_ptr);
-  // glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  // glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
+  
   textureMaps.push_back(textureID);
   textureSizes.push_back(texture_size);
   textureMapFiles.push_back(texture_file);
@@ -3717,6 +3717,10 @@ void Shader::enableTextureMaps( void ) const{
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
@@ -3754,8 +3758,8 @@ void Shader::setTextureMask( const Glyph* glyph, uint& textureID ){
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_RECTANGLE,textureID);
   glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RED, texture_size_POT.x, texture_size_POT.y, 0, GL_RED, GL_UNSIGNED_BYTE, texture_ptr);
-  //glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  //glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
  
@@ -3815,8 +3819,8 @@ void Shader::setTextureMask( const char* texture_file, uint& textureID, int2& te
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_RECTANGLE,textureID);
   glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RED, texture_size_POT.x, texture_size_POT.y, 0, GL_RED, GL_UNSIGNED_BYTE, texture_ptr);
-  //glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  //glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -3833,6 +3837,10 @@ void Shader::enableTextureMasks( void ) const{
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }

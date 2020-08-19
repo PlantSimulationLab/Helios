@@ -2197,6 +2197,204 @@ void Context::setPrimitiveData( const std::vector<uint> UUIDs, const char* label
   }
 }
 
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const int& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const uint& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const float& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const double& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::vec2& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::vec3& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::vec4& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::int2& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::int3& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::int4& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const std::string& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t i=0; i<UUIDs.at(p).size(); i++ ){
+      setPrimitiveData( UUIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const int& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const uint& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const float& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const double& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::vec2& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::vec3& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::vec4& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::int2& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::int3& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::int4& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const std::string& data ){
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    for( size_t j=0; j<UUIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<UUIDs.at(p).at(j).size(); i++ ){
+	setPrimitiveData( UUIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
 void Context::getPrimitiveData( const uint UUID, const char* label, int& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " out of range (only " << primitives.size() << " primitives in the context)." << std::endl;
@@ -3347,9 +3545,13 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const RGBAcolor& color ){
 
+  if( size.x==0 || size.y==0 ){
+    std::cerr << "ERROR (addPatch): Size of patch must be greater than 0." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  
   Patch* patch_new = (new Patch( color, currentUUID ));
 
-  assert( size.x>0.f && size.y>0.f );
   patch_new->scale( make_vec3(size.x,size.y,1) );
   
   if( rotation.elevation!=0 ){
@@ -3392,6 +3594,11 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 }
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation,const char* texture_file, const helios::vec2& uv_center, const helios::vec2& uv_size ){
+
+  if( size.x==0 || size.y==0 ){
+    std::cerr << "ERROR (addPatch): Size of patch must be greater than 0." << std::endl;
+    exit(EXIT_FAILURE);
+  }
 
   if( uv_center.x-0.5*uv_size.x<-1e-3 || uv_center.y-0.5*uv_size.y<-1e-3 || uv_center.x+0.5*uv_size.x-1.f>1e-3 || uv_center.y+0.5*uv_size.y-1.f>1e-3 ){
     std::cerr << "ERROR (addPatch): Invalid texture coordinates. uv_center-0.5*uv_size should be >=0 and uv_center+0.5*uv_size should be <=1." << std::endl;

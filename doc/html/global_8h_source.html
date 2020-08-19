@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.5</span>
+   &#160;<span id="projectnumber">v1.1.6</span>
    </div>
   </td>
  </tr>
@@ -296,10 +296,54 @@ $(function() {
 <div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160; </div>
 <div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160; std::vector&lt;std::vector&lt;bool&gt; &gt; readPNGAlpha( <span class="keyword">const</span> <span class="keywordtype">char</span>* filename );</div>
 <div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160; </div>
-<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160; </div>
-<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;}</div>
-<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160; </div>
-<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160; std::vector&lt;int&gt; flatten( std::vector&lt;std::vector&lt;int&gt; &gt; vec );</div>
+<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;  </div>
+<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160; std::vector&lt;uint&gt; flatten( std::vector&lt;std::vector&lt;uint&gt; &gt; vec );</div>
+<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160; </div>
+<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160; std::vector&lt;float&gt; flatten( std::vector&lt;std::vector&lt;float&gt; &gt; vec );</div>
+<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160; </div>
+<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160; std::vector&lt;double&gt; flatten( std::vector&lt;std::vector&lt;double&gt; &gt; vec );</div>
+<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160; </div>
+<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160; std::vector&lt;helios::vec2&gt; flatten( std::vector&lt;std::vector&lt;helios::vec2&gt; &gt; vec );</div>
+<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160; </div>
+<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160; std::vector&lt;helios::vec3&gt; flatten( std::vector&lt;std::vector&lt;helios::vec3&gt; &gt; vec );</div>
+<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160; </div>
+<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160; std::vector&lt;helios::vec4&gt; flatten( std::vector&lt;std::vector&lt;helios::vec4&gt; &gt; vec );</div>
+<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160; </div>
+<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160; std::vector&lt;helios::int2&gt; flatten( std::vector&lt;std::vector&lt;helios::int2&gt; &gt; vec );</div>
+<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160; </div>
+<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160; std::vector&lt;helios::int3&gt; flatten( std::vector&lt;std::vector&lt;helios::int3&gt; &gt; vec );</div>
+<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160; </div>
+<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160; std::vector&lt;helios::int4&gt; flatten( std::vector&lt;std::vector&lt;helios::int4&gt; &gt; vec );</div>
+<div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160; </div>
+<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160; std::vector&lt;std::string&gt; flatten( std::vector&lt;std::vector&lt;std::string&gt; &gt; vec );</div>
+<div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160; </div>
+<div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160; std::vector&lt;int&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;int&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160;  </div>
+<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160; std::vector&lt;uint&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;uint&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160; </div>
+<div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160; std::vector&lt;float&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;float&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160; </div>
+<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160; std::vector&lt;double&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;double&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160; </div>
+<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160; std::vector&lt;helios::vec2&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;helios::vec2&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160; </div>
+<div class="line"><a name="l00450"></a><span class="lineno">  450</span>&#160; std::vector&lt;helios::vec3&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;helios::vec3&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00451"></a><span class="lineno">  451</span>&#160; </div>
+<div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160; std::vector&lt;helios::vec4&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;helios::vec4&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160; </div>
+<div class="line"><a name="l00456"></a><span class="lineno">  456</span>&#160; std::vector&lt;helios::int2&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;helios::int2&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00457"></a><span class="lineno">  457</span>&#160; </div>
+<div class="line"><a name="l00459"></a><span class="lineno">  459</span>&#160; std::vector&lt;helios::int3&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;helios::int3&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00460"></a><span class="lineno">  460</span>&#160; </div>
+<div class="line"><a name="l00462"></a><span class="lineno">  462</span>&#160; std::vector&lt;helios::int4&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;helios::int4&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00463"></a><span class="lineno">  463</span>&#160; </div>
+<div class="line"><a name="l00465"></a><span class="lineno">  465</span>&#160; std::vector&lt;std::string&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;std::string&gt; &gt; &gt; vec );</div>
+<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160; </div>
+<div class="line"><a name="l00467"></a><span class="lineno">  467</span>&#160; </div>
+<div class="line"><a name="l00468"></a><span class="lineno">  468</span>&#160;}</div>
+<div class="line"><a name="l00469"></a><span class="lineno">  469</span>&#160; </div>
+<div class="line"><a name="l00470"></a><span class="lineno">  470</span>&#160;<span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 <div class="ttc" id="agroup__functions_html_ga6f0e7f437a6316c12190a5fbaf9bfa9c"><div class="ttname"><a href="group__functions.html#ga6f0e7f437a6316c12190a5fbaf9bfa9c">helios::deg2rad</a></div><div class="ttdeci">float deg2rad(const float &amp;deg)</div><div class="ttdoc">Convert degrees to radians.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00604">global.cpp:604</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a5bbf8999d270fd46ea20bbd7a3c8f4aa"><div class="ttname"><a href="global_8h.html#a5bbf8999d270fd46ea20bbd7a3c8f4aa">helios::lineIntersection</a></div><div class="ttdeci">bool lineIntersection(const helios::vec2 p1, const helios::vec2 q1, const helios::vec2 p2, const helios::vec2 q2)</div><div class="ttdoc">Determine if two line segments intersect. The lines segments are defined by vertices (p1,...</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00210">global.cpp:210</a></div></div>

@@ -1249,6 +1249,200 @@ public:
   */
   void setPrimitiveData( const std::vector<uint> UUIDs, const char* label, HeliosDataType type, uint size, void* data );
 
+  //! Add data value (int) associated with a primitive element
+  /** 
+      \param[in] "UUIDs" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const int& data );
+  
+  //! Add data value (uint) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const uint& data );
+  
+  //! Add data value (float) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const float& data );
+  
+  //! Add data value (double) associated with a primitive element
+  /** 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const double& data );
+  
+  //! Add data value (vec2) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::vec2& data );
+  
+  //! Add data value (vec3) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::vec3& data );
+  
+  //! Add data value (vec4) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::vec4& data );
+  
+  //! Add data value (int2) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::int2& data );
+  
+  //! Add data value (int3) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::int3& data );
+  
+  //! Add data value (int4) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const helios::int4& data );
+  
+  //! Add data value (string) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, const std::string& data );
+  
+  //! Add data associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "type" Helios data type of primitive data (see \ref HeliosDataType)
+      \param[in] "size" Number of data elements
+      \param[in] "data" Pointer to primitive data
+  */
+  void setPrimitiveData( const std::vector<std::vector<uint> > UUIDs, const char* label, HeliosDataType type, uint size, void* data );
+
+  //! Add data value (int) associated with a primitive element
+  /** 
+      \param[in] "UUIDs" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const int& data );
+  
+  //! Add data value (uint) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const uint& data );
+  
+  //! Add data value (float) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const float& data );
+  
+  //! Add data value (double) associated with a primitive element
+  /** 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const double& data );
+  
+  //! Add data value (vec2) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::vec2& data );
+  
+  //! Add data value (vec3) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::vec3& data );
+  
+  //! Add data value (vec4) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::vec4& data );
+  
+  //! Add data value (int2) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::int2& data );
+  
+  //! Add data value (int3) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::int3& data );
+  
+  //! Add data value (int4) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const helios::int4& data );
+  
+  //! Add data value (string) associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Primitive data value (scalar)
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, const std::string& data );
+  
+  //! Add data associated with a primitive element
+  /** 
+      \param[in] "UUID" Vector of unique universal identifiers of Primitive elements 
+      \param[in] "label" Name/label associated with data
+      \param[in] "type" Helios data type of primitive data (see \ref HeliosDataType)
+      \param[in] "size" Number of data elements
+      \param[in] "data" Pointer to primitive data
+  */
+  void setPrimitiveData( const std::vector<std::vector<std::vector<uint> > > UUIDs, const char* label, HeliosDataType type, uint size, void* data );
+
   //! Get data associated with a primitive element
   /** 
       \param[in] "UUID" Unique universal identifier of Primitive element 

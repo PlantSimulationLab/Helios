@@ -219,7 +219,7 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
 	
       }
 
-      rad_pshoot.back()=0.01f;
+      rad_pshoot.back()=0.0f;
 
       std::vector<vec3> tmp;
       tmp.resize(pos_pshoot.size());
@@ -510,7 +510,7 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
 	
       }
 
-      rad_pshoot.back()=0.01f;
+      rad_pshoot.back()=0.0f;
 
       std::vector<vec3> tmp;
       tmp.resize(pos_pshoot.size());
@@ -696,7 +696,7 @@ void CanopyGenerator::grapevineUnilateral( const UnilateralGrapevineParameters p
 	
     }
 
-    rad_pshoot.back()=0.01f;
+    rad_pshoot.back()=0.0f;
 
     std::vector<vec3> tmp;
     tmp.resize(pos_pshoot.size());
@@ -837,7 +837,7 @@ void CanopyGenerator::grapevineGoblet( const GobletGrapevineParameters params, c
 	
       }
 
-      rad_pshoot.back()=0.01f;
+      rad_pshoot.back()=0.0f;
 
       std::vector<vec3> tmp;
       tmp.resize(pos_pshoot.size());

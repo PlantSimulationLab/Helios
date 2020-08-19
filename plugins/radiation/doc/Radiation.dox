@@ -169,7 +169,7 @@
  Radiative properties (reflectivity, transmissivity, emissivity) are defined for each band each primitive.  Their values are set via primitive data (see also Input Primitive Data table above, and \ref helios::Context::setPrimitiveData() "setPrimitiveData()"):  
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> \c// Initialize the Context
+ <pre><code>  \c// Initialize the Context
   Context context;
 
   \c// Add 'Patch' primitive
@@ -185,6 +185,8 @@
 
  Note that absorptivity is not directly set, rather it is calculated as \f$1-\rho-\tau\f$.  If \f$1-\rho-\tau\f$ is calculated to be negative, an error is thrown.
 
+ If radiative properties are changed from default vaules, the number of scattering iterations needs to be increased from the default value of 0 (see \ref RadScatter). If radiative properties are changed, but the number of scattering iterations is set to the default value of 0, the modified radiative property values are overridden and set back to their default values (black surface).
+
  \subsection RadEmission Radiative Emission
 
  By default, radiation emission calculations are performed for each band.  Each primitive emits radiation with a flux of \f$\varepsilon \sigma T^4\f$, where \f$\varepsilon\f$ is the primitive's emissivity, \f$\sigma=5.67\times 10^{-8}\,W/m^2/K^4\f$ is the Steffan Boltzmann constant, and \f$T\f$ is the primitive's surface temperature in Kelvin.  By default, it is assumed that \f$\varepsilon=1\f$, unless primitive data exists that defines the emissivity.  By default, it is also assumed that \f$T=300K\f$, unless the primitive data 'temperature' exists in the Context whose value defines the temperature.
@@ -192,7 +194,15 @@
  Emission can be disabled for the band by caling the \ref RadiationModel::disableEmission() "disableEmission()" function.  For example, for the photosynthetically active (PAR) band, terrestrial objects do not emit radiation (i.e., \f$\varepsilon\approx 0\f$) and thus rather than setting a zero emissivity for this band for all primitives, it is desirable to simply disable radiation emission for this band:
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code>radiationmodel.disableEmission( "PAR" ); //Disable emission for the 'PAR' band</code></pre></div>
+   <pre><code> radiationmodel.disableEmission( "PAR" ); //Disable emission for the 'PAR' band</code></pre></div>
+
+ The surface emissivity can be changed similarly as was shown above for the reflectivity and transmissivity:
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+   <pre><code> float eps = 0.9; //emissivity value
+ context.setPrimitiveData( UUID, "emissivity_LW", eps);</code></pre></div>
+
+ Note that you can also set the reflectivity and transmissivity for a band with emission. It is required that \f$\rho+\tau+\varepsilon=0\f$ in order to satisfy conservation of energy. If only the emissivity is set and reflectivity and transmissivity are left at their default values of 0, it is automatically assumed that \f$\rho=1-\varepsilon\f$ and \f$\tau=0\f$.
 
  \subsection RadSources External Radiation Sources
 
@@ -397,17 +407,16 @@ The spherical sun source is defined in a similar manner as the collimated radiat
 
   vis.buildContextGeometry( &context );
 
-  std::vector<float> total_flux;
   std::vector<uint> allUUIDs = context.getAllUUIDs();
   for( size_t p=0; p<allUUIDs.size(); p++ ){
       uint UUID = allUUIDs.at(p);
       float flux_SW, flux_LW;
       context.getPrimitiveData( UUID, "radiation_flux_SW", flux_SW );
       context.getPrimitiveData( UUID, "radiation_flux_LW", flux_LW );
-      total_flux.push_back( flux_SW + flux_LW );
+      context.setPrimitiveData( UUID, "total_flux", flux_SW + flux_LW );
   }
 	   
-  vis.colorContextPrimitivesByValue( total_flux );
+  vis.colorContextPrimitivesByData( "total_flux" );
   vis.enableColorbar();
 
   vis.plotInteractive();</code></pre></div>

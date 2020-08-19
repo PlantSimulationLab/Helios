@@ -1209,3 +1209,245 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
   return mask;
   
 }
+
+std::vector<int> helios::flatten( const std::vector<std::vector<int> > vec ){
+
+  std::vector<int> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<uint> helios::flatten( const std::vector<std::vector<uint> > vec ){
+
+  std::vector<uint> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<float> helios::flatten( const std::vector<std::vector<float> > vec ){
+
+  std::vector<float> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<double> helios::flatten( const std::vector<std::vector<double> > vec ){
+
+  std::vector<double> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<helios::vec2> > vec ){
+
+  std::vector<helios::vec2> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<helios::vec3> > vec ){
+
+  std::vector<helios::vec3> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<helios::vec4> > vec ){
+
+  std::vector<helios::vec4> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<helios::int2> helios::flatten( const std::vector<std::vector<helios::int2> > vec ){
+
+  std::vector<helios::int2> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<helios::int3> helios::flatten( const std::vector<std::vector<helios::int3> > vec ){
+
+  std::vector<helios::int3> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<helios::int4> helios::flatten( const std::vector<std::vector<helios::int4> > vec ){
+
+  std::vector<helios::int4> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<std::string> helios::flatten( const std::vector<std::vector<std::string> > vec ){
+
+  std::vector<std::string> flat;
+  for( size_t i=0; i<vec.size(); i++ ){
+    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
+  }
+  return flat;
+  
+}
+
+std::vector<int> helios::flatten( const std::vector<std::vector<std::vector<int> > > vec ){
+
+  std::vector<int> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}
+
+std::vector<uint> helios::flatten( const std::vector<std::vector<std::vector<uint> > > vec ){
+
+  std::vector<uint> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+ 
+}
+
+std::vector<float> helios::flatten( const std::vector<std::vector<std::vector<float> > > vec ){
+
+  std::vector<float> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}
+
+std::vector<double> helios::flatten( const std::vector<std::vector<std::vector<double> > > vec ){
+
+  std::vector<double> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}
+
+std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<std::vector<helios::vec2> > > vec ){
+
+  std::vector<helios::vec2> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}
+
+std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<std::vector<helios::vec3> > > vec ){
+
+  std::vector<helios::vec3> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}
+
+std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<std::vector<helios::vec4> > > vec ){
+
+  std::vector<helios::vec4> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}
+
+std::vector<helios::int2> helios::flatten( const std::vector<std::vector<std::vector<helios::int2> > > vec ){
+
+  std::vector<helios::int2> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}
+
+std::vector<helios::int3> helios::flatten( const std::vector<std::vector<std::vector<helios::int3> > > vec ){
+
+  std::vector<helios::int3> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}
+
+std::vector<helios::int4> helios::flatten( const std::vector<std::vector<std::vector<helios::int4> > > vec ){
+
+  std::vector<helios::int4> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}
+
+std::vector<std::string> helios::flatten( const std::vector<std::vector<std::vector<std::string> > > vec ){
+
+  std::vector<std::string> flat;
+  for( size_t j=0; j<vec.size(); j++ ){
+    for( size_t i=0; i<vec.at(j).size(); i++ ){
+      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    }
+  }
+  return flat;
+  
+}

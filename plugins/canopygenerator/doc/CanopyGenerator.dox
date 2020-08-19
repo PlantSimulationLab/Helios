@@ -258,6 +258,41 @@
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>	
 
+ \section CGenBuildGround Building the Ground
+
+ The CanopyGenerator plug-in provides a function to easily build a ground surface comprised of many textured patches. The resolution of each textured patch can also be increased by tiling it with sub-patches.
+
+ \image html ground_mapping.jpeg "Example ground surface. Each black box is mapped to a single texture map, which is sub-divided into 3x3 sub-patches (gray boxes)."
+
+ Example code is given below:
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  #include "Context.h"
+  #include "CanopyGenerator.h"
+
+  int main( void ){
+
+     %Context context;
+
+     %CanopyGenerator canopygenerator(&context);
+
+     \c//Variable defining the center of the ground
+     vec3 origin(0,0,0);
+
+     \c//Variable defining the horizontal extent of the ground
+     vec2 extent(10,10);
+
+     \c//Variable defining the number of texture tiles for the ground
+     int2 Ntiles(3,2);
+
+     \c//Variable defining the number of sub-patches per texture tile
+     int2 subpatches(3,3);
+
+     \c//Add the ground geometry to the Context
+     canopygenerator.buildGround( origin, extent, Ntiles, subpatches, "plugins/canopygenerator/textures/dirt.jpg" );
+
+   }</code></pre></div>
+
  \section CGenBuildPlant Building an Individual Plant
 
  Maximum flexibility in creating a canopy of plants is achieved by manually adding each individual plant. An example is given below to add a single grapevine plant on VSP trellis at the point (0,0,0).
@@ -310,9 +345,9 @@
 
    }</code></pre></div>
 
- \subsection CGenUUIDs Retrieving UUIDs for Primitives
+ \section CGenUUIDs Retrieving UUIDs for Primitives
 
- The UUIDs of primitives making up the canopy geometry are grouped into four different types of elements: trunks, branches/shoots, leaves, and fruit. Not all canopy types will have all four groups of elements, for example the homogeneous canopy has no trunks, branches, or fruit. The UUIDs can be retrieved for a given plant using the appropriate getter function, as detailed in the table below.
+ The UUIDs of primitives making up the canopy geometry are grouped into four different types of elements: trunks, branches/shoots, leaves, and fruit. Not all canopy types will have all four groups of elements, for example the homogeneous canopy has no trunks, branches, or fruit. The UUIDs can be retrieved for a given plant using the appropriate getter function, as detailed in the table below. Additionally, UUIDs can be retrieved for the ground surface.
 
  UUIDs of some element types are grouped by multiple levels of organization. For example, leaves are grouped by each individual leaf, which may be further subdivided into patches or triangles. In many cases, leaves may not have any subdivisions (as set within the parameters structure), and thus the size of the second index in the leaf UUIDs vector is equal to 1. If you try to index the leaf UUID vector at a value greater than 0, you will get an out of bounds error.
 
@@ -320,11 +355,14 @@
 
  <table>
  <tr><th>Element Type</th><th>Getter Function</th><th>Data Type</th><th>First Index</th><th>Second Index</th><th>Third Index</th></tr>
- <tr><td>Trunk</td><td>\ref CanopyGenerator::getTrunkUUIDs()</td><td>\htmlonly<font face="courier" color="green">std::vector&ltuint&gt</font>\endhtmlonly</td><td>Triangles within trunk tube</td><td>N/A</td><td>N/A</td></tr>
- <tr><td>Branches/Shoots</td><td>\ref CanopyGenerator::getBranchUUIDs()</td><td>\htmlonly<font face="courier" color="green">std::vector&ltuint&gt</font>\endhtmlonly</td><td>Triangles within branch/shoot tubes</td><td>N/A</td><td>N/A</td></tr>
- <tr><td>Leaves</td><td>\ref CanopyGenerator::getLeafUUIDs()</td><td>\htmlonly<font face="courier" color="green">std::vector&ltstd::vector&ltuint&gt &gt</font>\endhtmlonly</td><td>Leaves within plant</td><td>Sub-divisions within leaf (if applicable)</td><td>N/A</td></tr>
- <tr><td>Fruit</td><td>\ref CanopyGenerator::getFruitUUIDs()</td><td>\htmlonly<font face="courier" color="green">std::vector&ltstd::vector&ltstd::vector&ltuint&gt &gt &gt</font>\endhtmlonly</td><td>Fruit clusters within plant (if applicable)</td><td>Individual fruit within cluster (if applicable)</td><td>Triangles within individual fruit</td></tr>
+ <tr><td>Ground</td><td>\ref CanopyGenerator::getGroundUUIDs()</td><td>\htmlonly<font face="courier" color="green">std::vector&ltuint&gt</font>\endhtmlonly</td><td>Patches within ground surface</td><td>N/A</td><td>N/A</td></tr>
+ <tr><td>Trunk</td><td>\ref CanopyGenerator::getTrunkUUIDs( uint PlantID )</td><td>\htmlonly<font face="courier" color="green">std::vector&ltuint&gt</font>\endhtmlonly</td><td>Triangles within trunk tube</td><td>N/A</td><td>N/A</td></tr>
+ <tr><td>Branches/Shoots</td><td>\ref CanopyGenerator::getBranchUUIDs( uint PlantID )</td><td>\htmlonly<font face="courier" color="green">std::vector&ltuint&gt</font>\endhtmlonly</td><td>Triangles within branch/shoot tubes</td><td>N/A</td><td>N/A</td></tr>
+ <tr><td>Leaves</td><td>\ref CanopyGenerator::getLeafUUIDs( uint PlantID )</td><td>\htmlonly<font face="courier" color="green">std::vector&ltstd::vector&ltuint&gt &gt</font>\endhtmlonly</td><td>Leaves within plant</td><td>Sub-divisions within leaf (if applicable)</td><td>N/A</td></tr>
+ <tr><td>Fruit</td><td>\ref CanopyGenerator::getFruitUUIDs( uint PlantID )</td><td>\htmlonly<font face="courier" color="green">std::vector&ltstd::vector&ltstd::vector&ltuint&gt &gt &gt</font>\endhtmlonly</td><td>Fruit clusters within plant (if applicable)</td><td>Individual fruit within cluster (if applicable)</td><td>Triangles within individual fruit</td></tr>
  </table>
+
+ Each plant in the canopy is given an integer identifier, which starts at 0 and increases in the order plants are added. The total number of plants in the canopy can be queried with the function \ref CanopyGenerator::getPlantCount().
 
  \section CGenParameterMod Modifying Geometric Parameters from Default Values
 

@@ -2615,9 +2615,16 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
       }
       
       if( emission_flag.at(band) ){ //emission enabled
-	if( eps[u]+tau[u]+rho[u]!=1.f && eps[u]>0.f ){
+	if( eps[u]!=1.f && rho[u]==0 && tau[u]==0 ){
+	  rho[u] = 1.f-eps[u];
+	}else if( eps[u]+tau[u]+rho[u]!=1.f && eps[u]>0.f ){
 	  std::cerr << "ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " << label << ", Primitive #" << p << ": eps=" << eps[u] << ", tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
 	  exit(EXIT_FAILURE);
+	}else if( scatteringDepth.at(band)==0 && eps[u]!=1.f  ){
+	  //std::cout << "WARNING (RadiationModel): emissivity must be 1 if the number of scattering iterations is set to 0" << std::endl;
+	  eps[u] = 1.f;
+	  rho[u] = 0.f;
+	  tau[u] = 0.f;
 	}
       }else if( tau[u]+rho[u]>1.f ){
       	std::cerr << "ERROR (RadiationModel): transmissivity and reflectivity cannot sum to greater than 1 ensure energy conservation. Band " << label << ", Primitive #" << p << ": tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
@@ -2794,7 +2801,10 @@ void RadiationModel::runBand( const char* label ){
   	sprintf(prop,"emissivity_%s",label);
   	for( size_t u=0; u<Nprimitives; u++ ){
 	  uint p = context_UUIDs.at(u);
-  	  context->getPrimitiveData(p,prop,eps);
+	  context->getPrimitiveData(p,prop,eps);
+	  if( scatteringDepth.at(band)==0 && eps!=1.f ){
+	    eps = 1.f;
+	  }
 	  if( context->doesPrimitiveDataExist(p,"temperature") ){
 	    context->getPrimitiveData(p,"temperature",temperature);
 	    if( temperature<=0 ){
@@ -3075,6 +3085,9 @@ void RadiationModel::runBand_MCRT( const char* label ){
     for( size_t u=0; u<Nprimitives; u++ ){
       uint p = context_UUIDs.at(u);
       context->getPrimitiveData(p,prop,eps);
+      if( scatteringDepth.at(band)==0 && eps!=1.f ){
+	eps = 1.f;
+      }
       if( context->doesPrimitiveDataExist(p,"temperature") ){
 	context->getPrimitiveData(p,"temperature",temperature);
 	if( temperature<=0 ){

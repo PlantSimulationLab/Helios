@@ -551,11 +551,9 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
     std::vector<uint> UUIDs;
     if( leaf_segs.x==1 && leaf_segs.y==1 ){
       UUIDs.push_back(context->addPatch( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), parameters.LeafFile.c_str() ));
-      //UUIDs.push_back(context->addPatch( make_vec3(0,0,0), make_vec2(parameters.LeafScale*parameters.LeafScaleX*scale, parameters.LeafScale*scale), make_SphericalCoord(0,0), parameters.LeafFile.c_str() ));
       UUID_leaf.back().push_back(UUIDs.front());
     }else{
       UUIDs = context->copyPrimitive( leaf_template );
-      //UUIDs = context->addTile( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), leaf_segs, parameters.LeafFile.c_str() );
       UUID_leaf.back().insert( UUID_leaf.back().end(), UUIDs.begin(), UUIDs.end() ); 
     }
       
@@ -567,15 +565,31 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
 	context->getPrimitivePointer(UUID)->rotate( rotation.azimuth, "z" );
 	context->getPrimitivePointer(UUID)->translate(position);
       }else{
-	context->getPrimitivePointer(UUID)->rotate( M_PI, "x" );
-	context->getPrimitivePointer(UUID)->rotate( M_PI-rotation.zenith-(0.5*M_PI-downangle), "y" );
+
+	context->getPrimitivePointer(UUID)->rotate( M_PI, "x" ); //flip leaf (this is so lighting looks right based on leaf normal)
+
+	//rotate leaf so the tip is pointing in the same direction as the branch
+	context->getPrimitivePointer(UUID)->rotate( 0.5*M_PI - rotation.zenith, "y" );
 	context->getPrimitivePointer(UUID)->rotate( -0.5*M_PI - rotation.azimuth, "z" );
+
+	vec3 lnorm = context->getPrimitivePointer(UUID)->getNormal(); // current leaf normal vector
+	vec3 pvec = cross( parent_normal, lnorm );
+
+	//rotate leaf based on downangle
+	if( downangle<0.f ){
+	  downangle = M_PI+downangle;
+	}
+	context->getPrimitivePointer(UUID)->rotate( -downangle, pvec );
+
+	//shift leaf perpendicular to the direction of the branch
+	vec3 offset = -0.6*parameters.LeafScale*scale*fabs(sinf(downangle))*lnorm;
 	
-	vec3 tvec( parent_normal.x, parent_normal.y, 0 );
-	tvec.normalize();
-	context->getPrimitivePointer(UUID)->translate( -0.55*parameters.LeafScale*tvec );
-     
+	context->getPrimitivePointer(UUID)->translate( offset );
+
+	//random azimuthal rotation about the branch
 	context->getPrimitivePointer(UUID)->rotate( phi, parent_normal );
+
+	//translate to the position of the branch
 	context->getPrimitivePointer(UUID)->translate(position);
 	
       }

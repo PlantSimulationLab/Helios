@@ -546,6 +546,9 @@ class CanopyGenerator{
   */
   std::vector<std::vector<std::vector<uint> > > getFruitUUIDs( const uint TreeID );
 
+  //! Get the unique universal identifiers (UUIDs) for the primitives that make up the ground
+  std::vector<uint> getGroundUUIDs();
+
   //! Get the unique universal identifiers (UUIDs) for all primitives that make up the tree
   /** \param[in] "TreeID" Identifer of tree.
   */

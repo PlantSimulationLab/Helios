@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.5</span>
+   &#160;<span id="projectnumber">v1.1.6</span>
    </div>
   </td>
  </tr>
@@ -460,10 +460,10 @@ $(function() {
 <div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;  glBindTexture(GL_TEXTURE_2D, depthTexture);</div>
 <div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;  <span class="comment">//glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 8192, 8192, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);</span></div>
 <div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;  glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 16384, 16384, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);</div>
-<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);</div>
-<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);</div>
-<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</span></div>
-<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</span></div>
+<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);</span></div>
+<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);</span></div>
+<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</div>
 <div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);</div>
 <div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);</div>
 <div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);</span></div>
@@ -1172,43 +1172,43 @@ $(function() {
 <div class="line"><a name="l01115"></a><span class="lineno"> 1115</span>&#160;  position_data.at(0) = v.at(0).x;</div>
 <div class="line"><a name="l01116"></a><span class="lineno"> 1116</span>&#160;  position_data.at(1) = v.at(0).y;</div>
 <div class="line"><a name="l01117"></a><span class="lineno"> 1117</span>&#160;  position_data.at(2) = v.at(0).z;</div>
-<div class="line"><a name="l01118"></a><span class="lineno"> 1118</span>&#160;  uv_data.at(0) = uvs.at(0).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01119"></a><span class="lineno"> 1119</span>&#160;  uv_data.at(1) = uvs.at(0).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01118"></a><span class="lineno"> 1118</span>&#160;  uv_data.at(0) = uvs.at(0).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01119"></a><span class="lineno"> 1119</span>&#160;  uv_data.at(1) = uvs.at(0).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01120"></a><span class="lineno"> 1120</span>&#160; </div>
 <div class="line"><a name="l01121"></a><span class="lineno"> 1121</span>&#160;  <span class="comment">//Lower right vertex</span></div>
 <div class="line"><a name="l01122"></a><span class="lineno"> 1122</span>&#160;  position_data.at(3) = v.at(1).x;</div>
 <div class="line"><a name="l01123"></a><span class="lineno"> 1123</span>&#160;  position_data.at(4) = v.at(1).y;</div>
 <div class="line"><a name="l01124"></a><span class="lineno"> 1124</span>&#160;  position_data.at(5) = v.at(1).z;</div>
-<div class="line"><a name="l01125"></a><span class="lineno"> 1125</span>&#160;  uv_data.at(2) = uvs.at(1).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01126"></a><span class="lineno"> 1126</span>&#160;  uv_data.at(3) = uvs.at(1).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01125"></a><span class="lineno"> 1125</span>&#160;  uv_data.at(2) = uvs.at(1).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01126"></a><span class="lineno"> 1126</span>&#160;  uv_data.at(3) = uvs.at(1).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01127"></a><span class="lineno"> 1127</span>&#160; </div>
 <div class="line"><a name="l01128"></a><span class="lineno"> 1128</span>&#160;  <span class="comment">//Upper right vertex</span></div>
 <div class="line"><a name="l01129"></a><span class="lineno"> 1129</span>&#160;  position_data.at(6) = v.at(2).x;</div>
 <div class="line"><a name="l01130"></a><span class="lineno"> 1130</span>&#160;  position_data.at(7) = v.at(2).y;</div>
 <div class="line"><a name="l01131"></a><span class="lineno"> 1131</span>&#160;  position_data.at(8) = v.at(2).z;</div>
-<div class="line"><a name="l01132"></a><span class="lineno"> 1132</span>&#160;  uv_data.at(4) = uvs.at(2).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01133"></a><span class="lineno"> 1133</span>&#160;  uv_data.at(5) = uvs.at(2).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01132"></a><span class="lineno"> 1132</span>&#160;  uv_data.at(4) = uvs.at(2).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01133"></a><span class="lineno"> 1133</span>&#160;  uv_data.at(5) = uvs.at(2).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01134"></a><span class="lineno"> 1134</span>&#160; </div>
 <div class="line"><a name="l01135"></a><span class="lineno"> 1135</span>&#160;  <span class="comment">//Lower left vertex</span></div>
 <div class="line"><a name="l01136"></a><span class="lineno"> 1136</span>&#160;  position_data.at(9) = v.at(0).x;</div>
 <div class="line"><a name="l01137"></a><span class="lineno"> 1137</span>&#160;  position_data.at(10) = v.at(0).y;</div>
 <div class="line"><a name="l01138"></a><span class="lineno"> 1138</span>&#160;  position_data.at(11) = v.at(0).z;</div>
-<div class="line"><a name="l01139"></a><span class="lineno"> 1139</span>&#160;  uv_data.at(6) = uvs.at(0).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01140"></a><span class="lineno"> 1140</span>&#160;  uv_data.at(7) = uvs.at(0).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01139"></a><span class="lineno"> 1139</span>&#160;  uv_data.at(6) = uvs.at(0).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01140"></a><span class="lineno"> 1140</span>&#160;  uv_data.at(7) = uvs.at(0).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01141"></a><span class="lineno"> 1141</span>&#160; </div>
 <div class="line"><a name="l01142"></a><span class="lineno"> 1142</span>&#160;  <span class="comment">//Upper right vertex</span></div>
 <div class="line"><a name="l01143"></a><span class="lineno"> 1143</span>&#160;  position_data.at(12) = v.at(2).x;</div>
 <div class="line"><a name="l01144"></a><span class="lineno"> 1144</span>&#160;  position_data.at(13) = v.at(2).y;</div>
 <div class="line"><a name="l01145"></a><span class="lineno"> 1145</span>&#160;  position_data.at(14) = v.at(2).z;</div>
-<div class="line"><a name="l01146"></a><span class="lineno"> 1146</span>&#160;  uv_data.at(8) = uvs.at(2).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01147"></a><span class="lineno"> 1147</span>&#160;  uv_data.at(9) = uvs.at(2).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01146"></a><span class="lineno"> 1146</span>&#160;  uv_data.at(8) = uvs.at(2).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01147"></a><span class="lineno"> 1147</span>&#160;  uv_data.at(9) = uvs.at(2).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01148"></a><span class="lineno"> 1148</span>&#160; </div>
 <div class="line"><a name="l01149"></a><span class="lineno"> 1149</span>&#160;  <span class="comment">//Upper left vertex</span></div>
 <div class="line"><a name="l01150"></a><span class="lineno"> 1150</span>&#160;  position_data.at(15) = v.at(3).x;</div>
 <div class="line"><a name="l01151"></a><span class="lineno"> 1151</span>&#160;  position_data.at(16) = v.at(3).y;</div>
 <div class="line"><a name="l01152"></a><span class="lineno"> 1152</span>&#160;  position_data.at(17) = v.at(3).z;</div>
-<div class="line"><a name="l01153"></a><span class="lineno"> 1153</span>&#160;  uv_data.at(10) = uvs.at(3).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01154"></a><span class="lineno"> 1154</span>&#160;  uv_data.at(11) = uvs.at(3).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01153"></a><span class="lineno"> 1153</span>&#160;  uv_data.at(10) = uvs.at(3).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01154"></a><span class="lineno"> 1154</span>&#160;  uv_data.at(11) = uvs.at(3).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01155"></a><span class="lineno"> 1155</span>&#160; </div>
 <div class="line"><a name="l01156"></a><span class="lineno"> 1156</span>&#160;  positionData[<span class="stringliteral">&quot;triangle&quot;</span>].insert( positionData[<span class="stringliteral">&quot;triangle&quot;</span>].end(), position_data.begin(), position_data.end() ); </div>
 <div class="line"><a name="l01157"></a><span class="lineno"> 1157</span>&#160;  colorData[<span class="stringliteral">&quot;triangle&quot;</span>].insert( colorData[<span class="stringliteral">&quot;triangle&quot;</span>].end(), color_data.begin(), color_data.end() ); </div>
@@ -1401,43 +1401,43 @@ $(function() {
 <div class="line"><a name="l01344"></a><span class="lineno"> 1344</span>&#160;  position_data.at(0) = v.at(0).x;</div>
 <div class="line"><a name="l01345"></a><span class="lineno"> 1345</span>&#160;  position_data.at(1) = v.at(0).y;</div>
 <div class="line"><a name="l01346"></a><span class="lineno"> 1346</span>&#160;  position_data.at(2) = v.at(0).z;</div>
-<div class="line"><a name="l01347"></a><span class="lineno"> 1347</span>&#160;  uv_data.at(0) = uvs.at(0).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01348"></a><span class="lineno"> 1348</span>&#160;  uv_data.at(1) = uvs.at(0).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01347"></a><span class="lineno"> 1347</span>&#160;  uv_data.at(0) = uvs.at(0).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01348"></a><span class="lineno"> 1348</span>&#160;  uv_data.at(1) = uvs.at(0).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01349"></a><span class="lineno"> 1349</span>&#160; </div>
 <div class="line"><a name="l01350"></a><span class="lineno"> 1350</span>&#160;  <span class="comment">//Lower right vertex</span></div>
 <div class="line"><a name="l01351"></a><span class="lineno"> 1351</span>&#160;  position_data.at(3) = v.at(1).x;</div>
 <div class="line"><a name="l01352"></a><span class="lineno"> 1352</span>&#160;  position_data.at(4) = v.at(1).y;</div>
 <div class="line"><a name="l01353"></a><span class="lineno"> 1353</span>&#160;  position_data.at(5) = v.at(1).z;</div>
-<div class="line"><a name="l01354"></a><span class="lineno"> 1354</span>&#160;  uv_data.at(2) = uvs.at(1).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01355"></a><span class="lineno"> 1355</span>&#160;  uv_data.at(3) = uvs.at(1).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01354"></a><span class="lineno"> 1354</span>&#160;  uv_data.at(2) = uvs.at(1).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01355"></a><span class="lineno"> 1355</span>&#160;  uv_data.at(3) = uvs.at(1).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01356"></a><span class="lineno"> 1356</span>&#160; </div>
 <div class="line"><a name="l01357"></a><span class="lineno"> 1357</span>&#160;  <span class="comment">//Upper right vertex</span></div>
 <div class="line"><a name="l01358"></a><span class="lineno"> 1358</span>&#160;  position_data.at(6) = v.at(2).x;</div>
 <div class="line"><a name="l01359"></a><span class="lineno"> 1359</span>&#160;  position_data.at(7) = v.at(2).y;</div>
 <div class="line"><a name="l01360"></a><span class="lineno"> 1360</span>&#160;  position_data.at(8) = v.at(2).z;</div>
-<div class="line"><a name="l01361"></a><span class="lineno"> 1361</span>&#160;  uv_data.at(4) = uvs.at(2).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01362"></a><span class="lineno"> 1362</span>&#160;  uv_data.at(5) = uvs.at(2).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01361"></a><span class="lineno"> 1361</span>&#160;  uv_data.at(4) = uvs.at(2).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01362"></a><span class="lineno"> 1362</span>&#160;  uv_data.at(5) = uvs.at(2).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01363"></a><span class="lineno"> 1363</span>&#160; </div>
 <div class="line"><a name="l01364"></a><span class="lineno"> 1364</span>&#160;  <span class="comment">//Lower left vertex</span></div>
 <div class="line"><a name="l01365"></a><span class="lineno"> 1365</span>&#160;  position_data.at(9) = v.at(0).x;</div>
 <div class="line"><a name="l01366"></a><span class="lineno"> 1366</span>&#160;  position_data.at(10) = v.at(0).y;</div>
 <div class="line"><a name="l01367"></a><span class="lineno"> 1367</span>&#160;  position_data.at(11) = v.at(0).z;</div>
-<div class="line"><a name="l01368"></a><span class="lineno"> 1368</span>&#160;  uv_data.at(6) = uvs.at(0).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01369"></a><span class="lineno"> 1369</span>&#160;  uv_data.at(7) = uvs.at(0).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01368"></a><span class="lineno"> 1368</span>&#160;  uv_data.at(6) = uvs.at(0).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01369"></a><span class="lineno"> 1369</span>&#160;  uv_data.at(7) = uvs.at(0).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01370"></a><span class="lineno"> 1370</span>&#160; </div>
 <div class="line"><a name="l01371"></a><span class="lineno"> 1371</span>&#160;  <span class="comment">//Upper right vertex</span></div>
 <div class="line"><a name="l01372"></a><span class="lineno"> 1372</span>&#160;  position_data.at(12) = v.at(2).x;</div>
 <div class="line"><a name="l01373"></a><span class="lineno"> 1373</span>&#160;  position_data.at(13) = v.at(2).y;</div>
 <div class="line"><a name="l01374"></a><span class="lineno"> 1374</span>&#160;  position_data.at(14) = v.at(2).z;</div>
-<div class="line"><a name="l01375"></a><span class="lineno"> 1375</span>&#160;  uv_data.at(8) = uvs.at(2).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01376"></a><span class="lineno"> 1376</span>&#160;  uv_data.at(9) = uvs.at(2).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01375"></a><span class="lineno"> 1375</span>&#160;  uv_data.at(8) = uvs.at(2).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01376"></a><span class="lineno"> 1376</span>&#160;  uv_data.at(9) = uvs.at(2).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01377"></a><span class="lineno"> 1377</span>&#160; </div>
 <div class="line"><a name="l01378"></a><span class="lineno"> 1378</span>&#160;  <span class="comment">//Upper left vertex</span></div>
 <div class="line"><a name="l01379"></a><span class="lineno"> 1379</span>&#160;  position_data.at(15) = v.at(3).x;</div>
 <div class="line"><a name="l01380"></a><span class="lineno"> 1380</span>&#160;  position_data.at(16) = v.at(3).y;</div>
 <div class="line"><a name="l01381"></a><span class="lineno"> 1381</span>&#160;  position_data.at(17) = v.at(3).z;</div>
-<div class="line"><a name="l01382"></a><span class="lineno"> 1382</span>&#160;  uv_data.at(10) = uvs.at(3).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>);</div>
-<div class="line"><a name="l01383"></a><span class="lineno"> 1383</span>&#160;  uv_data.at(11) = uvs.at(3).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>);</div>
+<div class="line"><a name="l01382"></a><span class="lineno"> 1382</span>&#160;  uv_data.at(10) = uvs.at(3).x*(texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>-1);</div>
+<div class="line"><a name="l01383"></a><span class="lineno"> 1383</span>&#160;  uv_data.at(11) = uvs.at(3).y*(texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>-1);</div>
 <div class="line"><a name="l01384"></a><span class="lineno"> 1384</span>&#160; </div>
 <div class="line"><a name="l01385"></a><span class="lineno"> 1385</span>&#160;  positionData[<span class="stringliteral">&quot;triangle&quot;</span>].insert( positionData[<span class="stringliteral">&quot;triangle&quot;</span>].end(), position_data.begin(), position_data.end() ); </div>
 <div class="line"><a name="l01386"></a><span class="lineno"> 1386</span>&#160;  colorData[<span class="stringliteral">&quot;triangle&quot;</span>].insert( colorData[<span class="stringliteral">&quot;triangle&quot;</span>].end(), color_data.begin(), color_data.end() ); </div>
@@ -3755,11 +3755,11 @@ $(function() {
 <div class="line"><a name="l03699"></a><span class="lineno"> 3699</span>&#160;  glActiveTexture(GL_TEXTURE0);</div>
 <div class="line"><a name="l03700"></a><span class="lineno"> 3700</span>&#160;  glBindTexture(GL_TEXTURE_RECTANGLE,textureID);</div>
 <div class="line"><a name="l03701"></a><span class="lineno"> 3701</span>&#160;  glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RGBA, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_ptr);</div>
-<div class="line"><a name="l03702"></a><span class="lineno"> 3702</span>&#160;  <span class="comment">// glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);</span></div>
-<div class="line"><a name="l03703"></a><span class="lineno"> 3703</span>&#160;  <span class="comment">// glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);</span></div>
+<div class="line"><a name="l03702"></a><span class="lineno"> 3702</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03703"></a><span class="lineno"> 3703</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</div>
 <div class="line"><a name="l03704"></a><span class="lineno"> 3704</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);</div>
 <div class="line"><a name="l03705"></a><span class="lineno"> 3705</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);</div>
-<div class="line"><a name="l03706"></a><span class="lineno"> 3706</span>&#160; </div>
+<div class="line"><a name="l03706"></a><span class="lineno"> 3706</span>&#160;  </div>
 <div class="line"><a name="l03707"></a><span class="lineno"> 3707</span>&#160;  textureMaps.push_back(textureID);</div>
 <div class="line"><a name="l03708"></a><span class="lineno"> 3708</span>&#160;  textureSizes.push_back(texture_size);</div>
 <div class="line"><a name="l03709"></a><span class="lineno"> 3709</span>&#160;  textureMapFiles.push_back(texture_file);</div>
@@ -3773,263 +3773,271 @@ $(function() {
 <div class="line"><a name="l03717"></a><span class="lineno"> 3717</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);</span></div>
 <div class="line"><a name="l03718"></a><span class="lineno"> 3718</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</div>
 <div class="line"><a name="l03719"></a><span class="lineno"> 3719</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</div>
-<div class="line"><a name="l03720"></a><span class="lineno"> 3720</span>&#160;  glEnable(GL_BLEND);</div>
-<div class="line"><a name="l03721"></a><span class="lineno"> 3721</span>&#160;  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);</div>
-<div class="line"><a name="l03722"></a><span class="lineno"> 3722</span>&#160;}</div>
-<div class="line"><a name="l03723"></a><span class="lineno"> 3723</span>&#160; </div>
-<div class="line"><a name="l03724"></a><span class="lineno"> 3724</span>&#160; </div>
-<div class="line"><a name="l03725"></a><span class="lineno"><a class="line" href="struct_shader.html#a7800ac33a9f3fdaefad983d6fe851fa7"> 3725</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a7800ac33a9f3fdaefad983d6fe851fa7">Shader::setTextureMask</a>( <span class="keyword">const</span> <a class="code" href="class_glyph.html">Glyph</a>* glyph, uint&amp; textureID ){</div>
-<div class="line"><a name="l03726"></a><span class="lineno"> 3726</span>&#160; </div>
-<div class="line"><a name="l03727"></a><span class="lineno"> 3727</span>&#160;  <a class="code" href="structhelios_1_1int2.html">int2</a> texture_size = glyph-&gt;size;</div>
+<div class="line"><a name="l03720"></a><span class="lineno"> 3720</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03721"></a><span class="lineno"> 3721</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03722"></a><span class="lineno"> 3722</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);</div>
+<div class="line"><a name="l03723"></a><span class="lineno"> 3723</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);</div>
+<div class="line"><a name="l03724"></a><span class="lineno"> 3724</span>&#160;  glEnable(GL_BLEND);</div>
+<div class="line"><a name="l03725"></a><span class="lineno"> 3725</span>&#160;  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);</div>
+<div class="line"><a name="l03726"></a><span class="lineno"> 3726</span>&#160;}</div>
+<div class="line"><a name="l03727"></a><span class="lineno"> 3727</span>&#160; </div>
 <div class="line"><a name="l03728"></a><span class="lineno"> 3728</span>&#160; </div>
-<div class="line"><a name="l03729"></a><span class="lineno"> 3729</span>&#160;   <span class="comment">//Check if this texture has already been added to the shader</span></div>
-<div class="line"><a name="l03730"></a><span class="lineno"> 3730</span>&#160;  <span class="keywordflow">for</span>( uint i=0; i&lt;textureMaskFiles.size(); i++ ){</div>
-<div class="line"><a name="l03731"></a><span class="lineno"> 3731</span>&#160;    <span class="keywordflow">if</span>( textureMaskFiles.at(i).compare(glyph-&gt;filename)==0 ){</div>
-<div class="line"><a name="l03732"></a><span class="lineno"> 3732</span>&#160;      textureID = textureMasks.at(i); <span class="comment">//copy the handle</span></div>
-<div class="line"><a name="l03733"></a><span class="lineno"> 3733</span>&#160;      <span class="keywordflow">return</span>;</div>
-<div class="line"><a name="l03734"></a><span class="lineno"> 3734</span>&#160;    }</div>
-<div class="line"><a name="l03735"></a><span class="lineno"> 3735</span>&#160;  }</div>
-<div class="line"><a name="l03736"></a><span class="lineno"> 3736</span>&#160; </div>
-<div class="line"><a name="l03737"></a><span class="lineno"> 3737</span>&#160;  <span class="comment">//OpenGL is a pain, so we need to pad the first dimension of the texture so that it size is a power of two</span></div>
-<div class="line"><a name="l03738"></a><span class="lineno"> 3738</span>&#160;  <span class="keywordtype">int</span> POT = 0;</div>
-<div class="line"><a name="l03739"></a><span class="lineno"> 3739</span>&#160;  <span class="keywordflow">while</span>( pow(2,POT)&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a> ){</div>
-<div class="line"><a name="l03740"></a><span class="lineno"> 3740</span>&#160;    POT++;</div>
-<div class="line"><a name="l03741"></a><span class="lineno"> 3741</span>&#160;  }</div>
-<div class="line"><a name="l03742"></a><span class="lineno"> 3742</span>&#160;  <a class="code" href="structhelios_1_1int2.html">int2</a> texture_size_POT = <a class="code" href="helios__vector__types_8h.html#a05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>( pow(2,POT), texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a> );</div>
-<div class="line"><a name="l03743"></a><span class="lineno"> 3743</span>&#160;  </div>
-<div class="line"><a name="l03744"></a><span class="lineno"> 3744</span>&#160;  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> texture[texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>*texture_size_POT.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>];</div>
-<div class="line"><a name="l03745"></a><span class="lineno"> 3745</span>&#160;  <span class="keywordflow">for</span>(<span class="keywordtype">int</span> j=0;j&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>;j++){</div>
-<div class="line"><a name="l03746"></a><span class="lineno"> 3746</span>&#160;    <span class="keywordflow">for</span>(<span class="keywordtype">int</span> i=0;i&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>;i++){</div>
-<div class="line"><a name="l03747"></a><span class="lineno"> 3747</span>&#160;      texture[i+j*texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>]=glyph-&gt;data.at(j).at(i);</div>
-<div class="line"><a name="l03748"></a><span class="lineno"> 3748</span>&#160;    }</div>
-<div class="line"><a name="l03749"></a><span class="lineno"> 3749</span>&#160;  }</div>
-<div class="line"><a name="l03750"></a><span class="lineno"> 3750</span>&#160;  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* texture_ptr = texture;</div>
-<div class="line"><a name="l03751"></a><span class="lineno"> 3751</span>&#160;  </div>
-<div class="line"><a name="l03752"></a><span class="lineno"> 3752</span>&#160;  glGenTextures(1, &amp;textureID);</div>
-<div class="line"><a name="l03753"></a><span class="lineno"> 3753</span>&#160; </div>
-<div class="line"><a name="l03754"></a><span class="lineno"> 3754</span>&#160;  glActiveTexture(GL_TEXTURE0);</div>
-<div class="line"><a name="l03755"></a><span class="lineno"> 3755</span>&#160;  glBindTexture(GL_TEXTURE_RECTANGLE,textureID);</div>
-<div class="line"><a name="l03756"></a><span class="lineno"> 3756</span>&#160;  glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RED, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>, 0, GL_RED, GL_UNSIGNED_BYTE, texture_ptr);</div>
-<div class="line"><a name="l03757"></a><span class="lineno"> 3757</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);</span></div>
-<div class="line"><a name="l03758"></a><span class="lineno"> 3758</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);</span></div>
-<div class="line"><a name="l03759"></a><span class="lineno"> 3759</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);</div>
-<div class="line"><a name="l03760"></a><span class="lineno"> 3760</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);</div>
-<div class="line"><a name="l03761"></a><span class="lineno"> 3761</span>&#160; </div>
-<div class="line"><a name="l03762"></a><span class="lineno"> 3762</span>&#160;  <span class="keywordflow">if</span>( strlen(glyph-&gt;filename)&gt;0 ){</div>
-<div class="line"><a name="l03763"></a><span class="lineno"> 3763</span>&#160;    textureMasks.push_back(textureID);</div>
-<div class="line"><a name="l03764"></a><span class="lineno"> 3764</span>&#160;    textureMaskFiles.push_back(glyph-&gt;filename);</div>
-<div class="line"><a name="l03765"></a><span class="lineno"> 3765</span>&#160;  }    </div>
-<div class="line"><a name="l03766"></a><span class="lineno"> 3766</span>&#160; </div>
-<div class="line"><a name="l03767"></a><span class="lineno"> 3767</span>&#160;}</div>
-<div class="line"><a name="l03768"></a><span class="lineno"> 3768</span>&#160; </div>
-<div class="line"><a name="l03769"></a><span class="lineno"><a class="line" href="struct_shader.html#acabe2ce63e1a7fc5773803e3174de7ac"> 3769</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a7800ac33a9f3fdaefad983d6fe851fa7">Shader::setTextureMask</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* texture_file, uint&amp; textureID, <a class="code" href="structhelios_1_1int2.html">int2</a>&amp; texture_size ){</div>
+<div class="line"><a name="l03729"></a><span class="lineno"><a class="line" href="struct_shader.html#a7800ac33a9f3fdaefad983d6fe851fa7"> 3729</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a7800ac33a9f3fdaefad983d6fe851fa7">Shader::setTextureMask</a>( <span class="keyword">const</span> <a class="code" href="class_glyph.html">Glyph</a>* glyph, uint&amp; textureID ){</div>
+<div class="line"><a name="l03730"></a><span class="lineno"> 3730</span>&#160; </div>
+<div class="line"><a name="l03731"></a><span class="lineno"> 3731</span>&#160;  <a class="code" href="structhelios_1_1int2.html">int2</a> texture_size = glyph-&gt;size;</div>
+<div class="line"><a name="l03732"></a><span class="lineno"> 3732</span>&#160; </div>
+<div class="line"><a name="l03733"></a><span class="lineno"> 3733</span>&#160;   <span class="comment">//Check if this texture has already been added to the shader</span></div>
+<div class="line"><a name="l03734"></a><span class="lineno"> 3734</span>&#160;  <span class="keywordflow">for</span>( uint i=0; i&lt;textureMaskFiles.size(); i++ ){</div>
+<div class="line"><a name="l03735"></a><span class="lineno"> 3735</span>&#160;    <span class="keywordflow">if</span>( textureMaskFiles.at(i).compare(glyph-&gt;filename)==0 ){</div>
+<div class="line"><a name="l03736"></a><span class="lineno"> 3736</span>&#160;      textureID = textureMasks.at(i); <span class="comment">//copy the handle</span></div>
+<div class="line"><a name="l03737"></a><span class="lineno"> 3737</span>&#160;      <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l03738"></a><span class="lineno"> 3738</span>&#160;    }</div>
+<div class="line"><a name="l03739"></a><span class="lineno"> 3739</span>&#160;  }</div>
+<div class="line"><a name="l03740"></a><span class="lineno"> 3740</span>&#160; </div>
+<div class="line"><a name="l03741"></a><span class="lineno"> 3741</span>&#160;  <span class="comment">//OpenGL is a pain, so we need to pad the first dimension of the texture so that it size is a power of two</span></div>
+<div class="line"><a name="l03742"></a><span class="lineno"> 3742</span>&#160;  <span class="keywordtype">int</span> POT = 0;</div>
+<div class="line"><a name="l03743"></a><span class="lineno"> 3743</span>&#160;  <span class="keywordflow">while</span>( pow(2,POT)&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a> ){</div>
+<div class="line"><a name="l03744"></a><span class="lineno"> 3744</span>&#160;    POT++;</div>
+<div class="line"><a name="l03745"></a><span class="lineno"> 3745</span>&#160;  }</div>
+<div class="line"><a name="l03746"></a><span class="lineno"> 3746</span>&#160;  <a class="code" href="structhelios_1_1int2.html">int2</a> texture_size_POT = <a class="code" href="helios__vector__types_8h.html#a05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>( pow(2,POT), texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a> );</div>
+<div class="line"><a name="l03747"></a><span class="lineno"> 3747</span>&#160;  </div>
+<div class="line"><a name="l03748"></a><span class="lineno"> 3748</span>&#160;  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> texture[texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>*texture_size_POT.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>];</div>
+<div class="line"><a name="l03749"></a><span class="lineno"> 3749</span>&#160;  <span class="keywordflow">for</span>(<span class="keywordtype">int</span> j=0;j&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>;j++){</div>
+<div class="line"><a name="l03750"></a><span class="lineno"> 3750</span>&#160;    <span class="keywordflow">for</span>(<span class="keywordtype">int</span> i=0;i&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>;i++){</div>
+<div class="line"><a name="l03751"></a><span class="lineno"> 3751</span>&#160;      texture[i+j*texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>]=glyph-&gt;data.at(j).at(i);</div>
+<div class="line"><a name="l03752"></a><span class="lineno"> 3752</span>&#160;    }</div>
+<div class="line"><a name="l03753"></a><span class="lineno"> 3753</span>&#160;  }</div>
+<div class="line"><a name="l03754"></a><span class="lineno"> 3754</span>&#160;  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* texture_ptr = texture;</div>
+<div class="line"><a name="l03755"></a><span class="lineno"> 3755</span>&#160;  </div>
+<div class="line"><a name="l03756"></a><span class="lineno"> 3756</span>&#160;  glGenTextures(1, &amp;textureID);</div>
+<div class="line"><a name="l03757"></a><span class="lineno"> 3757</span>&#160; </div>
+<div class="line"><a name="l03758"></a><span class="lineno"> 3758</span>&#160;  glActiveTexture(GL_TEXTURE0);</div>
+<div class="line"><a name="l03759"></a><span class="lineno"> 3759</span>&#160;  glBindTexture(GL_TEXTURE_RECTANGLE,textureID);</div>
+<div class="line"><a name="l03760"></a><span class="lineno"> 3760</span>&#160;  glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RED, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>, 0, GL_RED, GL_UNSIGNED_BYTE, texture_ptr);</div>
+<div class="line"><a name="l03761"></a><span class="lineno"> 3761</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03762"></a><span class="lineno"> 3762</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03763"></a><span class="lineno"> 3763</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);</div>
+<div class="line"><a name="l03764"></a><span class="lineno"> 3764</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);</div>
+<div class="line"><a name="l03765"></a><span class="lineno"> 3765</span>&#160; </div>
+<div class="line"><a name="l03766"></a><span class="lineno"> 3766</span>&#160;  <span class="keywordflow">if</span>( strlen(glyph-&gt;filename)&gt;0 ){</div>
+<div class="line"><a name="l03767"></a><span class="lineno"> 3767</span>&#160;    textureMasks.push_back(textureID);</div>
+<div class="line"><a name="l03768"></a><span class="lineno"> 3768</span>&#160;    textureMaskFiles.push_back(glyph-&gt;filename);</div>
+<div class="line"><a name="l03769"></a><span class="lineno"> 3769</span>&#160;  }    </div>
 <div class="line"><a name="l03770"></a><span class="lineno"> 3770</span>&#160; </div>
-<div class="line"><a name="l03771"></a><span class="lineno"> 3771</span>&#160;  <span class="comment">//Check if this texture has already been added to the shader</span></div>
-<div class="line"><a name="l03772"></a><span class="lineno"> 3772</span>&#160;  <span class="comment">//Note: if the texture_file is empy, it will automatically load a new texture</span></div>
-<div class="line"><a name="l03773"></a><span class="lineno"> 3773</span>&#160;  <span class="keywordflow">for</span>( uint i=0; i&lt;textureMapFiles.size(); i++ ){</div>
-<div class="line"><a name="l03774"></a><span class="lineno"> 3774</span>&#160;    <span class="keywordflow">if</span>( textureMapFiles.at(i).compare(texture_file)==0 &amp;&amp; strlen(texture_file)&gt;0 ){</div>
-<div class="line"><a name="l03775"></a><span class="lineno"> 3775</span>&#160;      textureID = textureMaps.at(i); <span class="comment">//copy the handle</span></div>
-<div class="line"><a name="l03776"></a><span class="lineno"> 3776</span>&#160;      texture_size = textureSizes.at(i); <span class="comment">//copy the size</span></div>
-<div class="line"><a name="l03777"></a><span class="lineno"> 3777</span>&#160;      <span class="keywordflow">return</span>;</div>
-<div class="line"><a name="l03778"></a><span class="lineno"> 3778</span>&#160;    }</div>
-<div class="line"><a name="l03779"></a><span class="lineno"> 3779</span>&#160;  }</div>
-<div class="line"><a name="l03780"></a><span class="lineno"> 3780</span>&#160; </div>
-<div class="line"><a name="l03781"></a><span class="lineno"> 3781</span>&#160;  <span class="comment">//--- Load the Texture ----//</span></div>
-<div class="line"><a name="l03782"></a><span class="lineno"> 3782</span>&#160; </div>
-<div class="line"><a name="l03783"></a><span class="lineno"> 3783</span>&#160;  <span class="keywordtype">int</span> Nchannels=3;</div>
-<div class="line"><a name="l03784"></a><span class="lineno"> 3784</span>&#160;  std::vector&lt;unsigned char&gt; texture;</div>
-<div class="line"><a name="l03785"></a><span class="lineno"> 3785</span>&#160;  uint texture_height, texture_width;</div>
-<div class="line"><a name="l03786"></a><span class="lineno"> 3786</span>&#160;  std::string file = texture_file;</div>
-<div class="line"><a name="l03787"></a><span class="lineno"> 3787</span>&#160;  <span class="keywordflow">if</span>(file.substr(file.find_last_of(<span class="stringliteral">&quot;.&quot;</span>) + 1) == <span class="stringliteral">&quot;png&quot;</span>) {</div>
-<div class="line"><a name="l03788"></a><span class="lineno"> 3788</span>&#160;    <a class="code" href="_visualizer_8cpp.html#a0e60a86e54784ea9f2b178ce9540713f">read_png_file</a> (texture_file,texture,texture_height,texture_width);</div>
-<div class="line"><a name="l03789"></a><span class="lineno"> 3789</span>&#160;  }<span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l03790"></a><span class="lineno"> 3790</span>&#160;    std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: texture mask file &quot;</span> &lt;&lt; texture_file &lt;&lt; <span class="stringliteral">&quot; must be a PNG image.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a name="l03791"></a><span class="lineno"> 3791</span>&#160;  }</div>
-<div class="line"><a name="l03792"></a><span class="lineno"> 3792</span>&#160;  </div>
-<div class="line"><a name="l03793"></a><span class="lineno"> 3793</span>&#160;  texture_size = <a class="code" href="helios__vector__types_8h.html#a05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>( texture_width, texture_height );</div>
-<div class="line"><a name="l03794"></a><span class="lineno"> 3794</span>&#160; </div>
-<div class="line"><a name="l03795"></a><span class="lineno"> 3795</span>&#160;  <span class="comment">//Find next power of two up from size</span></div>
-<div class="line"><a name="l03796"></a><span class="lineno"> 3796</span>&#160;  <span class="keywordtype">int</span> POT = 0;</div>
-<div class="line"><a name="l03797"></a><span class="lineno"> 3797</span>&#160;  <span class="keywordflow">while</span>( pow(2,POT)&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a> ){</div>
-<div class="line"><a name="l03798"></a><span class="lineno"> 3798</span>&#160;    POT++;</div>
-<div class="line"><a name="l03799"></a><span class="lineno"> 3799</span>&#160;  }</div>
-<div class="line"><a name="l03800"></a><span class="lineno"> 3800</span>&#160;  <a class="code" href="structhelios_1_1int2.html">int2</a> texture_size_POT = <a class="code" href="helios__vector__types_8h.html#a05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>( <span class="keywordtype">int</span>(pow(2,POT)), texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a> );</div>
-<div class="line"><a name="l03801"></a><span class="lineno"> 3801</span>&#160; </div>
-<div class="line"><a name="l03802"></a><span class="lineno"> 3802</span>&#160;  <span class="comment">//OpenGL is a pain, so we need to pad the first dimension of the texture so that it size is a power of two</span></div>
-<div class="line"><a name="l03803"></a><span class="lineno"> 3803</span>&#160;  std::vector&lt;unsigned char&gt; texture_;</div>
-<div class="line"><a name="l03804"></a><span class="lineno"> 3804</span>&#160;  texture_.resize(texture_size_POT.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>*texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>,0);</div>
-<div class="line"><a name="l03805"></a><span class="lineno"> 3805</span>&#160;  <span class="keywordflow">for</span>(<span class="keywordtype">int</span> j=0;j&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>;j++){</div>
-<div class="line"><a name="l03806"></a><span class="lineno"> 3806</span>&#160;    <span class="keywordflow">for</span>(<span class="keywordtype">int</span> i=0;i&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>;i++){</div>
-<div class="line"><a name="l03807"></a><span class="lineno"> 3807</span>&#160;      texture_[j*texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>+i] = texture[ 3 + i*4 + j*texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>*4 ]; </div>
-<div class="line"><a name="l03808"></a><span class="lineno"> 3808</span>&#160;    }</div>
-<div class="line"><a name="l03809"></a><span class="lineno"> 3809</span>&#160;  }</div>
-<div class="line"><a name="l03810"></a><span class="lineno"> 3810</span>&#160; </div>
-<div class="line"><a name="l03811"></a><span class="lineno"> 3811</span>&#160;  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* texture_ptr = &amp;texture_[0];</div>
-<div class="line"><a name="l03812"></a><span class="lineno"> 3812</span>&#160; </div>
-<div class="line"><a name="l03813"></a><span class="lineno"> 3813</span>&#160;  glGenTextures(1, &amp;textureID);</div>
+<div class="line"><a name="l03771"></a><span class="lineno"> 3771</span>&#160;}</div>
+<div class="line"><a name="l03772"></a><span class="lineno"> 3772</span>&#160; </div>
+<div class="line"><a name="l03773"></a><span class="lineno"><a class="line" href="struct_shader.html#acabe2ce63e1a7fc5773803e3174de7ac"> 3773</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a7800ac33a9f3fdaefad983d6fe851fa7">Shader::setTextureMask</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* texture_file, uint&amp; textureID, <a class="code" href="structhelios_1_1int2.html">int2</a>&amp; texture_size ){</div>
+<div class="line"><a name="l03774"></a><span class="lineno"> 3774</span>&#160; </div>
+<div class="line"><a name="l03775"></a><span class="lineno"> 3775</span>&#160;  <span class="comment">//Check if this texture has already been added to the shader</span></div>
+<div class="line"><a name="l03776"></a><span class="lineno"> 3776</span>&#160;  <span class="comment">//Note: if the texture_file is empy, it will automatically load a new texture</span></div>
+<div class="line"><a name="l03777"></a><span class="lineno"> 3777</span>&#160;  <span class="keywordflow">for</span>( uint i=0; i&lt;textureMapFiles.size(); i++ ){</div>
+<div class="line"><a name="l03778"></a><span class="lineno"> 3778</span>&#160;    <span class="keywordflow">if</span>( textureMapFiles.at(i).compare(texture_file)==0 &amp;&amp; strlen(texture_file)&gt;0 ){</div>
+<div class="line"><a name="l03779"></a><span class="lineno"> 3779</span>&#160;      textureID = textureMaps.at(i); <span class="comment">//copy the handle</span></div>
+<div class="line"><a name="l03780"></a><span class="lineno"> 3780</span>&#160;      texture_size = textureSizes.at(i); <span class="comment">//copy the size</span></div>
+<div class="line"><a name="l03781"></a><span class="lineno"> 3781</span>&#160;      <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l03782"></a><span class="lineno"> 3782</span>&#160;    }</div>
+<div class="line"><a name="l03783"></a><span class="lineno"> 3783</span>&#160;  }</div>
+<div class="line"><a name="l03784"></a><span class="lineno"> 3784</span>&#160; </div>
+<div class="line"><a name="l03785"></a><span class="lineno"> 3785</span>&#160;  <span class="comment">//--- Load the Texture ----//</span></div>
+<div class="line"><a name="l03786"></a><span class="lineno"> 3786</span>&#160; </div>
+<div class="line"><a name="l03787"></a><span class="lineno"> 3787</span>&#160;  <span class="keywordtype">int</span> Nchannels=3;</div>
+<div class="line"><a name="l03788"></a><span class="lineno"> 3788</span>&#160;  std::vector&lt;unsigned char&gt; texture;</div>
+<div class="line"><a name="l03789"></a><span class="lineno"> 3789</span>&#160;  uint texture_height, texture_width;</div>
+<div class="line"><a name="l03790"></a><span class="lineno"> 3790</span>&#160;  std::string file = texture_file;</div>
+<div class="line"><a name="l03791"></a><span class="lineno"> 3791</span>&#160;  <span class="keywordflow">if</span>(file.substr(file.find_last_of(<span class="stringliteral">&quot;.&quot;</span>) + 1) == <span class="stringliteral">&quot;png&quot;</span>) {</div>
+<div class="line"><a name="l03792"></a><span class="lineno"> 3792</span>&#160;    <a class="code" href="_visualizer_8cpp.html#a0e60a86e54784ea9f2b178ce9540713f">read_png_file</a> (texture_file,texture,texture_height,texture_width);</div>
+<div class="line"><a name="l03793"></a><span class="lineno"> 3793</span>&#160;  }<span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l03794"></a><span class="lineno"> 3794</span>&#160;    std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: texture mask file &quot;</span> &lt;&lt; texture_file &lt;&lt; <span class="stringliteral">&quot; must be a PNG image.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a name="l03795"></a><span class="lineno"> 3795</span>&#160;  }</div>
+<div class="line"><a name="l03796"></a><span class="lineno"> 3796</span>&#160;  </div>
+<div class="line"><a name="l03797"></a><span class="lineno"> 3797</span>&#160;  texture_size = <a class="code" href="helios__vector__types_8h.html#a05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>( texture_width, texture_height );</div>
+<div class="line"><a name="l03798"></a><span class="lineno"> 3798</span>&#160; </div>
+<div class="line"><a name="l03799"></a><span class="lineno"> 3799</span>&#160;  <span class="comment">//Find next power of two up from size</span></div>
+<div class="line"><a name="l03800"></a><span class="lineno"> 3800</span>&#160;  <span class="keywordtype">int</span> POT = 0;</div>
+<div class="line"><a name="l03801"></a><span class="lineno"> 3801</span>&#160;  <span class="keywordflow">while</span>( pow(2,POT)&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a> ){</div>
+<div class="line"><a name="l03802"></a><span class="lineno"> 3802</span>&#160;    POT++;</div>
+<div class="line"><a name="l03803"></a><span class="lineno"> 3803</span>&#160;  }</div>
+<div class="line"><a name="l03804"></a><span class="lineno"> 3804</span>&#160;  <a class="code" href="structhelios_1_1int2.html">int2</a> texture_size_POT = <a class="code" href="helios__vector__types_8h.html#a05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>( <span class="keywordtype">int</span>(pow(2,POT)), texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a> );</div>
+<div class="line"><a name="l03805"></a><span class="lineno"> 3805</span>&#160; </div>
+<div class="line"><a name="l03806"></a><span class="lineno"> 3806</span>&#160;  <span class="comment">//OpenGL is a pain, so we need to pad the first dimension of the texture so that it size is a power of two</span></div>
+<div class="line"><a name="l03807"></a><span class="lineno"> 3807</span>&#160;  std::vector&lt;unsigned char&gt; texture_;</div>
+<div class="line"><a name="l03808"></a><span class="lineno"> 3808</span>&#160;  texture_.resize(texture_size_POT.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>*texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>,0);</div>
+<div class="line"><a name="l03809"></a><span class="lineno"> 3809</span>&#160;  <span class="keywordflow">for</span>(<span class="keywordtype">int</span> j=0;j&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>;j++){</div>
+<div class="line"><a name="l03810"></a><span class="lineno"> 3810</span>&#160;    <span class="keywordflow">for</span>(<span class="keywordtype">int</span> i=0;i&lt;texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>;i++){</div>
+<div class="line"><a name="l03811"></a><span class="lineno"> 3811</span>&#160;      texture_[j*texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>+i] = texture[ 3 + i*4 + j*texture_size.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>*4 ]; </div>
+<div class="line"><a name="l03812"></a><span class="lineno"> 3812</span>&#160;    }</div>
+<div class="line"><a name="l03813"></a><span class="lineno"> 3813</span>&#160;  }</div>
 <div class="line"><a name="l03814"></a><span class="lineno"> 3814</span>&#160; </div>
-<div class="line"><a name="l03815"></a><span class="lineno"> 3815</span>&#160;  glActiveTexture(GL_TEXTURE0);</div>
-<div class="line"><a name="l03816"></a><span class="lineno"> 3816</span>&#160;  glBindTexture(GL_TEXTURE_RECTANGLE,textureID);</div>
-<div class="line"><a name="l03817"></a><span class="lineno"> 3817</span>&#160;  glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RED, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>, 0, GL_RED, GL_UNSIGNED_BYTE, texture_ptr);</div>
-<div class="line"><a name="l03818"></a><span class="lineno"> 3818</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);</span></div>
-<div class="line"><a name="l03819"></a><span class="lineno"> 3819</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);</span></div>
-<div class="line"><a name="l03820"></a><span class="lineno"> 3820</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);</div>
-<div class="line"><a name="l03821"></a><span class="lineno"> 3821</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);</div>
-<div class="line"><a name="l03822"></a><span class="lineno"> 3822</span>&#160; </div>
-<div class="line"><a name="l03823"></a><span class="lineno"> 3823</span>&#160;  textureMaps.push_back(textureID);</div>
-<div class="line"><a name="l03824"></a><span class="lineno"> 3824</span>&#160;  textureSizes.push_back(texture_size);</div>
-<div class="line"><a name="l03825"></a><span class="lineno"> 3825</span>&#160;  textureMapFiles.push_back(texture_file);</div>
+<div class="line"><a name="l03815"></a><span class="lineno"> 3815</span>&#160;  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* texture_ptr = &amp;texture_[0];</div>
+<div class="line"><a name="l03816"></a><span class="lineno"> 3816</span>&#160; </div>
+<div class="line"><a name="l03817"></a><span class="lineno"> 3817</span>&#160;  glGenTextures(1, &amp;textureID);</div>
+<div class="line"><a name="l03818"></a><span class="lineno"> 3818</span>&#160; </div>
+<div class="line"><a name="l03819"></a><span class="lineno"> 3819</span>&#160;  glActiveTexture(GL_TEXTURE0);</div>
+<div class="line"><a name="l03820"></a><span class="lineno"> 3820</span>&#160;  glBindTexture(GL_TEXTURE_RECTANGLE,textureID);</div>
+<div class="line"><a name="l03821"></a><span class="lineno"> 3821</span>&#160;  glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RED, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, texture_size_POT.<a class="code" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a>, 0, GL_RED, GL_UNSIGNED_BYTE, texture_ptr);</div>
+<div class="line"><a name="l03822"></a><span class="lineno"> 3822</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03823"></a><span class="lineno"> 3823</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03824"></a><span class="lineno"> 3824</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);</div>
+<div class="line"><a name="l03825"></a><span class="lineno"> 3825</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);</div>
 <div class="line"><a name="l03826"></a><span class="lineno"> 3826</span>&#160; </div>
-<div class="line"><a name="l03827"></a><span class="lineno"> 3827</span>&#160;}</div>
-<div class="line"><a name="l03828"></a><span class="lineno"> 3828</span>&#160; </div>
-<div class="line"><a name="l03829"></a><span class="lineno"><a class="line" href="struct_shader.html#a05b4653b781f318d654f5a853ea9761e"> 3829</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a05b4653b781f318d654f5a853ea9761e">Shader::enableTextureMasks</a>( <span class="keywordtype">void</span> )<span class="keyword"> const</span>{</div>
-<div class="line"><a name="l03830"></a><span class="lineno"> 3830</span>&#160;  glActiveTexture(GL_TEXTURE0);</div>
-<div class="line"><a name="l03831"></a><span class="lineno"> 3831</span>&#160;  glUniform1i(textureUniform,0);</div>
-<div class="line"><a name="l03832"></a><span class="lineno"> 3832</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);</span></div>
-<div class="line"><a name="l03833"></a><span class="lineno"> 3833</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);</span></div>
-<div class="line"><a name="l03834"></a><span class="lineno"> 3834</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</div>
-<div class="line"><a name="l03835"></a><span class="lineno"> 3835</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</div>
-<div class="line"><a name="l03836"></a><span class="lineno"> 3836</span>&#160;  glEnable(GL_BLEND);</div>
-<div class="line"><a name="l03837"></a><span class="lineno"> 3837</span>&#160;  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);</div>
-<div class="line"><a name="l03838"></a><span class="lineno"> 3838</span>&#160;}</div>
-<div class="line"><a name="l03839"></a><span class="lineno"> 3839</span>&#160; </div>
-<div class="line"><a name="l03840"></a><span class="lineno"><a class="line" href="struct_shader.html#a98c842464051a1821fd045dac40f4260"> 3840</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a98c842464051a1821fd045dac40f4260">Shader::setTransformationMatrix</a>( <span class="keyword">const</span> glm::mat4 matrix ){</div>
-<div class="line"><a name="l03841"></a><span class="lineno"> 3841</span>&#160;  glUniformMatrix4fv(transformMatrixUniform, 1, GL_FALSE, &amp;matrix[0][0]);</div>
-<div class="line"><a name="l03842"></a><span class="lineno"> 3842</span>&#160;}</div>
-<div class="line"><a name="l03843"></a><span class="lineno"> 3843</span>&#160; </div>
-<div class="line"><a name="l03844"></a><span class="lineno"><a class="line" href="struct_shader.html#ac0d16427ac71c0f579d4b41b6c1f94ff"> 3844</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#ac0d16427ac71c0f579d4b41b6c1f94ff">Shader::setDepthBiasMatrix</a>( <span class="keyword">const</span> glm::mat4 matrix ){</div>
-<div class="line"><a name="l03845"></a><span class="lineno"> 3845</span>&#160;  glUniformMatrix4fv(depthBiasUniform, 1, GL_FALSE, &amp;matrix[0][0]);</div>
+<div class="line"><a name="l03827"></a><span class="lineno"> 3827</span>&#160;  textureMaps.push_back(textureID);</div>
+<div class="line"><a name="l03828"></a><span class="lineno"> 3828</span>&#160;  textureSizes.push_back(texture_size);</div>
+<div class="line"><a name="l03829"></a><span class="lineno"> 3829</span>&#160;  textureMapFiles.push_back(texture_file);</div>
+<div class="line"><a name="l03830"></a><span class="lineno"> 3830</span>&#160; </div>
+<div class="line"><a name="l03831"></a><span class="lineno"> 3831</span>&#160;}</div>
+<div class="line"><a name="l03832"></a><span class="lineno"> 3832</span>&#160; </div>
+<div class="line"><a name="l03833"></a><span class="lineno"><a class="line" href="struct_shader.html#a05b4653b781f318d654f5a853ea9761e"> 3833</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a05b4653b781f318d654f5a853ea9761e">Shader::enableTextureMasks</a>( <span class="keywordtype">void</span> )<span class="keyword"> const</span>{</div>
+<div class="line"><a name="l03834"></a><span class="lineno"> 3834</span>&#160;  glActiveTexture(GL_TEXTURE0);</div>
+<div class="line"><a name="l03835"></a><span class="lineno"> 3835</span>&#160;  glUniform1i(textureUniform,0);</div>
+<div class="line"><a name="l03836"></a><span class="lineno"> 3836</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);</span></div>
+<div class="line"><a name="l03837"></a><span class="lineno"> 3837</span>&#160;  <span class="comment">//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);</span></div>
+<div class="line"><a name="l03838"></a><span class="lineno"> 3838</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03839"></a><span class="lineno"> 3839</span>&#160;  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03840"></a><span class="lineno"> 3840</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03841"></a><span class="lineno"> 3841</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);</div>
+<div class="line"><a name="l03842"></a><span class="lineno"> 3842</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);</div>
+<div class="line"><a name="l03843"></a><span class="lineno"> 3843</span>&#160;  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);</div>
+<div class="line"><a name="l03844"></a><span class="lineno"> 3844</span>&#160;  glEnable(GL_BLEND);</div>
+<div class="line"><a name="l03845"></a><span class="lineno"> 3845</span>&#160;  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);</div>
 <div class="line"><a name="l03846"></a><span class="lineno"> 3846</span>&#160;}</div>
 <div class="line"><a name="l03847"></a><span class="lineno"> 3847</span>&#160; </div>
-<div class="line"><a name="l03848"></a><span class="lineno"><a class="line" href="struct_shader.html#a2bbdbcf8a6f0a8f258349e1f17b6a676"> 3848</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a2bbdbcf8a6f0a8f258349e1f17b6a676">Shader::setLightDirection</a>( <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">vec3</a> direction ){</div>
-<div class="line"><a name="l03849"></a><span class="lineno"> 3849</span>&#160;  glUniform3f( lightDirectionUniform, direction.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, direction.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, direction.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a> );</div>
+<div class="line"><a name="l03848"></a><span class="lineno"><a class="line" href="struct_shader.html#a98c842464051a1821fd045dac40f4260"> 3848</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a98c842464051a1821fd045dac40f4260">Shader::setTransformationMatrix</a>( <span class="keyword">const</span> glm::mat4 matrix ){</div>
+<div class="line"><a name="l03849"></a><span class="lineno"> 3849</span>&#160;  glUniformMatrix4fv(transformMatrixUniform, 1, GL_FALSE, &amp;matrix[0][0]);</div>
 <div class="line"><a name="l03850"></a><span class="lineno"> 3850</span>&#160;}</div>
 <div class="line"><a name="l03851"></a><span class="lineno"> 3851</span>&#160; </div>
-<div class="line"><a name="l03852"></a><span class="lineno"><a class="line" href="struct_shader.html#af6e26d4b595f857ca0610387095520af"> 3852</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#af6e26d4b595f857ca0610387095520af">Shader::setLightingModel</a>( <span class="keyword">const</span> uint lightingmodel ){</div>
-<div class="line"><a name="l03853"></a><span class="lineno"> 3853</span>&#160;  glUniform1i( lightingModelUniform, lightingmodel );</div>
+<div class="line"><a name="l03852"></a><span class="lineno"><a class="line" href="struct_shader.html#ac0d16427ac71c0f579d4b41b6c1f94ff"> 3852</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#ac0d16427ac71c0f579d4b41b6c1f94ff">Shader::setDepthBiasMatrix</a>( <span class="keyword">const</span> glm::mat4 matrix ){</div>
+<div class="line"><a name="l03853"></a><span class="lineno"> 3853</span>&#160;  glUniformMatrix4fv(depthBiasUniform, 1, GL_FALSE, &amp;matrix[0][0]);</div>
 <div class="line"><a name="l03854"></a><span class="lineno"> 3854</span>&#160;}</div>
 <div class="line"><a name="l03855"></a><span class="lineno"> 3855</span>&#160; </div>
-<div class="line"><a name="l03856"></a><span class="lineno"><a class="line" href="struct_shader.html#a813d954624937d4a76c4f1c178097d4b"> 3856</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a813d954624937d4a76c4f1c178097d4b">Shader::useShader</a>(<span class="keywordtype">void</span>){</div>
-<div class="line"><a name="l03857"></a><span class="lineno"> 3857</span>&#160;  glUseProgram(shaderID);</div>
+<div class="line"><a name="l03856"></a><span class="lineno"><a class="line" href="struct_shader.html#a2bbdbcf8a6f0a8f258349e1f17b6a676"> 3856</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a2bbdbcf8a6f0a8f258349e1f17b6a676">Shader::setLightDirection</a>( <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">vec3</a> direction ){</div>
+<div class="line"><a name="l03857"></a><span class="lineno"> 3857</span>&#160;  glUniform3f( lightDirectionUniform, direction.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, direction.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, direction.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a> );</div>
 <div class="line"><a name="l03858"></a><span class="lineno"> 3858</span>&#160;}</div>
 <div class="line"><a name="l03859"></a><span class="lineno"> 3859</span>&#160; </div>
-<div class="line"><a name="l03860"></a><span class="lineno"> 3860</span>&#160;<span class="keywordtype">void</span> Visualizer::getViewKeystrokes( <a class="code" href="structhelios_1_1vec3.html">vec3</a>&amp; eye, <a class="code" href="structhelios_1_1vec3.html">vec3</a>&amp; center ){</div>
-<div class="line"><a name="l03861"></a><span class="lineno"> 3861</span>&#160; </div>
-<div class="line"><a name="l03862"></a><span class="lineno"> 3862</span>&#160; </div>
-<div class="line"><a name="l03863"></a><span class="lineno"> 3863</span>&#160;  <a class="code" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> Spherical = <a class="code" href="global_8h.html#a32a34b00e0a28f4b35e501b8b34cfccd">cart2sphere</a>( eye-center );</div>
-<div class="line"><a name="l03864"></a><span class="lineno"> 3864</span>&#160;  <span class="keywordtype">float</span> radius = Spherical.<a class="code" href="structhelios_1_1_spherical_coord.html#a017f345f74aeaa332cdd36b66b22c906">radius</a>;</div>
-<div class="line"><a name="l03865"></a><span class="lineno"> 3865</span>&#160;  <span class="keywordtype">float</span> theta = Spherical.<a class="code" href="structhelios_1_1_spherical_coord.html#a7772770b8529c3e86d44b1172b7339db">elevation</a>;</div>
-<div class="line"><a name="l03866"></a><span class="lineno"> 3866</span>&#160;  <span class="keywordtype">float</span> phi = Spherical.<a class="code" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59">azimuth</a>;</div>
+<div class="line"><a name="l03860"></a><span class="lineno"><a class="line" href="struct_shader.html#af6e26d4b595f857ca0610387095520af"> 3860</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#af6e26d4b595f857ca0610387095520af">Shader::setLightingModel</a>( <span class="keyword">const</span> uint lightingmodel ){</div>
+<div class="line"><a name="l03861"></a><span class="lineno"> 3861</span>&#160;  glUniform1i( lightingModelUniform, lightingmodel );</div>
+<div class="line"><a name="l03862"></a><span class="lineno"> 3862</span>&#160;}</div>
+<div class="line"><a name="l03863"></a><span class="lineno"> 3863</span>&#160; </div>
+<div class="line"><a name="l03864"></a><span class="lineno"><a class="line" href="struct_shader.html#a813d954624937d4a76c4f1c178097d4b"> 3864</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="struct_shader.html#a813d954624937d4a76c4f1c178097d4b">Shader::useShader</a>(<span class="keywordtype">void</span>){</div>
+<div class="line"><a name="l03865"></a><span class="lineno"> 3865</span>&#160;  glUseProgram(shaderID);</div>
+<div class="line"><a name="l03866"></a><span class="lineno"> 3866</span>&#160;}</div>
 <div class="line"><a name="l03867"></a><span class="lineno"> 3867</span>&#160; </div>
-<div class="line"><a name="l03868"></a><span class="lineno"> 3868</span>&#160;  GLFWwindow* _window = (GLFWwindow*) window;</div>
+<div class="line"><a name="l03868"></a><span class="lineno"> 3868</span>&#160;<span class="keywordtype">void</span> Visualizer::getViewKeystrokes( <a class="code" href="structhelios_1_1vec3.html">vec3</a>&amp; eye, <a class="code" href="structhelios_1_1vec3.html">vec3</a>&amp; center ){</div>
 <div class="line"><a name="l03869"></a><span class="lineno"> 3869</span>&#160; </div>
-<div class="line"><a name="l03870"></a><span class="lineno"> 3870</span>&#160;  <span class="comment">//----- Holding SPACEBAR -----//</span></div>
-<div class="line"><a name="l03871"></a><span class="lineno"> 3871</span>&#160;  <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_SPACE ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03872"></a><span class="lineno"> 3872</span>&#160; </div>
-<div class="line"><a name="l03873"></a><span class="lineno"> 3873</span>&#160;    <span class="comment">// Move center to the left - SPACE + LEFT KEY</span></div>
-<div class="line"><a name="l03874"></a><span class="lineno"> 3874</span>&#160;    <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03875"></a><span class="lineno"> 3875</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a> +=0.1*sin(phi);</div>
-<div class="line"><a name="l03876"></a><span class="lineno"> 3876</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a> +=0.1*cos(phi);</div>
-<div class="line"><a name="l03877"></a><span class="lineno"> 3877</span>&#160;    }</div>
-<div class="line"><a name="l03878"></a><span class="lineno"> 3878</span>&#160;    <span class="comment">// Move center to the right - SPACE + RIGHT KEY</span></div>
-<div class="line"><a name="l03879"></a><span class="lineno"> 3879</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_RIGHT ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03880"></a><span class="lineno"> 3880</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a> -=0.1*sin(phi);</div>
-<div class="line"><a name="l03881"></a><span class="lineno"> 3881</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a> -=0.1*cos(phi);</div>
-<div class="line"><a name="l03882"></a><span class="lineno"> 3882</span>&#160;    }</div>
-<div class="line"><a name="l03883"></a><span class="lineno"> 3883</span>&#160;    <span class="comment">// Move center upward - SPACE + UP KEY</span></div>
-<div class="line"><a name="l03884"></a><span class="lineno"> 3884</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03885"></a><span class="lineno"> 3885</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a> +=0.2;</div>
-<div class="line"><a name="l03886"></a><span class="lineno"> 3886</span>&#160;    }</div>
-<div class="line"><a name="l03887"></a><span class="lineno"> 3887</span>&#160;    <span class="comment">// Move center downward - SPACE + DOWN KEY</span></div>
-<div class="line"><a name="l03888"></a><span class="lineno"> 3888</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03889"></a><span class="lineno"> 3889</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a> -=0.2;</div>
+<div class="line"><a name="l03870"></a><span class="lineno"> 3870</span>&#160; </div>
+<div class="line"><a name="l03871"></a><span class="lineno"> 3871</span>&#160;  <a class="code" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> Spherical = <a class="code" href="global_8h.html#a32a34b00e0a28f4b35e501b8b34cfccd">cart2sphere</a>( eye-center );</div>
+<div class="line"><a name="l03872"></a><span class="lineno"> 3872</span>&#160;  <span class="keywordtype">float</span> radius = Spherical.<a class="code" href="structhelios_1_1_spherical_coord.html#a017f345f74aeaa332cdd36b66b22c906">radius</a>;</div>
+<div class="line"><a name="l03873"></a><span class="lineno"> 3873</span>&#160;  <span class="keywordtype">float</span> theta = Spherical.<a class="code" href="structhelios_1_1_spherical_coord.html#a7772770b8529c3e86d44b1172b7339db">elevation</a>;</div>
+<div class="line"><a name="l03874"></a><span class="lineno"> 3874</span>&#160;  <span class="keywordtype">float</span> phi = Spherical.<a class="code" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59">azimuth</a>;</div>
+<div class="line"><a name="l03875"></a><span class="lineno"> 3875</span>&#160; </div>
+<div class="line"><a name="l03876"></a><span class="lineno"> 3876</span>&#160;  GLFWwindow* _window = (GLFWwindow*) window;</div>
+<div class="line"><a name="l03877"></a><span class="lineno"> 3877</span>&#160; </div>
+<div class="line"><a name="l03878"></a><span class="lineno"> 3878</span>&#160;  <span class="comment">//----- Holding SPACEBAR -----//</span></div>
+<div class="line"><a name="l03879"></a><span class="lineno"> 3879</span>&#160;  <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_SPACE ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03880"></a><span class="lineno"> 3880</span>&#160; </div>
+<div class="line"><a name="l03881"></a><span class="lineno"> 3881</span>&#160;    <span class="comment">// Move center to the left - SPACE + LEFT KEY</span></div>
+<div class="line"><a name="l03882"></a><span class="lineno"> 3882</span>&#160;    <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03883"></a><span class="lineno"> 3883</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a> +=0.1*sin(phi);</div>
+<div class="line"><a name="l03884"></a><span class="lineno"> 3884</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a> +=0.1*cos(phi);</div>
+<div class="line"><a name="l03885"></a><span class="lineno"> 3885</span>&#160;    }</div>
+<div class="line"><a name="l03886"></a><span class="lineno"> 3886</span>&#160;    <span class="comment">// Move center to the right - SPACE + RIGHT KEY</span></div>
+<div class="line"><a name="l03887"></a><span class="lineno"> 3887</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_RIGHT ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03888"></a><span class="lineno"> 3888</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a> -=0.1*sin(phi);</div>
+<div class="line"><a name="l03889"></a><span class="lineno"> 3889</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a> -=0.1*cos(phi);</div>
 <div class="line"><a name="l03890"></a><span class="lineno"> 3890</span>&#160;    }</div>
-<div class="line"><a name="l03891"></a><span class="lineno"> 3891</span>&#160; </div>
-<div class="line"><a name="l03892"></a><span class="lineno"> 3892</span>&#160;  <span class="comment">//----- Not Holding SPACEBAR -----//</span></div>
-<div class="line"><a name="l03893"></a><span class="lineno"> 3893</span>&#160;  }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l03894"></a><span class="lineno"> 3894</span>&#160;  </div>
-<div class="line"><a name="l03895"></a><span class="lineno"> 3895</span>&#160;    <span class="comment">//   Orbit left - LEFT ARROW KEY</span></div>
-<div class="line"><a name="l03896"></a><span class="lineno"> 3896</span>&#160;    <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03897"></a><span class="lineno"> 3897</span>&#160;      phi+=M_PI/40.f;</div>
+<div class="line"><a name="l03891"></a><span class="lineno"> 3891</span>&#160;    <span class="comment">// Move center upward - SPACE + UP KEY</span></div>
+<div class="line"><a name="l03892"></a><span class="lineno"> 3892</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03893"></a><span class="lineno"> 3893</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a> +=0.2;</div>
+<div class="line"><a name="l03894"></a><span class="lineno"> 3894</span>&#160;    }</div>
+<div class="line"><a name="l03895"></a><span class="lineno"> 3895</span>&#160;    <span class="comment">// Move center downward - SPACE + DOWN KEY</span></div>
+<div class="line"><a name="l03896"></a><span class="lineno"> 3896</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03897"></a><span class="lineno"> 3897</span>&#160;      center.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a> -=0.2;</div>
 <div class="line"><a name="l03898"></a><span class="lineno"> 3898</span>&#160;    }</div>
-<div class="line"><a name="l03899"></a><span class="lineno"> 3899</span>&#160;    <span class="comment">// Orbit right - RIGHT ARROW KEY</span></div>
-<div class="line"><a name="l03900"></a><span class="lineno"> 3900</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_RIGHT ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03901"></a><span class="lineno"> 3901</span>&#160;      phi-=M_PI/40.f;</div>
-<div class="line"><a name="l03902"></a><span class="lineno"> 3902</span>&#160;    }</div>
-<div class="line"><a name="l03903"></a><span class="lineno"> 3903</span>&#160;    </div>
-<div class="line"><a name="l03904"></a><span class="lineno"> 3904</span>&#160;    <span class="comment">// Increase Elevation - UP ARROW KEY</span></div>
-<div class="line"><a name="l03905"></a><span class="lineno"> 3905</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03906"></a><span class="lineno"> 3906</span>&#160;      <span class="keywordflow">if</span>( theta + M_PI/80.f &lt; 0.49f*M_PI ){</div>
-<div class="line"><a name="l03907"></a><span class="lineno"> 3907</span>&#160;    theta+=M_PI/80.f;</div>
-<div class="line"><a name="l03908"></a><span class="lineno"> 3908</span>&#160;      }</div>
-<div class="line"><a name="l03909"></a><span class="lineno"> 3909</span>&#160;    }</div>
-<div class="line"><a name="l03910"></a><span class="lineno"> 3910</span>&#160;    <span class="comment">// Decrease Elevation - DOWN ARROW KEY</span></div>
-<div class="line"><a name="l03911"></a><span class="lineno"> 3911</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03912"></a><span class="lineno"> 3912</span>&#160;      <span class="keywordflow">if</span>( theta&gt;-0.25*M_PI ){</div>
-<div class="line"><a name="l03913"></a><span class="lineno"> 3913</span>&#160;    theta-=M_PI/80.f;</div>
-<div class="line"><a name="l03914"></a><span class="lineno"> 3914</span>&#160;      }</div>
-<div class="line"><a name="l03915"></a><span class="lineno"> 3915</span>&#160;    }</div>
-<div class="line"><a name="l03916"></a><span class="lineno"> 3916</span>&#160; </div>
-<div class="line"><a name="l03917"></a><span class="lineno"> 3917</span>&#160;    <span class="comment">//   Zoom in - &quot;+&quot; KEY</span></div>
-<div class="line"><a name="l03918"></a><span class="lineno"> 3918</span>&#160;    <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_EQUAL  ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03919"></a><span class="lineno"> 3919</span>&#160;      radius *= 0.9;</div>
-<div class="line"><a name="l03920"></a><span class="lineno"> 3920</span>&#160;    }</div>
-<div class="line"><a name="l03921"></a><span class="lineno"> 3921</span>&#160;    <span class="comment">// Zoom out - &quot;-&quot; KEY</span></div>
-<div class="line"><a name="l03922"></a><span class="lineno"> 3922</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_MINUS ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03923"></a><span class="lineno"> 3923</span>&#160;      radius *= 1.1;</div>
-<div class="line"><a name="l03924"></a><span class="lineno"> 3924</span>&#160;    }</div>
-<div class="line"><a name="l03925"></a><span class="lineno"> 3925</span>&#160;  }</div>
-<div class="line"><a name="l03926"></a><span class="lineno"> 3926</span>&#160; </div>
-<div class="line"><a name="l03927"></a><span class="lineno"> 3927</span>&#160;  <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_P  ) == GLFW_PRESS){</div>
-<div class="line"><a name="l03928"></a><span class="lineno"> 3928</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;View is: (R,theta,phi)=(&quot;</span> &lt;&lt; radius &lt;&lt; <span class="stringliteral">&quot;,&quot;</span> &lt;&lt; theta &lt;&lt; <span class="stringliteral">&quot;,&quot;</span> &lt;&lt; phi &lt;&lt; <span class="stringliteral">&quot;) at height &quot;</span> &lt;&lt; center.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a> &lt;&lt; std::endl;</div>
-<div class="line"><a name="l03929"></a><span class="lineno"> 3929</span>&#160;  }</div>
-<div class="line"><a name="l03930"></a><span class="lineno"> 3930</span>&#160; </div>
-<div class="line"><a name="l03931"></a><span class="lineno"> 3931</span>&#160; </div>
-<div class="line"><a name="l03932"></a><span class="lineno"> 3932</span>&#160;  eye = <a class="code" href="global_8h.html#a97e12cf9fda6bf8b65b3ccc17e788c12">sphere2cart</a>( <a class="code" href="helios__vector__types_8h.html#a74e6157b54ba7d0027c40c6a9e593f5a">make_SphericalCoord</a>(radius,theta,phi) ) + center;</div>
-<div class="line"><a name="l03933"></a><span class="lineno"> 3933</span>&#160; </div>
-<div class="line"><a name="l03934"></a><span class="lineno"> 3934</span>&#160;    </div>
-<div class="line"><a name="l03935"></a><span class="lineno"> 3935</span>&#160;}</div>
-<div class="line"><a name="l03936"></a><span class="lineno"> 3936</span>&#160; </div>
-<div class="line"><a name="l03937"></a><span class="lineno"> 3937</span>&#160;std::string errorString( GLenum err ){</div>
-<div class="line"><a name="l03938"></a><span class="lineno"> 3938</span>&#160;  </div>
-<div class="line"><a name="l03939"></a><span class="lineno"> 3939</span>&#160;  std::string message;</div>
-<div class="line"><a name="l03940"></a><span class="lineno"> 3940</span>&#160;  message.assign(<span class="stringliteral">&quot;&quot;</span>);</div>
+<div class="line"><a name="l03899"></a><span class="lineno"> 3899</span>&#160; </div>
+<div class="line"><a name="l03900"></a><span class="lineno"> 3900</span>&#160;  <span class="comment">//----- Not Holding SPACEBAR -----//</span></div>
+<div class="line"><a name="l03901"></a><span class="lineno"> 3901</span>&#160;  }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l03902"></a><span class="lineno"> 3902</span>&#160;  </div>
+<div class="line"><a name="l03903"></a><span class="lineno"> 3903</span>&#160;    <span class="comment">//   Orbit left - LEFT ARROW KEY</span></div>
+<div class="line"><a name="l03904"></a><span class="lineno"> 3904</span>&#160;    <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03905"></a><span class="lineno"> 3905</span>&#160;      phi+=M_PI/40.f;</div>
+<div class="line"><a name="l03906"></a><span class="lineno"> 3906</span>&#160;    }</div>
+<div class="line"><a name="l03907"></a><span class="lineno"> 3907</span>&#160;    <span class="comment">// Orbit right - RIGHT ARROW KEY</span></div>
+<div class="line"><a name="l03908"></a><span class="lineno"> 3908</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_RIGHT ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03909"></a><span class="lineno"> 3909</span>&#160;      phi-=M_PI/40.f;</div>
+<div class="line"><a name="l03910"></a><span class="lineno"> 3910</span>&#160;    }</div>
+<div class="line"><a name="l03911"></a><span class="lineno"> 3911</span>&#160;    </div>
+<div class="line"><a name="l03912"></a><span class="lineno"> 3912</span>&#160;    <span class="comment">// Increase Elevation - UP ARROW KEY</span></div>
+<div class="line"><a name="l03913"></a><span class="lineno"> 3913</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03914"></a><span class="lineno"> 3914</span>&#160;      <span class="keywordflow">if</span>( theta + M_PI/80.f &lt; 0.49f*M_PI ){</div>
+<div class="line"><a name="l03915"></a><span class="lineno"> 3915</span>&#160;    theta+=M_PI/80.f;</div>
+<div class="line"><a name="l03916"></a><span class="lineno"> 3916</span>&#160;      }</div>
+<div class="line"><a name="l03917"></a><span class="lineno"> 3917</span>&#160;    }</div>
+<div class="line"><a name="l03918"></a><span class="lineno"> 3918</span>&#160;    <span class="comment">// Decrease Elevation - DOWN ARROW KEY</span></div>
+<div class="line"><a name="l03919"></a><span class="lineno"> 3919</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03920"></a><span class="lineno"> 3920</span>&#160;      <span class="keywordflow">if</span>( theta&gt;-0.25*M_PI ){</div>
+<div class="line"><a name="l03921"></a><span class="lineno"> 3921</span>&#160;    theta-=M_PI/80.f;</div>
+<div class="line"><a name="l03922"></a><span class="lineno"> 3922</span>&#160;      }</div>
+<div class="line"><a name="l03923"></a><span class="lineno"> 3923</span>&#160;    }</div>
+<div class="line"><a name="l03924"></a><span class="lineno"> 3924</span>&#160; </div>
+<div class="line"><a name="l03925"></a><span class="lineno"> 3925</span>&#160;    <span class="comment">//   Zoom in - &quot;+&quot; KEY</span></div>
+<div class="line"><a name="l03926"></a><span class="lineno"> 3926</span>&#160;    <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_EQUAL  ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03927"></a><span class="lineno"> 3927</span>&#160;      radius *= 0.9;</div>
+<div class="line"><a name="l03928"></a><span class="lineno"> 3928</span>&#160;    }</div>
+<div class="line"><a name="l03929"></a><span class="lineno"> 3929</span>&#160;    <span class="comment">// Zoom out - &quot;-&quot; KEY</span></div>
+<div class="line"><a name="l03930"></a><span class="lineno"> 3930</span>&#160;    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_MINUS ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03931"></a><span class="lineno"> 3931</span>&#160;      radius *= 1.1;</div>
+<div class="line"><a name="l03932"></a><span class="lineno"> 3932</span>&#160;    }</div>
+<div class="line"><a name="l03933"></a><span class="lineno"> 3933</span>&#160;  }</div>
+<div class="line"><a name="l03934"></a><span class="lineno"> 3934</span>&#160; </div>
+<div class="line"><a name="l03935"></a><span class="lineno"> 3935</span>&#160;  <span class="keywordflow">if</span> (glfwGetKey( _window, GLFW_KEY_P  ) == GLFW_PRESS){</div>
+<div class="line"><a name="l03936"></a><span class="lineno"> 3936</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;View is: (R,theta,phi)=(&quot;</span> &lt;&lt; radius &lt;&lt; <span class="stringliteral">&quot;,&quot;</span> &lt;&lt; theta &lt;&lt; <span class="stringliteral">&quot;,&quot;</span> &lt;&lt; phi &lt;&lt; <span class="stringliteral">&quot;) at height &quot;</span> &lt;&lt; center.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a> &lt;&lt; std::endl;</div>
+<div class="line"><a name="l03937"></a><span class="lineno"> 3937</span>&#160;  }</div>
+<div class="line"><a name="l03938"></a><span class="lineno"> 3938</span>&#160; </div>
+<div class="line"><a name="l03939"></a><span class="lineno"> 3939</span>&#160; </div>
+<div class="line"><a name="l03940"></a><span class="lineno"> 3940</span>&#160;  eye = <a class="code" href="global_8h.html#a97e12cf9fda6bf8b65b3ccc17e788c12">sphere2cart</a>( <a class="code" href="helios__vector__types_8h.html#a74e6157b54ba7d0027c40c6a9e593f5a">make_SphericalCoord</a>(radius,theta,phi) ) + center;</div>
 <div class="line"><a name="l03941"></a><span class="lineno"> 3941</span>&#160; </div>
-<div class="line"><a name="l03942"></a><span class="lineno"> 3942</span>&#160;  <span class="keywordflow">if</span>( err==GL_INVALID_ENUM ){</div>
-<div class="line"><a name="l03943"></a><span class="lineno"> 3943</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_INVALID_ENUM - An unacceptable value is specified for an enumerated argument.&quot;</span>);</div>
-<div class="line"><a name="l03944"></a><span class="lineno"> 3944</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_INVALID_VALUE ){</div>
-<div class="line"><a name="l03945"></a><span class="lineno"> 3945</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_INVALID_VALUE - A numeric argument is out of range.&quot;</span>);</div>
-<div class="line"><a name="l03946"></a><span class="lineno"> 3946</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_INVALID_OPERATION ){</div>
-<div class="line"><a name="l03947"></a><span class="lineno"> 3947</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_INVALID_OPERATION - The specified operation is not allowed in the current state.&quot;</span>);</div>
-<div class="line"><a name="l03948"></a><span class="lineno"> 3948</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_STACK_OVERFLOW ){</div>
-<div class="line"><a name="l03949"></a><span class="lineno"> 3949</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_STACK_OVERFLOW - This command would cause a stack overflow.&quot;</span>);</div>
-<div class="line"><a name="l03950"></a><span class="lineno"> 3950</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_STACK_UNDERFLOW ){</div>
-<div class="line"><a name="l03951"></a><span class="lineno"> 3951</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_STACK_UNDERFLOW - This command would cause a stack underflow.&quot;</span>);</div>
-<div class="line"><a name="l03952"></a><span class="lineno"> 3952</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_OUT_OF_MEMORY ){</div>
-<div class="line"><a name="l03953"></a><span class="lineno"> 3953</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_OUT_OF_MEMORY - There is not enough memory left to execute the command.&quot;</span>);</div>
-<div class="line"><a name="l03954"></a><span class="lineno"> 3954</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_TABLE_TOO_LARGE ){</div>
-<div class="line"><a name="l03955"></a><span class="lineno"> 3955</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_TABLE_TOO_LARGE - The specified table exceeds the implementation&#39;s maximum supported table size.&quot;</span>);</div>
-<div class="line"><a name="l03956"></a><span class="lineno"> 3956</span>&#160;  }</div>
-<div class="line"><a name="l03957"></a><span class="lineno"> 3957</span>&#160; </div>
-<div class="line"><a name="l03958"></a><span class="lineno"> 3958</span>&#160;  <span class="keywordflow">return</span> message;</div>
-<div class="line"><a name="l03959"></a><span class="lineno"> 3959</span>&#160; </div>
-<div class="line"><a name="l03960"></a><span class="lineno"> 3960</span>&#160;}</div>
-<div class="line"><a name="l03961"></a><span class="lineno"> 3961</span>&#160; </div>
-<div class="line"><a name="l03962"></a><span class="lineno"> 3962</span>&#160;<span class="keywordtype">int</span> checkerrors( <span class="keywordtype">void</span> ){</div>
-<div class="line"><a name="l03963"></a><span class="lineno"> 3963</span>&#160; </div>
-<div class="line"><a name="l03964"></a><span class="lineno"> 3964</span>&#160;  GLenum err;</div>
-<div class="line"><a name="l03965"></a><span class="lineno"> 3965</span>&#160;  <span class="keywordtype">int</span> err_count=0;</div>
-<div class="line"><a name="l03966"></a><span class="lineno"> 3966</span>&#160;  <span class="keywordflow">while</span> ((err = glGetError()) != GL_NO_ERROR) {</div>
-<div class="line"><a name="l03967"></a><span class="lineno"> 3967</span>&#160;    std::cerr &lt;&lt; <span class="stringliteral">&quot;glError #&quot;</span> &lt;&lt; err_count &lt;&lt; <span class="stringliteral">&quot;: &quot;</span> &lt;&lt; errorString(err) &lt;&lt; std::endl;</div>
-<div class="line"><a name="l03968"></a><span class="lineno"> 3968</span>&#160;    err_count++;</div>
-<div class="line"><a name="l03969"></a><span class="lineno"> 3969</span>&#160;  }</div>
-<div class="line"><a name="l03970"></a><span class="lineno"> 3970</span>&#160;  <span class="keywordflow">if</span>(err_count&gt;0){</div>
-<div class="line"><a name="l03971"></a><span class="lineno"> 3971</span>&#160;    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a name="l03972"></a><span class="lineno"> 3972</span>&#160;  }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l03973"></a><span class="lineno"> 3973</span>&#160;    <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a name="l03974"></a><span class="lineno"> 3974</span>&#160;  }</div>
-<div class="line"><a name="l03975"></a><span class="lineno"> 3975</span>&#160; </div>
-<div class="line"><a name="l03976"></a><span class="lineno"> 3976</span>&#160;}</div>
+<div class="line"><a name="l03942"></a><span class="lineno"> 3942</span>&#160;    </div>
+<div class="line"><a name="l03943"></a><span class="lineno"> 3943</span>&#160;}</div>
+<div class="line"><a name="l03944"></a><span class="lineno"> 3944</span>&#160; </div>
+<div class="line"><a name="l03945"></a><span class="lineno"> 3945</span>&#160;std::string errorString( GLenum err ){</div>
+<div class="line"><a name="l03946"></a><span class="lineno"> 3946</span>&#160;  </div>
+<div class="line"><a name="l03947"></a><span class="lineno"> 3947</span>&#160;  std::string message;</div>
+<div class="line"><a name="l03948"></a><span class="lineno"> 3948</span>&#160;  message.assign(<span class="stringliteral">&quot;&quot;</span>);</div>
+<div class="line"><a name="l03949"></a><span class="lineno"> 3949</span>&#160; </div>
+<div class="line"><a name="l03950"></a><span class="lineno"> 3950</span>&#160;  <span class="keywordflow">if</span>( err==GL_INVALID_ENUM ){</div>
+<div class="line"><a name="l03951"></a><span class="lineno"> 3951</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_INVALID_ENUM - An unacceptable value is specified for an enumerated argument.&quot;</span>);</div>
+<div class="line"><a name="l03952"></a><span class="lineno"> 3952</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_INVALID_VALUE ){</div>
+<div class="line"><a name="l03953"></a><span class="lineno"> 3953</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_INVALID_VALUE - A numeric argument is out of range.&quot;</span>);</div>
+<div class="line"><a name="l03954"></a><span class="lineno"> 3954</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_INVALID_OPERATION ){</div>
+<div class="line"><a name="l03955"></a><span class="lineno"> 3955</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_INVALID_OPERATION - The specified operation is not allowed in the current state.&quot;</span>);</div>
+<div class="line"><a name="l03956"></a><span class="lineno"> 3956</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_STACK_OVERFLOW ){</div>
+<div class="line"><a name="l03957"></a><span class="lineno"> 3957</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_STACK_OVERFLOW - This command would cause a stack overflow.&quot;</span>);</div>
+<div class="line"><a name="l03958"></a><span class="lineno"> 3958</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_STACK_UNDERFLOW ){</div>
+<div class="line"><a name="l03959"></a><span class="lineno"> 3959</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_STACK_UNDERFLOW - This command would cause a stack underflow.&quot;</span>);</div>
+<div class="line"><a name="l03960"></a><span class="lineno"> 3960</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_OUT_OF_MEMORY ){</div>
+<div class="line"><a name="l03961"></a><span class="lineno"> 3961</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_OUT_OF_MEMORY - There is not enough memory left to execute the command.&quot;</span>);</div>
+<div class="line"><a name="l03962"></a><span class="lineno"> 3962</span>&#160;  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( err==GL_TABLE_TOO_LARGE ){</div>
+<div class="line"><a name="l03963"></a><span class="lineno"> 3963</span>&#160;    message.assign(<span class="stringliteral">&quot;GL_TABLE_TOO_LARGE - The specified table exceeds the implementation&#39;s maximum supported table size.&quot;</span>);</div>
+<div class="line"><a name="l03964"></a><span class="lineno"> 3964</span>&#160;  }</div>
+<div class="line"><a name="l03965"></a><span class="lineno"> 3965</span>&#160; </div>
+<div class="line"><a name="l03966"></a><span class="lineno"> 3966</span>&#160;  <span class="keywordflow">return</span> message;</div>
+<div class="line"><a name="l03967"></a><span class="lineno"> 3967</span>&#160; </div>
+<div class="line"><a name="l03968"></a><span class="lineno"> 3968</span>&#160;}</div>
+<div class="line"><a name="l03969"></a><span class="lineno"> 3969</span>&#160; </div>
+<div class="line"><a name="l03970"></a><span class="lineno"> 3970</span>&#160;<span class="keywordtype">int</span> checkerrors( <span class="keywordtype">void</span> ){</div>
+<div class="line"><a name="l03971"></a><span class="lineno"> 3971</span>&#160; </div>
+<div class="line"><a name="l03972"></a><span class="lineno"> 3972</span>&#160;  GLenum err;</div>
+<div class="line"><a name="l03973"></a><span class="lineno"> 3973</span>&#160;  <span class="keywordtype">int</span> err_count=0;</div>
+<div class="line"><a name="l03974"></a><span class="lineno"> 3974</span>&#160;  <span class="keywordflow">while</span> ((err = glGetError()) != GL_NO_ERROR) {</div>
+<div class="line"><a name="l03975"></a><span class="lineno"> 3975</span>&#160;    std::cerr &lt;&lt; <span class="stringliteral">&quot;glError #&quot;</span> &lt;&lt; err_count &lt;&lt; <span class="stringliteral">&quot;: &quot;</span> &lt;&lt; errorString(err) &lt;&lt; std::endl;</div>
+<div class="line"><a name="l03976"></a><span class="lineno"> 3976</span>&#160;    err_count++;</div>
+<div class="line"><a name="l03977"></a><span class="lineno"> 3977</span>&#160;  }</div>
+<div class="line"><a name="l03978"></a><span class="lineno"> 3978</span>&#160;  <span class="keywordflow">if</span>(err_count&gt;0){</div>
+<div class="line"><a name="l03979"></a><span class="lineno"> 3979</span>&#160;    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a name="l03980"></a><span class="lineno"> 3980</span>&#160;  }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l03981"></a><span class="lineno"> 3981</span>&#160;    <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a name="l03982"></a><span class="lineno"> 3982</span>&#160;  }</div>
+<div class="line"><a name="l03983"></a><span class="lineno"> 3983</span>&#160; </div>
+<div class="line"><a name="l03984"></a><span class="lineno"> 3984</span>&#160;}</div>
 </div><!-- fragment --></div><!-- contents -->
 <div class="ttc" id="astructhelios_1_1_spherical_coord_html_a7772770b8529c3e86d44b1172b7339db"><div class="ttname"><a href="structhelios_1_1_spherical_coord.html#a7772770b8529c3e86d44b1172b7339db">helios::SphericalCoord::elevation</a></div><div class="ttdeci">float elevation</div><div class="ttdoc">Elevation angle (radians)</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01260">helios_vector_types.h:1260</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a0c75972b0cc0300a4fa0139af6a32234"><div class="ttname"><a href="class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234">Visualizer::colorContextPrimitivesByData</a></div><div class="ttdeci">void colorContextPrimitivesByData(const char *data_name)</div><div class="ttdoc">Color primitives from Context by color mapping their ‘Primitive Data’.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02886">Visualizer.cpp:2886</a></div></div>
@@ -4056,7 +4064,7 @@ $(function() {
 <div class="ttc" id="astructhelios_1_1_time_html"><div class="ttname"><a href="structhelios_1_1_time.html">helios::Time</a></div><div class="ttdoc">Time vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01142">helios_vector_types.h:1142</a></div></div>
 <div class="ttc" id="agroup__functions_html_ga1bf8edfac149ac1f3accdcf9025d0e9b"><div class="ttname"><a href="group__functions.html#ga1bf8edfac149ac1f3accdcf9025d0e9b">helios::max</a></div><div class="ttdeci">float max(std::vector&lt; float &gt; vect)</div><div class="ttdoc">Maximum value of a vector of floats.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00850">global.cpp:850</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a5865d359d40dc5e4aea94ad1e22cec4a"><div class="ttname"><a href="class_visualizer.html#a5865d359d40dc5e4aea94ad1e22cec4a">Visualizer::setCameraFieldOfView</a></div><div class="ttdeci">void setCameraFieldOfView(const float angle_FOV)</div><div class="ttdoc">Set the camera field of view (angle width) in degrees. Default value is 45 degrees.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l00659">Visualizer.cpp:659</a></div></div>
-<div class="ttc" id="astruct_shader_html_a2bbdbcf8a6f0a8f258349e1f17b6a676"><div class="ttname"><a href="struct_shader.html#a2bbdbcf8a6f0a8f258349e1f17b6a676">Shader::setLightDirection</a></div><div class="ttdeci">void setLightDirection(const helios::vec3 direction)</div><div class="ttdoc">Set the direction of the light (sun)</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03848">Visualizer.cpp:3848</a></div></div>
+<div class="ttc" id="astruct_shader_html_a2bbdbcf8a6f0a8f258349e1f17b6a676"><div class="ttname"><a href="struct_shader.html#a2bbdbcf8a6f0a8f258349e1f17b6a676">Shader::setLightDirection</a></div><div class="ttdeci">void setLightDirection(const helios::vec3 direction)</div><div class="ttdoc">Set the direction of the light (sun)</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03856">Visualizer.cpp:3856</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_primitive_html_a209c6d8ff4bce55abdc732452e222835"><div class="ttname"><a href="classhelios_1_1_primitive.html#a209c6d8ff4bce55abdc732452e222835">helios::Primitive::isTextureColorOverridden</a></div><div class="ttdeci">bool isTextureColorOverridden(void) const</div><div class="ttdoc">Check if color of texture map is overridden by the diffuse R-G-B color of the primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01059">Context.cpp:1059</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a580a78fe3e25c423e2d13aebc1b54573ac864e3d3a92a93d2d070faee3a6b4789"><div class="ttname"><a href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573ac864e3d3a92a93d2d070faee3a6b4789">Visualizer::LIGHTING_NONE</a></div><div class="ttdeci">@ LIGHTING_NONE</div><div class="ttdoc">No shading, primitive is colored by its diffuse color.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8h_source.html#l00336">Visualizer.h:336</a></div></div>
 <div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00270">helios_vector_types.h:270</a></div></div>
@@ -4068,7 +4076,7 @@ $(function() {
 <div class="ttc" id="aclass_visualizer_html_a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4"><div class="ttname"><a href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4">Visualizer::COORDINATES_CARTESIAN</a></div><div class="ttdeci">@ COORDINATES_CARTESIAN</div><div class="ttdoc">Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8h_source.html#l00285">Visualizer.h:283</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a5e26e469e396ba9b802640fc02f461e8"><div class="ttname"><a href="class_visualizer.html#a5e26e469e396ba9b802640fc02f461e8">Visualizer::closeWindow</a></div><div class="ttdeci">void closeWindow(void)</div><div class="ttdoc">Close the graphics window.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l00814">Visualizer.cpp:814</a></div></div>
 <div class="ttc" id="aclass_visualizer_html"><div class="ttname"><a href="class_visualizer.html">Visualizer</a></div><div class="ttdoc">Class for visualization of simulation results.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8h_source.html#l00241">Visualizer.h:241</a></div></div>
-<div class="ttc" id="astruct_shader_html_a05b4653b781f318d654f5a853ea9761e"><div class="ttname"><a href="struct_shader.html#a05b4653b781f318d654f5a853ea9761e">Shader::enableTextureMasks</a></div><div class="ttdeci">void enableTextureMasks(void) const</div><div class="ttdoc">Enable texture masks and color fragments by interpolating vertex colors.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03829">Visualizer.cpp:3829</a></div></div>
+<div class="ttc" id="astruct_shader_html_a05b4653b781f318d654f5a853ea9761e"><div class="ttname"><a href="struct_shader.html#a05b4653b781f318d654f5a853ea9761e">Shader::enableTextureMasks</a></div><div class="ttdeci">void enableTextureMasks(void) const</div><div class="ttdoc">Enable texture masks and color fragments by interpolating vertex colors.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03833">Visualizer.cpp:3833</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a0af839aae42fd7086643608a6cbd194b"><div class="ttname"><a href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194b">Visualizer::Ctable</a></div><div class="ttdeci">Ctable</div><div class="ttdoc">Pseudocolor map tables.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8h_source.html#l00288">Visualizer.h:288</a></div></div>
 <div class="ttc" id="a_visualizer_8cpp_html_aa76cea0b174f9557bffe7e6a57d65b87"><div class="ttname"><a href="_visualizer_8cpp.html#aa76cea0b174f9557bffe7e6a57d65b87">write_JPEG_file</a></div><div class="ttdeci">int write_JPEG_file(const char *filename, uint width, uint height)</div><div class="ttdoc">Write current graphics window to a JPEG image file.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l00126">Visualizer.cpp:126</a></div></div>
 <div class="ttc" id="astructhelios_1_1int2_html"><div class="ttname"><a href="structhelios_1_1int2.html">helios::int2</a></div><div class="ttdoc">Vector of two elements of type 'int'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00032">helios_vector_types.h:32</a></div></div>
@@ -4083,7 +4091,7 @@ $(function() {
 <div class="ttc" id="astructhelios_1_1vec2_html_ab4afff51f764cbf9bab0949ae067977e"><div class="ttname"><a href="structhelios_1_1vec2.html#ab4afff51f764cbf9bab0949ae067977e">helios::vec2::y</a></div><div class="ttdeci">float y</div><div class="ttdoc">Second element in vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00276">helios_vector_types.h:276</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l00689">Context.h:689</a></div></div>
 <div class="ttc" id="astructhelios_1_1_time_html_a744b90da076192b90a3ee4ce2ff3743a"><div class="ttname"><a href="structhelios_1_1_time.html#a744b90da076192b90a3ee4ce2ff3743a">helios::Time::minute</a></div><div class="ttdeci">int minute</div><div class="ttdoc">Minute of hour.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01147">helios_vector_types.h:1147</a></div></div>
-<div class="ttc" id="astruct_shader_html_ac0d16427ac71c0f579d4b41b6c1f94ff"><div class="ttname"><a href="struct_shader.html#ac0d16427ac71c0f579d4b41b6c1f94ff">Shader::setDepthBiasMatrix</a></div><div class="ttdeci">void setDepthBiasMatrix(const glm::mat4 matrix)</div><div class="ttdoc">Set the depth bias matrix for shadows.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03844">Visualizer.cpp:3844</a></div></div>
+<div class="ttc" id="astruct_shader_html_ac0d16427ac71c0f579d4b41b6c1f94ff"><div class="ttname"><a href="struct_shader.html#ac0d16427ac71c0f579d4b41b6c1f94ff">Shader::setDepthBiasMatrix</a></div><div class="ttdeci">void setDepthBiasMatrix(const glm::mat4 matrix)</div><div class="ttdoc">Set the depth bias matrix for shadows.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03852">Visualizer.cpp:3852</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a580a78fe3e25c423e2d13aebc1b54573"><div class="ttname"><a href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573">Visualizer::LightingModel</a></div><div class="ttdeci">LightingModel</div><div class="ttdoc">Lighting model to use for shading primitives.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8h_source.html#l00334">Visualizer.h:334</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a7c6362d7dc0f0bd4bba53195ce92b84e"><div class="ttname"><a href="class_visualizer.html#a7c6362d7dc0f0bd4bba53195ce92b84e">Visualizer::getDepthMap</a></div><div class="ttdeci">void getDepthMap(float *buffer)</div><div class="ttdoc">Get depth buffer data for the current display window.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l00781">Visualizer.cpp:781</a></div></div>
 <div class="ttc" id="astructmy__error__mgr_html"><div class="ttname"><a href="structmy__error__mgr.html">my_error_mgr</a></div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l00041">Visualizer.cpp:41</a></div></div>
@@ -4093,7 +4101,7 @@ $(function() {
 <div class="ttc" id="ahelios__vector__types_8h_html_a74e6157b54ba7d0027c40c6a9e593f5a"><div class="ttname"><a href="helios__vector__types_8h.html#a74e6157b54ba7d0027c40c6a9e593f5a">helios::make_SphericalCoord</a></div><div class="ttdeci">SphericalCoord make_SphericalCoord(float __elevation, float __azimuth)</div><div class="ttdoc">Make a SphericalCoord by specifying elevation and azimuth.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01292">helios_vector_types.h:1292</a></div></div>
 <div class="ttc" id="astructhelios_1_1_spherical_coord_html_af63b7ee76a5d57bf5881079eff52aa59"><div class="ttname"><a href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59">helios::SphericalCoord::azimuth</a></div><div class="ttdeci">float azimuth</div><div class="ttdoc">Azimuthal angle (radians)</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01264">helios_vector_types.h:1264</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a7efb1e8bc6de19f885781b564573066f"><div class="ttname"><a href="class_visualizer.html#a7efb1e8bc6de19f885781b564573066f">Visualizer::setColorbarSize</a></div><div class="ttdeci">void setColorbarSize(helios::vec2 size)</div><div class="ttdoc">Set the size of the colorbar in normalized window units (0-1)</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02463">Visualizer.cpp:2463</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a255b76955afa40ae9325f930eb28c984"><div class="ttname"><a href="classhelios_1_1_context.html#a255b76955afa40ae9325f930eb28c984">helios::Context::getAllUUIDs</a></div><div class="ttdeci">std::vector&lt; uint &gt; getAllUUIDs(void) const</div><div class="ttdoc">Get all primitive UUIDs currently in the Context.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l03737">Context.cpp:3737</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a255b76955afa40ae9325f930eb28c984"><div class="ttname"><a href="classhelios_1_1_context.html#a255b76955afa40ae9325f930eb28c984">helios::Context::getAllUUIDs</a></div><div class="ttdeci">std::vector&lt; uint &gt; getAllUUIDs(void) const</div><div class="ttdoc">Get all primitive UUIDs currently in the Context.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l03944">Context.cpp:3944</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_primitive_html_a39e4b6e3903cd6e395e242eb28b172b9"><div class="ttname"><a href="classhelios_1_1_primitive.html#a39e4b6e3903cd6e395e242eb28b172b9">helios::Primitive::getType</a></div><div class="ttdeci">PrimitiveType getType(void) const</div><div class="ttdoc">Function to get the Primitive type.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l00878">Context.cpp:878</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a32f4b1bcbbac176591bd7c1892668d7a"><div class="ttname"><a href="class_visualizer.html#a32f4b1bcbbac176591bd7c1892668d7a">Visualizer::buildContextGeometry</a></div><div class="ttdeci">void buildContextGeometry(helios::Context *context)</div><div class="ttdoc">Add all geometry from the Context to the visualizer.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02565">Visualizer.cpp:2565</a></div></div>
 <div class="ttc" id="a_context_8h_html_a935eb2a4249411a8f376a27820c70de3"><div class="ttname"><a href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3">helios::HeliosDataType</a></div><div class="ttdeci">HeliosDataType</div><div class="ttdoc">Data types.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l00043">Context.h:43</a></div></div>
@@ -4131,13 +4139,13 @@ $(function() {
 <div class="ttc" id="aclass_visualizer_html_a4938f3b70283e785c53e674358b3f03a"><div class="ttname"><a href="class_visualizer.html#a4938f3b70283e785c53e674358b3f03a">Visualizer::setColorbarTicks</a></div><div class="ttdeci">void setColorbarTicks(std::vector&lt; float &gt; ticks)</div><div class="ttdoc">Set the values in the colorbar where ticks and labels should be placed.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02480">Visualizer.cpp:2480</a></div></div>
 <div class="ttc" id="astruct_shader_html_ab2e9dda74f59acd1bfa0bbfb6d405526"><div class="ttname"><a href="struct_shader.html#ab2e9dda74f59acd1bfa0bbfb6d405526">Shader::setTextureMap</a></div><div class="ttdeci">void setTextureMap(const char *texture_file, uint &amp;textureID, helios::int2 &amp;texture_size)</div><div class="ttdoc">Color fragments using an RGB texture map.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03630">Visualizer.cpp:3630</a></div></div>
 <div class="ttc" id="astructhelios_1_1_r_g_bcolor_html"><div class="ttname"><a href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a></div><div class="ttdoc">R-G-B color vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00725">helios_vector_types.h:725</a></div></div>
-<div class="ttc" id="astruct_shader_html_a813d954624937d4a76c4f1c178097d4b"><div class="ttname"><a href="struct_shader.html#a813d954624937d4a76c4f1c178097d4b">Shader::useShader</a></div><div class="ttdeci">void useShader(void)</div><div class="ttdoc">Set shader as current.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03856">Visualizer.cpp:3856</a></div></div>
+<div class="ttc" id="astruct_shader_html_a813d954624937d4a76c4f1c178097d4b"><div class="ttname"><a href="struct_shader.html#a813d954624937d4a76c4f1c178097d4b">Shader::useShader</a></div><div class="ttdeci">void useShader(void)</div><div class="ttdoc">Set shader as current.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03864">Visualizer.cpp:3864</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_voxel_html"><div class="ttname"><a href="classhelios_1_1_voxel.html">helios::Voxel</a></div><div class="ttdoc">Parallelpiped geometric object filled with a participating medium.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l00640">Context.h:640</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a846f08321715ae2a35652bd6f6bf4aa2"><div class="ttname"><a href="class_visualizer.html#a846f08321715ae2a35652bd6f6bf4aa2">Visualizer::addSkyDomeByCenter</a></div><div class="ttdeci">void addSkyDomeByCenter(const float radius, const helios::vec3 center, const uint Ndivisions, const char *texture_file)</div><div class="ttdoc">Add a Sky Dome, which is a hemispherical dome colored by a sky texture map.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02133">Visualizer.cpp:2133</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a835b0eceaf53de0975eefbb11fc45a88"><div class="ttname"><a href="class_visualizer.html#a835b0eceaf53de0975eefbb11fc45a88">Visualizer::addTextboxByCenter</a></div><div class="ttdeci">void addTextboxByCenter(const char *textstring, const helios::vec3 center, helios::SphericalCoord rotation, const helios::RGBcolor fontcolor, const uint fontsize, const char *fontname, CoordinateSystem coordFlag)</div><div class="ttdoc">Add a text box by giving the coordinates of its center.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02228">Visualizer.cpp:2228</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a32a34b00e0a28f4b35e501b8b34cfccd"><div class="ttname"><a href="global_8h.html#a32a34b00e0a28f4b35e501b8b34cfccd">helios::cart2sphere</a></div><div class="ttdeci">SphericalCoord cart2sphere(const vec3 &amp;Cartesian)</div><div class="ttdoc">Convert Cartesian coordinates to spherical coordinates.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00638">global.cpp:638</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_ac41ea2148985f9797ca84a3affa35da9"><div class="ttname"><a href="class_visualizer.html#ac41ea2148985f9797ca84a3affa35da9">Visualizer::setColorbarRange</a></div><div class="ttdeci">void setColorbarRange(float cmin, float cmax)</div><div class="ttdoc">Set the range of the Colorbar.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02471">Visualizer.cpp:2471</a></div></div>
-<div class="ttc" id="astruct_shader_html_af6e26d4b595f857ca0610387095520af"><div class="ttname"><a href="struct_shader.html#af6e26d4b595f857ca0610387095520af">Shader::setLightingModel</a></div><div class="ttdeci">void setLightingModel(const uint lightingmodel)</div><div class="ttdoc">Set the lighting model.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03852">Visualizer.cpp:3852</a></div></div>
+<div class="ttc" id="astruct_shader_html_af6e26d4b595f857ca0610387095520af"><div class="ttname"><a href="struct_shader.html#af6e26d4b595f857ca0610387095520af">Shader::setLightingModel</a></div><div class="ttdeci">void setLightingModel(const uint lightingmodel)</div><div class="ttdoc">Set the lighting model.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03860">Visualizer.cpp:3860</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a5c8d26d18bd0bea73272834e8ed1bbe2"><div class="ttname"><a href="class_visualizer.html#a5c8d26d18bd0bea73272834e8ed1bbe2">Visualizer::disableColorbar</a></div><div class="ttdeci">void disableColorbar(void)</div><div class="ttdoc">Disable the colorbar.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02447">Visualizer.cpp:2447</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_a7203aa6d2b4db5d4a88dde73a5329f56"><div class="ttname"><a href="class_visualizer.html#a7203aa6d2b4db5d4a88dde73a5329f56">Visualizer::setBackgroundColor</a></div><div class="ttdeci">void setBackgroundColor(helios::RGBcolor color)</div><div class="ttdoc">Set the background color for the visualizer window.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l00743">Visualizer.cpp:743</a></div></div>
 <div class="ttc" id="aclass_visualizer_html_acd7770285b51e4b66eaeff7ecc19ab03"><div class="ttname"><a href="class_visualizer.html#acd7770285b51e4b66eaeff7ecc19ab03">Visualizer::addPoint</a></div><div class="ttdeci">void addPoint(const helios::vec3 position, const helios::RGBcolor color, const uint pointsize, const CoordinateSystem coordFlag)</div><div class="ttdoc">Add a point by giving its coordinates and size.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02038">Visualizer.cpp:2038</a></div></div>
@@ -4151,8 +4159,8 @@ $(function() {
 <div class="ttc" id="aclass_visualizer_html_a440ac7246f28448fdb248f537dd8cff5"><div class="ttname"><a href="class_visualizer.html#a440ac7246f28448fdb248f537dd8cff5">Visualizer::plotInteractive</a></div><div class="ttdeci">void plotInteractive(void)</div><div class="ttdoc">Plot current geometry into an interactive graphics window.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l02907">Visualizer.cpp:2907</a></div></div>
 <div class="ttc" id="astructhelios_1_1_r_g_bcolor_html_ae002d220d8695538760eee2a6c4e9023"><div class="ttname"><a href="structhelios_1_1_r_g_bcolor.html#ae002d220d8695538760eee2a6c4e9023">helios::RGBcolor::g</a></div><div class="ttdeci">float g</div><div class="ttdoc">Green color component.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00733">helios_vector_types.h:733</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_primitive_html"><div class="ttname"><a href="classhelios_1_1_primitive.html">helios::Primitive</a></div><div class="ttdoc">Primitive class.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l00125">Context.h:125</a></div></div>
-<div class="ttc" id="astruct_shader_html_a7800ac33a9f3fdaefad983d6fe851fa7"><div class="ttname"><a href="struct_shader.html#a7800ac33a9f3fdaefad983d6fe851fa7">Shader::setTextureMask</a></div><div class="ttdeci">void setTextureMask(const Glyph *glyph, uint &amp;textureID)</div><div class="ttdoc">Set fragment opacity using a Glyph (red channel)</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03725">Visualizer.cpp:3725</a></div></div>
-<div class="ttc" id="astruct_shader_html_a98c842464051a1821fd045dac40f4260"><div class="ttname"><a href="struct_shader.html#a98c842464051a1821fd045dac40f4260">Shader::setTransformationMatrix</a></div><div class="ttdeci">void setTransformationMatrix(const glm::mat4 matrix)</div><div class="ttdoc">Set the shader transformation matrix, i.e., the Affine transformation applied to all vertices.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03840">Visualizer.cpp:3840</a></div></div>
+<div class="ttc" id="astruct_shader_html_a7800ac33a9f3fdaefad983d6fe851fa7"><div class="ttname"><a href="struct_shader.html#a7800ac33a9f3fdaefad983d6fe851fa7">Shader::setTextureMask</a></div><div class="ttdeci">void setTextureMask(const Glyph *glyph, uint &amp;textureID)</div><div class="ttdoc">Set fragment opacity using a Glyph (red channel)</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03729">Visualizer.cpp:3729</a></div></div>
+<div class="ttc" id="astruct_shader_html_a98c842464051a1821fd045dac40f4260"><div class="ttname"><a href="struct_shader.html#a98c842464051a1821fd045dac40f4260">Shader::setTransformationMatrix</a></div><div class="ttdeci">void setTransformationMatrix(const glm::mat4 matrix)</div><div class="ttdoc">Set the shader transformation matrix, i.e., the Affine transformation applied to all vertices.</div><div class="ttdef"><b>Definition:</b> <a href="_visualizer_8cpp_source.html#l03848">Visualizer.cpp:3848</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_voxel_html_a85a67a4722ce17a4a36ae2f83bd8a993"><div class="ttname"><a href="classhelios_1_1_voxel.html#a85a67a4722ce17a4a36ae2f83bd8a993">helios::Voxel::getVertices</a></div><div class="ttdeci">std::vector&lt; helios::vec3 &gt; getVertices(void) const</div><div class="ttdoc">Function to return the (x,y,z) coordinates of the vertices of a Primitve.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l00984">Context.cpp:984</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_primitive_html_a6a082e3b08e374cb38145cb7ea863e2b"><div class="ttname"><a href="classhelios_1_1_primitive.html#a6a082e3b08e374cb38145cb7ea863e2b">helios::Primitive::getTextureFile</a></div><div class="ttdeci">std::string getTextureFile(void) const</div><div class="ttdoc">Function to return the texture map file of a Primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01038">Context.cpp:1038</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_primitive_html_a170665146a2c97b97de42d81cbb9115a"><div class="ttname"><a href="classhelios_1_1_primitive.html#a170665146a2c97b97de42d81cbb9115a">helios::Primitive::getTextureUV</a></div><div class="ttdeci">std::vector&lt; vec2 &gt; getTextureUV(void)</div><div class="ttdoc">Get u-v texture coordinates at primitive vertices.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01047">Context.cpp:1047</a></div></div>

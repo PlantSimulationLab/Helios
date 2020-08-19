@@ -398,6 +398,72 @@ void wait( float seconds );
  */
  std::vector<std::vector<bool> > readPNGAlpha( const char* filename );
 
+ //! Function to flatten a 2D int vector into a 1D vector
+ std::vector<int> flatten( std::vector<std::vector<int> > vec );
+  
+ //! Function to flatten a 2D uint vector into a 1D vector
+ std::vector<uint> flatten( std::vector<std::vector<uint> > vec );
+
+ //! Function to flatten a 2D float vector into a 1D vector
+ std::vector<float> flatten( std::vector<std::vector<float> > vec );
+
+ //! Function to flatten a 2D double vector into a 1D vector
+ std::vector<double> flatten( std::vector<std::vector<double> > vec );
+
+ //! Function to flatten a 2D vec2 vector into a 1D vector
+ std::vector<helios::vec2> flatten( std::vector<std::vector<helios::vec2> > vec );
+
+ //! Function to flatten a 2D vec3 vector into a 1D vector
+ std::vector<helios::vec3> flatten( std::vector<std::vector<helios::vec3> > vec );
+
+ //! Function to flatten a 2D vec4 vector into a 1D vector
+ std::vector<helios::vec4> flatten( std::vector<std::vector<helios::vec4> > vec );
+
+ //! Function to flatten a 2D int2 vector into a 1D vector
+ std::vector<helios::int2> flatten( std::vector<std::vector<helios::int2> > vec );
+
+ //! Function to flatten a 2D int3 vector into a 1D vector
+ std::vector<helios::int3> flatten( std::vector<std::vector<helios::int3> > vec );
+
+ //! Function to flatten a 2D int4 vector into a 1D vector
+ std::vector<helios::int4> flatten( std::vector<std::vector<helios::int4> > vec );
+
+ //! Function to flatten a 2D string vector into a 1D vector
+ std::vector<std::string> flatten( std::vector<std::vector<std::string> > vec );
+
+ //! Function to flatten a 3D int vector into a 1D vector
+ std::vector<int> flatten( std::vector<std::vector<std::vector<int> > > vec );
+  
+ //! Function to flatten a 3D uint vector into a 1D vector
+ std::vector<uint> flatten( std::vector<std::vector<std::vector<uint> > > vec );
+
+ //! Function to flatten a 3D float vector into a 1D vector
+ std::vector<float> flatten( std::vector<std::vector<std::vector<float> > > vec );
+
+ //! Function to flatten a 3D double vector into a 1D vector
+ std::vector<double> flatten( std::vector<std::vector<std::vector<double> > > vec );
+
+ //! Function to flatten a 3D vec2 vector into a 1D vector
+ std::vector<helios::vec2> flatten( std::vector<std::vector<std::vector<helios::vec2> > > vec );
+
+ //! Function to flatten a 3D vec3 vector into a 1D vector
+ std::vector<helios::vec3> flatten( std::vector<std::vector<std::vector<helios::vec3> > > vec );
+
+ //! Function to flatten a 3D vec4 vector into a 1D vector
+ std::vector<helios::vec4> flatten( std::vector<std::vector<std::vector<helios::vec4> > > vec );
+
+ //! Function to flatten a 3D int2 vector into a 1D vector
+ std::vector<helios::int2> flatten( std::vector<std::vector<std::vector<helios::int2> > > vec );
+
+ //! Function to flatten a 3D int3 vector into a 1D vector
+ std::vector<helios::int3> flatten( std::vector<std::vector<std::vector<helios::int3> > > vec );
+
+ //! Function to flatten a 3D int4 vector into a 1D vector
+ std::vector<helios::int4> flatten( std::vector<std::vector<std::vector<helios::int4> > > vec );
+
+ //! Function to flatten a 3D string vector into a 1D vector
+ std::vector<std::string> flatten( std::vector<std::vector<std::vector<std::string> > > vec );
+
  
 }
 

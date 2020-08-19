@@ -82,7 +82,7 @@ VSPGrapevineParameters::VSPGrapevineParameters(void){
 
   shoot_length = 0.9;
 
-  shoot_radius = 0.005;
+  shoot_radius = 0.0025;
 
   shoots_per_cordon = 10;
 
@@ -128,7 +128,7 @@ SplitGrapevineParameters::SplitGrapevineParameters(void){
 
   shoot_length = 1.2;
 
-  shoot_radius = 0.005;
+  shoot_radius = 0.0025;
 
   shoots_per_cordon = 10;
 
@@ -176,7 +176,7 @@ UnilateralGrapevineParameters::UnilateralGrapevineParameters(void){
 
   shoot_length = 0.9;
 
-  shoot_radius = 0.005;
+  shoot_radius = 0.0025;
 
   shoots_per_cordon = 20;
 
@@ -220,7 +220,7 @@ GobletGrapevineParameters::GobletGrapevineParameters(void){
 
   shoot_length = 0.9;
 
-  shoot_radius = 0.005;
+  shoot_radius = 0.0025;
 
   shoots_per_cordon = 10;
 
@@ -811,6 +811,10 @@ std::vector<std::vector<std::vector<uint> > > CanopyGenerator::getFruitUUIDs( co
     exit(EXIT_FAILURE);
   }
   return UUID_fruit.at(TreeID);
+}
+
+std::vector<uint> CanopyGenerator::getGroundUUIDs( void ){
+  return UUID_ground;
 }
 
 std::vector<uint> CanopyGenerator::getAllUUIDs( const uint TreeID ){
