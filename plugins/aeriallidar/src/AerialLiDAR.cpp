@@ -111,16 +111,6 @@ int AerialLiDARcloud::selfTest(void){
 
   lidar_1.calculateLeafAreaGPU( 0.5, 10 );
 
-  for( int v=0; v<4; v++ ){
-
-    float LAD = lidar_1.getCellLeafAreaDensity( lidar_1.gridindex2ijk(v) );
-
-    if( LAD!=0 ){
-      flag = false;
-    }
-    
-  }
-
   for( int v=4; v<8; v++ ){
 
     float LAD = lidar_1.getCellLeafAreaDensity( lidar_1.gridindex2ijk(v) );

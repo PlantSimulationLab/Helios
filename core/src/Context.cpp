@@ -4260,6 +4260,114 @@ void Context::getDomainBoundingSphere( const std::vector<uint>& UUIDs, vec3& cen
 
 }
 
+void Context::cropDomainX( const helios::vec2 xbounds ){
+
+  std::vector<vec3> vertices;
+
+  std::vector<uint> UUIDs_all = getAllUUIDs();
+  
+  for( size_t p=0; p<UUIDs_all.size(); p++ ){
+
+    vertices = getPrimitivePointer(UUIDs_all.at(p))->getVertices();
+
+    for( int i=0; i<vertices.size(); i++ ){
+      if( vertices.at(i).x<xbounds.x || vertices.at(i).x>xbounds.y ){
+	deletePrimitive( UUIDs_all.at(p) );
+	break;
+      }
+    }
+    
+  }
+
+  if( getPrimitiveCount()==0 ){
+    std::cout << "WARNING (cropDomainX): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
+  }
+  
+}
+
+void Context::cropDomainY( const helios::vec2 ybounds ){
+
+  std::vector<vec3> vertices;
+
+  std::vector<uint> UUIDs_all = getAllUUIDs();
+  
+  for( size_t p=0; p<UUIDs_all.size(); p++ ){
+
+    vertices = getPrimitivePointer(UUIDs_all.at(p))->getVertices();
+
+    for( int i=0; i<vertices.size(); i++ ){
+      if( vertices.at(i).y<ybounds.x || vertices.at(i).y>ybounds.y ){
+	deletePrimitive( UUIDs_all.at(p) );
+	break;
+      }
+    }
+    
+  }
+
+  if( getPrimitiveCount()==0 ){
+    std::cout << "WARNING (cropDomainY): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
+  }
+  
+}
+
+void Context::cropDomainZ( const helios::vec2 zbounds ){
+
+  std::vector<vec3> vertices;
+
+  std::vector<uint> UUIDs_all = getAllUUIDs();
+  
+  for( size_t p=0; p<UUIDs_all.size(); p++ ){
+
+    vertices = getPrimitivePointer(UUIDs_all.at(p))->getVertices();
+
+    for( int i=0; i<vertices.size(); i++ ){
+      if( vertices.at(i).z<zbounds.x || vertices.at(i).z>zbounds.y ){
+	deletePrimitive( UUIDs_all.at(p) );
+	break;
+      }
+    }
+    
+  }
+
+  if( getPrimitiveCount()==0 ){
+    std::cout << "WARNING (cropDomainZ): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
+  }
+
+}
+
+void Context::cropDomain( const helios::vec2 xbounds, const helios::vec2 ybounds, const helios::vec2 zbounds ){
+
+  std::vector<vec3> vertices;
+
+  std::vector<uint> UUIDs_all = getAllUUIDs();
+  
+  for( size_t p=0; p<UUIDs_all.size(); p++ ){
+
+    vertices = getPrimitivePointer(UUIDs_all.at(p))->getVertices();
+
+    for( int i=0; i<vertices.size(); i++ ){
+      if( vertices.at(i).x<xbounds.x || vertices.at(i).x>xbounds.y ){
+	deletePrimitive( UUIDs_all.at(p) );
+	break;
+      }
+      if( vertices.at(i).y<ybounds.x || vertices.at(i).y>ybounds.y ){
+	deletePrimitive( UUIDs_all.at(p) );
+	break;
+      }
+      if( vertices.at(i).z<zbounds.x || vertices.at(i).z>zbounds.y ){
+	deletePrimitive( UUIDs_all.at(p) );
+	break;
+      }
+    }
+    
+  }
+
+  if( getPrimitiveCount()==0 ){
+    std::cout << "WARNING (cropDomain): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
+  }
+
+}
+
 std::vector<uint> Context::addSphere( const uint Ndivs, const vec3 center, const float radius ){
  
   RGBcolor color = make_RGBcolor(0.f,0.75f,0.f); //Default color is green

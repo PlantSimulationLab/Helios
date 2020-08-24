@@ -92,6 +92,8 @@ VSPGrapevineParameters::VSPGrapevineParameters(void){
 
   cluster_radius = 0.03;
 
+  grape_color = make_RGBcolor(0.18,0.2,0.25);
+
   plant_spacing = 2;
 
   row_spacing = 2;
@@ -142,6 +144,8 @@ SplitGrapevineParameters::SplitGrapevineParameters(void){
 
   cluster_radius = 0.03;
 
+  grape_color = make_RGBcolor(0.18,0.2,0.25);
+
   plant_spacing = 2;
 
   row_spacing = 4;
@@ -186,6 +190,8 @@ UnilateralGrapevineParameters::UnilateralGrapevineParameters(void){
 
   cluster_radius = 0.03;
 
+  grape_color = make_RGBcolor(0.18,0.2,0.25);
+
   plant_spacing = 2;
 
   row_spacing = 2;
@@ -229,6 +235,8 @@ GobletGrapevineParameters::GobletGrapevineParameters(void){
   grape_radius = 0.0075;
 
   cluster_radius = 0.03;
+
+  grape_color = make_RGBcolor(0.18,0.2,0.25);
 
   plant_spacing = 2;
 
@@ -305,6 +313,7 @@ int CanopyGenerator::selfTest( void ){
   std::cout << "Generating default homogeneous canopy..." << std::flush;
 
   CanopyGenerator canopygenerator_0(&context);
+  canopygenerator_0.disableMessages();
   HomogeneousCanopyParameters params_0;
   canopygenerator_0.buildCanopy(params_0);
   context.deletePrimitive( context.getAllUUIDs() );
@@ -314,6 +323,7 @@ int CanopyGenerator::selfTest( void ){
   std::cout << "Generating default spherical crowns canopy..." << std::flush;
 
   CanopyGenerator canopygenerator_1(&context);
+  canopygenerator_1.disableMessages();
   SphericalCrownsCanopyParameters params_1;
   canopygenerator_1.buildCanopy(params_1);
   context.deletePrimitive( context.getAllUUIDs() );
@@ -323,6 +333,7 @@ int CanopyGenerator::selfTest( void ){
   std::cout << "Generating default VSP grapevine canopy..." << std::flush;
 
   CanopyGenerator canopygenerator_2(&context);
+  canopygenerator_2.disableMessages();
   VSPGrapevineParameters params_2;
   canopygenerator_2.buildCanopy(params_2);
   context.deletePrimitive( context.getAllUUIDs() );
@@ -332,6 +343,7 @@ int CanopyGenerator::selfTest( void ){
   std::cout << "Generating default split trellis grapevine canopy..." << std::flush;
 
   CanopyGenerator canopygenerator_3(&context);
+  canopygenerator_3.disableMessages();
   SplitGrapevineParameters params_3;
   canopygenerator_3.buildCanopy(params_3);
   context.deletePrimitive( context.getAllUUIDs() );
@@ -341,6 +353,7 @@ int CanopyGenerator::selfTest( void ){
   std::cout << "Generating default unilateral trellis grapevine canopy..." << std::flush;
 
   CanopyGenerator canopygenerator_4(&context);
+  canopygenerator_4.disableMessages();
   UnilateralGrapevineParameters params_4;
   canopygenerator_4.buildCanopy(params_4);
   context.deletePrimitive( context.getAllUUIDs() );
@@ -350,14 +363,56 @@ int CanopyGenerator::selfTest( void ){
   std::cout << "Generating default goblet trellis grapevine canopy..." << std::flush;
 
   CanopyGenerator canopygenerator_5(&context);
+  canopygenerator_5.disableMessages();
   GobletGrapevineParameters params_5;
   canopygenerator_5.buildCanopy(params_5);
   context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;
 
-  std::cout << "passed." << std::endl;
-  return 0;
+  std::cout << "Generating homogeneous canopy with randomly deleted primitives..." << std::flush;
+
+  CanopyGenerator canopygenerator_6(&context);
+  canopygenerator_6.disableMessages();
+  HomogeneousCanopyParameters params_6;
+  canopygenerator_6.buildCanopy(params_6);
+
+  std::vector<uint> UUIDs_leaves = flatten( canopygenerator_6.getLeafUUIDs(0) );
+
+  context.deletePrimitive(UUIDs_leaves.at(0));
+  context.deletePrimitive(UUIDs_leaves.at(11));
+  context.deletePrimitive(UUIDs_leaves.at(23));
+  context.deletePrimitive(UUIDs_leaves.back());
+
+  UUIDs_leaves = flatten( canopygenerator_6.getLeafUUIDs(0) );
+
+  bool fail_flag = false;
+  for( uint p=0; p<UUIDs_leaves.size(); p++ ){
+    if( !context.doesPrimitiveExist( UUIDs_leaves.at(p) ) ){
+      fail_flag = true;
+    }
+  }
+  
+  std::vector<uint> UUIDs_all = canopygenerator_6.getAllUUIDs(0);
+
+  fail_flag = false;
+  for( uint p=0; p<UUIDs_all.size(); p++ ){
+    if( !context.doesPrimitiveExist( UUIDs_all.at(p) ) ){
+      fail_flag = true;
+    }
+  }
+  
+  context.deletePrimitive( context.getAllUUIDs() );
+
+  std::cout << "done." << std::endl;
+  
+  if( fail_flag ){
+    std::cout << "failed." << std::endl;
+    return 1;
+  }else{    
+    std::cout << "passed." << std::endl;
+    return 0;
+  }
   
 }
 
@@ -786,35 +841,120 @@ std::vector<uint> CanopyGenerator::getTrunkUUIDs( const uint TreeID ){
     std::cerr << "ERROR (CanopyGenerator::getTrunkUUIDs): Cannot get UUIDs for plant " << TreeID << " because only " << UUID_trunk.size() << " plants have been built." << std::endl;
     exit(EXIT_FAILURE);
   }
-  return UUID_trunk.at(TreeID);
+
+  std::vector<uint> UUID;
+
+  for( size_t i=0; i<UUID_trunk.at(TreeID).size(); i++ ){
+ 
+    if( context->doesPrimitiveExist(UUID_trunk.at(TreeID).at(i)) ){
+      UUID.push_back(UUID_trunk.at(TreeID).at(i));
+    }
+          
+  }
+  
+  return UUID;
+  
 }
 
 std::vector<uint> CanopyGenerator::getBranchUUIDs( const uint TreeID ){
-  if( TreeID>=UUID_trunk.size() ){
+  if( TreeID>=UUID_branch.size() ){
     std::cerr << "ERROR (CanopyGenerator::getBranchUUIDs): Cannot get UUIDs for plant " << TreeID << " because only " << UUID_branch.size() << " plants have been built." << std::endl;
     exit(EXIT_FAILURE);
   }
-  return UUID_branch.at(TreeID);
+
+  std::vector<uint> UUID;
+
+  for( size_t i=0; i<UUID_branch.at(TreeID).size(); i++ ){
+ 
+    if( context->doesPrimitiveExist(UUID_branch.at(TreeID).at(i)) ){
+      UUID.push_back(UUID_branch.at(TreeID).at(i));
+    }
+          
+  }
+  
+  return UUID;
+
 }
 
 std::vector<std::vector<uint> > CanopyGenerator::getLeafUUIDs( const uint TreeID ){
-  if( TreeID>=UUID_trunk.size() ){
+  if( TreeID>=UUID_leaf.size() ){
     std::cerr << "ERROR (CanopyGenerator::getLeafUUIDs): Cannot get UUIDs for plant " << TreeID << " because only " << UUID_leaf.size() << " plants have been built." << std::endl;
     exit(EXIT_FAILURE);
   }
-  return UUID_leaf.at(TreeID);
+
+  //in case primitives have been deleted, only return UUIDs that still exist
+  
+  std::vector<std::vector<uint> > UUID;
+
+  for( size_t j=0; j<UUID_leaf.at(TreeID).size(); j++ ){
+    std::vector<uint> U;
+    for( size_t i=0; i<UUID_leaf.at(TreeID).at(j).size(); i++ ){
+      
+      if( context->doesPrimitiveExist(UUID_leaf.at(TreeID).at(j).at(i)) ){
+	U.push_back(UUID_leaf.at(TreeID).at(j).at(i));
+      }
+      
+    }
+
+    if( U.size()>0 ){
+      UUID.push_back(U);
+    }
+    
+  }
+  
+  return UUID;
 }
 
 std::vector<std::vector<std::vector<uint> > > CanopyGenerator::getFruitUUIDs( const uint TreeID ){
-  if( TreeID>=UUID_trunk.size() ){
+  if( TreeID>=UUID_fruit.size() ){
     std::cerr << "ERROR (CanopyGenerator::getFruitUUIDs): Cannot get UUIDs for plant " << TreeID << " because only " << UUID_fruit.size() << " plants have been built." << std::endl;
     exit(EXIT_FAILURE);
   }
-  return UUID_fruit.at(TreeID);
+
+  std::vector<std::vector<std::vector<uint> > > UUID;
+
+  for( size_t k=0; k<UUID_fruit.at(TreeID).size(); k++ ){
+    std::vector<std::vector<uint> > U2;
+    for( size_t j=0; j<UUID_fruit.at(TreeID).at(k).size(); j++ ){
+      std::vector<uint> U1;
+      for( size_t i=0; i<UUID_fruit.at(TreeID).at(k).at(j).size(); i++ ){
+
+	if( context->doesPrimitiveExist(UUID_fruit.at(TreeID).at(k).at(j).at(i)) ){
+	  U1.push_back(UUID_fruit.at(TreeID).at(k).at(j).at(i));
+	}
+      
+      }
+
+      if( U1.size()>0 ){
+	U2.push_back(U1);
+      }
+
+    }
+
+    if( U2.size()>0 ){
+      UUID.push_back(U2);
+    }
+    
+  }
+  
+  return UUID;
+
 }
 
 std::vector<uint> CanopyGenerator::getGroundUUIDs( void ){
-  return UUID_ground;
+
+  std::vector<uint> UUID;
+
+  for( size_t i=0; i<UUID_ground.size(); i++ ){
+ 
+    if( context->doesPrimitiveExist(UUID_ground.at(i)) ){
+      UUID.push_back(UUID_ground.at(i));
+    }
+          
+  }
+  
+  return UUID;
+  
 }
 
 std::vector<uint> CanopyGenerator::getAllUUIDs( const uint TreeID ){
@@ -837,7 +977,16 @@ std::vector<uint> CanopyGenerator::getAllUUIDs( const uint TreeID ){
       }
     }
   }
-  return UUIDs;
+
+  std::vector<uint> U;
+
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    if( context->doesPrimitiveExist(UUIDs.at(p)) ){
+      U.push_back(UUIDs.at(p));
+    }
+  }
+  
+  return U;
 }
 
 uint CanopyGenerator::getPlantCount( void ){

@@ -6,7 +6,7 @@
     <center> 5 5 20 </center>
     <extent> 10 10 </extent>
     <coneangle> 0 </coneangle>
-    <scandensity> 100 </scandensity>
+    <scandensity> 1000 </scandensity>
   </scan>
 
   <grid>

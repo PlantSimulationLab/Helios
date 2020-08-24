@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.6</span>
+   &#160;<span id="projectnumber">v1.1.7</span>
    </div>
   </td>
  </tr>
@@ -619,6 +619,18 @@ std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a 
 <tr class="memitem:af3e048e969f06e3a0cf36ed3d76766ca"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#af3e048e969f06e3a0cf36ed3d76766ca">getDomainBoundingSphere</a> (const std::vector&lt; uint &gt; &amp;UUIDs, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;center, float &amp;radius) const</td></tr>
 <tr class="memdesc:af3e048e969f06e3a0cf36ed3d76766ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the center and radius of a sphere that bounds a subset of primitives.  <a href="classhelios_1_1_context.html#af3e048e969f06e3a0cf36ed3d76766ca">More...</a><br /></td></tr>
 <tr class="separator:af3e048e969f06e3a0cf36ed3d76766ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaca91acadee587aed19665b7d53a7bf9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#aaca91acadee587aed19665b7d53a7bf9">cropDomainX</a> (const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> xbounds)</td></tr>
+<tr class="memdesc:aaca91acadee587aed19665b7d53a7bf9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Crop the domain in the x-direction such that all primitives lie within some specified x interval.  <a href="classhelios_1_1_context.html#aaca91acadee587aed19665b7d53a7bf9">More...</a><br /></td></tr>
+<tr class="separator:aaca91acadee587aed19665b7d53a7bf9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa97118f137587781bbc0e91329b2330e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#aa97118f137587781bbc0e91329b2330e">cropDomainY</a> (const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> ybounds)</td></tr>
+<tr class="memdesc:aa97118f137587781bbc0e91329b2330e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Crop the domain in the y-direction such that all primitives lie within some specified y interval.  <a href="classhelios_1_1_context.html#aa97118f137587781bbc0e91329b2330e">More...</a><br /></td></tr>
+<tr class="separator:aa97118f137587781bbc0e91329b2330e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a05b7ad87b2b2db7f497afe0126f2e9a1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a05b7ad87b2b2db7f497afe0126f2e9a1">cropDomainZ</a> (const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> zbounds)</td></tr>
+<tr class="memdesc:a05b7ad87b2b2db7f497afe0126f2e9a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Crop the domain in the z-direction such that all primitives lie within some specified z interval.  <a href="classhelios_1_1_context.html#a05b7ad87b2b2db7f497afe0126f2e9a1">More...</a><br /></td></tr>
+<tr class="separator:a05b7ad87b2b2db7f497afe0126f2e9a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1683a56c8ab27f5f8fa0da44fc2663ca"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a1683a56c8ab27f5f8fa0da44fc2663ca">cropDomain</a> (const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> xbounds, const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> ybounds, const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> zbounds)</td></tr>
+<tr class="memdesc:a1683a56c8ab27f5f8fa0da44fc2663ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Crop the domain such that all primitives lie within some specified axis-aligned box.  <a href="classhelios_1_1_context.html#a1683a56c8ab27f5f8fa0da44fc2663ca">More...</a><br /></td></tr>
+<tr class="separator:a1683a56c8ab27f5f8fa0da44fc2663ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a382594ed34f1e8e45d5c30b5912d2aa1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a382594ed34f1e8e45d5c30b5912d2aa1">loadXML</a> (const char *filename)</td></tr>
 <tr class="memdesc:a382594ed34f1e8e45d5c30b5912d2aa1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load inputs specified in an XML file.  <a href="classhelios_1_1_context.html#a382594ed34f1e8e45d5c30b5912d2aa1">More...</a><br /></td></tr>
 <tr class="separator:a382594ed34f1e8e45d5c30b5912d2aa1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -978,6 +990,136 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="section return"><dt>Returns</dt><dd>UUID for copied primitive </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03834">3834</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1683a56c8ab27f5f8fa0da44fc2663ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1683a56c8ab27f5f8fa0da44fc2663ca">&#9670;&nbsp;</a></span>cropDomain()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::cropDomain </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td>
+          <td class="paramname"><em>xbounds</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td>
+          <td class="paramname"><em>ybounds</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td>
+          <td class="paramname"><em>zbounds</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Crop the domain such that all primitives lie within some specified axis-aligned box. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">xbounds</td><td>Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ybounds</td><td>Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">zbounds</td><td>Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04338">4338</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aaca91acadee587aed19665b7d53a7bf9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaca91acadee587aed19665b7d53a7bf9">&#9670;&nbsp;</a></span>cropDomainX()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::cropDomainX </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td>
+          <td class="paramname"><em>xbounds</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Crop the domain in the x-direction such that all primitives lie within some specified x interval. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">xbounds</td><td>Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04263">4263</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa97118f137587781bbc0e91329b2330e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa97118f137587781bbc0e91329b2330e">&#9670;&nbsp;</a></span>cropDomainY()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::cropDomainY </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td>
+          <td class="paramname"><em>ybounds</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Crop the domain in the y-direction such that all primitives lie within some specified y interval. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ybounds</td><td>Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04288">4288</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a05b7ad87b2b2db7f497afe0126f2e9a1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a05b7ad87b2b2db7f497afe0126f2e9a1">&#9670;&nbsp;</a></span>cropDomainZ()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::cropDomainZ </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td>
+          <td class="paramname"><em>zbounds</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Crop the domain in the z-direction such that all primitives lie within some specified z interval. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">zbounds</td><td>Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04313">4313</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3499,7 +3641,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06728">6728</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06836">6836</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3566,7 +3708,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06732">6732</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06840">6840</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3619,7 +3761,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06452">6452</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06560">6560</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3673,7 +3815,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of blue if no colors are specified in the .ply file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06448">6448</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06556">6556</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3733,7 +3875,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06456">6456</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06564">6564</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3780,7 +3922,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of blue if no colors are specified in the .ply file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06444">6444</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06552">6552</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3809,7 +3951,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function is based on the pugi xml parser. See <a href="www.pugixml.org">pugixml.org</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05226">5226</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05334">5334</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7331,7 +7473,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07027">7027</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07135">7135</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7359,7 +7501,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06664">6664</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06772">6772</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7387,7 +7529,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06036">6036</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06144">6144</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

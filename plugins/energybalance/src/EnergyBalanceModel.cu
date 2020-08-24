@@ -30,7 +30,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
-__device__ float evaluateEnergyBalance( float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, float objectdensity, float dt, float Tprev ){
+__device__ float evaluateEnergyBalance( float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, float heatcapacity, float dt, float Tprev ){
 
   //Outgoing emission flux
   float Rout = float(Nsides)*eps*5.67e-8*pow(T,4);
@@ -50,11 +50,10 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
   float QL = gM*lambda*(es-ea)/pressure;
 
   //Storage heat flux
-  float specificheatofwater=4190; // J/kg/C
 
   float storage = 0.f;
   if (dt>0){
-    storage=objectdensity*specificheatofwater*(T-Tprev)/dt;
+    storage=heatcapacity*(T-Tprev)/dt;
   }
 
   //Residual
@@ -62,7 +61,7 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
 
 }
 
-__global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float* Qother, float* eps, float* Ta, float* ea, float* pressure, float* gH, float* gS, uint* Nsides, float* TL, float* objectdensity, float dt ){
+__global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float* Qother, float* eps, float* Ta, float* ea, float* pressure, float* gH, float* gS, uint* Nsides, float* TL, float* heatcapacity, float dt ){
 
   uint p = blockIdx.x*blockDim.x+threadIdx.x;
 
@@ -80,8 +79,8 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
   float T_old = T_old_old;
   T_old_old = 400.f;
 
-  float resid_old = evaluateEnergyBalance(T_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],objectdensity[p],dt,To[p]);
-  float resid_old_old = evaluateEnergyBalance(T_old_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],objectdensity[p],dt,To[p]);
+  float resid_old = evaluateEnergyBalance(T_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],heatcapacity[p],dt,To[p]);
+  float resid_old_old = evaluateEnergyBalance(T_old_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],heatcapacity[p],dt,To[p]);
   
   float resid = 100;
   float err = resid;
@@ -95,7 +94,7 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
 
     T = fabs((T_old_old*resid_old-T_old*resid_old_old)/(resid_old-resid_old_old));
 
-    resid = evaluateEnergyBalance(T,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],objectdensity[p],dt,To[p]);
+    resid = evaluateEnergyBalance(T,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],heatcapacity[p],dt,To[p]);
 
     resid_old_old = resid_old;
     resid_old = resid;
@@ -128,12 +127,12 @@ void EnergyBalanceModel::run( const float dt ){
 }
 
 void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
- run( UUIDs, 0.f );
+  run( UUIDs, 0.f);
 }
 
 
 void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
-
+ 
   if( message_flag ){
     std::cout << "Running energy balance model..." << std::flush;
   }
@@ -231,9 +230,9 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
   uint* d_Nsides;
   CUDA_CHECK_ERROR( cudaMalloc((void**)&d_Nsides, Nprimitives*sizeof(uint)) );
 
-  float* objectdensity = (float*)malloc( Nprimitives*sizeof(float) );
-  float* d_objectdensity;
-  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_objectdensity, Nprimitives*sizeof(float)) );
+  float* heatcapacity = (float*)malloc( Nprimitives*sizeof(float) );
+  float* d_heatcapacity;
+  CUDA_CHECK_ERROR( cudaMalloc((void**)&d_heatcapacity, Nprimitives*sizeof(float)) );
   
   for( uint u=0; u<Nprimitives; u++ ){
     size_t p = UUIDs.at(u);
@@ -335,11 +334,11 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
       }
     }
 
-    //Object density
-    if( prim->doesPrimitiveDataExist("object_density") ){
-      prim->getPrimitiveData("object_density",objectdensity[u]);
+    //Object heat capacity
+    if( prim->doesPrimitiveDataExist("heat_capacity") ){
+      prim->getPrimitiveData("heat_capacity",heatcapacity[u]);
     }else{
-      objectdensity[u] = objectdensity_default;
+      heatcapacity[u] = heatcapacity_default;
     }
 
   }
@@ -355,7 +354,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
   CUDA_CHECK_ERROR( cudaMemcpy(d_gH, gH, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
   CUDA_CHECK_ERROR( cudaMemcpy(d_gS, gS, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
   CUDA_CHECK_ERROR( cudaMemcpy(d_Nsides, Nsides, Nprimitives*sizeof(uint), cudaMemcpyHostToDevice) );
-  CUDA_CHECK_ERROR( cudaMemcpy(d_objectdensity, objectdensity, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
+  CUDA_CHECK_ERROR( cudaMemcpy(d_heatcapacity, heatcapacity, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
 
   float* T = (float*)malloc( Nprimitives*sizeof(float) );
   float* d_T;
@@ -364,8 +363,9 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
   //launch kernel
   dim3 dimBlock( 64, 1 );
   dim3 dimGrid( ceil(Nprimitives/64.f) );
-  solveEnergyBalance <<< dimGrid, dimBlock >>>(Nprimitives,d_To,d_R,d_Qother,d_eps,d_Ta,d_ea,d_pressure,d_gH,d_gS,d_Nsides,d_T,d_objectdensity,dt);
   
+  solveEnergyBalance <<< dimGrid, dimBlock >>>(Nprimitives,d_To,d_R,d_Qother,d_eps,d_Ta,d_ea,d_pressure,d_gH,d_gS,d_Nsides,d_T,d_heatcapacity,dt);
+      
   CUDA_CHECK_ERROR( cudaPeekAtLastError() );
   CUDA_CHECK_ERROR( cudaDeviceSynchronize() );
 
@@ -392,7 +392,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
 
     float storage=0.f;
     if ( dt>0){
-      storage=objectdensity[u]*4190*(T[u]-To[u])/dt;
+      storage=heatcapacity[u]*(T[u]-To[u])/dt;
     }
     prim->setPrimitiveData("heat_storage", storage);
 
@@ -418,7 +418,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
   free( gS );
   free( Nsides );
   free( T );
-  free( objectdensity );
+  free( heatcapacity );
 
   CUDA_CHECK_ERROR( cudaFree(d_To) );
   CUDA_CHECK_ERROR( cudaFree(d_R) );
@@ -431,7 +431,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
   CUDA_CHECK_ERROR( cudaFree(d_gS) );
   CUDA_CHECK_ERROR( cudaFree(d_Nsides) );
   CUDA_CHECK_ERROR( cudaFree(d_T) );
-  CUDA_CHECK_ERROR( cudaFree(d_objectdensity) );
+  CUDA_CHECK_ERROR( cudaFree(d_heatcapacity) );
 
   if( message_flag ){
     std::cout << "done." << std::endl;

@@ -36,7 +36,7 @@ EnergyBalanceModel::EnergyBalanceModel( helios::Context* __context ){
 
   Qother_default = 0; //W/m^2
 
-  objectdensity_default=1; //kg/m^2
+  heatcapacity_default = 0; //J/m^2-oC
 
   dt_default=0; //sec
 

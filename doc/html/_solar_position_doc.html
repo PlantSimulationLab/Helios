@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.6</span>
+   &#160;<span id="projectnumber">v1.1.7</span>
    </div>
   </td>
  </tr>
@@ -132,16 +132,16 @@ Model Theory</h1>
 <h2><a class="anchor" id="SolarPosTheory"></a>
 Position of the Sun</h2>
 <p>The solar position model was implemented following the description in <a href="https://www.sciencedirect.com/science/article/pii/B9780123737502500069">Chapter 1 of Iqbal (1983)</a>.</p>
-<p>The day angle <img class="formulaInl" alt="$\Gamma$" src="form_88.png" width="11" height="11"/> given as the polar angle of the earth relative to the sun ( <img class="formulaInl" alt="$\Gamma=0$" src="form_89.png" width="38" height="11"/> on Jan. 1) is calculated as</p>
-<center> <img class="formulaInl" alt="$\Gamma = 2\pi(DOY-1)/365.25$" src="form_90.png" width="171" height="17"/>, (1) </center><p>where DOY is the <a href="https://en.wikipedia.org/wiki/Julian_day">Julian Day</a> of the year.</p>
+<p>The day angle <img class="formulaInl" alt="$\Gamma$" src="form_91.png" width="11" height="11"/> given as the polar angle of the earth relative to the sun ( <img class="formulaInl" alt="$\Gamma=0$" src="form_92.png" width="38" height="11"/> on Jan. 1) is calculated as</p>
+<center> <img class="formulaInl" alt="$\Gamma = 2\pi(DOY-1)/365.25$" src="form_93.png" width="171" height="17"/>, (1) </center><p>where DOY is the <a href="https://en.wikipedia.org/wiki/Julian_day">Julian Day</a> of the year.</p>
 <p>The solar declination angle is then calculated as</p>
-<center> <img class="formulaInl" alt="$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$" src="form_91.png" width="575" height="35"/>. (2) </center><p>The <a href="https://en.wikipedia.org/wiki/Equation_of_time">equation of time</a> is calculated as</p>
-<center> <img class="formulaInl" alt="$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$" src="form_92.png" width="527" height="35"/>, (3) </center><p>The hour angle is given by</p>
-<center> <img class="formulaInl" alt="$h=15(LST-12)$" src="form_93.png" width="119" height="17"/>, (4) </center><p>with</p>
-<center> <img class="formulaInl" alt="$LST=hour+minute/60+TC/60$" src="form_94.png" width="234" height="17"/>, (5) </center><p>and</p>
-<center> <img class="formulaInl" alt="$TC=4(15UTC-longitude)+EoT$" src="form_95.png" width="242" height="17"/>, (6) </center><p>Finally, the solar zenith angle is given by</p>
-<center> <img class="formulaInl" alt="$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )$" src="form_96.png" width="378" height="20"/>, (7) </center><p>and the solar azimuthal angle is given by</p>
-<center> <img class="formulaInl" alt="$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))$" src="form_97.png" width="416" height="18"/>. (8) </center><p>Note that <img class="formulaInl" alt="$\mathrm{cos}^{-1}$" src="form_98.png" width="36" height="14"/> gives angles between 0 and <img class="formulaInl" alt="$\pi$" src="form_5.png" width="11" height="8"/>, so to get a <img class="formulaInl" alt="$\phi_s$" src="form_99.png" width="14" height="15"/> between 0 and <img class="formulaInl" alt="$2\pi$" src="form_0.png" width="17" height="11"/>, we take <img class="formulaInl" alt="$\phi_s=2\pi-\phi_s$" src="form_100.png" width="84" height="15"/> if <img class="formulaInl" alt="$LST&gt;12$" src="form_101.png" width="66" height="14"/>.</p>
+<center> <img class="formulaInl" alt="$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$" src="form_94.png" width="575" height="35"/>. (2) </center><p>The <a href="https://en.wikipedia.org/wiki/Equation_of_time">equation of time</a> is calculated as</p>
+<center> <img class="formulaInl" alt="$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$" src="form_95.png" width="527" height="35"/>, (3) </center><p>The hour angle is given by</p>
+<center> <img class="formulaInl" alt="$h=15(LST-12)$" src="form_96.png" width="119" height="17"/>, (4) </center><p>with</p>
+<center> <img class="formulaInl" alt="$LST=hour+minute/60+TC/60$" src="form_97.png" width="234" height="17"/>, (5) </center><p>and</p>
+<center> <img class="formulaInl" alt="$TC=4(15UTC-longitude)+EoT$" src="form_98.png" width="242" height="17"/>, (6) </center><p>Finally, the solar zenith angle is given by</p>
+<center> <img class="formulaInl" alt="$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )$" src="form_99.png" width="378" height="20"/>, (7) </center><p>and the solar azimuthal angle is given by</p>
+<center> <img class="formulaInl" alt="$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))$" src="form_100.png" width="416" height="18"/>. (8) </center><p>Note that <img class="formulaInl" alt="$\mathrm{cos}^{-1}$" src="form_101.png" width="36" height="14"/> gives angles between 0 and <img class="formulaInl" alt="$\pi$" src="form_5.png" width="11" height="8"/>, so to get a <img class="formulaInl" alt="$\phi_s$" src="form_102.png" width="14" height="15"/> between 0 and <img class="formulaInl" alt="$2\pi$" src="form_0.png" width="17" height="11"/>, we take <img class="formulaInl" alt="$\phi_s=2\pi-\phi_s$" src="form_103.png" width="84" height="15"/> if <img class="formulaInl" alt="$LST&gt;12$" src="form_104.png" width="66" height="14"/>.</p>
 <h2><a class="anchor" id="SolarFluxTheory"></a>
 Direct and Diffuse Solar Flux</h2>
 <p>Clear-sky solar fluxes are calculated using the 'REST-2' model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. REST-2 is a state-of-the-art atmospheric transmission model that calculates the solar flux at Earth's surface after attenuation by water vapor, CO<sub>2</sub>, Ozone, NO<sub>2</sub>, and aerosols. The model partitions the total radiative flux into direct and diffuse components.</p>
@@ -149,9 +149,9 @@ Direct and Diffuse Solar Flux</h2>
 Ambient Longwave Flux</h2>
 <p>The longwave radiation flux emanating from the clear-sky is modeled following <a href="https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/qj.49712253306">Prata (1996)</a>.</p>
 <p>The model surmounts to calculating the effective emissivity of the sky as a function of precipitable water in the atmosphere</p>
-<center> <img class="formulaInl" alt="$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)$" src="form_102.png" width="240" height="29"/>, </center><p>where <img class="formulaInl" alt="$u$" src="form_103.png" width="11" height="8"/> is the wator vapor path length (cm of precipitable water) which can be estimated following <a href="https://journals.ametsoc.org/doi/abs/10.1175/1520-0450(1981)020%3C0003%3ATRBTPW%3E2.0.CO%3B2">Viswanadham (1981)</a> for example.</p>
+<center> <img class="formulaInl" alt="$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)$" src="form_105.png" width="240" height="29"/>, </center><p>where <img class="formulaInl" alt="$u$" src="form_106.png" width="11" height="8"/> is the wator vapor path length (cm of precipitable water) which can be estimated following <a href="https://journals.ametsoc.org/doi/abs/10.1175/1520-0450(1981)020%3C0003%3ATRBTPW%3E2.0.CO%3B2">Viswanadham (1981)</a> for example.</p>
 <p>The downwelling longwave radiation flux on a horizontal surface is given by</p>
-<center> <img class="formulaInl" alt="$R_L=\epsilon_s\sigma T_a^4$" src="form_104.png" width="78" height="18"/>, </center><p>where <img class="formulaInl" alt="$\sigma=5.67\times10^{-8}$" src="form_105.png" width="104" height="14"/> W/m<sup>2</sup>-K<sup>4</sup>, and <img class="formulaInl" alt="$T_a$" src="form_12.png" width="17" height="14"/> is the air temperature in Kelvin measured near the ground (say 2 m height).</p>
+<center> <img class="formulaInl" alt="$R_L=\epsilon_s\sigma T_a^4$" src="form_107.png" width="78" height="18"/>, </center><p>where <img class="formulaInl" alt="$\sigma=5.67\times10^{-8}$" src="form_108.png" width="104" height="14"/> W/m<sup>2</sup>-K<sup>4</sup>, and <img class="formulaInl" alt="$T_a$" src="form_12.png" width="17" height="14"/> is the air temperature in Kelvin measured near the ground (say 2 m height).</p>
 <h1><a class="anchor" id="SolarLib"></a>
 Using the SolarPosition Plug-in</h1>
 <h2><a class="anchor" id="SolarPos"></a>

@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.6</span>
+   &#160;<span id="projectnumber">v1.1.7</span>
    </div>
   </td>
  </tr>
@@ -84,7 +84,9 @@ $(function() {
 <li class="level1"><a href="#EBUse">Using the Energy Balance Model Plug-in</a><ul><li class="level2"><a href="#EBPrimData">Input Variables</a></li>
 <li class="level2"><a href="#EBRad">Input Radiative Bands</a></li>
 <li class="level2"><a href="#EBblc">Boundary-layer Conductance Model</a></li>
-<li class="level2"><a href="#EBRun">Running the Model</a></li>
+<li class="level2"><a href="#EBRun">Running the Steady-State Model</a><ul><li class="level3"><a href="#EBRunUS">Unsteady model with heat storage</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -134,7 +136,7 @@ Introduction</h1>
 <p>This model plugin calculates a local energy balance for every primitive, and ultimately predics sensible, latent, and longwave fluxes as well as surface temperature. The energy balance equation is solved in parallel on the GPU to accelerate calculations.</p>
 <p>The model is solving the steady-state budget between absorbed radiation, emitted radiation, sensible heat exchange, and latent heat exchange, which is written as</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[ R-\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+Q_{other}\]" src="form_8.png" width="435" height="38"/>
+<img class="formulaDsp" alt="\[ R-\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+C_p\frac{dT_s}{dt}+Q_{other}\]" src="form_8.png" width="497" height="38"/>
 </p>
 <p>Variables in this equation are listed in this table:</p>
 <table class="doxtable">
@@ -159,16 +161,18 @@ Introduction</h1>
 <tr>
 <td><img class="formulaInl" alt="$p_{atm}$" src="form_17.png" width="30" height="11"/> (Pa)</td><td>Atmospheric pressure. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$Q_{other}$" src="form_18.png" width="41" height="15"/> (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, or latent (e.g., storage). </td></tr>
+<td><img class="formulaInl" alt="$C_p$" src="form_18.png" width="17" height="17"/> (J/m<sup>2</sup>/<sup>o</sup>C)</td><td>Heat capacity of object. </td></tr>
+<tr>
+<td><img class="formulaInl" alt="$Q_{other}$" src="form_19.png" width="41" height="15"/> (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, or latent (e.g., storage). </td></tr>
 </table>
 <p>Constants are given by:</p>
 <table class="doxtable">
 <tr>
 <th>Constant (units) </th><th>Value </th><th>Description </th></tr>
 <tr>
-<td><img class="formulaInl" alt="$c_p$" src="form_19.png" width="12" height="12"/> (J/mol/K) </td><td>29.25 </td><td>Heat capacity of air. </td></tr>
+<td><img class="formulaInl" alt="$c_p$" src="form_20.png" width="12" height="12"/> (J/mol/K) </td><td>29.25 </td><td>Heat capacity of air. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$\lambda$" src="form_20.png" width="9" height="12"/> (J/mol) </td><td>44,000 </td><td>Latent heat of vaporization of air. </td></tr>
+<td><img class="formulaInl" alt="$\lambda$" src="form_21.png" width="9" height="12"/> (J/mol) </td><td>44,000 </td><td>Latent heat of vaporization of air. </td></tr>
 </table>
 <h1><a class="anchor" id="EBConstructor"></a>
 EnergyBalanceModel Class Constructor</h1>
@@ -193,7 +197,7 @@ Input Primitive Data</h2>
 <tr>
 <td>object_length </td><td>m </td><td> <font face="courier" color="green">float</font> </td><td>Characteristic dimension of object formed by primitive. </td><td>N/A </td><td>Square root of primitive surface area </td></tr>
 <tr>
-<td>boundarylayer_conductance</td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Leaf boundary-layer conductance to heat. </td><td>N/A </td><td>Try calculating from model <img class="formulaInl" alt="$0.135\sqrt{\frac{U}{L}}$" src="form_21.png" width="63" height="29"/> </td></tr>
+<td>boundarylayer_conductance</td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Leaf boundary-layer conductance to heat. </td><td>N/A </td><td>Try calculating from model <img class="formulaInl" alt="$0.135\sqrt{\frac{U}{L}}$" src="form_22.png" width="63" height="29"/> </td></tr>
 <tr>
 <td>air_temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Ambient air temperature outside of surface boundary layer. </td><td>N/A </td><td>300 K </td></tr>
 <tr>
@@ -205,7 +209,9 @@ Input Primitive Data</h2>
 <tr>
 <td>air_pressure </td><td>Pascals </td><td> <font face="courier" color="green">float</font> </td><td>Atmospheric pressure. </td><td>N/A </td><td>101,000 Pa </td></tr>
 <tr>
-<td>other_surface_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Other surface energy fluxes, e.g., storage flux. </td><td>N/A </td><td>0 </td></tr>
+<td>heat_capacity </td><td>J/m<sup>2</sup>/<sup>o</sup>C </td><td> <font face="courier" color="green">float</font> </td><td>Heat capacity of object. </td><td>N/A </td><td>0 </td></tr>
+<tr>
+<td>other_surface_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Other surface energy fluxes. </td><td>N/A </td><td>0 </td></tr>
 </table>
 <p><br  />
 </p>
@@ -220,6 +226,8 @@ Default Output Primitive Data</h2>
 <td>sensible_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Sensible heat flux. </td></tr>
 <tr>
 <td>latent_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Latent heat flux. </td></tr>
+<tr>
+<td>storage_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Storage heat flux. </td></tr>
 </table>
 <h2><a class="anchor" id="EBOptionalOutputData"></a>
 Optional Output Primitive Data</h2>
@@ -245,14 +253,14 @@ Input Radiative Bands</h2>
  energybalance.addRadiationBand("LW");</code></pre></div><h2><a class="anchor" id="EBblc"></a>
 Boundary-layer Conductance Model</h2>
 <p>The boundary-layer conductance is calculated as</p>
-<p><img class="formulaInl" alt="$g_H = 0.135\sqrt{\frac{U}{L}}$" src="form_22.png" width="102" height="29"/>,</p>
-<p>where <img class="formulaInl" alt="$U$" src="form_23.png" width="12" height="12"/> is the wind speed just outside of the primitive boundary-layer, and <img class="formulaInl" alt="$L$" src="form_24.png" width="11" height="12"/> is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, <img class="formulaInl" alt="$L$" src="form_24.png" width="11" height="12"/> could be assumed to be the length of the primitive. If the primitive was a triangle that forms the surface of a sphere, <img class="formulaInl" alt="$L$" src="form_24.png" width="11" height="12"/> could be assumed to be the diameter of the sphere.</p>
+<p><img class="formulaInl" alt="$g_H = 0.135\sqrt{\frac{U}{L}}$" src="form_23.png" width="102" height="29"/>,</p>
+<p>where <img class="formulaInl" alt="$U$" src="form_24.png" width="12" height="12"/> is the wind speed just outside of the primitive boundary-layer, and <img class="formulaInl" alt="$L$" src="form_25.png" width="11" height="12"/> is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, <img class="formulaInl" alt="$L$" src="form_25.png" width="11" height="12"/> could be assumed to be the length of the primitive. If the primitive was a triangle that forms the surface of a sphere, <img class="formulaInl" alt="$L$" src="form_25.png" width="11" height="12"/> could be assumed to be the diameter of the sphere.</p>
 <p>Users can override this model by directly providing a value for <img class="formulaInl" alt="$g_H$" src="form_11.png" width="20" height="11"/> by setting the value of primitive data labeled &lsquo;boundarylayer_conductance&rsquo;.</p>
 <h2><a class="anchor" id="EBRun"></a>
-Running the Model</h2>
-<p>The model is run using the <a class="el" href="class_energy_balance_model.html#a63363c02792f13aa0056c1a30276c6ba">EnergyBalanceModel::run()</a> function, which will run the model for all primitives in the Context if no argument is give, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.</p>
+Running the Steady-State Model</h2>
+<p>The model is run assuming steady-state conditions (heat storage term is zero) using the <a class="el" href="class_energy_balance_model.html#a63363c02792f13aa0056c1a30276c6ba">EnergyBalanceModel::run()</a> function, which will run the model for all primitives in the Context if no argument is given, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.</p>
 <table class="doxtable">
-<caption>Functions to run the energy balance model.</caption>
+<caption>Functions to run the steady-state energy balance model.</caption>
 <tr>
 <th>Model Run Function </th><th>Description </th></tr>
 <tr>
@@ -270,6 +278,39 @@ Running the Model</h2>
     uint UUID = context.addPatch( center, size );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    EnergyBalanceModel energybalance(&amp;context);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    energybalance.addRadiationBand("PAR");
     energybalance.addRadiationBand("NIR");
     energybalance.addRadiationBand("LW");</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    energybalance.run();
+ }</code></pre></div><h3><a class="anchor" id="EBRunUS"></a>
+Unsteady model with heat storage</h3>
+<p>Additional functions are available to run the unsteady energy balance model with heat storage. If the timestep argument "dt" is passed with value greater than 0, and the heat capacity <img class="formulaInl" alt="$C_p$" src="form_18.png" width="17" height="17"/> is greater than 0, the unsteady energy balance equation will be applied with the heat storage term included. The equation is discretized in time using a forward Euler scheme in order to solve for the surface temperature at time <img class="formulaInl" alt="$t+\Delta t$" src="form_26.png" width="44" height="14"/></p>
+<p class="formulaDsp">
+<img class="formulaDsp" alt="\[ T_s(t+\Delta t) = T_s(t)+\left( R-\varepsilon\sigma T_s^4 - c_p g_H \left( T_s-T_a \right) - \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)-Q_{other} \right)\frac{\Delta t}{C_p}.\]" src="form_27.png" width="608" height="38"/>
+</p>
+<p>The timestep should be chosen such that it is significantly smaller than the characteristic time constant of heat storage.</p>
+<p>Functions for running the unsteady energy balance model are listed below.</p>
+<table class="doxtable">
+<caption>Functions to run the unsteady energy balance model.</caption>
+<tr>
+<th>Model Run Function </th><th>Description </th></tr>
+<tr>
+<td><a class="el" href="class_energy_balance_model.html#a3c7ab6adae9c4a8e0a822a132a9ca3ec">EnergyBalanceModel::run( float dt )</a> </td><td>Run the model for all primitives in the Context and advance in time by dt. </td></tr>
+<tr>
+<td><a class="el" href="class_energy_balance_model.html#aa98de2c324005391e1d462b1a140e11b">EnergyBalanceModel::run( std::vector&lt;uint&gt; UUIDs, float dt )</a> </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt. </td></tr>
+</table>
+<p>Note that you can run the steady-state model for some primitives but run the unsteady model for others simply by changing the value of the heat capacity primitive data. This is illustrated in the code example below.</p>
+<p><br  />
+<br  />
+ </p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "EnergyBalanceModel.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main(void){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Initialize the Context
+    Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Add one `Patch' primitive
+    vec3 center = make_vec3(0,0,1);
+    vec2 size = make_vec2(1,1);
+    uint UUID1 = context.addPatch( center, size );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Add a second `Patch' primitive
+    center = make_vec3(2,0,1);
+    uint UUID2 = context.addPatch( center, size );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Set the heat capacity of the first patch so that the unsteady energy balance model will be run
+    float Cp = 10000; //J/m^2-oC
+    context.setPrimitiveData( UUID1, "heat_capacity", Cp );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    EnergyBalanceModel energybalance(&amp;context);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    energybalance.addRadiationBand("PAR");
+    energybalance.addRadiationBand("NIR");
+    energybalance.addRadiationBand("LW");</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    float dt = 180;
+    energybalance.run( dt );
  }</code></pre></div> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->

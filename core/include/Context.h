@@ -2213,6 +2213,28 @@ public:
       \param[out] "radius" Radius of primitive bounding sphere.
   */
   void getDomainBoundingSphere( const std::vector<uint>& UUIDs, helios::vec3& center, float& radius ) const;
+
+  //! Crop the domain in the x-direction such that all primitives lie within some specified x interval.
+  /** \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.
+   */
+  void cropDomainX( const helios::vec2 xbounds );
+
+  //! Crop the domain in the y-direction such that all primitives lie within some specified y interval.
+  /** \param[in] "ybounds" Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction.
+   */
+  void cropDomainY( const helios::vec2 ybounds );
+
+  //! Crop the domain in the z-direction such that all primitives lie within some specified z interval.
+  /** \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
+   */
+  void cropDomainZ( const helios::vec2 zbounds );
+
+  //! Crop the domain such that all primitives lie within some specified axis-aligned box
+  /** \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.
+      \param[in] "ybounds" Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction.
+      \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
+   */
+  void cropDomain( const helios::vec2 xbounds, const helios::vec2 ybounds, const helios::vec2 zbounds );
   
   //! Load inputs specified in an XML file. 
   /** \param[in] "filename" name of XML file.

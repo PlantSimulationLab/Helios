@@ -41,7 +41,7 @@ public:
   //! Function to run the energy balance model for all primitives in the Context
   void run(void) ;
 
-  //! Function to run the dynamic /non steady state energy balance model
+  //! Function to run the dynamic /non steady state energy balance model for one timestep of length "dt"
    /** \param[in] "dt" Time step. */
   void run( const float dt ) ;
 
@@ -49,7 +49,7 @@ public:
   /** \param[in] "UUIDs" Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.*/
   void run( std::vector<uint> UUIDs );
 
-  //! Function to run the energy balance model for a select set of primitives
+  //! Function to run the energy balance model for a select set of primitives for one timestep of length "dt"
   /** \param[in] "UUIDs"  Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
      \param[in] "dt" Time step. 
   */
@@ -88,8 +88,8 @@ private:
   //! Default stomatal conductance if it was not specified in the context
   float gS_default;
 
-  //! Default objectdensity if it was not specified in the context
-  float objectdensity_default;
+  //! Default heat capacity if it was not specified in the context
+  float heatcapacity_default;
   
   //! Default time step if it was not specified in the context
   float dt_default;
