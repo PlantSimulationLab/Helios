@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.7</span>
+   &#160;<span id="projectnumber">v1.2.0</span>
    </div>
   </td>
  </tr>
@@ -76,6 +76,9 @@ $(function() {
 <li>generateHeightModel()
 : <a class="el" href="class_aerial_li_d_a_rcloud.html#afc44503e2a6eb986fa79b5af56069468">AerialLiDARcloud</a>
 </li>
+<li>getAllObjectIDs()
+: <a class="el" href="classhelios_1_1_context.html#afd73a270c99e4898db57dc7008691644">helios::Context</a>
+</li>
 <li>getAllUUIDs()
 : <a class="el" href="class_canopy_generator.html#afeaae0860ea6bfbfe73277fc7b98af30">CanopyGenerator</a>
 , <a class="el" href="classhelios_1_1_context.html#a255b76955afa40ae9325f930eb28c984">helios::Context</a>
@@ -85,10 +88,14 @@ $(function() {
 : <a class="el" href="class_solar_position.html#af5ad91077729f17ef1a3448cee050894">SolarPosition</a>
 </li>
 <li>getArea()
-: <a class="el" href="classhelios_1_1_patch.html#a5762fb7f8ba073640234251a9225f4e7">helios::Patch</a>
+: <a class="el" href="classhelios_1_1_compound_object.html#a8bb518f6166e2a2831a68a7626787ac1">helios::CompoundObject</a>
+, <a class="el" href="classhelios_1_1_patch.html#a5762fb7f8ba073640234251a9225f4e7">helios::Patch</a>
 , <a class="el" href="classhelios_1_1_primitive.html#a2e140af864e6dcb56d6ea5f85fef8f49">helios::Primitive</a>
 , <a class="el" href="classhelios_1_1_triangle.html#aa3f268ac0b3ec5a12e9cb5e6b38d1eb9">helios::Triangle</a>
 , <a class="el" href="classhelios_1_1_voxel.html#a69a6e564ca8b6628733c5fe01db8f2d0">helios::Voxel</a>
+</li>
+<li>getBoxObjectPointer()
+: <a class="el" href="classhelios_1_1_context.html#a3bddb008576060c664317f47c0384ab4">helios::Context</a>
 </li>
 <li>getBranchUUIDs()
 : <a class="el" href="class_canopy_generator.html#a427ff4d14a637a18461a78c603159d84">CanopyGenerator</a>
@@ -162,6 +169,9 @@ $(function() {
 <li>getDiffuseFraction()
 : <a class="el" href="class_solar_position.html#af71ca6056cde4733b5f5af6e9e474642">SolarPosition</a>
 </li>
+<li>getDiskObjectPointer()
+: <a class="el" href="classhelios_1_1_context.html#a0d782306c7d09fb9c3a68cb4caca8507">helios::Context</a>
+</li>
 <li>getDomainBoundingBox()
 : <a class="el" href="classhelios_1_1_context.html#a8690412a63d1eff69e679e48d03c9838">helios::Context</a>
 , <a class="el" href="class_visualizer.html#ae9c98dee278e9bcd5f85b871ff8ddfe5">Visualizer</a>
@@ -182,7 +192,7 @@ $(function() {
 : <a class="el" href="class_canopy_generator.html#ad3e977b6342ed000902b2becf000675b">CanopyGenerator</a>
 </li>
 <li>getGlobalData()
-: <a class="el" href="classhelios_1_1_context.html#aea16d4845e23fe44ae1da4c032ea57e3">helios::Context</a>
+: <a class="el" href="classhelios_1_1_context.html#a990fdccf51979e235a1acba08e54583b">helios::Context</a>
 </li>
 <li>getGlobalDataSize()
 : <a class="el" href="classhelios_1_1_context.html#ad58820f9cb6a406749e6f21f19b1959d">helios::Context</a>
@@ -265,18 +275,31 @@ $(function() {
 , <a class="el" href="classhelios_1_1_triangle.html#a420fcf7e20291a11ebf6f632ed58d089">helios::Triangle</a>
 , <a class="el" href="classhelios_1_1_voxel.html#a4ba239c8eb37f4e2c1037fb66758fdda">helios::Voxel</a>
 </li>
+<li>getObjectCenter()
+: <a class="el" href="classhelios_1_1_compound_object.html#a49ad4d021a83dcbb9a73402c14c1944a">helios::CompoundObject</a>
+</li>
+<li>getObjectPointer()
+: <a class="el" href="classhelios_1_1_context.html#ace73d527fdb1703c752fe8c4fd568ed6">helios::Context</a>
+</li>
+<li>getParentObjectID()
+: <a class="el" href="classhelios_1_1_primitive.html#a0c1e10e5274c97a305c83d35cfc480ed">helios::Primitive</a>
+</li>
 <li>getPatchPointer()
 : <a class="el" href="group__primitives.html#ga0e3ac5f6948b1207d1fd2a9c3a1f6bb7">helios::Context</a>
 </li>
 <li>getPlantCount()
 : <a class="el" href="class_canopy_generator.html#a3d722a76c842ed4304fa2584a00cce2b">CanopyGenerator</a>
 </li>
+<li>getPolymeshObjectPointer()
+: <a class="el" href="classhelios_1_1_context.html#abcab3e68418e44d5f519e0654b6fd97c">helios::Context</a>
+</li>
 <li>getPrimitiveCount()
-: <a class="el" href="group__primitives.html#gaf61c469d9b9eaae68fbef8b3d2b7ef78">helios::Context</a>
+: <a class="el" href="classhelios_1_1_compound_object.html#a0eb06d37710a7dc9f5b915fc33f191a0">helios::CompoundObject</a>
+, <a class="el" href="group__primitives.html#gaf61c469d9b9eaae68fbef8b3d2b7ef78">helios::Context</a>
 </li>
 <li>getPrimitiveData()
-: <a class="el" href="classhelios_1_1_context.html#a861cd3c6e3b833a218037b76cef8a6d5">helios::Context</a>
-, <a class="el" href="classhelios_1_1_primitive.html#a4ebe676fe96a65c5921a1f4e734131e3">helios::Primitive</a>
+: <a class="el" href="classhelios_1_1_context.html#a9d3bec19ecfed99f1fee4c25ac7f37a4">helios::Context</a>
+, <a class="el" href="classhelios_1_1_primitive.html#a4ada3356f78589795de9731f7a38bef2">helios::Primitive</a>
 </li>
 <li>getPrimitiveDataSize()
 : <a class="el" href="classhelios_1_1_context.html#a7b8a8bb7691aaee72e30f98e15bff7ca">helios::Context</a>
@@ -342,6 +365,9 @@ $(function() {
 <li>getSolidFraction()
 : <a class="el" href="classhelios_1_1_texture.html#a9c2323a7695784864768dc93f39e8440">helios::Texture</a>
 </li>
+<li>getSphereObjectPointer()
+: <a class="el" href="classhelios_1_1_context.html#a5c8cb607a36b59e7f3d8e2249180ee11">helios::Context</a>
+</li>
 <li>getSunAzimuth()
 : <a class="el" href="class_solar_position.html#aef04bff9d7cb8d05bdd672f403ce8e1f">SolarPosition</a>
 </li>
@@ -373,6 +399,9 @@ $(function() {
 <li>getTextureUV()
 : <a class="el" href="classhelios_1_1_primitive.html#a170665146a2c97b97de42d81cbb9115a">helios::Primitive</a>
 </li>
+<li>getTileObjectPointer()
+: <a class="el" href="classhelios_1_1_context.html#a17f75e8099d343c8117567d56e118349">helios::Context</a>
+</li>
 <li>getTime()
 : <a class="el" href="classhelios_1_1_context.html#a8fe6ad4e67e89e33c86f571159b8d320">helios::Context</a>
 </li>
@@ -403,6 +432,9 @@ $(function() {
 <li>getTrunkUUIDs()
 : <a class="el" href="class_canopy_generator.html#a069a2c266f8efdefea708677d30ec39e">CanopyGenerator</a>
 , <a class="el" href="class_weber_penn_tree.html#ab247d9368368263dfdded18a43917f98">WeberPennTree</a>
+</li>
+<li>getTubeObjectPointer()
+: <a class="el" href="classhelios_1_1_context.html#a3bb939f21302a24a3b363365fa6d41aa">helios::Context</a>
 </li>
 <li>getType()
 : <a class="el" href="classhelios_1_1_primitive.html#a39e4b6e3903cd6e395e242eb28b172b9">helios::Primitive</a>
@@ -445,6 +477,12 @@ $(function() {
 , <a class="el" href="struct_split_grapevine_parameters.html#a3a617d032dcb2a5e0556c6b7d9cdb1d7">SplitGrapevineParameters</a>
 , <a class="el" href="struct_unilateral_grapevine_parameters.html#a6d8ff0d8ad8666b00214802fc0531c0a">UnilateralGrapevineParameters</a>
 , <a class="el" href="struct_v_s_p_grapevine_parameters.html#a7a5c2d109286fb621250bff69311254a">VSPGrapevineParameters</a>
+</li>
+<li>grape_subdivisions
+: <a class="el" href="struct_goblet_grapevine_parameters.html#a869d99245748768c6675464e80b4da84">GobletGrapevineParameters</a>
+, <a class="el" href="struct_split_grapevine_parameters.html#ac2722cac2d4ac1c018439de9b87afeef">SplitGrapevineParameters</a>
+, <a class="el" href="struct_unilateral_grapevine_parameters.html#aeab1327d91dd7e18ae53cc7afb8d9de7">UnilateralGrapevineParameters</a>
+, <a class="el" href="struct_v_s_p_grapevine_parameters.html#a6cbc117cc4714a35700c1a716cb9d39d">VSPGrapevineParameters</a>
 </li>
 <li>grapevineGoblet()
 : <a class="el" href="class_canopy_generator.html#ac3c2fe3428cfcc223f65759a0a63e3d8">CanopyGenerator</a>

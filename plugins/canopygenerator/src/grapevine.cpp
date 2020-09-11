@@ -23,7 +23,7 @@
 using namespace helios;
 using namespace std;
 
-std::vector<std::vector<uint> > CanopyGenerator::addGrapeCluster( vec3 position, float grape_rad, float cluster_rad, helios::RGBcolor grape_color ){
+std::vector<std::vector<uint> > CanopyGenerator::addGrapeCluster( vec3 position, float grape_rad, float cluster_rad, helios::RGBcolor grape_color, uint grape_subdiv ){
 
   float z = position.z;
 
@@ -54,7 +54,7 @@ std::vector<std::vector<uint> > CanopyGenerator::addGrapeCluster( vec3 position,
 	xgrape.y = position.y+RB*cos(theta)+context->randn()*0.25*grape_rad;
 	xgrape.z = z+context->randn()*0.25*grape_rad;
 
-	std::vector<uint> U=context->addSphere( 8, xgrape, grape_rad, grape_color );
+	std::vector<uint> U=context->addSphere( fmax(2,grape_subdiv), xgrape, grape_rad, grape_color );
 	UUID.push_back(U);
 	
 	theta=theta+dtheta;
@@ -241,7 +241,7 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
 	  sgn = -1;
 	}
 	vec3 offset(sgn*getVariation(0.1,generator)*sint,sgn*getVariation(0.1,generator)*cost,0.f);
-	UUID_grapes = addGrapeCluster( p_grape+offset, params.grape_radius, params.cluster_radius, params.grape_color );
+	UUID_grapes = addGrapeCluster( p_grape+offset, params.grape_radius, params.cluster_radius, params.grape_color, params.grape_subdivisions );
       }
       UUID_fruit_plant.push_back( UUID_grapes );
 
@@ -532,7 +532,7 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
 	  sgn = -1;
 	}
 	vec3 offset(sgn*getVariation(0.1,generator)*sint,sgn*getVariation(0.1,generator)*cost,0.f);
-	UUID_grapes = addGrapeCluster( p_grape+offset, params.grape_radius, params.cluster_radius, params.grape_color );
+	UUID_grapes = addGrapeCluster( p_grape+offset, params.grape_radius, params.cluster_radius, params.grape_color, params.grape_subdivisions );
       }
       UUID_fruit_plant.push_back( UUID_grapes );
 	
@@ -718,7 +718,7 @@ void CanopyGenerator::grapevineUnilateral( const UnilateralGrapevineParameters p
 	sgn = -1;
       }
       vec3 offset(sgn*getVariation(0.1,generator)*sint,sgn*getVariation(0.1,generator)*cost,0.f);
-      UUID_grapes = addGrapeCluster( p_grape+offset, params.grape_radius, params.cluster_radius, params.grape_color );
+      UUID_grapes = addGrapeCluster( p_grape+offset, params.grape_radius, params.cluster_radius, params.grape_color, params.grape_subdivisions );
     }
     UUID_fruit_plant.push_back( UUID_grapes );
     
@@ -859,7 +859,7 @@ void CanopyGenerator::grapevineGoblet( const GobletGrapevineParameters params, c
 	  sgn = -1;
 	}
 	vec3 offset(sgn*getVariation(0.1,generator)*sin(params.canopy_rotation),sgn*getVariation(0.1,generator)*cos(params.canopy_rotation),0.f);
-	UUID_grapes = addGrapeCluster( p_grape+offset, params.grape_radius, params.cluster_radius, params.grape_color );
+	UUID_grapes = addGrapeCluster( p_grape+offset, params.grape_radius, params.cluster_radius, params.grape_color, params.grape_subdivisions );
       }
       UUID_fruit_plant.push_back( UUID_grapes );
 

@@ -34,10 +34,15 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
 
   for( int i=0; i<Nlevels-1; i++ ){
 
-    float vfrac = float(Nlevels-i)/float(Nlevels);
+    float vfrac = float(Nlevels-i-1)/float(Nlevels-1);
 
-    float rcrown = fmax(vfrac*params.crown_radius,0.15*params.crown_radius);
-    rcrown += getVariation(0.25*rcrown,generator);
+    float rcrown;
+    if( vfrac>0.3 ){
+      rcrown = params.crown_radius;
+    }else{
+      rcrown = fmax(1.f/0.3*vfrac*params.crown_radius,0.2*params.crown_radius);
+    }
+    rcrown += getVariation(0.05*rcrown,generator);
 
     float z = fmin( params.trunk_height,params.base_height + i*params.level_spacing*(1+getVariation(0.1*params.level_spacing,generator)));
 
@@ -47,13 +52,13 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
 
       float phi = float(j)/float(Nbranches)*2.f*M_PI*(1+getVariation(0.1,generator));
 
-      float theta = float(i)/float(Nlevels)*params.shoot_angle;
+      float theta = 0;//float(i)/float(Nlevels)*params.shoot_angle;
       theta+=getVariation(0.2*theta,generator);
 
       std::vector<float> rad_branch;
       std::vector<vec3> pos_branch;
 
-      pos_branch.push_back( origin + make_vec3(0,0,z) );
+      pos_branch.push_back( origin + make_vec3(0,0,z+getVariation(0.5,generator)) );
       pos_branch.push_back( origin + make_vec3(rcrown*sinf(phi)*cosf(theta),rcrown*cosf(phi)*cosf(theta),z+rcrown*sinf(theta)) );
 
       //printf("pos_branch = (%f,%f,%f)\n",pos_branch.front().x,pos_branch.front().y,pos_branch.front().z);
@@ -101,7 +106,7 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
 	  //nfrac = 4.f/0.8*nfrac/(4*nfrac+1.f);
 
 	  vec3 nbase = interpolateTube( pos_subbranch, nfrac );
-	  vec3 nbase_p = interpolateTube( pos_subbranch, nfrac-0.01 );
+	  vec3 nbase_p = interpolateTube( pos_subbranch, 0.99*nfrac );
 
 	  vec3 norm = nbase-nbase_p;
 	  //n.normalize();

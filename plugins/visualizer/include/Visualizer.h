@@ -37,8 +37,9 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
 /** \param[in] "filename" Name of the JPEG image file
     \param[in] "width" Width of the graphics window in pixels
     \param[in] "height" Height of the graphics window in pixels
+    \param[in] "window" Pointer to the window object
 */
-int write_JPEG_file ( const char* filename, uint width, uint height );
+int write_JPEG_file ( const char* filename, uint width, uint height, void* _window );
 
 //! Function to create a texture map from a PNG image
 /** \param[in] "filename" Name of the PNG image file
@@ -738,7 +739,7 @@ public:
 
   //! Get R-G-B pixel data in the current display window
   /** \param[out] "buffer" Pixel data. The data is stored as r-g-b * column * row. So indices (0,1,2) would be the RGB values for row 0 and column 0, indices (3,4,5) would be RGB values for row 0 and column 1, and so on. Thus, buffer is of size 3*width*height.
-  */
+   */
   void getWindowPixelsRGB( unsigned int * buffer );
 
   //! Get depth buffer data for the current display window

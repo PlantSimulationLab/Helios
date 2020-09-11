@@ -44,7 +44,7 @@ set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${OPTIX_PATH}incl
 
 SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; --use_fast_math -gencode arch=compute_30,code=sm_30)
 
-file(GLOB CUDA_SOURCES "src/*.cu")
+set( CUDA_SOURCES "src/primitiveIntersection.cu;src/rayGeneration.cu;src/rayHit.cu;src/rayHit_MCRT.cu" )
 cuda_compile_ptx(  cuda_ptx_files ${CUDA_SOURCES} )
 add_custom_target(ptx ALL DEPENDS ${cuda_ptx_files}  ${CUDA_SOURCES} ${OPTIX_LIBRARIES} SOURCES ${CUDA_SOURCES} )
 

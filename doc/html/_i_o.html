@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.7</span>
+   &#160;<span id="projectnumber">v1.2.0</span>
    </div>
   </td>
  </tr>
@@ -141,15 +141,19 @@ Adding Timeseries Data</h2>
 Reading XML Files</h1>
 <p>XML files can be read by the Context via the function loadXML(). This function parses the XML file and adds all specified structures (see above) to the Context. Below is an example of how to load an XML file into the Context.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    context.loadXML( "file.xml" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div><h1><a class="anchor" id="Poly"></a>
+ using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    context.loadXML( "file.xml" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div><h1><a class="anchor" id="Poly"></a>
 Reading Standard Polygon File Formats</h1>
-<h2><a class="anchor" id="PLY"></a>
+<h2><a class="anchor" id="PLYread"></a>
 Reading PLY (Stanford Polygon) Files</h2>
-<p>The Context can automatically import Stanford .ply files <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">en.wikipedia.org/wiki/PLY_(file_format)</a>. This is accomplished via the loadPLY() command, as illustrated below.</p>
+<p>The Context can automatically import Stanford .ply files <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">en.wikipedia.org/wiki/PLY_(file_format)</a>. This is accomplished via the loadPLY() command, as illustrated below. There are several overloaded versions of this function, which allow for various modifications to the PLY model.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    context.loadPLY( "file.ply" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div><p>There are other forms of the loadPLY command that allow for translation, rotation, and scaling of the entire PLY model.</p>
+ using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     <code></code>// location where PLY model will be centered
+     vec3 origin(0,0,0);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     <code></code>// scaling factor to apply to model
+     float scale = 1.0;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     <code></code>// rotation to apply to model (optional argument to loadPLY)
+     SphericalCoord rotation( 0., M_PI );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     <code></code>// default color for model (optional argument to loadPLY)
+     RGBcolor color = RGB::red;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     context.loadPLY( "file.ply", origin, scale, rotation, color );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div><p>There are other forms of the loadPLY command that allow for translation, rotation, and scaling of the entire PLY model.</p>
 <p>The Blender software package (<a href="https://www.blender.org">www.blender.org</a>) can easily modify and convert most polygon file formats to .ply format. <a class="el" href="_convert_p_l_y.html">This page</a> gives a tutorial on how to perform such conversions using Blender.</p>
-<h2><a class="anchor" id="OBJ"></a>
+<h2><a class="anchor" id="OBJread"></a>
 Reading OBJ (Wavefront) Files</h2>
 <p>Helios can read <a href="https://en.wikipedia.org/wiki/Wavefront_.obj_file">Wavefront (.obj)</a> files and associated material (.mtl) files. Not all features of .obj files are applicable to Helios, and thus some features are not supported. Supported features are:</p>
 <ul>
@@ -157,11 +161,26 @@ Reading OBJ (Wavefront) Files</h2>
 <li>Vertex texture coordinates (u,v)</li>
 <li>Texture map image files (.jpg, .png) associated with materials</li>
 </ul>
-<p>Wavefront files are loaded via the Context::loadOBJ() command, which takes the name of an .obj file. If the file defines materials and list an associated material (.mtl) file, the code looks in one of two places for the file. First, if an absolute or relative path is given for the .mtl file name, the file is simply loaded from that location. If only a file name is given for the .mtl file, the directory where the original .obj file was found is searched for the .mtl file.</p>
+<p>Wavefront files are loaded via the Context::loadOBJ() command, which takes the name of an .obj file. If the file defines materials and lists an associated material (.mtl) file, the code looks in one of two places for the file. First, if an absolute or relative path is given for the .mtl file name, the file is simply loaded from that location. If only a file name is given for the .mtl file, the directory where the original .obj file was found is searched for the .mtl file.</p>
 <p>All aspects of material files are not supported. Helios simply searches for the "Kd" texture map, and uses that to color the primitives.</p>
-<h1><a class="anchor" id="Export"></a>
+<h2><a class="anchor" id="PLYwrite"></a>
+Writing PLY (Stanford Polygon) Files</h2>
+<p>The Context has analagous files for writing PLY files based on the geometry currently loaded in the Context. This is accomplished via the writePLY() command, as illustrated below.</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
+ using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     context.addPatch();</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     context.writePLY( "file.ply" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div><h2><a class="anchor" id="OBJwrite"></a>
+Writing OBJ (Wavefront) Files</h2>
+<p>Writing Wavefront OBJ files is similar to writing a PLY file, except that it will produce both a .obj file containing the geometry, and a .mtl file defining materials (colors, texture masks). For this reason, only the base file name with no extension is provided to the function.</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
+ using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     context.addPatch();</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     <code></code>// This will produce two files: "file.obj" and "file.mtl"
+     context.writeOBJ( "file" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div><h1><a class="anchor" id="Export"></a>
 Exporting Project to XML File Format</h1>
-</div></div><!-- contents -->
+<p>All geometry and global/primitive data loaded into the Context can be written to an XML file using the writeXML() function, which can be later read back in using the loadXML(). This functionality can be used to save progress during a simulation run, or to ensure that consistent geometry is always used across simulation runs, among other things.</p>
+<p>An XML file can be written as follows:</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
+ using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     uint UUID = context.addPatch();</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     context.setPrimitiveData( UUID, "somedata", 10.2f );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     context.writeXML( "file.xml" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div><p>and later read back into a new simulation:</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
+ using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     <code>//</code> The context will now contain a default patch, with primitive data "somedata" equal to 10.2
+     context.loadXML( "file.xml" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

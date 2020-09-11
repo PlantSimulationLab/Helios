@@ -123,21 +123,29 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
   return 0;
 }
 
-int write_JPEG_file ( const char* filename, uint width, uint height ){
-
-  // uint namesize = strlen(filename);
-  // char extension;
-  // sprintf(extension,"%c%c%c%c",filename[namesize-4],filename[namesize-3],filename[namesize-2],filename[namesize-1]);
-
-  // if( !strcmp(extension,".jpg") ){
-  //   std::cout << "File extension is not JPEG." << std::endl;
-  // }
+int write_JPEG_file ( const char* filename, uint width, uint height, void* _window ){
 
   std::cout << "writing JPEG image: " << filename << std::endl;
 
   GLubyte screen_shot_trans[ 3 * width * height];
 
-  glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, screen_shot_trans);
+  glfwSwapBuffers((GLFWwindow*)_window);
+  glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans);
+
+  //depending on the ative frame buffer, we may get all zero data and need to swap it again.
+  bool zeros = true;
+  for( int i=0; i<3*width*height; i++ ){
+    if( screen_shot_trans[i]!=0 ){
+      zeros = false;
+    }
+  }
+  if( zeros ){
+
+    glfwSwapBuffers((GLFWwindow*)_window);
+
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans);
+    
+  }
 
   struct jpeg_compress_struct cinfo;
 
@@ -761,14 +769,30 @@ void Visualizer::printWindow( void ){
 
 void Visualizer::printWindow( const char* outfile ){
   
-  write_JPEG_file( outfile, Wdisplay, Hdisplay );
+  write_JPEG_file( outfile, Wdisplay, Hdisplay, window );
 }
 
 void Visualizer::getWindowPixelsRGB( unsigned int * buffer ){
 
   GLubyte buff[ 3*Wdisplay*Hdisplay ];
 
-  glReadPixels(0, 0, Wdisplay, Hdisplay, GL_RGB, GL_UNSIGNED_BYTE, buff);
+  glfwSwapBuffers((GLFWwindow*)window);
+  glReadPixels(0, 0, Wdisplay, Hdisplay, GL_RGB, GL_UNSIGNED_BYTE, &buff);
+
+  //depending on the ative frame buffer, we may get all zero data and need to swap it again.
+  bool zeros = true;
+  for( int i=0; i<3*Wdisplay*Hdisplay; i++ ){
+    if( buff[i]!=0 ){
+      zeros = false;
+    }
+  }
+  if( zeros ){
+
+    glfwSwapBuffers((GLFWwindow*)window);
+
+    glReadPixels(0, 0, Wdisplay, Hdisplay, GL_RGB, GL_UNSIGNED_BYTE, &buff);
+    
+  }
 
   //assert( checkerrors() );
 
@@ -3029,6 +3053,11 @@ void Visualizer::plotInteractive( void ){
     glfwSwapBuffers((GLFWwindow*)window);
 
     glfwWaitEvents();
+
+    int width, height;
+    glfwGetWindowSize((GLFWwindow*)window, &width, &height );
+    Wdisplay = width;
+    Hdisplay = height;
     
   }while( glfwGetKey((GLFWwindow*)window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose((GLFWwindow*)window) == 0 );
 
@@ -3342,7 +3371,23 @@ void Visualizer::plotDepthMap( void ){
 
   depth_buffer_data.resize( Wdisplay*Hdisplay );
 
+  glfwSwapBuffers((GLFWwindow*)window);
   glReadPixels(0, 0, Wdisplay, Hdisplay, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_buffer_data[0] );
+
+  //depending on the ative frame buffer, we may get all zero data and need to swap it again.
+  bool zeros = true;
+  for( int i=0; i<3*Wdisplay*Hdisplay; i++){
+    if( depth_buffer_data[i]!=0 ){
+      zeros = false;
+    }
+  }
+  if( zeros ){
+
+    glfwSwapBuffers((GLFWwindow*)window);
+    
+    glReadPixels(0, 0, Wdisplay, Hdisplay, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_buffer_data[0] );
+    
+  }
   
   assert( checkerrors() );
 

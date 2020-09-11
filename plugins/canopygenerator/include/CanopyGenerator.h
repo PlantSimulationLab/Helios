@@ -168,6 +168,9 @@ struct VSPGrapevineParameters{
   //! Color of grapes
   helios::RGBcolor grape_color;
 
+  //! Number of azimuthal and zenithal subdivisions making up berries (will result in roughly 2*(grape_subdivisions)^2 triangles per grape berry)
+  uint grape_subdivisions;
+
   //! 
   std::vector<float> leaf_angle_PDF;
   
@@ -251,6 +254,9 @@ struct SplitGrapevineParameters{
   //! Color of grapes
   helios::RGBcolor grape_color;
 
+  //! Number of azimuthal and zenithal subdivisions making up berries (will result in roughly grape_subdivisions^2 triangles per grape berry)
+  uint grape_subdivisions;
+  
   //! 
   std::vector<float> leaf_angle_PDF;
   
@@ -324,6 +330,9 @@ struct UnilateralGrapevineParameters{
 
   //! Color of grapes
   helios::RGBcolor grape_color;
+
+  //! Number of azimuthal and zenithal subdivisions making up berries (will result in roughly grape_subdivisions^2 triangles per grape berry)
+  uint grape_subdivisions;
 
   //! 
   std::vector<float> leaf_angle_PDF;
@@ -399,6 +408,9 @@ struct GobletGrapevineParameters{
 
   //! Color of grapes
   helios::RGBcolor grape_color;
+
+  //! Number of azimuthal and zenithal subdivisions making up berries (will result in roughly grape_subdivisions^2 triangles per grape berry)
+  uint grape_subdivisions;
 
   //! 
   std::vector<float> leaf_angle_PDF;
@@ -585,9 +597,10 @@ class CanopyGenerator{
   /* \param[in] "position" Cartesian (x,y,z) position of the cluster main stem.
      \param[in] "grape_rad" Maximum grape berry radius.
      \param[in] "cluster_rad" Radius of berry cluster at widest point.
+     \param[in] "grape_subdiv" Number of azimuthal and zenithal berry sub-triangle subdivisions.
      \return 2D vector of primitive UUIDs. The first index is the UUID for each primitive (triangles) comprising individual berries, second index corresponds to each berry in the cluster.
   */
-  std::vector<std::vector<uint> > addGrapeCluster( helios::vec3 position, float grape_rad, float cluster_rad, helios::RGBcolor grape_color );
+  std::vector<std::vector<uint> > addGrapeCluster( helios::vec3 position, float grape_rad, float cluster_rad, helios::RGBcolor grape_color, uint grape_subdiv );
 
 //! Function to add an individual grapevine plant on a vertical shoot positioned (VSP) trellis.
 /* \param[in] "params" Set of parameters defining grapevine plant.

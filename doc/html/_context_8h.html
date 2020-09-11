@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.7</span>
+   &#160;<span id="projectnumber">v1.2.0</span>
    </div>
   </td>
  </tr>
@@ -98,6 +98,20 @@ Data Structures</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_voxel.html">helios::Voxel</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parallelpiped geometric object filled with a participating medium.  <a href="classhelios_1_1_voxel.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html">helios::CompoundObject</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_tile.html">helios::Tile</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_sphere.html">helios::Sphere</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_tube.html">helios::Tube</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_box.html">helios::Box</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_disk.html">helios::Disk</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_polymesh.html">helios::Polymesh</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html">helios::Context</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stores the state associated with simulation.  <a href="classhelios_1_1_context.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -128,6 +142,18 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:a935eb2a4249411a8f376a27820c70de3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Data types.  <a href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3">More...</a><br /></td></tr>
 <tr class="separator:a935eb2a4249411a8f376a27820c70de3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad0894682f41916c84c2026b3cb8ac682"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682">helios::ObjectType</a> { <br />
+&#160;&#160;<a class="el" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682aed347b5fb08bc5551b61310a964f0bde">helios::OBJECT_TYPE_TILE</a> = 0, 
+<a class="el" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682af4e336a18e47e54ca6e9a7f57e665175">helios::OBJECT_TYPE_SPHERE</a> = 1, 
+<a class="el" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a4c8545d7bc5d79cd8d150eca0624b623">helios::OBJECT_TYPE_TUBE</a> = 2, 
+<a class="el" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a2f065407387865d0564746c763c78d66">helios::OBJECT_TYPE_BOX</a> = 3, 
+<br />
+&#160;&#160;<a class="el" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a7d26aca591c366d41bca9d184a07ee51">helios::OBJECT_TYPE_DISK</a> = 4, 
+<a class="el" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a40bb0200100d500b738a6c3efc70df38">helios::OBJECT_TYPE_POLYMESH</a> = 5
+<br />
+ }</td></tr>
+<tr class="memdesc:ad0894682f41916c84c2026b3cb8ac682"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of compound object.  <a href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682">More...</a><br /></td></tr>
+<tr class="separator:ad0894682f41916c84c2026b3cb8ac682"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Context header file. </p><dl class="section author"><dt>Author</dt><dd>Brian Bailey</dd></dl>
@@ -175,7 +201,39 @@ Enumerations</h2></td></tr>
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00043">43</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00045">45</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+
+</div>
+</div>
+<a id="ad0894682f41916c84c2026b3cb8ac682"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad0894682f41916c84c2026b3cb8ac682">&#9670;&nbsp;</a></span>ObjectType</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682">helios::ObjectType</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Type of compound object. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682aed347b5fb08bc5551b61310a964f0bde"></a>OBJECT_TYPE_TILE&#160;</td><td class="fielddoc"><p>&lt; <a class="el" href="classhelios_1_1_tile.html">Tile</a> </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682af4e336a18e47e54ca6e9a7f57e665175"></a>OBJECT_TYPE_SPHERE&#160;</td><td class="fielddoc"><p>&lt; <a class="el" href="classhelios_1_1_sphere.html">Sphere</a> </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a4c8545d7bc5d79cd8d150eca0624b623"></a>OBJECT_TYPE_TUBE&#160;</td><td class="fielddoc"><p><a class="el" href="classhelios_1_1_tube.html">Tube</a>. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a2f065407387865d0564746c763c78d66"></a>OBJECT_TYPE_BOX&#160;</td><td class="fielddoc"><p><a class="el" href="classhelios_1_1_box.html">Box</a>. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a7d26aca591c366d41bca9d184a07ee51"></a>OBJECT_TYPE_DISK&#160;</td><td class="fielddoc"><p>&lt; <a class="el" href="classhelios_1_1_disk.html">Disk</a> </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a40bb0200100d500b738a6c3efc70df38"></a>OBJECT_TYPE_POLYMESH&#160;</td><td class="fielddoc"><p>&lt; Triangular Mesh </p>
+</td></tr>
+</table>
+
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00708">708</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>
@@ -203,7 +261,7 @@ Enumerations</h2></td></tr>
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00031">31</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00033">33</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>

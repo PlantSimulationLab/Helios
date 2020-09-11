@@ -94,6 +94,8 @@ VSPGrapevineParameters::VSPGrapevineParameters(void){
 
   grape_color = make_RGBcolor(0.18,0.2,0.25);
 
+  grape_subdivisions = 8;
+
   plant_spacing = 2;
 
   row_spacing = 2;
@@ -146,6 +148,8 @@ SplitGrapevineParameters::SplitGrapevineParameters(void){
 
   grape_color = make_RGBcolor(0.18,0.2,0.25);
 
+  grape_subdivisions = 8;
+  
   plant_spacing = 2;
 
   row_spacing = 4;
@@ -191,6 +195,8 @@ UnilateralGrapevineParameters::UnilateralGrapevineParameters(void){
   cluster_radius = 0.03;
 
   grape_color = make_RGBcolor(0.18,0.2,0.25);
+
+  grape_subdivisions = 8;
 
   plant_spacing = 2;
 
@@ -238,6 +244,8 @@ GobletGrapevineParameters::GobletGrapevineParameters(void){
 
   grape_color = make_RGBcolor(0.18,0.2,0.25);
 
+  grape_subdivisions = 8;
+
   plant_spacing = 2;
 
   row_spacing = 2;
@@ -266,15 +274,15 @@ WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters(void){
 
   trunk_height = 10;
 
-  trunk_radius = 0.1;
+  trunk_radius = 0.15;
 
   base_height = 1.25;
 
-  crown_radius = 1.;
+  crown_radius = 0.65;
 
   shoot_radius = 0.02;
 
-  level_spacing = 0.25;
+  level_spacing = 0.5;
 
   branches_per_level = 10;
 

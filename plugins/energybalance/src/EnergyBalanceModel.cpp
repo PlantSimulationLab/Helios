@@ -257,7 +257,7 @@ int EnergyBalanceModel::selfTest( void ){
   float dt_5 = 1.f;      //sec
   float T_5 = 3600;    //sec
   float To_5 = 300.f;  // K
-  float rho_5 = 0.5;   // kg/m^2
+  float cp_5 = 2000;   // kg/m^2
 
   float Rlow = 50.f;
   float Rhigh = 500.f;
@@ -266,7 +266,7 @@ int EnergyBalanceModel::selfTest( void ){
 
   context_5.setPrimitiveData( UUID_5, "radiation_flux_SW", Rlow );
   context_5.setPrimitiveData( UUID_5, "temperature", To_5 );
-  context_5.setPrimitiveData( UUID_5, "object_density", rho_5 );
+  context_5.setPrimitiveData( UUID_5, "heat_capacity", cp_5 );
   context_5.setPrimitiveData( UUID_5, "twosided_flag", uint(0) );
   context_5.setPrimitiveData( UUID_5, "emissivity_SW", 0.f );
 
@@ -297,7 +297,7 @@ int EnergyBalanceModel::selfTest( void ){
   float gH_5;
   context_5.getPrimitiveData( UUID_5, "boundarylayer_conductance_out", gH_5 );
 
-  float tau_5 = rho_5*4190.f/gH_5/29.25f;
+  float tau_5 = cp_5/gH_5/29.25f;
 
   context_5.setPrimitiveData( UUID_5, "radiation_flux_SW", Rlow );
   energybalance_5.run();

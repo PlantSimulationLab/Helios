@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.7</span>
+   &#160;<span id="projectnumber">v1.2.0</span>
    </div>
   </td>
  </tr>
@@ -102,9 +102,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a1ffc8a34ba2895084c71e95ed615d10a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#a1ffc8a34ba2895084c71e95ed615d10a">read_JPEG_file</a> (const char *filename, std::vector&lt; unsigned char &gt; &amp;texture, uint &amp;height, uint &amp;width)</td></tr>
 <tr class="memdesc:a1ffc8a34ba2895084c71e95ed615d10a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a texture map from a JPEG image.  <a href="_visualizer_8h.html#a1ffc8a34ba2895084c71e95ed615d10a">More...</a><br /></td></tr>
 <tr class="separator:a1ffc8a34ba2895084c71e95ed615d10a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa76cea0b174f9557bffe7e6a57d65b87"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#aa76cea0b174f9557bffe7e6a57d65b87">write_JPEG_file</a> (const char *filename, uint width, uint height)</td></tr>
-<tr class="memdesc:aa76cea0b174f9557bffe7e6a57d65b87"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write current graphics window to a JPEG image file.  <a href="_visualizer_8h.html#aa76cea0b174f9557bffe7e6a57d65b87">More...</a><br /></td></tr>
-<tr class="separator:aa76cea0b174f9557bffe7e6a57d65b87"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae26724442b97caabf5cd0dca335c38a9"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#ae26724442b97caabf5cd0dca335c38a9">write_JPEG_file</a> (const char *filename, uint width, uint height, void *_window)</td></tr>
+<tr class="memdesc:ae26724442b97caabf5cd0dca335c38a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write current graphics window to a JPEG image file.  <a href="_visualizer_8h.html#ae26724442b97caabf5cd0dca335c38a9">More...</a><br /></td></tr>
+<tr class="separator:ae26724442b97caabf5cd0dca335c38a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0e60a86e54784ea9f2b178ce9540713f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#a0e60a86e54784ea9f2b178ce9540713f">read_png_file</a> (const char *filename, std::vector&lt; unsigned char &gt; &amp;texture, uint &amp;height, uint &amp;width)</td></tr>
 <tr class="memdesc:a0e60a86e54784ea9f2b178ce9540713f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a texture map from a PNG image.  <a href="_visualizer_8h.html#a0e60a86e54784ea9f2b178ce9540713f">More...</a><br /></td></tr>
 <tr class="separator:a0e60a86e54784ea9f2b178ce9540713f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -222,12 +222,12 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>checkerrors</b> (void)
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00188">188</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00196">196</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
-<a id="aa76cea0b174f9557bffe7e6a57d65b87"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa76cea0b174f9557bffe7e6a57d65b87">&#9670;&nbsp;</a></span>write_JPEG_file()</h2>
+<a id="ae26724442b97caabf5cd0dca335c38a9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae26724442b97caabf5cd0dca335c38a9">&#9670;&nbsp;</a></span>write_JPEG_file()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -248,7 +248,13 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>checkerrors</b> (void)
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">uint&#160;</td>
-          <td class="paramname"><em>height</em>&#160;</td>
+          <td class="paramname"><em>height</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>_window</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -264,6 +270,7 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>checkerrors</b> (void)
     <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>Name of the JPEG image file </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">width</td><td>Width of the graphics window in pixels </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">height</td><td>Height of the graphics window in pixels </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">window</td><td>Pointer to the window object </td></tr>
   </table>
   </dd>
 </dl>

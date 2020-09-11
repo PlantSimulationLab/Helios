@@ -27,6 +27,8 @@
 
 namespace helios {
 
+  class Context; //forward declaration of Context class
+
   /// Type of primitive element
   enum PrimitiveType{
     /// < Rectangular primitive
@@ -135,6 +137,14 @@ namespace helios {
     //! Function to get the Primitive type
     /** \sa \ref PrimitiveType */
     PrimitiveType getType(void) const;
+
+    //! Function to set the ID of the parent object the primitive belongs to (default is object 0)
+    /** \param[in] "objID" Identifier of primitive's parent object.
+    */
+    void setParentObjectID( const uint objID );
+
+    //! Function to return the ID of the parent object the primitive belongs to (default is object 0)
+    uint getParentObjectID( void )const;
     
     //! Function to return the surface area of a Primitive
     virtual float getArea() const = 0;
@@ -152,7 +162,7 @@ namespace helios {
     
     //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
     virtual std::vector<helios::vec3> getVertices( void ) const = 0;
-    
+
     //! Function to return the diffuse color of a Primitive
     helios::RGBcolor getColor() const;
 
@@ -463,6 +473,12 @@ namespace helios {
     */
     bool doesPrimitiveDataExist( const char* label ) const;
 
+    //! Clear the primitive data for this primitive
+    /** 
+	\param[in] "label" Name/label associated with data
+    */
+    void clearPrimitiveData( const char* label );
+
     //! Return labels for all primitive data for this particular primitive
     std::vector<std::string> listPrimitiveData( void ) const;
     
@@ -473,6 +489,9 @@ namespace helios {
     
     //! Type of primitive element (e.g., patch, triangle, etc.)
     PrimitiveType prim_type;
+
+    //! Identifier of parent object (default is object 0)
+    uint parent_object_ID;
 
     //! Diffuse RGB color
     helios::RGBAcolor color;
@@ -683,20 +702,237 @@ namespace helios {
     
   };
 
+  //---------- COMPOUND OBJECTS ----------------//
+
+  /// Type of compound object
+  enum ObjectType{
+  /// < Tile
+  OBJECT_TYPE_TILE = 0,
+  /// < Sphere
+  OBJECT_TYPE_SPHERE = 1,
+  //! Tube
+  OBJECT_TYPE_TUBE = 2,
+  //! Box
+  OBJECT_TYPE_BOX = 3,
+  /// < Disk
+  OBJECT_TYPE_DISK = 4,
+  /// < Triangular Mesh
+  OBJECT_TYPE_POLYMESH = 5,
+  };
+
+  class CompoundObject{
+  public:
+
+    virtual ~CompoundObject(){};
+
+    uint getObjectID( void ) const;
+
+    helios::ObjectType getObjectType( void ) const;
+
+    //! Return the number of primitives contained in the object
+    uint getPrimitiveCount() const;
+
+    std::vector<uint> getPrimitiveUUIDs( void ) const;
+
+    bool doesObjectContainPrimitive( const uint UUID );
+
+    //! Calculate the Cartesian (x,y,z) point of the center of a bounding box for the Compound Object
+    helios::vec3 getObjectCenter( void ) const;
+
+    //! Calculate the total one-sided surface area of the Compound Object
+    float getArea() const;
+    
+    //! Function to set the diffuse color for all primitives in the Compound Object
+    /** /param[in] "color" New color of primitives
+     */
+    void setColor( const helios::RGBcolor color );
+
+    //! Function to set the diffuse color (with transparency) for all primitives in the Compound Object
+    /** /param[in] "color" New color of primitives
+     */
+    void setColor( const helios::RGBAcolor color );
+
+    //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
+    void overrideTextureColor( void );
+
+    //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
+    void useTextureColor( void );
+
+    //! Function to translate/shift a Compound Object
+    /** \param[in] "shift" Distance to translate in (x,y,z) directions.
+    */
+    void translate( const helios::vec3 shift );
+
+    //! Function to rotate a Compound Object about the x-, y-, or z-axis
+    /** \param[in] "rot" Rotation angle in radians.
+	\param[in] "axis" Axis about which to rotate (must be one of x, y, z )
+    */
+    void rotate( const float rot, const char* axis );
+
+    //! Function to rotate a Compound Object about an arbitrary axis
+    /** \param[in] "rot" Rotation angle in radians.
+	\param[in] "axis" Vector describing axis about which to rotate.
+    */
+    void rotate( const float rot, const helios::vec3 axis );
+
+  protected:
+
+    //! Object ID
+    uint OID;
+
+    //! Type of object
+    helios::ObjectType type;
+
+    //! UUIDs for all primitives contained in object
+    std::vector<uint> UUIDs;
+
+    //! Pointer to the Helios context object was added to
+    helios::Context* context;
+
+  };
+
+  class Tile : public CompoundObject {
+  public:
+
+    //! Default constructor
+    Tile( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec2 __size, const helios::int2 __subdiv, helios::Context* context );
+
+    //! Tile destructor
+    ~Tile(){};
+
+    helios::vec2 getSize( void ) const;
+
+    helios::int2 getSubdivisionCount( void ) const;
+
+    std::vector<helios::vec3> getVertices( void ) const;
+
+    std::vector<helios::vec2> getTextureUV( void ) const;
+
+  protected:
+    
+    helios::vec2 size;
+
+    helios::int2 subdiv;
+    
+  };
+
+  class Sphere : public CompoundObject {
+  public:
+
+    //! Default constructor
+    Sphere( const uint __OID, const std::vector<uint> __UUIDs, const float __radius, const uint __subdiv, helios::Context* context );
+
+    //! Shpere destructor
+    ~Sphere(){};
+
+    float getRadius( void ) const;
+
+    uint getSubdivisionCount( void ) const;
+
+  protected:
+    
+    float radius;
+
+    uint subdiv;
+    
+  };
+
+  class Tube : public CompoundObject {
+  public:
+
+    //! Default constructor
+    Tube( const uint __OID, const std::vector<uint> __UUIDs, const std::vector<helios::vec3> __nodes, const std::vector<float> __radius, const uint __subdiv, helios::Context* context );
+
+    //! Tube destructor
+    ~Tube(){};
+
+    std::vector<helios::vec3> getNodes( void ) const;
+
+    std::vector<float> getNodeRadii( void ) const;
+
+    uint getSubdivisionCount( void ) const;
+
+  protected:
+    
+    std::vector<helios::vec3> nodes;
+
+    std::vector<float> radius;
+
+    uint subdiv;
+    
+  };
+
+  class Box : public CompoundObject {
+  public:
+
+    //! Default constructor
+    Box( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec3 __size, const helios::int3 __subdiv, helios::Context* __context );
+
+    //! Box destructor
+    ~Box(){};
+
+    helios::vec3 getSize( void ) const;
+
+    helios::int3 getSubdivisionCount( void ) const;
+
+  protected:
+    
+    helios::vec3 size;
+
+    helios::int3 subdiv;
+    
+  };
+
+  class Disk : public CompoundObject {
+  public:
+
+    //! Default constructor
+    Disk( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec2 __size, const uint __subdiv, helios::Context* __context );
+
+    //! Disk destructor
+    ~Disk(){};
+
+    helios::vec2 getSize( void ) const;
+
+    uint getSubdivisionCount( void ) const;
+
+  protected:
+    
+    helios::vec2 size;
+
+    uint subdiv;
+    
+  };
+
+  class Polymesh : public CompoundObject {
+  public:
+
+    //! Default constructor
+    Polymesh( const uint __OID, const std::vector<uint> __UUIDs, helios::Context* __context );
+
+    //! Polymesh destructor
+    ~Polymesh(){};
+
+  protected:
+    
+    
+  };
+
+  
 //! Stores the state associated with simulation
-/** The Context provides an interface to global information about the application environment.   It allows access to application-level operations such as adding geometry, running models, and visualization. After creation, the Context must first be initialized via a call to initializeContext(), after which geometry and models can be added and simulated.  Memory associated with the Context is freed by calling finalize().
+/** The Context provides an interface to global information about the application environment.   It allows access to application-level operations such as adding geometry, running models, and visualization. After creation, the Context must first be initialized via a call to initializeContext(), after which geometry and models can be added and simulated.  
  */ 
 class Context{
 private:
   
   //---------- PRIMITIVE/OBJECT HELIOS::VECTORS ----------------//
 
-  //! Helios::Vector containing a pointer to each primitive
-  /** \note A Primitive's index in this vector is its \ref UUID */
+  //! Map containing a pointer to each primitive
+  /** \note A Primitive's index in this map is its \ref UUID */
   std::map<uint,Primitive*> primitives;
 
-  //! Map containing variable data for each primitive
-  std::map<std::string,std::vector<float> > variables;
+  //! Map containing a pointer to each compound object
+  std::map<uint,CompoundObject*> objects;
 
   //! Map containing data values for timeseries
   std::map<std::string, std::vector<float> > timeseries_data;
@@ -763,6 +999,8 @@ private:
 
   uint currentUUID;
 
+  uint currentObjectID;
+
 public:
 
   //! Context default constructor
@@ -788,6 +1026,12 @@ public:
   //! Query whether the Context geometry is ``dirty", meaning has the geometry been modified since last set as clean
   /** \sa \ref markGeometryClean(), \ref markGeometryDirty() */
   bool isGeometryDirty(void);
+
+  //! Add new default Patch geometric primitive, which is centered at the origin (0,0,0), has unit length and width, horizontal orientation, and black color
+  /** Function to add a new default Patch to the Context
+      \ingroup primitives
+  */
+  uint addPatch( void );
 
   //! Add new Patch geometric primitive
   /** Function to add a new Patch to the Context given its center, and size.
@@ -1644,6 +1888,20 @@ public:
   */
   bool doesPrimitiveDataExist( const uint UUID, const char* label ) const;
 
+  //! Clear primitive data for a single primitive based on its UUID
+  /** 
+      \param[in] "UUID" Unique universal identifier of Primitive element 
+      \param[in] "label" Name/label associated with data
+  */
+  void clearPrimitiveData( const uint UUID, const char* label );
+
+  //! Clear primitive data for multiple primitives based on a vector of UUIDs
+  /** 
+      \param[in] "UUIDs" Vector of unique universal identifiers for Primitive elements
+      \param[in] "label" Name/label associated with data
+  */
+  void clearPrimitiveData( const std::vector<uint> UUIDs, const char* label );
+
   //-------- Global Data Functions ---------- //
 
   //! Add global data value (int)
@@ -1909,6 +2167,282 @@ public:
   bool doesGlobalDataExist( const char* label ) const;
   
   //--------- Compound Objects Functions -------------//
+
+  //! Get a pointer to a Compound Object
+  /** \param[in] "ObjID" Identifier for Compound Object.
+   */
+  CompoundObject* getObjectPointer( const uint ObjID ) const;
+
+  //! Check whether Compound Object exists in the Context
+  /** \param[in] "ObjID" Identifier for Compound Object.
+   */
+  bool doesObjectExist( const uint ObjID ) const;
+
+  //! Get the IDs for all Compound Objects in the Context
+  std::vector<uint> getAllObjectIDs( void ) const;
+
+  //! Delete a single Compound Object from the context
+  /**  \param[in] "ObjID" Identifier for Compound Object.
+  */
+  void deleteObject( const uint ObjID );
+  
+  //! Delete a group of Compound Objects from the context
+  /** \param[in] "ObjID" Identifier for Compound Object.
+  */
+  void deleteObject( const std::vector<uint> ObjIDs );
+
+  //! Make a copy of a Compound Objects from the context
+  /** \param[in] "ObjID" Identifier for Compound Object.
+      \return ID for copied object.
+  */
+  uint copyObject( const uint ObjID );
+
+  //! Make a copy of a group of Compound Objects from the context
+  /** \param[in] "ObjID" Identifier for Compound Object.
+      \return ID for copied object.
+  */
+  std::vector<uint> copyObject( const std::vector<uint> ObjIDs );
+
+  //! Get a pointer to a Tile Compound Object
+  /** \param[in] "ObjID" Identifier for Tile Compound Object.
+   */
+  Tile* getTileObjectPointer( const uint ObjID ) const;
+
+  //! Get a pointer to a Sphere Compound Object
+  /** \param[in] "ObjID" Identifier for Sphere Compound Object.
+   */
+  Sphere* getSphereObjectPointer( const uint ObjID ) const;
+
+  //! Get a pointer to a Tube Compound Object
+  /** \param[in] "ObjID" Identifier for Tube Compound Object.
+   */
+  Tube* getTubeObjectPointer( const uint ObjID ) const;
+
+  //! Get a pointer to a Box Compound Object
+  /** \param[in] "ObjID" Identifier for Box Compound Object.
+   */
+  Box* getBoxObjectPointer( const uint ObjID ) const;
+
+  //! Get a pointer to a Disk Compound Object
+  /** \param[in] "ObjID" Identifier for Disk Compound Object.
+   */
+  Disk* getDiskObjectPointer( const uint ObjID ) const;
+
+  //! Get a pointer to a Polygon Mesh Compound Object
+  /** \param[in] "ObjID" Identifier for Polygon Mesh Compound Object.
+   */
+  Polymesh* getPolymeshObjectPointer( const uint ObjID ) const;
+  
+  //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x- and y-directions
+      \param[in] "rotation" Spherical rotation of tiled surface
+      \param[in] "subdiv" Number of subdivisions in x- and y-directions 
+      \return Vector of UUIDs for each sub-patch
+      \note Assumes default color of green
+      \ingroup compoundobjects
+  */
+  uint addTileObject( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv );
+
+  //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x- and y-directions
+      \param[in] "rotation" Spherical rotation of tiled surface
+      \param[in] "subdiv" Number of subdivisions in x- and y-directions 
+      \param[in] "color" r-g-b color of tiled surface
+      \return Vector of UUIDs for each sub-patch
+      \ingroup compoundobjects
+  */
+  uint addTileObject( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const RGBcolor color );
+
+  //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x- and y-directions
+      \param[in] "rotation" Spherical rotation of tiled surface
+      \param[in] "subdiv" Number of subdivisions in x- and y-directions 
+      \param[in] "texturefile" Name of image file for texture map 
+      \return Vector of UUIDs for each sub-patch
+      \ingroup compoundobjects
+  */
+  uint addTileObject( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const char* texturefile );
+
+  //! Add a spherical compound object to the Context
+  /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+      \param[in] "center" (x,y,z) coordinate of sphere center
+      \param[in] "radius" Radius of sphere
+      \note Assumes a default color of green
+      \ingroup compoundobjects
+  */
+  uint addSphereObject( const uint Ndivs, const helios::vec3 center, const float radius );
+
+  //! Add a spherical compound object to the Context
+  /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+      \param[in] "center" (x,y,z) coordinate of sphere center
+      \param[in] "radius" Radius of sphere
+      \param[in] "color" r-g-b color of sphere
+      \ingroup compoundobjects
+  */
+  uint addSphereObject( const uint Ndivs, const helios::vec3 center, const float radius, const RGBcolor color );
+
+  //! Add a 3D tube compound object to the Context
+  /** A `tube' or `snake' compound object comprised of Triangle primitives
+      \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
+      \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.  
+      \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
+      \param[in] "radius" Radius of the tube at each node position.
+      \note Ndivs must be greater than 2.
+      \ingroup compoundobjects
+  */
+  uint addTubeObject( const uint Ndivs, const std::vector<helios::vec3> nodes, const std::vector<float> radius );
+
+  //! Add a 3D tube compound object to the Context and specify its diffuse color
+  /** A `tube' or `snake' compound object comprised of Triangle primitives
+      \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.  
+      \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
+      \param[in] "radius" Radius of the tube at each node position.
+      \param[in] "color" Diffuse color of each tube segment.
+      \note Ndivs must be greater than 2.
+      \ingroup compoundobjects
+  */
+  uint addTubeObject( const uint Ndivs, const std::vector<helios::vec3> nodes, const std::vector<float> radius, const std::vector<helios::RGBcolor> color );
+
+  //! Add a 3D tube compound object to the Context that is texture-mapped
+  /** A `tube' or `snake' compound object comprised of Triangle primitives
+      \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.  
+      \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
+      \param[in] "radius" Radius of the tube at each node position.
+      \param[in] "texturefile" Name of image file for texture map
+      \note Ndivs must be greater than 2.
+      \ingroup compoundobjects
+  */
+  uint addTubeObject( const uint Ndivs, const std::vector<helios::vec3> nodes, const std::vector<float> radius, const char* texturefile );
+  
+  //! Add a rectangular prism tesselated with Patch primitives
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x-, y-, and z-directions
+      \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions 
+      \return Vector of UUIDs for each sub-patch
+      \note Assumes default color of green
+      \note This version of addBox assumes that all surface normal vectors point away from the box
+      \ingroup compoundobjects
+  */
+  uint addBoxObject( const vec3 center, const vec3 size, const int3 subdiv );
+
+  //! Add a rectangular prism tesselated with Patch primitives
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x-, y-, and z-directions
+      \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions 
+      \param[in] "color" r-g-b color of box
+      \return Vector of UUIDs for each sub-patch
+      \note This version of addBox assumes that all surface normal vectors point away from the box
+      \ingroup compoundobjects
+  */
+  uint addBoxObject( const vec3 center, const vec3 size, const int3 subdiv, const RGBcolor color );
+
+  //! Add a rectangular prism tesselated with Patch primitives
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x-, y-, and z-directions
+      \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions 
+      \param[in] "texturefile" Name of image file for texture map
+      \return Vector of UUIDs for each sub-patch
+      \note This version of addBox assumes that all surface normal vectors point away from the box
+      \ingroup compoundobjects
+  */
+  uint addBoxObject( const vec3 center, const vec3 size, const int3 subdiv, const char* texturefile );
+
+  //! Add a rectangular prism tesselated with Patch primitives
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x-, y-, and z-directions
+      \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions 
+      \param[in] "color" r-g-b color of box
+      \param[in] "reverse_normals" Flip all surface normals so that patch normals point inside the box
+      \return Vector of UUIDs for each sub-patch
+      \note This version of addBox assumes that all surface normal vectors point away from the box
+      \ingroup compoundobjects
+  */
+  uint addBoxObject( const vec3 center, const vec3 size, const int3 subdiv, const helios::RGBcolor color, const bool reverse_normals );
+
+  //! Add a rectangular prism tesselated with Patch primitives
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x-, y-, and z-directions
+      \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions 
+      \param[in] "texturefile" Name of image file for texture map
+      \return Vector of UUIDs for each sub-patch
+      \note This version of addBox assumes that all surface normal vectors point away from the box
+      \ingroup compoundobjects
+  */
+  uint addBoxObject( const vec3 center, const vec3 size, const int3 subdiv, const char* texturefile, const bool reverse_normals );
+
+  //! Add new Disk geometric primitive to the Context given its center, and size.
+  /** 
+      \param[in] "Ndiv" Number to triangles used to form disk
+      \param[in] "center" 3D coordinates of Disk center
+      \param[in] "size" length of Disk semi-major and semi-minor radii
+      \return Vector of UUIDs for each sub-triangle
+      \note Assumes that disk is horizontal.
+      \note Assumes a default color of black.
+      \ingroup compoundobjects
+  */
+  uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size );
+
+  //! Add new Disk geometric primitive
+  /** Function to add a new Disk to the Context given its center, size, and spherical rotation.
+      \param[in] "Ndiv" Number to triangles used to form disk
+      \param[in] "center" 3D coordinates of Disk center
+      \param[in] "size" length of Disk semi-major and semi-minor radii
+      \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+      \return Vector of UUIDs for each sub-triangle
+      \note Assumes a default color of black.
+      \ingroup compoundobjects
+  */
+  uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation );
+
+  //! Add new Disk geometric primitive
+  /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
+      \param[in] "Ndiv" Number to triangles used to form disk
+      \param[in] "center" 3D coordinates of Disk center
+      \param[in] "size" length of Disk semi-major and semi-minor radii
+      \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+      \param[in] "color" diffuse R-G-B color of Disk
+      \return Vector of UUIDs for each sub-triangle
+      \ingroup compoundobjects
+  */
+  uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color );
+
+  //! Add new Disk geometric primitive
+  /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
+      \param[in] "Ndiv" Number to triangles used to form disk
+      \param[in] "center" 3D coordinates of Disk center
+      \param[in] "size" length of Disk semi-major and semi-minor radii
+      \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+      \param[in] "color" diffuse R-G-B-A color of Disk
+      \return Vector of UUIDs for each sub-triangle
+      \ingroup compoundobjects
+  */
+  uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color );
+
+  //! Add new Disk geometric primitive
+  /** Function to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
+      \param[in] "Ndiv" Number to triangles used to form disk
+      \param[in] "center" 3D coordinates of Disk center
+      \param[in] "size" length of Disk semi-major and semi-minor radii
+      \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+      \param[in] "texture_file" path to JPEG file to be used as texture
+      \return Vector of UUIDs for each sub-triangle
+      \note Assumes a default color of black.
+      \ingroup compoundobjects
+  */
+  uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
+  
+  
   
   //! Add a spherical compound object to the Context
   /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
@@ -1928,14 +2462,41 @@ public:
   */
   std::vector<uint> addSphere( const uint Ndivs, const helios::vec3 center, const float radius, const RGBcolor color );
 
-  //! Add a spherical compound object to the Context
-  /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
-      \param[in] "center" (x,y,z) coordinate of sphere center
-      \param[in] "radius" Radius of sphere
-      \param[in] "color" r-g-b-a color of sphere
+  //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x- and y-directions
+      \param[in] "rotation" Spherical rotation of tiled surface
+      \param[in] "subdiv" Number of subdivisions in x- and y-directions 
+      \return Vector of UUIDs for each sub-patch
+      \note Assumes default color of green
       \ingroup compoundobjects
   */
-  //std::vector<uint> addSphere( const uint Ndivs, const helios::vec3 center, const float radius, const RGBAcolor color );
+  std::vector<uint> addTile( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv );
+
+  //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x- and y-directions
+      \param[in] "rotation" Spherical rotation of tiled surface
+      \param[in] "subdiv" Number of subdivisions in x- and y-directions 
+      \param[in] "color" r-g-b color of tiled surface
+      \return Vector of UUIDs for each sub-patch
+      \ingroup compoundobjects
+  */
+  std::vector<uint> addTile( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const RGBcolor color );
+
+  //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
+  /** 
+      \param[in] "center" 3D coordinates of box center
+      \param[in] "size" Size of the box in the x- and y-directions
+      \param[in] "rotation" Spherical rotation of tiled surface
+      \param[in] "subdiv" Number of subdivisions in x- and y-directions 
+      \param[in] "texturefile" Name of image file for texture map 
+      \return Vector of UUIDs for each sub-patch
+      \ingroup compoundobjects
+  */
+  std::vector<uint> addTile( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const char* texturefile );
   
   //! Add a 3D tube compound object to the Context
   /** A `tube' or `snake' compound object comprised of Triangle primitives
@@ -2030,42 +2591,6 @@ public:
       \ingroup compoundobjects
   */
   std::vector<uint> addBox( const vec3 center, const vec3 size, const int3 subdiv, const char* texturefile, const bool reverse_normals );
-
-  //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
-  /** 
-      \param[in] "center" 3D coordinates of box center
-      \param[in] "size" Size of the box in the x- and y-directions
-      \param[in] "rotation" Spherical rotation of tiled surface
-      \param[in] "subdiv" Number of subdivisions in x- and y-directions 
-      \return Vector of UUIDs for each sub-patch
-      \note Assumes default color of green
-      \ingroup compoundobjects
-  */
-  std::vector<uint> addTile( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv );
-
-  //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
-  /** 
-      \param[in] "center" 3D coordinates of box center
-      \param[in] "size" Size of the box in the x- and y-directions
-      \param[in] "rotation" Spherical rotation of tiled surface
-      \param[in] "subdiv" Number of subdivisions in x- and y-directions 
-      \param[in] "color" r-g-b color of tiled surface
-      \return Vector of UUIDs for each sub-patch
-      \ingroup compoundobjects
-  */
-  std::vector<uint> addTile( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const RGBcolor color );
-
-  //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
-  /** 
-      \param[in] "center" 3D coordinates of box center
-      \param[in] "size" Size of the box in the x- and y-directions
-      \param[in] "rotation" Spherical rotation of tiled surface
-      \param[in] "subdiv" Number of subdivisions in x- and y-directions 
-      \param[in] "texturefile" Name of image file for texture map 
-      \return Vector of UUIDs for each sub-patch
-      \ingroup compoundobjects
-  */
-  std::vector<uint> addTile( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const char* texturefile );
 
   //! Add new Disk geometric primitive to the Context given its center, and size.
   /** 
@@ -2427,6 +2952,7 @@ public:
 };
 
 }
+
 
 
 #endif

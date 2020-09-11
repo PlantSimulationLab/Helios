@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.1.7</span>
+   &#160;<span id="projectnumber">v1.2.0</span>
    </div>
   </td>
  </tr>
@@ -102,6 +102,13 @@ virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="c
 <tr class="memitem:a39e4b6e3903cd6e395e242eb28b172b9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601">PrimitiveType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#a39e4b6e3903cd6e395e242eb28b172b9">getType</a> (void) const</td></tr>
 <tr class="memdesc:a39e4b6e3903cd6e395e242eb28b172b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to get the <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> type.  <a href="classhelios_1_1_primitive.html#a39e4b6e3903cd6e395e242eb28b172b9">More...</a><br /></td></tr>
 <tr class="separator:a39e4b6e3903cd6e395e242eb28b172b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f382dbe8b807f35946c29486cbd8059"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#a2f382dbe8b807f35946c29486cbd8059">setParentObjectID</a> (const uint objID)</td></tr>
+<tr class="memdesc:a2f382dbe8b807f35946c29486cbd8059"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to set the ID of the parent object the primitive belongs to (default is object 0)  <a href="classhelios_1_1_primitive.html#a2f382dbe8b807f35946c29486cbd8059">More...</a><br /></td></tr>
+<tr class="separator:a2f382dbe8b807f35946c29486cbd8059"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c1e10e5274c97a305c83d35cfc480ed"><td class="memItemLeft" align="right" valign="top"><a id="a0c1e10e5274c97a305c83d35cfc480ed"></a>
+uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#a0c1e10e5274c97a305c83d35cfc480ed">getParentObjectID</a> (void) const</td></tr>
+<tr class="memdesc:a0c1e10e5274c97a305c83d35cfc480ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the ID of the parent object the primitive belongs to (default is object 0) <br /></td></tr>
+<tr class="separator:a0c1e10e5274c97a305c83d35cfc480ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2e140af864e6dcb56d6ea5f85fef8f49"><td class="memItemLeft" align="right" valign="top"><a id="a2e140af864e6dcb56d6ea5f85fef8f49"></a>
 virtual float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#a2e140af864e6dcb56d6ea5f85fef8f49">getArea</a> () const =0</td></tr>
 <tr class="memdesc:a2e140af864e6dcb56d6ea5f85fef8f49"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the surface area of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>. <br /></td></tr>
@@ -290,6 +297,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:aa2241f7d999a12a9b47949116a3ff886"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#aa2241f7d999a12a9b47949116a3ff886">doesPrimitiveDataExist</a> (const char *label) const</td></tr>
 <tr class="memdesc:aa2241f7d999a12a9b47949116a3ff886"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if primitive data 'label' exists.  <a href="classhelios_1_1_primitive.html#aa2241f7d999a12a9b47949116a3ff886">More...</a><br /></td></tr>
 <tr class="separator:aa2241f7d999a12a9b47949116a3ff886"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4922868658e37a0247c229dc6d271e35"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#a4922868658e37a0247c229dc6d271e35">clearPrimitiveData</a> (const char *label)</td></tr>
+<tr class="memdesc:a4922868658e37a0247c229dc6d271e35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear the primitive data for this primitive.  <a href="classhelios_1_1_primitive.html#a4922868658e37a0247c229dc6d271e35">More...</a><br /></td></tr>
+<tr class="separator:a4922868658e37a0247c229dc6d271e35"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a58dd546316762b75b5b4e8a3592d89b9"><td class="memItemLeft" align="right" valign="top"><a id="a58dd546316762b75b5b4e8a3592d89b9"></a>
 std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#a58dd546316762b75b5b4e8a3592d89b9">listPrimitiveData</a> (void) const</td></tr>
 <tr class="memdesc:a58dd546316762b75b5b4e8a3592d89b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return labels for all primitive data for this particular primitive. <br /></td></tr>
@@ -299,8 +309,36 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <div class="textblock"><p><a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> class. </p>
 <p>All primitive objects inherit this class, and it provides functionality universal to all primitives. There may be additional functionality associated with specific primitive elements. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00125">125</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00127">127</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a4922868658e37a0247c229dc6d271e35"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4922868658e37a0247c229dc6d271e35">&#9670;&nbsp;</a></span>clearPrimitiveData()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Primitive::clearPrimitiveData </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>label</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Clear the primitive data for this primitive. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Name/label associated with data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02052">2052</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
 <a id="aa2241f7d999a12a9b47949116a3ff886"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa2241f7d999a12a9b47949116a3ff886">&#9670;&nbsp;</a></span>doesPrimitiveDataExist()</h2>
 
@@ -326,7 +364,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True/false </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02016">2016</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02099">2099</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -365,7 +403,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01624">1624</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01660">1660</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -404,7 +442,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01548">1548</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01584">1584</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -443,7 +481,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01814">1814</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01850">1850</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -482,7 +520,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01852">1852</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01888">1888</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -521,7 +559,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01890">1890</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01926">1926</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -560,7 +598,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01928">1928</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01964">1964</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -599,7 +637,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01681">1681</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01717">1717</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -638,7 +676,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01643">1643</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01679">1679</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -677,7 +715,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01567">1567</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01603">1603</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -716,7 +754,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01833">1833</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01869">1869</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -755,7 +793,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01871">1871</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01907">1907</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -794,7 +832,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01909">1909</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01945">1945</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -833,7 +871,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01947">1947</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01983">1983</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -872,7 +910,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01605">1605</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01641">1641</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -911,7 +949,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01757">1757</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01793">1793</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -950,7 +988,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01795">1795</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01831">1831</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -989,7 +1027,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01586">1586</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01622">1622</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1028,7 +1066,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01700">1700</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01736">1736</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1067,7 +1105,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01776">1776</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01812">1812</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1096,7 +1134,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Size/length of primitive data array </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01977">1977</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02013">2013</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1126,7 +1164,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <dl class="section return"><dt>Returns</dt><dd>Helios data type of primitive data </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>HeliosDataType </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01966">1966</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02002">2002</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1149,7 +1187,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <p>Function to return a pointer to the <a class="el" href="_a_p_i.html#Texture">Texture Mapping</a> data associated with this primitive. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="_a_p_i.html#Texture">Texture Mapping</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01026">1026</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01062">1062</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1172,7 +1210,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <p>Get u-v texture coordinates at primitive vertices. </p>
 <dl class="section return"><dt>Returns</dt><dd>2D vector of u-v texture coordinates </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01047">1047</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01083">1083</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1200,7 +1238,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00882">882</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00918">918</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1223,7 +1261,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <p>Function to get the <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> type. </p>
 <dl class="section see"><dt>See also</dt><dd>PrimitiveType </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00878">878</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00906">906</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1246,7 +1284,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <p>Function to get the <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> universal unique identifier (UUID) </p>
 <dl class="section return"><dt>Returns</dt><dd>UUID of primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00874">874</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00902">902</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1368,7 +1406,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01063">1063</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01099">1099</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1391,7 +1429,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <p>Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> with transparency. </p>
 <p>/param[in] "color" New color of primitive </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01022">1022</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01058">1058</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1414,7 +1452,35 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <p>Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>. </p>
 <p>/param[in] "color" New color of primitive </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01018">1018</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01054">1054</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2f382dbe8b807f35946c29486cbd8059"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2f382dbe8b807f35946c29486cbd8059">&#9670;&nbsp;</a></span>setParentObjectID()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Primitive::setParentObjectID </td>
+          <td>(</td>
+          <td class="paramtype">const uint&#160;</td>
+          <td class="paramname"><em>objID</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to set the ID of the parent object the primitive belongs to (default is object 0) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">objID</td><td>Identifier of primitive's parent object. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00910">910</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1453,7 +1519,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01363">1363</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01399">1399</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1492,7 +1558,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01356">1356</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01392">1392</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1531,7 +1597,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01391">1391</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01427">1427</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1570,7 +1636,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01398">1398</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01434">1434</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1609,7 +1675,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01405">1405</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01441">1441</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1648,7 +1714,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01370">1370</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01406">1406</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1687,7 +1753,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01377">1377</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01413">1413</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1726,7 +1792,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01384">1384</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01420">1420</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1765,7 +1831,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01342">1342</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01378">1378</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1804,7 +1870,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01412">1412</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01448">1448</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1843,7 +1909,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01349">1349</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01385">1385</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1897,7 +1963,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 </dl>
 <dl class="section note"><dt>Note</dt><dd>While this function still works for scalar data, it is typically prefereable to use the scalar versions of this function. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01419">1419</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01455">1455</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1925,7 +1991,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00888">888</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00924">924</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1953,7 +2019,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01069">1069</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01105">1105</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
