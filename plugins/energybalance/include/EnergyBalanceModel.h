@@ -41,17 +41,17 @@ public:
   //! Function to run the energy balance model for all primitives in the Context
   void run(void) ;
 
-  //! Function to run the dynamic /non steady state energy balance model for one timestep of length "dt"
-   /** \param[in] "dt" Time step. */
+  //! Function to run the dynamic /non steady state energy balance model for one timestep of length "dt" seconds
+   /** \param[in] "dt" Time step in seconds. */
   void run( const float dt ) ;
 
   //! Function to run the energy balance model for a select set of primitives
   /** \param[in] "UUIDs" Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.*/
   void run( std::vector<uint> UUIDs );
 
-  //! Function to run the energy balance model for a select set of primitives for one timestep of length "dt"
+  //! Function to run the energy balance model for a select set of primitives for one timestep of length "dt" seconds
   /** \param[in] "UUIDs"  Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
-     \param[in] "dt" Time step. 
+     \param[in] "dt" Time step in seconds. 
   */
   void run( std::vector<uint> UUIDs, const float dt );
 
@@ -98,40 +98,6 @@ private:
   float Qother_default;
 
   bool message_flag;
-
-  //! Solve the surface energy balance using Secant method
-  /** 
-     \param[in] "T" Initial guess for primitive surface temperature
-     \param[in] "R" Total absorbed radiation over all bands
-     \param[in] "Qother" Other energy flux, e.g., storage, conductance
-     \param[in] "eps" Primitive emissivity
-     \param[in] "U" Wind speed outside of the primitive boundary-layer
-     \param[in] "L" Characteristic length of primitive for convection
-     \param[in] "Ta" Air temperature outside of the primitive boundary-layer
-     \param[in] "ea" Air vapor pressure outside of the primitive boundary-layer
-     \param[in] "pressure" Air pressure
-     \param[in] "gS" Stomatal conductance
-     \param[in] "Nsides" Number of sides of primitive emitting radiation
-     \return Primitive surface temperature
-  */
-  //float solveEnergyBalance( float T, float R, float Qother, float eps, float U, float L, float Ta, float ea, float pressure, float gS, uint Nsides );
-
-  //! Evaluate the surface energy balance equation and calculate the residual
-  /** 
-     \param[in] "T" Primitive surface temperature
-     \param[in] "R" Total absorbed radiation over all bands
-     \param[in] "Qother" Other energy flux, e.g., storage, conductance
-     \param[in] "eps" Primitive emissivity
-     \param[in] "U" Wind speed outside of the primitive boundary-layer
-     \param[in] "L" Characteristic length of primitive for convection
-     \param[in] "Ta" Air temperature outside of the primitive boundary-layer
-     \param[in] "ea" Air vapor pressure outside of the primitive boundary-layer
-     \param[in] "pressure" Air pressure
-     \param[in] "gS" Stomatal conductance
-     \param[in] "Nsides" Number of sides of primitive emitting radiation
-     \return Energy balance resiudal
-  */
-  //float evaluateEnergyBalance( float T, float R, float Qother, float eps, float U, float L, float Ta, float ea, float pressure, float gS, uint Nsides );
 
   //! Names of radiation bands to be included in absorbed all-wave radiation flux
   std::vector<std::string> radiation_bands;

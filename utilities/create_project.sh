@@ -24,8 +24,8 @@ if [ ! -e "build" ]; then
     mkdir build;
 fi
 
-PLUGINS=("energybalance" "lidar" "photosynthesis" "radiation" "solarposition" "stomatalconductance" "topography" "visualizer" "voxelintersection" "weberpenntree")
-HEADERS=("EnergyBalanceModel.h" "LiDAR.h" "PhotosynthesisModel.h" "RadiationModel.h" "SolarPosition.h" "StomatalConductanceModel.h" "Topography.h" "Visualizer.h" "VoxelIntersection.h" "WeberPennTree.h")
+PLUGINS=("energybalance" "lidar" "photosynthesis" "radiation" "solarposition" "stomatalconductance" "topography" "visualizer" "voxelintersection" "weberpenntree" "canopygenerator")
+HEADERS=("EnergyBalanceModel.h" "LiDAR.h" "PhotosynthesisModel.h" "RadiationModel.h" "SolarPosition.h" "StomatalConductanceModel.h" "Topography.h" "Visualizer.h" "VoxelIntersection.h" "WeberPennTree.h" "CanopyGenerator.h")
 
 FILEBASE=`basename $DIRPATH`
 

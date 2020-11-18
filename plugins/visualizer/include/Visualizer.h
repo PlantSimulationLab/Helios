@@ -832,6 +832,9 @@ private:
   //! Fontsize of colorbar text
   uint colorbar_fontsize;
 
+  //! Width of points (if applicable) in pixels
+  uint point_width;
+
   //! Color of colorbar text
   helios::RGBcolor colorbar_fontcolor;
 

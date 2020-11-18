@@ -304,10 +304,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
     if( prim->doesPrimitiveDataExist("boundarylayer_conductance") ){
       prim->getPrimitiveData("boundarylayer_conductance",gH[u]);
     }else{
-      gH[u] = 0.135f*sqrt(U/L);
-      if( L==0 ){//this causes gH = NaN
-    	gH[u] = 0;
-      }
+      gH[u]=0.135f*sqrt(U/L);
     }
  
     //Moisture conductance
@@ -394,7 +391,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
     if ( dt>0){
       storage=heatcapacity[u]*(T[u]-To[u])/dt;
     }
-    prim->setPrimitiveData("heat_storage", storage);
+    prim->setPrimitiveData("storage_flux", storage);
 
     for( int i=0; i<output_prim_data.size(); i++ ){
       if( output_prim_data.at(i).compare("boundarylayer_conductance_out")==0 ){

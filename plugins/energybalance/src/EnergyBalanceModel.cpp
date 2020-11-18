@@ -327,7 +327,6 @@ int EnergyBalanceModel::selfTest( void ){
     return 1;
   }
   
-  
   std::cout << "passed." << std::endl;
   return 0;
 

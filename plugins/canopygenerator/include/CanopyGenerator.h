@@ -165,6 +165,9 @@ struct VSPGrapevineParameters{
   //! Maximum horizontal radius of grape clusters
   float cluster_radius;
 
+  //! Maximum height of grape clusters along the shoot as a fraction of the total shoot length
+  float cluster_height_max;
+
   //! Color of grapes
   helios::RGBcolor grape_color;
 
@@ -251,6 +254,9 @@ struct SplitGrapevineParameters{
   //! Maximum horizontal radius of grape clusters
   float cluster_radius;
 
+  //! Maximum height of grape clusters along the shoot as a fraction of the total shoot length
+  float cluster_height_max;
+
   //! Color of grapes
   helios::RGBcolor grape_color;
 
@@ -327,6 +333,9 @@ struct UnilateralGrapevineParameters{
 
   //! Maximum horizontal radius of grape clusters
   float cluster_radius;
+
+  //! Maximum height of grape clusters along the shoot as a fraction of the total shoot length
+  float cluster_height_max;
 
   //! Color of grapes
   helios::RGBcolor grape_color;
@@ -406,6 +415,9 @@ struct GobletGrapevineParameters{
   //! Maximum horizontal radius of grape clusters
   float cluster_radius;
 
+  //! Maximum height of grape clusters along the shoot as a fraction of the total shoot length
+  float cluster_height_max;
+
   //! Color of grapes
   helios::RGBcolor grape_color;
 
@@ -482,6 +494,57 @@ struct WhiteSpruceCanopyParameters{
   
 };
 
+//! Parameters defining the tomato plant canopy
+struct TomatoParameters{
+
+  //! Default constructor
+  TomatoParameters( void );
+
+  //! Maximum width of leaves. 
+  float leaf_length;
+
+  //! Number of sub-division segments per leaf
+  helios::int2 leaf_subdivisions;
+
+  //! Path to texture map file for leaves.
+  std::string leaf_texture_file;
+
+  //! Color of shoorts
+  helios::RGBcolor shoot_color;
+
+  //! Number of radial subdivisions for shoot tubes
+  int shoot_subdivisions;
+  
+  //! Spacing between adjacent plants along the row direction.
+  float plant_spacing;
+
+  //! Spacing between plant rows.
+  float row_spacing;
+
+  //! Height of the plant
+  float plant_height;
+
+  //! Number of crowns/plants in the x- and y-directions.
+  helios::int2 plant_count;
+
+  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
+  helios::vec3 canopy_origin;
+
+  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
+  float canopy_rotation;
+
+  //! Radius of tomato fruit
+  float fruit_radius;
+
+  //! Color of tomato fruit
+  helios::RGBcolor fruit_color;
+
+  //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly grape_subdivisions^2 triangles per fruit)
+  uint fruit_subdivisions;
+  
+};
+
+
 
 class CanopyGenerator{
  public:
@@ -528,6 +591,11 @@ class CanopyGenerator{
   /** \param[in] "params" Structure containing parameters for white spruce canopy.
    */
   void buildCanopy( const WhiteSpruceCanopyParameters params );
+
+  //! Build a canopy consisting of tomato plants
+  /** \param[in] "params" Structure containing parameters for tomato canopy.
+   */
+  void buildCanopy( const TomatoParameters params );
 
   //! Build a ground consisting of texture sub-tiles and sub-patches, which can be different sizes
   /** \param[in] "ground_origin" x-, y-, and z-position of the ground center point.
@@ -631,6 +699,12 @@ void grapevineGoblet( const GobletGrapevineParameters params, const helios::vec3
      \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
   */ 
   void whitespruce( const WhiteSpruceCanopyParameters params, const helios::vec3 origin );
+
+  //! Function to add an individual tomato plant
+  /* \param[in] "params" Set of parameters defining white spruce tree.
+     \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+  */ 
+  void tomato( const TomatoParameters params, const helios::vec3 origin );
 
  private:
 

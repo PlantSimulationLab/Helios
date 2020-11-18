@@ -92,6 +92,8 @@ VSPGrapevineParameters::VSPGrapevineParameters(void){
 
   cluster_radius = 0.03;
 
+  cluster_height_max = 0.15;
+
   grape_color = make_RGBcolor(0.18,0.2,0.25);
 
   grape_subdivisions = 8;
@@ -146,6 +148,8 @@ SplitGrapevineParameters::SplitGrapevineParameters(void){
 
   cluster_radius = 0.03;
 
+  cluster_height_max = 0.1;
+
   grape_color = make_RGBcolor(0.18,0.2,0.25);
 
   grape_subdivisions = 8;
@@ -194,11 +198,13 @@ UnilateralGrapevineParameters::UnilateralGrapevineParameters(void){
 
   cluster_radius = 0.03;
 
+  cluster_height_max = 0.1;
+
   grape_color = make_RGBcolor(0.18,0.2,0.25);
 
   grape_subdivisions = 8;
 
-  plant_spacing = 2;
+  plant_spacing = 1.5;
 
   row_spacing = 2;
 
@@ -242,6 +248,8 @@ GobletGrapevineParameters::GobletGrapevineParameters(void){
 
   cluster_radius = 0.03;
 
+  cluster_height_max = 0.1;
+
   grape_color = make_RGBcolor(0.18,0.2,0.25);
 
   grape_subdivisions = 8;
@@ -260,11 +268,11 @@ GobletGrapevineParameters::GobletGrapevineParameters(void){
 
 WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters(void){
 
-  needle_width = 0.001;
+  needle_width = 0.0005;
 
   needle_length = 0.05;
 
-  needle_color = RGB::forestgreen;
+  needle_color = make_RGBcolor(0.67,0.9,0.56);
 
   needle_subdivisions = make_int2(1,1);
 
@@ -276,15 +284,15 @@ WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters(void){
 
   trunk_radius = 0.15;
 
-  base_height = 1.25;
+  base_height = 2.0;
 
   crown_radius = 0.65;
 
   shoot_radius = 0.02;
 
-  level_spacing = 0.5;
+  level_spacing = 0.35;
 
-  branches_per_level = 10;
+  branches_per_level = 8;
 
   shoot_angle = 0.3*M_PI;
 
@@ -298,6 +306,38 @@ WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters(void){
 
   canopy_rotation = 0;
 
+}
+
+TomatoParameters::TomatoParameters(void){
+
+  leaf_length = 0.2;
+
+  leaf_subdivisions = make_int2(1,1);
+
+  leaf_texture_file = "plugins/canopygenerator/textures/TomatoLeaf_big.png";
+
+  shoot_color = make_RGBcolor(0.35,0.45,0.2);
+
+  shoot_subdivisions = 10;
+
+  plant_height = 1.;
+
+  fruit_radius = 0.03;
+
+  fruit_color = make_RGBcolor(0.7,0.28,0.2);
+
+  fruit_subdivisions = 8;
+
+  plant_spacing = 2;
+
+  row_spacing = 2;
+
+  plant_count = make_int2(3,3);
+
+  canopy_origin = make_vec3(0,0,0);
+
+  canopy_rotation = 0;
+  
 }
 
 CanopyGenerator::CanopyGenerator( helios::Context* __context ){
@@ -783,6 +823,40 @@ void CanopyGenerator::buildCanopy( const WhiteSpruceCanopyParameters params ){
   if( printmessages ){
     std::cout << "done." << std::endl;
     std::cout << "Canopy consists of " << UUID_leaf.size()*UUID_leaf.front().size() << " leaves and " << prim_count << " total primitives." << std::endl;
+  }
+
+}
+
+void CanopyGenerator::buildCanopy( const TomatoParameters params ){
+
+  if( printmessages ){
+    std::cout << "Building canopy of tomato plants..." << std::flush;
+  }
+
+  std::uniform_real_distribution<float> unif_distribution;
+
+  vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
+
+  uint plant_ID = 0;
+  uint prim_count = 0;
+  for( int j=0; j<params.plant_count.y; j++ ){
+    for( int i=0; i<params.plant_count.x; i++ ){
+
+      vec3 center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+(i+0.5)*params.plant_spacing, -0.5*canopy_extent.y+(j+0.5)*params.row_spacing, 0 );
+
+      tomato( params, center );
+
+      std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
+      prim_count += UUIDs_all.size();
+
+      plant_ID++;
+
+    }
+  }
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+    //std::cout << "Canopy consists of " << UUID_leaf.size()*UUID_leaf.front().size() << " leaves and " << prim_count << " total primitives." << std::endl;
   }
 
 }

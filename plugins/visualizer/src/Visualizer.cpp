@@ -321,6 +321,8 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   colorbar_position = make_vec3(0.65,0.1,0.1);
   colorbar_size = make_vec2( 0.15, 0.1 );
 
+  point_width = 1;
+
   //Initialize OpenGL context and open graphic window
   
   std::cout << "Opening graphic window..." << std::flush;
@@ -345,7 +347,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
     fprintf( stderr, "Failed to open graphics window.\n" );
     fprintf( stderr, "Common causes for this error:\n");
     fprintf( stderr, "-- OSX\n  - Is XQuartz installed (xquartz.org) and configured as the default X11 window handler?  When running the visualizer, XQuartz should automatically open and appear in the dock, indicating it is working.\n" );
-    fprintf( stderr, "-- Unix\n  - Are you running this program remotely via SSH? Remote X11 graphics along with OpenGL are not natively supported.  Installing and using VirtualGL is a good solution for this (virtualgl.org).\n" );
+    fprintf( stderr, "-- Linux\n  - Are you running this program remotely via SSH? Remote X11 graphics along with OpenGL are not natively supported.  Installing and using VirtualGL is a good solution for this (virtualgl.org).\n" );
     exit(EXIT_FAILURE);
   }
   glfwMakeContextCurrent(_window);
@@ -387,6 +389,15 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   glDisable(GL_CULL_FACE);
 
   assert( checkerrors() );
+
+   int width, height;
+  glfwGetFramebufferSize(_window, &width, &height);
+
+  if( width!=Wdisplay || height!=Hdisplay ){
+    printf("WARNING: requested size of window is larger than the screen area.\n");
+    Wdisplay = width;
+    Hdisplay = height;
+  }
 
   //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
 
@@ -2065,6 +2076,8 @@ void Visualizer::addPoint( const vec3 position, const RGBcolor color, const uint
 
 void Visualizer::addPoint( const vec3 position, const RGBAcolor color, const uint pointsize,  const CoordinateSystem coordFlag ){
 
+  point_width = pointsize;
+
   vec3 p = position;  //copy so that can be modified
 
   if( coordFlag == 0 ){ //No vertex transformation (i.e., identity matrix)
@@ -2080,7 +2093,6 @@ void Visualizer::addPoint( const vec3 position, const RGBAcolor color, const uin
   color_data.resize( 4, 0 );
   normal_data.resize( 3, 0 );
   uv_data.resize( 2, 0 );
-;
 
   position_data.at(0) = p.x;
   position_data.at(1) = p.y;
@@ -3182,7 +3194,7 @@ void Visualizer::render( bool shadow ){
     }
 
     if( point_size>0 ){
-      glPointSize( 1 );
+      glPointSize( point_width );
       glDrawArrays(GL_POINTS, triangle_size+line_size, point_size );
     }
 

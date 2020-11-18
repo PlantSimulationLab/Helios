@@ -18,7 +18,7 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
 
   float dz = params.trunk_height/10.f;
   for( int i=0; i<10; i++ ){
-    rad_main.push_back(params.trunk_radius*(10-i)/10.f);
+    rad_main.push_back(params.trunk_radius*(9-i)/9.f);
     pos_main.push_back(make_vec3(0.,0., i*dz ));
   }
 
@@ -42,7 +42,7 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
     }else{
       rcrown = fmax(1.f/0.3*vfrac*params.crown_radius,0.2*params.crown_radius);
     }
-    rcrown += getVariation(0.05*rcrown,generator);
+    //rcrown += getVariation(0.1*rcrown,generator);
 
     float z = fmin( params.trunk_height,params.base_height + i*params.level_spacing*(1+getVariation(0.1*params.level_spacing,generator)));
 
@@ -52,14 +52,18 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
 
       float phi = float(j)/float(Nbranches)*2.f*M_PI*(1+getVariation(0.1,generator));
 
-      float theta = 0;//float(i)/float(Nlevels)*params.shoot_angle;
-      theta+=getVariation(0.2*theta,generator);
+      float theta = -0.15*M_PI;
+      theta+=getVariation(0.2*fabs(theta),generator);
 
       std::vector<float> rad_branch;
       std::vector<vec3> pos_branch;
 
-      pos_branch.push_back( origin + make_vec3(0,0,z+getVariation(0.5,generator)) );
-      pos_branch.push_back( origin + make_vec3(rcrown*sinf(phi)*cosf(theta),rcrown*cosf(phi)*cosf(theta),z+rcrown*sinf(theta)) );
+      z += getVariation(0.5,generator);
+
+      float r = rcrown + getVariation(0.1*rcrown,generator);
+      
+      pos_branch.push_back( origin + make_vec3(0,0,z) );
+      pos_branch.push_back( origin + make_vec3(r*sinf(phi)*cosf(theta),r*cosf(phi)*cosf(theta),z+r*sinf(theta)) );
 
       //printf("pos_branch = (%f,%f,%f)\n",pos_branch.front().x,pos_branch.front().y,pos_branch.front().z);
       
@@ -71,10 +75,12 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
       U = context->addTube(params.wood_subdivisions,pos_branch,rad_branch, params.wood_texture_file.c_str() );
       UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end());
 
-      for( int k=0; k<Nbranches; k++ ){
+      for( int k=0; k<2*Nbranches; k++ ){
 
-	float bfrac = float(k+1)/float(Nbranches);
+	float bfrac = float(k+1)/float(2*Nbranches);
 	//bfrac = 4.f/0.8*bfrac/(4*bfrac+1.f);
+
+	int side = k%2;
 
 	std::vector<float> rad_subbranch;
 	std::vector<vec3> pos_subbranch;
@@ -84,12 +90,14 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
 
 	pos_subbranch.push_back( base );
 
-	float l = fmax(0.1,0.4*rcrown);
+	float l = fmax(0.1,0.6*rcrown);
 	l+=getVariation(0.25*l,generator);
 	
 	float bangle = 0.2*M_PI;
-	vec3 bdir = l*make_vec3(sinf(phi)*cosf(theta+bangle),cosf(phi)*cosf(theta+0.5*M_PI),sinf(theta+bangle));
-	bdir = rotatePointAboutLine( bdir, base, interpolateTube( pos_branch, bfrac-0.01 ), getVariation(M_PI,generator) );
+	//vec3 bdir = l*make_vec3(sinf(phi)*cosf(theta+bangle),cosf(phi)*cosf(theta+0.5*M_PI),sinf(theta+bangle));
+	//bdir = rotatePointAboutLine( bdir, base, interpolateTube( pos_branch, bfrac-0.01 ), getVariation(M_PI,generator) );
+
+	vec3 bdir = l*make_vec3(sinf(phi+(0.4+getVariation(0.1,generator))*M_PI*(-1+2*side)),cosf(phi-0.4*M_PI+0.8*M_PI*side),0);
 	
 	pos_subbranch.push_back( base + bdir );
 	
@@ -97,6 +105,7 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
 	rad_subbranch.push_back( 0.1*rbase );
 	
 	//UUID_branch = context->addTube(params.wood_subdivisions,pos_subbranch,rad_subbranch, params.wood_texture_file.c_str() );
+	//context->addTube(params.wood_subdivisions,pos_subbranch,rad_subbranch, params.wood_texture_file.c_str() );
 
 	//needles
 	int Nneedles = round(50*l/(0.4*params.crown_radius));
@@ -115,7 +124,7 @@ void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, con
 
 	  UUID_leaf_plant.push_back( context->addTile( make_vec3(0,0,0), make_vec2(0.1*params.needle_length,params.needle_length), make_SphericalCoord(0,0), params.needle_subdivisions, params.needle_color ) );
 
-	  float downangle = 0.1*M_PI;
+	  float downangle = 0.2*M_PI;
 	  context->rotatePrimitive( UUID_leaf_plant.back(), downangle-rotation.elevation, "x" );
 	  context->translatePrimitive( UUID_leaf_plant.back(), make_vec3(0,-0.55*params.needle_length,0) );
 	  context->rotatePrimitive( UUID_leaf_plant.back(), 0.5*M_PI-rotation.azimuth, "z" );

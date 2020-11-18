@@ -2174,12 +2174,14 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
   std::map<std::string,std::vector<std::vector<bool> > > texture_data;
   int tID = 0;
 
+  std::vector<uint> UUIDs_all = context->getAllUUIDs();
+
   //----- PATCHES ----- //
 
   //figure out how many patches
   size_t Npatches = 0;
-  for( int p=0; p<context->getPrimitiveCount(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(p);
+  for( int p=0; p<UUIDs_all.size(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
     if( prim->getType() == helios::PRIMITIVE_TYPE_PATCH ){
       Npatches++;
     }
@@ -2190,8 +2192,8 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
   float2* patch_uv = (float2*)malloc(2*Npatches * sizeof(float2)); //allocate host memory
 
   c=0;
-  for( int p=0; p<context->getPrimitiveCount(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(p);
+  for( int p=0; p<UUIDs_all.size(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
     if( prim->getType() == helios::PRIMITIVE_TYPE_PATCH ){
       std::vector<helios::vec3> verts = prim->getVertices();
       patch_vertex[4*c] = vec3tofloat3(verts.at(0));
@@ -2244,8 +2246,8 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
 
   //figure out how many triangles
   size_t Ntriangles = 0;
-  for( int p=0; p<context->getPrimitiveCount(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(p);
+  for( int p=0; p<UUIDs_all.size(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
     if( prim->getType() == helios::PRIMITIVE_TYPE_TRIANGLE ){
       Ntriangles++;
     }
@@ -2256,8 +2258,8 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
   float2* tri_uv = (float2*)malloc(3*Ntriangles * sizeof(float2)); //allocate host memory
 
   c=0;
-  for( int p=0; p<context->getPrimitiveCount(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(p);
+  for( int p=0; p<UUIDs_all.size(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
     if( prim->getType() == helios::PRIMITIVE_TYPE_TRIANGLE ){
       std::vector<helios::vec3> verts = prim->getVertices();
       tri_vertex[3*c] = vec3tofloat3(verts.at(0));
@@ -2596,14 +2598,16 @@ void LiDARcloud::calculateSyntheticLeafArea( helios::Context* context ){
 
   float3* d_prim_xyz;
 
-  const uint N = context->getPrimitiveCount();
+  std::vector<uint> UUIDs_all = context->getAllUUIDs();
+
+  const uint N = UUIDs_all.size();
   
   float3* prim_xyz = (float3*)malloc(N * sizeof(float3)); //allocate host memory
   CUDA_CHECK_ERROR( cudaMalloc((void**)&d_prim_xyz,N*sizeof(float3)) ); //allocate device memory
 
   //copy scan data into the host buffer
   for( std::size_t p=0; p<N; p++ ){
-    std::vector<helios::vec3> verts = context->getPrimitivePointer(p)->getVertices();
+    std::vector<helios::vec3> verts = context->getPrimitivePointer(UUIDs_all.at(p))->getVertices();
     prim_xyz[p] = vec3tofloat3( verts.at(0) );
   }
 
@@ -2677,8 +2681,8 @@ void LiDARcloud::calculateSyntheticLeafArea( helios::Context* context ){
   for( std::size_t p=0; p<N; p++ ){
     if( prim_vol[p]>=0 ){
       uint gridcell = prim_vol[p];
-      total_area.at(gridcell) += context->getPrimitivePointer(p)->getArea();
-      context->setPrimitiveData(p,"gridCell",helios::HELIOS_TYPE_UINT,1,&gridcell);
+      total_area.at(gridcell) += context->getPrimitivePointer(UUIDs_all.at(p))->getArea();
+      context->setPrimitiveData(UUIDs_all.at(p),"gridCell",helios::HELIOS_TYPE_UINT,1,&gridcell);
     }
   }
 

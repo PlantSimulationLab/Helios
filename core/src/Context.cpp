@@ -922,6 +922,7 @@ void Primitive::getTransformationMatrix( float (&T)[16] )const {
 }
 
 void Primitive::setTransformationMatrix( float (&T)[16] ){
+  
   for( int i=0; i<16; i++ ){
     transform[i] = T[i];
   }
@@ -1052,10 +1053,22 @@ RGBAcolor Primitive::getColorRGBA() const{
 }
 
 void Primitive::setColor( const helios::RGBcolor __color ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Primitive::setColor): Cannot set the color of individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
+  
   color = make_RGBAcolor(__color,1);
 }
 
 void Primitive::setColor( const helios::RGBAcolor __color ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Primitive::setColor): Cannot set the color of individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
+  
   color = __color;
 }
 
@@ -1085,10 +1098,22 @@ std::vector<vec2> Primitive::getTextureUV( void ){
 }
 
 void Primitive::overrideTextureColor( void ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Primitive::overrideTextureColor): Cannot set the texture options of individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
+  
   texturecoloroverridden = true;
 }
 
 void Primitive::useTextureColor( void ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Primitive::useTextureColor): Cannot set the texture options of individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
+  
   texturecoloroverridden = false;
 }
 
@@ -1097,18 +1122,35 @@ bool Primitive::isTextureColorOverridden( void ) const{
 }
 
 void Primitive::scale( const vec3 S ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Primitive::scale): Cannot scale individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
+  
   float T[16];
   makeScaleMatrix(S,T);
   matmult(T,transform,transform);
 }
 
 void Primitive::translate( const helios::vec3 shift ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Primitive::translate): Cannot translate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
+  
   float T[16];
   makeTranslationMatrix(shift,T);
   matmult(T,transform,transform);
 }
 
 void Patch::rotate( const float rot, const char* axis ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
 
   if( strcmp(axis,"z")==0 ){
     float Rz[16];
@@ -1130,12 +1172,23 @@ void Patch::rotate( const float rot, const char* axis ){
 }
 
 void Patch::rotate( const float rot, const helios::vec3 axis ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
+  
   float R[16];
   makeRotationMatrix(rot,axis,R);
   matmult(R,transform,transform);
 }
 
 void Triangle::rotate( const float rot, const char* axis ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
 
   if( strcmp(axis,"z")==0 ){
     float Rz[16];
@@ -1157,12 +1210,23 @@ void Triangle::rotate( const float rot, const char* axis ){
 }
 
 void Triangle::rotate( const float rot, const helios::vec3 axis ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
+
   float R[16];
   makeRotationMatrix(rot,axis,R);
   matmult(R,transform,transform);
 }
 
 void Voxel::rotate( const float rot, const char* axis ){
+
+  if( parent_object_ID!=0 ){
+    std::cout << "WARNING (Voxel::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+    return;
+  }
 
   float Rz[16];
   makeRotationMatrix(rot,"z",Rz);
@@ -3657,6 +3721,8 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
   
   Patch* patch_new = (new Patch( color, currentUUID ));
 
+  patch_new->setParentObjectID(0); 
+
   patch_new->scale( make_vec3(size.x,size.y,1) );
   
   if( rotation.elevation!=0 ){
@@ -3668,7 +3734,6 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
   patch_new->translate( center );
 
-  patch_new->setParentObjectID(0); 
   primitives[currentUUID] = patch_new;
   markGeometryDirty();
   currentUUID++;
@@ -3680,6 +3745,8 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
   Texture* texture = addTexture( texture_file );
 
   Patch* patch_new = (new Patch( texture, currentUUID ));
+
+  patch_new->setParentObjectID(0);
 
   assert( size.x>0.f && size.y>0.f );
   patch_new->scale( make_vec3(size.x,size.y,1) );
@@ -3693,7 +3760,6 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
   patch_new->translate( center );
 
-  patch_new->setParentObjectID(0);
   primitives[currentUUID] = patch_new;
   markGeometryDirty();
   currentUUID++;
@@ -3749,6 +3815,8 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
   
   Patch* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
 
+  patch_new->setParentObjectID(0);
+
   assert( size.x>0.f && size.y>0.f );
   patch_new->scale( make_vec3(size.x,size.y,1) );
   
@@ -3761,7 +3829,6 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
   patch_new->translate( center );
 
-  patch_new->setParentObjectID(0);
   primitives[currentUUID] = patch_new;
   markGeometryDirty();
   currentUUID++;
@@ -3857,6 +3924,8 @@ uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotat
 
   Voxel* voxel_new = (new Voxel( color, currentUUID ));
 
+  voxel_new->setParentObjectID(0);
+
   voxel_new->scale( size );
   
   if( rotation!=0 ){
@@ -3865,7 +3934,6 @@ uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotat
 
   voxel_new->translate( center );
 
-  voxel_new->setParentObjectID(0);
   primitives[currentUUID] = voxel_new;
   markGeometryDirty();
   currentUUID++;
@@ -4611,24 +4679,42 @@ float CompoundObject::getArea( void ) const{
 
 }
 
-void CompoundObject::setColor( const helios::RGBcolor color ){
+void CompoundObject::setColor( const helios::RGBcolor __color ){
   for( size_t o=0; o<UUIDs.size(); o++ ){
 
     if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
-      context->getPrimitivePointer( UUIDs.at(o) )->setColor( color );
+      context->getPrimitivePointer( UUIDs.at(o) )->setColor( __color );
     }
       
   }
+
+  color = make_RGBAcolor(__color, 1.f);
+  
 }
 
-void CompoundObject::setColor( const helios::RGBAcolor color ){
+void CompoundObject::setColor( const helios::RGBAcolor __color ){
   for( size_t o=0; o<UUIDs.size(); o++ ){
 
     if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
-      context->getPrimitivePointer( UUIDs.at(o) )->setColor( color );
+      context->getPrimitivePointer( UUIDs.at(o) )->setColor( __color );
     }
       
   }
+
+  color = __color;
+  
+}
+
+RGBcolor CompoundObject::getColor( void )const {
+  return make_RGBcolor( color.r, color.g, color.b );
+}
+
+RGBcolor CompoundObject::getRGBColor( void )const {
+  return make_RGBcolor( color.r, color.g, color.b );
+}
+
+RGBAcolor CompoundObject::getRGBAColor( void )const {
+  return color;
 }
 
 void CompoundObject::overrideTextureColor( void ){
@@ -4651,34 +4737,121 @@ void CompoundObject::useTextureColor( void ){
   }
 }
 
-void CompoundObject::translate( const helios::vec3 shift ){
+void CompoundObject::scale( const vec3 S ){
+
+  float T[16], T_prim[16];
+  makeScaleMatrix(S,T);
+  matmult(T,transform,transform);
+
   for( size_t o=0; o<UUIDs.size(); o++ ){
 
     if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
-      context->getPrimitivePointer( UUIDs.at(o) )->translate( shift );
+
+      context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
+      matmult(T,T_prim,T_prim);
+      context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
+
     }
       
   }
+  
+}
+
+void CompoundObject::translate( const helios::vec3 shift ){
+
+  float T[16], T_prim[16];
+  makeTranslationMatrix(shift,T);
+  
+  matmult(T,transform,transform);
+  
+  for( size_t o=0; o<UUIDs.size(); o++ ){
+
+    if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+
+      context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
+      matmult(T,T_prim,T_prim);
+      context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
+    }
+      
+  }
+  
 }
 
 void CompoundObject::rotate( const float rot, const char* axis ){
-  for( size_t o=0; o<UUIDs.size(); o++ ){
 
-    if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
-      context->getPrimitivePointer( UUIDs.at(o) )->rotate( rot, axis );
+  if( strcmp(axis,"z")==0 ){
+    float Rz[16], Rz_prim[16];
+    makeRotationMatrix(rot,"z",Rz);
+    matmult(Rz,transform,transform);
+
+    for( size_t o=0; o<UUIDs.size(); o++ ){
+      if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+	context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(Rz_prim);
+	matmult(Rz,Rz_prim,Rz_prim);
+	context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(Rz_prim);
+      }
     }
-      
+  }else if( strcmp(axis,"y")==0 ){
+    float Ry[16], Ry_prim[16];
+    makeRotationMatrix(rot,"y",Ry);
+    matmult(Ry,transform,transform);
+    for( size_t o=0; o<UUIDs.size(); o++ ){
+      if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+	context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(Ry_prim);
+	matmult(Ry,Ry_prim,Ry_prim);
+	context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(Ry_prim);
+      }
+    }
+  }else if( strcmp(axis,"x")==0 ){
+    float Rx[16], Rx_prim[16];
+    makeRotationMatrix(rot,"x",Rx);
+    matmult(Rx,transform,transform);
+    for( size_t o=0; o<UUIDs.size(); o++ ){
+      if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+	context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(Rx_prim);
+	matmult(Rx,Rx_prim,Rx_prim);
+	context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(Rx_prim);
+      }
+    }
+  }else{
+    std::cerr << "ERROR (CompoundObject::rotate): Rotation axis should be one of x, y, or z." << std::endl;
+    exit(EXIT_FAILURE);
   }
+  
 }
 
 void CompoundObject::rotate( const float rot, const helios::vec3 axis ){
+
+  float R[16], R_prim[16];
+  makeRotationMatrix(rot,axis,R);
+  matmult(R,transform,transform);
+  
   for( size_t o=0; o<UUIDs.size(); o++ ){
 
     if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
-      context->getPrimitivePointer( UUIDs.at(o) )->rotate( rot, axis );
+
+      context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(R_prim);
+      matmult(R,R_prim,R_prim);
+      context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(R_prim);
+
     }
       
   }
+  
+}
+
+void CompoundObject::getTransformationMatrix( float (&T)[16] ) const{
+  for( int i=0; i<16; i++ ){
+    T[i]=transform[i];
+  }
+}
+
+void CompoundObject::setTransformationMatrix( float (&T)[16] ){
+
+  for( int i=0; i<16; i++ ){
+    transform[i] = T[i];
+  }
+
 }
 
 CompoundObject* Context::getObjectPointer( uint ObjID ) const{
@@ -4827,6 +5000,8 @@ uint Context::copyObject( const uint ObjID ){
 
 Tile::Tile( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec2 __size, const helios::int2 __subdiv, helios::Context* __context ){
 
+  makeIdentityMatrix( transform );
+
   OID = __OID;
   type = helios::OBJECT_TYPE_TILE;
   UUIDs = __UUIDs;
@@ -4869,7 +5044,7 @@ std::vector<helios::vec3> Tile::getVertices( void ) const{
 
   vertices.at(2) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-1 ) )->getVertices().at(2);
 
-  vertices.at(3) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-subdiv.y ) )->getVertices().at(3);
+  vertices.at(3) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-subdiv.x ) )->getVertices().at(3);
 
   return vertices;
 
@@ -4904,6 +5079,8 @@ std::vector<helios::vec2> Tile::getTextureUV( void ) const{
 
 Sphere::Sphere( const uint __OID, const std::vector<uint> __UUIDs, const float __radius, const uint __subdiv, helios::Context* __context ){
 
+  makeIdentityMatrix( transform );
+
   OID = __OID;
   type = helios::OBJECT_TYPE_SPHERE;
   UUIDs = __UUIDs;
@@ -4930,6 +5107,8 @@ uint Sphere::getSubdivisionCount( void ) const{
 }
 
 Tube::Tube( const uint __OID, const std::vector<uint> __UUIDs, const std::vector<helios::vec3> __nodes, const std::vector<float> __radius, const uint __subdiv, helios::Context* __context ){
+
+  makeIdentityMatrix( transform );
 
   OID = __OID;
   type = helios::OBJECT_TYPE_TUBE;
@@ -4963,6 +5142,8 @@ uint Tube::getSubdivisionCount( void ) const{
 
 Box::Box( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec3 __size, const helios::int3 __subdiv, helios::Context* __context ){
 
+  makeIdentityMatrix( transform );
+
   OID = __OID;
   type = helios::OBJECT_TYPE_BOX;
   UUIDs = __UUIDs;
@@ -4990,6 +5171,8 @@ helios::int3 Box::getSubdivisionCount( void ) const{
 
 Disk::Disk( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec2 __size, const uint __subdiv, helios::Context* __context ){
 
+  makeIdentityMatrix( transform );
+
   OID = __OID;
   type = helios::OBJECT_TYPE_DISK;
   UUIDs = __UUIDs;
@@ -5016,6 +5199,8 @@ uint Disk::getSubdivisionCount( void ) const{
 }
 
 Polymesh::Polymesh( const uint __OID, const std::vector<uint> __UUIDs, helios::Context* __context ){
+
+  makeIdentityMatrix( transform );
 
   OID = __OID;
   type = helios::OBJECT_TYPE_POLYMESH;
@@ -5090,11 +5275,24 @@ uint Context::addSphereObject( const uint Ndivs, const vec3 center, const float 
     }
   }
 
+  Sphere* sphere_new = (new Sphere( currentObjectID, UUID, radius, Ndivs, this ));
+
+  float T[16], transform[16];
+  sphere_new->getTransformationMatrix( transform );
+
+  makeScaleMatrix(make_vec3(radius,radius,radius),T);
+  matmult(T,transform,transform);
+
+  makeTranslationMatrix(center,T);
+  matmult(T,transform,transform);
+
+  sphere_new->setTransformationMatrix( transform );
+
+  sphere_new->setColor( color );
+
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
-
-  Sphere* sphere_new = (new Sphere( currentObjectID, UUID, radius, Ndivs, this ));
   
   objects[currentObjectID] = sphere_new;
   currentObjectID++;
@@ -5147,12 +5345,32 @@ uint Context::addTileObject( const vec3 center, const vec2 size, const Spherical
     }
   }
 
+  Tile* tile_new = (new Tile( currentObjectID, UUID, size, subdiv, this ));
+
+  float T[16], S[16], R[16];
+
+  float transform[16];
+  tile_new->getTransformationMatrix( transform );
+
+  makeScaleMatrix(make_vec3(size.x,size.y,1.f),S);
+  matmult(S,transform,transform);
+
+  makeRotationMatrix( -rotation.elevation,"x",R);
+  matmult(R,transform,transform);
+  makeRotationMatrix( -rotation.azimuth,"z",R);
+  matmult(R,transform,transform);
+
+  makeTranslationMatrix(center,T);
+  matmult(T,transform,transform);
+
+  tile_new->setTransformationMatrix( transform );
+
+  tile_new->setColor( color );
+
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
 
-  Tile* tile_new = (new Tile( currentObjectID, UUID, size, subdiv, this ));
-  
   objects[currentObjectID] = tile_new;
   currentObjectID++;
   return currentObjectID-1;
@@ -5231,6 +5449,8 @@ uint Context::addTileObject( const vec3 center, const vec2 size, const Spherical
 
       Patch* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
 
+      patch_new->setParentObjectID(0);
+
       assert( size.x>0.f && size.y>0.f );
       patch_new->scale( make_vec3(subsize.x,subsize.y,1) );
 
@@ -5245,7 +5465,6 @@ uint Context::addTileObject( const vec3 center, const vec2 size, const Spherical
       
       patch_new->translate( center );
 
-      patch_new->setParentObjectID(0);
       primitives[currentUUID] = patch_new;
       markGeometryDirty();
       currentUUID++;
@@ -5255,12 +5474,30 @@ uint Context::addTileObject( const vec3 center, const vec2 size, const Spherical
     }
   }
 
+  Tile* tile_new = (new Tile( currentObjectID, UUID, size, subdiv, this ));
+
+  float T[16], S[16], R[16];
+
+  float transform[16];
+  tile_new->getTransformationMatrix( transform );
+
+  makeScaleMatrix(make_vec3(size.x,size.y,1.f),S);
+  matmult(S,transform,transform);
+
+  makeRotationMatrix( -rotation.elevation,"x",R);
+  matmult(R,transform,transform);
+  makeRotationMatrix( -rotation.azimuth,"z",R);
+  matmult(R,transform,transform);
+
+  makeTranslationMatrix(center,T);
+  matmult(T,transform,transform);
+
+  tile_new->setTransformationMatrix( transform );
+
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
 
-  Tile* tile_new = (new Tile( currentObjectID, UUID, size, subdiv, this ));
-  
   objects[currentObjectID] = tile_new;
   currentObjectID++;
   return currentObjectID-1;
@@ -5381,12 +5618,22 @@ uint Context::addTubeObject( const uint Ndivs, const std::vector<helios::vec3> n
       
     }
   }
+  
+  Tube* tube_new = (new Tube( currentObjectID, UUID, nodes, radius, Ndivs, this ));
+
+  float T[16],  transform[16];
+  tube_new->getTransformationMatrix( transform );
+
+  makeTranslationMatrix(nodes.front(),T);
+  matmult(T,transform,transform);
+
+  tube_new->setTransformationMatrix( transform );
+
+  //tube_new->setColor( color );
 
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
-  
-  Tube* tube_new = (new Tube( currentObjectID, UUID, nodes, radius, Ndivs, this ));
   
   objects[currentObjectID] = tube_new;
   currentObjectID++;
@@ -5504,11 +5751,19 @@ uint Context::addTubeObject( const uint Ndivs, const std::vector<vec3> nodes, co
     }
   }
 
+  Tube* tube_new = (new Tube( currentObjectID, UUID, nodes, radius, Ndivs, this ));
+
+  float T[16],  transform[16];
+  tube_new->getTransformationMatrix( transform );
+
+  makeTranslationMatrix(nodes.front(),T);
+  matmult(T,transform,transform);
+
+  tube_new->setTransformationMatrix( transform );
+
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
-
-  Tube* tube_new = (new Tube( currentObjectID, UUID, nodes, radius, Ndivs, this ));
   
   objects[currentObjectID] = tube_new;
   currentObjectID++;
@@ -5559,131 +5814,96 @@ uint Context::addBoxObject( const vec3 center, const vec3 size, const int3 subdi
 
     //right
     subcenter = center + make_vec3(0,0.5*size.y,0);
-    //U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), color );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 	
     //left
     subcenter = center - make_vec3(0,0.5*size.y,0);
-    //U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), color );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
 
     // y-z faces (vertical)
 	
     //front
     subcenter = center + make_vec3(0.5*size.x,0,0);
-    //U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
-    objID = addTileObject( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), color );;
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-	
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     //back
     subcenter = center - make_vec3(0.5*size.x,0,0);
-    //U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
-    objID = addTileObject( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
     
     // x-y faces (horizontal)
 
     //top
     subcenter = center + make_vec3(0,0,0.5*size.z);
-    //U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), color );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     //bottom
     subcenter = center - make_vec3(0,0,0.5*size.z);
-    //U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), color );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
   }else{ //normals point outward
 
     // x-z faces (vertical)
  	
     //right
     subcenter = center + make_vec3(0,0.5*size.y,0);
-    //U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), color );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-	
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     //left
     subcenter = center - make_vec3(0,0.5*size.y,0);
-    //U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), color );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-	    
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     // y-z faces (vertical)
       
     //front
     subcenter = center + make_vec3(0.5*size.x,0,0);
-    //U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
-    objID = addTileObject( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
     
     //back
     subcenter = center - make_vec3(0.5*size.x,0,0);
-    //U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
-    objID = addTileObject( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-	    
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     // x-y faces (horizontal)
 	
     //top
     subcenter = center + make_vec3(0,0,0.5*size.z);
-    //U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), color );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
     
     //bottom
     subcenter = center - make_vec3(0,0,0.5*size.z);
-    //U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), color );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), color );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), color );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
   }
+
+  Box* box_new = (new Box( currentObjectID, UUID, size, subdiv, this ));
+
+  float T[16], transform[16];
+  box_new->getTransformationMatrix( transform );
+
+  makeScaleMatrix(size,T);
+  matmult(T,transform,transform);
+
+  makeTranslationMatrix(center,T);
+  matmult(T,transform,transform);
+
+  box_new->setTransformationMatrix( transform );
+
+  box_new->setColor( color );
 
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
-
-  Box* box_new = (new Box( currentObjectID, UUID, size, subdiv, this ));
   
   objects[currentObjectID] = box_new;
   currentObjectID++;
@@ -5710,132 +5930,95 @@ uint Context::addBoxObject( const vec3 center, const vec3 size, const int3 subdi
 
     //right
     subcenter = center + make_vec3(0,0.5*size.y,0);
-    //U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-	
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     //left
     subcenter = center - make_vec3(0,0.5*size.y,0);
-    //U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     // y-z faces (vertical)
 	
     //front
     subcenter = center + make_vec3(0.5*size.x,0,0);
-    //U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-	
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     //back
     subcenter = center - make_vec3(0.5*size.x,0,0);
-    //U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
     
     // x-y faces (horizontal)
 
     //top
     subcenter = center + make_vec3(0,0,0.5*size.z);
-    //U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), texturefile );
-    objID =  addTileObject( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     //bottom
     subcenter = center - make_vec3(0,0,0.5*size.z);
-    //U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
   }else{ //normals point outward
 
     // x-z faces (vertical)
  	
     //right
     subcenter = center + make_vec3(0,0.5*size.y,0);
-    //U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-	
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,0), make_int2(subdiv.x,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     //left
     subcenter = center - make_vec3(0,0.5*size.y,0);
-    //U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-	    
+    U = addTile( subcenter, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,M_PI), make_int2(subdiv.x,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     // y-z faces (vertical)
       
     //front
     subcenter = center + make_vec3(0.5*size.x,0,0);
-    //U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
     
     //back
     subcenter = center - make_vec3(0.5*size.x,0,0);
-    //U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-	    
+    U = addTile( subcenter, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,1.5*M_PI), make_int2(subdiv.y,subdiv.z), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
     // x-y faces (horizontal)
 	
     //top
     subcenter = center + make_vec3(0,0,0.5*size.z);
-    //U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(0,0), make_int2(subdiv.x,subdiv.y), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
     
     //bottom
     subcenter = center - make_vec3(0,0,0.5*size.z);
-    //U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), texturefile );
-    objID = addTileObject( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), texturefile );
-    U = getObjectPointer(objID)->getPrimitiveUUIDs();
-    U_copy = copyPrimitive( U );
-    UUID.insert( UUID.end(), U_copy.begin(), U_copy.end() );
-    deleteObject(objID);
-
+    U = addTile( subcenter, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,0), make_int2(subdiv.x,subdiv.y), texturefile );
+    UUID.insert( UUID.end(), U.begin(), U.end() );
+    
   }
+
+  Box* box_new = (new Box( currentObjectID, UUID, size, subdiv, this ));
+
+  float T[16], transform[16];
+  box_new->getTransformationMatrix( transform );
+
+  makeScaleMatrix(size,T);
+  matmult(T,transform,transform);
+
+  makeTranslationMatrix(center,T);
+  matmult(T,transform,transform);
+
+  box_new->setTransformationMatrix( transform );
 
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
 
-  Box* box_new = (new Box( currentObjectID, UUID, size, subdiv, this ));
-  
   objects[currentObjectID] = box_new;
   currentObjectID++;
   return currentObjectID-1;
@@ -5871,11 +6054,24 @@ uint Context::addDiskObject( const uint Ndivs, const vec3& center, const vec2& s
     
   }
 
+  Disk* disk_new = (new Disk( currentObjectID, UUID, size, Ndivs, this ));
+
+  float T[16], transform[16];
+  disk_new->getTransformationMatrix( transform );
+
+  makeScaleMatrix(make_vec3(size.x,size.y,1.f),T);
+  matmult(T,transform,transform);
+
+  makeTranslationMatrix(center,T);
+  matmult(T,transform,transform);
+
+  disk_new->setTransformationMatrix( transform );
+
+  disk_new->setColor( color );
+
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
-
-  Disk* disk_new = (new Disk( currentObjectID, UUID, size, Ndivs, this ));
   
   objects[currentObjectID] = disk_new;
   currentObjectID++;
@@ -5899,19 +6095,52 @@ uint Context::addDiskObject( const uint Ndivs, const vec3& center, const vec2& s
     
   }
 
+  Disk* disk_new = (new Disk( currentObjectID, UUID, size, Ndivs, this ));
+
+  float T[16], transform[16];
+  disk_new->getTransformationMatrix( transform );
+
+  makeScaleMatrix(make_vec3(size.x,size.y,1.f),T);
+  matmult(T,transform,transform);
+
+  makeTranslationMatrix(center,T);
+  matmult(T,transform,transform);
+
+  disk_new->setTransformationMatrix( transform );
+
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
 
-  Disk* disk_new = (new Disk( currentObjectID, UUID, size, Ndivs, this ));
-  
   objects[currentObjectID] = disk_new;
   currentObjectID++;
   return currentObjectID-1;
 
 } 
 
+uint Context::addPolymeshObject( const std::vector<uint> UUIDs ){
 
+  Polymesh* polymesh_new = (new Polymesh( currentObjectID, UUIDs, this ));
+
+  polymesh_new->setColor( getPrimitivePointer( UUIDs.front())->getColor() );
+
+  float T[16], transform[16];
+  polymesh_new->getTransformationMatrix( transform );
+
+  makeTranslationMatrix( getPrimitivePointer( UUIDs.front())->getVertices().front(),T);
+  matmult(T,transform,transform);
+
+  polymesh_new->setTransformationMatrix( transform );
+
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    getPrimitivePointer(UUIDs.at(p))->setParentObjectID(currentObjectID);
+  }
+
+  objects[currentObjectID] = polymesh_new;
+  currentObjectID++;
+  return currentObjectID-1;
+
+}
 
 
 
@@ -6073,7 +6302,13 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
 	solid_fraction = 1.f;
       }
 
+      if( solid_fraction==0.f ){
+	continue;
+      }
+
       Patch* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
+
+      patch_new->setParentObjectID(0);
 
       assert( size.x>0.f && size.y>0.f );
       patch_new->scale( make_vec3(subsize.x,subsize.y,1) );
@@ -6089,7 +6324,6 @@ std::vector<uint> Context::addTile( const vec3 center, const vec2 size, const Sp
       
       patch_new->translate( center );
 
-      patch_new->setParentObjectID(0);
       primitives[currentUUID] = patch_new;
       markGeometryDirty();
       currentUUID++;

@@ -1,6 +1,30 @@
 var searchData=
 [
-  ['querytimeseriesdata_455',['queryTimeseriesData',['../group__timeseries.html#gac14ce5b1300170dd614c01cdcbf503d2',1,'helios::Context::queryTimeseriesData(const char *label, const Date date, const Time time) const'],['../group__timeseries.html#ga2d1163ffd5d5bfb3528aa23148020a44',1,'helios::Context::queryTimeseriesData(const char *label, const uint index) const']]],
-  ['querytimeseriesdate_456',['queryTimeseriesDate',['../group__timeseries.html#ga1f93f88ff5b9b93542506a7f8141e7c3',1,'helios::Context']]],
-  ['querytimeseriestime_457',['queryTimeseriesTime',['../group__timeseries.html#ga110d7cf09daefb3a714bddb9d1df11c9',1,'helios::Context']]]
+  ['patch_443',['Patch',['../classhelios_1_1_patch.html',1,'helios::Patch'],['../classhelios_1_1_patch.html#a9742993e6ca7e72d4fca6c3f2aff5ae3',1,'helios::Patch::Patch(const helios::RGBAcolor color, const uint UUID)'],['../classhelios_1_1_patch.html#a71bcf83335d97d9a039e8a79417e9d1c',1,'helios::Patch::Patch(Texture *texture, const uint UUID)'],['../classhelios_1_1_patch.html#a440efda8806c5eb13cf10ab7cbbf3873',1,'helios::Patch::Patch(Texture *texture, const std::vector&lt; helios::vec2 &gt; _uv_, const float _solid_fraction_, const uint UUID)']]],
+  ['periodic_5fdepth_444',['periodic_depth',['../struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5',1,'PerRayData']]],
+  ['perraydata_445',['PerRayData',['../struct_per_ray_data.html',1,'']]],
+  ['perraydata_5fmcrt_446',['PerRayData_MCRT',['../struct_per_ray_data___m_c_r_t.html',1,'']]],
+  ['phimax_447',['phiMax',['../struct_scan_metadata.html#a29f41bdfbec57a32c60755944b4c0a7f',1,'ScanMetadata']]],
+  ['phimin_448',['phiMin',['../struct_scan_metadata.html#a019acfcaf7a3ba3fe062af1a59c24513',1,'ScanMetadata']]],
+  ['photosynthesis_20model_20plugin_20documentation_449',['Photosynthesis Model Plugin Documentation',['../_photosynthesis_doc.html',1,'PlugIns']]],
+  ['photosynthesismodel_450',['PhotosynthesisModel',['../class_photosynthesis_model.html',1,'PhotosynthesisModel'],['../class_photosynthesis_model.html#a955195882a3aa7d9f9c092a221ae6142',1,'PhotosynthesisModel::PhotosynthesisModel()']]],
+  ['photosynthesismodel_2ecpp_451',['PhotosynthesisModel.cpp',['../_photosynthesis_model_8cpp.html',1,'']]],
+  ['photosynthesismodel_2eh_452',['PhotosynthesisModel.h',['../_photosynthesis_model_8h.html',1,'']]],
+  ['plant_5fcount_453',['plant_count',['../struct_spherical_crowns_canopy_parameters.html#a8ac3d5fbeee86db6289693aa5e14a76f',1,'SphericalCrownsCanopyParameters::plant_count()'],['../struct_v_s_p_grapevine_parameters.html#a4e8951ce8fd2f808a770f6535bf227ba',1,'VSPGrapevineParameters::plant_count()'],['../struct_split_grapevine_parameters.html#aceb690fe1271b451c4f6ce98ea4abb1e',1,'SplitGrapevineParameters::plant_count()'],['../struct_unilateral_grapevine_parameters.html#a8220247ae8e6da7f33fd8c43604f6634',1,'UnilateralGrapevineParameters::plant_count()'],['../struct_goblet_grapevine_parameters.html#aba20ec6b42c081e9250b2b4f3c9b0de6',1,'GobletGrapevineParameters::plant_count()'],['../struct_white_spruce_canopy_parameters.html#a6df2f849f402259e099b1dafdabc0a2c',1,'WhiteSpruceCanopyParameters::plant_count()'],['../struct_tomato_parameters.html#a3e32aed174650e40d708fb75fc7d6a41',1,'TomatoParameters::plant_count()']]],
+  ['plant_5fheight_454',['plant_height',['../struct_tomato_parameters.html#adf398ca857bb113ffa65f3ded195ab23',1,'TomatoParameters']]],
+  ['plant_5fspacing_455',['plant_spacing',['../struct_spherical_crowns_canopy_parameters.html#a9be21b26afb7d32b61a236bbe5372acd',1,'SphericalCrownsCanopyParameters::plant_spacing()'],['../struct_v_s_p_grapevine_parameters.html#a41a428c1a2ec318a139d2de0ea787257',1,'VSPGrapevineParameters::plant_spacing()'],['../struct_split_grapevine_parameters.html#a7003e0157c127ff7c9afe1270ae1dd0a',1,'SplitGrapevineParameters::plant_spacing()'],['../struct_unilateral_grapevine_parameters.html#a4c4c0145cd5e6a9b5cf925094cc6ae7e',1,'UnilateralGrapevineParameters::plant_spacing()'],['../struct_goblet_grapevine_parameters.html#acd2289ad52eba1a689feada522426530',1,'GobletGrapevineParameters::plant_spacing()'],['../struct_white_spruce_canopy_parameters.html#a3a46d591c89d1436a2892b76c4703e34',1,'WhiteSpruceCanopyParameters::plant_spacing()'],['../struct_tomato_parameters.html#a979927066ea306b2f5d3897ba0d5b09c',1,'TomatoParameters::plant_spacing()']]],
+  ['plotdepthmap_456',['plotDepthMap',['../class_visualizer.html#a5640bb4984f2947bda0d7d6dea34ce75',1,'Visualizer']]],
+  ['plotinteractive_457',['plotInteractive',['../class_visualizer.html#a440ac7246f28448fdb248f537dd8cff5',1,'Visualizer']]],
+  ['plotupdate_458',['plotUpdate',['../class_visualizer.html#ae056b735b1b9c154b981f07ba93d0a3a',1,'Visualizer']]],
+  ['plug_2dins_459',['Plug-ins',['../_plug_ins.html',1,'']]],
+  ['pnghasalpha_460',['PNGHasAlpha',['../global_8h.html#a07b0dda8b9aee4100e9f6332dbfe7f64',1,'helios']]],
+  ['pointinpolygon_461',['pointInPolygon',['../global_8h.html#a9e5241d9d341174bc8ae9b8d42c2d435',1,'helios']]],
+  ['polymesh_462',['Polymesh',['../classhelios_1_1_polymesh.html',1,'helios::Polymesh'],['../classhelios_1_1_polymesh.html#a4cc9889384afc612b490348cbc557658',1,'helios::Polymesh::Polymesh()']]],
+  ['primitive_463',['Primitive',['../classhelios_1_1_primitive.html',1,'helios']]],
+  ['primitive_5ftype_5fpatch_464',['PRIMITIVE_TYPE_PATCH',['../_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601a6fcd29f0c812849b3eb5bedec52cd744',1,'helios']]],
+  ['primitive_5ftype_5ftriangle_465',['PRIMITIVE_TYPE_TRIANGLE',['../_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601aeed8005c1692d92beefcbafe8147207c',1,'helios']]],
+  ['primitive_5ftype_5fvoxel_466',['PRIMITIVE_TYPE_VOXEL',['../_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601a963e2e943d9bd4d5c4648473802cf78c',1,'helios']]],
+  ['primitiveintersection_2ecu_467',['primitiveIntersection.cu',['../primitive_intersection_8cu.html',1,'']]],
+  ['primitivetype_468',['PrimitiveType',['../_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601',1,'helios']]],
+  ['printwindow_469',['printWindow',['../class_visualizer.html#ab42f12bed91baa9f2d8532cbe804be5b',1,'Visualizer::printWindow(void)'],['../class_visualizer.html#a1840b4285caa645e6b8b28144478cfe1',1,'Visualizer::printWindow(const char *outfile)']]]
 ];

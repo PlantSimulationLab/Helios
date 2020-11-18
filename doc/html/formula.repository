@@ -89,38 +89,68 @@
 \_form#88=89x14:$\rho+\tau+\varepsilon=0$
 \_form#89=62x14:$\rho=1-\varepsilon$
 \_form#90=38x11:$\tau=0$
-\_form#91=11x11:$\Gamma$
-\_form#92=38x11:$\Gamma=0$
-\_form#93=171x17:$\Gamma = 2\pi(DOY-1)/365.25$
-\_form#94=575x35:$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$
-\_form#95=527x35:$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$
-\_form#96=119x17:$h=15(LST-12)$
-\_form#97=234x17:$LST=hour+minute/60+TC/60$
-\_form#98=242x17:$TC=4(15UTC-longitude)+EoT$
-\_form#99=378x20:$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )$
-\_form#100=416x18:$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))$
-\_form#101=36x14:$\mathrm{cos}^{-1}$
-\_form#102=14x15:$\phi_s$
-\_form#103=84x15:$\phi_s=2\pi-\phi_s$
-\_form#104=66x14:$LST>12$
-\_form#105=240x29:$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)$
-\_form#106=11x8:$u$
-\_form#107=78x18:$R_L=\epsilon_s\sigma T_a^4$
-\_form#108=104x14:$\sigma=5.67\times10^{-8}$
-\_form#109=153x38:\[g_s = \frac{E_m(i+i_0)}{k+bi+(i+i_0)D}\]
-\_form#110=12x12:$D$
-\_form#111=65x15:$E_m,\,i_0,\,k,$
-\_form#112=6x12:$b$
-\_form#113=149x36:\[D = \frac{e_s(T_s)-e_s(T_a)h}{p_{atm}},\]
-\_form#114=21x14:$E_m$
-\_form#115=12x14:$i_0$
-\_form#116=8x12:$k$
-\_form#117=44x15:$\theta_L=0$
-\_form#118=54x20:$\theta_L=\frac{1}{2}\pi$
-\_form#119=17x11:$g_L$
-\_form#120=143x20:$\Delta \theta_L=\frac{1}{2}\pi/9\approx 0.1745$
-\_form#121=105x36:$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1$
-\_form#122=54x15:$\theta_L=0.1$
-\_form#123=42x17:$1/\Delta \theta_L$
-\_form#124=15x15:$\theta_L$
-\_form#125=44x17:$g_L(\theta_L)$
+\_form#91=216x38:\[ \frac{\partial \theta}{\partial h}\frac{\partial h}{\partial t} = \frac{\partial}{\partial z}\left[ K\left(\frac{\partial h}{\partial z}+1\right)\right] + S, \]
+\_form#92=14x12:$K$
+\_form#93=11x12:$S$
+\_form#94=6x11:$t$
+\_form#95=8x8:$z$
+\_form#96=77x33:\[ q = -K\frac{dh}{dz}, \]
+\_form#97=41x17:$\partial \theta/\partial h$
+\_form#98=162x41:\[ \theta = \theta_r + \frac{\theta_s-\theta_r}{\left[1+\left(\alpha\big| h\big|\right)^n\right]^m} \]
+\_form#99=12x15:$\theta_r$
+\_form#100=12x15:$\theta_s$
+\_form#101=35x12:$\theta-h$
+\_form#102=59x12:$h \rightarrow -\infty$
+\_form#103=39x12:$h \rightarrow 0$
+\_form#104=11x8:$n$
+\_form#105=15x8:$m$
+\_form#106=206x50:\[ \frac{\partial \theta}{\partial h} = \frac{\alpha\,m\,n \left(\theta_s-\theta_r\right)\left(\alpha\big| h \big|\right)^{n-1}}{\left[1+\left(\alpha\big| h \big| \right)^n\right]^{m+1}} \]
+\_form#107=303x66:\[ K = K_s\left\{ \frac{ \left[ 1-(\alpha \big| h\big|)^{n-1}\left[1+(\alpha \big| h\big|)^{n}\right]^{-m}\right]^2 }{\left[1+(\alpha \big| h\big|)^{n}\right]^{m/2}}\right\} \]
+\_form#108=84x17:$m=1-1/n$
+\_form#109=18x15:$K_s$
+\_form#110=50x11:$\alpha,\,n,\,m$
+\_form#111=717x38:\[ -\left[\frac{K_k^n}{2(\Delta z)^2}+\frac{(dK/dz)^n_k}{4\Delta z}\right]h_{k+1}^{n+1}+\left[ \frac{C_r}{\Delta t}+\frac{K_k^n}{(\Delta z)^2}\right]h_k^{n+1}-\left[\frac{K_k^n}{2(\Delta z)^2}-\frac{(dK/dz)^n_k}{4\Delta z}\right]h_{k-1}^{n+1}=\frac{C_r}{\Delta t}h_k^n+\frac{K_k^n}{2(\Delta z)^2}\left(h_{k+1}^n-2h_k^n+h_{k-1}^n\right)+\left[\left(\frac{h^n_{k+1}-h^n_{k-1}}{4\Delta z}\right)+1\right]\left(\frac{dK}{dz}\right)^n_k+S_k^n, \]
+\_form#112=141x33:\[ \frac{dK}{dz}=\frac{K_{k+1}-K_{k-1}}{2\Delta z}, \]
+\_form#113=78x17:$C_r=\partial \theta/\partial h$
+\_form#114=36x12:$n+1$
+\_form#115=48x12:$Ah=b$
+\_form#116=12x11:$q_s$
+\_form#117=185x35:\[ h_1 = -\frac{1}{3}h_3+\frac{4}{3}h_2+\frac{2\Delta z}{3K_1}q_s. \]
+\_form#118=47x15:$h_N=0$
+\_form#119=221x35:\[ h_N = \frac{4}{3}h_{N-1}-\frac{1}{3}h_{N-2}-\frac{2\Delta z}{3K_N}q_b. \]
+\_form#120=303x66:\[ K = K_r\left\{ \frac{ \left[ 1-(\alpha \big| h\big|)^{n-1}\left[1+(\alpha \big| h\big|)^{n}\right]^{-m}\right]^2 }{\left[1+(\alpha \big| h\big|)^{n}\right]^{m/2}}\right\}\]
+\_form#121=11x11:$\Gamma$
+\_form#122=38x11:$\Gamma=0$
+\_form#123=171x17:$\Gamma = 2\pi(DOY-1)/365.25$
+\_form#124=575x35:$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$
+\_form#125=527x35:$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$
+\_form#126=119x17:$h=15(LST-12)$
+\_form#127=234x17:$LST=hour+minute/60+TC/60$
+\_form#128=242x17:$TC=4(15UTC-longitude)+EoT$
+\_form#129=378x20:$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )$
+\_form#130=416x18:$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))$
+\_form#131=36x14:$\mathrm{cos}^{-1}$
+\_form#132=14x15:$\phi_s$
+\_form#133=84x15:$\phi_s=2\pi-\phi_s$
+\_form#134=66x14:$LST>12$
+\_form#135=240x29:$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)$
+\_form#136=11x8:$u$
+\_form#137=78x18:$R_L=\epsilon_s\sigma T_a^4$
+\_form#138=104x14:$\sigma=5.67\times10^{-8}$
+\_form#139=153x38:\[g_s = \frac{E_m(i+i_0)}{k+bi+(i+i_0)D}\]
+\_form#140=12x12:$D$
+\_form#141=65x15:$E_m,\,i_0,\,k,$
+\_form#142=6x12:$b$
+\_form#143=149x36:\[D = \frac{e_s(T_s)-e_s(T_a)h}{p_{atm}},\]
+\_form#144=21x14:$E_m$
+\_form#145=12x14:$i_0$
+\_form#146=8x12:$k$
+\_form#147=44x15:$\theta_L=0$
+\_form#148=54x20:$\theta_L=\frac{1}{2}\pi$
+\_form#149=17x11:$g_L$
+\_form#150=143x20:$\Delta \theta_L=\frac{1}{2}\pi/9\approx 0.1745$
+\_form#151=105x36:$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1$
+\_form#152=54x15:$\theta_L=0.1$
+\_form#153=42x17:$1/\Delta \theta_L$
+\_form#154=15x15:$\theta_L$
+\_form#155=44x17:$g_L(\theta_L)$

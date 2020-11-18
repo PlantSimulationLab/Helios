@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.0</span>
+   &#160;<span id="projectnumber">v1.2.1</span>
    </div>
   </td>
  </tr>
@@ -145,7 +145,7 @@ Introduction</h1>
 Model Equations</h1>
 <p>Stomatal conductance is calculated using the following equation</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[g_s = \frac{E_m(i+i_0)}{k+bi+(i+i_0)D}\]" src="form_109.png" width="153" height="38"/>
+<img class="formulaDsp" alt="\[g_s = \frac{E_m(i+i_0)}{k+bi+(i+i_0)D}\]" src="form_139.png" width="153" height="38"/>
 </p>
 <p>Variables in this equation are listed in this table:</p>
 <table class="doxtable">
@@ -156,31 +156,31 @@ Model Equations</h1>
 <tr>
 <td><img class="formulaInl" alt="$i$" src="form_37.png" width="6" height="11"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_39.png" width="11" height="11"/>mol photons/m<sup>2</sup>-s </td><td>Photon flux density in photosynthetically active band.  </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$D$" src="form_110.png" width="12" height="12"/> </td><td>mmol water/mol air </td><td>Molar concentration of water vapor at leaf surface.  </td></tr>
+<td><img class="formulaInl" alt="$D$" src="form_140.png" width="12" height="12"/> </td><td>mmol water/mol air </td><td>Molar concentration of water vapor at leaf surface.  </td></tr>
 </table>
-<p>There are four additional empirical parameters: <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_111.png" width="65" height="15"/> and <img class="formulaInl" alt="$b$" src="form_112.png" width="6" height="12"/>, which are further described below.</p>
+<p>There are four additional empirical parameters: <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_141.png" width="65" height="15"/> and <img class="formulaInl" alt="$b$" src="form_142.png" width="6" height="12"/>, which are further described below.</p>
 <p>The vapor pressure deficit is calculated based on the temperature of the leaf and air, the relative humidity of the air, and the atmospheric pressure</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[D = \frac{e_s(T_s)-e_s(T_a)h}{p_{atm}},\]" src="form_113.png" width="149" height="36"/>
+<img class="formulaDsp" alt="\[D = \frac{e_s(T_s)-e_s(T_a)h}{p_{atm}},\]" src="form_143.png" width="149" height="36"/>
 </p>
 <p>with <img class="formulaInl" alt="$e_s(T)$" src="form_14.png" width="35" height="17"/> calculated according to the <a href="https://en.wikipedia.org/wiki/Tetens_equation">Tetens equation</a>.</p>
 <h1><a class="anchor" id="StomatalUse"></a>
 Using the Stomatal Conductance Model</h1>
 <h2><a class="anchor" id="StomatalCoeffs"></a>
 Setting the Model Coefficients</h2>
-<p>The model coefficients <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_111.png" width="65" height="15"/> and <img class="formulaInl" alt="$b$" src="form_112.png" width="6" height="12"/> are set using the structure <a class="el" href="struct_b_m_fcoefficients.html">BMFcoefficients</a>. This structure has four member elements of type float (Em, i0, k, and b), each corresponding to the respective model coefficents ( <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_111.png" width="65" height="15"/> and <img class="formulaInl" alt="$b$" src="form_112.png" width="6" height="12"/>). Default values are listed in the table below.</p>
+<p>The model coefficients <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_141.png" width="65" height="15"/> and <img class="formulaInl" alt="$b$" src="form_142.png" width="6" height="12"/> are set using the structure <a class="el" href="struct_b_m_fcoefficients.html">BMFcoefficients</a>. This structure has four member elements of type float (Em, i0, k, and b), each corresponding to the respective model coefficents ( <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_141.png" width="65" height="15"/> and <img class="formulaInl" alt="$b$" src="form_142.png" width="6" height="12"/>). Default values are listed in the table below.</p>
 <p>In order to modify model coefficients from the default values, one should 1) declare and instance of the <a class="el" href="struct_b_m_fcoefficients.html">BMFcoefficients</a> structure, 2) modify the appropriate data elements of the data structure, and 3) pass the data structure to the <a class="el" href="class_stomatal_conductance_model.html#af98932c1c3147d7528a66f54e5ab94f0">StomatalConductanceModel::setModelCoefficients()</a> function. Example code is given below</p>
 <table class="doxtable">
 <tr>
 <th>Parameter </th><th>Units </th><th>Default Value  </th></tr>
 <tr>
-<td><img class="formulaInl" alt="$E_m$" src="form_114.png" width="21" height="14"/> </td><td>mmol/m<sup>2</sup>-s </td><td>7.0  </td></tr>
+<td><img class="formulaInl" alt="$E_m$" src="form_144.png" width="21" height="14"/> </td><td>mmol/m<sup>2</sup>-s </td><td>7.0  </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$i_0$" src="form_115.png" width="12" height="14"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_39.png" width="11" height="11"/>mol/m<sup>2</sup>-s </td><td>6.6  </td></tr>
+<td><img class="formulaInl" alt="$i_0$" src="form_145.png" width="12" height="14"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_39.png" width="11" height="11"/>mol/m<sup>2</sup>-s </td><td>6.6  </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$k$" src="form_116.png" width="8" height="12"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_39.png" width="11" height="11"/>mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup> </td><td>496  </td></tr>
+<td><img class="formulaInl" alt="$k$" src="form_146.png" width="8" height="12"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_39.png" width="11" height="11"/>mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup> </td><td>496  </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$b$" src="form_112.png" width="6" height="12"/> </td><td>mmol/mol </td><td>6.1  </td></tr>
+<td><img class="formulaInl" alt="$b$" src="form_142.png" width="6" height="12"/> </td><td>mmol/mol </td><td>6.1  </td></tr>
 </table>
 <p><br  />
  </p>

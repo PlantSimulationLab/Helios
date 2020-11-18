@@ -65,7 +65,7 @@
  <tr><td>leaf_area_index</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>One-sided leaf area in canopy per unit ground surface area.</td><td>1.0</td></tr>
  <tr><td>canopy_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Height/depth of the canopy.</td><td>1.0</td></tr>
  <tr><td>canopy_extent</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Dimension of the canopy in the x- and y-directions.</td><td>(5,5)</td></tr>
- <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y,z point about which the canopy is centered.</td><td>(0,0,0)</td></tr>
+ <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  </table>
 
  \subsection CGenSphere Canopy of Spherical Crowns
@@ -94,7 +94,7 @@
  <tr><td>canopy_configuration</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Horizontal arrangement of crowns. Either "uniform", evenly spaced crowns in x- or y-direction, or "random", randomly arranged crowns such that crowns do not overlap.</td><td>"uniform"</td></tr>
  <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Spacing between adjacent crowns in x- and y-directions. If canopy_configuration="random", this is the average spacing between crowns.</td><td>(2,2)</td></tr>
  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of crowns in the x- and y-directions, such that plant_spacing*plant_count defines the extent of the canopy in the horizontal directions.</td><td>(5,5)</td></tr>
- <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y,z point about which the canopy is centered.</td><td>(0,0,0)</td></tr>
+ <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>	
 
@@ -135,7 +135,7 @@
  <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
  <tr><td>row_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
- <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y,z point about which the canopy is centered.</td><td>(0,0,0)</td></tr>
+ <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>
 
@@ -178,7 +178,7 @@
  <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
  <tr><td>row_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>4.0</td></tr>
  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
- <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y,z point about which the canopy is centered.</td><td>(0,0,0)</td></tr>
+ <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>
 
@@ -220,7 +220,7 @@
  <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
  <tr><td>row_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
- <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y,z point about which the canopy is centered.</td><td>(0,0,0)</td></tr>
+ <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>
 
@@ -262,7 +262,7 @@
  <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
  <tr><td>row_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
- <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y,z point about which the canopy is centered.</td><td>(0,0,0)</td></tr>
+ <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>	
 

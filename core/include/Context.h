@@ -752,11 +752,25 @@ namespace helios {
      */
     void setColor( const helios::RGBAcolor color );
 
+    //! Function to return the diffuse color of a Compound Object
+    helios::RGBcolor getColor( void ) const;
+
+    //! Function to return the R-G-B diffuse color of a Compound Object
+    helios::RGBcolor getRGBColor( void ) const;
+
+    //! Function to return the R-G-B-A diffuse color of a Compound Object
+    helios::RGBAcolor getRGBAColor( void ) const;
+
     //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
     void overrideTextureColor( void );
 
     //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
     void useTextureColor( void );
+
+    //! Function to scale the dimensions of a Compound Object
+    /** \param[in] "S" Scaling factor
+    */
+    void scale( const helios::vec3 S );
 
     //! Function to translate/shift a Compound Object
     /** \param[in] "shift" Distance to translate in (x,y,z) directions.
@@ -775,6 +789,14 @@ namespace helios {
     */
     void rotate( const float rot, const helios::vec3 axis );
 
+    //! Function to return the Affine transformation matrix of a Compound Object
+    /** \param[out] "T" 1D vector corresponding to Compound Object transformation matrix */
+    void getTransformationMatrix( float (&T)[16] ) const;
+
+    //! Function to set the Affine transformation matrix of a Compound Object
+    /** \param[in] "T" 1D vector corresponding to Compound Object transformation matrix */
+    void setTransformationMatrix( float (&T)[16] );
+
   protected:
 
     //! Object ID
@@ -788,6 +810,15 @@ namespace helios {
 
     //! Pointer to the Helios context object was added to
     helios::Context* context;
+
+    //! Diffuse color of all primitives in object
+    RGBAcolor color;
+
+    //! Texture data (pointer)
+    Texture* texture;
+
+    //! Affine transformation matrix
+    float transform[16];
 
   };
 
@@ -2393,7 +2424,7 @@ public:
   */
   uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size );
 
-  //! Add new Disk geometric primitive
+  //! Add new Disk Compound Object
   /** Function to add a new Disk to the Context given its center, size, and spherical rotation.
       \param[in] "Ndiv" Number to triangles used to form disk
       \param[in] "center" 3D coordinates of Disk center
@@ -2405,7 +2436,7 @@ public:
   */
   uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation );
 
-  //! Add new Disk geometric primitive
+  //! Add new Disk Compound Object
   /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
       \param[in] "Ndiv" Number to triangles used to form disk
       \param[in] "center" 3D coordinates of Disk center
@@ -2417,7 +2448,7 @@ public:
   */
   uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color );
 
-  //! Add new Disk geometric primitive
+  //! Add new Disk Compound Object
   /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
       \param[in] "Ndiv" Number to triangles used to form disk
       \param[in] "center" 3D coordinates of Disk center
@@ -2429,7 +2460,7 @@ public:
   */
   uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color );
 
-  //! Add new Disk geometric primitive
+  //! Add new Disk Compound Object
   /** Function to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
       \param[in] "Ndiv" Number to triangles used to form disk
       \param[in] "center" 3D coordinates of Disk center
@@ -2441,8 +2472,13 @@ public:
       \ingroup compoundobjects
   */
   uint addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
-  
-  
+
+  //! Add new Polymesh Compound Object
+  /** Function to add a new Polymesh to the Context given a vector of UUIDs
+      \param[in] "UUIDs" Unique universal identifiers of primitives to be added to polymesh object
+       \ingroup compoundobjects
+  */
+  uint addPolymeshObject( const std::vector<uint> UUIDs );
   
   //! Add a spherical compound object to the Context
   /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions

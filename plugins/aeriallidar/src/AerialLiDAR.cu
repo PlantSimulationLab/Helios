@@ -686,13 +686,15 @@ void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_
   std::map<std::string,int2> texture_size;
   std::map<std::string,std::vector<std::vector<bool> > > texture_data;
   int tID = 0;
+
+  std::vector<uint> UUIDs_all = context->getAllUUIDs();
   
   //----- PATCHES ----- //
 
   //figure out how many patches
   size_t Npatches = 0;
-  for( int p=0; p<context->getPrimitiveCount(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(p);
+  for( int p=0; p<UUIDs_all.size(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
     if( prim->getType() == helios::PRIMITIVE_TYPE_PATCH ){
       Npatches++;
     }
@@ -703,8 +705,8 @@ void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_
   float2* patch_uv = (float2*)malloc(2*Npatches * sizeof(float2)); //allocate host memory
 
   c=0;
-  for( int p=0; p<context->getPrimitiveCount(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(p);
+  for( int p=0; p<UUIDs_all.size(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
     if( prim->getType() == helios::PRIMITIVE_TYPE_PATCH ){
       std::vector<helios::vec3> verts = prim->getVertices();
       patch_vertex[4*c] = vec3tofloat3(verts.at(0));
@@ -757,8 +759,8 @@ void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_
 
   //figure out how many triangles
   size_t Ntriangles = 0;
-  for( int p=0; p<context->getPrimitiveCount(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(p);
+  for( int p=0; p<UUIDs_all.size(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
     if( prim->getType() == helios::PRIMITIVE_TYPE_TRIANGLE ){
       Ntriangles++;
     }
@@ -769,8 +771,8 @@ void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_
   float2* tri_uv = (float2*)malloc(3*Ntriangles * sizeof(float2)); //allocate host memory
   
   c=0;
-  for( int p=0; p<context->getPrimitiveCount(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(p);
+  for( int p=0; p<UUIDs_all.size(); p++ ){
+    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
     if( prim->getType() == helios::PRIMITIVE_TYPE_TRIANGLE ){
       std::vector<helios::vec3> verts = prim->getVertices();
       tri_vertex[3*c] = vec3tofloat3(verts.at(0));

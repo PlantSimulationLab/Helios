@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.0</span>
+   &#160;<span id="projectnumber">v1.2.1</span>
    </div>
   </td>
  </tr>
@@ -83,7 +83,7 @@ $(function() {
 </li>
 <li class="level1"><a href="#EBUse">Using the Energy Balance Model Plug-in</a><ul><li class="level2"><a href="#EBPrimData">Input Variables</a></li>
 <li class="level2"><a href="#EBRad">Input Radiative Bands</a></li>
-<li class="level2"><a href="#EBblc">Boundary-layer Conductance Model</a></li>
+<li class="level2"><a href="#EBblc">Boundary-layer Conductance Models</a></li>
 <li class="level2"><a href="#EBRun">Running the Steady-State Model</a><ul><li class="level3"><a href="#EBRunUS">Unsteady model with heat storage</a></li>
 </ul>
 </li>
@@ -251,11 +251,28 @@ Input Radiative Bands</h2>
  EnergyBalanceModel energybalance(&amp;context);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> energybalance.addRadiationBand("PAR");
  energybalance.addRadiationBand("NIR");
  energybalance.addRadiationBand("LW");</code></pre></div><h2><a class="anchor" id="EBblc"></a>
-Boundary-layer Conductance Model</h2>
+Boundary-layer Conductance Models</h2>
+<p>There are four different built-in models for the boundary-layer conductance. Note also that custom conductance values can also be provided by setting the value of primitive data labeled &lsquo;boundarylayer_conductance&rsquo;, which overrides the computed model value.</p>
+<p>The boundary-layer conductance model is set using the setBoundaryLayerModel() function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below.</p>
+<p>It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.</p>
+<table class="doxtable">
+<tr>
+<th>Model</th><th>string argument </th></tr>
+<tr>
+<td>1. Polhausen Equation (default)</td><td>"Polhausen" </td></tr>
+<tr>
+<td>2. Inclined Plate</td><td>"InclinedPlate" </td></tr>
+<tr>
+<td>3. Laminar Sphere</td><td>"Sphere" </td></tr>
+<tr>
+<td>4. Ground Surface</td><td>"Ground" </td></tr>
+</table>
+<ol type="1">
+<li>The Polhausen Equation</li>
+</ol>
 <p>The boundary-layer conductance is calculated as</p>
 <p><img class="formulaInl" alt="$g_H = 0.135\sqrt{\frac{U}{L}}$" src="form_23.png" width="102" height="29"/>,</p>
-<p>where <img class="formulaInl" alt="$U$" src="form_24.png" width="12" height="12"/> is the wind speed just outside of the primitive boundary-layer, and <img class="formulaInl" alt="$L$" src="form_25.png" width="11" height="12"/> is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, <img class="formulaInl" alt="$L$" src="form_25.png" width="11" height="12"/> could be assumed to be the length of the primitive. If the primitive was a triangle that forms the surface of a sphere, <img class="formulaInl" alt="$L$" src="form_25.png" width="11" height="12"/> could be assumed to be the diameter of the sphere.</p>
-<p>Users can override this model by directly providing a value for <img class="formulaInl" alt="$g_H$" src="form_11.png" width="20" height="11"/> by setting the value of primitive data labeled &lsquo;boundarylayer_conductance&rsquo;.</p>
+<p>where <img class="formulaInl" alt="$U$" src="form_24.png" width="12" height="12"/> is the wind speed just outside of the primitive boundary-layer, and <img class="formulaInl" alt="$L$" src="form_25.png" width="11" height="12"/> is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, <img class="formulaInl" alt="$L$" src="form_25.png" width="11" height="12"/> could be assumed to be the length of the primitive.</p>
 <h2><a class="anchor" id="EBRun"></a>
 Running the Steady-State Model</h2>
 <p>The model is run assuming steady-state conditions (heat storage term is zero) using the <a class="el" href="class_energy_balance_model.html#a63363c02792f13aa0056c1a30276c6ba">EnergyBalanceModel::run()</a> function, which will run the model for all primitives in the Context if no argument is given, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.</p>
@@ -291,9 +308,9 @@ Unsteady model with heat storage</h3>
 <tr>
 <th>Model Run Function </th><th>Description </th></tr>
 <tr>
-<td><a class="el" href="class_energy_balance_model.html#a3c7ab6adae9c4a8e0a822a132a9ca3ec">EnergyBalanceModel::run( float dt )</a> </td><td>Run the model for all primitives in the Context and advance in time by dt. </td></tr>
+<td><a class="el" href="class_energy_balance_model.html#a3c7ab6adae9c4a8e0a822a132a9ca3ec">EnergyBalanceModel::run( float dt )</a> </td><td>Run the model for all primitives in the Context and advance in time by dt seconds. </td></tr>
 <tr>
-<td><a class="el" href="class_energy_balance_model.html#aa98de2c324005391e1d462b1a140e11b">EnergyBalanceModel::run( std::vector&lt;uint&gt; UUIDs, float dt )</a> </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt. </td></tr>
+<td><a class="el" href="class_energy_balance_model.html#aa98de2c324005391e1d462b1a140e11b">EnergyBalanceModel::run( std::vector&lt;uint&gt; UUIDs, float dt )</a> </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt seconds. </td></tr>
 </table>
 <p>Note that you can run the steady-state model for some primitives but run the unsteady model for others simply by changing the value of the heat capacity primitive data. This is illustrated in the code example below.</p>
 <p><br  />

@@ -129,15 +129,29 @@
   energybalance.addRadiationBand("NIR");
   energybalance.addRadiationBand("LW");</code></pre></div>
 
- \subsection EBblc Boundary-layer Conductance Model
+ \subsection EBblc Boundary-layer Conductance Models
+
+ There are four different built-in models for the boundary-layer conductance. Note also that custom conductance values can also be provided by setting the value of primitive data labeled `boundarylayer_conductance', which overrides the computed model value.
+
+ The boundary-layer conductance model is set using the \ref setBoundaryLayerModel() function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below.
+
+ It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.
+
+ <table>
+ <tr><th>Model<th>string argument
+ <tr><td>1. Polhausen Equation (default)<td>"Polhausen"
+ <tr><td>2. Inclined Plate<td>"InclinedPlate"
+ <tr><td>3. Laminar Sphere<td>"Sphere"
+ <tr><td>4. Ground Surface<td>"Ground"
+ </table>
+
+ 1. The Polhausen Equation
 
  The boundary-layer conductance is calculated as
 
  \f$g_H = 0.135\sqrt{\frac{U}{L}}\f$,
 
- where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. If the primitive was a triangle that forms the surface of a sphere, \f$L\f$ could be assumed to be the diameter of the sphere.
-
- Users can override this model by directly providing a value for \f$g_H\f$ by setting the value of primitive data labeled `boundarylayer_conductance'.
+ where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive.
 
  \subsection EBRun Running the Steady-State Model
 
@@ -187,8 +201,8 @@
  <table>
  <caption>Functions to run the unsteady energy balance model.</caption>
  <tr><th>Model Run Function <th>Description
- <tr><td>\ref EnergyBalanceModel::run( float dt ) <td>Run the model for all primitives in the Context and advance in time by dt.
- <tr><td>\ref EnergyBalanceModel::run( std::vector<uint> UUIDs, float dt ) <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt.
+ <tr><td>\ref EnergyBalanceModel::run( float dt ) <td>Run the model for all primitives in the Context and advance in time by dt seconds.
+ <tr><td>\ref EnergyBalanceModel::run( std::vector<uint> UUIDs, float dt ) <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt seconds.
  </table>
 
  Note that you can run the steady-state model for some primitives but run the unsteady model for others simply by changing the value of the heat capacity primitive data. This is illustrated in the code example below.

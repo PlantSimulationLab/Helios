@@ -126,7 +126,7 @@ int LiDARcloud::selfTest(void){
   
   Context context_2;
 
-  int3 N = make_int3(5,5,5);
+  int3 N = make_int3(6,6,6);
   float diskR = 0.02;
 
   vec3 dx = make_vec3((gsize.x-2.f*diskR)/float(N.x),(gsize.y-2.f*diskR)/float(N.y),(gsize.z-2.f*diskR)/float(N.z));
@@ -221,7 +221,7 @@ int LiDARcloud::selfTest(void){
     leafAngleCDF.at(i) = tsum;
   }
 
-  N = make_int3(5,5,5);
+  N = make_int3(7,7,7);
 
   dx = make_vec3((gsize.x-2.f*diskR)/float(N.x),(gsize.y-2.f*diskR)/float(N.y),(gsize.z-2.f*diskR)/float(N.z));
 
@@ -1782,12 +1782,13 @@ void LiDARcloud::calculateSyntheticGtheta( const helios::Context* context ){
 
       uint gridCell;
       context->getPrimitivePointer(UUID)->getPrimitiveData("gridCell",gridCell);
+
+      std::vector<vec3> vertices = context->getPrimitivePointer(UUID)->getVertices();
+      float area = context->getPrimitivePointer(UUID)->getArea();
+      vec3 normal = context->getPrimitivePointer(UUID)->getNormal();
       
       for( int s=0; s<Nscans; s++ ){
 	vec3 origin = getScanOrigin(s);
-	std::vector<vec3> vertices = context->getPrimitivePointer(p)->getVertices();
-	float area = context->getPrimitivePointer(p)->getArea();
-	vec3 normal = context->getPrimitivePointer(p)->getNormal();
 	vec3 raydir = vertices.front()-origin;
 	raydir.normalize();
 	float theta = fabs(acos_safe(raydir.z));

@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.0</span>
+   &#160;<span id="projectnumber">v1.2.1</span>
    </div>
   </td>
  </tr>
@@ -70,10 +70,12 @@ $(function() {
 <div class="textblock"><dl class="reflist">
 <dt>Global <a class="el" href="struct_scan_metadata.html#a1ac75dd11e32061c999525651160b519">ScanMetadata::rc2direction</a>  (const uint row, const uint column) const</dt>
 <dd><a class="anchor" id="_todo000001"></a>Add in support for clockwise-rotating scanners  </dd>
+<dt>Global <a class="el" href="class_soil_transport_model.html#acb7f859c0ac63592606bfaa298d3a497">SoilTransportModel::run</a>  (const std::vector&lt; uint &gt; UUIDs, const float T, const float dt)</dt>
+<dd><a class="anchor" id="_todo000002"></a>For very large problems, we may need to tile in order to avoid running out of shared memory. The kernel requires about Ncolumns*7*(Nz+1)*sizeof(float) bytes of shared memory.  </dd>
 <dt>Class <a class="el" href="structmy__error__mgr.html">my_error_mgr</a>  </dt>
-<dd><a class="anchor" id="_todo000002"></a>This is crap associated with the JPEG reading library need to figure out if some of it can be removed.  </dd>
+<dd><a class="anchor" id="_todo000003"></a>This is crap associated with the JPEG reading library need to figure out if some of it can be removed.  </dd>
 <dt>" </dt>
-<dd><a class="anchor" id="_todo000003"></a>Need to use the more sophisticated formatting of tick strings </dd>
+<dd><a class="anchor" id="_todo000004"></a>Need to use the more sophisticated formatting of tick strings </dd>
 </dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
