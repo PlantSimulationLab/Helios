@@ -837,6 +837,8 @@ namespace helios {
 
     std::vector<helios::vec3> getVertices( void ) const;
 
+    vec3 getNormal( void ) const;
+
     std::vector<helios::vec2> getTextureUV( void ) const;
 
   protected:

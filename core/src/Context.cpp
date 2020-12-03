@@ -4916,7 +4916,7 @@ std::vector<uint> Context::copyObject( const std::vector<uint> ObjIDs ){
 uint Context::copyObject( const uint ObjID ){
 
   if( objects.find(ObjID) == objects.end() ){
-    std::cerr << "ERROR (copyObject: Object ID of " <<ObjID << " not found in the context." << std::endl;
+    std::cerr << "ERROR (copyObject): Object ID of " <<ObjID << " not found in the context." << std::endl;
     exit(EXIT_FAILURE);
   }
 
@@ -5038,7 +5038,7 @@ std::vector<helios::vec3> Tile::getVertices( void ) const{
   //Y[2] = make_vec3( 0.5f, 0.5f, 0.f);
   //Y[3] = make_vec3( -0.5f, 0.5f, 0.f);
   
-  vertices.at(0) = context->getPrimitivePointer( UUIDs.at(0) )->getVertices().at(0);
+  vertices.at(0) = context->getPrimitivePointer( UUIDs.front() )->getVertices().at(0);
 
   vertices.at(1) = context->getPrimitivePointer( UUIDs.at( subdiv.x-1 ) )->getVertices().at(1);
 
@@ -5048,6 +5048,12 @@ std::vector<helios::vec3> Tile::getVertices( void ) const{
 
   return vertices;
 
+}
+
+vec3 Tile::getNormal() const{
+
+  return context->getPatchPointer( UUIDs.front() )->getNormal();
+  
 }
 
 std::vector<helios::vec2> Tile::getTextureUV( void ) const{

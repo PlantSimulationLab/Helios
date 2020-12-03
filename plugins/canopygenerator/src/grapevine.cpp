@@ -167,6 +167,8 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
 		      
   //------- primary shoots ---------//
 
+  uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+
   float height = params.cordon_height + params.shoot_length;
   
   for( uint c=0; c<2; c++ ){
@@ -275,11 +277,13 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
 
   	vec3 position = origin+pos_leaf+leaf_offset;
 
-  	UUID_leaf_plant.push_back( context->addTile( make_vec3(0,0,0), make_vec2(lsize,lsize), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() ) );
-	
-  	context->rotatePrimitive(UUID_leaf_plant.back(),-Rtheta,"y");
-  	context->rotatePrimitive(UUID_leaf_plant.back(),Rphi,"z");
-  	context->translatePrimitive(UUID_leaf_plant.back(),position);
+	uint ID = context->copyObject(ID0);
+	context->getObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
+	context->getObjectPointer(ID)->rotate(-Rtheta,"y");
+  	context->getObjectPointer(ID)->rotate(Rphi,"z");
+  	context->getObjectPointer(ID)->translate(position);
+
+  	UUID_leaf_plant.push_back( context->getObjectPointer(ID)->getPrimitiveUUIDs() );
 
 	lfrac = lfrac - params.leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
 	
@@ -290,6 +294,8 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
     }
 	
   }
+
+  context->deleteObject(ID0);
 
   UUID_trunk.push_back( UUID_trunk_plant );
   UUID_branch.push_back( UUID_branch_plant );
@@ -355,7 +361,8 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
     pos_crownw.at(i) = pos_crownw.at(i) + origin;
   }
       
-  UUID_trunk_plant = context->addTube(params.wood_subdivisions,pos_crownw,rad_crown, params.wood_texture_file.c_str() );
+  U = context->addTube(params.wood_subdivisions,pos_crownw,rad_crown, params.wood_texture_file.c_str() );
+  UUID_trunk_plant.insert( UUID_trunk_plant.end(), U.begin(), U.end() );
 
   std::vector<vec3> pos_crowne;
   pos_crowne.push_back(make_vec3(0.,0.,0.95*params.trunk_height));
@@ -368,7 +375,8 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
     pos_crowne.at(i) = pos_crowne.at(i) + origin;
   }
       
-  UUID_trunk_plant = context->addTube(params.wood_subdivisions,pos_crowne,rad_crown, params.wood_texture_file.c_str() );
+  U = context->addTube(params.wood_subdivisions,pos_crowne,rad_crown, params.wood_texture_file.c_str() );
+  UUID_trunk_plant.insert( UUID_trunk_plant.end(), U.begin(), U.end() );
 
   //---- Cordons -----//
 
@@ -452,6 +460,8 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
   UUID_branch_plant.insert( UUID_branch_plant.end(), U.begin(), U.end() );
 
   //------- primary shoots ---------//
+
+  uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
   float height = params.cordon_height + params.shoot_length;
 
@@ -580,11 +590,13 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
 
   	vec3 position = origin+pos_leaf+leaf_offset;
 
-  	UUID_leaf_plant.push_back( context->addTile( make_vec3(0,0,0), make_vec2(lsize,lsize), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() ) );
-	
-  	context->rotatePrimitive(UUID_leaf_plant.back(),-Rtheta,"y");
-  	context->rotatePrimitive(UUID_leaf_plant.back(),Rphi,"z");
-  	context->translatePrimitive(UUID_leaf_plant.back(),position);
+	uint ID = context->copyObject(ID0);
+	context->getObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
+	context->getObjectPointer(ID)->rotate(-Rtheta,"y");
+  	context->getObjectPointer(ID)->rotate(Rphi,"z");
+  	context->getObjectPointer(ID)->translate(position);
+
+  	UUID_leaf_plant.push_back( context->getObjectPointer(ID)->getPrimitiveUUIDs() );
 
 	lfrac = lfrac - params.leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
 	
@@ -596,6 +608,8 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
 	
   }
   }
+
+  context->deleteObject(ID0);
 
   UUID_trunk.push_back( UUID_trunk_plant );
   UUID_branch.push_back( UUID_branch_plant );
@@ -672,6 +686,8 @@ void CanopyGenerator::grapevineUnilateral( const UnilateralGrapevineParameters p
   UUID_branch_plant = context->addTube(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
 		      
   //------- primary shoots ---------//
+
+  uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
   float height = params.cordon_height + params.shoot_length;
   
@@ -765,13 +781,15 @@ void CanopyGenerator::grapevineUnilateral( const UnilateralGrapevineParameters p
       float Rtheta = 0.4*M_PI*(1.f+getVariation(0.1,generator));
       
       vec3 position = origin+pos_leaf+leaf_offset;
+
+      uint ID = context->copyObject(ID0);
+      context->getObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
+      context->getObjectPointer(ID)->rotate(-Rtheta,"y");
+      context->getObjectPointer(ID)->rotate(Rphi,"z");
+      context->getObjectPointer(ID)->translate(position);
       
-      UUID_leaf_plant.push_back( context->addTile( make_vec3(0,0,0), make_vec2(lsize,lsize), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() ) );
-      
-      context->rotatePrimitive(UUID_leaf_plant.back(),-Rtheta,"y");
-      context->rotatePrimitive(UUID_leaf_plant.back(),Rphi,"z");
-      context->translatePrimitive(UUID_leaf_plant.back(),position);
-      
+      UUID_leaf_plant.push_back( context->getObjectPointer(ID)->getPrimitiveUUIDs() );
+
       lfrac = lfrac - params.leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
       
       flip++;
@@ -779,6 +797,8 @@ void CanopyGenerator::grapevineUnilateral( const UnilateralGrapevineParameters p
     }
 	
   }
+
+  context->deleteObject(ID0);
 
   UUID_trunk.push_back( UUID_trunk_plant );
   UUID_branch.push_back( UUID_branch_plant );
@@ -823,6 +843,8 @@ void CanopyGenerator::grapevineGoblet( const GobletGrapevineParameters params, c
   UUID_trunk_plant = context->addTube(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
 		      
   //------- primary shoots ---------//
+
+  uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
   
   for( uint c=0; c<2; c++ ){
 
@@ -910,11 +932,13 @@ void CanopyGenerator::grapevineGoblet( const GobletGrapevineParameters params, c
 
   	vec3 position = origin+pos_leaf+leaf_offset;
 
-  	UUID_leaf_plant.push_back( context->addTile( make_vec3(0,0,0), make_vec2(lsize,lsize), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() ) );
+	uint ID = context->copyObject(ID0);
+	context->getObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
+	context->getObjectPointer(ID)->rotate(-Rtheta,"y");
+	context->getObjectPointer(ID)->rotate(Rphi,"z");
+	context->getObjectPointer(ID)->translate(position);
 	
-  	context->rotatePrimitive(UUID_leaf_plant.back(),-Rtheta,"y");
-  	context->rotatePrimitive(UUID_leaf_plant.back(),Rphi,"z");
-  	context->translatePrimitive(UUID_leaf_plant.back(),position);
+	UUID_leaf_plant.push_back( context->getObjectPointer(ID)->getPrimitiveUUIDs() );
 
 	lfrac = lfrac - params.leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
 	
@@ -925,6 +949,8 @@ void CanopyGenerator::grapevineGoblet( const GobletGrapevineParameters params, c
     }
 	
   }
+
+  context->deleteObject(ID0);
 
   UUID_trunk.push_back( UUID_trunk_plant );
   UUID_branch.push_back( UUID_branch_plant );

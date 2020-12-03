@@ -516,6 +516,13 @@ void CanopyGenerator::buildCanopy( const HomogeneousCanopyParameters params ){
 
   float Lmax = fmax(params.leaf_size.x,params.leaf_size.y);
 
+  uint ID0;
+  if( params.leaf_texture_file.size()==0 ){
+    ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_color );
+  }else{
+    ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+  }
+
   for( int i=0; i<Nleaves; i++ ){
 
     float rx = unif_distribution(generator);
@@ -529,16 +536,18 @@ void CanopyGenerator::buildCanopy( const HomogeneousCanopyParameters params ){
 
     SphericalCoord rotation( 1.f, acos(1.f-rt), 2.f*M_PI*rp );
 
-    std::vector<uint> UUID;
-    if( params.leaf_texture_file.size()==0 ){
-      UUID = context->addTile( position, params.leaf_size, rotation, params.leaf_subdivisions, params.leaf_color );
-    }else{
-      UUID = context->addTile( position, params.leaf_size, rotation, params.leaf_subdivisions, params.leaf_texture_file.c_str() );
-    }
+    uint ID = context->copyObject(ID0);
+    context->getObjectPointer(ID)->rotate(-rotation.elevation,"y");
+    context->getObjectPointer(ID)->rotate(rotation.azimuth,"z");
+    context->getObjectPointer(ID)->translate(position);
+
+    std::vector<uint> UUID = context->getObjectPointer(ID)->getPrimitiveUUIDs();
 
     UUID_leaf.front().push_back(UUID);
 
   }
+
+  context->deleteObject(ID0);
 
 
   if( printmessages ){
@@ -571,6 +580,13 @@ void CanopyGenerator::buildCanopy( const SphericalCrownsCanopyParameters params 
 
   UUID_leaf.resize(params.plant_count.x*params.plant_count.y);
 
+  uint ID0;
+  if( params.leaf_texture_file.size()==0 ){
+    ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_color );
+  }else{
+    ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+  }
+
   uint plant_ID = 0;
   uint prim_count = 0;
   for( int j=0; j<params.plant_count.y; j++ ){
@@ -599,15 +615,16 @@ void CanopyGenerator::buildCanopy( const SphericalCrownsCanopyParameters params 
 	float x = r * rad * sinf(phi) * cosf(theta);
 	float y = r * rad * sinf(phi) * sinf(theta);
 	float z = r * rad * cosf(phi);
-	      
+
+	theta = acosf(1.f-unif_distribution(generator));
 	phi = 2.f*M_PI*unif_distribution(generator);
 
-	std::vector<uint> UUID;
-	if( params.leaf_texture_file.size()==0 ){
-	  UUID=context->addTile( center+make_vec3(x,y,z), params.leaf_size, make_SphericalCoord(theta,phi), params.leaf_subdivisions, params.leaf_color );
-	}else{
-	  UUID=context->addTile( center+make_vec3(x,y,z), params.leaf_size, make_SphericalCoord(theta,phi), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
-	}
+	uint ID = context->copyObject(ID0);
+	context->getObjectPointer(ID)->rotate(-theta,"y");
+	context->getObjectPointer(ID)->rotate(phi,"z");
+	context->getObjectPointer(ID)->translate(center+make_vec3(x,y,z));
+
+	std::vector<uint> UUID = context->getObjectPointer(ID)->getPrimitiveUUIDs();
 
 	UUID_leaf.at(plant_ID).push_back(UUID);
 
@@ -620,6 +637,8 @@ void CanopyGenerator::buildCanopy( const SphericalCrownsCanopyParameters params 
       
     }
   }
+
+  context->deleteObject(ID0);
 
   if( printmessages ){
     std::cout << "done." << std::endl;

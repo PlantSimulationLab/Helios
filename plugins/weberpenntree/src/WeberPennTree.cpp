@@ -105,11 +105,8 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
     exit(EXIT_FAILURE);
   }
 
-  std::vector<uint> UUID_leaf_template;
-  if( leaf_segs.x>1 || leaf_segs.y>1 ){
-    UUID_leaf_template = context->addTile( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), leaf_segs, parameters.LeafFile.c_str() );
-  }
-    
+  uint ID_leaf_template = context->addTileObject( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), leaf_segs, parameters.LeafFile.c_str() );
+     
   uint base_nodes = 20;
 
   vec3 center = make_vec3(0,0,0);
@@ -202,7 +199,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
       helios::SphericalCoord child_rotation = make_SphericalCoord(angle_split,phi_split);
       
-      recursiveBranch( parameters, 0, 0, base_position, current_normal, child_rotation, length0-offset_child, radius.at(base_nodes-1), offset_child, origin, scale, UUID_leaf_template );
+      recursiveBranch( parameters, 0, 0, base_position, current_normal, child_rotation, length0-offset_child, radius.at(base_nodes-1), offset_child, origin, scale, ID_leaf_template );
       
       //phi_split += (20+0.75*120*pow(getVariation(1),2))*M_PI/180.f;
       phi_split += 2.f*M_PI/float(parameters.BaseSplits+1);
@@ -270,7 +267,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 	  phi_child += (parameters.nRotate.at(1)+getVariation(parameters.nRotateV.at(1)))*M_PI/180.f;
 
 	  if( offset_child>0 ){
-	    recursiveBranch( parameters, 1, 0, base_position, current_normal, child_rotation, length0, radius_parent, offset_child, origin, scale, UUID_leaf_template );
+	    recursiveBranch( parameters, 1, 0, base_position, current_normal, child_rotation, length0, radius_parent, offset_child, origin, scale, ID_leaf_template );
 	  }
 	  
 	}
@@ -294,7 +291,8 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
     UUID_trunk.back() = context->addTube(trunk_segs,nodes,radius,parameters.WoodFile.c_str());
   }
 
-  context->deletePrimitive( UUID_leaf_template );
+  //context->deletePrimitive( UUID_leaf_template );
+  context->deleteObject( ID_leaf_template );
 
   uint flag=1;
   for( size_t i=0; i<UUID_leaf.at(TreeID).size(); i++ ){
@@ -311,7 +309,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
 }
 
-void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale, const std::vector<uint>& leaf_template ){
+void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale, const uint leaf_template ){
 
   if( n<parameters.Levels ){ //Branches
 
@@ -548,51 +546,43 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
     }
 
     //add to Context
-    std::vector<uint> UUIDs;
-    if( leaf_segs.x==1 && leaf_segs.y==1 ){
-      UUIDs.push_back(context->addPatch( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), parameters.LeafFile.c_str() ));
-      UUID_leaf.back().push_back(UUIDs.front());
-    }else{
-      UUIDs = context->copyPrimitive( leaf_template );
-      UUID_leaf.back().insert( UUID_leaf.back().end(), UUIDs.begin(), UUIDs.end() ); 
-    }
+    uint ID = context->copyObject( leaf_template );
+    std::vector<uint> UUIDs = context->getObjectPointer(ID)->getPrimitiveUUIDs();
+    UUID_leaf.back().insert( UUID_leaf.back().end(), UUIDs.begin(), UUIDs.end() ); 
       
     //perform transformations
-    for( int p=0; p<UUIDs.size(); p++ ){
-      uint UUID = UUIDs.at(p);
-      if( parameters.leafAngleCDF.size()>0 ){
-	context->getPrimitivePointer(UUID)->rotate( rotation.elevation, "y" );
-	context->getPrimitivePointer(UUID)->rotate( rotation.azimuth, "z" );
-	context->getPrimitivePointer(UUID)->translate(position);
-      }else{
+    if( parameters.leafAngleCDF.size()>0 ){
+      context->getObjectPointer(ID)->rotate( rotation.elevation, "y" );
+      context->getObjectPointer(ID)->rotate( rotation.azimuth, "z" );
+      context->getObjectPointer(ID)->translate(position);
+    }else{
 
-	context->getPrimitivePointer(UUID)->rotate( M_PI, "x" ); //flip leaf (this is so lighting looks right based on leaf normal)
+      context->getObjectPointer(ID)->rotate( M_PI, "x" ); //flip leaf (this is so lighting looks right based on leaf normal)
 
-	//rotate leaf so the tip is pointing in the same direction as the branch
-	context->getPrimitivePointer(UUID)->rotate( 0.5*M_PI - rotation.zenith, "y" );
-	context->getPrimitivePointer(UUID)->rotate( -0.5*M_PI - rotation.azimuth, "z" );
+      //rotate leaf so the tip is pointing in the same direction as the branch
+      context->getObjectPointer(ID)->rotate( 0.5*M_PI - rotation.zenith, "y" );
+      context->getObjectPointer(ID)->rotate( -0.5*M_PI - rotation.azimuth, "z" );
 
-	vec3 lnorm = context->getPrimitivePointer(UUID)->getNormal(); // current leaf normal vector
-	vec3 pvec = cross( parent_normal, lnorm );
+      vec3 lnorm = context->getTileObjectPointer(ID)->getNormal(); // current leaf normal vector
+      vec3 pvec = cross( parent_normal, lnorm );
 
-	//rotate leaf based on downangle
-	if( downangle<0.f ){
-	  downangle = M_PI+downangle;
-	}
-	context->getPrimitivePointer(UUID)->rotate( -downangle, pvec );
-
-	//shift leaf perpendicular to the direction of the branch
-	vec3 offset = -0.6*parameters.LeafScale*scale*fabs(sinf(downangle))*lnorm;
-	
-	context->getPrimitivePointer(UUID)->translate( offset );
-
-	//random azimuthal rotation about the branch
-	context->getPrimitivePointer(UUID)->rotate( phi, parent_normal );
-
-	//translate to the position of the branch
-	context->getPrimitivePointer(UUID)->translate(position);
-	
+      //rotate leaf based on downangle
+      if( downangle<0.f ){
+	downangle = M_PI+downangle;
       }
+      context->getObjectPointer(ID)->rotate( -downangle, pvec );
+
+      //shift leaf perpendicular to the direction of the branch
+      vec3 offset = -0.6*parameters.LeafScale*scale*fabs(sinf(downangle))*lnorm;
+	
+      context->getObjectPointer(ID)->translate( offset );
+
+      //random azimuthal rotation about the branch
+      context->getObjectPointer(ID)->rotate( phi, parent_normal );
+
+      //translate to the position of the branch
+      context->getObjectPointer(ID)->translate(position);
+	
     }
       
   }
