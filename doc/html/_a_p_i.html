@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.3</span>
+   &#160;<span id="projectnumber">v1.2.4</span>
    </div>
   </td>
  </tr>
@@ -560,7 +560,13 @@ Masking Primitives by Image Transparency Channel</h2>
 <img src="AlphaMask_leaf.png" alt=""/>
 <div class="caption">
 Rectangular patch masked by an image with a transparency channel.</div></div>
-<h2><a class="anchor" id="Compound"></a>
+<div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> A very important performance note when using texture-masked primitives with transparency: When a texture-masked primitive with transparency is added to the Context, the solid surface area of the primitive is calculated by determining which fraction of pixels are non-transparent. This is a computationally expensive process when the images is high resolution (e.g., millions of pixels).</div><div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> If you are adding many identical primitives/objects with transparency, it is better to add it to the Context one time, then copy and translate it as many times as you need. An example of this is given in the code below. </div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
+ using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Initialize the Context
+    Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Add 'Patch' primitive with transparency mask
+    <code></code>// We will add a patch at the origin and with unit size, and copy it multiple times
+    vec3 center = make_vec3(0,0,0);
+    vec2 size = make_vec2(1,1);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    uint UUID = context.addPatch( center, size, make_SphericalCoord(0,0), "GrapeLeaf.png" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    for( int i=0; i&lt;10; i++ ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>          uint UUID_copy = context.copyPrimitive(UUID);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>          vec3 position = make_vec3( i*3, 0, 0 );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     context.translatePrimitive( position );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    }</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Let's delete the original "template"
+    context.deletePrimitive(UUID);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div><h2><a class="anchor" id="Compound"></a>
 Compound Objects</h2>
 <table class="doxtable">
 <tr>

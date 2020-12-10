@@ -390,14 +390,17 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
 
   assert( checkerrors() );
 
-   int width, height;
-  glfwGetFramebufferSize(_window, &width, &height);
+  int window_width, window_height;
+  glfwGetWindowSize(_window, &window_width, &window_height);
 
-  if( width!=Wdisplay || height!=Hdisplay ){
+  if( window_width<Wdisplay || window_height<Hdisplay ){
     printf("WARNING: requested size of window is larger than the screen area.\n");
-    Wdisplay = width;
-    Hdisplay = height;
+    //printf("Changing width from %d to %d and height from %d to %d\n",Wdisplay,window_width,Hdisplay,window_height);
+    Wdisplay = window_width;
+    Hdisplay = window_height;
   }
+
+  glfwSetWindowAspectRatio( _window, Wdisplay, Hdisplay );
 
   //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
 

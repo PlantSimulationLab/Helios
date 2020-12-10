@@ -1166,7 +1166,7 @@ void Patch::rotate( const float rot, const char* axis ){
     matmult(Rx,transform,transform);
   }else{
     std::cerr << "ERROR (Patch::rotate): Rotation axis should be one of x, y, or z." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
 }
@@ -1204,7 +1204,7 @@ void Triangle::rotate( const float rot, const char* axis ){
     matmult(Rx,transform,transform);
   }else{
     std::cerr << "ERROR (Triangle::rotate): Rotation axis should be one of x, y, or z." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
 }
@@ -1649,7 +1649,7 @@ void Primitive::getPrimitiveData( const char* label, int& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1659,7 +1659,7 @@ void Primitive::getPrimitiveData( const char* label, int& data ) const{
     data = d.at(0);
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type int, but data '" << label << "' for primitive " << UUID << " does not have type int." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1668,7 +1668,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int>& data ) co
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1678,7 +1678,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int>& data ) co
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type int, but data '" << label << "' for primitive " << UUID << " does not have type int." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1687,7 +1687,7 @@ void Primitive::getPrimitiveData( const char* label, uint& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1697,7 +1697,7 @@ void Primitive::getPrimitiveData( const char* label, uint& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type uint, but data '" << label << "' for primitive " << UUID << " does not have type uint." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1706,7 +1706,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<uint>& data ) c
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1716,7 +1716,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<uint>& data ) c
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type uint, but data '" << label << "' for primitive " << UUID << " does not have type uint." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1725,7 +1725,7 @@ void Primitive::getPrimitiveData( const char* label, float& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1735,7 +1735,7 @@ void Primitive::getPrimitiveData( const char* label, float& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type float, but data '" << label << "' for primitive " << UUID << " does not have type float." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1744,7 +1744,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<float>& data ) 
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1754,7 +1754,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<float>& data ) 
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type float, but data '" << label << "' for primitive " << UUID << " does not have type float." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1763,7 +1763,7 @@ void Primitive::getPrimitiveData( const char* label, double& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1773,7 +1773,7 @@ void Primitive::getPrimitiveData( const char* label, double& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type double, but data '" << label << "' for primitive " << UUID << " does not have type double." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1782,7 +1782,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<double>& data )
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1792,7 +1792,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<double>& data )
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type double, but data '" << label << "' for primitive " << UUID << " does not have type double." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1801,7 +1801,7 @@ void Primitive::getPrimitiveData( const char* label, vec2& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1811,7 +1811,7 @@ void Primitive::getPrimitiveData( const char* label, vec2& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type vec2, but data '" << label << "' for primitive " << UUID << " does not have type vec2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1820,7 +1820,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec2>& data ) c
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1830,7 +1830,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec2>& data ) c
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type vec2, but data '" << label << "' for primitive " << UUID << " does not have type vec2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1839,7 +1839,7 @@ void Primitive::getPrimitiveData( const char* label, vec3& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1849,7 +1849,7 @@ void Primitive::getPrimitiveData( const char* label, vec3& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type vec3, but data '" << label << "' for primitive " << UUID << " does not have type vec3." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1858,7 +1858,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec3>& data ) c
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1868,7 +1868,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec3>& data ) c
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type vec3, but data '" << label << "' for primitive " << UUID << " does not have type vec3." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1877,7 +1877,7 @@ void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1887,7 +1887,7 @@ void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type vec4, but data '" << label << "' for primitive " << UUID << " does not have type vec4." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1896,7 +1896,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) c
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1906,7 +1906,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) c
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type vec4, but data '" << label << "' for primitive " << UUID << " does not have type vec4." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1915,7 +1915,7 @@ void Primitive::getPrimitiveData( const char* label, int2& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1925,7 +1925,7 @@ void Primitive::getPrimitiveData( const char* label, int2& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type int2, but data '" << label << "' for primitive " << UUID << " does not have type int2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1934,7 +1934,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) c
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1944,7 +1944,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) c
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type int2, but data '" << label << "' for primitive " << UUID << " does not have type int2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1953,7 +1953,7 @@ void Primitive::getPrimitiveData( const char* label, int3& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1963,7 +1963,7 @@ void Primitive::getPrimitiveData( const char* label, int3& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type int3, but data '" << label << "' for primitive " << UUID << " does not have type int3." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1972,7 +1972,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) c
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1982,7 +1982,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) c
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type int3, but data '" << label << "' for primitive " << UUID << " does not have type int3." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -1991,7 +1991,7 @@ void Primitive::getPrimitiveData( const char* label, int4& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -2001,7 +2001,7 @@ void Primitive::getPrimitiveData( const char* label, int4& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type int4, but data '" << label << "' for primitive " << UUID << " does not have type int4." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -2010,7 +2010,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) c
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -2020,7 +2020,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) c
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type int4, but data '" << label << "' for primitive " << UUID << " does not have type int4." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -2029,7 +2029,7 @@ void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -2039,7 +2039,7 @@ void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type string, but data '" << label << "' for primitive " << UUID << " does not have type string." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -2048,7 +2048,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& d
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveData): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -2058,7 +2058,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& d
     data = d;
   }else{
     std::cerr << "ERROR (getPrimitiveData): Attempted to get data for type string, but data '" << label << "' for primitive " << UUID << " does not have type string." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -2067,7 +2067,7 @@ HeliosDataType Primitive::getPrimitiveDataType( const char* label ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveDataType): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   return primitive_data_types.at(label);
@@ -2078,7 +2078,7 @@ uint Primitive::getPrimitiveDataSize( const char* label ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
     std::cerr << "ERROR (getPrimitiveDataSize): Primitive data " << label << " does not exist for primitive " << UUID << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -2185,7 +2185,7 @@ std::vector<std::string> Primitive::listPrimitiveData( void ) const{
 void Context::setPrimitiveData( const uint UUID, const char* label, const int& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2193,7 +2193,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const int& d
 void Context::setPrimitiveData( const uint UUID, const char* label, const uint& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2201,7 +2201,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const uint& 
 void Context::setPrimitiveData( const uint UUID, const char* label, const float& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2209,7 +2209,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const float&
 void Context::setPrimitiveData( const uint UUID, const char* label, const double& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2217,7 +2217,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const double
 void Context::setPrimitiveData( const uint UUID, const char* label, const helios::vec2& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2225,7 +2225,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const helios
 void Context::setPrimitiveData( const uint UUID, const char* label, const helios::vec3& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2233,7 +2233,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const helios
 void Context::setPrimitiveData( const uint UUID, const char* label, const helios::vec4& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2241,7 +2241,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const helios
 void Context::setPrimitiveData( const uint UUID, const char* label, const helios::int2& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2249,7 +2249,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const helios
 void Context::setPrimitiveData( const uint UUID, const char* label, const helios::int3& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2257,7 +2257,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const helios
 void Context::setPrimitiveData( const uint UUID, const char* label, const helios::int4& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2265,7 +2265,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const helios
 void Context::setPrimitiveData( const uint UUID, const char* label, const std::string& data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
@@ -2273,7 +2273,7 @@ void Context::setPrimitiveData( const uint UUID, const char* label, const std::s
 void Context::setPrimitiveData( const uint UUID, const char* label, HeliosDataType type, uint size, void* data ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (setPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->setPrimitiveData(label,type,size,data);
 }
@@ -2545,7 +2545,7 @@ void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> 
 void Context::getPrimitiveData( const uint UUID, const char* label, int& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2553,7 +2553,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, int& data ) 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2561,7 +2561,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, uint& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2569,7 +2569,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, uint& data )
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<uint>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2577,7 +2577,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, float& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2585,7 +2585,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, float& data 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<float>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2593,7 +2593,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, double& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2601,7 +2601,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, double& data
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<double>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2609,7 +2609,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, vec2& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2617,7 +2617,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, vec2& data )
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<vec2>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2625,7 +2625,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, vec3& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2633,7 +2633,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, vec3& data )
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<vec3>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2641,7 +2641,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, vec4& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2649,7 +2649,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, vec4& data )
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<vec4>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2657,7 +2657,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, int2& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2665,7 +2665,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, int2& data )
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int2>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2673,7 +2673,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, int3& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2681,7 +2681,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, int3& data )
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int3>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2689,7 +2689,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, int4& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2697,7 +2697,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, int4& data )
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int4>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2705,7 +2705,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 void Context::getPrimitiveData( const uint UUID, const char* label, std::string& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2713,7 +2713,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::string&
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<std::string>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
@@ -2721,7 +2721,7 @@ void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<
 HeliosDataType Context::getPrimitiveDataType( const uint UUID, const char* label )const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return primitives.at(UUID)->getPrimitiveDataType(label);
 }
@@ -2729,7 +2729,7 @@ HeliosDataType Context::getPrimitiveDataType( const uint UUID, const char* label
 uint Context::getPrimitiveDataSize( const uint UUID, const char* label )const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return primitives.at(UUID)->getPrimitiveDataSize(label);
 }
@@ -2737,7 +2737,7 @@ uint Context::getPrimitiveDataSize( const uint UUID, const char* label )const{
 bool Context::doesPrimitiveDataExist( const uint UUID, const char* label ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return primitives.at(UUID)->doesPrimitiveDataExist(label);
 }
@@ -2745,7 +2745,7 @@ bool Context::doesPrimitiveDataExist( const uint UUID, const char* label ) const
 void Context::clearPrimitiveData( const uint UUID, const char* label ){
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (clearPrimitiveData): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   primitives.at(UUID)->clearPrimitiveData(label);
 }
@@ -2754,7 +2754,7 @@ void Context::clearPrimitiveData( const std::vector<uint> UUIDs, const char* lab
   for( size_t p=0; p<UUIDs.size(); p++ ){
     if( primitives.find(UUIDs.at(p)) == primitives.end() ){
       std::cerr << "ERROR (clearPrimitiveData): UUID of " << UUIDs.at(p) << " does not exist in the Context." << std::endl;
-      exit(EXIT_FAILURE);
+      throw(1);
     }
     primitives.at(UUIDs.at(p))->clearPrimitiveData(label);
   }
@@ -2982,7 +2982,7 @@ void Context::getGlobalData( const char* label, int& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2992,7 +2992,7 @@ void Context::getGlobalData( const char* label, int& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type int, but data does not have type int." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3001,7 +3001,7 @@ void Context::getGlobalData( const char* label, std::vector<int>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3011,7 +3011,7 @@ void Context::getGlobalData( const char* label, std::vector<int>& data ) const{
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type int, but data  does not have type int." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3020,7 +3020,7 @@ void Context::getGlobalData( const char* label, uint& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3030,7 +3030,7 @@ void Context::getGlobalData( const char* label, uint& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type uint, but data does not have type uint." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3039,7 +3039,7 @@ void Context::getGlobalData( const char* label, std::vector<uint>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3049,7 +3049,7 @@ void Context::getGlobalData( const char* label, std::vector<uint>& data ) const{
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type uint, but data does not have type int." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3058,7 +3058,7 @@ void Context::getGlobalData( const char* label, float& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3068,7 +3068,7 @@ void Context::getGlobalData( const char* label, float& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type float, but data does not have type float." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3077,7 +3077,7 @@ void Context::getGlobalData( const char* label, std::vector<float>& data ) const
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3087,7 +3087,7 @@ void Context::getGlobalData( const char* label, std::vector<float>& data ) const
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type float, but data does not have type float." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3096,7 +3096,7 @@ void Context::getGlobalData( const char* label, double& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3106,7 +3106,7 @@ void Context::getGlobalData( const char* label, double& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type double, but data does not have type double." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3115,7 +3115,7 @@ void Context::getGlobalData( const char* label, std::vector<double>& data ) cons
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3125,7 +3125,7 @@ void Context::getGlobalData( const char* label, std::vector<double>& data ) cons
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type double, but data does not have type double." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3134,7 +3134,7 @@ void Context::getGlobalData( const char* label, helios::vec2& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3144,7 +3144,7 @@ void Context::getGlobalData( const char* label, helios::vec2& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type vec2, but data does not have type vec2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3153,7 +3153,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec2>& data 
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3163,7 +3163,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec2>& data 
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type vec2, but data does not have type vec2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3172,7 +3172,7 @@ void Context::getGlobalData( const char* label, helios::vec3& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3182,7 +3182,7 @@ void Context::getGlobalData( const char* label, helios::vec3& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type vec3, but data does not have type vec3." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3191,7 +3191,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec3>& data 
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3201,7 +3201,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec3>& data 
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type vec3, but data does not have type vec3." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3210,7 +3210,7 @@ void Context::getGlobalData( const char* label, helios::vec4& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3220,7 +3220,7 @@ void Context::getGlobalData( const char* label, helios::vec4& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type vec4, but data does not have type vec4." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3229,7 +3229,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec4>& data 
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3239,7 +3239,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec4>& data 
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type vec4, but data does not have type vec4." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3248,7 +3248,7 @@ void Context::getGlobalData( const char* label, helios::int2& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3258,7 +3258,7 @@ void Context::getGlobalData( const char* label, helios::int2& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type int2, but data does not have type int2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3267,7 +3267,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int2>& data 
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3277,7 +3277,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int2>& data 
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type int2, but data does not have type int2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3286,7 +3286,7 @@ void Context::getGlobalData( const char* label, helios::int3& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3296,7 +3296,7 @@ void Context::getGlobalData( const char* label, helios::int3& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type int3, but data does not have type int3." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3305,7 +3305,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int3>& data 
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3315,7 +3315,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int3>& data 
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type int3, but data does not have type int3." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3324,7 +3324,7 @@ void Context::getGlobalData( const char* label, helios::int4& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3334,7 +3334,7 @@ void Context::getGlobalData( const char* label, helios::int4& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type int4, but data does not have type int4." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3343,7 +3343,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int4>& data 
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3353,7 +3353,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int4>& data 
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type int4, but data does not have type int4." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3362,7 +3362,7 @@ void Context::getGlobalData( const char* label, std::string& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Primitive data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3372,7 +3372,7 @@ void Context::getGlobalData( const char* label, std::string& data ) const{
     data = d.front();
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get global data for type string, but data does not have type string." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3381,7 +3381,7 @@ void Context::getGlobalData( const char* label, std::vector<std::string>& data )
 
   if( !doesGlobalDataExist( label ) ){
     std::cerr << "ERROR (getGlobalData): Global data " << label << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3391,7 +3391,7 @@ void Context::getGlobalData( const char* label, std::vector<std::string>& data )
     data = d;
   }else{
     std::cerr << "ERROR (getGlobalData): Attempted to get data for type string, but data does not have type string." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -3488,7 +3488,7 @@ vec3 Triangle::getVertex( int number ){
 
   if( number<0 || number>2 ){
     std::cerr << "getVertex ERROR: vertex number must be 0, 1, or 2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   vec3 Y[3];
@@ -3536,13 +3536,13 @@ void Context::setDate( int day, int month, int year ){
 
   if( day<1 || day>31 ){
     std::cerr << "ERROR (setDate): Day of month is out of range (day of " << day << " was given)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( month<1 || month>12){
     std::cerr << "ERROR (setDate): Month of year is out of range (month of " << month << " was given)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( year<1000 ){
     std::cerr << "ERROR (setDate): Year should be specified in YYYY format." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   sim_date = make_Date(day,month,year);
@@ -3555,13 +3555,13 @@ void Context::setDate( Date date ){
 
   if( date.day<1 || date.day>31 ){
     std::cerr << "ERROR (setDate): Day of month is out of range (day of " << date.day << " was given)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( date.month<1 || date.month>12){
     std::cerr << "ERROR (setDate): Month of year is out of range (month of " << date.month << " was given)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( date.year<1000 ){
     std::cerr << "ERROR (setDate): Year should be specified in YYYY format." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   sim_date = date;
@@ -3574,10 +3574,10 @@ void Context::setDate( int Julian_day, int year ){
 
   if( Julian_day<1 || Julian_day>366 ){
     std::cerr << "ERROR (setDate): Julian day out of range." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( year<1000 ){
     std::cerr << "ERROR (setDate): Year should be specified in YYYY format." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   sim_date = CalendarDay( Julian_day, year );
@@ -3631,13 +3631,13 @@ void Context::setTime( int second, int minute, int hour ){
 
   if( second<0 || second>59 ){
     std::cerr << "ERROR (setTime): Second out of range (0-59)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( minute<0 || minute>59 ){
     std::cerr << "ERROR (setTime): Minute out of range (0-59)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( hour<0 || hour>23 ){
     std::cerr << "ERROR (setTime): Hour out of range (0-23)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   sim_time = make_Time(hour,minute,second);
@@ -3648,10 +3648,10 @@ void Context::setTime( Time time ){
 
   if( time.minute<0 || time.minute>59 ){
     std::cerr << "ERROR (setTime): Minute out of range (0-59)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( time.hour<0 || time.hour>23 ){
     std::cerr << "ERROR (setTime): Hour out of range (0-23)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   sim_time = time;
@@ -3669,7 +3669,7 @@ float Context::randu(void){
 float Context::randu( float min, float max ){
   if( max<min ){
     std::cerr << "ERROR (randu): Maximum value of range must be greater than minimum value of range." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( max==min ){
     return min;
   }else{
@@ -3680,7 +3680,7 @@ float Context::randu( float min, float max ){
 int Context::randu( int min, int max ){
   if( max<min ){
     std::cerr << "ERROR (randu): Maximum value of range must be greater than minimum value of range." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( max==min ){
     return min;
   }else{
@@ -3716,7 +3716,7 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
   if( size.x==0 || size.y==0 ){
     std::cerr << "ERROR (addPatch): Size of patch must be greater than 0." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   Patch* patch_new = (new Patch( color, currentUUID ));
@@ -3770,13 +3770,13 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
   if( size.x==0 || size.y==0 ){
     std::cerr << "ERROR (addPatch): Size of patch must be greater than 0." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   if( uv_center.x-0.5*uv_size.x<-1e-3 || uv_center.y-0.5*uv_size.y<-1e-3 || uv_center.x+0.5*uv_size.x-1.f>1e-3 || uv_center.y+0.5*uv_size.y-1.f>1e-3 ){
     std::cerr << "ERROR (addPatch): Invalid texture coordinates. uv_center-0.5*uv_size should be >=0 and uv_center+0.5*uv_size should be <=1." << std::endl;
     std::cout << (uv_center.x-0.5*uv_size.x>=0.f) << " " << (uv_center.y-0.5*uv_size.y>=0.f) << " " << (uv_center.x+0.5*uv_size.x<=1.f) << " " << (uv_center.y+0.5*uv_size.y<=1.f) << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   Texture* texture = addTexture( texture_file );
@@ -3990,7 +3990,7 @@ void Context::deletePrimitive( const uint UUID ){
 
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (deletePrimitive: UUID of " << UUID << " not found in the context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   Primitive* prim = primitives.at(UUID);
@@ -4019,7 +4019,7 @@ uint Context::copyPrimitive( const uint UUID ){
 
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (copyPrimitive: UUID of " << UUID << " not found in the context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   PrimitiveType type = primitives.at(UUID)->getType();
@@ -4142,7 +4142,7 @@ uint Context::copyPrimitive( const uint UUID ){
 Primitive* Context::getPrimitivePointer( uint UUID ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPrimitivePointer): UUID of " << UUID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return primitives.at(UUID);
 }
@@ -4154,7 +4154,7 @@ bool Context::doesPrimitiveExist( const uint UUID ) const{
 Patch* Context::getPatchPointer( const uint UUID ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getPatchPointer): UUID of " << UUID << " not found in the context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
     std::cerr << "ERROR (getPatchPointer): Primitive " << UUID << " is not a patch." << std::endl;
   }
@@ -4163,7 +4163,7 @@ Patch* Context::getPatchPointer( const uint UUID ) const{
 Triangle* Context::getTrianglePointer( const uint UUID ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getTrianglePointer): UUID of " << UUID << " not found in the context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_TRIANGLE ){
     std::cerr << "ERROR (getTrianglePointer): Primitive " << UUID << " is not a triangle." << std::endl;
   }
@@ -4173,7 +4173,7 @@ Triangle* Context::getTrianglePointer( const uint UUID ) const{
 Voxel* Context::getVoxelPointer( const uint UUID ) const{
   if( primitives.find(UUID) == primitives.end() ){
     std::cerr << "ERROR (getVoxelPointer): UUID of " << UUID << " not found in the context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
     std::cerr << "ERROR (getVoxelPointer): Primitive " << UUID << " is not a voxel." << std::endl;
   }
@@ -4255,14 +4255,14 @@ void Context::addTimeseriesData( const char* label, float value, Date date, Time
   }
   
   std::cerr << "ERROR (addTimeseriesData): Failed to insert timeseries data for unknown reason." << std::endl;
-  exit(EXIT_FAILURE);
+  throw(1);
 
 }
 
 void Context::setCurrentTimeseriesPoint( const char* label, const uint index ){
   if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
     std::cerr << "ERROR (setCurrentTimeseriesPoint): Timeseries variable `" << label << "' does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   setDate( queryTimeseriesDate( label, index ) );
   setTime( queryTimeseriesTime( label, index ) );
@@ -4271,7 +4271,7 @@ void Context::setCurrentTimeseriesPoint( const char* label, const uint index ){
 float Context::queryTimeseriesData( const char* label, const Date date, const Time time ) const{
   if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
     std::cerr << "ERROR (queryTimeseriesData): Timeseries variable `" << label << "' does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   double date_value = floor(date.year*366.25) + date.JulianDay();
@@ -4306,7 +4306,7 @@ float Context::queryTimeseriesData( const char* label, const Date date, const Ti
 
     if(!success){
       
-    exit(EXIT_FAILURE);
+    throw(1);
     }
 
     double xminus = timeseries_data.at(label).at(i);
@@ -4325,7 +4325,7 @@ float Context::queryTimeseriesData( const char* label, const uint index ) const{
 
   if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
     std::cerr << "ERROR (getTimeseriesData): Timeseries variable `" << label << "' does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   return timeseries_data.at(label).at(index);
@@ -4336,7 +4336,7 @@ Time Context::queryTimeseriesTime( const char* label, const uint index ) const{
 
   if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
     std::cerr << "ERROR (getTimeseriesTime): Timeseries variable `" << label << "' does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   double dateval = timeseries_datevalue.at(label).at(index);
@@ -4373,7 +4373,7 @@ Date Context::queryTimeseriesDate( const char* label, const uint index ) const{
 
   if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
     std::cerr << "ERROR (getTimeseriesDate): Timeseries variable `" << label << "' does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   double dateval = timeseries_datevalue.at(label).at(index);
@@ -4394,7 +4394,7 @@ uint Context::getTimeseriesLength( const char* label ) const{
 
   if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
     std::cerr << "ERROR (getTimeseriesLength): Timeseries variable `" << label << "' does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else{
     return timeseries_data.at(label).size();
   }
@@ -4815,7 +4815,7 @@ void CompoundObject::rotate( const float rot, const char* axis ){
     }
   }else{
     std::cerr << "ERROR (CompoundObject::rotate): Rotation axis should be one of x, y, or z." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
 }
@@ -4857,7 +4857,7 @@ void CompoundObject::setTransformationMatrix( float (&T)[16] ){
 CompoundObject* Context::getObjectPointer( uint ObjID ) const{
   if( objects.find(ObjID) == objects.end() ){
     std::cerr << "ERROR (getObjectPointer): ObjectID of " << ObjID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return objects.at(ObjID);
 }
@@ -4887,7 +4887,7 @@ void Context::deleteObject( const uint ObjID ){
 
   if( objects.find(ObjID) == objects.end() ){
     std::cerr << "ERROR (deleteObject): Object ID of " <<ObjID << " not found in the context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   CompoundObject* obj = objects.at(ObjID);
@@ -4917,7 +4917,7 @@ uint Context::copyObject( const uint ObjID ){
 
   if( objects.find(ObjID) == objects.end() ){
     std::cerr << "ERROR (copyObject): Object ID of " <<ObjID << " not found in the context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   ObjectType type = objects.at(ObjID)->getObjectType();
@@ -5014,7 +5014,7 @@ Tile::Tile( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec
 Tile* Context::getTileObjectPointer( const uint ObjID ) const{
   if( objects.find(ObjID) == objects.end() ){
     std::cerr << "ERROR (getTileObjectPointer): ObjectID of " << ObjID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return static_cast<Tile*>(objects.at(ObjID));
 }
@@ -5099,7 +5099,7 @@ Sphere::Sphere( const uint __OID, const std::vector<uint> __UUIDs, const float _
 Sphere* Context::getSphereObjectPointer( const uint ObjID ) const{
   if( objects.find(ObjID) == objects.end() ){
     std::cerr << "ERROR (getSphereObjectPointer): ObjectID of " << ObjID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return static_cast<Sphere*>(objects.at(ObjID));
 }
@@ -5129,7 +5129,7 @@ Tube::Tube( const uint __OID, const std::vector<uint> __UUIDs, const std::vector
 Tube* Context::getTubeObjectPointer( const uint ObjID ) const{
   if( objects.find(ObjID) == objects.end() ){
     std::cerr << "ERROR (getTubeObjectPointer): ObjectID of " << ObjID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return static_cast<Tube*>(objects.at(ObjID));
 }
@@ -5162,7 +5162,7 @@ Box::Box( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec3 
 Box* Context::getBoxObjectPointer( const uint ObjID ) const{
   if( objects.find(ObjID) == objects.end() ){
     std::cerr << "ERROR (getBoxObjectPointer): ObjectID of " << ObjID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return static_cast<Box*>(objects.at(ObjID));
 }
@@ -5191,7 +5191,7 @@ Disk::Disk( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec
 Disk* Context::getDiskObjectPointer( const uint ObjID ) const{
   if( objects.find(ObjID) == objects.end() ){
     std::cerr << "ERROR (getDiskObjectPointer): ObjectID of " << ObjID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return static_cast<Disk*>(objects.at(ObjID));
 }
@@ -5218,7 +5218,7 @@ Polymesh::Polymesh( const uint __OID, const std::vector<uint> __UUIDs, helios::C
 Polymesh* Context::getPolymeshObjectPointer( const uint ObjID ) const{
   if( objects.find(ObjID) == objects.end() ){
     std::cerr << "ERROR (getPolymeshObjectPointer): ObjectID of " << ObjID << " does not exist in the Context." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   return static_cast<Polymesh*>(objects.at(ObjID));
 }
@@ -5235,7 +5235,7 @@ uint Context::addSphereObject( const uint Ndivs, const vec3 center, const float 
 
   if( radius<=0.f ){
     std::cerr << "ERROR (addSphereObject): Radius of sphere must be positive." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   std::vector<uint> UUID;
@@ -5318,11 +5318,11 @@ uint Context::addTileObject( const vec3 center, const vec2 size, const Spherical
 
   if( size.x==0 || size.y==0 ){
     std::cerr << "ERROR (addTileObject): Size of tile must be greater than 0." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   if( subdiv.x<1 || subdiv.y<1 ){
     std::cerr << "ERROR (addTileObject): Number of tile subdivisions must be greater than 0." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   std::vector<uint> UUID;
@@ -5387,11 +5387,11 @@ uint Context::addTileObject( const vec3 center, const vec2 size, const Spherical
 
   if( size.x==0 || size.y==0 ){
     std::cerr << "ERROR (addTileObject): Size of tile must be greater than 0." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   if( subdiv.x<1 || subdiv.y<1 ){
     std::cerr << "ERROR (addTileObject): Number of tile subdivisions must be greater than 0." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   std::vector<uint> UUID;
@@ -5531,13 +5531,13 @@ uint Context::addTubeObject( const uint Ndivs, const std::vector<helios::vec3> n
 
   if( node_count==0 ){
     std::cerr << "ERROR (Context::addTubeObject): Node and radius arrays are empty." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( node_count!=radius.size() ){
     std::cerr << "ERROR (Context::addTubeObject): Size of `nodes' and `radius' arguments must agree." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( node_count!=color.size() ){
     std::cerr << "ERROR (Context::addTubeObject): Size of `nodes' and `color' arguments must agree." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   vec3 vec, convec;
@@ -5653,10 +5653,10 @@ uint Context::addTubeObject( const uint Ndivs, const std::vector<vec3> nodes, co
 
   if( node_count==0 ){
     std::cerr << "ERROR (Context::addTubeObject): Node and radius arrays are empty." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( node_count!=radius.size() ){
     std::cerr << "ERROR (Context::addTubeObject): Size of `nodes' and `radius' arguments must agree." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   vec3 vec, convec;
@@ -5796,11 +5796,11 @@ uint Context::addBoxObject( const vec3 center, const vec3 size, const int3 subdi
 
   if( size.x<=0 || size.y<=0 || size.z<=0 ){
     std::cerr << "ERROR (addBoxObject): Size of box must be positive." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   if( subdiv.x<1 || subdiv.y<1 || subdiv.z<1 ){
     std::cerr << "ERROR (addBoxObject): Number of box subdivisions must be positive." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   std::vector<uint> UUID;
@@ -6364,13 +6364,13 @@ std::vector<uint> Context::addTube( const uint Ndivs, const std::vector<vec3> no
 
   if( node_count==0 ){
     std::cerr << "ERROR (Context::addTube): Node and radius arrays are empty." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( node_count!=radius.size() ){
     std::cerr << "ERROR (Context::addTube): Size of `nodes' and `radius' arguments must agree." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( node_count!=color.size() ){
     std::cerr << "ERROR (Context::addTube): Size of `nodes' and `color' arguments must agree." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   vec3 vec, convec;
@@ -6468,10 +6468,10 @@ std::vector<uint> Context::addTube( const uint Ndivs, const std::vector<vec3> no
 
   if( node_count==0 ){
     std::cerr << "ERROR (Context::addTube): Node and radius arrays are empty." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else if( node_count!=radius.size() ){
     std::cerr << "ERROR (Context::addTube): Size of `nodes' and `radius' arguments must agree." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   vec3 vec, convec;
@@ -7134,7 +7134,7 @@ std::vector<uint> Context::loadXML( const char* filename ){
     std::cerr << "XML [" << filename << "] parsed with errors, attr value: [" << xmldoc.child("node").attribute("attr").value() << "]\n";
     std::cerr << "Error description: " << result.description() << "\n";
     std::cerr << "Error offset: " << result.offset << " (error at [..." << (filename + result.offset) << "]\n\n";
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   pugi::xml_node helios = xmldoc.child("helios");
@@ -7142,7 +7142,7 @@ std::vector<uint> Context::loadXML( const char* filename ){
   if( helios.empty() ){
     std::cout << "failed." << std::endl;
     std::cerr << "ERROR (loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   //-------------- TIME/DATE ---------------//
@@ -7429,7 +7429,7 @@ std::vector<uint> Context::loadXML( const char* filename ){
 	  std::cout << "failed." << std::endl;
 	  std::cerr << "ERROR (loadXML): Only 2 vertices were given for triangle #" << tri << " (requires 3)." << std::endl;
 	}
-	exit(EXIT_FAILURE);
+	throw(1);
       }
       
       vertices = vertices.next_sibling("vertex");
@@ -7842,18 +7842,18 @@ std::vector<uint> Context::loadXML( const char* filename ){
 	int3 time_ = string2int3(time_str);
 	if( time_.x<0 || time_.x>23 ){
 	  std::cerr << "ERROR (loadXML): Invalid hour of " << time_.x << " given in timeseries. Hour must be positive and not greater than 23." << std::endl;
-	  exit(EXIT_FAILURE);
+	  throw(1);
 	}else if( time_.y<0 || time_.y>59 ){
 	  std::cerr << "ERROR (loadXML): Invalid minute of " << time_.y << " given in timeseries. Minute must be positive and not greater than 59." << std::endl;
-	  exit(EXIT_FAILURE);
+	  throw(1);
 	}else if( time_.z<0 || time_.z>59 ){
 	  std::cerr << "ERROR (loadXML): Invalid second of " << time_.z << " given in timeseries. Second must be positive and not greater than 59." << std::endl;
-	  exit(EXIT_FAILURE);
+	  throw(1);
 	}
 	time = make_Time(time_.x, time_.y,time_.z);
       }else{
 	std::cerr << "ERROR (loadXML): No time was specified for timeseries datapoint." << std::endl;
-	exit(EXIT_FAILURE);
+	throw(1);
       }
 
       Date date;
@@ -7865,13 +7865,13 @@ std::vector<uint> Context::loadXML( const char* filename ){
 	int3 date_ = string2int3(date_str);
 	if( date_.x<1 || date_.x>31 ){
 	  std::cerr << "ERROR (loadXML): Invalid day of month " << date_.x << " given in timeseries. Day must be greater than zero and not greater than 31." << std::endl;
-	  exit(EXIT_FAILURE);
+	  throw(1);
 	}else if( date_.y<1 || date_.y>12 ){
 	  std::cerr << "ERROR (loadXML): Invalid month of " << date_.y << " given in timeseries. Month must be greater than zero and not greater than 12." << std::endl;
-	  exit(EXIT_FAILURE);
+	  throw(1);
 	}else if( date_.z<1000 || date_.z>10000 ){
 	  std::cerr << "ERROR (loadXML): Invalid year of " << date_.z << " given in timeseries. Year should be in YYYY format." << std::endl;
-	  exit(EXIT_FAILURE);
+	  throw(1);
 	}
 	date = make_Date(date_.x, date_.y, date_.z );
 	date_flag=true;
@@ -7883,10 +7883,10 @@ std::vector<uint> Context::loadXML( const char* filename ){
 	int2 date_ = string2int2(Jdate_str);
 	if( date_.x<1 || date_.x>366 ){
 	  std::cerr << "ERROR (loadXML): Invalid Julian day of year " << date_.x << " given in timeseries. Julian day must be greater than zero and not greater than 366." << std::endl;
-	  exit(EXIT_FAILURE);
+	  throw(1);
 	}else if( date_.y<1000 || date_.y>10000 ){
 	  std::cerr << "ERROR (loadXML): Invalid year of " << date_.y << " given in timeseries. Year should be in YYYY format." << std::endl;
-	  exit(EXIT_FAILURE);
+	  throw(1);
 	}
 	date = Julian2Calendar( date_.x, date_.y );
 	date_flag=true;
@@ -7894,7 +7894,7 @@ std::vector<uint> Context::loadXML( const char* filename ){
 
       if( !date_flag ){
 	std::cerr << "ERROR (loadXML): No date was specified for timeseries datapoint." << std::endl;
-	exit(EXIT_FAILURE);
+	throw(1);
       }
 
       float value;
@@ -7904,7 +7904,7 @@ std::vector<uint> Context::loadXML( const char* filename ){
 	value = atof(value_str);
       }else{
 	std::cerr << "ERROR (loadXML): No value was specified for timeseries datapoint." << std::endl;
-	exit(EXIT_FAILURE);
+	throw(1);
       }
 
       addTimeseriesData(label,value,date,time);
@@ -8363,7 +8363,7 @@ std::vector<uint> Context::loadPLY( const char* filename, const vec3 origin, con
 
   if (!inputPly.is_open()) {
     std::cerr << "Couldn't open " << filename << std::endl;;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   //--- read header info -----//
@@ -8372,20 +8372,20 @@ std::vector<uint> Context::loadPLY( const char* filename, const vec3 origin, con
   inputPly>>line;
   if( strcmp("ply",line.c_str())!=0 ){
     std::cerr << "ERROR (loadPLY): " << filename << " is not a PLY file." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   //read format
   inputPly>>line;
   if( strcmp("format",line.c_str())!=0 ){
     std::cerr << "ERROR (loadPLY): could not determine data format of " << filename << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   inputPly>>line;
   if( strcmp("ascii",line.c_str())!=0 ){
     std::cerr << "ERROR (loadPLY): Only ASCII data types are supported." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   while(strcmp("end_header",line.c_str())!=0){
@@ -8625,7 +8625,7 @@ std::vector<uint> Context::loadOBJ( const char* filename, const vec3 origin, con
 
   if( strcmp(upaxis,"XUP") && strcmp(upaxis,"YUP") && strcmp(upaxis,"ZUP") ){
     std::cerr << "ERROR (loadOBJ): Up axis of " << upaxis << " is not valid.  Should be one of 'XUP', 'YUP', or 'ZUP'." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   std::string line, prop;
@@ -8644,7 +8644,7 @@ std::vector<uint> Context::loadOBJ( const char* filename, const vec3 origin, con
 
   if (!inputOBJ.is_open()) {
     std::cerr << "Couldn't open " << filename << std::endl;;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   //determine the base file path for 'filename'
@@ -8832,12 +8832,12 @@ std::map<std::string, std::string> Context::loadMTL( std::string filebase, std::
     }
     if( material_file.empty() ){
       std::cerr << "ERROR (loadMTL): Material file does not have correct file extension (.mtl)." << std::endl;
-      exit(EXIT_FAILURE);
+      throw(1);
     }
     inputMTL.open( material_file.c_str() );
     if( !inputMTL.is_open() ){
       std::cerr << "ERROR (loadOBJ): Material file " << material_file << " given in .obj file cannot be found." << std::endl;
-      exit(EXIT_FAILURE);
+      throw(1);
     }
   }
 
