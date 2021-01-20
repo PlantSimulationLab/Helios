@@ -201,18 +201,17 @@
 
   \subsection WPTgL User-Defined Leaf Angle Distribution Functions
 
-  By default, the Weber-Penn tree model will create a random leaf angle distribution by rotating leaves around its parent branch according to the parameters set for that particular tree. However, this is typically not realistic for how leaves arrange themselves in nature, and it is often desirable to specify a leaf angle distribution based on actual data. A custom leaf angle (inclination) distribution funciton can be specified for a given tree type in the tree library XML file using the tag '<LeafAngleDist> ... </LeafAngleDist>'. The elements within the tag should be probability densities of leaf inclination for discrete angle classes ranging from \f$\theta_L=0\f$ to \f$\theta_L=\frac{1}{2}\pi\f$ rad.	       
+  By default, the Weber-Penn tree model will create a semi-random leaf angle distribution by rotating leaves around its parent branch according to the parameters set for that particular tree. However, this is typically not realistic for how leaves arrange themselves in nature, and it is often desirable to specify a leaf angle distribution based on actual data. A custom leaf angle (inclination) distribution funciton can be specified for a given tree type in the tree library XML file using the tag '<LeafAngleDist> ... </LeafAngleDist>'. The elements within the tag should be probability densities of leaf inclination for discrete angle classes ranging from \f$\theta_L=0\f$ to \f$\theta_L=\pi\f$ rad.	       
 
-  Here is an example: Imagine that we wanted to have N=9 discrete leaf angle bins in our leaf angle PDF \f$g_L\f$. The width of one discrete bin would be \f$\Delta \theta_L=\frac{1}{2}\pi/9\approx 0.1745\f$ rad. Each of the 9 bins of our PDF \f$g_L\f$ should give the probability density that we have a leaf inclination angle that falls within that bin. By definition, the following should hold for our PDF:
+  Here is an example: Imagine that we wanted to have N=18 discrete leaf angle bins in our leaf angle PDF \f$g_L\f$. The width of one discrete bin would be \f$\Delta \theta_L=\pi/18\approx 0.1795\f$ rad. Each of the 18 bins of our PDF \f$g_L\f$ should give the probability density that we have a leaf inclination angle that falls within that bin. By definition, the following should hold for our PDF:
 
   <center>\f$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1\f$</center>
 
   If this condition is not met by the PDF input by the user, the program will ignore it and revert to the default behavior.
-											 As a simple example, imagine we had only one leaf with an inclination of \f$\theta_L=0.1\f$ rad. This leaf would fall in the first discrete bin of \f$g_L\f$, which would have a value of \f$1/\Delta \theta_L\f$ and all other bins would be zero.
 
-											For a typical almond tree, the PDF for N=9 is given in the figure below. The distribution values are also tabulated below.
+As a simple example, imagine we had only one leaf with an inclination of \f$\theta_L=0.1\f$ rad. This leaf would fall in the first discrete bin of \f$g_L\f$, which would have a value of \f$1/\Delta \theta_L\f$ and all other bins would be zero.
 
-  \image html "images/gL_almond.png"	      
+For a typical almond tree, the PDF for N=18 is tabulated below. Note that we have the capability to have leaves pointing upward from their base (\f$\theta_L<\pi/2\f$) or leaves pointiing downward from their base (\f$\theta_L>\pi/2\f$). For simplicity, the distribution below considers only upward-facing normals.
 
   <center>
   <table>
@@ -227,6 +226,15 @@
   <tr><td>60-70</td><td>0.619</td></tr>
   <tr><td>70-80</td><td>0.424</td></tr>
   <tr><td>80-90</td><td>0.315</td></tr>
+  <tr><td>90-100</td><td>0</td></tr>
+  <tr><td>100-110</td><td>0</td></tr>
+  <tr><td>110-120</td><td>0</td></tr>
+  <tr><td>120-130</td><td>0</td></tr>
+  <tr><td>130-140</td><td>0</td></tr>
+  <tr><td>140-150</td><td>0</td></tr>
+  <tr><td>150-160</td><td>0</td></tr>
+  <tr><td>160-170</td><td>0</td></tr>
+  <tr><td>180-180</td><td>0</td></tr>
   </table>
   </center>
 
@@ -240,8 +248,8 @@
     <WeberPennTree label="Almond">
       \<!--
       Many other parameters here
-      \-->  
-      <LeafAngleDist> 0.229 0.665 0.917 0.945 0.865 0.745 0.619 0.424 0.315 </LeafAngleDist>
+      \-->
+      <LeafAngleDist>0.2290 0.6650 0.9170 0.9450 0.8650 0.7450 0.6190 0.4240 0.3100 0 0 0 0 0 0 0 0 0</LeafAngleDist>
     </WeberPennTree>
 
   </helios></code></pre>

@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.4</span>
+   &#160;<span id="projectnumber">v1.2.5</span>
    </div>
   </td>
  </tr>
@@ -221,7 +221,7 @@ Adding Collimated Sources</h3>
  radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div><h3><a class="anchor" id="SunSphereSource"></a>
 Adding Spherical Sun Source</h3>
 <p>To represent penumbral effects, a spherical radiation source can be used to represent the sun. The sun is represented by a sphere, which has the same diameter and distance from the earth as the sun.</p>
-<p>The spherical sun source is defined in a similar manner as the collimated radiation source, but using the <a class="el" href="class_radiation_model.html#a6178ae419617c091dc7202d6d4cf248c">addSunSphereRadiationSource()</a> function. Below is an example of adding a spherical sun source, with a flux of 800 and using 200 rays per primitive:</p>
+<p>The spherical sun source is defined in a similar manner as the collimated radiation source, but using the <a class="el" href="class_radiation_model.html#a301f41951818cd511d2950f57558cdac">addSunSphereRadiationSource()</a> function. Below is an example of adding a spherical sun source, with a flux of 800 and using 200 rays per primitive:</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> vec3 sun_dir(0,0,1);
  uint SunSource = radiationmodel.addSunSphereRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'SunSource' variable
  radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source

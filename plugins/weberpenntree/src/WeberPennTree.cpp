@@ -291,6 +291,20 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
     UUID_trunk.back() = context->addTube(trunk_segs,nodes,radius,parameters.WoodFile.c_str());
   }
 
+  // printf("size of UUID_trunk = %d\n",UUID_trunk.back().size());
+  // printf("trunk_segs = %d\n",trunk_segs);
+  // printf("tube nodes = %d\n",radius.size());
+
+  // for( int i=0; i<output_prim_data.size(); i++ ){
+  //   if( output_prim_data.at(i).compare("branch_radius")==0 ){
+  //     for( int p=0; p<UUID_trunk.back().size(); p++ ){
+  // 	context->setPrimitiveData(UUID_trunk.back().at(p),"branch_radius",radius.at(c));
+  //     }
+  //   }else if( output_prim_data.at(i).compare("element_type")==0 ){
+  //     context->setPrimitiveData(UUID_trunk.back(),"element_type","trunk");
+  //   }
+  // }
+
   //context->deletePrimitive( UUID_leaf_template );
   context->deleteObject( ID_leaf_template );
 
@@ -1361,4 +1375,14 @@ void WeberPennTree::loadXML( const char* filename ){
   }
     
 
+}
+
+void WeberPennTree::optionalOutputPrimitiveData( const char* label ){
+
+  if( strcmp(label,"element_type")==0 || strcmp(label,"branch_radius")==0 ){
+    output_prim_data.push_back( label );
+  }else{
+    std::cout << "WARNING (WeberPennTree::optionalOutputPrimitiveData): unknown optional output primitive data " << label << std::endl;
+  }
+  
 }

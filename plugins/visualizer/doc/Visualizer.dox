@@ -570,8 +570,10 @@
       SphericalCoord rotation = make_SphericalCoord(0,0);
       vis.addRectangleByCenter(center,size,rotation,RGB::red,Visualizer::COORDINATES_CARTESIAN,0);
 
+      vec3 light_direction = make_vec3(1,1,1);
+
       vis.setLightingModel( Visualizer::LIGHTING_PHONG_SHADOWED );
-      vis.setLightDirection( context.getSunDirection() );
+      vis.setLightDirection( light_direction );
    }</code></pre>
   </div>
 

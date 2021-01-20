@@ -146,11 +146,13 @@
 \_form#145=12x14:$i_0$
 \_form#146=8x12:$k$
 \_form#147=44x15:$\theta_L=0$
-\_form#148=54x20:$\theta_L=\frac{1}{2}\pi$
+\_form#148=45x15:$\theta_L=\pi$
 \_form#149=17x11:$g_L$
-\_form#150=143x20:$\Delta \theta_L=\frac{1}{2}\pi/9\approx 0.1745$
+\_form#150=141x17:$\Delta \theta_L=\pi/18\approx 0.1795$
 \_form#151=105x36:$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1$
 \_form#152=54x15:$\theta_L=0.1$
 \_form#153=42x17:$1/\Delta \theta_L$
-\_form#154=15x15:$\theta_L$
-\_form#155=44x17:$g_L(\theta_L)$
+\_form#154=60x17:$\theta_L<\pi/2$
+\_form#155=60x17:$\theta_L>\pi/2$
+\_form#156=15x15:$\theta_L$
+\_form#157=44x17:$g_L(\theta_L)$

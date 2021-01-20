@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.4</span>
+   &#160;<span id="projectnumber">v1.2.5</span>
    </div>
   </td>
  </tr>
@@ -74,7 +74,7 @@ $(function() {
 <div class="textblock"><h1><a class="anchor" id="context_globaldata_intro"></a>
 Introduction to Global Data</h1>
 <p>Using global data is very similar to using primitive data (see <a class="el" href="context_primdata.html">Tutorial 5: Primitive Data</a>), with the only notable difference being that global data is not defined for every primitive, but rather there exists only one instance of particular global data.</p>
-<p>A graphical depiction of global data (right boxe) and primitive data (green boxes) is given in the figure below.</p>
+<p>A graphical depiction of global data (right box) and primitive data (green boxes) is given in the figure below.</p>
 <div class="image">
 <img src="Context_sketch.png" alt=""/>
 </div>
@@ -86,56 +86,30 @@ Creating Global Data (Scalars)</h1>
 <p>Adding global data that has length greater than one (array) requires a little extra information, namely the type of the data to be added and the length of the data array. The type is specified by one of the enumerations given in the table below.</p>
 <table class="doxtable">
 <tr>
-</tr>
+<th>Data type </th><th>Enumeration (HeliosDataType)  </th></tr>
+<tr>
+<td>int</td><td>HELIOS_TYPE_INT </td></tr>
+<tr>
+<td>uint </td><td>HELIOS_TYPE_UINT </td></tr>
+<tr>
+<td>float </td><td>HELIOS_TYPE_FLOAT  </td></tr>
+<tr>
+<td>double</td><td>HELIOS_TYPE_DOUBLE  </td></tr>
+<tr>
+<td>vec2</td><td>HELIOS_TYPE_VEC2 </td></tr>
+<tr>
+<td>vec3</td><td>HELIOS_TYPE_VEC3 </td></tr>
+<tr>
+<td>vec4 </td><td>HELIOS_TYPE_VEC4 </td></tr>
+<tr>
+<td>int2 </td><td>HELIOS_TYPE_INT2  </td></tr>
+<tr>
+<td>int3 </td><td>HELIOS_TYPE_INT3 </td></tr>
+<tr>
+<td>int4</td><td>HELIOS_TYPE_INT4 </td></tr>
+<tr>
+<td>std::string</td><td>HELIOS_TYPE_STRING </td></tr>
 </table>
-<p><br  />
- </p>
-<p>Data type </p>
-<p>Enumeration (HeliosDataType)  </p>
-<p><br  />
- </p>
-<p>int </p>
-<p>HELIOS_TYPE_INT  </p>
-<p><br  />
- </p>
-<p>uint </p>
-<p>HELIOS_TYPE_UINT  </p>
-<p><br  />
- </p>
-<p>float </p>
-<p>HELIOS_TYPE_FLOAT  </p>
-<p><br  />
- </p>
-<p>double </p>
-<p>HELIOS_TYPE_DOUBLE  </p>
-<p><br  />
- </p>
-<p>vec2 </p>
-<p>HELIOS_TYPE_VEC2  </p>
-<p><br  />
- </p>
-<p>vec3 </p>
-<p>HELIOS_TYPE_VEC3  </p>
-<p><br  />
- </p>
-<p>vec4 </p>
-<p>HELIOS_TYPE_VEC4  </p>
-<p><br  />
- </p>
-<p>int2 </p>
-<p>HELIOS_TYPE_INT2  </p>
-<p><br  />
- </p>
-<p>int3 </p>
-<p>HELIOS_TYPE_INT3  </p>
-<p><br  />
- </p>
-<p>int4 </p>
-<p>HELIOS_TYPE_INT4  </p>
-<p><br  />
- </p>
-<p>std::string </p>
-<p>HELIOS_TYPE_STRING  </p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main(void){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    Context context;  //Declare the "Context" class</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    float data[5] = {10, 11, 12, 13, 14};</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    context.setGlobalData("my_data",HELIOS_TYPE_FLOAT,5,&amp;data); //add global data called my_data to only the first primitive</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    std::vector&lt;float&gt; data_new;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    context.getGlobalData("my_data",data_new); //get the global data and assign it to 'data_new'</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>}</code></pre></div> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->

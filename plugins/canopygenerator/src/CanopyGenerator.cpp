@@ -26,6 +26,8 @@ HomogeneousCanopyParameters::HomogeneousCanopyParameters(void){
 
   leaf_color = RGB::green;
 
+  leaf_angle_distribution = "spherical";
+
   leaf_area_index = 1.f;
 
   canopy_height = 1.f;
@@ -43,6 +45,8 @@ SphericalCrownsCanopyParameters::SphericalCrownsCanopyParameters(void){
   leaf_subdivisions = make_int2(1,1);
 
   leaf_color = RGB::green;
+
+  leaf_angle_distribution = "spherical";
 
   leaf_area_density = 1.f;
 
@@ -512,7 +516,16 @@ void CanopyGenerator::buildCanopy( const HomogeneousCanopyParameters params ){
 
   UUID_leaf.resize(1);
 
-  int Nleaves = round(params.leaf_area_index*params.canopy_extent.x*params.canopy_extent.y/params.leaf_size.x/params.leaf_size.y);
+  float solidFractionx;
+  if(params.leaf_texture_file.size()==0){
+    solidFractionx = 1.0;
+  }else{
+    helios::Texture texture(params.leaf_texture_file.c_str());
+    solidFractionx = texture.getSolidFraction();
+  }
+
+  float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
+  int Nleaves = round(params.leaf_area_index*params.canopy_extent.x*params.canopy_extent.y/leafArea);
 
   float Lmax = fmax(params.leaf_size.x,params.leaf_size.y);
 
@@ -529,12 +542,11 @@ void CanopyGenerator::buildCanopy( const HomogeneousCanopyParameters params ){
     float ry = unif_distribution(generator);
     float rz = unif_distribution(generator);
 
-    float rt = unif_distribution(generator);
     float rp = unif_distribution(generator);
 
     vec3 position = params.canopy_origin + make_vec3( (-0.5+rx)*params.canopy_extent.x, (-0.5+ry)*params.canopy_extent.y, 0.5*Lmax+rz*(params.canopy_height-Lmax) );
 
-    SphericalCoord rotation( 1.f, acos(1.f-rt), 2.f*M_PI*rp );
+    SphericalCoord rotation( 1.f, sampleLeafPDF(params.leaf_angle_distribution.c_str()), 2.f*M_PI*rp );
 
     uint ID = context->copyObject(ID0);
     context->getObjectPointer(ID)->rotate(-rotation.elevation,"y");
@@ -567,8 +579,17 @@ void CanopyGenerator::buildCanopy( const SphericalCrownsCanopyParameters params 
   std::uniform_real_distribution<float> unif_distribution;
 
   float r = params.crown_radius;
-  
-  int Nleaves = round(4.f/3.f*M_PI*r*r*r*params.leaf_area_density/params.leaf_size.x/params.leaf_size.y);
+
+  float solidFractionx;
+  if(params.leaf_texture_file.size()==0){
+    solidFractionx = 1.0;
+  }else{
+    helios::Texture texture(params.leaf_texture_file.c_str());
+    solidFractionx = texture.getSolidFraction();
+  }
+
+  float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
+  int Nleaves = round(4.f/3.f*M_PI*r*r*r*params.leaf_area_density/leafArea);
 
   vec2 canopy_extent( params.plant_spacing.x*float(params.plant_count.x), params.plant_spacing.y*float(params.plant_count.y) );
 
@@ -616,7 +637,7 @@ void CanopyGenerator::buildCanopy( const SphericalCrownsCanopyParameters params 
 	float y = r * rad * sinf(phi) * sinf(theta);
 	float z = r * rad * cosf(phi);
 
-	theta = acosf(1.f-unif_distribution(generator));
+	theta = sampleLeafPDF(params.leaf_angle_distribution.c_str());
 	phi = 2.f*M_PI*unif_distribution(generator);
 
 	uint ID = context->copyObject(ID0);
@@ -1174,4 +1195,86 @@ float interpolateTube( const std::vector<float> P, const float frac ){
 
   return P.front();
 
+}
+
+float evaluateCDFresid( const char* distribution, float thetaL, float ru ){
+
+  assert( ru>=0.f && ru<=1.f );
+
+  float CDFresid;
+  if( strcmp(distribution,"planophile")==0 ){
+    CDFresid = ru - 2.f/M_PI*(thetaL+0.5*sinf(2.f*thetaL));
+  }else if( strcmp(distribution,"erectophile")==0 ){
+    CDFresid = ru - 2.f/M_PI*(thetaL-0.5*sinf(2.f*thetaL));
+  }else if( strcmp(distribution,"plagiophile")==0 ){
+    CDFresid = ru - 2.f/M_PI*(thetaL-0.25*sinf(4.f*thetaL));
+  }else if( strcmp(distribution,"extremophile")==0 ){
+    CDFresid = ru - 2.f/M_PI*(thetaL+0.25*sinf(4.f*thetaL));
+  }else{
+
+  }
+
+  return CDFresid;
+
+}
+
+float CanopyGenerator::sampleLeafPDF( const char* distribution ){
+
+  float thetaL;
+
+  std::uniform_real_distribution<float> unif_distribution;
+  
+  float ru = unif_distribution(generator);
+
+  if( strcmp(distribution,"spherical")==0 ){
+    thetaL = acos_safe(1.f-ru);
+  }else if( strcmp(distribution,"uniform")==0 ){
+    thetaL = ru*0.5*M_PI;
+  }else if( strcmp(distribution,"planophile")==0 || strcmp(distribution,"erectophile")==0 || strcmp(distribution,"plagiophile")==0 || strcmp(distribution,"extremophile")==0  ){
+
+    float err_max = 0.0001;
+    uint max_iter = 100;
+
+    float tL_old_old = 0.25*M_PI;;
+
+    float tL_old = 0.24*M_PI;
+
+    float resid_old = evaluateCDFresid(distribution,tL_old,ru);
+    float resid_old_old = evaluateCDFresid(distribution,tL_old_old,ru);
+  
+    float resid = 100;
+    float err = resid;
+    uint iter = 0;
+    while( err>err_max && iter<max_iter ){
+      
+      if( resid_old==resid_old_old ){//this condition will cause NaN
+	err=0;
+	break;
+      }
+      
+      thetaL = fabs((tL_old_old*resid_old-tL_old*resid_old_old)/(resid_old-resid_old_old));
+      
+      resid = evaluateCDFresid(distribution,thetaL,ru);
+      
+      resid_old_old = resid_old;
+      resid_old = resid;
+      
+      err = fabs(tL_old-tL_old_old)/fabs(tL_old_old);
+      
+      tL_old_old = tL_old;
+      tL_old = thetaL;
+      
+      iter++;
+
+    }
+
+    assert( err<=err_max );
+
+  }else{
+    std::cerr << "ERROR (sampleLeafPDF): Invalid leaf angle distribution of " << distribution << " specified." << std::endl;
+    throw 1;
+  }
+
+  return thetaL;
+  
 }

@@ -62,6 +62,7 @@
  <tr><td>leaf_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
  <tr><td>leaf_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of leaves if a texture map file is not provided (see `leaf_texture_file' parameter).</td><td>RGB::green</td></tr>
  <tr><td>leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for texture mapping/masking of leaves.</td><td>none</td></tr>
+<tr><td>leaf_angle_distribution</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Leaf angle distribution - one of "spherical", "uniform", "erectophile", "planophile", "plagiophile", "extremophile"</td><td>"spherical"</td></tr>
  <tr><td>leaf_area_index</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>One-sided leaf area in canopy per unit ground surface area.</td><td>1.0</td></tr>
  <tr><td>canopy_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Height/depth of the canopy.</td><td>1.0</td></tr>
  <tr><td>canopy_extent</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Dimension of the canopy in the x- and y-directions.</td><td>(5,5)</td></tr>
@@ -87,6 +88,7 @@
  <tr><td>leaf_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
  <tr><td>leaf_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of leaves if a texture map file is not provided (see `leaf_texture_file' parameter).</td><td>RGB::green</td></tr>
  <tr><td>leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for texture mapping/masking of leaves.</td><td>none</td></tr>
+ <tr><td>leaf_angle_distribution</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Leaf angle distribution - one of "spherical", "uniform", "erectophile", "planophile", "plagiophile", "extremophile"</td><td>"spherical"</td></tr>
  <tr><td>leaf_area_density</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>One-sided leaf area density in each crown (i.e., LAD is equal to the total leaf area in a crown divided by \f$4/3\pi R^3\f$).</td><td>1.0</td></tr>
  <tr><td>crown_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of spherical crown.</td><td>0.5</td></tr>
 

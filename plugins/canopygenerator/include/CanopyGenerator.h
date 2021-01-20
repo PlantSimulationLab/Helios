@@ -38,6 +38,9 @@ struct HomogeneousCanopyParameters{
   //! Leaf color if no texture map file is provided.
   helios::RGBcolor leaf_color;
 
+  //! Leaf angle distribution - one of "spherical", "uniform", "erectophile", "planophile", "plagiophile", "extremophile"
+  std::string leaf_angle_distribution;
+
   //! One-sided leaf area index of the canopy.
   float leaf_area_index;
 
@@ -72,6 +75,9 @@ struct SphericalCrownsCanopyParameters{
 
   //! Leaf color if no texture map file is provided.
   helios::RGBcolor leaf_color;
+
+  //! Leaf angle distribution - one of "spherical", "uniform", "erectophile", "planophile", "plagiophile", "extremophile"
+  std::string leaf_angle_distribution;
 
   //! One-sided leaf area density within spherical crowns.
   float leaf_area_density;
@@ -727,9 +733,11 @@ void grapevineGoblet( const GobletGrapevineParameters params, const helios::vec3
   std::vector<std::vector<std::vector<std::vector<uint> > > > UUID_fruit;
 
   //! UUIDs for ground primitives
-  std::vector<uint> UUID_ground; 
+  std::vector<uint> UUID_ground;
 
   float sampleLeafAngle( const std::vector<float> leafAngleDist );
+
+  float sampleLeafPDF( const char* distribution );
  
   std::minstd_rand0 generator;
 
@@ -742,5 +750,6 @@ float getVariation( float V, std::minstd_rand0& generator );
 helios::vec3 interpolateTube( const std::vector<helios::vec3> P, const float frac );
 
 float interpolateTube( const std::vector<float> P, const float frac );
+
 
 #endif

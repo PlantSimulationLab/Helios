@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.4</span>
+   &#160;<span id="projectnumber">v1.2.5</span>
    </div>
   </td>
  </tr>
@@ -455,8 +455,8 @@ Shading</h3>
       Visualizer vis( 1200 );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><pre><code>      vec3 center = make_vec3(0,0,0);
       vec2 size = make_vec2(1,1);
       SphericalCoord rotation = make_SphericalCoord(0,0);
-      vis.addRectangleByCenter(center,size,rotation,RGB::red,Visualizer::COORDINATES_CARTESIAN,0);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><pre><code>      vis.setLightingModel( Visualizer::LIGHTING_PHONG_SHADOWED );
-      vis.setLightDirection( context.getSunDirection() );
+      vis.addRectangleByCenter(center,size,rotation,RGB::red,Visualizer::COORDINATES_CARTESIAN,0);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><pre><code>      vec3 light_direction = make_vec3(1,1,1);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><pre><code>      vis.setLightingModel( Visualizer::LIGHTING_PHONG_SHADOWED );
+      vis.setLightDirection( light_direction );
    }</code></pre> </div><h2><a class="anchor" id="Options"></a>
 View Options</h2>
 <p>The default camera position is at an elevation angle of 20 degrees and to the North, with the camera looking toward the origin. The distance of the camera from the origin is automatically adjusted to fit all primitives in view.</p>

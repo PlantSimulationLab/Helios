@@ -1480,6 +1480,10 @@ uint RadiationModel::addSphereRadiationSource( const helios::vec3 position, cons
   
 }
 
+uint RadiationModel::addSunSphereRadiationSource( void ){
+  return addSunSphereRadiationSource( make_vec3(0,0,1) );
+}
+
 uint RadiationModel::addSunSphereRadiationSource( const helios::SphericalCoord sun_direction ){
   return addSunSphereRadiationSource( sphere2cart(sun_direction) );
 }

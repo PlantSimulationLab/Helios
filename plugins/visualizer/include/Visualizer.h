@@ -39,7 +39,7 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
     \param[in] "height" Height of the graphics window in pixels
     \param[in] "window" Pointer to the window object
 */
-int write_JPEG_file ( const char* filename, uint width, uint height, void* _window );
+int write_JPEG_file ( const char* filename, const uint width, const uint height, void* _window );
 
 //! Function to create a texture map from a PNG image
 /** \param[in] "filename" Name of the PNG image file
@@ -784,10 +784,15 @@ private:
   //! Add a Colorbar given its center position
   void addColorbarByCenter( const char* title, const helios::vec2 size, const helios::vec3 center, const helios::RGBcolor font_color, const Colormap colormap );
 
-  //! Width of the display window in pixels
+  //! Width of the display window in screen coordinates
   uint Wdisplay;
-  //! Height of the display window in pixels
+  //! Height of the display window in screen coordinates
   uint Hdisplay;
+
+  //! Width of the display window in pixels
+  uint Wframebuffer;
+  //! Height of the display window in pixels
+  uint Hframebuffer;
 
   uint frame_counter;
 
@@ -824,7 +829,8 @@ private:
   helios::vec3 light_direction;
 
   //! Flag indicating whether colorbar is enabled
-  bool colorbar_flag;
+  /** colorbar_flag=0 means the colorbar is off and no enable/disable functions have been called, colorbar_flag=1 means the colorbar is off and disableColorbar() was explicitly called and thus the colorbar should remain off, colorbar_flag=2 means the colorbar is on. */
+  uint colorbar_flag;
 
   //! Title of the colorbar
   std::string colorbar_title;

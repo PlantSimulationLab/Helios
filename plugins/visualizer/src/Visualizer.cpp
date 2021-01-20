@@ -96,7 +96,7 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
 
   if(cinfo.output_components!=3){
     std::cerr << "ERROR: texture does not have RGB components." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   JSAMPLE* ba;
@@ -123,18 +123,20 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
   return 0;
 }
 
-int write_JPEG_file ( const char* filename, uint width, uint height, void* _window ){
+int write_JPEG_file ( const char* filename, const uint width, const uint height, void* _window ){
 
   std::cout << "writing JPEG image: " << filename << std::endl;
 
-  GLubyte screen_shot_trans[ 3 * width * height];
-
+  const uint bsize = 3 * width * height;
+  std::vector<GLubyte> screen_shot_trans;
+  screen_shot_trans.resize(bsize);
+  
   glfwSwapBuffers((GLFWwindow*)_window);
-  glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans);
+  glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
 
   //depending on the ative frame buffer, we may get all zero data and need to swap it again.
   bool zeros = true;
-  for( int i=0; i<3*width*height; i++ ){
+  for( int i=0; i<bsize; i++ ){
     if( screen_shot_trans[i]!=0 ){
       zeros = false;
     }
@@ -143,7 +145,7 @@ int write_JPEG_file ( const char* filename, uint width, uint height, void* _wind
 
     glfwSwapBuffers((GLFWwindow*)_window);
 
-    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
     
   }
 
@@ -161,7 +163,7 @@ int write_JPEG_file ( const char* filename, uint width, uint height, void* _wind
 
   if ((outfile = fopen(filename, "wb")) == NULL) {
     fprintf(stderr, "can't open %s\n", filename);
-    exit(1);
+    throw(1);
   }
   jpeg_stdio_dest(&cinfo, outfile);
 
@@ -211,7 +213,7 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
   FILE *fp = fopen(filename, "rb");
   if (!fp){
     std::cerr << "ERROR (read_png_file): File " << filename << " could not be opened for reading" << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   fread(header, 1, 8, fp);
   // if (png_sig_cmp(header, 0, 8)){
@@ -224,18 +226,18 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
 
   if (!png_ptr){
     std::cerr << "ERROR (read_png_file): png_create_read_struct failed." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr){
     std::cerr << "ERROR (read_png_file): png_create_info_struct failed." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   if (setjmp(png_jmpbuf(png_ptr))){
     std::cerr << "ERROR (read_png_file): init_io failed." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }  
 
   png_init_io(png_ptr, fp);
@@ -254,7 +256,7 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr))){
     std::cerr << "ERROR (read_png_file): read_image failed." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
@@ -309,13 +311,13 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
 
   isWatermarkVisible = true;
 
-  colorbar_flag = false;
+  colorbar_flag = 0;
   
   colorbar_min = 0.f;
   colorbar_max = 0.f;
 
   colorbar_title = "";
-  colorbar_fontsize = 8;
+  colorbar_fontsize = 12;
   colorbar_fontcolor = RGB::black;
 
   colorbar_position = make_vec3(0.65,0.1,0.1);
@@ -330,7 +332,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   // Initialise GLFW
   if( !glfwInit() ){
     fprintf( stderr, "Failed to initialize GLFW\n" );
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   glfwWindowHint(GLFW_SAMPLES, aliasing_samples ); // antialiasing
@@ -339,16 +341,17 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //We don't want the old OpenGL
   glfwWindowHint( GLFW_VISIBLE, 0 );
-  
+
   // Open a window and create its OpenGL context
   GLFWwindow* _window;
+  //_window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation System", NULL, NULL);
   _window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation System", NULL, NULL); 
   if( _window == NULL ){
     fprintf( stderr, "Failed to open graphics window.\n" );
     fprintf( stderr, "Common causes for this error:\n");
     fprintf( stderr, "-- OSX\n  - Is XQuartz installed (xquartz.org) and configured as the default X11 window handler?  When running the visualizer, XQuartz should automatically open and appear in the dock, indicating it is working.\n" );
     fprintf( stderr, "-- Linux\n  - Are you running this program remotely via SSH? Remote X11 graphics along with OpenGL are not natively supported.  Installing and using VirtualGL is a good solution for this (virtualgl.org).\n" );
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   glfwMakeContextCurrent(_window);
 
@@ -361,7 +364,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   glewExperimental=GL_TRUE; // Needed in core profile 
   if (glewInit() != GLEW_OK) {
     fprintf(stderr, "Failed to initialize GLEW\n");
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   //NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
@@ -393,12 +396,20 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   int window_width, window_height;
   glfwGetWindowSize(_window, &window_width, &window_height);
 
+  int framebuffer_width, framebuffer_height;
+  glfwGetFramebufferSize(_window, &framebuffer_width, &framebuffer_height);
+
+  Wframebuffer = uint(framebuffer_width);
+  Hframebuffer = uint(framebuffer_height);
+
   if( window_width<Wdisplay || window_height<Hdisplay ){
     printf("WARNING: requested size of window is larger than the screen area.\n");
     //printf("Changing width from %d to %d and height from %d to %d\n",Wdisplay,window_width,Hdisplay,window_height);
-    Wdisplay = window_width;
-    Hdisplay = window_height;
+    Wdisplay = uint(window_width);
+    Hdisplay = uint(window_height);
   }
+
+  glfwSetWindowSize( _window, window_width, window_height );
 
   glfwSetWindowAspectRatio( _window, Wdisplay, Hdisplay );
 
@@ -448,7 +459,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   }
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
     std::cout << "Problem with framebuffer." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
  
@@ -783,19 +794,21 @@ void Visualizer::printWindow( void ){
 
 void Visualizer::printWindow( const char* outfile ){
   
-  write_JPEG_file( outfile, Wdisplay, Hdisplay, window );
+  write_JPEG_file( outfile, Wframebuffer, Hframebuffer, window );
+
 }
 
 void Visualizer::getWindowPixelsRGB( unsigned int * buffer ){
 
-  GLubyte buff[ 3*Wdisplay*Hdisplay ];
+  std::vector<GLubyte> buff;
+  buff.resize( 3*Wframebuffer*Hframebuffer );
 
   glfwSwapBuffers((GLFWwindow*)window);
-  glReadPixels(0, 0, Wdisplay, Hdisplay, GL_RGB, GL_UNSIGNED_BYTE, &buff);
+  glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
 
   //depending on the ative frame buffer, we may get all zero data and need to swap it again.
   bool zeros = true;
-  for( int i=0; i<3*Wdisplay*Hdisplay; i++ ){
+  for( int i=0; i<3*Wframebuffer*Hframebuffer; i++ ){
     if( buff[i]!=0 ){
       zeros = false;
     }
@@ -804,13 +817,13 @@ void Visualizer::getWindowPixelsRGB( unsigned int * buffer ){
 
     glfwSwapBuffers((GLFWwindow*)window);
 
-    glReadPixels(0, 0, Wdisplay, Hdisplay, GL_RGB, GL_UNSIGNED_BYTE, &buff);
+    glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
     
   }
 
   //assert( checkerrors() );
 
-  for( int i=0; i<3*Wdisplay*Hdisplay; i++ ){
+  for( int i=0; i<3*Wframebuffer*Hframebuffer; i++ ){
     buffer[i] = (unsigned int)buff[i];
   }
 
@@ -820,7 +833,7 @@ void Visualizer::getDepthMap( float * buffer ){
 
   if( depth_buffer_data.size()==0 ){
     std::cerr << "ERROR (getDepthMap): No depth map data available. You must run 'plotDepthMap' before depth map can be retreived." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   updatePerspectiveTransformation( center, eye );
@@ -2272,7 +2285,7 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 center, 
   //initialize the freetype library
   if(FT_Init_FreeType(&ft)!=0) {
     fprintf(stderr, "Could not init freetype library\n");
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   std::vector<std::vector<uint> > maskData; //This will hold the letter mask data
@@ -2282,7 +2295,7 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 center, 
   sprintf(font,"plugins/visualizer/fonts/%s.ttf",fontname);
   if(FT_New_Face(ft, font, 0, &face)!=0) {
     fprintf(stderr, "Could not open font `%s'\n",fontname);
-    exit(EXIT_FAILURE);
+    throw(1);
   }
     
   //Load the font size
@@ -2457,7 +2470,7 @@ void Visualizer::addColorbarByCenter( const char* title, const vec2 size, const 
     }
 
     // tick labels
-    addTextboxByCenter( textstr, make_vec3(x,center.y-0.4*size.y,center.z), make_SphericalCoord(0,0), font_color, 12, "OpenSans-Regular", COORDINATES_WINDOW_NORMALIZED );
+    addTextboxByCenter( textstr, make_vec3(x,center.y-0.4*size.y,center.z), make_SphericalCoord(0,0), font_color, colorbar_fontsize, "OpenSans-Regular", COORDINATES_WINDOW_NORMALIZED );
 
     if(i>0 && i<Nticks-1){
       ticks[0] = make_vec3( x, center.y-0.25*size.y, center.z-0.001 );
@@ -2471,30 +2484,22 @@ void Visualizer::addColorbarByCenter( const char* title, const vec2 size, const 
   }
 
   //title
-  addTextboxByCenter( title, make_vec3( center.x, center.y+0.4*size.y, center.z), make_SphericalCoord(0,0), font_color, 14, "CantoraOne-Regular", COORDINATES_WINDOW_NORMALIZED );
+  addTextboxByCenter( title, make_vec3( center.x, center.y+0.4*size.y, center.z), make_SphericalCoord(0,0), font_color, colorbar_fontsize, "CantoraOne-Regular", COORDINATES_WINDOW_NORMALIZED );
 
 }
 
 void Visualizer::enableColorbar( void ){
-  if( !colorbar_flag ){
-    colorbar_flag = true;
-  }else{
-    std::cout << "WARNING: colorbar is already enabled." << std::endl;
-  }
+  colorbar_flag = 2;
 }
 
 void Visualizer::disableColorbar( void ){
-  if( colorbar_flag ){
-    colorbar_flag = false;
-  }else{
-    std::cout << "WARNING: colorbar is already disabled." << std::endl;
-  }
+  colorbar_flag = 1;
 }
 
 void Visualizer::setColorbarPosition( vec3 position ){
   if( position.x < 0 || position.x>1 || position.y<0 || position.y>1 || position.z<-1 || position.z>1 ){
     std::cerr << "ERROR (setColorbarPosition): position is out of range.  Coordinates must be: 0<x<1, 0<y<1, -1<z<1." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   colorbar_position = position;
 }
@@ -2502,7 +2507,7 @@ void Visualizer::setColorbarPosition( vec3 position ){
 void Visualizer::setColorbarSize( vec2 size ){
   if( size.x < 0 || size.x>1 || size.y<0 || size.y>1 ){
     std::cerr << "ERROR (setColorbarSize): Size must be greater than 0 and less than the window size (i.e., 1)." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   colorbar_size = size;
 }
@@ -2521,14 +2526,14 @@ void Visualizer::setColorbarTicks( std::vector<float> ticks ){
   //check that vector is not empty
   if( ticks.size()==0 ){
     std::cerr << "ERROR (setColorbarTicks): Colorbar ticks vector is empty." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   //Check that ticks are monotonically increasing
   for( int i=1; i<ticks.size(); i++ ){
     if( ticks.at(i)<=ticks.at(i-1) ){
       std::cerr << "ERROR (setColorbarTicks): Colorbar ticks must be monotonically increasing." << std::endl;
-      exit(EXIT_FAILURE);
+      throw(1);
     }
   }
 
@@ -2554,7 +2559,7 @@ void Visualizer::setColorbarTitle( const char* title ){
 void Visualizer::setColorbarFontSize( uint font_size ){
   if( font_size<=0 ){
     std::cerr << "ERROR (setColorbarFontSize): Font size must be greater than zero." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   colorbar_fontsize = font_size;
 }
@@ -2578,17 +2583,17 @@ void Visualizer::setColormap( Ctable colormap_name ){
     colormap_current = colormap_gray;
   }else if( colormap_name==COLORMAP_CUSTOM ){
     std::cerr << "ERROR (setColormap): Setting a custom colormap requires calling setColormap with additional arguments defining the colormap." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }else{
     std::cerr << "ERROR (setColormap): " << colormap_name << " is not a valid colormap." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 }
 
 void Visualizer::setColormap( Ctable colormap_name, std::vector<RGBcolor> colors, std::vector<float> divisions ){
   if( colormap_name!=COLORMAP_CUSTOM ){
     std::cerr << "ERROR (setColormap): Setting a custom colormap requires calling setColormap with additional arguments defining the colormap." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   Colormap colormap_custom( colors, divisions, 100, colorbar_min, colorbar_max );
@@ -2930,7 +2935,9 @@ void Visualizer::colorContextPrimitivesByData( const char* data_name ){
   for( size_t p=0; p<UUIDs.size(); p++ ){
     colorPrimitives_UUIDs[UUIDs.at(p)] = UUIDs.at(p);
   }
-  enableColorbar();
+  if( colorbar_flag==0 ){
+    enableColorbar();
+  }
 }
 
 void Visualizer::colorContextPrimitivesByData( const char* data_name, const std::vector<uint>& UUIDs ){
@@ -2940,7 +2947,9 @@ void Visualizer::colorContextPrimitivesByData( const char* data_name, const std:
   for( size_t p=0; p<UUIDs.size(); p++ ){
     colorPrimitives_UUIDs[UUIDs.at(p)] = UUIDs.at(p);
   }
-  enableColorbar();
+  if( colorbar_flag==0 ){
+    enableColorbar();
+  }
 }
 
 void Visualizer::plotInteractive( void ){
@@ -2957,7 +2966,7 @@ void Visualizer::plotInteractive( void ){
   }
 
   //Update 
-  if( colorbar_flag ){
+  if( colorbar_flag==2 ){
     addColorbarByCenter( colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current );
   }
 
@@ -3029,8 +3038,9 @@ void Visualizer::plotInteractive( void ){
 
     // Render to the screen
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
-  
+    //glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    glViewport(0,0,Wframebuffer,Hframebuffer);
+    
     glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
 
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -3070,9 +3080,12 @@ void Visualizer::plotInteractive( void ){
     glfwWaitEvents();
 
     int width, height;
-    glfwGetWindowSize((GLFWwindow*)window, &width, &height );
-    Wdisplay = width;
-    Hdisplay = height;
+    //glfwGetWindowSize((GLFWwindow*)window, &width, &height );
+    //Wdisplay = width;
+    //Hdisplay = height;
+    glfwGetFramebufferSize((GLFWwindow*)window, &width, &height );
+    Wframebuffer = width;
+    Hframebuffer = height;
     
   }while( glfwGetKey((GLFWwindow*)window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose((GLFWwindow*)window) == 0 );
 
@@ -3227,7 +3240,7 @@ void Visualizer::plotUpdate( void ){
   }
 
   //Update 
-  if( colorbar_flag ){
+  if( colorbar_flag==2 ){
     addColorbarByCenter( colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current );
   }
 
@@ -3297,7 +3310,8 @@ void Visualizer::plotUpdate( void ){
   
   // Render to the screen
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+  //glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+  glViewport(0,0,Wframebuffer,Hframebuffer);
   
   glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
   
@@ -3362,12 +3376,14 @@ void Visualizer::plotDepthMap( void ){
   // Depth buffer for shadows
   glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
   //glViewport(0,0, 8192, 8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
-  glViewport(0,0, Wdisplay, Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
-
+  //glViewport(0,0, Wdisplay, Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+  glViewport(0,0,Wframebuffer,Hframebuffer);
+  
   //bind depth texture
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, depthTexture);
-  glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, Wdisplay, Hdisplay, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  //glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, Wdisplay, Hdisplay, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, Wframebuffer, Hframebuffer, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 
   // Clear the screen
   glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -3384,14 +3400,14 @@ void Visualizer::plotDepthMap( void ){
 
   assert( checkerrors() );
 
-  depth_buffer_data.resize( Wdisplay*Hdisplay );
+  depth_buffer_data.resize( Wframebuffer*Hframebuffer );
 
   glfwSwapBuffers((GLFWwindow*)window);
-  glReadPixels(0, 0, Wdisplay, Hdisplay, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_buffer_data[0] );
+  glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_buffer_data[0] );
 
   //depending on the ative frame buffer, we may get all zero data and need to swap it again.
   bool zeros = true;
-  for( int i=0; i<3*Wdisplay*Hdisplay; i++){
+  for( int i=0; i<3*Wframebuffer*Hframebuffer; i++){
     if( depth_buffer_data[i]!=0 ){
       zeros = false;
     }
@@ -3400,7 +3416,7 @@ void Visualizer::plotDepthMap( void ){
 
     glfwSwapBuffers((GLFWwindow*)window);
     
-    glReadPixels(0, 0, Wdisplay, Hdisplay, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_buffer_data[0] );
+    glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_buffer_data[0] );
     
   }
   
@@ -3501,7 +3517,8 @@ void Visualizer::plotDepthMap( void ){
   
     // Render to the screen
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    //glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    glViewport(0,0,Wframebuffer,Hframebuffer);
     
     glClearColor(0,0,0, 0.0f);
     
@@ -3550,7 +3567,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     VertexShaderStream.close();
   }else{
     std::cerr << "ERROR: Could not open vertex shader file `" << vertex_shader_file << "'." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
  
   // Read the Fragment Shader code from the file
@@ -3563,7 +3580,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     FragmentShaderStream.close();
   }else{
     std::cerr << "ERROR: Could not open vertex shader file `" << vertex_shader_file << "'." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
 
   int Result = GL_FALSE;
@@ -3585,7 +3602,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
   glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &success);
   if( success==GL_FALSE ){
     fprintf(stderr, "%s\n", &VertexShaderErrorMessage[0]);
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   // Compile Fragment Shader
@@ -3604,7 +3621,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
   glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &success);
   if( success==GL_FALSE ){
     fprintf(stderr, "%s\n", &FragmentShaderErrorMessage[0]);
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   // Link the program
@@ -3622,7 +3639,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
   glGetProgramInfoLog(shaderID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
   if( isspace( ProgramErrorMessage[0] ) ){
     fprintf(stderr, "%s\n", &ProgramErrorMessage[0]);
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   assert( checkerrors() );
@@ -3693,7 +3710,7 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
   std::ifstream f(texture_file);
   if( !f.good() ){
     std::cerr << "ERROR: texture file " << texture_file << " does not exist." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   f.close();
 
@@ -3719,7 +3736,7 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
     read_png_file (texture_file,texture,texture_height,texture_width);
   }else {
     std::cerr << "ERROR: texture file " << texture_file << " must be JPG, JPEG, or PNG." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(1);
   }
   
   texture_size = make_int2( texture_width, texture_height );

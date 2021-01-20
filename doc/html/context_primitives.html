@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.4</span>
+   &#160;<span id="projectnumber">v1.2.5</span>
    </div>
   </td>
  </tr>
@@ -76,16 +76,11 @@ Overview</h1>
 <p>In this tutorial, you will gain experience working with model geometry or "primitives". There are several types of geometric elements, which can be used to make up virtually any shape/object. Available primitives are given in the table below.</p>
 <table class="doxtable">
 <tr>
-<th>Primitive </th><th>Description  </th></tr>
+<th>Primitive</th><th>Description </th></tr>
 <tr>
 <td><a class="el" href="classhelios_1_1_patch.html">Patch</a> </td><td>Rectangular polygon with coplanar vertices. A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions. The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).  </td></tr>
 <tr>
 <td><a class="el" href="classhelios_1_1_triangle.html">Triangle</a> </td><td>Triangular polygon specified by its three vertices.  </td></tr>
-<tr>
-<td><a class="el" href="classhelios_1_1_disk.html">Disk</a> </td><td>Ellipsoidal disk. A disk is specified by the (x,y,z) coodinate of its center, and by the lengths of its major and minor axes in the x- and y-directions. The default orientation of a disk is horizontal (i.e., it's normal is in the +z direction).  <br  />
- </td></tr>
-<tr>
-<td>AlphaMask </td><td>Rectangular polygon with area removed based on the alpha channel of a PNG image file. An alphamask is specified by the (x,y,z) coordinate of its center and the lengths of its sides in the x- and y-directions. The default orientation of an alphamask is horizontal (i.e., it's normal is in the +z direction). The alpha channel of the accompanying PNG image file is mapped onto the rectangle, and in instances where alpha&lt;1, material is removed from the rectangle.  </td></tr>
 <tr>
 <td><a class="el" href="classhelios_1_1_voxel.html">Voxel</a> </td><td>Parallelpiped or rectangular prism. A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions. The default orientation of a voxel is axis-aligned.  </td></tr>
 </table>
@@ -97,7 +92,7 @@ Adding a Patch to the Context</h1>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
   #include "Visualizer.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  int main(void){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context;  //Declare the "Context" class</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     vec3 position(0,0,0); //(x,y,z) position of patch center
      vec2 size(1,1); //length and width of patch</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     context.addPatch( position, size );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     <code></code>//Visualizer code
-     Visualizer vis(800);
+     Visualizer vis(800); //our <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> window will be 800 pixels wide
      vis.buildContextGeometry(&amp;context);
      vis.plotInteractive();</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  }</code></pre></div><h1><a class="anchor" id="AddPatch_UUIDs"></a>
 Unique Universal Identifiers (UUIDs)</h1>
@@ -106,7 +101,7 @@ Unique Universal Identifiers (UUIDs)</h1>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
   #include "Visualizer.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  int main(void){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context;  //Declare the "Context" class</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     vec3 position(0,0,0); //(x,y,z) position of patch center
      vec2 size(1,1); //length and width of patch</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     uint UUID; //declare the UUID variable</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     UUID = context.addPatch( position, size ); //this will assign the UUID for this patch to the UUID variable</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     <code></code>//Visualizer code
-     Visualizer vis(800);
+     Visualizer vis(800); //our <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> window will be 800 pixels wide
      vis.buildContextGeometry(&amp;context);
      vis.plotInteractive();</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  }</code></pre></div><h1><a class="anchor" id="AddPatch_pointer"></a>
 Primitive Pointers</h1>
@@ -115,7 +110,7 @@ Primitive Pointers</h1>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
   #include "Visualizer.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  int main(void){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context;  //Declare the "Context" class</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     vec3 position(0,0,0); //(x,y,z) position of patch center
      vec2 size(1,1); //length and width of patch</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     uint UUID; //declare the UUID variable</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     UUID = context.addPatch( position, size ); //this will assign the UUID for this patch to the UUID variable</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Primitive* primitive = context.getPrimitivePointer( UUID ); //gets a pointer to the Patch and assigns it to the variable "primitive"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     vec3 position_shift(1,0,0); //we are going to translate the patch 1 unit in the x-direction</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     primitive-&gt;translate( position_shift ); //apply the translation</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     <code></code>//Visualizer code
-     Visualizer vis(800);
+     Visualizer vis(800); //our <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> window will be 800 pixels wide
      vis.buildContextGeometry(&amp;context);
      vis.plotInteractive();</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  }</code></pre></div> </div></div><!-- contents -->
 </div><!-- PageDoc -->

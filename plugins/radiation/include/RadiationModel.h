@@ -105,6 +105,11 @@ class RadiationModel{
    */
   uint addSphereRadiationSource( const helios::vec3 position, const float radius );
 
+  //! Add a sphere radiation source that models the sun assuming the default direction of (0,0,1)
+  /**       \return Source identifier
+  */
+  uint addSunSphereRadiationSource( void );
+
   //! Add a sphere radiation source that models the sun
   /** \param[in] "sun_direction" Spherical coordinate pointing towards the sun 
       \return Source identifier
