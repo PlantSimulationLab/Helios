@@ -344,6 +344,44 @@ TomatoParameters::TomatoParameters(void){
   
 }
 
+StrawberryParameters::StrawberryParameters(void){
+
+  leaf_length = 0.1;
+
+  leaf_subdivisions = make_int2(4,4);
+
+  leaf_texture_file = "plugins/canopygenerator/textures/StrawberryLeaf.png";
+
+  stem_color = make_RGBcolor(0.35,0.45,0.2);
+
+  stem_subdivisions = 10;
+
+  stems_per_plant = 50;
+  
+  stem_radius = 0.005;
+
+  plant_height = 0.4;
+
+  fruit_radius = 0.025;
+
+  fruit_texture_file = "plugins/canopygenerator/textures/StrawberryTexture.jpg";
+
+  fruit_subdivisions = 12;
+
+  clusters_per_stem = 0.6;
+
+  plant_spacing = 0.5;
+
+  row_spacing = 1.5;
+
+  plant_count = make_int2(4,2);
+
+  canopy_origin = make_vec3(0,0,0);
+
+  canopy_rotation = 0;
+  
+}
+
 CanopyGenerator::CanopyGenerator( helios::Context* __context ){
 
   context = __context;
@@ -418,6 +456,16 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_5.disableMessages();
   GobletGrapevineParameters params_5;
   canopygenerator_5.buildCanopy(params_5);
+  context.deletePrimitive( context.getAllUUIDs() );
+  
+  std::cout << "done." << std::endl;
+
+  std::cout << "Generating default strawberry canopy..." << std::flush;
+
+  CanopyGenerator canopygenerator_7(&context);
+  canopygenerator_7.disableMessages();
+  StrawberryParameters params_7;
+  canopygenerator_7.buildCanopy(params_7);
   context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;
@@ -885,6 +933,40 @@ void CanopyGenerator::buildCanopy( const TomatoParameters params ){
       vec3 center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+(i+0.5)*params.plant_spacing, -0.5*canopy_extent.y+(j+0.5)*params.row_spacing, 0 );
 
       tomato( params, center );
+
+      std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
+      prim_count += UUIDs_all.size();
+
+      plant_ID++;
+
+    }
+  }
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+    //std::cout << "Canopy consists of " << UUID_leaf.size()*UUID_leaf.front().size() << " leaves and " << prim_count << " total primitives." << std::endl;
+  }
+
+}
+
+void CanopyGenerator::buildCanopy( const StrawberryParameters params ){
+
+  if( printmessages ){
+    std::cout << "Building canopy of strawberry plants..." << std::flush;
+  }
+
+  std::uniform_real_distribution<float> unif_distribution;
+
+  vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
+
+  uint plant_ID = 0;
+  uint prim_count = 0;
+  for( int j=0; j<params.plant_count.y; j++ ){
+    for( int i=0; i<params.plant_count.x; i++ ){
+
+      vec3 center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+(i+0.5)*params.plant_spacing, -0.5*canopy_extent.y+(j+0.5)*params.row_spacing, 0 );
+
+      strawberry( params, center );
 
       std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
       prim_count += UUIDs_all.size();

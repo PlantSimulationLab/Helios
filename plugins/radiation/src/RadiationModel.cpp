@@ -2082,7 +2082,7 @@ void RadiationModel::initializeOptiX( void ){
   //maximum scattering depth
   RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "max_scatters", &max_scatters_RTvariable ) );
   RT_CHECK_ERROR( rtVariableSet1ui( max_scatters_RTvariable, 0 ) );
-  
+
   // RTsize device_memory;
   // RT_CHECK_ERROR( rtContextGetAttribute( OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &device_memory ) );
 

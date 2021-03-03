@@ -20,9 +20,7 @@ if(CUDA_FOUND)
 endif(CUDA_FOUND)
 
 if(UNIX AND NOT APPLE)
-        #set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/linux64-3.8.0/)
-        set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/linux64-4.0.1/)
-        #set(OPTIX_PATH /usr/local/OptiX-3.6.0/)
+        set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/linux64-5.1.0/)
 	include_directories(${OPTIX_PATH}include)
 	add_subdirectory(${OPTIX_PATH} "plugins/radiation")	
 	target_link_libraries( radiation ${OPTIX_PATH}lib64/liboptix.so )
@@ -42,7 +40,7 @@ endif(NOT DEFINED OPTIX_PATH)
 
 set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${OPTIX_PATH}include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
 
-SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; --use_fast_math -gencode arch=compute_30,code=sm_30)
+SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; --use_fast_math )
 
 set( CUDA_SOURCES "src/primitiveIntersection.cu;src/rayGeneration.cu;src/rayHit.cu;src/rayHit_MCRT.cu" )
 cuda_compile_ptx(  cuda_ptx_files ${CUDA_SOURCES} )

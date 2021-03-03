@@ -550,6 +550,65 @@ struct TomatoParameters{
   
 };
 
+//! Parameters defining the strawberry plant canopy
+struct StrawberryParameters{
+
+  //! Default constructor
+  StrawberryParameters( void );
+
+  //! Maximum width of leaves. 
+  float leaf_length;
+
+  //! Number of sub-division segments per leaf
+  helios::int2 leaf_subdivisions;
+
+  //! Path to texture map file for leaves.
+  std::string leaf_texture_file;
+
+  //! Color of stems
+  helios::RGBcolor stem_color;
+
+  //! Number of radial subdivisions for stem tubes
+  int stem_subdivisions;
+
+  //! Number of stems per plant
+  int stems_per_plant;
+
+  //! Radius of stems
+  float stem_radius;
+  
+  //! Spacing between adjacent plants along the row direction.
+  float plant_spacing;
+
+  //! Spacing between plant rows.
+  float row_spacing;
+
+  //! Height of the plant
+  float plant_height;
+
+  //! Number of crowns/plants in the x- and y-directions.
+  helios::int2 plant_count;
+
+  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
+  helios::vec3 canopy_origin;
+
+  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
+  float canopy_rotation;
+
+  //! Radius of strawberry fruit
+  float fruit_radius;
+
+  //! Texture map for strawberry fruit
+  std::string fruit_texture_file;
+
+  //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly grape_subdivisions^2 triangles per fruit)
+  uint fruit_subdivisions;
+
+  //! Number of strawberry clusters per plant stem. Clusters randomly have 1, 2, or 3 berries.
+  float clusters_per_stem;
+  
+};
+
 
 
 class CanopyGenerator{
@@ -602,6 +661,11 @@ class CanopyGenerator{
   /** \param[in] "params" Structure containing parameters for tomato canopy.
    */
   void buildCanopy( const TomatoParameters params );
+
+  //! Build a canopy consisting of strawberry plants
+  /** \param[in] "params" Structure containing parameters for strawberry canopy.
+   */
+  void buildCanopy( const StrawberryParameters params );
 
   //! Build a ground consisting of texture sub-tiles and sub-patches, which can be different sizes
   /** \param[in] "ground_origin" x-, y-, and z-position of the ground center point.
@@ -707,10 +771,16 @@ void grapevineGoblet( const GobletGrapevineParameters params, const helios::vec3
   void whitespruce( const WhiteSpruceCanopyParameters params, const helios::vec3 origin );
 
   //! Function to add an individual tomato plant
-  /* \param[in] "params" Set of parameters defining white spruce tree.
+  /* \param[in] "params" Set of parameters defining tomato plants/canopy.
      \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
   */ 
   void tomato( const TomatoParameters params, const helios::vec3 origin );
+
+  //! Function to add an individual strawberry plant
+  /* \param[in] "params" Set of parameters defining strawberry plants/canopy.
+     \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+  */ 
+  void strawberry( const StrawberryParameters params, const helios::vec3 origin );
 
  private:
 

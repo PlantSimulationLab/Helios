@@ -70,6 +70,28 @@ class SolarPosition{
   */
   float getSolarFlux( const float pressure, const float temperature, const float humidity, const float turbidity );
 
+  //! Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction.
+  /** \param[in] "pressure" Atmospheric pressure near ground surface in Pascals
+     \param[in] "temperature" Air temperature near the ground surface in Kelvin
+     \param[in] "humidity" Air relative humidity near the ground surface
+     \param[in] "turbidity" Angstrom's aerosol turbidity coefficient
+     \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
+     \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
+     \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+  */
+  float getSolarFluxPAR( const float pressure, const float temperature, const float humidity, const float turbidity );
+
+  //! Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction.
+  /** \param[in] "pressure" Atmospheric pressure near ground surface in Pascals
+     \param[in] "temperature" Air temperature near the ground surface in Kelvin
+     \param[in] "humidity" Air relative humidity near the ground surface
+     \param[in] "turbidity" Angstrom's aerosol turbidity coefficient
+     \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
+     \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
+     \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+  */
+  float getSolarFluxNIR( const float pressure, const float temperature, const float humidity, const float turbidity );
+
   //! Get the fraction of solar radiation flux that is diffuse
   /** \param[in] "pressure" Atmospheric pressure near ground surface in Pascals
      \param[in] "temperature" Air temperature near the ground surface in Kelvin
@@ -97,7 +119,7 @@ class SolarPosition{
 
   helios::SphericalCoord calculateSunDirection( helios::Time time, helios::Date date ) const;
 
-  void GueymardSolarModel( const float pressure, const float temperature, const float humidity, const float turbidity, float& Eb, float &fdiff );
+  void GueymardSolarModel( const float pressure, const float temperature, const float humidity, const float turbidity, float& Eb_PAR, float& Eb_NIR, float &fdiff );
 
 };
 

@@ -797,6 +797,259 @@ namespace helios {
     /** \param[in] "T" 1D vector corresponding to Compound Object transformation matrix */
     void setTransformationMatrix( float (&T)[16] );
 
+    //-------- Object Data Functions ---------- //
+
+    //! Add data value (int) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const int& data );
+    
+    //! Add data value (uint) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const uint& data );
+
+    //! Add data value (float) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const float& data );
+
+    //! Add data value (double) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const double& data );
+
+    //! Add data value (vec2) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const helios::vec2& data );
+
+    //! Add data value (vec3) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const helios::vec3& data );
+
+    //! Add data value (vec4) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const helios::vec4& data );
+
+    //! Add data value (int2) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const helios::int2& data );
+
+    //! Add data value (int3) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const helios::int3& data );
+
+    //! Add data value (int4) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const helios::int4& data );
+
+    //! Add data value (string) associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "data" Object data value (scalar)
+    */
+    void setObjectData( const char* label, const std::string& data );
+
+    //! Add (array) data associated with a object element
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[in] "type" Helios data type of object data (see \ref HeliosDataType)
+	\param[in] "size" Number of data elements
+	\param[in] "data" Pointer to object data
+	\note While this function still works for scalar data, it is typically prefereable to use the scalar versions of this function.
+    */
+    void setObjectData( const char* label, HeliosDataType type, uint size, void* data );
+
+    //! Get data associated with a object element (integer scalar)
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, int& data ) const;
+    //! Get data associated with a object element (vector of integers)
+    /** 
+	\param[in] "label" Name/label associated with data
+	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<int>& data ) const;
+    //! Get data associated with a object element (unsigned integer scalar)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, uint& data ) const;
+    //! Get data associated with a object element (vector of unsigned integers)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<uint>& data ) const;
+    //! Get data associated with a object element (float scalar)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, float& data ) const;
+    //! Get data associated with a object element (vector of floats)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<float>& data ) const;
+    //! Get data associated with a object element (double scalar)
+    /*
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, double& data ) const;
+    //! Get data associated with a object element (vector of doubles)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<double>& data ) const;
+    //! Get data associated with a object element (vec2 scalar)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, vec2& data ) const;
+    //! Get data associated with a object element (vector of vec2's)
+    /*
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<vec2>& data ) const;
+    //! Get data associated with a object element (vec3 scalar)
+    /*
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, vec3& data ) const;
+    //! Get data associated with a object element (vector of vec3's)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<vec3>& data ) const;
+    //! Get data associated with a object element (vec4 scalar)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, vec4& data ) const;
+    //! Get data associated with a object element (vector of vec4's)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<vec4>& data ) const;
+    //! Get data associated with a object element (int2 scalar)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, int2& data ) const;
+    //! Get data associated with a object element (vector of int2's)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<int2>& data ) const;
+    //! Get data associated with a object element (int3 scalar)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, int3& data ) const;
+    //! Get data associated with a object element (vector of int3's)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<int3>& data ) const;
+    //! Get data associated with a object element (int4 scalar)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, int4& data ) const;
+    //! Get data associated with a object element (vector of int4's)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<int4>& data ) const;
+    //! Get data associated with a object element (string scalar)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::string& data ) const;
+    //! Get data associated with a object element (vector of strings)
+    /**
+    	\param[in] "label" Name/label associated with data
+    	\param[out] "data" Object data structure
+    */
+    void getObjectData( const char* label, std::vector<std::string>& data ) const;
+   
+    //! Get the Helios data type of object data
+    /** 
+	\param[in] "label" Name/label associated with data
+	\return Helios data type of object data
+	\sa HeliosDataType
+    */
+    HeliosDataType getObjectDataType( const char* label ) const;
+    
+    //! Get the size/length of object data
+    /** 
+	\param[in] "label" Name/label associated with data
+	\return Size/length of object data array
+    */
+    uint getObjectDataSize( const char* label ) const;
+
+    //! Check if object data 'label' exists
+    /** 
+	\param[in] "label" Name/label associated with data
+      \return True/false
+    */
+    bool doesObjectDataExist( const char* label ) const;
+
+    //! Clear the object data for this object
+    /** 
+	\param[in] "label" Name/label associated with data
+    */
+    void clearObjectData( const char* label );
+
+    //! Return labels for all object data for this particular object
+    std::vector<std::string> listObjectData( void ) const;
+
   protected:
 
     //! Object ID
@@ -819,6 +1072,20 @@ namespace helios {
 
     //! Affine transformation matrix
     float transform[16];
+
+    std::map<std::string,HeliosDataType > object_data_types;
+    std::map<std::string, std::vector<int> > object_data_int;
+    std::map<std::string, std::vector<uint> > object_data_uint;
+    std::map<std::string, std::vector<float> > object_data_float;
+    std::map<std::string, std::vector<double> > object_data_double;
+    std::map<std::string, std::vector<vec2> > object_data_vec2;
+    std::map<std::string, std::vector<vec3> > object_data_vec3;
+    std::map<std::string, std::vector<vec4> > object_data_vec4;
+    std::map<std::string, std::vector<int2> > object_data_int2;
+    std::map<std::string, std::vector<int3> > object_data_int3;
+    std::map<std::string, std::vector<int4> > object_data_int4;
+    std::map<std::string, std::vector<std::string> > object_data_string;
+    std::map<std::string, std::vector<bool> > object_data_bool;
 
   };
 
@@ -1934,6 +2201,611 @@ public:
       \param[in] "label" Name/label associated with data
   */
   void clearPrimitiveData( const std::vector<uint> UUIDs, const char* label );
+
+  //-------- Compound Object Data Functions ---------- //
+
+  //! Add data value (int) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const int& data );
+  
+  //! Add data value (uint) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const uint& data );
+  
+  //! Add data value (float) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const float& data );
+  
+  //! Add data value (double) associated with a compound object
+  /** 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const double& data );
+  
+  //! Add data value (vec2) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const helios::vec2& data );
+  
+  //! Add data value (vec3) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const helios::vec3& data );
+  
+  //! Add data value (vec4) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const helios::vec4& data );
+  
+  //! Add data value (int2) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const helios::int2& data );
+  
+  //! Add data value (int3) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const helios::int3& data );
+  
+  //! Add data value (int4) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const helios::int4& data );
+  
+  //! Add data value (string) associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const uint objID, const char* label, const std::string& data );
+
+  //! Add data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object
+      \param[in] "label" Name/label associated with data
+      \param[in] "type" Helios data type of primitive data (see \ref HeliosDataType)
+      \param[in] "size" Number of data elements
+      \param[in] "data" Pointer to primitive data
+  */
+  void setObjectData( const uint objIDs, const char* label, HeliosDataType type, uint size, void* data );
+
+  //! Add data value (int) associated with a compound object
+  /** 
+      \param[in] "objIDs" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const int& data );
+  
+  //! Add data value (uint) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const uint& data );
+  
+  //! Add data value (float) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const float& data );
+  
+  //! Add data value (double) associated with a compound object
+  /** 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const double& data );
+  
+  //! Add data value (vec2) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const helios::vec2& data );
+  
+  //! Add data value (vec3) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const helios::vec3& data );
+  
+  //! Add data value (vec4) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const helios::vec4& data );
+  
+  //! Add data value (int2) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const helios::int2& data );
+  
+  //! Add data value (int3) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const helios::int3& data );
+  
+  //! Add data value (int4) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const helios::int4& data );
+  
+  //! Add data value (string) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, const std::string& data );
+  
+  //! Add data associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "type" Helios data type of primitive data (see \ref HeliosDataType)
+      \param[in] "size" Number of data elements
+      \param[in] "data" Pointer to primitive data
+  */
+  void setObjectData( const std::vector<uint> objIDs, const char* label, HeliosDataType type, uint size, void* data );
+
+  //! Add data value (int) associated with a compound object
+  /** 
+      \param[in] "objIDs" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const int& data );
+  
+  //! Add data value (uint) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const uint& data );
+  
+  //! Add data value (float) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const float& data );
+  
+  //! Add data value (double) associated with a compound object
+  /** 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const double& data );
+  
+  //! Add data value (vec2) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::vec2& data );
+  
+  //! Add data value (vec3) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::vec3& data );
+  
+  //! Add data value (vec4) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::vec4& data );
+  
+  //! Add data value (int2) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::int2& data );
+  
+  //! Add data value (int3) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::int3& data );
+  
+  //! Add data value (int4) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::int4& data );
+  
+  //! Add data value (string) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const std::string& data );
+  
+  //! Add data associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "type" Helios data type of primitive data (see \ref HeliosDataType)
+      \param[in] "size" Number of data elements
+      \param[in] "data" Pointer to primitive data
+  */
+  void setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, HeliosDataType type, uint size, void* data );
+
+  //! Add data value (int) associated with a compound object
+  /** 
+      \param[in] "objIDs" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const int& data );
+  
+  //! Add data value (uint) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const uint& data );
+  
+  //! Add data value (float) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const float& data );
+  
+  //! Add data value (double) associated with a compound object
+  /** 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const double& data );
+  
+  //! Add data value (vec2) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::vec2& data );
+  
+  //! Add data value (vec3) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::vec3& data );
+  
+  //! Add data value (vec4) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::vec4& data );
+  
+  //! Add data value (int2) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::int2& data );
+  
+  //! Add data value (int3) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::int3& data );
+  
+  //! Add data value (int4) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::int4& data );
+  
+  //! Add data value (string) associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "data" Object data value (scalar)
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const std::string& data );
+  
+  //! Add data associated with a compound object
+  /** 
+      \param[in] "objID" Vector of unique universal identifiers of compound objects 
+      \param[in] "label" Name/label associated with data
+      \param[in] "type" Helios data type of primitive data (see \ref HeliosDataType)
+      \param[in] "size" Number of data elements
+      \param[in] "data" Pointer to primitive data
+  */
+  void setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, HeliosDataType type, uint size, void* data );
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar integer)
+  */
+  void getObjectData( const uint objID, const char* label, int& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of integers)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<int>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar unsigned integer)
+  */
+  void getObjectData( const uint objID, const char* label, uint& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of unsigned integers)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<uint>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar float)
+  */
+  void getObjectData( const uint objID, const char* label, float& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of floats)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<float>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar double)
+  */
+  void getObjectData( const uint objID, const char* label, double& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of doubles)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<double>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar vec2)
+  */
+  void getObjectData( const uint objID, const char* label, vec2& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of vec2's)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<vec2>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar vec3)
+  */
+  void getObjectData( const uint objID, const char* label, vec3& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of vec3's)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<vec3>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar vec4)
+  */
+  void getObjectData( const uint objID, const char* label, vec4& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of vec4's)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<vec4>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar int2)
+  */
+  void getObjectData( const uint objID, const char* label, int2& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of int2's)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<int2>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar int3)
+  */
+  void getObjectData( const uint objID, const char* label, int3& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of int3's)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<int3>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar int4)
+  */
+  void getObjectData( const uint objID, const char* label, int4& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of int4's)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<int4>& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (scalar string)
+  */
+  void getObjectData( const uint objID, const char* label, std::string& data ) const;
+
+  //! Get data associated with a compound object
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \param[out] "data" Object data structure (vector of strings)
+  */
+  void getObjectData( const uint objID, const char* label, std::vector<std::string>& data ) const;  
+
+  //! Get the Helios data type of primitive data
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \return Helios data type of primitive data
+      \sa HeliosDataType
+  */
+  HeliosDataType getObjectDataType( const uint objID, const char* label ) const;
+
+  //! Get the size/length of primitive data
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \return Size/length of primitive data array
+  */
+  uint getObjectDataSize( const uint objID, const char* label ) const;
+
+  //! Check if primitive data 'label' exists
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+      \return True/false
+  */
+  bool doesObjectDataExist( const uint objID, const char* label ) const;
+
+  //! Clear primitive data for a single primitive based on its objID
+  /** 
+      \param[in] "objID" Unique universal identifier of compound object 
+      \param[in] "label" Name/label associated with data
+  */
+  void clearObjectData( const uint objID, const char* label );
+
+  //! Clear primitive data for multiple primitives based on a vector of objIDs
+  /** 
+      \param[in] "objIDs" Vector of unique universal identifiers for compound objects
+      \param[in] "label" Name/label associated with data
+  */
+  void clearObjectData( const std::vector<uint> objIDs, const char* label );
 
   //-------- Global Data Functions ---------- //
 

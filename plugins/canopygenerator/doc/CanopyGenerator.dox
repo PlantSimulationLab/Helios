@@ -226,7 +226,7 @@
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>
 
- \subsection CGenGoblet Grapevine Canopy with a Goblet
+ \subsection CGenGoblet Grapevine Canopy with a Goblet Trellis
 
  A canopy of grapevine with a Goblet (vent a taille) trellis.
 
@@ -264,6 +264,41 @@
  <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
  <tr><td>row_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
+ <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+ <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
+ </table>	
+
+  \subsection CGenStrawberry Strawberry Canopy
+
+ A canopy of strawberry plants.
+
+ \image html StrawberryCanopy.png
+
+ <table>
+ <tr><th>Parameters Structure</th><td>\ref StrawberryParameters</td></tr>
+ <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::strawberry()</td></tr>
+ <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( StrawberryParameters parameters )</td></tr>
+ </table>
+
+ <table>
+ <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+ <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr> 
+ <tr><td>leaf_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum length of a leaf.</td><td>0.1</td></tr>
+ <tr><td>leaf_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(4,4)</td></tr>
+ <tr><td>leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/StrawberryLeaf.png"</td></tr>
+ <tr><td>stem_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for stem tubes (e.g., if stem_subdivisions=3 the stem would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
+ <tr><td>stem_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the stem at the widest point.</td><td>0.005</td></tr>
+ <tr><td>plant_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average effective height of the plant.</td><td>0.4</td></tr>
+ <tr><td>stems_per_plant</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of stems on each plant.</td><td>50</td></tr>
+ <tr><td>fruit_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum horizontal radius of individual berries. NOTE: Setting fruit_radius=0 will not create any berries.</td><td>0.025</td></tr>
+ <tr><td>clusters_per_stem</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average number of berry clusters per stem (usually <1). NOTE: Setting clusters_per_stem=0 will not create any berries.</td><td>0.6</td></tr>
+<tr><td>fruit_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal direction.</td><td>12</td></tr>
+<tr><td>fruit_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for berry texture overlay.</td><td>"plugins/canopygenerator/textures/StrawberryTexture.jpg"</td></tr>
+ 
+ <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+ <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>0.5</td></tr>
+ <tr><td>row_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>1.5</td></tr>
+ <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(4,2)</td></tr>
  <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>	

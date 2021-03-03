@@ -108,9 +108,10 @@ int SolarPosition::selfTest( void ) const{
   float humidity = 0.5;
   float turbidity = 0.025;
 
-  float Eb, fdiff;
+  float Eb, Eb_PAR, Eb_NIR, fdiff;
 
-  solarposition_2.GueymardSolarModel( pressure, temperature, humidity, turbidity, Eb, fdiff );
+  solarposition_2.GueymardSolarModel( pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff );
+  Eb=Eb_PAR+Eb_NIR;
 
   //----- Test of Ambient Longwave Model ------ //
 
@@ -244,18 +245,30 @@ SphericalCoord SolarPosition::getSunDirectionSpherical( void ){
 }
 
 float SolarPosition::getSolarFlux( const float pressure, const float temperature, const float humidity, const float turbidity ){
-  float Eb, fdiff;
-  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb, fdiff);
-  return Eb;
+  float Eb_PAR, Eb_NIR, fdiff;
+  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
+  return Eb_PAR+Eb_NIR;
+}
+
+float SolarPosition::getSolarFluxPAR( const float pressure, const float temperature, const float humidity, const float turbidity ){
+  float Eb_PAR, Eb_NIR, fdiff;
+  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
+  return Eb_PAR;
+}
+
+float SolarPosition::getSolarFluxNIR( const float pressure, const float temperature, const float humidity, const float turbidity ){
+  float Eb_PAR, Eb_NIR, fdiff;
+  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
+  return Eb_NIR;
 }
 
 float SolarPosition::getDiffuseFraction( const float pressure, const float temperature, const float humidity, const float turbidity ){
-  float Eb, fdiff;
-  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb, fdiff);
+  float Eb_PAR, Eb_NIR, fdiff;
+  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
   return fdiff;
 }
 
-void SolarPosition::GueymardSolarModel( const float pressure, const float temperature, const float humidity, const float turbidity, float& Eb, float &fdiff ){
+void SolarPosition::GueymardSolarModel( const float pressure, const float temperature, const float humidity, const float turbidity, float& Eb_PAR, float& Eb_NIR, float &fdiff ){
 
   //float pressure = 101325;
   //float T = 25;
@@ -270,7 +283,8 @@ void SolarPosition::GueymardSolarModel( const float pressure, const float temper
   float theta = getSunZenith();
 
   if( theta>0.5*M_PI ){
-    Eb = 0.f;
+    Eb_PAR = 0.f;
+    Eb_NIR = 0.f;
     fdiff = 1.f;
     return;
   }
@@ -377,9 +391,9 @@ void SolarPosition::GueymardSolarModel( const float pressure, const float temper
   float Tas_NIR=exp(-ma*omega_NIR*beta*pow(lambdae_NIR,-alpha.y));
 
   //global irradiation
-  float Eb_PAR=TR_PAR*Tg_PAR*To_PAR*Tn_PAR*Tw_PAR*Ta_PAR*E0_PAR;
-  float Eb_NIR=TR_NIR*Tg_NIR*To_NIR*Tn_NIR*Tw_NIR*Ta_NIR*E0_NIR;
-  Eb=Eb_PAR+Eb_NIR;
+  Eb_PAR=TR_PAR*Tg_PAR*To_PAR*Tn_PAR*Tw_PAR*Ta_PAR*E0_PAR;
+  Eb_NIR=TR_NIR*Tg_NIR*To_NIR*Tn_NIR*Tw_NIR*Ta_NIR*E0_NIR;
+  float Eb=Eb_PAR+Eb_NIR;
 
   //diffuse irradiation
   float Edp_PAR=To_PAR*Tg_PAR*Tn_PAR_p*Tw_PAR_p*(BR_PAR*(1.f-TR_PAR)*pow(Ta_PAR,0.25)+Ba*TR_PAR*(1.f-pow(Tas_PAR,0.25)))*E0_PAR;

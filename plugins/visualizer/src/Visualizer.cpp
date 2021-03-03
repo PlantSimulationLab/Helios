@@ -2618,12 +2618,20 @@ void Visualizer::buildContextGeometry( helios::Context* __context, const std::ve
   contextPrimitiveIDs.insert(contextPrimitiveIDs.begin(), UUIDs.begin(), UUIDs.end() );
 
   //Set the view to fit window
-  vec3 center;
-  float radius;
-  context->getDomainBoundingSphere( UUIDs, center, radius );
-  center.z = 0.f;
-  eye = center + sphere2cart( make_SphericalCoord(1.5f*radius,20.f*M_PI/180.f,0) );
+  if( center.x==0 && center.y==0 && center.z==0 ){ //default center
+    if( eye.x<1e-4 && eye.y<1e-4 && eye.z==2.f ){ //default eye position
+  
+      vec3 center_sph;
+      vec2 xbounds, ybounds, zbounds;
+      float radius;
+      context->getDomainBoundingSphere( UUIDs, center_sph, radius );
+      context->getDomainBoundingBox( UUIDs, xbounds, ybounds, zbounds );
+      center = make_vec3( 0.5*(xbounds.x+xbounds.y), 0.5*(ybounds.x+ybounds.y), 0.5*(zbounds.x+zbounds.y) );
+      eye = center + sphere2cart( make_SphericalCoord(2.f*radius,20.f*M_PI/180.f,0) );
 
+    }
+  }
+      
 }
 
 void Visualizer::buildContextGeometry_private( void ){

@@ -588,7 +588,55 @@ int Context::selfTest(void){
     error_count ++;
     std::cerr << "failed: set/getGlobalData (setting/getting scalar data). Get data did not match set data." << std::endl;
   }
+  
+  //------- Compound Object Data --------//
 
+  uint IDtile = context_test.addTileObject( make_vec3(0,0,0), make_vec2(3,1), make_SphericalCoord(0,0), make_int2(3,3) );
+  
+  float objdata = 5;
+  context_test.setObjectData( IDtile, "some_data", objdata); 
+
+  if( !context_test.doesObjectDataExist( IDtile, "some_data") ){
+    error_count ++;
+    std::cerr << "failed: setObjectData - data was added but was not actually created." << std::endl;
+  }
+
+  float objdata_return;
+  context_test.getObjectPointer(IDtile)->getObjectData("some_data", objdata_return);
+  if( objdata_return!=objdata ){
+    error_count ++;
+    std::cerr << "failed: set/getObjectData (getting through object pointer). Get data did not match set data." << std::endl;
+  }
+
+  std::vector<float> objdata_v;
+  for( uint i=0; i<5; i++ ){
+    objdata_v.push_back(i);
+  }
+  context_test.setObjectData(IDtile, "some_data",HELIOS_TYPE_FLOAT,5,&objdata_v[0] );
+
+  std::vector<float> objdata_return_v;
+  context_test.getObjectData(IDtile,"some_data", objdata_return_v);
+  for( uint i=0; i<5; i++ ){
+    if( objdata_return_v.at(i)!=objdata_v.at(i) ){
+      error_count ++;
+      std::cerr << "failed: set/getObjectData. Get data did not match set data." << std::endl;
+      break;
+    }
+  }
+
+  objdata = 10;
+  context_test.setObjectData(IDtile,"some_data_2",objdata);
+
+  if( !context_test.doesObjectDataExist(IDtile,"some_data_2") ){
+    error_count ++;
+    std::cerr << "failed: setObjectData - data was added but was not actually created." << std::endl;
+  }
+
+  context_test.getObjectData(IDtile, "some_data_2", objdata_return);
+  if( objdata_return!=objdata ){
+    error_count ++;
+    std::cerr << "failed: set/getObjectData (setting/getting scalar data). Get data did not match set data." << std::endl;
+  }
 
 
   //------- Cartesian/Spherical Coordinate Conversion --------//
@@ -2760,6 +2808,586 @@ void Context::clearPrimitiveData( const std::vector<uint> UUIDs, const char* lab
   }
 }
 
+//-----
+
+void Context::setObjectData( const uint objID, const char* label, const int& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const uint& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const float& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const double& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const helios::vec2& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const helios::vec3& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const helios::vec4& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const helios::int2& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const helios::int3& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const helios::int4& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, const std::string& data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,data);
+}
+
+void Context::setObjectData( const uint objID, const char* label, HeliosDataType type, uint size, void* data ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (setObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->setObjectData(label,type,size,data);
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const int& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const uint& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const float& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const double& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const helios::vec2& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const helios::vec3& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const helios::vec4& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const helios::int2& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const helios::int3& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const helios::int4& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<uint> objIDs, const char* label, const std::string& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    setObjectData( objIDs.at(p), label, data );
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const int& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const uint& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const float& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const double& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::vec2& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::vec3& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::vec4& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::int2& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::int3& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const helios::int4& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<uint> > objIDs, const char* label, const std::string& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t i=0; i<objIDs.at(p).size(); i++ ){
+      setObjectData( objIDs.at(p).at(i), label, data );
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const int& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const uint& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const float& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const double& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::vec2& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::vec3& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::vec4& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::int2& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::int3& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const helios::int4& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > > objIDs, const char* label, const std::string& data ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    for( size_t j=0; j<objIDs.at(p).size(); j++ ){
+      for( size_t i=0; i<objIDs.at(p).at(j).size(); i++ ){
+	setObjectData( objIDs.at(p).at(j).at(i), label, data );
+      }
+    }
+  }
+}
+
+void Context::getObjectData( const uint objID, const char* label, int& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<int>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, uint& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<uint>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, float& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<float>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, double& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<double>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, vec2& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<vec2>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, vec3& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<vec3>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, vec4& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<vec4>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, int2& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<int2>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, int3& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<int3>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, int4& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<int4>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::string& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+void Context::getObjectData( const uint objID, const char* label, std::vector<std::string>& data ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->getObjectData(label,data);
+}
+
+HeliosDataType Context::getObjectDataType( const uint objID, const char* label )const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  return objects.at(objID)->getObjectDataType(label);
+}
+
+uint Context::getObjectDataSize( const uint objID, const char* label )const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  return objects.at(objID)->getObjectDataSize(label);
+}
+
+bool Context::doesObjectDataExist( const uint objID, const char* label ) const{
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (getObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  return objects.at(objID)->doesObjectDataExist(label);
+}
+
+void Context::clearObjectData( const uint objID, const char* label ){
+  if( objects.find(objID) == objects.end() ){
+    std::cerr << "ERROR (clearObjectData): objID of " << objID << " does not exist in the Context." << std::endl;
+    throw(1);
+  }
+  objects.at(objID)->clearObjectData(label);
+}
+
+void Context::clearObjectData( const std::vector<uint> objIDs, const char* label ){
+  for( size_t p=0; p<objIDs.size(); p++ ){
+    if( objects.find(objIDs.at(p)) == objects.end() ){
+      std::cerr << "ERROR (clearObjectData): objID of " << objIDs.at(p) << " does not exist in the Context." << std::endl;
+      throw(1);
+    }
+    objects.at(objIDs.at(p))->clearObjectData(label);
+  }
+}
+
 void Context::setGlobalData( const char* label, const int& data ){
   std::vector<int> vec;
   vec.push_back(data);
@@ -4852,6 +5480,749 @@ void CompoundObject::setTransformationMatrix( float (&T)[16] ){
     transform[i] = T[i];
   }
 
+}
+
+void CompoundObject::setObjectData( const char* label, const int& data ){
+  std::vector<int> vec;
+  vec.push_back(data);
+  object_data_int[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_INT;
+}
+
+void CompoundObject::setObjectData( const char* label, const uint& data ){
+  std::vector<uint> vec;
+  vec.push_back(data);
+  object_data_uint[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_UINT;
+}
+
+void CompoundObject::setObjectData( const char* label, const float& data ){
+  std::vector<float> vec;
+  vec.push_back(data);
+  object_data_float[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_FLOAT;
+}
+
+void CompoundObject::setObjectData( const char* label, const double& data ){
+  std::vector<double> vec;
+  vec.push_back(data);
+  object_data_double[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_DOUBLE;
+}
+
+void CompoundObject::setObjectData( const char* label, const helios::vec2& data ){
+  std::vector<vec2> vec;
+  vec.push_back(data);
+  object_data_vec2[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_VEC2;
+}
+
+void CompoundObject::setObjectData( const char* label, const helios::vec3& data ){
+  std::vector<vec3> vec;
+  vec.push_back(data);
+  object_data_vec3[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_VEC3;
+}
+
+void CompoundObject::setObjectData( const char* label, const helios::vec4& data ){
+  std::vector<vec4> vec;
+  vec.push_back(data);
+  object_data_vec4[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_VEC4;
+}
+
+void CompoundObject::setObjectData( const char* label, const helios::int2& data ){
+  std::vector<int2> vec;
+  vec.push_back(data);
+  object_data_int2[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_INT2;
+}
+
+void CompoundObject::setObjectData( const char* label, const helios::int3& data ){
+  std::vector<int3> vec;
+  vec.push_back(data);
+  object_data_int3[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_INT3;
+}
+
+void CompoundObject::setObjectData( const char* label, const helios::int4& data ){
+  std::vector<int4> vec;
+  vec.push_back(data);
+  object_data_int4[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_INT4;
+}
+
+void CompoundObject::setObjectData( const char* label, const std::string& data ){
+  std::vector<std::string> vec;
+  vec.push_back(data);
+  object_data_string[label] = vec;
+  object_data_types[label] = HELIOS_TYPE_STRING;
+}
+
+void CompoundObject::setObjectData( const char* label, HeliosDataType type, uint size, void* data ){
+
+  object_data_types[label] = type;
+
+  if( type==HELIOS_TYPE_INT ){
+
+    int* data_ptr = (int*)data;
+
+    std::vector<int> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_int[label] = vec;
+
+  }else if( type==HELIOS_TYPE_UINT ){
+
+    uint* data_ptr = (uint*)data;
+
+    std::vector<uint> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_uint[label] = vec;
+
+  }else if( type==HELIOS_TYPE_FLOAT ){
+
+    float* data_ptr = (float*)data;
+
+    std::vector<float> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_float[label] = vec;
+
+  }else if( type==HELIOS_TYPE_DOUBLE ){
+
+    double* data_ptr = (double*)data;
+
+    std::vector<double> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_double[label] = vec;
+
+  }else if( type==HELIOS_TYPE_VEC2 ){
+
+    vec2* data_ptr = (vec2*)data;
+
+    std::vector<vec2> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_vec2[label] = vec;
+
+  }else if( type==HELIOS_TYPE_VEC3 ){
+
+    vec3* data_ptr = (vec3*)data;
+
+    std::vector<vec3> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_vec3[label] = vec;
+
+  }else if( type==HELIOS_TYPE_VEC4 ){
+
+    vec4* data_ptr = (vec4*)data;
+
+    std::vector<vec4> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_vec4[label] = vec;
+
+  }else if( type==HELIOS_TYPE_INT2 ){
+
+    int2* data_ptr = (int2*)data;
+
+    std::vector<int2> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_int2[label] = vec;
+
+  }else if( type==HELIOS_TYPE_INT3 ){
+
+    int3* data_ptr = (int3*)data;
+
+    std::vector<int3> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_int3[label] = vec;
+
+  }else if( type==HELIOS_TYPE_INT4 ){
+
+    int4* data_ptr = (int4*)data;
+
+    std::vector<int4> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_int4[label] = vec;
+
+  }else if( type==HELIOS_TYPE_STRING ){
+
+    std::string* data_ptr = (std::string*)data;
+
+    std::vector<std::string> vec;
+    vec.resize(size);
+    for( size_t i=0; i<size; i++ ){
+      vec.at(i) = data_ptr[i];
+    }
+    object_data_string[label] = vec;
+    
+  }
+
+}
+
+void CompoundObject::getObjectData( const char* label, int& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT ){
+    std::vector<int> d = object_data_int.at(label);
+    data = d.at(0);
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type int, but data '" << label << "' for object " << OID << " does not have type int." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<int>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT ){
+    std::vector<int> d = object_data_int.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type int, but data '" << label << "' for object " << OID << " does not have type int." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, uint& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_UINT ){
+    std::vector<uint> d = object_data_uint.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type uint, but data '" << label << "' for object " << OID << " does not have type uint." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<uint>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_UINT ){
+    std::vector<uint> d = object_data_uint.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type uint, but data '" << label << "' for object " << OID << " does not have type uint." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, float& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_FLOAT ){
+    std::vector<float> d = object_data_float.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type float, but data '" << label << "' for object " << OID << " does not have type float." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<float>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_FLOAT ){
+    std::vector<float> d = object_data_float.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type float, but data '" << label << "' for object " << OID << " does not have type float." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, double& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_DOUBLE ){
+    std::vector<double> d = object_data_double.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type double, but data '" << label << "' for object " << OID << " does not have type double." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<double>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_DOUBLE ){
+    std::vector<double> d = object_data_double.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type double, but data '" << label << "' for object " << OID << " does not have type double." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, vec2& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_VEC2 ){
+    std::vector<vec2> d = object_data_vec2.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type vec2, but data '" << label << "' for object " << OID << " does not have type vec2." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<vec2>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_VEC2 ){
+    std::vector<vec2> d = object_data_vec2.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type vec2, but data '" << label << "' for object " << OID << " does not have type vec2." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, vec3& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_VEC3 ){
+    std::vector<vec3> d = object_data_vec3.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type vec3, but data '" << label << "' for object " << OID << " does not have type vec3." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<vec3>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_VEC3 ){
+    std::vector<vec3> d = object_data_vec3.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type vec3, but data '" << label << "' for object " << OID << " does not have type vec3." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, vec4& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_VEC4 ){
+    std::vector<vec4> d = object_data_vec4.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type vec4, but data '" << label << "' for object " << OID << " does not have type vec4." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<vec4>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_VEC4 ){
+    std::vector<vec4> d = object_data_vec4.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type vec4, but data '" << label << "' for object " << OID << " does not have type vec4." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, int2& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT2 ){
+    std::vector<int2> d = object_data_int2.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type int2, but data '" << label << "' for object " << OID << " does not have type int2." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<int2>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT2 ){
+    std::vector<int2> d = object_data_int2.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type int2, but data '" << label << "' for object " << OID << " does not have type int2." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, int3& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT3 ){
+    std::vector<int3> d = object_data_int3.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type int3, but data '" << label << "' for object " << OID << " does not have type int3." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<int3>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT3 ){
+    std::vector<int3> d = object_data_int3.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type int3, but data '" << label << "' for object " << OID << " does not have type int3." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, int4& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT4 ){
+    std::vector<int4> d = object_data_int4.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type int4, but data '" << label << "' for object " << OID << " does not have type int4." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<int4>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT4 ){
+    std::vector<int4> d = object_data_int4.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type int4, but data '" << label << "' for object " << OID << " does not have type int4." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::string& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_STRING ){
+    std::vector<std::string> d = object_data_string.at(label);
+    data = d.front();
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type string, but data '" << label << "' for object " << OID << " does not have type string." << std::endl;
+    throw(1);
+  }
+  
+}
+
+void CompoundObject::getObjectData( const char* label, std::vector<std::string>& data ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectData): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_STRING ){
+    std::vector<std::string> d = object_data_string.at(label);
+    data = d;
+  }else{
+    std::cerr << "ERROR (getObjectData): Attempted to get data for type string, but data '" << label << "' for object " << OID << " does not have type string." << std::endl;
+    throw(1);
+  }
+  
+}
+
+HeliosDataType CompoundObject::getObjectDataType( const char* label ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectDataType): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  return object_data_types.at(label);
+
+}
+
+uint CompoundObject::getObjectDataSize( const char* label ) const{
+
+  if( !doesObjectDataExist( label ) ){
+    std::cerr << "ERROR (getObjectDataSize): Object data " << label << " does not exist for object " << OID << std::endl;
+    throw(1);
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT ){
+    return object_data_int.at(label).size();
+  }else if( type==HELIOS_TYPE_UINT ){
+    return object_data_uint.at(label).size();
+  }else if( type==HELIOS_TYPE_FLOAT ){
+    return object_data_float.at(label).size();
+  }else if( type==HELIOS_TYPE_DOUBLE ){
+    return object_data_double.at(label).size();
+  }else if( type==HELIOS_TYPE_VEC2 ){
+    return object_data_vec2.at(label).size();
+  }else if( type==HELIOS_TYPE_VEC3 ){
+    return object_data_vec3.at(label).size();
+  }else if( type==HELIOS_TYPE_VEC4 ){
+    return object_data_vec4.at(label).size();
+  }else if( type==HELIOS_TYPE_INT2 ){
+    return object_data_int2.at(label).size();
+  }else if( type==HELIOS_TYPE_INT3 ){
+    return object_data_int3.at(label).size();
+  }else if( type==HELIOS_TYPE_INT4 ){
+    return object_data_int4.at(label).size();
+  }else if( type==HELIOS_TYPE_STRING ){
+    return object_data_string.at(label).size();
+  }else{
+    assert( false );
+  }
+
+  return 0;
+
+}
+
+void CompoundObject::clearObjectData( const char* label ){
+
+  if( !doesObjectDataExist( label ) ){
+    return;
+  }
+
+  HeliosDataType type = object_data_types.at(label);
+
+  if( type==HELIOS_TYPE_INT ){
+    object_data_int.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_UINT ){
+    object_data_uint.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_FLOAT ){
+    object_data_float.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_DOUBLE ){
+    object_data_double.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_VEC2 ){
+    object_data_vec2.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_VEC3 ){
+    object_data_vec3.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_VEC4 ){
+    object_data_vec4.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_INT2 ){
+    object_data_int2.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_INT3 ){
+    object_data_int3.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_INT4 ){
+    object_data_int4.erase(label);
+    object_data_types.erase(label);
+  }else if( type==HELIOS_TYPE_STRING ){
+    object_data_string.erase(label);
+    object_data_types.erase(label);
+  }else{
+    assert(false);
+  }
+  
+}
+
+bool CompoundObject::doesObjectDataExist( const char* label ) const{
+
+  if( object_data_types.find(label) == object_data_types.end() ){
+    return false;
+  }else{
+    return true;
+  }
+
+}
+
+std::vector<std::string> CompoundObject::listObjectData( void ) const{
+
+  std::vector<std::string> labels;
+  
+  for( std::map<std::string,HeliosDataType>::const_iterator iter = object_data_types.begin(); iter!=object_data_types.end(); ++iter ){
+    labels.push_back( iter->first );
+  }
+
+  return labels;
+  
 }
 
 CompoundObject* Context::getObjectPointer( uint ObjID ) const{
@@ -8919,185 +10290,261 @@ void Context::writeOBJ( const char* filename ) const{
   //To-Do list for OBJ writer
   // - image files need to be copied to the location where the .obj file is being written otherwise they won't be found.
   // - should parse "filename" to check that extension is .obj, and remove .obj extension when appending .mtl for material file.
-  // - it is possible to get duplicate materials. Should have more sophisticated checking for that.
-  // - it would make more sense to write patches and alphamasks as quads rather than two triangles
+  // - it would make more sense to write patches  as quads rather than two triangles
 
   std::cout << "Writing OBJ file " << filename << "..." << std::flush;
-
   std::ofstream file;
 
-  file.open(filename);
+  char objfilename[50];
+  sprintf(objfilename, "%s.obj", filename);
+  file.open(objfilename);
 
   file << "# Helios generated OBJ File" << std::endl;
   file << "# baileylab.ucdavis.edu/software/helios" << std::endl;
   file << "mtllib " << filename << ".mtl" << std::endl;
-
-  std::vector<int3> faces;
-  std::vector<vec3> verts;
-  std::vector<vec2> uv;
-  std::vector<int3> uv_inds;
-
-  std::vector<std::string> textures;
-  std::vector<RGBcolor> colors;
-
-  size_t vertex_count = 1; //OBJ files start indices at 1
+  std::vector < int3 > faces;
+  std::vector < vec3 > verts;
+  std::vector < vec2 > uv;
+  std::vector < int3 > uv_inds;
+  std::vector < std::string > textures;
+  std::vector < RGBcolor > colors;
+  size_t vertex_count = 1;  //OBJ files start indices at 1
   size_t uv_count = 1;
 
-  for( std::map<uint,Primitive*>::const_iterator iter = primitives.begin(); iter != primitives.end(); ++iter ){
+  for (std::map<uint, Primitive*>::const_iterator iter = primitives.begin();
+      iter != primitives.end(); ++iter) {
 
     uint p = iter->first;
 
-    std::vector<vec3> vertices = getPrimitivePointer(p)->getVertices();
+    std::vector < vec3 > vertices = getPrimitivePointer(p)->getVertices();
     PrimitiveType type = getPrimitivePointer(p)->getType();
     RGBcolor C = getPrimitivePointer(p)->getColor();
 
-    if( type==PRIMITIVE_TYPE_TRIANGLE ){
+    if (type == PRIMITIVE_TYPE_TRIANGLE) {
 
-      faces.push_back( make_int3( vertex_count, vertex_count+1, vertex_count+2 ) );
-      colors.push_back( C );
-      for( int i=0; i<3; i++ ){
-	verts.push_back( vertices.at(i) );
-	vertex_count ++;
+      faces.push_back(
+          make_int3(vertex_count, vertex_count + 1, vertex_count + 2));
+      colors.push_back(C);
+      for (int i = 0; i < 3; i++) {
+        verts.push_back(vertices.at(i));
+        vertex_count++;
       }
 
-      std::vector<vec2> uv_v = getTrianglePointer(p)->getTextureUV();
-      if( getTrianglePointer(p)->hasTexture() ){
-	uv_inds.push_back( make_int3(uv_count, uv_count+1, uv_count+2) );
-	textures.push_back(getTrianglePointer(p)->getTextureFile());
-	for( int i=0; i<3; i++ ){
-	  uv.push_back( uv_v.at(i) );
-	  uv_count ++;
-	}
-      }else{
-	textures.push_back("");
-	uv_inds.push_back( make_int3(-1,-1,-1) );
-      }
-	
-    }else if( type==PRIMITIVE_TYPE_PATCH ){
-
-      faces.push_back( make_int3( vertex_count, vertex_count+1, vertex_count+2 ) );
-      faces.push_back( make_int3( vertex_count, vertex_count+2, vertex_count+3 ) );
-      colors.push_back( C );
-      colors.push_back( C );
-      for( int i=0; i<4; i++ ){
-	verts.push_back( vertices.at(i) );
-	vertex_count ++;
+      std::vector < vec2 > uv_v = getTrianglePointer(p)->getTextureUV();
+      if (getTrianglePointer(p)->hasTexture()) {
+        uv_inds.push_back(make_int3(uv_count, uv_count + 1, uv_count + 2));
+        textures.push_back(getTrianglePointer(p)->getTextureFile());
+        for (int i = 0; i < 3; i++) {
+          uv.push_back( make_vec2(1-uv_v.at(i).x,uv_v.at(i).y));
+          uv_count++;
+        }
+      } else {
+        textures.push_back("");
+        uv_inds.push_back(make_int3(-1, -1, -1));
       }
 
-      std::vector<vec2> uv_v;
+    } else if (type == PRIMITIVE_TYPE_PATCH) {
+      faces.push_back(
+          make_int3(vertex_count, vertex_count + 1, vertex_count + 2));
+      faces.push_back(
+          make_int3(vertex_count, vertex_count + 2, vertex_count + 3));
+      colors.push_back(C);
+      colors.push_back(C);
+      for (int i = 0; i < 4; i++) {
+        verts.push_back(vertices.at(i));
+        vertex_count++;
+      }
+      std::vector < vec2 > uv_v;
       std::string texturefile;
       uv_v = getPatchPointer(p)->getTextureUV();
       texturefile = getPatchPointer(p)->getTextureFile();
 
-      if( getPatchPointer(p)->hasTexture() ){
-	textures.push_back(texturefile);
-	textures.push_back(texturefile);
-	uv_inds.push_back( make_int3(uv_count, uv_count+1, uv_count+2) );
-	uv_inds.push_back( make_int3(uv_count, uv_count+2, uv_count+3) );
-	if( uv_v.size()==0 ){//default (u,v)
-	  uv.push_back( make_vec2(0,1) );
-	  uv.push_back( make_vec2(1,1) );
-	  uv.push_back( make_vec2(1,0) );
-	  uv.push_back( make_vec2(0,0) );
-	  uv_count+=4;
-	}else{//custom (u,v)
-	  for( int i=0; i<4; i++ ){
-	    uv.push_back( uv_v.at(i) );
-	    uv_count ++;
-	  }
-	}
-      }else{
-	textures.push_back("");
-	textures.push_back("");
-	uv_inds.push_back( make_int3(-1,-1,-1) );
-	uv_inds.push_back( make_int3(-1,-1,-1) );
+      if (getPatchPointer(p)->hasTexture()) {
+        textures.push_back(texturefile);
+        textures.push_back(texturefile);
+        uv_inds.push_back(make_int3(uv_count, uv_count + 1, uv_count + 2));
+        uv_inds.push_back(make_int3(uv_count, uv_count + 2, uv_count + 3));
+        if (uv_v.size() == 0) {  //default (u,v)
+          uv.push_back(make_vec2(0, 1));
+          uv.push_back(make_vec2(1, 1));
+          uv.push_back(make_vec2(1, 0));
+          uv.push_back(make_vec2(0, 0));
+          uv_count += 4;
+        } else {  //custom (u,v)
+          for (int i = 0; i < 4; i++) {
+            uv.push_back(uv_v.at(i));
+            uv_count++;
+          }
+        }
+      } else {
+        textures.push_back("");
+        textures.push_back("");
+        uv_inds.push_back(make_int3(-1, -1, -1));
+        uv_inds.push_back(make_int3(-1, -1, -1));
       }
-
     }
-
   }
 
-  assert( uv_inds.size()==faces.size() );
-  assert( textures.size()==faces.size() );
-  assert( colors.size()==faces.size() );
+  assert(uv_inds.size() == faces.size());
+  assert(textures.size() == faces.size());
+  assert(colors.size() == faces.size());
 
-  for( size_t v=0; v<verts.size(); v++ ){
-    file << "v " << verts.at(v).x << " " << verts.at(v).y << " " << verts.at(v).z << std::endl; 
+  for (size_t v = 0; v < verts.size(); v++) {
+    file << "v " << verts.at(v).x << " " << verts.at(v).y << " "
+        << verts.at(v).z << std::endl;
   }
 
-  for( size_t v=0; v<uv.size(); v++ ){
+  for (size_t v = 0; v < uv.size(); v++) {
     file << "vt " << uv.at(v).x << " " << uv.at(v).y << std::endl;
   }
 
   std::string current_texture = "";
   int material_count = 1;
-  
-  for( size_t f=0; f<faces.size(); f++ ){
+  std::vector < size_t > exsit_mtl_list;
 
-    if( current_texture.compare(textures.at(f))!=0 ){
-      current_texture = textures.at(f);
-      file << "usemtl material" << material_count << std::endl;
-      material_count ++;
-    }
-    
-    //assert( faces.at(f).x <= verts.size() && faces.at(f).y <= verts.size() && faces.at(f).z <= verts.size() );
-    if( uv_inds.at(f).x<0 ){
-      file << "f " << faces.at(f).x << " " << faces.at(f).y << " " << faces.at(f).z << std::endl;
-    }else{
-      //assert( uv_inds.at(f).x <= uv.size() && uv_inds.at(f).y <= uv.size() && uv_inds.at(f).z <= uv.size() );
-      file << "f " << faces.at(f).x << "/" << uv_inds.at(f).x << " " << faces.at(f).y << "/" << uv_inds.at(f).y << " " << faces.at(f).z << "/" << uv_inds.at(f).z << std::endl;
-    }
+  current_texture = textures.at(0);
+  file << "usemtl material" << material_count << std::endl;
+  material_count++;
+  exsit_mtl_list.push_back(0);
+
+  if (uv_inds.at(0).x < 0) {
+    file << "f " << faces.at(0).x << " " << faces.at(0).y << " "
+        << faces.at(0).z << std::endl;
+  } else {
+    //assert( uv_inds.at(f).x <= uv.size() && uv_inds.at(f).y <= uv.size() && uv_inds.at(f).z <= uv.size() );
+    file << "f " << faces.at(0).x << "/" << uv_inds.at(0).x << " "
+        << faces.at(0).y << "/" << uv_inds.at(0).y << " " << faces.at(0).z
+        << "/" << uv_inds.at(0).z << std::endl;
   }
 
+  for (size_t f = 1; f < faces.size(); f++) {
 
+    if (current_texture.compare(textures.at(f)) != 0) {
+      bool mtl_exist_flag = false;
+      size_t mtl_index = 0;
+      size_t mtl_index_f = 0;
+      for (size_t index = 0; index < exsit_mtl_list.size(); index++) {
+        if (textures.at(f).compare(textures.at(exsit_mtl_list[index])) == 0) {
+          mtl_exist_flag = true;
+          mtl_index = index;
+          mtl_index_f = exsit_mtl_list[index];
+          break;
+        }
+      }
+
+      if (mtl_exist_flag) {
+        current_texture = textures.at(mtl_index_f);
+        file << "usemtl material" << (mtl_index + 1) << std::endl;  //we plus 1 here as we index mtl from 1 instead of 0 in the file.
+      } else {
+        current_texture = textures.at(f);
+        file << "usemtl material" << material_count << std::endl;
+        material_count++;
+        exsit_mtl_list.push_back(f);
+      }
+    }
+
+    if (uv_inds.at(f).x < 0) {
+      file << "f " << faces.at(f).x << " " << faces.at(f).y << " "
+          << faces.at(f).z << std::endl;
+    } else {
+      //assert( uv_inds.at(f).x <= uv.size() && uv_inds.at(f).y <= uv.size() && uv_inds.at(f).z <= uv.size() );
+      file << "f " << faces.at(f).x << "/" << uv_inds.at(f).x << " "
+          << faces.at(f).y << "/" << uv_inds.at(f).y << " " << faces.at(f).z
+          << "/" << uv_inds.at(f).z << std::endl;
+    }
+  }
   file.close();
 
   char mtlfilename[50];
-  sprintf(mtlfilename,"%s.mtl",filename);
+  sprintf(mtlfilename, "%s.mtl", filename);
   file.open(mtlfilename);
 
   current_texture = "";
   material_count = 1;
-  RGBcolor current_color = make_RGBcolor(0.010203,0.349302,0.8372910);
+  RGBcolor current_color = make_RGBcolor(0.010203, 0.349302, 0.8372910);
+  std::vector < size_t > exsit_mtl_list2;
 
-  for( size_t f=0; f<faces.size(); f++ ){
+  if (textures.at(0).compare("") == 0) {  //has no texture
+    if (current_color.r != colors.at(0).r && current_color.g != colors.at(0).g
+        && current_color.b != colors.at(0).b) {  //new color
+      current_texture = textures.at(0);
+      current_color = colors.at(0);
+      file << "newmtl material" << material_count << std::endl;
+      file << "Ka " << current_color.r << " " << current_color.g << " "
+          << current_color.b << std::endl;
+      file << "Kd " << current_color.r << " " << current_color.g << " "
+          << current_color.b << std::endl;
+      file << "Ks 0.0 0.0 0.0" << std::endl;
+      file << "illum 2 " << std::endl;
+    }
+  }
 
-    if( textures.at(f).compare("")!=0 ){ //has texture
-      if( current_texture.compare(textures.at(f))!=0 ){ //new texture
-	current_texture = textures.at(f);
-	file << "newmtl material" << material_count << std::endl;
-	file << "Ka 1.0 1.0 1.0" << std::endl;
-	file << "Kd 1.0 1.0 1.0" << std::endl;
-	file << "Ks 0.0 0.0 0.0" << std::endl;
-	file << "illum 2 " << std::endl;
-	file << "map_Ka " << current_texture << std::endl;
-	file << "map_Kd " << current_texture << std::endl;
-	file << "map_d " << current_texture << std::endl;
-	
-	material_count ++;
-      }
-    }else{ //does not have texture
-      if( current_color.r!=colors.at(f).r && current_color.g!=colors.at(f).g && current_color.b!=colors.at(f).b ){ //new color
-	current_texture = textures.at(f);
-	current_color = colors.at(f);
-	file << "newmtl material" << material_count << std::endl;
-	file << "Ka " << current_color.r << " " << current_color.g << " " << current_color.b << std::endl;
-	file << "Kd " << current_color.r << " " << current_color.g << " " << current_color.b << std::endl;
-	file << "Ks 0.0 0.0 0.0" << std::endl;
-	file << "illum 2 " << std::endl;
-	
-	material_count ++;
+  else {
+    current_texture = textures.at(0);
+    file << "newmtl material" << material_count << std::endl;
+    file << "Ka 1.0 1.0 1.0" << std::endl;
+    file << "Kd 1.0 1.0 1.0" << std::endl;
+    file << "Ks 0.0 0.0 0.0" << std::endl;
+    file << "illum 2 " << std::endl;
+    file << "map_Ka " << current_texture << std::endl;
+    file << "map_Kd " << current_texture << std::endl;
+    file << "map_d " << current_texture << std::endl;
+  }
+
+  material_count++;
+  exsit_mtl_list2.push_back(0);
+
+  for (size_t f = 1; f < faces.size(); f++) {
+    bool mtl_exist_flag = false;
+    size_t mtl_index = 0;
+    size_t mtl_index_f = 0;
+    for (size_t index = 0; index < exsit_mtl_list2.size(); index++) {
+      if (not (textures.at(f).compare(textures.at(exsit_mtl_list2.at(index))) != 0)) {
+        mtl_exist_flag = true;
+        mtl_index = index;
+        mtl_index_f = exsit_mtl_list2[index];
+        break;
       }
     }
+    if (not mtl_exist_flag) {
 
+      if (textures.at(f).compare("") == 0) {
+        if (current_color.r != colors.at(f).r
+            && current_color.g != colors.at(f).g
+            && current_color.b != colors.at(f).b) {  //new color
+	  
+          current_texture = textures.at(f);
+          current_color = colors.at(f);
+          file << "newmtl material" << material_count << std::endl;
+          file << "Ka " << current_color.r << " " << current_color.g << " "
+              << current_color.b << std::endl;
+          file << "Kd " << current_color.r << " " << current_color.g << " "
+              << current_color.b << std::endl;
+          file << "Ks 0.0 0.0 0.0" << std::endl;
+          file << "illum 2 " << std::endl;
+	  material_count++;
+        }
+      } else {
+        current_texture = textures.at(f);
+        file << "newmtl material" << material_count << std::endl;
+        file << "Ka 1.0 1.0 1.0" << std::endl;
+        file << "Kd 1.0 1.0 1.0" << std::endl;
+        file << "Ks 0.0 0.0 0.0" << std::endl;
+        file << "illum 2 " << std::endl;
+        file << "map_Ka " << current_texture << std::endl;
+        file << "map_Kd " << current_texture << std::endl;
+        file << "map_d " << current_texture << std::endl;
+        material_count++;
+        exsit_mtl_list2.push_back(f);
+      }
+
+    }
   }
-  
   file.close();
-	    
-
   std::cout << "done." << std::endl;
-  
 }
+
+  
 
 Context::~Context(){
 

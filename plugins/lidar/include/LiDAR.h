@@ -517,6 +517,12 @@ class LiDARcloud{
   /** \param[in] "filename" Path to XML file
    */
   void loadXML( const char* filename );
+
+  //! Read an XML file containing scan information
+  /** \param[in] "filename" Path to XML file
+      \param[in] "loadGridOnly" if true only the voxel grid defined in the xml file will be loaded, the scans themselves will not be loaded.
+   */
+  void loadXML( const char* filename, const bool loadGridOnly );
   
   //! Read all XML files currently loaded into the Helios context
   void readContextXML( void );

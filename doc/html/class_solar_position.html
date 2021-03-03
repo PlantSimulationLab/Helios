@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.5</span>
+   &#160;<span id="projectnumber">v1.2.6</span>
    </div>
   </td>
  </tr>
@@ -113,6 +113,12 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <tr class="memitem:a9554c28073bba07add08b1f0e034490f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_solar_position.html#a9554c28073bba07add08b1f0e034490f">getSolarFlux</a> (const float pressure, const float temperature, const float humidity, const float turbidity)</td></tr>
 <tr class="memdesc:a9554c28073bba07add08b1f0e034490f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the solar radiation flux perpendicular to the sun direction.  <a href="class_solar_position.html#a9554c28073bba07add08b1f0e034490f">More...</a><br /></td></tr>
 <tr class="separator:a9554c28073bba07add08b1f0e034490f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac5cb80997f61bf90c0330b1798b6249f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_solar_position.html#ac5cb80997f61bf90c0330b1798b6249f">getSolarFluxPAR</a> (const float pressure, const float temperature, const float humidity, const float turbidity)</td></tr>
+<tr class="memdesc:ac5cb80997f61bf90c0330b1798b6249f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction.  <a href="class_solar_position.html#ac5cb80997f61bf90c0330b1798b6249f">More...</a><br /></td></tr>
+<tr class="separator:ac5cb80997f61bf90c0330b1798b6249f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67e140507ff2d12ac26e41f81b505e09"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_solar_position.html#a67e140507ff2d12ac26e41f81b505e09">getSolarFluxNIR</a> (const float pressure, const float temperature, const float humidity, const float turbidity)</td></tr>
+<tr class="memdesc:a67e140507ff2d12ac26e41f81b505e09"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction.  <a href="class_solar_position.html#a67e140507ff2d12ac26e41f81b505e09">More...</a><br /></td></tr>
+<tr class="separator:a67e140507ff2d12ac26e41f81b505e09"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af71ca6056cde4733b5f5af6e9e474642"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_solar_position.html#af71ca6056cde4733b5f5af6e9e474642">getDiffuseFraction</a> (const float pressure, const float temperature, const float humidity, const float turbidity)</td></tr>
 <tr class="memdesc:af71ca6056cde4733b5f5af6e9e474642"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the fraction of solar radiation flux that is diffuse.  <a href="class_solar_position.html#af71ca6056cde4733b5f5af6e9e474642">More...</a><br /></td></tr>
 <tr class="separator:af71ca6056cde4733b5f5af6e9e474642"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -243,7 +249,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="section return"><dt>Returns</dt><dd>Ambient longwave flux in W/m^2 </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The longwave flux model is based on <a href="http://onlinelibrary.wiley.com/doi/10.1002/qj.49712253306/full">Prata (1996)</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00407">407</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00421">421</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -297,7 +303,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Fraction of global radiation that is diffuse </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00252">252</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00265">265</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -354,7 +360,121 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2 </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00246">246</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00247">247</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a67e140507ff2d12ac26e41f81b505e09"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a67e140507ff2d12ac26e41f81b505e09">&#9670;&nbsp;</a></span>getSolarFluxNIR()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float SolarPosition::getSolarFluxNIR </td>
+          <td>(</td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>pressure</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>temperature</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>humidity</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>turbidity</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">pressure</td><td>Atmospheric pressure near ground surface in Pascals </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">temperature</td><td>Air temperature near the ground surface in Kelvin </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">humidity</td><td>Air relative humidity near the ground surface </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Angstrom's aerosol turbidity coefficient </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the <a class="el" href="class_solar_position.html#a8198ff5e2d45cf0ca30172ca48fcf379">getSunZenith()</a> function. </dd>
+<dd>
+The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2 </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00259">259</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac5cb80997f61bf90c0330b1798b6249f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac5cb80997f61bf90c0330b1798b6249f">&#9670;&nbsp;</a></span>getSolarFluxPAR()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float SolarPosition::getSolarFluxPAR </td>
+          <td>(</td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>pressure</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>temperature</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>humidity</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>turbidity</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">pressure</td><td>Atmospheric pressure near ground surface in Pascals </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">temperature</td><td>Air temperature near the ground surface in Kelvin </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">humidity</td><td>Air relative humidity near the ground surface </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Angstrom's aerosol turbidity coefficient </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the <a class="el" href="class_solar_position.html#a8198ff5e2d45cf0ca30172ca48fcf379">getSunZenith()</a> function. </dd>
+<dd>
+The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2 </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00253">253</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
