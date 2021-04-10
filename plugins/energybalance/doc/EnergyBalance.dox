@@ -8,7 +8,7 @@
 
  <table>
  <tr><th>Dependencies <td>NVIDIA CUDA 9.0+ <br>gcc/g++ 5.5+
- <tr><th>CMakeLists.txt <td>set( PLUGINS "energybalancemodel" )
+ <tr><th>CMakeLists.txt <td>set( PLUGINS "energybalance" )
  <tr><th>Header File <td>#include "EnergyBalanceModel.h"
  <tr><th>Class <td>\ref EnergyBalanceModel
  </table>
@@ -84,7 +84,7 @@
  <tr><td>radiation_flux_[*] <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Net absorbed radiation flux for band [*] (e.g., direct_flux_PAR). <td>Can be computed by \ref RadiationModel plug-in. <td>0
   <tr><td>wind_speed <td>m/s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
   <tr><td>object_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
- <tr><td>boundarylayer_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>N/A <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
+ <tr><td>boundarylayer_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
  <tr><td>air_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>300 K
  <tr><td>moisture_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to moisture. <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0.1 mol/m<sup>2</sup>-s
  <tr><td>surface_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Relative humidity of air immediately above surface evaporating site. <td>N/A <td>1.0 (saturated)
@@ -129,25 +129,13 @@
   energybalance.addRadiationBand("NIR");
   energybalance.addRadiationBand("LW");</code></pre></div>
 
- \subsection EBblc Boundary-layer Conductance Models
+ \subsection EBblc Boundary-layer Conductance Model
 
- There are four different built-in models for the boundary-layer conductance. Note also that custom conductance values can also be provided by setting the value of primitive data labeled `boundarylayer_conductance', which overrides the computed model value.
+ The primitive boundary-layer conductance can either be set using the \ref BLConductanceModel plug-in, or using the default model which is the Polhausen equation. Note also that custom conductance values can also be provided by setting the value of primitive data labeled `boundarylayer_conductance', which overrides the computed model value.
 
- The boundary-layer conductance model is set using the \ref setBoundaryLayerModel() function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below.
+      It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.
 
- It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.
-
- <table>
- <tr><th>Model<th>string argument
- <tr><td>1. Polhausen Equation (default)<td>"Polhausen"
- <tr><td>2. Inclined Plate<td>"InclinedPlate"
- <tr><td>3. Laminar Sphere<td>"Sphere"
- <tr><td>4. Ground Surface<td>"Ground"
- </table>
-
- 1. The Polhausen Equation
-
- The boundary-layer conductance is calculated as
+ The default boundary-layer conductance is calculated as
 
  \f$g_H = 0.135\sqrt{\frac{U}{L}}\f$,
 

@@ -278,7 +278,7 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
   	vec3 position = origin+pos_leaf+leaf_offset;
 
 	uint ID = context->copyObject(ID0);
-	context->getObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
+	context->getTileObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
 	context->getObjectPointer(ID)->rotate(-Rtheta,"y");
   	context->getObjectPointer(ID)->rotate(Rphi,"z");
   	context->getObjectPointer(ID)->translate(position);
@@ -591,7 +591,7 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
   	vec3 position = origin+pos_leaf+leaf_offset;
 
 	uint ID = context->copyObject(ID0);
-	context->getObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
+	context->getTileObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
 	context->getObjectPointer(ID)->rotate(-Rtheta,"y");
   	context->getObjectPointer(ID)->rotate(Rphi,"z");
   	context->getObjectPointer(ID)->translate(position);
@@ -783,7 +783,7 @@ void CanopyGenerator::grapevineUnilateral( const UnilateralGrapevineParameters p
       vec3 position = origin+pos_leaf+leaf_offset;
 
       uint ID = context->copyObject(ID0);
-      context->getObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
+      context->getTileObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
       context->getObjectPointer(ID)->rotate(-Rtheta,"y");
       context->getObjectPointer(ID)->rotate(Rphi,"z");
       context->getObjectPointer(ID)->translate(position);
@@ -933,7 +933,7 @@ void CanopyGenerator::grapevineGoblet( const GobletGrapevineParameters params, c
   	vec3 position = origin+pos_leaf+leaf_offset;
 
 	uint ID = context->copyObject(ID0);
-	context->getObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
+	context->getTileObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
 	context->getObjectPointer(ID)->rotate(-Rtheta,"y");
 	context->getObjectPointer(ID)->rotate(Rphi,"z");
 	context->getObjectPointer(ID)->translate(position);

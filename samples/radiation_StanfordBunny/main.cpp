@@ -45,7 +45,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  -----------------//
 
   vec3 sun_dir(0.4,-0.4,0.6);
 

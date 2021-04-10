@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.6</span>
+   &#160;<span id="projectnumber">v1.2.7</span>
    </div>
   </td>
  </tr>
@@ -71,13 +71,17 @@ $(function() {
 , <a class="el" href="class_li_d_a_rcloud.html#a7e3794b05383a67d7d1b94aa23bb2d66">LiDARcloud</a>
 </li>
 <li>scale()
-: <a class="el" href="classhelios_1_1_compound_object.html#a3255c3366ed3b56d644104af4fde1226">helios::CompoundObject</a>
+: <a class="el" href="classhelios_1_1_box.html#a7497d9564e9249537781235e9ff2f7f8">helios::Box</a>
+, <a class="el" href="classhelios_1_1_disk.html#a460bea4bc38ef0795b9f65ef8b29a36a">helios::Disk</a>
 , <a class="el" href="classhelios_1_1_primitive.html#a2e21ef582322d72a16f98aec4903289f">helios::Primitive</a>
 , <a class="el" href="structhelios_1_1_r_g_b_acolor.html#a61e8dfbd88c4afa249997cfc4b02889d">helios::RGBAcolor</a>
 , <a class="el" href="structhelios_1_1_r_g_bcolor.html#a771797b0f691366993444b0867710ca8">helios::RGBcolor</a>
+, <a class="el" href="classhelios_1_1_sphere.html#a6b24121c33482955b6382e4fed868225">helios::Sphere</a>
+, <a class="el" href="classhelios_1_1_tile.html#a3518d5c6f89016f07b7ef06564f185d2">helios::Tile</a>
+, <a class="el" href="classhelios_1_1_tube.html#a04881902bb0a2cc02b04e5b050bec02b">helios::Tube</a>
 </li>
 <li>scalePrimitive()
-: <a class="el" href="classhelios_1_1_context.html#adb7115de7d63964ddfd8d7fa78a99502">helios::Context</a>
+: <a class="el" href="classhelios_1_1_context.html#a855b7d9bde57e659c5cbcda9cd99375a">helios::Context</a>
 </li>
 <li>scandensity
 : <a class="el" href="struct_aerial_scan_metadata.html#ab6e7d1152e1b122a4751c733f04a3803">AerialScanMetadata</a>
@@ -118,7 +122,7 @@ $(function() {
 : <a class="el" href="class_visualizer.html#a7203aa6d2b4db5d4a88dde73a5329f56">Visualizer</a>
 </li>
 <li>setBoundaryLayerModel()
-: <a class="el" href="class_b_l_conductance_model.html#a204eeeb5090f4e5320a01123b5c442ff">BLConductanceModel</a>
+: <a class="el" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">BLConductanceModel</a>
 </li>
 <li>setBranchRecursionLevel()
 : <a class="el" href="class_weber_penn_tree.html#a7aee9ed5ca2f7696179029b0c3ec5522">WeberPennTree</a>
@@ -192,7 +196,7 @@ $(function() {
 : <a class="el" href="class_visualizer.html#a61e0cfbbed1bc9584e52f279361300d8">Visualizer</a>
 </li>
 <li>setDate()
-: <a class="el" href="classhelios_1_1_context.html#a810169fc94d22368ff83c357e13b0a61">helios::Context</a>
+: <a class="el" href="classhelios_1_1_context.html#a5b9565e477a321ec7b7b9b62d43b2139">helios::Context</a>
 </li>
 <li>setDepthBiasMatrix()
 : <a class="el" href="struct_shader.html#ac0d16427ac71c0f579d4b41b6c1f94ff">Shader</a>
@@ -246,14 +250,14 @@ $(function() {
 </li>
 <li>setObjectData()
 : <a class="el" href="classhelios_1_1_compound_object.html#acf473c0595a525618fc6a5e39fca40e6">helios::CompoundObject</a>
-, <a class="el" href="classhelios_1_1_context.html#a1a1507b6102b92b0770c98f86ad0172c">helios::Context</a>
+, <a class="el" href="classhelios_1_1_context.html#a1d1208b2c758b35cd742348b83886ae1">helios::Context</a>
 </li>
 <li>setParentObjectID()
 : <a class="el" href="classhelios_1_1_primitive.html#a2f382dbe8b807f35946c29486cbd8059">helios::Primitive</a>
 </li>
 <li>setPrimitiveData()
-: <a class="el" href="classhelios_1_1_context.html#a605a1e43fc2a85a437dc049ba5f5284f">helios::Context</a>
-, <a class="el" href="classhelios_1_1_primitive.html#ac027412f91f5023475aa3ce03493f080">helios::Primitive</a>
+: <a class="el" href="classhelios_1_1_context.html#a7d3b23e3f6d44fdd33f687f1dfee6021">helios::Context</a>
+, <a class="el" href="classhelios_1_1_primitive.html#a7c4cf345b94dcef8d7496d14f0404bc4">helios::Primitive</a>
 </li>
 <li>setScatteringDepth()
 : <a class="el" href="class_radiation_model.html#aa99c8ff0ef01da7fd63fbd14d015c5fd">RadiationModel</a>
@@ -268,10 +272,10 @@ $(function() {
 : <a class="el" href="struct_shader.html#ab2e9dda74f59acd1bfa0bbfb6d405526">Shader</a>
 </li>
 <li>setTextureMask()
-: <a class="el" href="struct_shader.html#acabe2ce63e1a7fc5773803e3174de7ac">Shader</a>
+: <a class="el" href="struct_shader.html#a7800ac33a9f3fdaefad983d6fe851fa7">Shader</a>
 </li>
 <li>setTime()
-: <a class="el" href="classhelios_1_1_context.html#a98cf262539e8ebdd6ffb62e95bfc3fbd">helios::Context</a>
+: <a class="el" href="classhelios_1_1_context.html#ae3d9e19581787775556b8dd7dc1ac845">helios::Context</a>
 </li>
 <li>setTransformationMatrix()
 : <a class="el" href="classhelios_1_1_compound_object.html#a55a1ebd9699cb1c9ae0ca39b3db8f9b4">helios::CompoundObject</a>
@@ -328,13 +332,13 @@ $(function() {
 : <a class="el" href="class_soil_transport_model.html#a2322544c96872cf2cc67c8e5486d7897">SoilTransportModel</a>
 </li>
 <li>SolarPosition()
-: <a class="el" href="class_solar_position.html#ae5bb1cac318e667d1759277b9179fb30">SolarPosition</a>
+: <a class="el" href="class_solar_position.html#a157329e3ff97a1a8898fc4222c023cac">SolarPosition</a>
 </li>
 <li>sourcesInsideGridCellGPU()
 : <a class="el" href="class_li_d_a_rcloud.html#a97bb265ff038d2ed0cbb09e07069d49b">LiDARcloud</a>
 </li>
 <li>Sphere()
-: <a class="el" href="classhelios_1_1_sphere.html#a19da972c1481a3fd23bef31562c4eea0">helios::Sphere</a>
+: <a class="el" href="classhelios_1_1_sphere.html#af5c5b06b42e066f7678dcf81cc955ddf">helios::Sphere</a>
 </li>
 <li>SphericalCoord()
 : <a class="el" href="structhelios_1_1_spherical_coord.html#a875c7a9837a35cb2e7e32766fd1a60e1">helios::SphericalCoord</a>
@@ -371,7 +375,7 @@ $(function() {
 , <a class="el" href="struct_per_ray_data___m_c_r_t.html#a78da927b7a027a674c143a51ef3a2e58">PerRayData_MCRT</a>
 </li>
 <li>syntheticScan()
-: <a class="el" href="class_aerial_li_d_a_rcloud.html#a0d56ae98d2ab2ad7008640b0ea4ffaea">AerialLiDARcloud</a>
+: <a class="el" href="class_aerial_li_d_a_rcloud.html#a82abe2d47cc135f9f795ffaa15e4e041">AerialLiDARcloud</a>
 , <a class="el" href="class_li_d_a_rcloud.html#a3b63e0295c22c26abfb7901fe62b4415">LiDARcloud</a>
 </li>
 </ul>

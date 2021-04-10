@@ -5365,26 +5365,6 @@ void CompoundObject::useTextureColor( void ){
   }
 }
 
-void CompoundObject::scale( const vec3 S ){
-
-  float T[16], T_prim[16];
-  makeScaleMatrix(S,T);
-  matmult(T,transform,transform);
-
-  for( size_t o=0; o<UUIDs.size(); o++ ){
-
-    if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
-
-      context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
-      matmult(T,T_prim,T_prim);
-      context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
-
-    }
-      
-  }
-  
-}
-
 void CompoundObject::translate( const helios::vec3 shift ){
 
   float T[16], T_prim[16];
@@ -6301,10 +6281,9 @@ uint Context::copyObject( const uint ObjID ){
     
     Tile* o = getTileObjectPointer( ObjID );
 
-    vec2 size = o->getSize();
     int2 subdiv = o->getSubdivisionCount();
 
-    Tile* tile_new = (new Tile( currentObjectID, UUIDs_copy, size, subdiv, this ) );
+    Tile* tile_new = (new Tile( currentObjectID, UUIDs_copy, subdiv, this ) );
 
     objects[currentObjectID] = tile_new;
 
@@ -6312,10 +6291,9 @@ uint Context::copyObject( const uint ObjID ){
     
     Sphere* o = getSphereObjectPointer( ObjID );
 
-    float radius = o->getRadius();
     uint subdiv = o->getSubdivisionCount();
 
-    Sphere* sphere_new = (new Sphere( currentObjectID, UUIDs_copy, radius, subdiv, this ) );
+    Sphere* sphere_new = (new Sphere( currentObjectID, UUIDs_copy, subdiv, this ) );
 
     objects[currentObjectID] = sphere_new;
 
@@ -6338,7 +6316,7 @@ uint Context::copyObject( const uint ObjID ){
     vec3 size = o->getSize();
     int3 subdiv = o->getSubdivisionCount();
 
-    Box* box_new = (new Box( currentObjectID, UUIDs_copy, size, subdiv, this ) );
+    Box* box_new = (new Box( currentObjectID, UUIDs_copy, subdiv, this ) );
 
     objects[currentObjectID] = box_new;
 
@@ -6369,14 +6347,13 @@ uint Context::copyObject( const uint ObjID ){
   return currentObjectID-1;
 }
 
-Tile::Tile( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec2 __size, const helios::int2 __subdiv, helios::Context* __context ){
+Tile::Tile( const uint __OID, const std::vector<uint> __UUIDs, const helios::int2 __subdiv, helios::Context* __context ){
 
   makeIdentityMatrix( transform );
 
   OID = __OID;
   type = helios::OBJECT_TYPE_TILE;
   UUIDs = __UUIDs;
-  size = __size;
   subdiv = __subdiv;
   context = __context;
 
@@ -6391,8 +6368,28 @@ Tile* Context::getTileObjectPointer( const uint ObjID ) const{
 }
 
 helios::vec2 Tile::getSize( void ) const{
-  return size;
+  std::vector<vec3> vertices = getVertices();
+  float l = (vertices.at(1)-vertices.at(0)).magnitude();
+  float w = (vertices.at(3)-vertices.at(0)).magnitude();
+  return make_vec2(l,w);
 }
+
+vec3 Tile::getCenter( void ) const{
+
+  vec3 center;
+  vec3 Y;
+  Y.x = 0.f;
+  Y.y = 0.f;
+  Y.z = 0.f;
+
+  center.x = transform[0] * Y.x + transform[1] * Y.y + transform[2] * Y.z + transform[3];
+  center.y = transform[4] * Y.x + transform[5] * Y.y + transform[6] * Y.z + transform[7];
+  center.z = transform[8] * Y.x + transform[9] * Y.y + transform[10] * Y.z + transform[11];
+
+  return center;
+
+}
+  
 
 helios::int2 Tile::getSubdivisionCount( void ) const{
   return subdiv;
@@ -6454,14 +6451,33 @@ std::vector<helios::vec2> Tile::getTextureUV( void ) const{
 
 }
 
-Sphere::Sphere( const uint __OID, const std::vector<uint> __UUIDs, const float __radius, const uint __subdiv, helios::Context* __context ){
+void Tile::scale( const vec3 S ){
+
+  float T[16], T_prim[16];
+  makeScaleMatrix( S, T);
+  matmult(T,transform,transform);
+
+  for( size_t o=0; o<UUIDs.size(); o++ ){
+
+    if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+
+      context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
+      matmult(T,T_prim,T_prim);
+      context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
+
+    }
+      
+  }
+  
+}
+
+Sphere::Sphere( const uint __OID, const std::vector<uint> __UUIDs, const uint __subdiv, helios::Context* __context ){
 
   makeIdentityMatrix( transform );
 
   OID = __OID;
   type = helios::OBJECT_TYPE_SPHERE;
   UUIDs = __UUIDs;
-  radius = __radius;
   subdiv = __subdiv;
   context = __context;
 
@@ -6476,12 +6492,51 @@ Sphere* Context::getSphereObjectPointer( const uint ObjID ) const{
 }
 
 float Sphere::getRadius( void ) const{
-  return radius;
+  
+  return transform[0];
+  
+}
+  
+vec3 Sphere::getCenter( void ) const{
+
+  vec3 center;
+  vec3 Y;
+  Y.x = 0.f;
+  Y.y = 0.f;
+  Y.z = 0.f;
+
+  center.x = transform[0] * Y.x + transform[1] * Y.y + transform[2] * Y.z + transform[3];
+  center.y = transform[4] * Y.x + transform[5] * Y.y + transform[6] * Y.z + transform[7];
+  center.z = transform[8] * Y.x + transform[9] * Y.y + transform[10] * Y.z + transform[11];
+
+  return center;
+  
 }
 
 uint Sphere::getSubdivisionCount( void ) const{
   return subdiv;
 }
+
+void Sphere::scale( const float S ){
+
+  float T[16], T_prim[16];
+  makeScaleMatrix( make_vec3(S,S,S), T);
+  matmult(T,transform,transform);
+
+  for( size_t o=0; o<UUIDs.size(); o++ ){
+
+    if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+
+      context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
+      matmult(T,T_prim,T_prim);
+      context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
+
+    }
+      
+  }
+  
+}
+
 
 Tube::Tube( const uint __OID, const std::vector<uint> __UUIDs, const std::vector<helios::vec3> __nodes, const std::vector<float> __radius, const uint __subdiv, helios::Context* __context ){
 
@@ -6506,25 +6561,59 @@ Tube* Context::getTubeObjectPointer( const uint ObjID ) const{
 }
 
 std::vector<helios::vec3> Tube::getNodes( void ) const{
-  return nodes;
+
+  std::vector<vec3> nodes_T;
+  nodes_T.resize( nodes.size() );
+
+  for( uint i=0; i<nodes.size(); i++ ){
+    nodes_T.at(i).x = transform[0] * nodes.at(i).x + transform[1] * nodes.at(i).y + transform[2] * nodes.at(i).z + transform[3];
+    nodes_T.at(i).y = transform[4] * nodes.at(i).x + transform[5] * nodes.at(i).y + transform[6] * nodes.at(i).z + transform[7];
+    nodes_T.at(i).z = transform[8] * nodes.at(i).x + transform[9] * nodes.at(i).y + transform[10] * nodes.at(i).z + transform[11];
+  }
+
+  return nodes_T;
 }
 
 std::vector<float> Tube::getNodeRadii( void ) const{
-  return radius;
+  std::vector<float> radius_T;
+  radius_T.resize(radius.size());
+  for( int i=0; i<radius.size(); i++ ){
+    radius_T.at(i) = radius.at(i)*transform[0];
+  }
+  return radius_T; 
 }
 
 uint Tube::getSubdivisionCount( void ) const{
   return subdiv;
 }
 
-Box::Box( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec3 __size, const helios::int3 __subdiv, helios::Context* __context ){
+void Tube::scale( const float S ){
+
+  float T[16], T_prim[16];
+  makeScaleMatrix( make_vec3(S,S,S), T);
+  matmult(T,transform,transform);
+
+  for( size_t o=0; o<UUIDs.size(); o++ ){
+
+    if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+
+      context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
+      matmult(T,T_prim,T_prim);
+      context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
+
+    }
+      
+  }
+  
+}
+
+Box::Box( const uint __OID, const std::vector<uint> __UUIDs, const helios::int3 __subdiv, helios::Context* __context ){
 
   makeIdentityMatrix( transform );
 
   OID = __OID;
   type = helios::OBJECT_TYPE_BOX;
   UUIDs = __UUIDs;
-  size = __size;
   subdiv = __subdiv;
   context = __context;
 
@@ -6538,12 +6627,50 @@ Box* Context::getBoxObjectPointer( const uint ObjID ) const{
   return static_cast<Box*>(objects.at(ObjID));
 }
 
-helios::vec3 Box::getSize( void ) const{
-  return size;
+vec3 Box::getSize( void ) const{
+
+  return make_vec3( transform[0], transform[5], transform[10] );
+  
+}
+  
+vec3 Box::getCenter( void ) const{
+
+  vec3 center;
+  vec3 Y;
+  Y.x = 0.f;
+  Y.y = 0.f;
+  Y.z = 0.f;
+
+  center.x = transform[0] * Y.x + transform[1] * Y.y + transform[2] * Y.z + transform[3];
+  center.y = transform[4] * Y.x + transform[5] * Y.y + transform[6] * Y.z + transform[7];
+  center.z = transform[8] * Y.x + transform[9] * Y.y + transform[10] * Y.z + transform[11];
+
+  return center;
+  
 }
 
 helios::int3 Box::getSubdivisionCount( void ) const{
   return subdiv;
+}
+
+void Box::scale( const vec3 S ){
+
+  float T[16], T_prim[16];
+  makeScaleMatrix( S, T);
+  matmult(T,transform,transform);
+
+  for( size_t o=0; o<UUIDs.size(); o++ ){
+
+    if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+
+      context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
+      matmult(T,T_prim,T_prim);
+      context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
+
+    }
+      
+  }
+  
 }
 
 Disk::Disk( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec2 __size, const uint __subdiv, helios::Context* __context ){
@@ -6567,12 +6694,50 @@ Disk* Context::getDiskObjectPointer( const uint ObjID ) const{
   return static_cast<Disk*>(objects.at(ObjID));
 }
 
-helios::vec2 Disk::getSize( void ) const{
-  return size;
+vec2 Disk::getSize( void ) const{
+
+  return size*transform[0];
+  
+}
+  
+vec3 Disk::getCenter( void ) const{
+
+  vec3 center;
+  vec3 Y;
+  Y.x = 0.f;
+  Y.y = 0.f;
+  Y.z = 0.f;
+
+  center.x = transform[0] * Y.x + transform[1] * Y.y + transform[2] * Y.z + transform[3];
+  center.y = transform[4] * Y.x + transform[5] * Y.y + transform[6] * Y.z + transform[7];
+  center.z = transform[8] * Y.x + transform[9] * Y.y + transform[10] * Y.z + transform[11];
+
+  return center;
+  
 }
 
 uint Disk::getSubdivisionCount( void ) const{
   return subdiv;
+}
+
+void Disk::scale( const vec3 S ){
+
+  float T[16], T_prim[16];
+  makeScaleMatrix( S, T);
+  matmult(T,transform,transform);
+
+  for( size_t o=0; o<UUIDs.size(); o++ ){
+
+    if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+
+      context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
+      matmult(T,T_prim,T_prim);
+      context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
+
+    }
+      
+  }
+  
 }
 
 Polymesh::Polymesh( const uint __OID, const std::vector<uint> __UUIDs, helios::Context* __context ){
@@ -6652,7 +6817,7 @@ uint Context::addSphereObject( const uint Ndivs, const vec3 center, const float 
     }
   }
 
-  Sphere* sphere_new = (new Sphere( currentObjectID, UUID, radius, Ndivs, this ));
+  Sphere* sphere_new = (new Sphere( currentObjectID, UUID, Ndivs, this ));
 
   float T[16], transform[16];
   sphere_new->getTransformationMatrix( transform );
@@ -6722,7 +6887,7 @@ uint Context::addTileObject( const vec3 center, const vec2 size, const Spherical
     }
   }
 
-  Tile* tile_new = (new Tile( currentObjectID, UUID, size, subdiv, this ));
+  Tile* tile_new = (new Tile( currentObjectID, UUID, subdiv, this ));
 
   float T[16], S[16], R[16];
 
@@ -6851,7 +7016,7 @@ uint Context::addTileObject( const vec3 center, const vec2 size, const Spherical
     }
   }
 
-  Tile* tile_new = (new Tile( currentObjectID, UUID, size, subdiv, this ));
+  Tile* tile_new = (new Tile( currentObjectID, UUID, subdiv, this ));
 
   float T[16], S[16], R[16];
 
@@ -7263,7 +7428,7 @@ uint Context::addBoxObject( const vec3 center, const vec3 size, const int3 subdi
     
   }
 
-  Box* box_new = (new Box( currentObjectID, UUID, size, subdiv, this ));
+  Box* box_new = (new Box( currentObjectID, UUID, subdiv, this ));
 
   float T[16], transform[16];
   box_new->getTransformationMatrix( transform );
@@ -7379,7 +7544,7 @@ uint Context::addBoxObject( const vec3 center, const vec3 size, const int3 subdi
     
   }
 
-  Box* box_new = (new Box( currentObjectID, UUID, size, subdiv, this ));
+  Box* box_new = (new Box( currentObjectID, UUID, subdiv, this ));
 
   float T[16], transform[16];
   box_new->getTransformationMatrix( transform );

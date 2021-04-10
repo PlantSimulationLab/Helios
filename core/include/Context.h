@@ -767,11 +767,6 @@ namespace helios {
     //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
     void useTextureColor( void );
 
-    //! Function to scale the dimensions of a Compound Object
-    /** \param[in] "S" Scaling factor
-    */
-    void scale( const helios::vec3 S );
-
     //! Function to translate/shift a Compound Object
     /** \param[in] "shift" Distance to translate in (x,y,z) directions.
     */
@@ -1093,12 +1088,14 @@ namespace helios {
   public:
 
     //! Default constructor
-    Tile( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec2 __size, const helios::int2 __subdiv, helios::Context* context );
+    Tile( const uint __OID, const std::vector<uint> __UUIDs, const helios::int2 __subdiv, helios::Context* context );
 
     //! Tile destructor
     ~Tile(){};
 
     helios::vec2 getSize( void ) const;
+
+    helios::vec3 getCenter( void ) const;
 
     helios::int2 getSubdivisionCount( void ) const;
 
@@ -1108,10 +1105,13 @@ namespace helios {
 
     std::vector<helios::vec2> getTextureUV( void ) const;
 
+    //! Function to scale the dimensions of a Compound Object
+    /** \param[in] "S" Scaling factor
+    */
+    void scale( const helios::vec3 S );
+
   protected:
     
-    helios::vec2 size;
-
     helios::int2 subdiv;
     
   };
@@ -1120,24 +1120,29 @@ namespace helios {
   public:
 
     //! Default constructor
-    Sphere( const uint __OID, const std::vector<uint> __UUIDs, const float __radius, const uint __subdiv, helios::Context* context );
+    Sphere( const uint __OID, const std::vector<uint> __UUIDs, const uint __subdiv, helios::Context* context );
 
     //! Shpere destructor
     ~Sphere(){};
 
     float getRadius( void ) const;
 
+    helios::vec3 getCenter( void ) const;
+
     uint getSubdivisionCount( void ) const;
+
+    //! Function to scale the dimensions of a Compound Object
+    /** \param[in] "S" Scaling factor
+    */
+    void scale( const float S );
 
   protected:
     
-    float radius;
-
     uint subdiv;
     
   };
 
-  class Tube : public CompoundObject {
+  class Tube: public CompoundObject {
   public:
 
     //! Default constructor
@@ -1151,6 +1156,11 @@ namespace helios {
     std::vector<float> getNodeRadii( void ) const;
 
     uint getSubdivisionCount( void ) const;
+
+    //! Function to scale the dimensions of a Compound Object
+    /** \param[in] "S" Scaling factor
+    */
+    void scale( const float S );
 
   protected:
     
@@ -1166,19 +1176,24 @@ namespace helios {
   public:
 
     //! Default constructor
-    Box( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec3 __size, const helios::int3 __subdiv, helios::Context* __context );
+    Box( const uint __OID, const std::vector<uint> __UUIDs, const helios::int3 __subdiv, helios::Context* __context );
 
     //! Box destructor
     ~Box(){};
 
     helios::vec3 getSize( void ) const;
 
+    helios::vec3 getCenter( void ) const;
+
     helios::int3 getSubdivisionCount( void ) const;
+
+    //! Function to scale the dimensions of a Compound Object
+    /** \param[in] "S" Scaling factor
+    */
+    void scale( const helios::vec3 S );
 
   protected:
     
-    helios::vec3 size;
-
     helios::int3 subdiv;
     
   };
@@ -1194,7 +1209,14 @@ namespace helios {
 
     helios::vec2 getSize( void ) const;
 
+    helios::vec3 getCenter( void ) const;
+
     uint getSubdivisionCount( void ) const;
+
+    //! Function to scale the dimensions of a Compound Object
+    /** \param[in] "S" Scaling factor
+    */
+    void scale( const helios::vec3 S );
 
   protected:
     

@@ -36,7 +36,6 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
   float Rout = float(Nsides)*eps*5.67e-8*pow(T,4);
     
   //Sensible heat flux
-  //float gH = 0.135f*sqrt(U/L); //Convection conductance for flat plate (see Campbell and Norman Eq. 7.30 or Table 7.6). Units: mol/m^2-s
   float cp = 29.25; //Molar specific heat of air. Units: J/mol
   float QH = cp*gH*(T-Ta); // (see Campbell and Norman Eq. 6.8)
 
@@ -255,25 +254,6 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
     //Emissivity
     eps[u] = emissivity.at(u);
 
-    //Wind speed
-    float U;
-    if( prim->doesPrimitiveDataExist("wind_speed") ){
-      prim->getPrimitiveData("wind_speed",U);
-    }else{
-      U = wind_speed_default;
-    }
-
-    //Characteristic size of primitive
-    float L;
-    if( prim->doesPrimitiveDataExist("object_length") ){
-      prim->getPrimitiveData("object_length",L);
-      if( L==0 ){
-	L = sqrt(prim->getArea());
-      }
-    }else{
-      L = sqrt(prim->getArea());
-    }
-
     //Air temperature
     if( prim->doesPrimitiveDataExist("air_temperature") ){
       prim->getPrimitiveData("air_temperature",Ta[u]);
@@ -304,6 +284,26 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
     if( prim->doesPrimitiveDataExist("boundarylayer_conductance") ){
       prim->getPrimitiveData("boundarylayer_conductance",gH[u]);
     }else{
+
+      //Wind speed
+      float U;
+      if( prim->doesPrimitiveDataExist("wind_speed") ){
+	prim->getPrimitiveData("wind_speed",U);
+      }else{
+	U = wind_speed_default;
+      }
+
+      //Characteristic size of primitive
+      float L;
+      if( prim->doesPrimitiveDataExist("object_length") ){
+	prim->getPrimitiveData("object_length",L);
+	if( L==0 ){
+	  L = sqrt(prim->getArea());
+	}
+      }else{
+	L = sqrt(prim->getArea());
+      }
+      
       gH[u]=0.135f*sqrt(U/L);
     }
  

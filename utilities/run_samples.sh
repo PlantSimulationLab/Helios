@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "tutorial0"  "tutorial1")
+SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "tutorial0"  "tutorial1")
 # "tutorial2"  "tutorial5"  "tutorial6"  "tutorial8")
 
 if [ "$1" == "-checkout" ];then
