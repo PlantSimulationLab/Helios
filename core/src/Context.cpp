@@ -638,6 +638,78 @@ int Context::selfTest(void){
     std::cerr << "failed: set/getObjectData (setting/getting scalar data). Get data did not match set data." << std::endl;
   }
 
+  //------- Cone Object Transformations --------//
+  
+  float cone_radius_0 = 0.5;
+  float cone_radius_1 = 1.0;
+  float cone_length = 2.0;
+  
+  helios::vec3 node0 = make_vec3(0,0,0);
+  helios::vec3 node1 = make_vec3(0,0,cone_length);
+  
+  //create cone object
+  uint cone_1 = context_test.addConeObject( 50, node0, node1, cone_radius_0, cone_radius_1);
+  
+  //translate to (1,1,1)
+  context_test.getConeObjectPointer(cone_1)->translate(make_vec3(1, 1, 1));
+  
+  // get the updated node position
+  std::vector<helios::vec3> nodes_T = context_test.getConeObjectPointer(cone_1)->getNodes();
+  
+  if(nodes_T.at(0).x - 1.0 > errtol || nodes_T.at(0).y - 1.0 > errtol || nodes_T.at(0).z - 1.0 > errtol ||
+     nodes_T.at(1).x - 1.0 > errtol || nodes_T.at(1).y - 1.0 > errtol || nodes_T.at(1).z - 3.0 > errtol ){
+      
+      error_count ++;
+      std::cerr << "failed: translate cone object. Node coordinates after translation not correct." << std::endl;
+  }
+  
+  //rotate so that the cone is parallel with x axis
+  // define the desired tube axis
+  helios::vec3 x_axis = helios::make_vec3(1,0,0);
+  helios::vec3 z_axis = make_vec3(0,0,1);
+  //get the axis about which to rotate
+  vec3 ra = cross( z_axis, x_axis);
+  //get the angle to rotate
+  float dot = x_axis.x*z_axis.x + x_axis.y*z_axis.y + x_axis.z*z_axis.z;
+  float angle = acos(dot);
+  
+  // translate back to origin
+  context_test.getConeObjectPointer(cone_1)->translate(-1*nodes_T.at(0));
+  //rotate
+  context_test.getConeObjectPointer(cone_1)->rotate( angle, ra);
+  // translate back
+  context_test.getConeObjectPointer(cone_1)->translate(nodes_T.at(0));
+  //get the updated node positions
+  nodes_T = context_test.getConeObjectPointer(cone_1)->getNodes();
+  
+  if(nodes_T.at(0).x - 1.0 > errtol || nodes_T.at(0).y - 1.0 > errtol || nodes_T.at(0).z - 1.0 > errtol ||
+     nodes_T.at(1).x - 3.0 > errtol || nodes_T.at(1).y - 1.0 > errtol || nodes_T.at(1).z - 1.0 > errtol ){
+      error_count ++;
+      std::cerr << "failed: rotate cone object. Node coordinates after rotation not correct." << std::endl;
+  }
+  
+  
+  //scale the length of the cone to twice its original length
+  context_test.getConeObjectPointer(cone_1)->scaleLength(2.0);
+  //get the updated node positions
+  nodes_T = context_test.getConeObjectPointer(cone_1)->getNodes();
+  
+  if(nodes_T.at(0).x - 1.0 > errtol || nodes_T.at(0).y - 1.0 > errtol || nodes_T.at(0).z - 1.0 > errtol ||
+     nodes_T.at(1).x - 6.0 > errtol || nodes_T.at(1).y - 1.0 > errtol || nodes_T.at(1).z - 1.0 > errtol ){
+      
+      error_count ++;
+      std::cerr << "failed: scaleLength cone object. Node coordinates after length scaling not correct." << std::endl;
+  }
+  
+  //scale the girth of the cone to twice its original radii
+  context_test.getConeObjectPointer(cone_1)->scaleGirth(2.0);
+  //get the updated node positions
+  std::vector<float> radii_T = context_test.getConeObjectPointer(cone_1)->getNodeRadii();
+  
+  if(radii_T.at(0) - cone_radius_0*2.0 > pow(10,-6) || radii_T.at(1) - cone_radius_1*2.0 > pow(10, -6) ){
+      error_count ++;
+      std::cerr << "failed: scaleGirth cone object. Node radii after girth scaling not correct." << std::endl;
+  }
 
   //------- Cartesian/Spherical Coordinate Conversion --------//
   
@@ -6339,6 +6411,18 @@ uint Context::copyObject( const uint ObjID ){
 
     objects[currentObjectID] = polymesh_new;
 
+  }else if( type==OBJECT_TYPE_CONE ){
+      
+    Cone* o = getConeObjectPointer( ObjID );
+      
+    std::vector<vec3> nodes = o->getNodes();
+    std::vector<float> radius = o->getNodeRadii();
+    uint subdiv = o->getSubdivisionCount();
+    
+    Cone* cone_new = (new Cone( currentObjectID, UUIDs_copy, nodes.at(0), nodes.at(1), radius.at(0), radius.at(1), subdiv, this ) );
+    
+    objects[currentObjectID] = cone_new;
+
   }
 
    
@@ -6759,6 +6843,214 @@ Polymesh* Context::getPolymeshObjectPointer( const uint ObjID ) const{
   return static_cast<Polymesh*>(objects.at(ObjID));
 }
 
+Cone::Cone( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec3 __node0, const helios::vec3 __node1, const float __radius0, const float __radius1, const uint __subdiv, helios::Context* __context ){
+    
+    makeIdentityMatrix( transform );
+    
+    OID = __OID;
+    type = helios::OBJECT_TYPE_CONE;
+    UUIDs = __UUIDs;
+    subdiv = __subdiv;
+    context = __context;
+    nodes.push_back(__node0);
+    nodes.push_back(__node1);
+    
+    radii.push_back(__radius0);
+    radii.push_back(__radius1);
+    
+}
+
+Cone* Context::getConeObjectPointer( const uint ObjID ) const{
+    if( objects.find(ObjID) == objects.end() ){
+        std::cerr << "ERROR (getConeObjectPointer): ObjectID of " << ObjID << " does not exist in the Context." << std::endl;
+        throw(1);
+    }
+    return static_cast<Cone*>(objects.at(ObjID));
+}
+
+std::vector<helios::vec3> Cone::getNodes( void ) const{
+    
+    std::vector<vec3> nodes_T;
+    
+    nodes_T.resize( 2 );
+    
+    for( int i=0; i<2; i++ ){
+        nodes_T.at(i).x = transform[0] * nodes.at(i).x + transform[1] * nodes.at(i).y + transform[2] * nodes.at(i).z + transform[3];
+        nodes_T.at(i).y = transform[4] * nodes.at(i).x + transform[5] * nodes.at(i).y + transform[6] * nodes.at(i).z + transform[7];
+        nodes_T.at(i).z = transform[8] * nodes.at(i).x + transform[9] * nodes.at(i).y + transform[10] * nodes.at(i).z + transform[11];
+    }
+    
+    return nodes_T;
+}
+
+helios::vec3 Cone::getNode( int number ) const{
+    
+    if( number<0 || number>1 ){
+        std::cerr << "getNode ERROR: node number must be 0 or 1." << std::endl;
+        throw(1);
+    }
+    
+    vec3 node_T;
+    
+    node_T.x = transform[0] * nodes.at(number).x + transform[1] * nodes.at(number).y + transform[2] * nodes.at(number).z + transform[3];
+    node_T.y = transform[4] * nodes.at(number).x + transform[5] * nodes.at(number).y + transform[6] * nodes.at(number).z + transform[7];
+    node_T.z = transform[8] * nodes.at(number).x + transform[9] * nodes.at(number).y + transform[10] * nodes.at(number).z + transform[11];
+    
+    return node_T;
+}
+
+std::vector<float> Cone::getNodeRadii( void ) const{
+    std::vector<float> radii_T;
+    radii_T.resize(2);
+    for( int i=0; i<2; i++ ){
+        radii_T.at(i) = radii.at(i)*transform[0];
+    }
+    return radii_T; 
+}
+
+float Cone::getNodeRadius( int number ) const{
+    if( number<0 || number>1 ){
+        std::cerr << "getNodeRadius ERROR: node number must be 0 or 1." << std::endl;
+        throw(1);
+    }
+    float radius_T = radii.at(number)*transform[0];
+    return radius_T; 
+}
+
+uint Cone::getSubdivisionCount( void ) const{
+    return subdiv;
+}
+
+helios::vec3 Cone::getAxisUnitVector(void) const{
+    
+    std::vector<vec3> nodes_T;
+    nodes_T.resize( 2 );
+    
+    for( uint i=0; i<2; i++ ){
+        nodes_T.at(i).x = transform[0] * nodes.at(i).x + transform[1] * nodes.at(i).y + transform[2] * nodes.at(i).z + transform[3];
+        nodes_T.at(i).y = transform[4] * nodes.at(i).x + transform[5] * nodes.at(i).y + transform[6] * nodes.at(i).z + transform[7];
+        nodes_T.at(i).z = transform[8] * nodes.at(i).x + transform[9] * nodes.at(i).y + transform[10] * nodes.at(i).z + transform[11];
+    }
+    
+    helios::vec3 axis_unit_vector = helios::make_vec3(nodes_T.at(1).x - nodes_T.at(0).x, nodes_T.at(1).y - nodes_T.at(0).y, nodes_T.at(1).z - nodes_T.at(0).z );
+    float length = pow(pow(axis_unit_vector.x,2) + pow(axis_unit_vector.y,2) + pow(axis_unit_vector.z,2),0.5);
+    axis_unit_vector = axis_unit_vector / length;
+    
+    return axis_unit_vector;
+}
+
+float Cone::getLength( void ) const{
+    
+    std::vector<vec3> nodes_T;
+    nodes_T.resize( 2);
+    
+    for( uint i=0; i<2; i++ ){
+        nodes_T.at(i).x = transform[0] * nodes.at(i).x + transform[1] * nodes.at(i).y + transform[2] * nodes.at(i).z + transform[3];
+        nodes_T.at(i).y = transform[4] * nodes.at(i).x + transform[5] * nodes.at(i).y + transform[6] * nodes.at(i).z + transform[7];
+        nodes_T.at(i).z = transform[8] * nodes.at(i).x + transform[9] * nodes.at(i).y + transform[10] * nodes.at(i).z + transform[11];
+    }
+    
+    float length = pow(pow(nodes_T.at(1).x - nodes_T.at(0).x, 2) + pow(nodes_T.at(1).y - nodes_T.at(0).y, 2) + pow(nodes_T.at(1).z - nodes_T.at(0).z, 2), 0.5);
+    return length;  
+}
+
+void Cone::scaleLength( const float S ){
+    
+    //get the nodes and radii of the nodes with transformation matrix applied
+    std::vector<helios::vec3> nodes_T = context->getConeObjectPointer(OID)->getNodes();
+    std::vector<float> radii_T = context->getConeObjectPointer(OID)->getNodeRadii();
+
+    // calculate the transformed axis unit vector of the cone
+    vec3 axis_unit_vector = helios::make_vec3(nodes_T.at(1).x - nodes_T.at(0).x, nodes_T.at(1).y - nodes_T.at(0).y, nodes_T.at(1).z - nodes_T.at(0).z );
+    float length = pow(pow(axis_unit_vector.x,2) + pow(axis_unit_vector.y,2) + pow(axis_unit_vector.z,2),0.5);
+    axis_unit_vector = axis_unit_vector / length;
+    
+    //translate node 0 back to origin
+    context->getConeObjectPointer(OID)->translate(-1.0*nodes_T.at(0));
+    
+    //rotate the cone to align with z axis
+    helios::vec3 z_axis = make_vec3(0,0,1);
+    //get the axis about which to rotate
+    vec3 ra = cross( z_axis, axis_unit_vector);
+    //get the angle to rotate
+    float dot = axis_unit_vector.x*z_axis.x + axis_unit_vector.y*z_axis.y + axis_unit_vector.z*z_axis.z;
+    float angle = acos(dot);
+
+    //only rotate if the cone is not alread aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
+    if(angle != float(0.0)){
+        context->getConeObjectPointer(OID)->rotate( -1*angle, ra );
+    }
+    
+    // scale the cone in the z (length) dimension
+    float T[16], T_prim[16];
+    makeScaleMatrix( make_vec3(1,1,S), T);
+    matmult(T,transform,transform);
+    for( size_t o=0; o<UUIDs.size(); o++ ){
+        if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+            context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
+            matmult(T,T_prim,T_prim);
+            context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
+        }
+    }
+    
+    //rotate back
+    if(angle != 0.0){
+        context->getConeObjectPointer(OID)->rotate( angle, ra );
+    }
+    
+    // //translate back
+    context->getConeObjectPointer(OID)->translate(nodes_T.at(0));
+    
+}
+
+void Cone::scaleGirth( const float S ){
+    
+    //get the nodes and radii of the nodes with transformation matrix applied
+    std::vector<helios::vec3> nodes_T = context->getConeObjectPointer(OID)->getNodes();
+    std::vector<float> radii_T = context->getConeObjectPointer(OID)->getNodeRadii();
+
+    // calculate the transformed axis unit vector of the cone
+    vec3 axis_unit_vector = helios::make_vec3(nodes_T.at(1).x - nodes_T.at(0).x, nodes_T.at(1).y - nodes_T.at(0).y, nodes_T.at(1).z - nodes_T.at(0).z );
+    float length = pow(pow(axis_unit_vector.x,2) + pow(axis_unit_vector.y,2) + pow(axis_unit_vector.z,2),0.5);
+    axis_unit_vector = axis_unit_vector / length;
+    
+    //translate node 0 back to origin
+    context->getConeObjectPointer(OID)->translate(-1.0*nodes_T.at(0));
+    
+    //rotate the cone to align with z axis
+    helios::vec3 z_axis = make_vec3(0,0,1);
+    //get the axis about which to rotate
+    vec3 ra = cross( z_axis, axis_unit_vector);
+    //get the angle to rotate
+    float dot = axis_unit_vector.x*z_axis.x + axis_unit_vector.y*z_axis.y + axis_unit_vector.z*z_axis.z;
+    float angle = acos(dot);
+    //only rotate if the cone is not alread aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
+    if(angle != float(0.0)){
+        context->getConeObjectPointer(OID)->rotate( -1*angle, ra );
+    }
+    
+    // scale the cone in the z (length) dimension
+    float T[16], T_prim[16];
+    makeScaleMatrix( make_vec3(S,S,1), T);
+    matmult(T,transform,transform);
+    for( size_t o=0; o<UUIDs.size(); o++ ){
+        if( context->doesPrimitiveExist( UUIDs.at(o) ) ){
+            context->getPrimitivePointer( UUIDs.at(o) )->getTransformationMatrix(T_prim);
+            matmult(T,T_prim,T_prim);
+            context->getPrimitivePointer( UUIDs.at(o) )->setTransformationMatrix(T_prim);
+        }
+    }
+    
+    //rotate back
+    if(angle != 0.0){
+        context->getConeObjectPointer(OID)->rotate( angle, ra );
+    }
+    
+    // //translate back
+    context->getConeObjectPointer(OID)->translate(nodes_T.at(0));
+    
+}
+
 uint Context::addSphereObject( const uint Ndivs, const helios::vec3 center, const float radius ){
  
   RGBcolor color = make_RGBcolor(0.f,0.75f,0.f); //Default color is green
@@ -6831,6 +7123,129 @@ uint Context::addSphereObject( const uint Ndivs, const vec3 center, const float 
   sphere_new->setTransformationMatrix( transform );
 
   sphere_new->setColor( color );
+
+  for( size_t p=0; p<UUID.size(); p++ ){
+    getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
+  }
+  
+  objects[currentObjectID] = sphere_new;
+  currentObjectID++;
+  return currentObjectID-1;
+
+
+}
+
+uint Context::addSphereObject( const uint Ndivs, const vec3 center, const float radius, const char* texturefile ){
+
+  if( radius<=0.f ){
+    std::cerr << "ERROR (addSphereObject): Radius of sphere must be positive." << std::endl;
+    throw(1);
+  }
+
+  std::vector<uint> UUID;
+
+  float theta;
+  float dtheta=M_PI/float(Ndivs);
+  float dphi=2.0*M_PI/float(Ndivs);
+
+  //bottom cap
+  for( int j=0; j<Ndivs; j++ ){
+      
+    vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI, 0 ) );
+    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j)*dphi ) );
+    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j+1)*dphi ) );
+
+    vec3 n0 = v0-center;
+    n0.normalize();
+    vec3 n1 = v1-center;
+    n1.normalize();
+    vec3 n2 = v2-center;
+    n2.normalize();
+    
+    vec2 uv0 = make_vec2( 1 - atan2( sin(float(j+0.5)*dphi), -cos(float(j+0.5)*dphi) )/(2.f*M_PI) - 0.5, 1 - n0.z*0.5 - 0.5 );
+    vec2 uv1 = make_vec2( 1 - atan2( n1.x, -n1.y )/(2.f*M_PI) - 0.5, 1 - n1.z*0.5 - 0.5 );
+    vec2 uv2 = make_vec2( 1 - atan2( n2.x, -n2.y )/(2.f*M_PI) - 0.5, 1 - n2.z*0.5 - 0.5 );
+
+    if( j==Ndivs-1 ){
+      uv2.x = 1;
+    }
+    
+    UUID.push_back( addTriangle(v0,v1,v2,texturefile,uv0,uv1,uv2) );
+
+  }
+
+  //top cap
+  for( int j=0; j<Ndivs; j++ ){
+      
+    vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI, 0 ) );
+    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j)*dphi ) );
+    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j+1)*dphi ) );
+
+    vec3 n0 = v0-center;
+    n0.normalize();
+    vec3 n1 = v1-center;
+    n1.normalize();
+    vec3 n2 = v2-center;
+    n2.normalize();
+    
+    vec2 uv0 = make_vec2( 1 - atan2( sin(float(j+0.5)*dphi), -cos(float(j+0.5)*dphi) )/(2.f*M_PI) - 0.5, 1 - n0.z*0.5 - 0.5 );
+    vec2 uv1 = make_vec2( 1 - atan2( n1.x, -n1.y )/(2.f*M_PI) - 0.5, 1 - n1.z*0.5 - 0.5 );
+    vec2 uv2 = make_vec2( 1 - atan2( n2.x, -n2.y )/(2.f*M_PI) - 0.5, 1 - n2.z*0.5 - 0.5 );
+
+    if( j==Ndivs-1 ){
+      uv2.x = 1;
+    }
+    
+    UUID.push_back( addTriangle(v0,v1,v2,texturefile,uv0,uv1,uv2) );
+
+  }
+
+  //middle
+  for( int j=0; j<Ndivs; j++ ){
+    for( int i=1; i<Ndivs-1; i++ ){
+      
+      vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i)*dtheta, float(j)*dphi ) );
+      vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i+1)*dtheta, float(j)*dphi ) );
+      vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i+1)*dtheta, float(j+1)*dphi ) );
+      vec3 v3 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i)*dtheta, float(j+1)*dphi ) );
+
+      vec3 n0 = v0-center;
+      n0.normalize();
+      vec3 n1 = v1-center;
+      n1.normalize();
+      vec3 n2 = v2-center;
+      n2.normalize();
+      vec3 n3 = v3-center;
+      n3.normalize();
+
+      vec2 uv0 = make_vec2( 1 - atan2( n0.x, -n0.y )/(2.f*M_PI) - 0.5, 1 - n0.z*0.5 - 0.5 );
+      vec2 uv1 = make_vec2( 1 - atan2( n1.x, -n1.y )/(2.f*M_PI) - 0.5, 1 - n1.z*0.5 - 0.5 );
+      vec2 uv2 = make_vec2( 1 - atan2( n2.x, -n2.y )/(2.f*M_PI) - 0.5, 1 - n2.z*0.5 - 0.5 );
+      vec2 uv3 = make_vec2( 1 - atan2( n3.x, -n3.y )/(2.f*M_PI) - 0.5, 1 - n3.z*0.5 - 0.5 );
+
+      if( j==Ndivs-1 ){
+	uv2.x = 1;
+	uv3.x = 1;
+      }
+      
+      UUID.push_back( addTriangle(v0,v1,v2,texturefile,uv0,uv1,uv2) );
+      UUID.push_back( addTriangle(v0,v2,v3,texturefile,uv0,uv2,uv3) );      
+      
+    }
+  }
+
+  Sphere* sphere_new = (new Sphere( currentObjectID, UUID, Ndivs, this ));
+
+  float T[16], transform[16];
+  sphere_new->getTransformationMatrix( transform );
+
+  makeScaleMatrix(make_vec3(radius,radius,radius),T);
+  matmult(T,transform,transform);
+
+  makeTranslationMatrix(center,T);
+  matmult(T,transform,transform);
+
+  sphere_new->setTransformationMatrix( transform );
 
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
@@ -7684,7 +8099,231 @@ uint Context::addPolymeshObject( const std::vector<uint> UUIDs ){
 
 }
 
+uint Context::addConeObject( const uint Ndivs, const helios::vec3 node0, const helios::vec3 node1, const float radius0, const float radius1 ){
+    
+    RGBcolor color;
+    color = make_RGBcolor(0.f,0.75f,0.f); //Default color is green
+    return addConeObject(Ndivs, node0, node1, radius0, radius1, color);
+}
 
+uint Context::addConeObject( const uint Ndivs, const helios::vec3 node0, const helios::vec3 node1, const float radius0, const float radius1, const helios::RGBcolor color ){
+    
+    std::vector<helios::vec3> nodes{node0, node1};
+    std::vector<float> radii{radius0, radius1};
+    
+    vec3 vec, convec;
+    float cfact[Ndivs+1], sfact[Ndivs+1];
+    std::vector<std::vector<vec3> > xyz, normal;
+    xyz.resize(Ndivs+1);
+    normal.resize(Ndivs+1);
+    for( uint j=0; j<Ndivs+1; j++ ){
+        xyz.at(j).resize(2);
+        normal.at(j).resize(2);
+    }
+    vec3 nvec(0.1817f,0.6198f,0.7634f);//random vector to get things going
+    
+    for( int j=0; j<Ndivs+1; j++ ){
+        cfact[j]=cos(2.f*M_PI*float(j)/float(Ndivs));
+        sfact[j]=sin(2.f*M_PI*float(j)/float(Ndivs));
+    }
+    
+    for( int i=0; i<2; i++ ){ //looping over cone segments
+        
+        if(i==0){
+            vec.x=nodes[i+1].x-nodes[i].x;
+            vec.y=nodes[i+1].y-nodes[i].y;
+            vec.z=nodes[i+1].z-nodes[i].z;
+        }else if(i==1){
+            vec.x=nodes[i].x-nodes[i-1].x;
+            vec.y=nodes[i].y-nodes[i-1].y;
+            vec.z=nodes[i].z-nodes[i-1].z;
+        }
+        
+        float norm;
+        convec = cross(nvec,vec);
+        norm=convec.magnitude();
+        convec.x=convec.x/norm;
+        convec.y=convec.y/norm;
+        convec.z=convec.z/norm;
+        nvec = cross(vec,convec);
+        norm=nvec.magnitude();
+        nvec.x=nvec.x/norm;
+        nvec.y=nvec.y/norm;
+        nvec.z=nvec.z/norm;
+        
+        for( int j=0; j<Ndivs+1; j++ ){
+            normal[j][i].x=cfact[j]*radii[i]*nvec.x+sfact[j]*radii[i]*convec.x;
+            normal[j][i].y=cfact[j]*radii[i]*nvec.y+sfact[j]*radii[i]*convec.y;
+            normal[j][i].z=cfact[j]*radii[i]*nvec.z+sfact[j]*radii[i]*convec.z;
+            
+            xyz[j][i].x=nodes[i].x+normal[j][i].x;
+            xyz[j][i].y=nodes[i].y+normal[j][i].y;
+            xyz[j][i].z=nodes[i].z+normal[j][i].z;
+            
+            normal[j][i] = normal[j][i]/radii[i];
+        }
+        
+    }
+    
+    vec3 v0, v1, v2;
+    std::vector<uint> UUID;
+    
+    for( int i=0; i<2-1; i++ ){
+        for( int j=0; j<Ndivs; j++ ){
+            
+            v0 = xyz[j][i];
+            v1 = xyz[j+1][i+1];
+            v2 = xyz[j+1][i];
+            
+            UUID.push_back(addTriangle( v0, v1, v2, color ));
+            
+            v0 = xyz[j][i];
+            v1 = xyz[j][i+1];
+            v2 = xyz[j+1][i+1];
+            
+            UUID.push_back(addTriangle( v0, v1, v2, color ));
+            
+        }
+    }
+    
+    Cone* cone_new = (new Cone( currentObjectID, UUID, node0, node1, radius0, radius1, Ndivs, this ));
+    
+    float T[16],  transform[16];
+    cone_new->getTransformationMatrix( transform );
+    
+    makeTranslationMatrix(nodes.front(),T);
+    matmult(T,transform,transform);
+    
+    cone_new->setTransformationMatrix( transform );
+    
+    for( size_t p=0; p<UUID.size(); p++ ){
+        getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
+    }
+    
+    objects[currentObjectID] = cone_new;
+    currentObjectID++;
+    return currentObjectID-1;
+    
+}
+
+uint Context::addConeObject( const uint Ndivs, const helios::vec3 node0, const helios::vec3 node1, const float radius0, const float radius1, const char* texturefile ){
+    
+    std::vector<helios::vec3> nodes{node0, node1};
+    std::vector<float> radii{radius0, radius1};
+    
+    vec3 vec, convec;
+    float cfact[Ndivs+1], sfact[Ndivs+1];
+    std::vector<std::vector<vec3> > xyz, normal;
+    std::vector<std::vector<vec2> > uv;
+    xyz.resize(Ndivs+1);
+    normal.resize(Ndivs+1);
+    uv.resize(Ndivs+1);
+    for( uint j=0; j<Ndivs+1; j++ ){
+        xyz.at(j).resize(2);
+        normal.at(j).resize(2);
+        uv.at(j).resize(2);
+    }
+    vec3 nvec(0.f,1.f,0.f);
+    
+    for( int j=0; j<Ndivs+1; j++ ){
+        cfact[j]=cos(2.f*M_PI*float(j)/float(Ndivs));
+        sfact[j]=sin(2.f*M_PI*float(j)/float(Ndivs));
+    }
+    
+    for( int i=0; i<2; i++ ){ //looping over cone segments
+        
+        if(i==0){
+            vec.x=nodes[i+1].x-nodes[i].x;
+            vec.y=nodes[i+1].y-nodes[i].y;
+            vec.z=nodes[i+1].z-nodes[i].z;
+        }else if(i==1){
+            vec.x=nodes[i].x-nodes[i-1].x;
+            vec.y=nodes[i].y-nodes[i-1].y;
+            vec.z=nodes[i].z-nodes[i-1].z;
+        }
+        
+        float norm;
+        convec = cross(nvec,vec);
+        norm=convec.magnitude();
+        convec.x=convec.x/norm;
+        convec.y=convec.y/norm;
+        convec.z=convec.z/norm;
+        nvec = cross(vec,convec);
+        norm=nvec.magnitude();
+        nvec.x=nvec.x/norm;
+        nvec.y=nvec.y/norm;
+        nvec.z=nvec.z/norm;
+        
+        for( int j=0; j<Ndivs+1; j++ ){
+            normal[j][i].x=cfact[j]*radii[i]*nvec.x+sfact[j]*radii[i]*convec.x;
+            normal[j][i].y=cfact[j]*radii[i]*nvec.y+sfact[j]*radii[i]*convec.y;
+            normal[j][i].z=cfact[j]*radii[i]*nvec.z+sfact[j]*radii[i]*convec.z;
+            
+            xyz[j][i].x=nodes[i].x+normal[j][i].x;
+            xyz[j][i].y=nodes[i].y+normal[j][i].y;
+            xyz[j][i].z=nodes[i].z+normal[j][i].z;
+            
+            uv[j][i].x = float(i)/float(2-1);
+            uv[j][i].y = float(j)/float(Ndivs);
+            
+            normal[j][i] = normal[j][i]/radii[i];
+        }
+        
+    }
+    
+    vec3 v0, v1, v2;
+    vec2 uv0, uv1, uv2;
+    std::vector<uint> UUID;
+    
+    for( int i=0; i<2-1; i++ ){
+        for( int j=0; j<Ndivs; j++ ){
+            
+            v0 = xyz[j][i];
+            v1 = xyz[j+1][i+1];
+            v2 = xyz[j+1][i];
+            
+            uv0 = uv[j][i];
+            uv1 = uv[j+1][i+1];
+            uv2 = uv[j+1][i];
+            
+            if( (v1-v0).magnitude()>1e-6 && (v2-v0).magnitude()>1e-6 && (v2-v1).magnitude()>1e-6 ){
+                UUID.push_back(addTriangle( v0, v1, v2, texturefile, uv0, uv1, uv2 ));
+            }
+            
+            v0 = xyz[j][i];
+            v1 = xyz[j][i+1];
+            v2 = xyz[j+1][i+1];
+            
+            uv0 = uv[j][i];
+            uv1 = uv[j][i+1];
+            uv2 = uv[j+1][i+1];
+            
+            if( (v1-v0).magnitude()>1e-6 && (v2-v0).magnitude()>1e-6 && (v2-v1).magnitude()>1e-6 ){
+                UUID.push_back(addTriangle( v0, v1, v2, texturefile, uv0, uv1, uv2 ));
+            }
+            
+        }
+    }
+    
+    Cone* cone_new = (new Cone( currentObjectID, UUID, node0, node1, radius0, radius1, Ndivs, this ));
+    
+    float T[16],  transform[16];
+    cone_new->getTransformationMatrix( transform );
+    
+    makeTranslationMatrix(nodes.front(),T);
+    matmult(T,transform,transform);
+    
+    cone_new->setTransformationMatrix( transform );
+    
+    for( size_t p=0; p<UUID.size(); p++ ){
+        getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
+    }
+    
+    objects[currentObjectID] = cone_new;
+    currentObjectID++;
+    return currentObjectID-1;
+    
+}
 
 std::vector<uint> Context::addSphere( const uint Ndivs, const vec3 center, const float radius ){
  
@@ -7735,6 +8374,105 @@ std::vector<uint> Context::addSphere( const uint Ndivs, const vec3 center, const
 	
       UUID.push_back( addTriangle(v0,v1,v2,color) );
       UUID.push_back( addTriangle(v0,v2,v3,color) );      
+      
+    }
+  }
+
+  return UUID;
+
+
+}
+
+std::vector<uint> Context::addSphere( const uint Ndivs, const vec3 center, const float radius, const char* texturefile ){
+
+  std::vector<uint> UUID;
+
+  float theta;
+  float dtheta=M_PI/float(Ndivs);
+  float dphi=2.0*M_PI/float(Ndivs);
+
+  //bottom cap
+  for( int j=0; j<Ndivs; j++ ){
+      
+    vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI, 0 ) );
+    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j)*dphi ) );
+    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j+1)*dphi ) );
+
+    vec3 n0 = v0-center;
+    n0.normalize();
+    vec3 n1 = v1-center;
+    n1.normalize();
+    vec3 n2 = v2-center;
+    n2.normalize();
+    
+    vec2 uv0 = make_vec2( 1 - atan2( sin(float(j+0.5)*dphi), -cos(float(j+0.5)*dphi) )/(2.f*M_PI) - 0.5, 1 - n0.z*0.5 - 0.5 );
+    vec2 uv1 = make_vec2( 1 - atan2( n1.x, -n1.y )/(2.f*M_PI) - 0.5, 1 - n1.z*0.5 - 0.5 );
+    vec2 uv2 = make_vec2( 1 - atan2( n2.x, -n2.y )/(2.f*M_PI) - 0.5, 1 - n2.z*0.5 - 0.5 );
+
+    if( j==Ndivs-1 ){
+      uv2.x = 1;
+    }
+    
+    UUID.push_back( addTriangle(v0,v1,v2,texturefile,uv0,uv1,uv2) );
+
+  }
+
+  //top cap
+  for( int j=0; j<Ndivs; j++ ){
+      
+    vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI, 0 ) );
+    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j)*dphi ) );
+    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j+1)*dphi ) );
+
+    vec3 n0 = v0-center;
+    n0.normalize();
+    vec3 n1 = v1-center;
+    n1.normalize();
+    vec3 n2 = v2-center;
+    n2.normalize();
+    
+    vec2 uv0 = make_vec2( 1 - atan2( sin(float(j+0.5)*dphi), -cos(float(j+0.5)*dphi) )/(2.f*M_PI) - 0.5, 1 - n0.z*0.5 - 0.5 );
+    vec2 uv1 = make_vec2( 1 - atan2( n1.x, -n1.y )/(2.f*M_PI) - 0.5, 1 - n1.z*0.5 - 0.5 );
+    vec2 uv2 = make_vec2( 1 - atan2( n2.x, -n2.y )/(2.f*M_PI) - 0.5, 1 - n2.z*0.5 - 0.5 );
+
+    if( j==Ndivs-1 ){
+      uv2.x = 1;
+    }
+    
+    UUID.push_back( addTriangle(v0,v1,v2,texturefile,uv0,uv1,uv2) );
+
+  }
+
+  //middle
+  for( int j=0; j<Ndivs; j++ ){
+    for( int i=1; i<Ndivs-1; i++ ){
+      
+      vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i)*dtheta, float(j)*dphi ) );
+      vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i+1)*dtheta, float(j)*dphi ) );
+      vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i+1)*dtheta, float(j+1)*dphi ) );
+      vec3 v3 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i)*dtheta, float(j+1)*dphi ) );
+
+      vec3 n0 = v0-center;
+      n0.normalize();
+      vec3 n1 = v1-center;
+      n1.normalize();
+      vec3 n2 = v2-center;
+      n2.normalize();
+      vec3 n3 = v3-center;
+      n3.normalize();
+
+      vec2 uv0 = make_vec2( 1 - atan2( n0.x, -n0.y )/(2.f*M_PI) - 0.5, 1 - n0.z*0.5 - 0.5 );
+      vec2 uv1 = make_vec2( 1 - atan2( n1.x, -n1.y )/(2.f*M_PI) - 0.5, 1 - n1.z*0.5 - 0.5 );
+      vec2 uv2 = make_vec2( 1 - atan2( n2.x, -n2.y )/(2.f*M_PI) - 0.5, 1 - n2.z*0.5 - 0.5 );
+      vec2 uv3 = make_vec2( 1 - atan2( n3.x, -n3.y )/(2.f*M_PI) - 0.5, 1 - n3.z*0.5 - 0.5 );
+
+      if( j==Ndivs-1 ){
+	uv2.x = 1;
+	uv3.x = 1;
+      }
+      
+      UUID.push_back( addTriangle(v0,v1,v2,texturefile,uv0,uv1,uv2) );
+      UUID.push_back( addTriangle(v0,v2,v3,texturefile,uv0,uv2,uv3) );      
       
     }
   }
@@ -8365,7 +9103,206 @@ std::vector<uint> Context::addDisk( const uint Ndivs, const vec3& center, const 
 
   return UUIDs;
 
-} 
+}
+
+std::vector<uint> Context::addCone( const uint Ndivs, const vec3 node0, const vec3 node1, const float radius0, const float radius1 ){
+    
+    RGBcolor color;
+    color = make_RGBcolor(0.f,0.75f,0.f); //Default color is green
+    
+    return addCone(Ndivs, node0, node1, radius0, radius1, color);
+    
+}
+
+std::vector<uint> Context::addCone( const uint Ndivs,  const vec3 node0, const vec3 node1, const float radius0, const float radius1, RGBcolor color ){
+    
+    std::vector<helios::vec3> nodes{node0, node1};
+    std::vector<float> radii{radius0, radius1};
+    
+    vec3 vec, convec;
+    float cfact[Ndivs+1], sfact[Ndivs+1];
+    std::vector<std::vector<vec3> > xyz, normal;
+    xyz.resize(Ndivs+1);
+    normal.resize(Ndivs+1);
+    for( uint j=0; j<Ndivs+1; j++ ){
+        xyz.at(j).resize(2);
+        normal.at(j).resize(2);
+    }
+    vec3 nvec(0.1817f,0.6198f,0.7634f);//random vector to get things going
+    
+    for( int j=0; j<Ndivs+1; j++ ){
+        cfact[j]=cos(2.f*M_PI*float(j)/float(Ndivs));
+        sfact[j]=sin(2.f*M_PI*float(j)/float(Ndivs));
+    }
+    
+    for( int i=0; i<2; i++ ){ //looping over cone segments
+        
+        if(i==0){
+            vec.x=nodes[i+1].x-nodes[i].x;
+            vec.y=nodes[i+1].y-nodes[i].y;
+            vec.z=nodes[i+1].z-nodes[i].z;
+        }else if(i==1){
+            vec.x=nodes[i].x-nodes[i-1].x;
+            vec.y=nodes[i].y-nodes[i-1].y;
+            vec.z=nodes[i].z-nodes[i-1].z;
+        }
+        
+        float norm;
+        convec = cross(nvec,vec);
+        norm=convec.magnitude();
+        convec.x=convec.x/norm;
+        convec.y=convec.y/norm;
+        convec.z=convec.z/norm;
+        nvec = cross(vec,convec);
+        norm=nvec.magnitude();
+        nvec.x=nvec.x/norm;
+        nvec.y=nvec.y/norm;
+        nvec.z=nvec.z/norm;
+        
+        
+        
+        for( int j=0; j<Ndivs+1; j++ ){
+            normal[j][i].x=cfact[j]*radii[i]*nvec.x+sfact[j]*radii[i]*convec.x;
+            normal[j][i].y=cfact[j]*radii[i]*nvec.y+sfact[j]*radii[i]*convec.y;
+            normal[j][i].z=cfact[j]*radii[i]*nvec.z+sfact[j]*radii[i]*convec.z;
+            
+            xyz[j][i].x=nodes[i].x+normal[j][i].x;
+            xyz[j][i].y=nodes[i].y+normal[j][i].y;
+            xyz[j][i].z=nodes[i].z+normal[j][i].z;
+            
+            normal[j][i] = normal[j][i]/radii[i];
+        }
+        
+    }
+    
+    vec3 v0, v1, v2;
+    std::vector<uint> UUID;
+    
+    for( int i=0; i<2-1; i++ ){
+        for( int j=0; j<Ndivs; j++ ){
+            
+            v0 = xyz[j][i];
+            v1 = xyz[j+1][i+1];
+            v2 = xyz[j+1][i];
+            
+            UUID.push_back(addTriangle( v0, v1, v2, color ));
+            
+            v0 = xyz[j][i];
+            v1 = xyz[j][i+1];
+            v2 = xyz[j+1][i+1];
+            
+            UUID.push_back(addTriangle( v0, v1, v2, color ));
+
+            
+        }
+    }
+    
+    return UUID;
+    
+}
+
+std::vector<uint> Context::addCone( const uint Ndivs,  const vec3 node0, const vec3 node1, const float radius0, const float radius1, const char* texturefile ){
+    
+    std::vector<helios::vec3> nodes{node0, node1};
+    std::vector<float> radii{radius0, radius1};
+    
+    vec3 vec, convec;
+    float cfact[Ndivs+1], sfact[Ndivs+1];
+    std::vector<std::vector<vec3> > xyz, normal;
+    std::vector<std::vector<vec2> > uv;
+    xyz.resize(Ndivs+1);
+    normal.resize(Ndivs+1);
+    uv.resize(Ndivs+1);
+    for( uint j=0; j<Ndivs+1; j++ ){
+        xyz.at(j).resize(2);
+        normal.at(j).resize(2);
+        uv.at(j).resize(2);
+    }
+    vec3 nvec(0.f,1.f,0.f);
+    
+    for( int j=0; j<Ndivs+1; j++ ){
+        cfact[j]=cos(2.f*M_PI*float(j)/float(Ndivs));
+        sfact[j]=sin(2.f*M_PI*float(j)/float(Ndivs));
+    }
+    
+    for( int i=0; i<2; i++ ){ //looping over cone segments
+        
+        if(i==0){
+            vec.x=nodes[i+1].x-nodes[i].x;
+            vec.y=nodes[i+1].y-nodes[i].y;
+            vec.z=nodes[i+1].z-nodes[i].z;
+        }else if(i==1){
+            vec.x=nodes[i].x-nodes[i-1].x;
+            vec.y=nodes[i].y-nodes[i-1].y;
+            vec.z=nodes[i].z-nodes[i-1].z;
+        }
+        
+        float norm;
+        convec = cross(nvec,vec);
+        norm=convec.magnitude();
+        convec.x=convec.x/norm;
+        convec.y=convec.y/norm;
+        convec.z=convec.z/norm;
+        nvec = cross(vec,convec);
+        norm=nvec.magnitude();
+        nvec.x=nvec.x/norm;
+        nvec.y=nvec.y/norm;
+        nvec.z=nvec.z/norm;
+        
+        for( int j=0; j<Ndivs+1; j++ ){
+            normal[j][i].x=cfact[j]*radii[i]*nvec.x+sfact[j]*radii[i]*convec.x;
+            normal[j][i].y=cfact[j]*radii[i]*nvec.y+sfact[j]*radii[i]*convec.y;
+            normal[j][i].z=cfact[j]*radii[i]*nvec.z+sfact[j]*radii[i]*convec.z;
+            
+            xyz[j][i].x=nodes[i].x+normal[j][i].x;
+            xyz[j][i].y=nodes[i].y+normal[j][i].y;
+            xyz[j][i].z=nodes[i].z+normal[j][i].z;
+            
+            uv[j][i].x = float(i)/float(2-1);
+            uv[j][i].y = float(j)/float(Ndivs);
+            
+            normal[j][i] = normal[j][i]/radii[i];
+        }
+        
+    }
+    
+    vec3 v0, v1, v2;
+    vec2 uv0, uv1, uv2;
+    std::vector<uint> UUID;
+    
+    for( int i=0; i<2-1; i++ ){
+        for( int j=0; j<Ndivs; j++ ){
+            
+            v0 = xyz[j][i];
+            v1 = xyz[j+1][i+1];
+            v2 = xyz[j+1][i];
+            
+            uv0 = uv[j][i];
+            uv1 = uv[j+1][i+1];
+            uv2 = uv[j+1][i];
+            
+            if( (v1-v0).magnitude()>1e-6 && (v2-v0).magnitude()>1e-6 && (v2-v1).magnitude()>1e-6 ){
+                UUID.push_back(addTriangle( v0, v1, v2, texturefile, uv0, uv1, uv2 ));
+            }
+            
+            v0 = xyz[j][i];
+            v1 = xyz[j][i+1];
+            v2 = xyz[j+1][i+1];
+            
+            uv0 = uv[j][i];
+            uv1 = uv[j][i+1];
+            uv2 = uv[j+1][i+1];
+            
+            if( (v1-v0).magnitude()>1e-6 && (v2-v0).magnitude()>1e-6 && (v2-v1).magnitude()>1e-6 ){
+                UUID.push_back(addTriangle( v0, v1, v2, texturefile, uv0, uv1, uv2 ));
+            }
+            
+        }
+    }
+    
+    return UUID;
+    
+}
 
 void Context::loadPData( pugi::xml_node p, uint UUID ){
 

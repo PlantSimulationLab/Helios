@@ -718,6 +718,8 @@ namespace helios {
   OBJECT_TYPE_DISK = 4,
   /// < Triangular Mesh
   OBJECT_TYPE_POLYMESH = 5,
+  /// < Cone/tapered cylinder
+  OBJECT_TYPE_CONE = 6,
   };
 
   class CompoundObject{
@@ -1238,6 +1240,46 @@ namespace helios {
   protected:
     
     
+  };
+
+  class Cone: public CompoundObject {
+  public:
+      
+      //! Default constructor
+      Cone( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec3 __node0, const helios::vec3 __node1, const float __radius0, const float __radius1, const uint __subdiv, helios::Context* __context );
+      
+      //! Cone destructor
+      ~Cone(){};
+      
+      std::vector<helios::vec3> getNodes( void ) const;
+      helios::vec3 getNode(int number) const;
+      
+      std::vector<float> getNodeRadii( void ) const;
+      float getNodeRadius(int number) const;
+      
+      uint getSubdivisionCount( void ) const;
+      
+      helios::vec3 getAxisUnitVector() const;
+      
+      float getLength(void) const;
+      
+      //! Function to scale the length of the cone
+      /** \param[in] "S" Scaling factor
+       */
+      void scaleLength( const float S );
+      
+      //! Function to scale the girth of the cone
+      /** \param[in] "S" Scaling factor
+       */
+      void scaleGirth( const float S );
+      
+  protected:
+
+    std::vector<helios::vec3> nodes;
+    std::vector<float> radii;
+    
+    uint subdiv;
+      
   };
 
   
@@ -3159,6 +3201,11 @@ public:
   /** \param[in] "ObjID" Identifier for Polygon Mesh Compound Object.
    */
   Polymesh* getPolymeshObjectPointer( const uint ObjID ) const;
+
+  //! Get a pointer to a Cone Compound Object
+  /** \param[in] "ObjID" Identifier for Cone Compound Object.
+   */
+  Cone* getConeObjectPointer( const uint ObjID ) const;
   
   //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
   /** 
@@ -3213,6 +3260,15 @@ public:
       \ingroup compoundobjects
   */
   uint addSphereObject( const uint Ndivs, const helios::vec3 center, const float radius, const RGBcolor color );
+
+  //! Add a spherical compound object to the Context colored by texture map
+  /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+      \param[in] "center" (x,y,z) coordinate of sphere center
+      \param[in] "radius" Radius of sphere
+      \param[in] "texturefile" Name of image file for texture map 
+      \ingroup compoundobjects
+  */
+  uint addSphereObject( const uint Ndivs, const helios::vec3 center, const float radius, const char* texturefile );
 
   //! Add a 3D tube compound object to the Context
   /** A `tube' or `snake' compound object comprised of Triangle primitives
@@ -3375,6 +3431,45 @@ public:
        \ingroup compoundobjects
   */
   uint addPolymeshObject( const std::vector<uint> UUIDs );
+
+  //! Add a 3D cone compound object to the Context
+  /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+   \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
+   \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.  
+   \param[in] "node0" (x,y,z) position defining the base of the cone
+   \param[in] "node1" (x,y,z) position defining the end of the cone
+   \param[in] "radius0" Radius of the cone at the base node.
+   \param[in] "radius1" Radius of the cone at the base node.
+   \note Ndivs must be greater than 2.
+   \ingroup compoundobjects
+   */
+  uint addConeObject( const uint Ndivs, const helios::vec3 node0, const helios::vec3 node1, const float radius0, const float radius1 );
+  
+  //! Add a 3D cone compound object to the Context and specify its diffuse color
+  /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+   \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.  
+   \param[in] "node0" (x,y,z) position defining the base of the cone
+   \param[in] "node1" (x,y,z) position defining the end of the cone
+   \param[in] "radius0" Radius of the cone at the base node.
+   \param[in] "radius1" Radius of the cone at the base node.
+   \param[in] "color" Diffuse color of each tube segment.
+   \note Ndivs must be greater than 2.
+   \ingroup compoundobjects
+   */
+  uint addConeObject( const uint Ndivs, const helios::vec3 node0, const helios::vec3 node1, const float radius0, const float radius1, const helios::RGBcolor color );
+  
+  //! Add a 3D cone compound object to the Context that is texture-mapped
+  /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+   \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.  
+   \param[in] "node0" (x,y,z) position defining the base of the cone
+   \param[in] "node1" (x,y,z) position defining the end of the cone
+   \param[in] "radius0" Radius of the cone at the base node.
+   \param[in] "radius1" Radius of the cone at the base node.
+   \param[in] "texturefile" Name of image file for texture map
+   \note Ndivs must be greater than 2.
+   \ingroup compoundobjects
+   */
+  uint addConeObject( const uint Ndivs, const helios::vec3 node0, const helios::vec3 node1, const float radius0, const float radius1, const char* texturefile );
   
   //! Add a spherical compound object to the Context
   /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
@@ -3393,6 +3488,15 @@ public:
       \ingroup compoundobjects
   */
   std::vector<uint> addSphere( const uint Ndivs, const helios::vec3 center, const float radius, const RGBcolor color );
+
+  //! Add a spherical compound object to the Context colored by texture map
+  /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+      \param[in] "center" (x,y,z) coordinate of sphere center
+      \param[in] "radius" Radius of sphere
+      \param[in] "texturefile" Name of image file for texture map 
+      \ingroup compoundobjects
+  */
+  std::vector<uint> addSphere( const uint Ndivs, const helios::vec3 center, const float radius, const char* texturefile );
 
   //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
   /** 
@@ -3584,6 +3688,45 @@ public:
       \ingroup compoundobjects
   */
   std::vector<uint> addDisk( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
+
+  //! Add a 3D cone to the Context
+  /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+   \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
+    \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.  
+   \param[in] "node0" (x,y,z) position defining the base of the cone
+   \param[in] "node1" (x,y,z) position defining the end of the cone
+   \param[in] "radius0" Radius of the cone at the base node.
+   \param[in] "radius1" Radius of the cone at the base node.
+   \note Ndivs must be greater than 2.
+   \ingroup compoundobjects
+   */
+  std::vector<uint> addCone( const uint Ndivs, const helios::vec3 node0, const helios::vec3 node1, const float radius0, const float radius1 );
+  
+  //! Add a 3D cone to the Context and specify its diffuse color
+  /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+   \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.  
+   \param[in] "node0" (x,y,z) position defining the base of the cone
+   \param[in] "node1" (x,y,z) position defining the end of the cone
+   \param[in] "radius0" Radius of the cone at the base node.
+   \param[in] "radius1" Radius of the cone at the base node.
+   \param[in] "color" Diffuse color of the cone.
+   \note Ndivs must be greater than 2.
+   \ingroup compoundobjects
+   */
+  std::vector<uint> addCone( const uint Ndivs, const helios::vec3 node0, const helios::vec3 node1, const float radius0, const float radius1, const helios::RGBcolor color );
+  
+  //! Add a 3D cone to the Context that is texture-mapped
+  /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+   \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.  
+   \param[in] "node0" (x,y,z) position defining the base of the cone
+   \param[in] "node1" (x,y,z) position defining the end of the cone
+   \param[in] "radius0" Radius of the cone at the base node.
+   \param[in] "radius1" Radius of the cone at the base node.
+   \param[in] "texturefile" Name of image file for texture map
+   \note Ndivs must be greater than 2.
+   \ingroup compoundobjects
+   */
+  std::vector<uint> addCone( const uint Ndivs, const helios::vec3 node0, const helios::vec3 node1, const float radius0, const float radius1, const char* texturefile );
 
   //! Add a data point to timeseries of data
   /**\param[in] "label" Name of timeseries variable (e.g., temperature)
