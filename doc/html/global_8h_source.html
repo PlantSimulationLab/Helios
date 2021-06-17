@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.8</span>
+   &#160;<span id="projectnumber">v1.2.9</span>
    </div>
   </td>
  </tr>
@@ -340,10 +340,18 @@ $(function() {
 <div class="line"><a name="l00463"></a><span class="lineno">  463</span>&#160; </div>
 <div class="line"><a name="l00465"></a><span class="lineno">  465</span>&#160; std::vector&lt;std::string&gt; flatten( std::vector&lt;std::vector&lt;std::vector&lt;std::string&gt; &gt; &gt; vec );</div>
 <div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160; </div>
-<div class="line"><a name="l00467"></a><span class="lineno">  467</span>&#160; </div>
-<div class="line"><a name="l00468"></a><span class="lineno">  468</span>&#160;}</div>
-<div class="line"><a name="l00469"></a><span class="lineno">  469</span>&#160; </div>
-<div class="line"><a name="l00470"></a><span class="lineno">  470</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00468"></a><span class="lineno">  468</span>&#160;  <span class="comment">/* \param[in] &quot;u&quot; Interpolation point as a fraction of the distance between the start and end points (must be between 0 and 1).</span></div>
+<div class="line"><a name="l00469"></a><span class="lineno">  469</span>&#160;<span class="comment">     \param[in] &quot;x_start&quot; (x,y,z) Cartesian coordinate of spline starting point.</span></div>
+<div class="line"><a name="l00470"></a><span class="lineno">  470</span>&#160;<span class="comment">     \param[in] &quot;tan_start&quot; Vector tangent to spline at starting point.</span></div>
+<div class="line"><a name="l00471"></a><span class="lineno">  471</span>&#160;<span class="comment">     \param[in] &quot;x_end&quot; (x,y,z) Cartesian coordinate of spline ending point.</span></div>
+<div class="line"><a name="l00472"></a><span class="lineno">  472</span>&#160;<span class="comment">     \param[in] &quot;tan_end&quot; Vector tangent to spline at ending point.</span></div>
+<div class="line"><a name="l00473"></a><span class="lineno">  473</span>&#160;<span class="comment">     \return Interpolated (x,y,z) Cartesian point.</span></div>
+<div class="line"><a name="l00474"></a><span class="lineno">  474</span>&#160;<span class="comment">  */</span></div>
+<div class="line"><a name="l00475"></a><span class="lineno">  475</span>&#160;  <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> spline_interp3( <span class="keyword">const</span> <span class="keywordtype">float</span> u, <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> x_start, <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> tan_start, <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> x_end, <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> tan_end );</div>
+<div class="line"><a name="l00476"></a><span class="lineno">  476</span>&#160; </div>
+<div class="line"><a name="l00477"></a><span class="lineno">  477</span>&#160;}</div>
+<div class="line"><a name="l00478"></a><span class="lineno">  478</span>&#160; </div>
+<div class="line"><a name="l00479"></a><span class="lineno">  479</span>&#160;<span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 <div class="ttc" id="agroup__functions_html_ga6f0e7f437a6316c12190a5fbaf9bfa9c"><div class="ttname"><a href="group__functions.html#ga6f0e7f437a6316c12190a5fbaf9bfa9c">helios::deg2rad</a></div><div class="ttdeci">float deg2rad(const float &amp;deg)</div><div class="ttdoc">Convert degrees to radians.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00604">global.cpp:604</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a5bbf8999d270fd46ea20bbd7a3c8f4aa"><div class="ttname"><a href="global_8h.html#a5bbf8999d270fd46ea20bbd7a3c8f4aa">helios::lineIntersection</a></div><div class="ttdeci">bool lineIntersection(const helios::vec2 p1, const helios::vec2 q1, const helios::vec2 p2, const helios::vec2 q2)</div><div class="ttdoc">Determine if two line segments intersect. The lines segments are defined by vertices (p1,...</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00210">global.cpp:210</a></div></div>

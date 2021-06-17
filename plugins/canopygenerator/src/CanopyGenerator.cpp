@@ -382,6 +382,50 @@ StrawberryParameters::StrawberryParameters(void){
   
 }
 
+WalnutCanopyParameters::WalnutCanopyParameters(void){
+
+  leaf_length = 0.15;
+
+  leaf_subdivisions = make_int2(1,2);
+
+  leaf_texture_file = "plugins/canopygenerator/textures/StrawberryLeaf.png";
+
+  wood_texture_file = "plugins/canopygenerator/textures/wood.jpg";
+
+  wood_subdivisions = 15;
+
+  stems_per_plant = 50;
+  
+  trunk_radius = 0.15;
+
+  trunk_height = 4.f;
+
+  tree_height = 6;
+
+  branch_length = make_vec3(4,0.75,0.75);
+
+  crown_radius = 2.5;
+
+  fruit_radius = 0.025;
+
+  fruit_texture_file = "plugins/canopygenerator/textures/StrawberryTexture.jpg";
+
+  fruit_subdivisions = 12;
+
+  clusters_per_stem = 0.6;
+
+  plant_spacing = 6;
+
+  row_spacing = 8;
+
+  plant_count = make_int2(4,2);
+
+  canopy_origin = make_vec3(0,0,0);
+
+  canopy_rotation = 0;
+  
+}
+
 CanopyGenerator::CanopyGenerator( helios::Context* __context ){
 
   context = __context;
@@ -983,6 +1027,40 @@ void CanopyGenerator::buildCanopy( const StrawberryParameters params ){
 
 }
 
+void CanopyGenerator::buildCanopy( const WalnutCanopyParameters params ){
+
+  if( printmessages ){
+    std::cout << "Building canopy of walnut trees..." << std::flush;
+  }
+
+  std::uniform_real_distribution<float> unif_distribution;
+
+  vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
+
+  uint plant_ID = 0;
+  uint prim_count = 0;
+  for( int j=0; j<params.plant_count.y; j++ ){
+    for( int i=0; i<params.plant_count.x; i++ ){
+
+      vec3 center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+(i+0.5)*params.plant_spacing, -0.5*canopy_extent.y+(j+0.5)*params.row_spacing, 0 );
+
+      walnut( params, center );
+
+      std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
+      prim_count += UUIDs_all.size();
+
+      plant_ID++;
+
+    }
+  }
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+    //std::cout << "Canopy consists of " << UUID_leaf.size()*UUID_leaf.front().size() << " leaves and " << prim_count << " total primitives." << std::endl;
+  }
+
+}
+
 float getVariation( float V, std::minstd_rand0& generator ){
 
   std::uniform_real_distribution<float> unif_distribution;
@@ -1040,18 +1118,18 @@ float CanopyGenerator::sampleLeafAngle( const std::vector<float> leafAngleDist )
   
 }
 
-std::vector<uint> CanopyGenerator::getTrunkUUIDs( const uint TreeID ){
-  if( TreeID>=UUID_trunk.size() ){
-    std::cerr << "ERROR (CanopyGenerator::getTrunkUUIDs): Cannot get UUIDs for plant " << TreeID << " because only " << UUID_trunk.size() << " plants have been built." << std::endl;
+std::vector<uint> CanopyGenerator::getTrunkUUIDs( const uint PlantID ){
+  if( PlantID>=UUID_trunk.size() ){
+    std::cerr << "ERROR (CanopyGenerator::getTrunkUUIDs): Cannot get UUIDs for plant " << PlantID << " because only " << UUID_trunk.size() << " plants have been built." << std::endl;
     exit(EXIT_FAILURE);
   }
 
   std::vector<uint> UUID;
 
-  for( size_t i=0; i<UUID_trunk.at(TreeID).size(); i++ ){
+  for( size_t i=0; i<UUID_trunk.at(PlantID).size(); i++ ){
  
-    if( context->doesPrimitiveExist(UUID_trunk.at(TreeID).at(i)) ){
-      UUID.push_back(UUID_trunk.at(TreeID).at(i));
+    if( context->doesPrimitiveExist(UUID_trunk.at(PlantID).at(i)) ){
+      UUID.push_back(UUID_trunk.at(PlantID).at(i));
     }
           
   }
@@ -1060,18 +1138,22 @@ std::vector<uint> CanopyGenerator::getTrunkUUIDs( const uint TreeID ){
   
 }
 
-std::vector<uint> CanopyGenerator::getBranchUUIDs( const uint TreeID ){
-  if( TreeID>=UUID_branch.size() ){
-    std::cerr << "ERROR (CanopyGenerator::getBranchUUIDs): Cannot get UUIDs for plant " << TreeID << " because only " << UUID_branch.size() << " plants have been built." << std::endl;
+std::vector<uint> CanopyGenerator::getTrunkUUIDs( void ){
+  return flatten( UUID_trunk );
+}
+
+std::vector<uint> CanopyGenerator::getBranchUUIDs( const uint PlantID ){
+  if( PlantID>=UUID_branch.size() ){
+    std::cerr << "ERROR (CanopyGenerator::getBranchUUIDs): Cannot get UUIDs for plant " << PlantID << " because only " << UUID_branch.size() << " plants have been built." << std::endl;
     exit(EXIT_FAILURE);
   }
 
   std::vector<uint> UUID;
 
-  for( size_t i=0; i<UUID_branch.at(TreeID).size(); i++ ){
+  for( size_t i=0; i<UUID_branch.at(PlantID).size(); i++ ){
  
-    if( context->doesPrimitiveExist(UUID_branch.at(TreeID).at(i)) ){
-      UUID.push_back(UUID_branch.at(TreeID).at(i));
+    if( context->doesPrimitiveExist(UUID_branch.at(PlantID).at(i)) ){
+      UUID.push_back(UUID_branch.at(PlantID).at(i));
     }
           
   }
@@ -1080,9 +1162,13 @@ std::vector<uint> CanopyGenerator::getBranchUUIDs( const uint TreeID ){
 
 }
 
-std::vector<std::vector<uint> > CanopyGenerator::getLeafUUIDs( const uint TreeID ){
-  if( TreeID>=UUID_leaf.size() ){
-    std::cerr << "ERROR (CanopyGenerator::getLeafUUIDs): Cannot get UUIDs for plant " << TreeID << " because only " << UUID_leaf.size() << " plants have been built." << std::endl;
+std::vector<uint> CanopyGenerator::getBranchUUIDs( void ){
+  return flatten( UUID_branch );
+}
+
+std::vector<std::vector<uint> > CanopyGenerator::getLeafUUIDs( const uint PlantID ){
+  if( PlantID>=UUID_leaf.size() ){
+    std::cerr << "ERROR (CanopyGenerator::getLeafUUIDs): Cannot get UUIDs for plant " << PlantID << " because only " << UUID_leaf.size() << " plants have been built." << std::endl;
     exit(EXIT_FAILURE);
   }
 
@@ -1090,12 +1176,12 @@ std::vector<std::vector<uint> > CanopyGenerator::getLeafUUIDs( const uint TreeID
   
   std::vector<std::vector<uint> > UUID;
 
-  for( size_t j=0; j<UUID_leaf.at(TreeID).size(); j++ ){
+  for( size_t j=0; j<UUID_leaf.at(PlantID).size(); j++ ){
     std::vector<uint> U;
-    for( size_t i=0; i<UUID_leaf.at(TreeID).at(j).size(); i++ ){
+    for( size_t i=0; i<UUID_leaf.at(PlantID).at(j).size(); i++ ){
       
-      if( context->doesPrimitiveExist(UUID_leaf.at(TreeID).at(j).at(i)) ){
-	U.push_back(UUID_leaf.at(TreeID).at(j).at(i));
+      if( context->doesPrimitiveExist(UUID_leaf.at(PlantID).at(j).at(i)) ){
+	U.push_back(UUID_leaf.at(PlantID).at(j).at(i));
       }
       
     }
@@ -1109,22 +1195,26 @@ std::vector<std::vector<uint> > CanopyGenerator::getLeafUUIDs( const uint TreeID
   return UUID;
 }
 
-std::vector<std::vector<std::vector<uint> > > CanopyGenerator::getFruitUUIDs( const uint TreeID ){
-  if( TreeID>=UUID_fruit.size() ){
-    std::cerr << "ERROR (CanopyGenerator::getFruitUUIDs): Cannot get UUIDs for plant " << TreeID << " because only " << UUID_fruit.size() << " plants have been built." << std::endl;
+std::vector<uint> CanopyGenerator::getLeafUUIDs( void ){
+  return flatten( UUID_leaf );
+}
+
+std::vector<std::vector<std::vector<uint> > > CanopyGenerator::getFruitUUIDs( const uint PlantID ){
+  if( PlantID>=UUID_fruit.size() ){
+    std::cerr << "ERROR (CanopyGenerator::getFruitUUIDs): Cannot get UUIDs for plant " << PlantID << " because only " << UUID_fruit.size() << " plants have been built." << std::endl;
     exit(EXIT_FAILURE);
   }
 
   std::vector<std::vector<std::vector<uint> > > UUID;
 
-  for( size_t k=0; k<UUID_fruit.at(TreeID).size(); k++ ){
+  for( size_t k=0; k<UUID_fruit.at(PlantID).size(); k++ ){
     std::vector<std::vector<uint> > U2;
-    for( size_t j=0; j<UUID_fruit.at(TreeID).at(k).size(); j++ ){
+    for( size_t j=0; j<UUID_fruit.at(PlantID).at(k).size(); j++ ){
       std::vector<uint> U1;
-      for( size_t i=0; i<UUID_fruit.at(TreeID).at(k).at(j).size(); i++ ){
+      for( size_t i=0; i<UUID_fruit.at(PlantID).at(k).at(j).size(); i++ ){
 
-	if( context->doesPrimitiveExist(UUID_fruit.at(TreeID).at(k).at(j).at(i)) ){
-	  U1.push_back(UUID_fruit.at(TreeID).at(k).at(j).at(i));
+	if( context->doesPrimitiveExist(UUID_fruit.at(PlantID).at(k).at(j).at(i)) ){
+	  U1.push_back(UUID_fruit.at(PlantID).at(k).at(j).at(i));
 	}
       
       }
@@ -1145,6 +1235,18 @@ std::vector<std::vector<std::vector<uint> > > CanopyGenerator::getFruitUUIDs( co
 
 }
 
+std::vector<uint> CanopyGenerator::getFruitUUIDs( void ){
+
+  std::vector<uint> UUIDs, U;
+
+  for( uint p=0; p<UUID_fruit.size(); p++ ){
+    U = flatten( UUID_fruit.at(p) );
+    UUIDs.insert( UUIDs.end(), U.begin(), U.end() );
+  }
+  
+  return UUIDs;
+}
+
 std::vector<uint> CanopyGenerator::getGroundUUIDs( void ){
 
   std::vector<uint> UUID;
@@ -1161,23 +1263,23 @@ std::vector<uint> CanopyGenerator::getGroundUUIDs( void ){
   
 }
 
-std::vector<uint> CanopyGenerator::getAllUUIDs( const uint TreeID ){
+std::vector<uint> CanopyGenerator::getAllUUIDs( const uint PlantID ){
   std::vector<uint> UUIDs;
-  if( UUID_trunk.size()>TreeID ){
-    UUIDs.insert(UUIDs.end(),UUID_trunk.at(TreeID).begin(),UUID_trunk.at(TreeID).end());
+  if( UUID_trunk.size()>PlantID ){
+    UUIDs.insert(UUIDs.end(),UUID_trunk.at(PlantID).begin(),UUID_trunk.at(PlantID).end());
   }
-  if( UUID_branch.size()>TreeID ){
-    UUIDs.insert(UUIDs.end(),UUID_branch.at(TreeID).begin(),UUID_branch.at(TreeID).end());
+  if( UUID_branch.size()>PlantID ){
+    UUIDs.insert(UUIDs.end(),UUID_branch.at(PlantID).begin(),UUID_branch.at(PlantID).end());
   }
-  if( UUID_leaf.size()>TreeID ){
-    for( int i=0; i<UUID_leaf.at(TreeID).size(); i++ ){
-      UUIDs.insert(UUIDs.end(),UUID_leaf.at(TreeID).at(i).begin(),UUID_leaf.at(TreeID).at(i).end());
+  if( UUID_leaf.size()>PlantID ){
+    for( int i=0; i<UUID_leaf.at(PlantID).size(); i++ ){
+      UUIDs.insert(UUIDs.end(),UUID_leaf.at(PlantID).at(i).begin(),UUID_leaf.at(PlantID).at(i).end());
     }
   }
-  if( UUID_fruit.size()>TreeID ){
-    for( int j=0; j<UUID_fruit.at(TreeID).size(); j++ ){
-      for( int i=0; i<UUID_fruit.at(TreeID).at(j).size(); i++ ){
-	UUIDs.insert(UUIDs.end(),UUID_fruit.at(TreeID).at(j).at(i).begin(),UUID_fruit.at(TreeID).at(j).at(i).end());
+  if( UUID_fruit.size()>PlantID ){
+    for( int j=0; j<UUID_fruit.at(PlantID).size(); j++ ){
+      for( int i=0; i<UUID_fruit.at(PlantID).at(j).size(); i++ ){
+	UUIDs.insert(UUIDs.end(),UUID_fruit.at(PlantID).at(j).at(i).begin(),UUID_fruit.at(PlantID).at(j).at(i).end());
       }
     }
   }
@@ -1233,7 +1335,7 @@ helios::vec3 interpolateTube( const std::vector<helios::vec3> P, const float fra
     if( frac>=f && (frac<=fplus || fabs(frac-fplus)<0.0001 ) ){
 
       vec3 V = P.at(i) + (frac-f)/(fplus-f)*(P.at(i+1)-P.at(i));
-      
+
       return V;
     }
 

@@ -59,7 +59,7 @@ RT_PROGRAM void closest_hit_direct(){
 
     float eps=0;
 
-    if( prd.periodic_depth<10 ){
+    if( prd.periodic_depth<9 ){
       if( periodic_flag.x==1 ){
 
 	float2 xbounds = make_float2(bbox_vertices[make_uint2(0,0)].x,bbox_vertices[make_uint2(1,1)].x);
@@ -103,7 +103,7 @@ RT_PROGRAM void closest_hit_diffuse()
 
     float eps=0;
 
-    if( prd.periodic_depth<10 ){
+    if( prd.periodic_depth<9 ){
       if( periodic_flag.x==1 ){
 
 	float2 xbounds = make_float2(bbox_vertices[make_uint2(0,0)].x,bbox_vertices[make_uint2(1,1)].x);

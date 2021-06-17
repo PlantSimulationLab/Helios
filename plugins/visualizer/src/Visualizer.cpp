@@ -301,6 +301,8 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   //Hdisplay = Wdisplay*0.8f;
   //Hdisplay = Wdisplay*1.45f;
 
+  message_flag = true;
+
   frame_counter = 0;
 
   camera_FOV = 45;
@@ -326,9 +328,11 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   point_width = 1;
 
   //Initialize OpenGL context and open graphic window
-  
-  std::cout << "Opening graphic window..." << std::flush;
-  
+
+  if( message_flag ){
+    std::cout << "Opening graphic window..." << std::flush;
+  }
+    
   // Initialise GLFW
   if( !glfwInit() ){
     fprintf( stderr, "Failed to initialize GLFW\n" );
@@ -344,8 +348,8 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
 
   // Open a window and create its OpenGL context
   GLFWwindow* _window;
-  //_window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation System", NULL, NULL);
-  _window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation System", NULL, NULL); 
+  //_window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", NULL, NULL);
+  _window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", NULL, NULL); 
   if( _window == NULL ){
     fprintf( stderr, "Failed to open graphics window.\n" );
     fprintf( stderr, "Common causes for this error:\n");
@@ -434,8 +438,8 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   glActiveTexture(GL_TEXTURE1);
   glGenTextures(1, &depthTexture);
   glBindTexture(GL_TEXTURE_2D, depthTexture);
-  //glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 8192, 8192, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-  glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 16384, 16384, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 8192, 8192, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  //glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 16384, 16384, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -581,9 +585,11 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   colormap_current = colormap_hot;
 
   assert( checkerrors() );
-  
-  std::cout << "done." << std::endl;
 
+  if( message_flag ){
+    std::cout << "done." << std::endl;
+  }
+    
 }
 
 Visualizer::~Visualizer(){
@@ -673,10 +679,20 @@ int Visualizer::selfTest( void ){
   visualizer.addLine( make_vec3(1,3,0), make_vec3(0,2,0), RGB::red, 1, Visualizer::COORDINATES_CARTESIAN );
   visualizer.addLine( make_vec3(0,2,0), make_vec3(-1,3,0), RGB::red, 1, Visualizer::COORDINATES_CARTESIAN );
 
-  std::cout << "done." << std::endl;
-
+  if( message_flag ){
+    std::cout << "done." << std::endl;
+  }
+    
   return 0;
 
+}
+
+void Visualizer::enableMessages(void){
+  message_flag = true;
+}
+
+void Visualizer::disableMessages(void){
+  message_flag = false;
 }
 
 void Visualizer::setCameraPosition( vec3 cameraPosition, vec3 lookAt ){
@@ -798,7 +814,7 @@ void Visualizer::printWindow( const char* outfile ){
 
 }
 
-void Visualizer::getWindowPixelsRGB( unsigned int * buffer ){
+void Visualizer::getWindowPixelsRGB( uint * buffer ){
 
   std::vector<GLubyte> buff;
   buff.resize( 3*Wframebuffer*Hframebuffer );
@@ -806,7 +822,7 @@ void Visualizer::getWindowPixelsRGB( unsigned int * buffer ){
   glfwSwapBuffers((GLFWwindow*)window);
   glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
 
-  //depending on the ative frame buffer, we may get all zero data and need to swap it again.
+  //depending on the active frame buffer, we may get all zero data and need to swap it again.
   bool zeros = true;
   for( int i=0; i<3*Wframebuffer*Hframebuffer; i++ ){
     if( buff[i]!=0 ){
@@ -823,6 +839,7 @@ void Visualizer::getWindowPixelsRGB( unsigned int * buffer ){
 
   //assert( checkerrors() );
 
+  //buffer.resize(3*Wframebuffer*Hframebuffer);
   for( int i=0; i<3*Wframebuffer*Hframebuffer; i++ ){
     buffer[i] = (unsigned int)buff[i];
   }
@@ -848,6 +865,11 @@ void Visualizer::getDepthMap( float * buffer ){
 void Visualizer::getWindowSize( uint &width, uint &height ){
   width = Wdisplay;
   height = Hdisplay;
+}
+
+void Visualizer::getFramebufferSize( uint &width, uint &height ){
+  width = Wframebuffer;
+  height = Hframebuffer;
 }
 
 void Visualizer::clearGeometry( void ){
@@ -1021,11 +1043,17 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     //Check that coordinates are inside drawable area
     for( uint i=0; i<vertices.size(); i++ ){
       if( vertices.at(i).x<0.f || vertices.at(i).x>1.f ){
-	std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+	}
       }else if( vertices.at(i).y<0.f || vertices.at(i).y>1.f ){
-	std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+	}
       }else if( vertices.at(i).z<-1.f || vertices.at(i).z>1.f ){
-	std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+	}
       }
     }
 
@@ -1127,11 +1155,17 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     //Check that coordinates are inside drawable area
     for( uint i=0; i<vertices.size(); i++ ){
       if( vertices.at(i).x<0.f || vertices.at(i).x>1.f ){
-	std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+	}
       }else if( vertices.at(i).y<0.f || vertices.at(i).y>1.f ){
-	std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+	}
       }else if( vertices.at(i).z<-1.f || vertices.at(i).z>1.f ){
-	std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+	}
       }
     }
 
@@ -1351,11 +1385,17 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     //Check that coordinates are inside drawable area
     for( uint i=0; i<vertices.size(); i++ ){
       if( vertices.at(i).x<0.f || vertices.at(i).x>1.f ){
-	std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+	}
       }else if( vertices.at(i).y<0.f || vertices.at(i).y>1.f ){
-	std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+	}
       }else if( vertices.at(i).z<-1.f || vertices.at(i).z>1.f ){
-	std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+	}
       }
     }
 
@@ -1462,11 +1502,17 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, RGBA
     //Check that coordinates are inside drawable area
     for( uint i=0; i<vertices.size(); i++ ){
       if( vertices.at(i).x<0.f || vertices.at(i).x>1.f ){
-	std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+	}
       }else if( vertices.at(i).y<0.f || vertices.at(i).y>1.f ){
-	std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+	}
       }else if( vertices.at(i).z<-1.f || vertices.at(i).z>1.f ){
-	std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+	}
       }
     }
 
@@ -1576,11 +1622,17 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolo
     //Check that coordinates are inside drawable area
     for( uint i=0; i<v.size(); i++ ){
       if( v.at(i).x<0.f || v.at(i).x>1.f ){
-	std::cout << "WARNING: Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+	}
       }else if( v.at(i).y<0.f || v.at(i).y>1.f ){
-	std::cout << "WARNING: Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+	}
       }else if( v.at(i).z<-1.f || v.at(i).z>1.f ){
-	std::cout << "WARNING: Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+	}
       }
     }
 
@@ -1664,11 +1716,17 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     //Check that coordinates are inside drawable area
     for( uint i=0; i<v.size(); i++ ){
       if( v.at(i).x<0.f || v.at(i).x>1.f ){
-	std::cout << "WARNING: Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+	}
       }else if( v.at(i).y<0.f || v.at(i).y>1.f ){
-	std::cout << "WARNING: Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+	}
       }else if( v.at(i).z<-1.f || v.at(i).z>1.f ){
-	std::cout << "WARNING: Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+	}
       }
     }
 
@@ -1752,11 +1810,17 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     //Check that coordinates are inside drawable area
     for( uint i=0; i<v.size(); i++ ){
       if( v.at(i).x<0.f || v.at(i).x>1.f ){
-	std::cout << "WARNING: Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+	}
       }else if( v.at(i).y<0.f || v.at(i).y>1.f ){
-	std::cout << "WARNING: Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+	}
       }else if( v.at(i).z<-1.f || v.at(i).z>1.f ){
-	std::cout << "WARNING: Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+	if( message_flag ){
+	  std::cout << "WARNING: Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+	}
       }
     }
 
@@ -2034,6 +2098,8 @@ void Visualizer::addLine( const vec3 start, const vec3 end, const RGBcolor color
 }
 
 void Visualizer::addLine( const vec3 start, const vec3 end, const RGBAcolor color, const uint linewidth, const CoordinateSystem coordFlag ){
+
+  line_width = linewidth;
 
   vec3 s = start;  //copy so that can be modified
   vec3 e = end;
@@ -2333,11 +2399,15 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 center, 
   float xt=center.x-0.5f*wtext;
   float yt=center.y-0.5f*htext;
 
-  if(xt<0 || xt>1){
-    std::cout << "WARNING: text x-coordinate is outside of window area" << std::endl;
-  }
-  if(yt<0 || yt>1){
-    std::cout << "WARNING: text y-coordinate is outside of window area" << std::endl;
+  if( message_flag ){
+    if( coordFlag==COORDINATES_WINDOW_NORMALIZED ){
+      if(xt<0 || xt>1){
+	std::cout << "WARNING: text x-coordinate is outside of window area" << std::endl;
+      }
+      if(yt<0 || yt>1){
+	std::cout << "WARNING: text y-coordinate is outside of window area" << std::endl;
+      }
+    }
   }
 
   FT_GlyphSlot g = face->glyph; //Another FreeType glyph for font `fontname' and size `fontsize'
@@ -2488,6 +2558,47 @@ void Visualizer::addColorbarByCenter( const char* title, const vec2 size, const 
 
 }
 
+void Visualizer::addCoordinateAxes(){
+    addCoordinateAxes(helios::make_vec3(0,0,0), helios::make_vec3(1,1,1), "positive");
+}
+
+void Visualizer::addCoordinateAxes(const helios::vec3 origin, const helios::vec3 length, const std::string sign){
+    
+
+    float mult;
+    if(sign == "both"){
+        mult = 1.0;
+    }else{
+        mult = 0.0;
+    }
+
+    float Lmag = length.magnitude();
+    
+    // x axis
+    addLine(make_vec3(mult*-1.0*length.x + origin.x, origin.y, origin.z), make_vec3(length.x + origin.x, origin.y, origin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+ 
+    if(length.x > 0){
+      addTextboxByCenter("+ X", helios::make_vec3(1.2*length.x + origin.x, origin.y, origin.z), helios::make_SphericalCoord(0,0), helios::make_RGBcolor( 0.f, 0.f, 0.f ), uint(200*Lmag), "OpenSans-Regular", Visualizer::COORDINATES_CARTESIAN);
+    }
+    
+    // y axis
+    addLine(make_vec3(origin.x, mult*-1.0*length.y+origin.y, origin.z), make_vec3(origin.x, length.y+origin.y, origin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+    
+    if(length.y > 0){
+      addTextboxByCenter("+ Y", helios::make_vec3( origin.x, 1.1*length.y+origin.y, origin.z), helios::make_SphericalCoord(0,0), helios::make_RGBcolor( 0.f, 0.f, 0.f ), uint(200*Lmag), "OpenSans-Regular", Visualizer::COORDINATES_CARTESIAN);
+    }
+    
+    // z axis
+    addLine(make_vec3(origin.x, origin.y, mult*-1*length.z+origin.z), make_vec3(origin.x, origin.y, length.z+origin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+    
+    if(length.z > 0){
+      addTextboxByCenter("+ Z", helios::make_vec3( origin.x, origin.y, length.z+origin.z), helios::make_SphericalCoord(0,0), helios::make_RGBcolor( 0.f, 0.f, 0.f ), uint(200*Lmag), "OpenSans-Regular", Visualizer::COORDINATES_CARTESIAN);
+        
+    }
+
+    
+}
+
 void Visualizer::enableColorbar( void ){
   colorbar_flag = 2;
 }
@@ -2513,7 +2624,7 @@ void Visualizer::setColorbarSize( vec2 size ){
 }
 
 void Visualizer::setColorbarRange( float cmin, float cmax ){
-  if( cmin>cmax ){
+  if( message_flag && cmin>cmax ){
     std::cout << "WARNING (setColorbarRange): Maximum colorbar value must be greater than minimum value...Ignoring command." << std::endl;
     return;
   }
@@ -2641,16 +2752,18 @@ void Visualizer::buildContextGeometry_private( void ){
   //------ Colormap ------//
 
   uint psize = contextPrimitiveIDs.size();
-  if( psize>0 ){
-    if( psize>=1e3 && psize<1e6 ){
-      std::cout << "Adding " << psize/1e3 << "K Context primitives to visualizer...." << std::flush;
-    }else if( psize>=1e6 ){
-      std::cout << "Adding " << psize/1e6 << "M Context primitives to visualizer...." << std::flush;
+  if( message_flag ){
+    if( psize>0 ){
+      if( psize>=1e3 && psize<1e6 ){
+	std::cout << "Adding " << psize/1e3 << "K Context primitives to visualizer...." << std::flush;
+      }else if( psize>=1e6 ){
+	std::cout << "Adding " << psize/1e6 << "M Context primitives to visualizer...." << std::flush;
+      }else{
+	std::cout << "Adding " << psize << " Context primitives to visualizer...." << std::flush;
+      }
     }else{
-      std::cout << "Adding " << psize << " Context primitives to visualizer...." << std::flush;
+      std::cout << "WARNING: No primitives were found in the Context..." << std::endl;
     }
-  }else{
-    std::cout << "WARNING: No primitives were found in the Context..." << std::endl;
   }
 
   //do a pre-sort of primitive UUIDs by texture
@@ -2683,7 +2796,7 @@ void Visualizer::buildContextGeometry_private( void ){
 	
 	float colorValue=-9999;
 	if( colorPrimitivesByData.size()!=0 ){
-	  if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0 ){
+	  if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
 	    if( context->doesPrimitiveDataExist( UUID, colorPrimitivesByData.c_str() ) ){
 	      HeliosDataType type = context->getPrimitiveDataType( UUID, colorPrimitivesByData.c_str() );
 	      if( type==HELIOS_TYPE_FLOAT ){
@@ -2699,6 +2812,34 @@ void Visualizer::buildContextGeometry_private( void ){
 	      }else if( type==HELIOS_TYPE_DOUBLE ){
 	        double cv;
 		context->getPrimitiveData( UUID, colorPrimitivesByData.c_str(), cv );
+		colorValue = float(cv);
+	      }else{
+		colorValue = 0;
+	      }
+	    }else{
+	      colorValue = 0;
+	    }
+	  }
+	}else if( colorPrimitivesByObjectData.size()!=0 ){
+	  if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
+	    uint ObjID = context->getPrimitivePointer(UUID)->getParentObjectID();
+	    if( ObjID==0 ){
+	      colorValue = 0;
+	    }else if( context->doesObjectDataExist( ObjID, colorPrimitivesByObjectData.c_str() ) ){
+	      HeliosDataType type = context->getObjectDataType( ObjID, colorPrimitivesByObjectData.c_str() );
+	      if( type==HELIOS_TYPE_FLOAT ){
+		context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), colorValue );
+	      }else if( type==HELIOS_TYPE_INT ){
+		int cv;
+		context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+		colorValue = float(cv);
+	      }else if( type==HELIOS_TYPE_UINT ){
+		uint cv;
+		context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+		colorValue = float(cv);
+	      }else if( type==HELIOS_TYPE_DOUBLE ){
+	        double cv;
+		context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
 		colorValue = float(cv);
 	      }else{
 		colorValue = 0;
@@ -2753,7 +2894,7 @@ void Visualizer::buildContextGeometry_private( void ){
       RGBAcolor color;
       float colorValue;
       if( colorPrimitivesByData.size()!=0 ){
-	if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){
+	if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end()  ){
 	  if( context->doesPrimitiveDataExist( UUID, colorPrimitivesByData.c_str() ) ){
 	    HeliosDataType type = context->getPrimitiveDataType( UUID, colorPrimitivesByData.c_str() );
 	    if( type==HELIOS_TYPE_FLOAT ){
@@ -2774,6 +2915,37 @@ void Visualizer::buildContextGeometry_private( void ){
 	      colorValue = 0;
 	    }
 	    
+	  }else{
+	    colorValue = 0;
+	  }
+	  color = make_RGBAcolor(colormap_current.query( colorValue ),1);
+	}else{
+	  color = prim->getColorRGBA();
+	}
+      }else if( colorPrimitivesByObjectData.size()!=0 ){
+	if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
+	  uint ObjID = context->getPrimitivePointer(UUID)->getParentObjectID();
+	  if( ObjID==0 ){
+	    colorValue = 0;
+	  }else if( context->doesObjectDataExist( ObjID, colorPrimitivesByObjectData.c_str() ) ){
+	    HeliosDataType type = context->getObjectDataType( ObjID, colorPrimitivesByObjectData.c_str() );
+	    if( type==HELIOS_TYPE_FLOAT ){
+	      context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), colorValue );
+	    }else if( type==HELIOS_TYPE_INT ){
+	      int cv;
+	      context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+	      colorValue = float(cv);
+	    }else if( type==HELIOS_TYPE_UINT ){
+	      uint cv;
+	      context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+	      colorValue = float(cv);
+	    }else if( type==HELIOS_TYPE_DOUBLE ){
+	      double cv;
+	      context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+	      colorValue = float(cv);
+	    }else{
+	      colorValue = 0;
+	    }
 	  }else{
 	    colorValue = 0;
 	  }
@@ -2930,40 +3102,78 @@ void Visualizer::buildContextGeometry_private( void ){
       
     }
   }
-  
-  std::cout << "done." << std::endl;
 
+  if( message_flag ){
+    std::cout << "done." << std::endl;
+  }
+    
 }
 
 void Visualizer::colorContextPrimitivesByData( const char* data_name ){
   colorPrimitivesByData = data_name;
-  colorPrimitivesByVariable = "";
+  colorPrimitivesByObjectData = "";
   colorPrimitivesByValue = "";
   std::vector<uint> UUIDs = context->getAllUUIDs();
   for( size_t p=0; p<UUIDs.size(); p++ ){
-    colorPrimitives_UUIDs[UUIDs.at(p)] = UUIDs.at(p);
+    if( context->doesPrimitiveExist( UUIDs.at(p) ) ){
+      colorPrimitives_UUIDs[UUIDs.at(p)] = UUIDs.at(p);
+    }
   }
-  if( colorbar_flag==0 ){
+  if( colorPrimitives_UUIDs.size()>0 && colorbar_flag==0 ){
     enableColorbar();
   }
 }
 
 void Visualizer::colorContextPrimitivesByData( const char* data_name, const std::vector<uint>& UUIDs ){
   colorPrimitivesByData = data_name;
-  colorPrimitivesByVariable = "";
+  colorPrimitivesByObjectData = "";
   colorPrimitivesByValue = "";
+  for( size_t p=0; p<UUIDs.size(); p++ ){
+    if( context->doesPrimitiveExist( UUIDs.at(p) ) ){
+      colorPrimitives_UUIDs[UUIDs.at(p)] = UUIDs.at(p);
+    }
+  }
+  if( colorPrimitives_UUIDs.size()>0 && colorbar_flag==0 ){
+    enableColorbar();
+  }
+}
+
+void Visualizer::colorContextPrimitivesByObjectData( const char* data_name ){
+  colorPrimitivesByObjectData = data_name;
+  colorPrimitivesByData = "";
+  colorPrimitivesByValue = "";
+  std::vector<uint> UUIDs = context->getAllUUIDs();
   for( size_t p=0; p<UUIDs.size(); p++ ){
     colorPrimitives_UUIDs[UUIDs.at(p)] = UUIDs.at(p);
   }
-  if( colorbar_flag==0 ){
+  if( colorPrimitives_UUIDs.size()>0 && colorbar_flag==0 ){
+    enableColorbar();
+  }
+}
+
+void Visualizer::colorContextPrimitivesByObjectData( const char* data_name, const std::vector<uint>& ObjIDs ){
+  colorPrimitivesByObjectData = data_name;
+  colorPrimitivesByData = "";
+  colorPrimitivesByValue = "";
+  for( size_t i=0; i<ObjIDs.size(); i++ ){
+    if( context->doesObjectExist( ObjIDs.at(i) ) ){
+      std::vector<uint> UUIDs = context->getObjectPointer(ObjIDs.at(i))->getPrimitiveUUIDs();
+      for( size_t p=0; p<UUIDs.size(); p++ ){
+	colorPrimitives_UUIDs[UUIDs.at(p)] = UUIDs.at(p);
+      }
+    }
+  }
+  if( colorPrimitives_UUIDs.size()>0 && colorbar_flag==0 ){
     enableColorbar();
   }
 }
 
 void Visualizer::plotInteractive( void ){
 
-  std::cout << "Generating interactive plot..." << std::endl;
-
+  if( message_flag ){
+    std::cout << "Generating interactive plot..." << std::endl;
+  }
+  
   glfwShowWindow( (GLFWwindow*) window);
 
   //Update the Context geometry (if needed)
@@ -3010,8 +3220,8 @@ void Visualizer::plotInteractive( void ){
 
     // Depth buffer for shadows
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
-    //glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
-    glViewport(0,0,16384,16384); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    //glViewport(0,0,16384,16384); // Render on the whole framebuffer, complete from the lower left corner to the upper right
 
     // Clear the screen
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -3234,8 +3444,10 @@ void Visualizer::render( bool shadow ){
 
 void Visualizer::plotUpdate( void ){
 
-  std::cout << "Updating the plot..." << std::flush;
-
+  if( message_flag ){
+    std::cout << "Updating the plot..." << std::flush;
+  }
+    
   //if( glfwGetWindowAttrib( (GLFWwindow*) window, GLFW_VISIBLE)==0 ){
   glfwShowWindow( (GLFWwindow*) window);
   //}
@@ -3357,14 +3569,18 @@ void Visualizer::plotUpdate( void ){
   
   glfwSwapBuffers((GLFWwindow*)window);
 
-  std::cout << "done." << std::endl;
-  
+  if( message_flag ){
+    std::cout << "done." << std::endl;
+  }
+    
 }
 
 void Visualizer::plotDepthMap( void ){
 
-  std::cout << "Rendering depth map..." << std::flush;
-
+  if( message_flag ){
+    std::cout << "Rendering depth map..." << std::flush;
+  }
+    
   //Update the Context geometry (if needed)
   if( contextGeomNeedsUpdate ){
     buildContextGeometry_private();
@@ -3550,9 +3766,11 @@ void Visualizer::plotDepthMap( void ){
 
     //glfwWaitEvents();
     //}while( glfwGetKey((GLFWwindow*)window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose((GLFWwindow*)window) == 0 );
-  
-  std::cout << "done." << std::endl;
 
+    if( message_flag ){
+      std::cout << "done." << std::endl;
+    }
+      
 }
 
 void Shader::initialize( const char* vertex_shader_file, const char* fragment_shader_file ){

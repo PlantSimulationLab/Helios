@@ -1451,3 +1451,44 @@ std::vector<std::string> helios::flatten( const std::vector<std::vector<std::vec
   return flat;
   
 }
+
+helios::vec3 helios::spline_interp3( const float _u, const helios::vec3 x_start, const helios::vec3 tan_start, const helios::vec3 x_end, const helios::vec3 tan_end ){
+
+  //Perform interpolation between two 3D points using Cubic Hermite Spline
+
+  float u = _u;
+  if( u<0 || u>1.f ){
+    std::cout << "WARNING (spline_interp3): Clamping query point 'u' to the interval (0,1)" << std::endl;
+    u = clamp( u, 0.f, 1.f );
+  }
+
+  //Basis matrix
+  float B[16] = {2.f, -2.f, 1.f, 1.f, -3.f, 3.f, -2.f, -1.f, 0, 0, 1.f, 0, 1.f, 0, 0, 0};
+
+  //Control matrix
+  float C[12] = {x_start.x, x_start.y, x_start.z, x_end.x, x_end.y, x_end.z, tan_start.x, tan_start.y, tan_start.z, tan_end.x, tan_end.y, tan_end.z};
+
+  //Parameter vector
+  float P[4] = {u*u*u, u*u, u, 1.f};
+
+  float R[12]={0.f};
+
+  for( int i=0;i<4;i++){
+    for(int j=0;j<3;j++){
+      for(int k=0;k<4;k++){
+	R[3*i+j]=R[3*i+j]+B[4*i+k]*C[3*k+j];
+      }
+    }
+  }
+
+  float xq[3]={0.f};
+
+  for(int j=0;j<3;j++){
+    for(int k=0;k<4;k++){
+      xq[j]=xq[j]+P[k]*R[3*k+j];
+    }
+  }
+
+  return make_vec3(xq[0],xq[1],xq[2]);
+
+}

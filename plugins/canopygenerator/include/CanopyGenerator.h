@@ -609,6 +609,71 @@ struct StrawberryParameters{
   
 };
 
+//! Parameters defining the walnut tree canopy
+struct WalnutCanopyParameters{
+
+  //! Default constructor
+  WalnutCanopyParameters( void );
+
+  //! Maximum width of leaves. 
+  float leaf_length;
+
+  //! Number of sub-division segments per leaf
+  helios::int2 leaf_subdivisions;
+
+  //! Path to texture map file for leaves.
+  std::string leaf_texture_file;
+
+  //! Path to texture map file for wood/branches.
+  std::string wood_texture_file;
+
+  //! Number of radial subdivisions for branch tubes
+  int wood_subdivisions;
+
+  //! Number of stems per plant
+  int stems_per_plant;
+
+  //! Radius of trunk
+  float trunk_radius;
+
+  helios::vec3 branch_length;
+  
+  //! Spacing between adjacent plants along the row direction.
+  float plant_spacing;
+
+  //! Spacing between plant rows.
+  float row_spacing;
+
+  //! Height of the trunk at split
+  float trunk_height;
+
+  float tree_height;
+
+  float crown_radius;
+
+  //! Number of crowns/plants in the x- and y-directions.
+  helios::int2 plant_count;
+
+  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
+  helios::vec3 canopy_origin;
+
+  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
+  float canopy_rotation;
+
+  //! Radius of strawberry fruit
+  float fruit_radius;
+
+  //! Texture map for strawberry fruit
+  std::string fruit_texture_file;
+
+  //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly grape_subdivisions^2 triangles per fruit)
+  uint fruit_subdivisions;
+
+  //! Number of strawberry clusters per plant stem. Clusters randomly have 1, 2, or 3 berries.
+  float clusters_per_stem;
+  
+};
+
 
 
 class CanopyGenerator{
@@ -667,6 +732,11 @@ class CanopyGenerator{
    */
   void buildCanopy( const StrawberryParameters params );
 
+  //! Build a canopy consisting of walnut trees
+  /** \param[in] "params" Structure containing parameters for walnut tree canopy.
+   */
+  void buildCanopy( const WalnutCanopyParameters params );
+
   //! Build a ground consisting of texture sub-tiles and sub-patches, which can be different sizes
   /** \param[in] "ground_origin" x-, y-, and z-position of the ground center point.
       \param[in] "ground_extent" Width of the ground in the x- and y-directions.
@@ -686,35 +756,47 @@ class CanopyGenerator{
   */
   void buildGround( const helios::vec3 ground_origin, const helios::vec2 ground_extent, const helios::int2 texture_subtiles, const helios::int2 texture_subpatches, const char* ground_texture_file, const float ground_rotation  );
  
-  //! Get the unique universal identifiers (UUIDs) for the primitives that make up the tree trunk
-  /** \param[in] "TreeID" Identifer of tree.
+  //! Get the unique universal identifiers (UUIDs) for the primitives that make up the plant trunk
+  /** \param[in] "PlantID" Identifer of plant.
   */
-  std::vector<uint> getTrunkUUIDs( const uint TreeID );
+  std::vector<uint> getTrunkUUIDs( const uint PlantID );
 
-  //! Get the unique universal identifiers (UUIDs) for the primitives that make up the tree branches
-  /** \param[in] "TreeID" Identifer of tree.
+  //! Get the unique universal identifiers (UUIDs) for all trunk primitives in a single 1D vector
+  std::vector<uint> getTrunkUUIDs(void);
+
+  //! Get the unique universal identifiers (UUIDs) for the primitives that make up the plant branches
+  /** \param[in] "PlantID" Identifer of plant.
   */
-  std::vector<uint> getBranchUUIDs( const uint TreeID );
+  std::vector<uint> getBranchUUIDs( const uint PlantID );
 
-  //! Get the unique universal identifiers (UUIDs) for the primitives that make up the tree leaves
-  /** \param[in] "TreeID" Identifer of tree.
+  //! Get the unique universal identifiers (UUIDs) for all branch primitives in a single 1D vector
+  std::vector<uint> getBranchUUIDs(void);
+
+  //! Get the unique universal identifiers (UUIDs) for the primitives that make up the plant leaves
+  /** \param[in] "PlantID" Identifer of plant.
       \note The first index is the leaf, second index is the UUIDs making up the sub-primitives of the leaf (if appplicable).
   */
-  std::vector<std::vector<uint> > getLeafUUIDs( const uint TreeID );
+  std::vector<std::vector<uint> > getLeafUUIDs( const uint PlantID );
+
+  //! Get the unique universal identifiers (UUIDs) for all leaf primitives in a single 1D vector
+  std::vector<uint> getLeafUUIDs(void);
 
   //! Get the unique universal identifiers (UUIDs) for the primitives that make up the tree fruit
-  /** \param[in] "TreeID" Identifer of tree.
+  /** \param[in] "PlantID" Identifer of tree.
       \note First index is the cluster of fruit (if applicable), second index is the fruit, third index is the UUIDs making up the sub-primitives of the fruit.
   */
-  std::vector<std::vector<std::vector<uint> > > getFruitUUIDs( const uint TreeID );
+  std::vector<std::vector<std::vector<uint> > > getFruitUUIDs( const uint PlantID );
+
+  //! Get the unique universal identifiers (UUIDs) for all fruit primitives in a single 1D vector
+  std::vector<uint> getFruitUUIDs(void);
 
   //! Get the unique universal identifiers (UUIDs) for the primitives that make up the ground
   std::vector<uint> getGroundUUIDs();
 
   //! Get the unique universal identifiers (UUIDs) for all primitives that make up the tree
-  /** \param[in] "TreeID" Identifer of tree.
+  /** \param[in] "PlantID" Identifer of tree.
   */
-  std::vector<uint> getAllUUIDs( const uint TreeID );
+  std::vector<uint> getAllUUIDs( const uint PlantID );
 
   //! Get the current number of plants added to the Canopy Generator
   uint getPlantCount( void );
@@ -781,6 +863,12 @@ void grapevineGoblet( const GobletGrapevineParameters params, const helios::vec3
      \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
   */ 
   void strawberry( const StrawberryParameters params, const helios::vec3 origin );
+
+  //! Function to add an individual walnut tree
+  /* \param[in] "params" Set of parameters defining walnut trees/canopy.
+     \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+  */ 
+  void walnut( const WalnutCanopyParameters params, const helios::vec3 origin );
 
  private:
 

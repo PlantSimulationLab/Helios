@@ -262,7 +262,7 @@ The spherical sun source is defined in a similar manner as the collimated radiat
  If the reflectivity or tranmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively until there is no energy left to be scattered.  The number of scattering iterations is defined using:
  
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>radiationmodel.setScatteringDepth(5); //set the number of scattering iterations</code></pre></div>	
+ <pre><code>radiationmodel.setScatteringDepth( "PAR", 5); //set the number of scattering iterations</code></pre></div>	
 
  \subsection RadPeriodic Periodic Boundary Conditions
 

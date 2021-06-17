@@ -68,6 +68,10 @@ rtBuffer<int, 1> uvID;
 RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
 
+  if( prd.origin_UUID == patch_UUID[objID] ){
+    return;
+  }
+  
   float3 v0 = patch_vertices[ make_uint2(0, objID) ];
   float3 v1 = patch_vertices[ make_uint2(1, objID) ];
   float3 v2 = patch_vertices[ make_uint2(2, objID) ];
@@ -156,6 +160,10 @@ RT_PROGRAM void rectangle_bounds (int objID, float result[6])
 
 RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
+
+  if( prd.origin_UUID == triangle_UUID[objID] ){
+    return;
+  }
 
   float3 v0 = triangle_vertices[ make_uint2(0, objID) ];
   float3 v1 = triangle_vertices[ make_uint2(1, objID) ];
@@ -248,6 +256,10 @@ RT_PROGRAM void triangle_bounds (int objID, float result[6])
 RT_PROGRAM void disk_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
 
+  if( prd.origin_UUID == disk_UUID[objID] ){
+    return;
+  }
+
   float3 center = make_float3(0,0,0);
   float3 normal = make_float3(0,0,1);
 
@@ -288,6 +300,10 @@ RT_PROGRAM void disk_bounds (int objID, float result[6])
 
 RT_PROGRAM void alphamask_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
+
+  if( prd.origin_UUID == alphamask_UUID[objID] ){
+    return;
+  }
 
   float3 v0 = alphamask_vertices[ make_uint2(0, objID) ];
   float3 v1 = alphamask_vertices[ make_uint2(1, objID) ];
@@ -356,6 +372,10 @@ RT_PROGRAM void alphamask_bounds (int objID, float result[6])
 
 RT_PROGRAM void voxel_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
+
+  if( prd.origin_UUID == voxel_UUID[objID] ){
+    return;
+  }
 
   float x0 = voxel_vertices[ make_uint2(0, objID) ].x;
   float y0 = voxel_vertices[ make_uint2(0, objID) ].y;
@@ -449,6 +469,10 @@ RT_PROGRAM void voxel_bounds (int objID, float result[6])
 
 RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
+
+  if( prd.origin_UUID == bbox_UUID[objID] ){
+    return;
+  }
 
   float3 v0 = bbox_vertices[ make_uint2(0, objID) ];
   float3 v1 = bbox_vertices[ make_uint2(1, objID) ];

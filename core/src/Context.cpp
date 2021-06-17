@@ -671,7 +671,7 @@ int Context::selfTest(void){
   vec3 ra = cross( z_axis, x_axis);
   //get the angle to rotate
   float dot = x_axis.x*z_axis.x + x_axis.y*z_axis.y + x_axis.z*z_axis.z;
-  float angle = acos(dot);
+  float angle = acos_safe(dot);
   
   // translate back to origin
   context_test.getConeObjectPointer(cone_1)->translate(-1*nodes_T.at(0));
@@ -744,6 +744,25 @@ int Context::selfTest(void){
   date = Julian2Calendar(JulianDay,year);
   if( date.year!=year || date.month!=8 || date.day!=18 ){
     std::cerr << "failed: Julian2Calendar conversion #3 incorrect." << std::endl;
+    error_count++;
+  }
+
+  //-------- Spline Interpolation -----------//
+
+  vec3 p_start(0,0,0);
+  vec3 t_start(3,0,0);
+
+  vec3 p_end(1,1.5,0.4);
+  vec3 t_end(0,1,0);
+
+  float u = 0.6;
+
+  vec3 xi = spline_interp3( u, p_start, t_start, p_end, t_end );
+
+  vec3 xi_ref( 0.9360, 0.8280, 0.2592 );
+
+  if( fabs(xi.x-xi_ref.x)>errtol || fabs(xi.y-xi_ref.y)>errtol || fabs(xi.z-xi_ref.z)>errtol ){
+    std::cerr << "failed: cubic spline interpolation incorrect." << std::endl;
     error_count++;
   }
 
@@ -1174,22 +1193,24 @@ RGBAcolor Primitive::getColorRGBA() const{
 
 void Primitive::setColor( const helios::RGBcolor __color ){
 
-  if( parent_object_ID!=0 ){
-    std::cout << "WARNING (Primitive::setColor): Cannot set the color of individual primitives within a compound object. Use the setter function for objects." << std::endl;
-    return;
-  }
+  // if( parent_object_ID!=0 ){
+  //   std::cout << "WARNING (Primitive::setColor): Cannot set the color of individual primitives within a compound object. Use the setter function for objects." << std::endl;
+  //   return;
+  // }
   
   color = make_RGBAcolor(__color,1);
+  
 }
 
 void Primitive::setColor( const helios::RGBAcolor __color ){
 
-  if( parent_object_ID!=0 ){
-    std::cout << "WARNING (Primitive::setColor): Cannot set the color of individual primitives within a compound object. Use the setter function for objects." << std::endl;
-    return;
-  }
+  // if( parent_object_ID!=0 ){
+  //   std::cout << "WARNING (Primitive::setColor): Cannot set the color of individual primitives within a compound object. Use the setter function for objects." << std::endl;
+  //   return;
+  // }
   
   color = __color;
+  
 }
 
 Texture* Primitive::getTexture() const{
@@ -1219,20 +1240,20 @@ std::vector<vec2> Primitive::getTextureUV( void ){
 
 void Primitive::overrideTextureColor( void ){
 
-  if( parent_object_ID!=0 ){
-    std::cout << "WARNING (Primitive::overrideTextureColor): Cannot set the texture options of individual primitives within a compound object. Use the setter function for objects." << std::endl;
-    return;
-  }
+  // if( parent_object_ID!=0 ){
+  //   std::cout << "WARNING (Primitive::overrideTextureColor): Cannot set the texture options of individual primitives within a compound object. Use the setter function for objects." << std::endl;
+  //   return;
+  // }
   
   texturecoloroverridden = true;
 }
 
 void Primitive::useTextureColor( void ){
 
-  if( parent_object_ID!=0 ){
-    std::cout << "WARNING (Primitive::useTextureColor): Cannot set the texture options of individual primitives within a compound object. Use the setter function for objects." << std::endl;
-    return;
-  }
+  // if( parent_object_ID!=0 ){
+  //   std::cout << "WARNING (Primitive::useTextureColor): Cannot set the texture options of individual primitives within a compound object. Use the setter function for objects." << std::endl;
+  //   return;
+  // }
   
   texturecoloroverridden = false;
 }
@@ -6656,6 +6677,7 @@ std::vector<helios::vec3> Tube::getNodes( void ) const{
   }
 
   return nodes_T;
+
 }
 
 std::vector<float> Tube::getNodeRadii( void ) const{
@@ -6974,7 +6996,7 @@ void Cone::scaleLength( const float S ){
     vec3 ra = cross( z_axis, axis_unit_vector);
     //get the angle to rotate
     float dot = axis_unit_vector.x*z_axis.x + axis_unit_vector.y*z_axis.y + axis_unit_vector.z*z_axis.z;
-    float angle = acos(dot);
+    float angle = acos_safe(dot);
 
     //only rotate if the cone is not alread aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
     if(angle != float(0.0)){
@@ -7023,7 +7045,7 @@ void Cone::scaleGirth( const float S ){
     vec3 ra = cross( z_axis, axis_unit_vector);
     //get the angle to rotate
     float dot = axis_unit_vector.x*z_axis.x + axis_unit_vector.y*z_axis.y + axis_unit_vector.z*z_axis.z;
-    float angle = acos(dot);
+    float angle = acos_safe(dot);
     //only rotate if the cone is not alread aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
     if(angle != float(0.0)){
         context->getConeObjectPointer(OID)->rotate( -1*angle, ra );
@@ -7152,8 +7174,8 @@ uint Context::addSphereObject( const uint Ndivs, const vec3 center, const float 
   for( int j=0; j<Ndivs; j++ ){
       
     vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI, 0 ) );
-    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j)*dphi ) );
-    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j+1)*dphi ) );
+    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j+1)*dphi ) );
+    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j)*dphi ) );
 
     vec3 n0 = v0-center;
     n0.normalize();
@@ -7178,8 +7200,8 @@ uint Context::addSphereObject( const uint Ndivs, const vec3 center, const float 
   for( int j=0; j<Ndivs; j++ ){
       
     vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI, 0 ) );
-    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j)*dphi ) );
-    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j+1)*dphi ) );
+    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j+1)*dphi ) );
+    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j)*dphi ) );
 
     vec3 n0 = v0-center;
     n0.normalize();
@@ -7581,13 +7603,6 @@ uint Context::addTubeObject( const uint Ndivs, const std::vector<helios::vec3> n
   float T[16],  transform[16];
   tube_new->getTransformationMatrix( transform );
 
-  makeTranslationMatrix(nodes.front(),T);
-  matmult(T,transform,transform);
-
-  tube_new->setTransformationMatrix( transform );
-
-  //tube_new->setColor( color );
-
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
   }
@@ -7712,11 +7727,6 @@ uint Context::addTubeObject( const uint Ndivs, const std::vector<vec3> nodes, co
 
   float T[16],  transform[16];
   tube_new->getTransformationMatrix( transform );
-
-  makeTranslationMatrix(nodes.front(),T);
-  matmult(T,transform,transform);
-
-  tube_new->setTransformationMatrix( transform );
 
   for( size_t p=0; p<UUID.size(); p++ ){
     getPrimitivePointer(UUID.at(p))->setParentObjectID(currentObjectID);
@@ -8345,8 +8355,8 @@ std::vector<uint> Context::addSphere( const uint Ndivs, const vec3 center, const
   for( int j=0; j<Ndivs; j++ ){
       
     vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI, 0 ) );
-    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j)*dphi ) );
-    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j+1)*dphi ) );
+    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j+1)*dphi ) );
+    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j)*dphi ) );
     
     UUID.push_back( addTriangle(v0,v1,v2,color) );
 
@@ -8354,10 +8364,10 @@ std::vector<uint> Context::addSphere( const uint Ndivs, const vec3 center, const
 
   //top cap
   for( int j=0; j<Ndivs; j++ ){
-      
+
     vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI, 0 ) );
-    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j)*dphi ) );
-    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j+1)*dphi ) );
+    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j+1)*dphi ) );
+    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j)*dphi ) );
     
     UUID.push_back( addTriangle(v2,v1,v0,color) );
 
@@ -8421,8 +8431,8 @@ std::vector<uint> Context::addSphere( const uint Ndivs, const vec3 center, const
   for( int j=0; j<Ndivs; j++ ){
       
     vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI, 0 ) );
-    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j)*dphi ) );
-    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j+1)*dphi ) );
+    vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j+1)*dphi ) );
+    vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j)*dphi ) );
 
     vec3 n0 = v0-center;
     n0.normalize();

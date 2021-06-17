@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.8</span>
+   &#160;<span id="projectnumber">v1.2.9</span>
    </div>
   </td>
  </tr>
@@ -118,6 +118,14 @@ Public Member Functions</h2></td></tr>
 int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a26d55f187fa6ee606e17fe3076fd4ba6">selfTest</a> (void)</td></tr>
 <tr class="memdesc:a26d55f187fa6ee606e17fe3076fd4ba6"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> self-test routine. <br /></td></tr>
 <tr class="separator:a26d55f187fa6ee606e17fe3076fd4ba6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa62e7ff6064080d79e001cb183a7a5c0"><td class="memItemLeft" align="right" valign="top"><a id="aa62e7ff6064080d79e001cb183a7a5c0"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#aa62e7ff6064080d79e001cb183a7a5c0">enableMessages</a> (void)</td></tr>
+<tr class="memdesc:aa62e7ff6064080d79e001cb183a7a5c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable standard output from this plug-in (default) <br /></td></tr>
+<tr class="separator:aa62e7ff6064080d79e001cb183a7a5c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afb7c64af50185bf12b0668795e754d89"><td class="memItemLeft" align="right" valign="top"><a id="afb7c64af50185bf12b0668795e754d89"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#afb7c64af50185bf12b0668795e754d89">disableMessages</a> (void)</td></tr>
+<tr class="memdesc:afb7c64af50185bf12b0668795e754d89"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable standard output from this plug-in. <br /></td></tr>
+<tr class="separator:afb7c64af50185bf12b0668795e754d89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a89cb0913b093a73e983f927b258be03a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a89cb0913b093a73e983f927b258be03a">setCameraPosition</a> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> cameraPosition, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> lookAt)</td></tr>
 <tr class="memdesc:a89cb0913b093a73e983f927b258be03a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set camera position.  <a href="class_visualizer.html#a89cb0913b093a73e983f927b258be03a">More...</a><br /></td></tr>
 <tr class="separator:a89cb0913b093a73e983f927b258be03a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -237,6 +245,13 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <tr class="memitem:a835b0eceaf53de0975eefbb11fc45a88"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a835b0eceaf53de0975eefbb11fc45a88">addTextboxByCenter</a> (const char *textstring, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> center, <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> rotation, const <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> fontcolor, const uint fontsize, const char *fontname, <a class="el" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3">CoordinateSystem</a> coordFlag)</td></tr>
 <tr class="memdesc:a835b0eceaf53de0975eefbb11fc45a88"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a text box by giving the coordinates of its center.  <a href="class_visualizer.html#a835b0eceaf53de0975eefbb11fc45a88">More...</a><br /></td></tr>
 <tr class="separator:a835b0eceaf53de0975eefbb11fc45a88"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a831a69f2320707924c582e27d29a0ee5"><td class="memItemLeft" align="right" valign="top"><a id="a831a69f2320707924c582e27d29a0ee5"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a831a69f2320707924c582e27d29a0ee5">addCoordinateAxes</a> ()</td></tr>
+<tr class="memdesc:a831a69f2320707924c582e27d29a0ee5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a coordinate axis with at the origin with unit length. <br /></td></tr>
+<tr class="separator:a831a69f2320707924c582e27d29a0ee5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a57050131e1b8f87392131cd29fbcc53c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a57050131e1b8f87392131cd29fbcc53c">addCoordinateAxes</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> origin, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> length, const std::string sign)</td></tr>
+<tr class="memdesc:a57050131e1b8f87392131cd29fbcc53c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a coordinate axis.  <a href="class_visualizer.html#a57050131e1b8f87392131cd29fbcc53c">More...</a><br /></td></tr>
+<tr class="separator:a57050131e1b8f87392131cd29fbcc53c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a46882cfd66cc85dee4300e0e48b2302e"><td class="memItemLeft" align="right" valign="top"><a id="a46882cfd66cc85dee4300e0e48b2302e"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a46882cfd66cc85dee4300e0e48b2302e">enableColorbar</a> (void)</td></tr>
 <tr class="memdesc:a46882cfd66cc85dee4300e0e48b2302e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable the colorbar. <br /></td></tr>
@@ -288,6 +303,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:ac9b9fb0076f62a9a06542d876db34563"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#ac9b9fb0076f62a9a06542d876db34563">colorContextPrimitivesByData</a> (const char *data_name, const std::vector&lt; uint &gt; &amp;UUIDs)</td></tr>
 <tr class="memdesc:ac9b9fb0076f62a9a06542d876db34563"><td class="mdescLeft">&#160;</td><td class="mdescRight">Color primitives from Context by color mapping their &lsquo;Primitive Data&rsquo;.  <a href="class_visualizer.html#ac9b9fb0076f62a9a06542d876db34563">More...</a><br /></td></tr>
 <tr class="separator:ac9b9fb0076f62a9a06542d876db34563"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad6479e1f6bb7f0f06d0c83b0351b4424"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#ad6479e1f6bb7f0f06d0c83b0351b4424">colorContextPrimitivesByObjectData</a> (const char *data_name)</td></tr>
+<tr class="memdesc:ad6479e1f6bb7f0f06d0c83b0351b4424"><td class="mdescLeft">&#160;</td><td class="mdescRight">Color primitives from Context by color mapping their &lsquo;Object Data&rsquo;.  <a href="class_visualizer.html#ad6479e1f6bb7f0f06d0c83b0351b4424">More...</a><br /></td></tr>
+<tr class="separator:ad6479e1f6bb7f0f06d0c83b0351b4424"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af221d03db54adff2d38f8a938a1512b7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#af221d03db54adff2d38f8a938a1512b7">colorContextPrimitivesByObjectData</a> (const char *data_name, const std::vector&lt; uint &gt; &amp;ObjIDs)</td></tr>
+<tr class="memdesc:af221d03db54adff2d38f8a938a1512b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Color primitives from Context by color mapping their &lsquo;Object Data&rsquo;.  <a href="class_visualizer.html#af221d03db54adff2d38f8a938a1512b7">More...</a><br /></td></tr>
+<tr class="separator:af221d03db54adff2d38f8a938a1512b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a28a7fd56eacbad1ec915584aa5c3fa64"><td class="memItemLeft" align="right" valign="top"><a id="a28a7fd56eacbad1ec915584aa5c3fa64"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a28a7fd56eacbad1ec915584aa5c3fa64">hideWatermark</a> (void)</td></tr>
 <tr class="memdesc:a28a7fd56eacbad1ec915584aa5c3fa64"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make Helios logo watermark invisible. <br /></td></tr>
@@ -318,15 +339,18 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a1840b4285caa645e6b8b28144478cfe1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a1840b4285caa645e6b8b28144478cfe1">printWindow</a> (const char *outfile)</td></tr>
 <tr class="memdesc:a1840b4285caa645e6b8b28144478cfe1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Print the current graphics window to a JPEG image file.  <a href="class_visualizer.html#a1840b4285caa645e6b8b28144478cfe1">More...</a><br /></td></tr>
 <tr class="separator:a1840b4285caa645e6b8b28144478cfe1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab6fc82ee6d0fdc6f4b93d5093e210889"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#ab6fc82ee6d0fdc6f4b93d5093e210889">getWindowPixelsRGB</a> (unsigned int *buffer)</td></tr>
-<tr class="memdesc:ab6fc82ee6d0fdc6f4b93d5093e210889"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get R-G-B pixel data in the current display window.  <a href="class_visualizer.html#ab6fc82ee6d0fdc6f4b93d5093e210889">More...</a><br /></td></tr>
-<tr class="separator:ab6fc82ee6d0fdc6f4b93d5093e210889"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a15828ea9966b9729b56c9ddfccd4c117"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a15828ea9966b9729b56c9ddfccd4c117">getWindowPixelsRGB</a> (uint *buffer)</td></tr>
+<tr class="memdesc:a15828ea9966b9729b56c9ddfccd4c117"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get R-G-B pixel data in the current display window.  <a href="class_visualizer.html#a15828ea9966b9729b56c9ddfccd4c117">More...</a><br /></td></tr>
+<tr class="separator:a15828ea9966b9729b56c9ddfccd4c117"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7c6362d7dc0f0bd4bba53195ce92b84e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a7c6362d7dc0f0bd4bba53195ce92b84e">getDepthMap</a> (float *buffer)</td></tr>
 <tr class="memdesc:a7c6362d7dc0f0bd4bba53195ce92b84e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get depth buffer data for the current display window.  <a href="class_visualizer.html#a7c6362d7dc0f0bd4bba53195ce92b84e">More...</a><br /></td></tr>
 <tr class="separator:a7c6362d7dc0f0bd4bba53195ce92b84e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2d2d5e7e4b616b4df0a965b98f8497cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a2d2d5e7e4b616b4df0a965b98f8497cc">getWindowSize</a> (uint &amp;width, uint &amp;height)</td></tr>
 <tr class="memdesc:a2d2d5e7e4b616b4df0a965b98f8497cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the size of the display window in pixels.  <a href="class_visualizer.html#a2d2d5e7e4b616b4df0a965b98f8497cc">More...</a><br /></td></tr>
 <tr class="separator:a2d2d5e7e4b616b4df0a965b98f8497cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1b78b831db6bfb6502402b7318ee25ec"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a1b78b831db6bfb6502402b7318ee25ec">getFramebufferSize</a> (uint &amp;width, uint &amp;height)</td></tr>
+<tr class="memdesc:a1b78b831db6bfb6502402b7318ee25ec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the size of the framebuffer in pixels.  <a href="class_visualizer.html#a1b78b831db6bfb6502402b7318ee25ec">More...</a><br /></td></tr>
+<tr class="separator:a1b78b831db6bfb6502402b7318ee25ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2ce92a62a3fc1dbfae4ffdc1fca3e703"><td class="memItemLeft" align="right" valign="top"><a id="a2ce92a62a3fc1dbfae4ffdc1fca3e703"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_visualizer.html#a2ce92a62a3fc1dbfae4ffdc1fca3e703">clearGeometry</a> (void)</td></tr>
 <tr class="memdesc:a2ce92a62a3fc1dbfae4ffdc1fca3e703"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear all geometry previously added to the visualizer. <br /></td></tr>
@@ -361,7 +385,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l00278">278</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l00284">284</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
 
 </div>
 </div>
@@ -395,7 +419,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l00289">289</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l00295">295</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
 
 </div>
 </div>
@@ -421,7 +445,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l00335">335</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l00341">341</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
 
 </div>
 </div>
@@ -494,6 +518,52 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a57050131e1b8f87392131cd29fbcc53c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a57050131e1b8f87392131cd29fbcc53c">&#9670;&nbsp;</a></span>addCoordinateAxes()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Visualizer::addCoordinateAxes </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td>
+          <td class="paramname"><em>origin</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td>
+          <td class="paramname"><em>length</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string&#160;</td>
+          <td class="paramname"><em>sign</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add a coordinate axis. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">origin</td><td>(x,y,z) location of the coordinate axes orign </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">length</td><td>length of coordinate axis lines from origin in each direction </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">sign</td><td>either "both" or "positive" should the axes be drawn in both positive and negative directions or just positive </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02565">2565</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a35429e9c88e4fd8c37aaf05a7322c685"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a35429e9c88e4fd8c37aaf05a7322c685">&#9670;&nbsp;</a></span>addDiskByCenter() <span class="overload">[1/3]</span></h2>
 
@@ -556,7 +626,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01954">1954</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02018">2018</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -622,7 +692,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01877">1877</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01941">1941</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -688,7 +758,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01873">1873</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01937">1937</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -748,7 +818,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02036">2036</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02100">2100</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -808,7 +878,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02032">2032</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02096">2096</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -861,7 +931,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02093">2093</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02159">2159</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -914,7 +984,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02089">2089</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02155">2155</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -974,7 +1044,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00924">924</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00946">946</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1034,7 +1104,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00895">895</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00917">917</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1101,7 +1171,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00953">953</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00975">975</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1161,7 +1231,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00891">891</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00913">913</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1228,7 +1298,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00982">982</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01004">1004</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1274,7 +1344,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01104">1104</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01132">1132</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1327,7 +1397,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01121">1121</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01149">1149</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1373,7 +1443,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01015">1015</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01037">1037</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1426,7 +1496,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01456">1456</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01496">1496</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1479,7 +1549,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01223">1223</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01257">1257</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1539,7 +1609,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01345">1345</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01379">1379</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1585,7 +1655,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01011">1011</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01033">1033</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1638,7 +1708,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01452">1452</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01492">1492</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1691,7 +1761,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02185">2185</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02251">2251</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1751,7 +1821,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02140">2140</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02206">2206</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1811,7 +1881,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02136">2136</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02202">2202</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1884,7 +1954,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02280">2280</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02346">2346</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1965,7 +2035,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01655">1655</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01707">1707</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2053,7 +2123,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01743">1743</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01801">1801</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2113,7 +2183,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01567">1567</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01613">1613</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2173,7 +2243,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01563">1563</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01609">1609</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2232,7 +2302,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01847">1847</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01911">1911</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2290,7 +2360,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01843">1843</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l01907">1907</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2318,7 +2388,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02609">2609</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02720">2720</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2357,7 +2427,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02614">2614</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02725">2725</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2386,7 +2456,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If the data value does not exist for a certain primitive, a value of 0 is assumed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02938">2938</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03112">3112</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2426,7 +2496,76 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If the data value does not exist for a certain primitive, a value of 0 is assumed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02951">2951</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03127">3127</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad6479e1f6bb7f0f06d0c83b0351b4424"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad6479e1f6bb7f0f06d0c83b0351b4424">&#9670;&nbsp;</a></span>colorContextPrimitivesByObjectData() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Visualizer::colorContextPrimitivesByObjectData </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>data_name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Color primitives from Context by color mapping their &lsquo;Object Data&rsquo;. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">data_name</td><td>Name of &lsquo;Object Data&rsquo; </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>If the data value does not exist for a certain primitive, a value of 0 is assumed. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03141">3141</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af221d03db54adff2d38f8a938a1512b7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af221d03db54adff2d38f8a938a1512b7">&#9670;&nbsp;</a></span>colorContextPrimitivesByObjectData() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Visualizer::colorContextPrimitivesByObjectData </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>data_name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ObjIDs</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Color primitives from Context by color mapping their &lsquo;Object Data&rsquo;. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">data_name</td><td>Name of &lsquo;Object Data&rsquo; </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjIDs</td><td>Object ID's of primitives to be colored by object data </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>If the data value does not exist for a certain primitive, a value of 0 is assumed. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03154">3154</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2476,12 +2615,51 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The function <a class="el" href="class_visualizer.html#a5640bb4984f2947bda0d7d6dea34ce75">plotDepthMap()</a> must be called prior to <a class="el" href="class_visualizer.html#a7c6362d7dc0f0bd4bba53195ce92b84e">getDepthMap()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00832">832</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00849">849</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
-<a id="ab6fc82ee6d0fdc6f4b93d5093e210889"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab6fc82ee6d0fdc6f4b93d5093e210889">&#9670;&nbsp;</a></span>getWindowPixelsRGB()</h2>
+<a id="a1b78b831db6bfb6502402b7318ee25ec"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1b78b831db6bfb6502402b7318ee25ec">&#9670;&nbsp;</a></span>getFramebufferSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Visualizer::getFramebufferSize </td>
+          <td>(</td>
+          <td class="paramtype">uint &amp;&#160;</td>
+          <td class="paramname"><em>width</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint &amp;&#160;</td>
+          <td class="paramname"><em>height</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the size of the framebuffer in pixels. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">width</td><td>Width of the framebuffer in pixels </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">height</td><td>Height of the framebuffer in pixels </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00870">870</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a15828ea9966b9729b56c9ddfccd4c117"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a15828ea9966b9729b56c9ddfccd4c117">&#9670;&nbsp;</a></span>getWindowPixelsRGB()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2489,7 +2667,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
         <tr>
           <td class="memname">void Visualizer::getWindowPixelsRGB </td>
           <td>(</td>
-          <td class="paramtype">unsigned int *&#160;</td>
+          <td class="paramtype">uint *&#160;</td>
           <td class="paramname"><em>buffer</em></td><td>)</td>
           <td></td>
         </tr>
@@ -2504,7 +2682,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00801">801</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00817">817</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2543,7 +2721,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00848">848</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00865">865</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2572,7 +2750,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If outfile does not have extension &lsquo;.jpg&rsquo;, it will be appended to the file name. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00795">795</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00811">811</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2600,7 +2778,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00776">776</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00792">792</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2628,7 +2806,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00692">692</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00708">708</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2668,7 +2846,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00687">687</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00703">703</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2707,7 +2885,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00682">682</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00698">698</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2735,7 +2913,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02567">2567</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02678">2678</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2763,7 +2941,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02559">2559</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02670">2670</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2791,7 +2969,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02499">2499</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02610">2610</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2830,7 +3008,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02515">2515</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02626">2626</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2858,7 +3036,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02507">2507</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02618">2618</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2887,7 +3065,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If tick values are outside of the colorbar range (see setColorBarRange()), the colorbar will be automatically expanded to fit the tick values. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02524">2524</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02635">2635</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2915,7 +3093,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02555">2555</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02666">2666</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2943,7 +3121,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02571">2571</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02682">2682</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2987,7 +3165,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02593">2593</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02704">2704</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3041,7 +3219,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00696">696</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00712">712</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3070,7 +3248,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573">LightingModel</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00770">770</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00786">786</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>

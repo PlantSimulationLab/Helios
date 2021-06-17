@@ -646,18 +646,42 @@ float WeberPennTree::getVariation( float V ){
 }
 
 std::vector<uint> WeberPennTree::getTrunkUUIDs( const uint TreeID ){
+
+  if( TreeID >= UUID_trunk.size() ){
+    std::cerr << "ERROR (WeberPennTree::getTrunkUUIDs): Tree ID " << TreeID << " does not exist." << std::endl;
+    throw(1);
+  }
+  
   return UUID_trunk.at(TreeID);
 }
 
 std::vector<uint> WeberPennTree::getBranchUUIDs( const uint TreeID ){
+
+  if( TreeID >= UUID_branch.size() ){
+    std::cerr << "ERROR (WeberPennTree::getBranchUUIDs): Tree ID " << TreeID << " does not exist." << std::endl;
+    throw(1);
+  }
+  
   return UUID_branch.at(TreeID);
 }
 
 std::vector<uint> WeberPennTree::getLeafUUIDs( const uint TreeID ){
+
+  if( TreeID >= UUID_leaf.size() ){
+    std::cerr << "ERROR (WeberPennTree::getLeafUUIDs): Tree ID " << TreeID << " does not exist." << std::endl;
+    throw(1);
+  }
+  
   return UUID_leaf.at(TreeID);
 }
 
 std::vector<uint> WeberPennTree::getAllUUIDs( const uint TreeID ){
+
+  if( TreeID >= UUID_leaf.size() ){
+    std::cerr << "ERROR (WeberPennTree::getAllUUIDs): Tree ID " << TreeID << " does not exist." << std::endl;
+    throw(1);
+  }
+  
   std::vector<uint> UUIDs;
   UUIDs.insert(UUIDs.end(),UUID_trunk.at(TreeID).begin(),UUID_trunk.at(TreeID).end());
   UUIDs.insert(UUIDs.end(),UUID_branch.at(TreeID).begin(),UUID_branch.at(TreeID).end());

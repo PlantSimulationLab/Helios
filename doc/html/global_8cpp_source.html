@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.8</span>
+   &#160;<span id="projectnumber">v1.2.9</span>
    </div>
   </td>
  </tr>
@@ -1509,6 +1509,47 @@ $(function() {
 <div class="line"><a name="l01451"></a><span class="lineno"> 1451</span>&#160;  <span class="keywordflow">return</span> flat;</div>
 <div class="line"><a name="l01452"></a><span class="lineno"> 1452</span>&#160;  </div>
 <div class="line"><a name="l01453"></a><span class="lineno"> 1453</span>&#160;}</div>
+<div class="line"><a name="l01454"></a><span class="lineno"> 1454</span>&#160; </div>
+<div class="line"><a name="l01455"></a><span class="lineno"><a class="line" href="global_8h.html#a30b8b2bee937db6fd25fc652a9bc4246"> 1455</a></span>&#160;<a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> <a class="code" href="global_8h.html#a30b8b2bee937db6fd25fc652a9bc4246">helios::spline_interp3</a>( <span class="keyword">const</span> <span class="keywordtype">float</span> _u, <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> x_start, <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> tan_start, <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> x_end, <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> tan_end ){</div>
+<div class="line"><a name="l01456"></a><span class="lineno"> 1456</span>&#160; </div>
+<div class="line"><a name="l01457"></a><span class="lineno"> 1457</span>&#160;  <span class="comment">//Perform interpolation between two 3D points using Cubic Hermite Spline</span></div>
+<div class="line"><a name="l01458"></a><span class="lineno"> 1458</span>&#160; </div>
+<div class="line"><a name="l01459"></a><span class="lineno"> 1459</span>&#160;  <span class="keywordtype">float</span> u = _u;</div>
+<div class="line"><a name="l01460"></a><span class="lineno"> 1460</span>&#160;  <span class="keywordflow">if</span>( u&lt;0 || u&gt;1.f ){</div>
+<div class="line"><a name="l01461"></a><span class="lineno"> 1461</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING (spline_interp3): Clamping query point &#39;u&#39; to the interval (0,1)&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a name="l01462"></a><span class="lineno"> 1462</span>&#160;    u = <a class="code" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4">clamp</a>( u, 0.f, 1.f );</div>
+<div class="line"><a name="l01463"></a><span class="lineno"> 1463</span>&#160;  }</div>
+<div class="line"><a name="l01464"></a><span class="lineno"> 1464</span>&#160; </div>
+<div class="line"><a name="l01465"></a><span class="lineno"> 1465</span>&#160;  <span class="comment">//Basis matrix</span></div>
+<div class="line"><a name="l01466"></a><span class="lineno"> 1466</span>&#160;  <span class="keywordtype">float</span> B[16] = {2.f, -2.f, 1.f, 1.f, -3.f, 3.f, -2.f, -1.f, 0, 0, 1.f, 0, 1.f, 0, 0, 0};</div>
+<div class="line"><a name="l01467"></a><span class="lineno"> 1467</span>&#160; </div>
+<div class="line"><a name="l01468"></a><span class="lineno"> 1468</span>&#160;  <span class="comment">//Control matrix</span></div>
+<div class="line"><a name="l01469"></a><span class="lineno"> 1469</span>&#160;  <span class="keywordtype">float</span> C[12] = {x_start.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, x_start.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, x_start.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a>, x_end.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, x_end.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, x_end.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a>, tan_start.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, tan_start.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, tan_start.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a>, tan_end.<a class="code" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, tan_end.<a class="code" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, tan_end.<a class="code" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a>};</div>
+<div class="line"><a name="l01470"></a><span class="lineno"> 1470</span>&#160; </div>
+<div class="line"><a name="l01471"></a><span class="lineno"> 1471</span>&#160;  <span class="comment">//Parameter vector</span></div>
+<div class="line"><a name="l01472"></a><span class="lineno"> 1472</span>&#160;  <span class="keywordtype">float</span> P[4] = {u*u*u, u*u, u, 1.f};</div>
+<div class="line"><a name="l01473"></a><span class="lineno"> 1473</span>&#160; </div>
+<div class="line"><a name="l01474"></a><span class="lineno"> 1474</span>&#160;  <span class="keywordtype">float</span> R[12]={0.f};</div>
+<div class="line"><a name="l01475"></a><span class="lineno"> 1475</span>&#160; </div>
+<div class="line"><a name="l01476"></a><span class="lineno"> 1476</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0;i&lt;4;i++){</div>
+<div class="line"><a name="l01477"></a><span class="lineno"> 1477</span>&#160;    <span class="keywordflow">for</span>(<span class="keywordtype">int</span> j=0;j&lt;3;j++){</div>
+<div class="line"><a name="l01478"></a><span class="lineno"> 1478</span>&#160;      <span class="keywordflow">for</span>(<span class="keywordtype">int</span> k=0;k&lt;4;k++){</div>
+<div class="line"><a name="l01479"></a><span class="lineno"> 1479</span>&#160;    R[3*i+j]=R[3*i+j]+B[4*i+k]*C[3*k+j];</div>
+<div class="line"><a name="l01480"></a><span class="lineno"> 1480</span>&#160;      }</div>
+<div class="line"><a name="l01481"></a><span class="lineno"> 1481</span>&#160;    }</div>
+<div class="line"><a name="l01482"></a><span class="lineno"> 1482</span>&#160;  }</div>
+<div class="line"><a name="l01483"></a><span class="lineno"> 1483</span>&#160; </div>
+<div class="line"><a name="l01484"></a><span class="lineno"> 1484</span>&#160;  <span class="keywordtype">float</span> xq[3]={0.f};</div>
+<div class="line"><a name="l01485"></a><span class="lineno"> 1485</span>&#160; </div>
+<div class="line"><a name="l01486"></a><span class="lineno"> 1486</span>&#160;  <span class="keywordflow">for</span>(<span class="keywordtype">int</span> j=0;j&lt;3;j++){</div>
+<div class="line"><a name="l01487"></a><span class="lineno"> 1487</span>&#160;    <span class="keywordflow">for</span>(<span class="keywordtype">int</span> k=0;k&lt;4;k++){</div>
+<div class="line"><a name="l01488"></a><span class="lineno"> 1488</span>&#160;      xq[j]=xq[j]+P[k]*R[3*k+j];</div>
+<div class="line"><a name="l01489"></a><span class="lineno"> 1489</span>&#160;    }</div>
+<div class="line"><a name="l01490"></a><span class="lineno"> 1490</span>&#160;  }</div>
+<div class="line"><a name="l01491"></a><span class="lineno"> 1491</span>&#160; </div>
+<div class="line"><a name="l01492"></a><span class="lineno"> 1492</span>&#160;  <span class="keywordflow">return</span> <a class="code" href="helios__vector__types_8h.html#a35b1ff50d62c80cf63426e25ee814ca9">make_vec3</a>(xq[0],xq[1],xq[2]);</div>
+<div class="line"><a name="l01493"></a><span class="lineno"> 1493</span>&#160; </div>
+<div class="line"><a name="l01494"></a><span class="lineno"> 1494</span>&#160;}</div>
 </div><!-- fragment --></div><!-- contents -->
 <div class="ttc" id="agroup__functions_html_ga6f0e7f437a6316c12190a5fbaf9bfa9c"><div class="ttname"><a href="group__functions.html#ga6f0e7f437a6316c12190a5fbaf9bfa9c">helios::deg2rad</a></div><div class="ttdeci">float deg2rad(const float &amp;deg)</div><div class="ttdoc">Convert degrees to radians.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00604">global.cpp:604</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a5bbf8999d270fd46ea20bbd7a3c8f4aa"><div class="ttname"><a href="global_8h.html#a5bbf8999d270fd46ea20bbd7a3c8f4aa">helios::lineIntersection</a></div><div class="ttdeci">bool lineIntersection(const helios::vec2 p1, const helios::vec2 q1, const helios::vec2 p2, const helios::vec2 q2)</div><div class="ttdoc">Determine if two line segments intersect. The lines segments are defined by vertices (p1,...</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00210">global.cpp:210</a></div></div>
@@ -1556,6 +1597,7 @@ $(function() {
 <div class="ttc" id="aglobal_8h_html_a2404c4bfe8b03cdbde4421a2e0be2b19"><div class="ttname"><a href="global_8h.html#a2404c4bfe8b03cdbde4421a2e0be2b19">helios::matmult</a></div><div class="ttdeci">void matmult(const float ML[16], const float MR[16], float(&amp;T)[16])</div><div class="ttdoc">Multiply 4x4 matrices: T=ML*MR.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00391">global.cpp:391</a></div></div>
 <div class="ttc" id="agroup__functions_html_ga66681ffeb5bd130ce5fb14c93c801120"><div class="ttname"><a href="group__functions.html#ga66681ffeb5bd130ce5fb14c93c801120">helios::rad2deg</a></div><div class="ttdeci">float rad2deg(const float &amp;rad)</div><div class="ttdoc">Convert radians to degrees.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00608">global.cpp:608</a></div></div>
 <div class="ttc" id="agroup__functions_html_gafc2084bde2f2a0e15d637e973658a5a4"><div class="ttname"><a href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4">helios::clamp</a></div><div class="ttdeci">anytype clamp(anytype value, anytype min, anytype max)</div><div class="ttdoc">Clamp value to be within some specified bounds.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00775">global.cpp:775</a></div></div>
+<div class="ttc" id="aglobal_8h_html_a30b8b2bee937db6fd25fc652a9bc4246"><div class="ttname"><a href="global_8h.html#a30b8b2bee937db6fd25fc652a9bc4246">helios::spline_interp3</a></div><div class="ttdeci">helios::vec3 spline_interp3(const float u, const helios::vec3 x_start, const helios::vec3 tan_start, const helios::vec3 x_end, const helios::vec3 tan_end)</div><div class="ttdoc">Function to perform cubic Hermite spline interpolation.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l01455">global.cpp:1455</a></div></div>
 <div class="ttc" id="astructhelios_1_1_date_html_a9396638026040e4103b81388219b2a5b"><div class="ttname"><a href="structhelios_1_1_date.html#a9396638026040e4103b81388219b2a5b">helios::Date::JulianDay</a></div><div class="ttdeci">int JulianDay(void) const</div><div class="ttdoc">Convert to Julian day.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00164">global.cpp:164</a></div></div>
 <div class="ttc" id="astructhelios_1_1_r_g_b_acolor_html_a15af7f1c4d0e5e23a7ec2488fe0964df"><div class="ttname"><a href="structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df">helios::RGBAcolor::r</a></div><div class="ttdeci">float r</div><div class="ttdoc">Red color component.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00860">helios_vector_types.h:860</a></div></div>
 <div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00413">helios_vector_types.h:413</a></div></div>

@@ -464,6 +464,15 @@ void wait( float seconds );
  //! Function to flatten a 3D string vector into a 1D vector
  std::vector<std::string> flatten( std::vector<std::vector<std::vector<std::string> > > vec );
 
+  //! Function to perform cubic Hermite spline interpolation
+  /* \param[in] "u" Interpolation point as a fraction of the distance between the start and end points (must be between 0 and 1).
+     \param[in] "x_start" (x,y,z) Cartesian coordinate of spline starting point.
+     \param[in] "tan_start" Vector tangent to spline at starting point.
+     \param[in] "x_end" (x,y,z) Cartesian coordinate of spline ending point.
+     \param[in] "tan_end" Vector tangent to spline at ending point.
+     \return Interpolated (x,y,z) Cartesian point.
+  */
+  helios::vec3 spline_interp3( const float u, const helios::vec3 x_start, const helios::vec3 tan_start, const helios::vec3 x_end, const helios::vec3 tan_end );
  
 }
 

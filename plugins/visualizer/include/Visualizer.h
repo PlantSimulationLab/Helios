@@ -263,6 +263,12 @@ public:
   //! Visualizer self-test routine
   int selfTest( void );
 
+  //! Enable standard output from this plug-in (default)
+  void enableMessages( void );
+
+  //! Disable standard output from this plug-in
+  void disableMessages( void );
+
   /* //! Type of transformation applied to a geometric object */
   /* enum TransformationMethod {  */
   /*   //! Do not apply any coordinate transformation to positions. In this case, all positions must be between -1 and 1. */
@@ -629,6 +635,17 @@ public:
   */
   void addTextboxByCenter( const char* textstring, const helios::vec3 center, helios::SphericalCoord rotation, const helios::RGBcolor fontcolor, const uint fontsize, const char* fontname, CoordinateSystem coordFlag );
 
+  //! Add a coordinate axis with at the origin with unit length
+  void addCoordinateAxes();
+
+  //! Add a coordinate axis
+  /** 
+   \param[in] "origin" (x,y,z) location of the coordinate axes orign
+   \param[in] "length" length of coordinate axis lines from origin in each direction
+   \param[in] "sign" either "both" or "positive" should the axes be drawn in both positive and negative directions or just positive 
+   */
+  void addCoordinateAxes(const helios::vec3 origin, const helios::vec3 length, const std::string sign);
+
   //! Enable the colorbar
   void enableColorbar( void );
 
@@ -708,6 +725,19 @@ public:
   */
   void colorContextPrimitivesByData( const char* data_name, const std::vector<uint>& UUIDs );
 
+  //! Color primitives from Context by color mapping their `Object Data'
+  /** \param[in] "data_name" Name of `Object Data'
+       \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
+  */
+  void colorContextPrimitivesByObjectData( const char* data_name );
+
+  //! Color primitives from Context by color mapping their `Object Data'
+  /** \param[in] "data_name" Name of `Object Data'
+      \param[in] "ObjIDs" Object ID's of primitives to be colored by object data
+      \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
+  */
+  void colorContextPrimitivesByObjectData( const char* data_name, const std::vector<uint>& ObjIDs );
+
   //! Make Helios logo watermark invisible
   void hideWatermark( void );
 
@@ -740,7 +770,7 @@ public:
   //! Get R-G-B pixel data in the current display window
   /** \param[out] "buffer" Pixel data. The data is stored as r-g-b * column * row. So indices (0,1,2) would be the RGB values for row 0 and column 0, indices (3,4,5) would be RGB values for row 0 and column 1, and so on. Thus, buffer is of size 3*width*height.
    */
-  void getWindowPixelsRGB( unsigned int * buffer );
+  void getWindowPixelsRGB( uint * buffer );
 
   //! Get depth buffer data for the current display window
   /** \param[out] "buffer" Distance to nearest object from the camera location.
@@ -753,6 +783,12 @@ public:
       \param[out] "height" Height of the display window in pixels
   */
   void getWindowSize( uint &width, uint &height );
+
+  //! Get the size of the framebuffer in pixels
+  /** \param[out] "width" Width of the framebuffer in pixels
+      \param[out] "height" Height of the framebuffer in pixels
+  */
+  void getFramebufferSize( uint &width, uint &height );
 
   //! Clear all geometry previously added to the visualizer
   void clearGeometry( void );
@@ -770,7 +806,7 @@ private:
   
   //~~~~~~~~~~~~~~~~ Primitives ~~~~~~~~~~~~~~~~~~~~//
 
-  std::string colorPrimitivesByVariable,colorPrimitivesByData,colorPrimitivesByValue;
+  std::string colorPrimitivesByObjectData,colorPrimitivesByData,colorPrimitivesByValue;
   std::map<uint,uint> colorPrimitives_UUIDs;
 
   std::vector<int> contextPrimitiveIDs;
@@ -841,6 +877,9 @@ private:
   //! Width of points (if applicable) in pixels
   uint point_width;
 
+  //! Width of lines (if applicable) in pixels
+  uint line_width;
+
   //! Color of colorbar text
   helios::RGBcolor colorbar_fontcolor;
 
@@ -898,6 +937,8 @@ private:
 
   //! "gray" colormap used in visualization
   Colormap colormap_gray;
+
+  bool message_flag;
 
 
 };

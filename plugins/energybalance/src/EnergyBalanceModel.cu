@@ -155,7 +155,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
   }
     
   std::vector<float> Rn;
-  Rn.resize(Nprimitives);
+  Rn.resize(Nprimitives,0);
 
   std::vector<float> emissivity;
   emissivity.resize(Nprimitives);

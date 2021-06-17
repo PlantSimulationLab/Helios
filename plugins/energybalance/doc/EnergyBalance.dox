@@ -86,7 +86,7 @@
   <tr><td>object_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
  <tr><td>boundarylayer_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
  <tr><td>air_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>300 K
- <tr><td>moisture_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to moisture. <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0.1 mol/m<sup>2</sup>-s
+ <tr><td>moisture_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to moisture. <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0
  <tr><td>surface_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Relative humidity of air immediately above surface evaporating site. <td>N/A <td>1.0 (saturated)
  <tr><td>air_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air relative humidity outside of surface boundary layer. <td>N/A <td>0.5
  <tr><td>air_pressure <td>Pascals <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Atmospheric pressure. <td>N/A <td>101,000 Pa
