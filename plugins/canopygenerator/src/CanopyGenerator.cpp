@@ -388,31 +388,23 @@ WalnutCanopyParameters::WalnutCanopyParameters(void){
 
   leaf_subdivisions = make_int2(1,2);
 
-  leaf_texture_file = "plugins/canopygenerator/textures/StrawberryLeaf.png";
+  leaf_texture_file = "plugins/canopygenerator/textures/WalnutLeaf.png";
 
   wood_texture_file = "plugins/canopygenerator/textures/wood.jpg";
 
-  wood_subdivisions = 15;
+  wood_subdivisions = 10;
 
-  stems_per_plant = 50;
-  
   trunk_radius = 0.15;
 
   trunk_height = 4.f;
 
-  tree_height = 6;
-
   branch_length = make_vec3(4,0.75,0.75);
 
-  crown_radius = 2.5;
+  fruit_radius = 0.04;
 
-  fruit_radius = 0.025;
+  fruit_texture_file = "plugins/canopygenerator/textures/WalnutTexture.png";
 
-  fruit_texture_file = "plugins/canopygenerator/textures/StrawberryTexture.jpg";
-
-  fruit_subdivisions = 12;
-
-  clusters_per_stem = 0.6;
+  fruit_subdivisions = 16;
 
   plant_spacing = 6;
 
@@ -510,6 +502,16 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_7.disableMessages();
   StrawberryParameters params_7;
   canopygenerator_7.buildCanopy(params_7);
+  context.deletePrimitive( context.getAllUUIDs() );
+  
+  std::cout << "done." << std::endl;
+
+  std::cout << "Generating default walnut tree canopy..." << std::flush;
+
+  CanopyGenerator canopygenerator_8(&context);
+  canopygenerator_8.disableMessages();
+  WalnutCanopyParameters params_8;
+  canopygenerator_8.buildCanopy(params_8);
   context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;

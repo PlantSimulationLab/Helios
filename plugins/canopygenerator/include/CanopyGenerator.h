@@ -615,7 +615,7 @@ struct WalnutCanopyParameters{
   //! Default constructor
   WalnutCanopyParameters( void );
 
-  //! Maximum width of leaves. 
+  //! Maximum length of leaves along midrib. 
   float leaf_length;
 
   //! Number of sub-division segments per leaf
@@ -630,13 +630,15 @@ struct WalnutCanopyParameters{
   //! Number of radial subdivisions for branch tubes
   int wood_subdivisions;
 
-  //! Number of stems per plant
-  int stems_per_plant;
-
   //! Radius of trunk
   float trunk_radius;
 
+  //! Height of the trunk
+  float trunk_height;
+
+  //! Average length of branches in each recursive branch level. For example, the first (.x) value is the length of branches emanating from the trunk, the second (.y) is the the length of branches emanating from the first branching level.
   helios::vec3 branch_length;
+  
   
   //! Spacing between adjacent plants along the row direction.
   float plant_spacing;
@@ -644,21 +646,6 @@ struct WalnutCanopyParameters{
   //! Spacing between plant rows.
   float row_spacing;
 
-  //! Height of the trunk at split
-  float trunk_height;
-
-  float tree_height;
-
-  float crown_radius;
-
-  //! Number of crowns/plants in the x- and y-directions.
-  helios::int2 plant_count;
-
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
 
   //! Radius of strawberry fruit
   float fruit_radius;
@@ -669,8 +656,14 @@ struct WalnutCanopyParameters{
   //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly grape_subdivisions^2 triangles per fruit)
   uint fruit_subdivisions;
 
-  //! Number of strawberry clusters per plant stem. Clusters randomly have 1, 2, or 3 berries.
-  float clusters_per_stem;
+  //! Number of crowns/plants in the x- and y-directions.
+  helios::int2 plant_count;
+
+  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
+  helios::vec3 canopy_origin;
+
+  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
+  float canopy_rotation;
   
 };
 

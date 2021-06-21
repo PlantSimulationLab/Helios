@@ -3496,8 +3496,8 @@ void Visualizer::plotUpdate( void ){
 
     // Depth buffer for shadows
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
-    //glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
-    glViewport(0,0,16384,16384); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    //glViewport(0,0,16384,16384); // Render on the whole framebuffer, complete from the lower left corner to the upper right
 
     // Clear the screen
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
