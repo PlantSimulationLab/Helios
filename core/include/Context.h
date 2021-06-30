@@ -727,15 +727,19 @@ namespace helios {
 
     virtual ~CompoundObject(){};
 
+    //! Get the unique identifier for the object
     uint getObjectID( void ) const;
 
+    //! Get an enumeration specifying the type of the object
     helios::ObjectType getObjectType( void ) const;
 
     //! Return the number of primitives contained in the object
     uint getPrimitiveCount() const;
 
+    //! Get the UUIDs for all primitives contained in the object
     std::vector<uint> getPrimitiveUUIDs( void ) const;
 
+    //! Check whether a primitive is a member of the object based on its UUID
     bool doesObjectContainPrimitive( const uint UUID );
 
     //! Calculate the Cartesian (x,y,z) point of the center of a bounding box for the Compound Object
@@ -1095,16 +1099,22 @@ namespace helios {
     //! Tile destructor
     ~Tile(){};
 
+    //! Get the dimensions of the entire tile object
     helios::vec2 getSize( void ) const;
 
+    //! Get the Cartesian coordinates of the center of the tile object
     helios::vec3 getCenter( void ) const;
 
+    //! Get the number of sub-patch divisions of the tile
     helios::int2 getSubdivisionCount( void ) const;
 
+    //! Get the Cartesian coordinates of each of the four corners of the tile object
     std::vector<helios::vec3> getVertices( void ) const;
 
+    //! Get a unit vector normal to the tile object surface
     vec3 getNormal( void ) const;
 
+    //! Get the normalized (u,v) coordinates of the texture at each of the four corners of the tile object
     std::vector<helios::vec2> getTextureUV( void ) const;
 
     //! Function to scale the dimensions of a Compound Object
@@ -1127,10 +1137,13 @@ namespace helios {
     //! Shpere destructor
     ~Sphere(){};
 
+    //! Get the radius of the sphere
     float getRadius( void ) const;
 
+    //! Get the Cartesian coordinates of the center of the sphere object
     helios::vec3 getCenter( void ) const;
 
+    //! Get the number of sub-patch divisions of the sphere object
     uint getSubdivisionCount( void ) const;
 
     //! Function to scale the dimensions of a Compound Object
@@ -1153,10 +1166,13 @@ namespace helios {
     //! Tube destructor
     ~Tube(){};
 
+    //! Get the Cartesian coordinates of each of the tube object nodes
     std::vector<helios::vec3> getNodes( void ) const;
 
+    //! Get the radius at each of the tube object nodes
     std::vector<float> getNodeRadii( void ) const;
 
+    //! Get the number of sub-triangle divisions of the tube object
     uint getSubdivisionCount( void ) const;
 
     //! Function to scale the dimensions of a Compound Object
@@ -1183,10 +1199,13 @@ namespace helios {
     //! Box destructor
     ~Box(){};
 
+    //! Get the dimensions of the box object in each Cartesian direction
     helios::vec3 getSize( void ) const;
 
+    //! Get the Cartesian coordinates of the center of the box object
     helios::vec3 getCenter( void ) const;
 
+    //! Get the number of sub-patch divisions of the box object in each Cartesian direction
     helios::int3 getSubdivisionCount( void ) const;
 
     //! Function to scale the dimensions of a Compound Object
@@ -1209,10 +1228,13 @@ namespace helios {
     //! Disk destructor
     ~Disk(){};
 
+    //! Get the lateral dimensions of the disk object
     helios::vec2 getSize( void ) const;
 
+    //! Get the Cartesian coordinates of the center of the disk object
     helios::vec3 getCenter( void ) const;
 
+    //! Get the number of sub-triangle divisions of the disk object
     uint getSubdivisionCount( void ) const;
 
     //! Function to scale the dimensions of a Compound Object
@@ -1245,33 +1267,42 @@ namespace helios {
   class Cone: public CompoundObject {
   public:
       
-      //! Default constructor
-      Cone( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec3 __node0, const helios::vec3 __node1, const float __radius0, const float __radius1, const uint __subdiv, helios::Context* __context );
+    //! Default constructor
+    Cone( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec3 __node0, const helios::vec3 __node1, const float __radius0, const float __radius1, const uint __subdiv, helios::Context* __context );
       
-      //! Cone destructor
-      ~Cone(){};
+    //! Cone destructor
+    ~Cone(){};
+
+    //! Get the Cartesian coordinates of each of the cone object nodes
+    std::vector<helios::vec3> getNodes( void ) const;
+
+    //! Get the Cartesian coordinates of a cone object node
+    helios::vec3 getNode(int number) const;
+
+    //! Get the radius at each of the cone object nodes
+    std::vector<float> getNodeRadii( void ) const;
+
+    //! Get the radius of a cone object node
+    float getNodeRadius(int number) const;
+
+    //! Get the number of sub-triangle divisions of the cone object
+    uint getSubdivisionCount( void ) const;
+
+    //! Get a unit vector pointing in the direction of the cone central axis
+    helios::vec3 getAxisUnitVector() const;
+
+    //! Get the lenght of the cone along the axial direction
+    float getLength(void) const;
       
-      std::vector<helios::vec3> getNodes( void ) const;
-      helios::vec3 getNode(int number) const;
-      
-      std::vector<float> getNodeRadii( void ) const;
-      float getNodeRadius(int number) const;
-      
-      uint getSubdivisionCount( void ) const;
-      
-      helios::vec3 getAxisUnitVector() const;
-      
-      float getLength(void) const;
-      
-      //! Function to scale the length of the cone
-      /** \param[in] "S" Scaling factor
-       */
-      void scaleLength( const float S );
-      
-      //! Function to scale the girth of the cone
-      /** \param[in] "S" Scaling factor
-       */
-      void scaleGirth( const float S );
+    //! Function to scale the length of the cone
+    /** \param[in] "S" Scaling factor
+     */
+    void scaleLength( const float S );
+    
+    //! Function to scale the girth of the cone
+    /** \param[in] "S" Scaling factor
+     */
+    void scaleGirth( const float S );
       
   protected:
 

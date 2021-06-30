@@ -198,6 +198,9 @@ protected:
   //! Pointer to the context
   helios::Context* context;
 
+  //! Pointers to current primitive geometry
+  std::vector<helios::Primitive*> primitives;
+
   //! UUIDs currently added from the Context
   std::vector<uint> context_UUIDs;
 
@@ -526,16 +529,26 @@ protected:
   RTbuffer patch_UUID_RTbuffer;
   RTbuffer triangle_UUID_RTbuffer;
   RTbuffer disk_UUID_RTbuffer;
-  RTbuffer alphamask_UUID_RTbuffer;
+  RTbuffer tile_UUID_RTbuffer;
   RTbuffer voxel_UUID_RTbuffer;
   RTbuffer bbox_UUID_RTbuffer;
   //! Primitive UUIDs - RTvariable object
   RTvariable patch_UUID_RTvariable;
   RTvariable triangle_UUID_RTvariable;
   RTvariable disk_UUID_RTvariable;
-  RTvariable alphamask_UUID_RTvariable;
+  RTvariable tile_UUID_RTvariable;
   RTvariable voxel_UUID_RTvariable;
   RTvariable bbox_UUID_RTvariable;
+
+  //! Mapping UUIDs to object IDs - RTbuffer object
+  RTbuffer objectID_RTbuffer;
+  //! Mapping UUIDs to object IDs - RTvariable object
+  RTvariable objectID_RTvariable;
+
+  //! Mapping object IDs to UUIDs - RTbuffer object
+  RTbuffer primitiveID_RTbuffer;
+  //! Mapping object IDs to UUIDs - RTvariable object
+  RTvariable primitiveID_RTvariable;
 
   //! Primitive two-sided flag - RTbuffer object
   RTbuffer twosided_flag_RTbuffer;
@@ -561,9 +574,9 @@ protected:
   RTbuffer disk_normals_RTbuffer;
   RTvariable disk_normals_RTvariable;
 
-  //-- AlphaMask Buffers --//
-  RTbuffer alphamask_vertices_RTbuffer;
-  RTvariable alphamask_vertices_RTvariable;
+  //-- Tile Buffers --//
+  RTbuffer tile_vertices_RTbuffer;
+  RTvariable tile_vertices_RTvariable;
   
   //-- Voxel Buffers --//
   RTbuffer voxel_vertices_RTbuffer;
@@ -572,6 +585,10 @@ protected:
   //-- Bounding Box Buffers --//
   RTbuffer bbox_vertices_RTbuffer;
   RTvariable bbox_vertices_RTvariable;
+
+  //-- Object Buffers --//
+  RTbuffer object_subdivisions_RTbuffer;
+  RTvariable object_subdivisions_RTvariable;
 
   /* Output Buffers */
 
@@ -605,13 +622,13 @@ protected:
   //! "to-be-scattered" radiative energy (reflected/emitted) for bottom surface each object - RTvariable 
   RTvariable scatter_buff_bottom_RTvariable;
 
-  //! Mask data for AlphaMasks - RTbuffer object 
+  //! Mask data for texture masked Patches - RTbuffer object 
   RTbuffer maskdata_RTbuffer;
-  //! Mask data for AlphaMask - RTvariable 
+  //! Mask data for texture masked Patches - RTvariable 
   RTvariable maskdata_RTvariable;
-  //! Size of mask data for AlphaMask - RTbuffer object
+  //! Size of mask data for texture masked Patches - RTbuffer object
   RTbuffer masksize_RTbuffer;
-  //! Size of mask data for AlphaMask 
+  //! Size of mask data for texture masked Patches - RTvariable object
   RTvariable masksize_RTvariable;
   //! ID of mask data (0...Nmasks-1) - RTbuffer object
   RTbuffer maskID_RTbuffer;
@@ -647,13 +664,13 @@ protected:
   RTgeometry patch;
   RTgeometry triangle;
   RTgeometry disk;
-  RTgeometry alphamask;
+  RTgeometry tile;
   RTgeometry voxel;
   RTgeometry bbox;
   RTmaterial patch_material;
   RTmaterial triangle_material;
   RTmaterial disk_material;
-  RTmaterial alphamask_material;
+  RTmaterial tile_material;
   RTmaterial voxel_material;
   RTmaterial bbox_material;
 

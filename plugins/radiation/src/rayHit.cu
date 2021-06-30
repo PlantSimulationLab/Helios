@@ -51,9 +51,13 @@ rtBuffer<float, 2>  transform_matrix;
 
 rtBuffer<float3, 2> bbox_vertices;
 
+rtBuffer<uint, 1> objectID;
+
 RT_PROGRAM void closest_hit_direct(){
 
-  if( (periodic_flag.x==1 || periodic_flag.y==1) && primitive_type[UUID] == 5 ){ //periodic boundary condition
+  uint objID = objectID[UUID];
+
+  if( (periodic_flag.x==1 || periodic_flag.y==1) && primitive_type[objID] == 5 ){ //periodic boundary condition
 
     float3 ray_origin = ray.origin + t_hit*ray.direction;
 
@@ -97,7 +101,11 @@ RT_PROGRAM void closest_hit_direct(){
 RT_PROGRAM void closest_hit_diffuse()
 {
 
-  if( (periodic_flag.x==1 || periodic_flag.y==1) && primitive_type[UUID] == 5 ){ //periodic boundary condition
+  uint origin_UUID = prd.origin_UUID;
+
+  uint objID = objectID[UUID];
+
+  if( (periodic_flag.x==1 || periodic_flag.y==1) && primitive_type[objID] == 5 ){ //periodic boundary condition
 
     float3 ray_origin = ray.origin + t_hit*ray.direction;
 
@@ -139,8 +147,6 @@ RT_PROGRAM void closest_hit_diffuse()
 
   //Note: UUID corresponds to the object that the ray hit (i.e., where energy is coming from), and UUID_origin is the object the ray originated from (i.e., where the energy is being recieved)
 
-  uint origin_UUID = prd.origin_UUID;
-  
   float t_rho = rho[origin_UUID];
   float t_tau = tau[origin_UUID];
 
@@ -149,10 +155,10 @@ RT_PROGRAM void closest_hit_diffuse()
 
   float m[16];
   for( uint i=0; i<16; i++ ){
-    m[i] = transform_matrix[ optix::make_uint2(i,UUID) ];
+    m[i] = transform_matrix[ optix::make_uint2(i,objID) ];
   }
 
-  if( primitive_type[UUID] == 0 || primitive_type[UUID] == 3 ){//hit patch or alphamask
+  if( primitive_type[objID] == 0 || primitive_type[objID] == 3 ){//hit patch or tile
     float3 s0 = make_float3(0,0,0);
     float3 s1 = make_float3(1,0,0);
     float3 s2 = make_float3(0,1,0);
@@ -179,13 +185,13 @@ RT_PROGRAM void closest_hit_diffuse()
   bool face = dot(normal,ray.direction)<0;
 
   double strength;
-  if( face /*hit top*/ || primitive_type[UUID] == 4 /*hit voxel*/ ){
+  if( face || primitive_type[objID] == 4 ){
     strength = radiation_out_top[UUID]*prd.strength;
   }else{
     strength = radiation_out_bottom[UUID]*prd.strength;
   }
 
-  if( primitive_type[origin_UUID] == 4 ){ //ray was launched from voxel
+  if( primitive_type[objectID[origin_UUID]] == 4 ){ //ray was launched from voxel
 
     float kappa = t_rho; //just a reminder that rho is actually the absorption coefficient
     float sigma_s = t_tau; //just a reminder that tau is actually the scattering coefficient
@@ -215,19 +221,22 @@ RT_PROGRAM void closest_hit_diffuse()
     
   }
 
-  if( primitive_type[UUID] == 4 ){ //if we hit a voxel, reduce strength and launch another ray
-    optix::Ray ray_transmit = optix::make_Ray(ray.origin+(t_hit+prd.area+1e-5)*ray.direction, ray.direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
-    PerRayData prd_transmit = prd;
-    float beta = rho[UUID]+tau[UUID];
-    prd_transmit.strength = prd.strength*(1.f-exp(-beta*0.5*prd.area));
-    rtTrace( top_object, ray_transmit, prd_transmit);
-  }
+  // if( primitive_type[UUID] == 4 ){ //if we hit a voxel, reduce strength and launch another ray
+  //   optix::Ray ray_transmit = optix::make_Ray(ray.origin+(t_hit+prd.area+1e-5)*ray.direction, ray.direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
+  //   PerRayData prd_transmit = prd;
+  //   float beta = rho[UUID]+tau[UUID];
+  //   prd_transmit.strength = prd.strength*(1.f-exp(-beta*0.5*prd.area));
+  //   rtTrace( top_object, ray_transmit, prd_transmit);
+  // }
+  
 
   }
 
 }
 
 RT_PROGRAM void miss_direct(){
+
+  uint objID = objectID[prd.origin_UUID];
 
   float t_rho = rho[prd.origin_UUID];
   float t_tau = tau[prd.origin_UUID];
@@ -251,7 +260,7 @@ RT_PROGRAM void miss_direct(){
 RT_PROGRAM void miss_diffuse(){
   
   double strength;
-  if( prd.face /*hit top*/ || primitive_type[prd.origin_UUID] == 3 /*hit voxel*/ ){
+  if( prd.face || primitive_type[objectID[prd.origin_UUID] ] == 3 ){
     strength = radiation_out_top[prd.origin_UUID]*prd.strength*prd.area;
   }else{
     strength = radiation_out_bottom[prd.origin_UUID]*prd.strength*prd.area;
@@ -262,7 +271,7 @@ RT_PROGRAM void miss_diffuse(){
 
   atomicFloatAdd( &Rsky[prd.origin_UUID], strength);
 
-  if( primitive_type[prd.origin_UUID] == 4 ){ //ray was launched from voxel
+  if( primitive_type[ objectID[prd.origin_UUID] ] == 4 ){ //ray was launched from voxel
 
     float kappa = t_rho; //just a reminder that rho is actually the absorption coefficient
     float sigma_s = t_tau; //just a reminder that tau is actually the scattering coefficient

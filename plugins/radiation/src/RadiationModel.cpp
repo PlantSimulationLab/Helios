@@ -73,9 +73,11 @@ int RadiationModel::selfTest( void ){
 
   float a, b, c, X, X2, Y, Y2, F12;
   float R;
+  float theta_s, dtheta;
 
   uint UUID0, UUID1, UUID2;
-  
+  uint ID, N;
+
   //----- Test #1: 90 degree common-edge squares ------//
 
   std::cout << "Test #1: 90 degree common-edge squares..." << std::flush;
@@ -496,9 +498,9 @@ int RadiationModel::selfTest( void ){
     std::cout << "passed." << std::endl;  
   }
 
-  // ------ Test #6: Parallel Disks (AlphaMasks) ------- //
+  // ------ Test #6: Parallel Disks (Texture Masked Patches) ------- //
 
-  std::cout << "Test #6: Parallel disks (AlphaMasks)..." << std::flush;
+  std::cout << "Test #6: Parallel disks (Texture Masked Patches)..." << std::flush;
 
   uint Ndirect_6 = 100;
   uint Ndiffuse_6 = 500000;
@@ -621,8 +623,9 @@ int RadiationModel::selfTest( void ){
 
   Context context_7; 
 
-  std::vector<uint> UUIDt = context_7.addBox( make_vec3(0,0,0), make_vec3(10,10,10),make_int3(5,5,5), RGB::black, true );
-
+  uint objID_7 = context_7.addBoxObject( make_vec3(0,0,0), make_vec3(10,10,10),make_int3(5,5,5), RGB::black, true );
+  std::vector<uint> UUIDt = context_7.getObjectPointer(objID_7)->getPrimitiveUUIDs();
+  
   flag = 0;
   context_7.setPrimitiveData( UUIDt, "twosided_flag", flag );
   context_7.setPrimitiveData( UUIDt, "emissivity_LW", eps1_7 );
@@ -737,11 +740,44 @@ int RadiationModel::selfTest( void ){
     failure=true;
   }
 
-  // 8b, texture-mapped (u,v) inscribed ellipse patch above rectangle
+  // 8b, texture-mapped (u,v) inscribed ellipse tile object above rectangle
 
   context_8.deletePrimitive(UUID1);
 
-  //UUID1 = context_8.addPatch( p1, sz, make_SphericalCoord(0,0), "lib/images/disk_texture.png", make_vec2(0.25,0.75), make_vec2(0.75,0.75), make_vec2(0.75,0.25), make_vec2(0.25,0.25) );
+  uint objID_8 = context_8.addTileObject( p1, sz, make_SphericalCoord(0,0), make_int2(5,4), "lib/images/disk_texture.png" );
+  std::vector<uint> UUIDs1 = context_8.getObjectPointer(objID_8)->getPrimitiveUUIDs();
+
+  radiation.updateGeometry();
+
+  radiation.runBand("SW");
+
+  context_8.getPrimitiveData( UUID0, "radiation_flux_SW", F0 );
+
+  F1=0;
+  float A = 0;
+  for( uint p=0; p<UUIDs1.size(); p++ ){
+
+    float a = context_8.getPrimitivePointer( UUIDs1.at(p) )->getArea();
+    A+=a;
+
+    float R;
+    context_8.getPrimitiveData( UUIDs1.at(p), "radiation_flux_SW", R );
+    F1 += R*a;
+
+  }
+  F1 = F1/A;
+
+  if( fabs(F0-(1.f-0.25f*M_PI))>error_threshold || fabs(F1-1.f)>error_threshold ){
+    std::cout << "failed." << std::endl;
+    std::cerr << "Test failed for texture-mapped patch (b)." << std::endl;
+    failure_8 = true;
+    failure=true;
+  }
+
+  context_8.deleteObject(objID_8);
+
+  // 8c, texture-mapped (u,v) inscribed ellipse patch above rectangle
+
   UUID1 = context_8.addPatch( p1, sz, make_SphericalCoord(0,0), "lib/images/disk_texture.png", make_vec2(0.5,0.5), make_vec2(0.5,0.5) );
 
   radiation.updateGeometry();
@@ -753,12 +789,12 @@ int RadiationModel::selfTest( void ){
 
   if( fabs(F0)>error_threshold || fabs(F1-1.f)>error_threshold ){
     std::cout << "failed." << std::endl;
-    std::cerr << "Test failed for texture-mapped patch (b)." << std::endl;
+    std::cerr << "Test failed for texture-mapped patch (c)." << std::endl;
     failure_8 = true;
     failure=true;
   }
 
-  // 8c, texture-mapped (u,v) quarter ellipse patch above rectangle
+  // 8d, texture-mapped (u,v) quarter ellipse patch above rectangle
 
   context_8.deletePrimitive(UUID1);
 
@@ -773,12 +809,12 @@ int RadiationModel::selfTest( void ){
 
   if( fabs(F0-(1.f-0.25f*M_PI))>error_threshold || fabs(F1-1.f)>error_threshold ){
     std::cout << "failed." << std::endl;
-    std::cerr << "Test failed for texture-mapped patch (c)." << std::endl;
+    std::cerr << "Test failed for texture-mapped patch (d)." << std::endl;
     failure_8 = true;
     failure=true;
   }
 
-  // 8d, texture-mapped (u,v) half ellipse triangle above rectangle
+  // 8e, texture-mapped (u,v) half ellipse triangle above rectangle
 
   context_8.deletePrimitive(UUID1);
 
@@ -793,12 +829,12 @@ int RadiationModel::selfTest( void ){
 
   if( fabs(F0-0.5-0.5*(1.f-0.25f*M_PI))>error_threshold || fabs(F1-1.f)>error_threshold ){
     std::cout << "failed." << std::endl;
-    std::cerr << "Test failed for texture-mapped triangle (d)." << std::endl;
+    std::cerr << "Test failed for texture-mapped triangle (e)." << std::endl;
     failure_8 = true;
     failure=true;
   }
 
-  // 8e, texture-mapped (u,v) two ellipse triangles above ellipse patch
+  // 8f, texture-mapped (u,v) two ellipse triangles above ellipse patch
 
   context_8.deletePrimitive(UUID0);
 
@@ -816,12 +852,12 @@ int RadiationModel::selfTest( void ){
 
   if( fabs(F0)>error_threshold || fabs(F1-1.f)>error_threshold || fabs(F2-1.f)>error_threshold ){
     std::cout << "failed." << std::endl;
-    std::cerr << "Test failed for texture-mapped triangle (e)." << std::endl;
+    std::cerr << "Test failed for texture-mapped triangle (f)." << std::endl;
     failure_8 = true;
     failure=true;
   }
   
-  // 8f, texture-mapped (u,v) ellipse patch above two ellipse triangles
+  // 8g, texture-mapped (u,v) ellipse patch above two ellipse triangles
 
   context_8.deletePrimitive(UUID0);
   context_8.deletePrimitive(UUID1);
@@ -842,7 +878,7 @@ int RadiationModel::selfTest( void ){
 
   if( fabs(F1)>error_threshold || fabs(F2)>error_threshold || fabs(F0-1.f)>error_threshold ){
     std::cout << "failed." << std::endl;
-    std::cerr << "Test failed for texture-mapped triangle (f)." << std::endl;
+    std::cerr << "Test failed for texture-mapped triangle (g)." << std::endl;
     failure_8 = true;
     failure=true;
   }
@@ -898,7 +934,7 @@ int RadiationModel::selfTest( void ){
   radiation_9.addRadiationBand("direct");
   radiation_9.disableEmission("direct");
   radiation_9.setDirectRayCount("direct",Ndirect_9);
-  float theta_s = 0.2*M_PI;
+  theta_s = 0.2*M_PI;
   uint ID = radiation_9.addCollimatedRadiationSource( make_SphericalCoord(0.5*M_PI-theta_s,0.f) );
   radiation_9.setSourceFlux(ID,"direct",1.f/cos(theta_s));
 
@@ -952,8 +988,8 @@ int RadiationModel::selfTest( void ){
   intercepted_ground_direct = 1.f - intercepted_ground_direct;
   intercepted_ground_diffuse = 1.f - intercepted_ground_diffuse;
 
-  int N = 50;
-  float dtheta = 0.5*M_PI/float(N);
+  N = 50;
+  dtheta = 0.5*M_PI/float(N);
   
   float intercepted_theoretical_diffuse = 0.f;
   for( int i=0; i<N; i++ ){
@@ -1187,7 +1223,7 @@ int RadiationModel::selfTest( void ){
     std::cout << "passed." << std::endl;
   }
 
-    // -------- Test #12: homogeneous "canopy" with periodic boundaries---------- //
+  // -------- Test #12: homogeneous "canopy" with periodic boundaries---------- //
 
   std::cout << "Test #12: homogeneous 'canopy' of patches with periodic boundaries..." << std::flush;
 
@@ -1313,6 +1349,152 @@ int RadiationModel::selfTest( void ){
   }
 
   if( failure_12 ){
+    std::cout << "failed." << std::endl;
+  }else{
+    std::cout << "passed." << std::endl;
+  }
+
+  // -------- Test #13: homogeneous "canopy" of texture-masked tile objects with periodic boundaries---------- //
+
+  std::cout << "Test #13: homogeneous 'canopy' of texture-masked tile objects with periodic boundaries..." << std::flush;
+
+  bool failure_13 = false;
+  
+  uint Ndirect_13 = 1000;
+  uint Ndiffuse_13 = 5000;
+
+  float D_13 = 20;          //domain width
+  float LAI_13 = 1.0;       //canopy leaf area index
+  float h_13 = 3;           //canopy height
+  float w_leaf_13 = 0.05;    //leaf width
+
+  Context context_13;
+
+  uint objID_ptype = context_13.addTileObject( make_vec3(0,0,0), make_vec2(w_leaf_13,w_leaf_13), make_SphericalCoord(0,0), make_int2(2,2), "plugins/radiation/disk.png" );
+  std::vector<uint> UUIDs_ptype = context_13.getObjectPointer(objID_ptype)->getPrimitiveUUIDs();
+
+  float A_leaf = 0;
+  for( uint p=0; p<UUIDs_ptype.size(); p++ ){
+    A_leaf += context_13.getPrimitivePointer( UUIDs_ptype.at(p) )->getArea();
+  }
+
+  int Nleaves_13 = round(LAI_13*D_13*D_13/A_leaf);
+
+  std::vector<uint> UUIDs_leaf_13;
+
+  for( int i=0; i<Nleaves_13; i++ ){
+
+    vec3 position( (-0.5+context_13.randu())*D_13, (-0.5+context_13.randu())*D_13, 0.5*w_leaf_13+context_13.randu()*h_13 );
+
+    SphericalCoord rotation( 1.f, acos(1.f-context_13.randu()), 2.f*M_PI*context_13.randu() );
+
+    uint objID = context_13.copyObject( objID_ptype );
+
+    context_13.getObjectPointer( objID )->rotate( -rotation.elevation, "y" );
+    context_13.getObjectPointer( objID )->rotate( rotation.azimuth, "z" );
+
+    context_13.getObjectPointer( objID )->translate( position );
+
+    std::vector<uint> UUIDs = context_13.getObjectPointer( objID )->getPrimitiveUUIDs();
+
+    UUIDs_leaf_13.insert( UUIDs_leaf_13.end(), UUIDs.begin(), UUIDs.end() );
+
+  }
+
+  context_13.deleteObject( objID_ptype );
+
+  std::vector<uint> UUIDs_ground_13 = context_13.addTile( make_vec3(0,0,0), make_vec2(D_13,D_13), make_SphericalCoord(0,0), make_int2(100,100) );
+
+  context_13.setPrimitiveData( UUIDs_ground_13, "twosided_flag", uint(0) );
+
+  RadiationModel radiation_13(&context_13);
+  radiation_13.disableMessages();
+
+  radiation_13.addRadiationBand("direct");
+  radiation_13.disableEmission("direct");
+  radiation_13.setDirectRayCount("direct",Ndirect_13);
+  theta_s = 0.2*M_PI;
+  ID = radiation_13.addCollimatedRadiationSource( make_SphericalCoord(0.5*M_PI-theta_s,0.f) );
+  radiation_13.setSourceFlux(ID,"direct",1.f/cos(theta_s));
+
+  radiation_13.addRadiationBand("diffuse");
+  radiation_13.disableEmission("diffuse");
+  radiation_13.setDiffuseRayCount("diffuse",Ndiffuse_13);
+  radiation_13.setDiffuseRadiationFlux("diffuse",1.f);
+
+  radiation_13.enforcePeriodicBoundary("xy");
+   
+  radiation_13.updateGeometry();
+
+  radiation_13.runBand("direct");
+  radiation_13.runBand("diffuse");
+
+  float intercepted_leaf_direct_13 = 0.f;
+  float intercepted_leaf_diffuse_13 = 0.f;
+  for( int i=0; i<UUIDs_leaf_13.size(); i++ ){
+
+    float area = context_13.getPrimitivePointer( UUIDs_leaf_13.at(i) )->getArea();
+    
+    float flux;
+    
+    context_13.getPrimitiveData( UUIDs_leaf_13.at(i), "radiation_flux_direct", flux );
+    intercepted_leaf_direct_13 += flux*area/D_13/D_13;
+
+    context_13.getPrimitiveData( UUIDs_leaf_13.at(i), "radiation_flux_diffuse", flux );
+    intercepted_leaf_diffuse_13 += flux*area/D_13/D_13;
+
+  }
+
+  float intercepted_ground_direct_13 = 0.f;
+  float intercepted_ground_diffuse_13 = 0.f;
+  for( int i=0; i<UUIDs_ground_13.size(); i++ ){
+
+    float area = context_13.getPrimitivePointer( UUIDs_ground_13.at(i) )->getArea();
+    
+    float flux_dir;
+    context_13.getPrimitiveData( UUIDs_ground_13.at(i), "radiation_flux_direct", flux_dir );
+
+    float flux_diff;
+    context_13.getPrimitiveData( UUIDs_ground_13.at(i), "radiation_flux_diffuse", flux_diff );
+
+    vec3 position = context_13.getPatchPointer( UUIDs_ground_13.at(i) )->getCenter();
+
+    intercepted_ground_direct_13 += flux_dir*area/D_13/D_13;
+    intercepted_ground_diffuse_13 += flux_diff*area/D_13/D_13;
+      
+  }
+
+  intercepted_ground_direct_13 = 1.f - intercepted_ground_direct_13;
+  intercepted_ground_diffuse_13 = 1.f - intercepted_ground_diffuse_13;
+
+  N = 50;
+  dtheta = 0.5*M_PI/float(N);
+  
+  float intercepted_theoretical_diffuse_13 = 0.f;
+  for( int i=0; i<N; i++ ){
+    
+    float theta = (i+0.5f)*dtheta;
+    intercepted_theoretical_diffuse_13 += 2.f*(1.f-exp(-0.5*LAI_13/cos(theta)))*cos(theta)*sin(theta)*dtheta;
+    
+  }
+
+  float intercepted_theoretical_direct_13 = 1.f-exp(-0.5*LAI_13/cos(theta_s));
+
+  if( fabs(intercepted_ground_direct_13-intercepted_theoretical_direct_13)>2.f*error_threshold || fabs(intercepted_leaf_direct_13-intercepted_theoretical_direct_13)>2.f*error_threshold ){
+     std::cerr << "Test failed for direct radiation calculations." << std::endl;
+    std::cout << intercepted_ground_direct_13 << " " << intercepted_leaf_direct_13 << " " << intercepted_theoretical_direct_13 << std::endl;
+    failure_13 = true;
+    failure=true;
+  }
+
+  if( fabs(intercepted_ground_diffuse_13-intercepted_theoretical_diffuse_13)>2.f*error_threshold || fabs(intercepted_leaf_diffuse_13-intercepted_theoretical_diffuse_13)>4.f*error_threshold ){
+     std::cerr << "Test failed for diffuse radiation calculations." << std::endl;
+    std::cout << intercepted_ground_diffuse_13 << " " << intercepted_leaf_diffuse_13 << " " << intercepted_theoretical_diffuse_13 << std::endl;
+    failure_13 = true;
+    failure=true;
+  }
+
+  if( failure_13 ){
     std::cout << "failed." << std::endl;
   }else{
     std::cout << "passed." << std::endl;
@@ -1666,8 +1848,14 @@ void RadiationModel::initializeOptiX( void ){
   addBuffer( "patch_UUID", patch_UUID_RTbuffer, patch_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
   addBuffer( "triangle_UUID", triangle_UUID_RTbuffer, triangle_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
   addBuffer( "disk_UUID", disk_UUID_RTbuffer, disk_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-  addBuffer( "alphamask_UUID", alphamask_UUID_RTbuffer, alphamask_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+  addBuffer( "tile_UUID", tile_UUID_RTbuffer, tile_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
   addBuffer( "voxel_UUID", voxel_UUID_RTbuffer, voxel_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+
+  //Object ID Buffer
+  addBuffer( "objectID", objectID_RTbuffer, objectID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+
+  //Primitive ID Buffer
+  addBuffer( "primitiveID", primitiveID_RTbuffer, primitiveID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
 
   //primitive two-sided flag buffer
   addBuffer( "twosided_flag", twosided_flag_RTbuffer, twosided_flag_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_BYTE, 1 );
@@ -1683,11 +1871,14 @@ void RadiationModel::initializeOptiX( void ){
   addBuffer( "disk_radii", disk_radii_RTbuffer, disk_radii_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
   addBuffer( "disk_normals", disk_normals_RTbuffer, disk_normals_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
 
-  //alphamask buffers
-  addBuffer( "alphamask_vertices", alphamask_vertices_RTbuffer, alphamask_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
+  //tile buffers
+  addBuffer( "tile_vertices", tile_vertices_RTbuffer, tile_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
 
   //voxel buffers
   addBuffer( "voxel_vertices", voxel_vertices_RTbuffer, voxel_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
+
+  //object buffers
+  addBuffer( "object_subdivisions", object_subdivisions_RTbuffer, object_subdivisions_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT2, 1 );
 
   //radiation energy rate data buffers
   // - in -
@@ -1897,28 +2088,28 @@ void RadiationModel::initializeOptiX( void ){
   RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_DIFFUSE_MCRT, closest_hit_MCRT ) );
   RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_EMISSION_MCRT, closest_hit_MCRT ) );
 
-  /* Initialize AlphaMask Geometry */
+  /* Initialize Tile Geometry */
 
-  RTprogram  alphamask_intersection_program;
-  RTprogram  alphamask_bounding_box_program;
+  RTprogram  tile_intersection_program;
+  RTprogram  tile_bounding_box_program;
 
-  RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &alphamask ) );
+  RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &tile ) );
 
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "alphamask_bounds", &alphamask_bounding_box_program ) );
-  RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( alphamask, alphamask_bounding_box_program ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "alphamask_intersect", &alphamask_intersection_program ) );
-  RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( alphamask, alphamask_intersection_program ) );
+  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "tile_bounds", &tile_bounding_box_program ) );
+  RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( tile, tile_bounding_box_program ) );
+  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "tile_intersect", &tile_intersection_program ) );
+  RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( tile, tile_intersection_program ) );
 
-  /* Create AlphaMask Material */
+  /* Create Tile Material */
   
-  RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &alphamask_material ) );
+  RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &tile_material ) );
   
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( alphamask_material, RAYTYPE_DIRECT, closest_hit_direct ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( alphamask_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_DIRECT, closest_hit_direct ) );
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
   //MCRT
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( alphamask_material, RAYTYPE_DIRECT_MCRT, closest_hit_MCRT ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( alphamask_material, RAYTYPE_DIFFUSE_MCRT, closest_hit_MCRT ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( alphamask_material, RAYTYPE_EMISSION_MCRT, closest_hit_MCRT ) );
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_DIRECT_MCRT, closest_hit_MCRT ) );
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_DIFFUSE_MCRT, closest_hit_MCRT ) );
+  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_EMISSION_MCRT, closest_hit_MCRT ) );
 
   /* Initialize Voxel Geometry */
 
@@ -1989,7 +2180,7 @@ void RadiationModel::initializeOptiX( void ){
   RTgeometryinstance patch_instance;
   RTgeometryinstance triangle_instance;
   RTgeometryinstance disk_instance;
-  RTgeometryinstance alphamask_instance;
+  RTgeometryinstance tile_instance;
   RTgeometryinstance voxel_instance;
   RTgeometryinstance bbox_instance;
 
@@ -2046,12 +2237,12 @@ void RadiationModel::initializeOptiX( void ){
   RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( disk_instance, 1 ) );
   RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( disk_instance, 0, disk_material ) );
   RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 2, disk_instance ) );
-  //alphamasks
-  RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &alphamask_instance ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( alphamask_instance, alphamask ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( alphamask_instance, 1 ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( alphamask_instance, 0, alphamask_material ) );
-  RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 3, alphamask_instance ) );
+  //tiles
+  RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &tile_instance ) );
+  RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( tile_instance, tile ) );
+  RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( tile_instance, 1 ) );
+  RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( tile_instance, 0, tile_material ) );
+  RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 3, tile_instance ) );
   //voxels
   RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &voxel_instance ) );
   RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( voxel_instance, voxel ) );
@@ -2107,7 +2298,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
   context_UUIDs = UUIDs;
 
-  for( size_t u=0; u<context_UUIDs.size(); u++ ){
+  for( int u=context_UUIDs.size()-1; u>=0; u-- ){
     if( !context->doesPrimitiveExist( context_UUIDs.at(u) ) ){
       context_UUIDs.erase( context_UUIDs.begin()+u );
     }
@@ -2129,78 +2320,158 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
   uint Nbands = emission_flag.size(); //Number of spectral bands
 
-  //transformation matrix buffer
+  //transformation matrix buffer - size=Nobjects
   std::vector<std::vector<float> > m_global;
-  m_global.resize(Nprimitives);
 
-  //primitive type buffer
+  //primitive type buffer - size=Nobjects
   std::vector<uint> ptype_global;
-  ptype_global.resize(Nprimitives);
 
-  //primitive area buffer
+  //primitive area buffer - size=Nobjects
   std::vector<float> area_global;
-  area_global.resize(Nprimitives);
 
-  //primitive UUID buffers
+  //primitive UUID buffers - total size of all combined is Nobjects
   std::vector<uint> patch_UUID;
   std::vector<uint> triangle_UUID;
   std::vector<uint> disk_UUID;
-  std::vector<uint> alphamask_UUID;
+  std::vector<uint> tile_UUID;
   std::vector<uint> voxel_UUID;
 
-  //twosided flag buffer
+  //twosided flag buffer - size=Nobjects
   std::vector<bool> twosided_flag_global;
-  twosided_flag_global.resize(Nprimitives);//initialize to be two-sided
-  for( size_t i=0; i<Nprimitives; i++ ){
-    twosided_flag_global.at(i) = true;
-  }
   
   //primitive geometry specification buffers
   std::vector<std::vector<optix::float3> > patch_vertices;
   std::vector<std::vector<optix::float3> > triangle_vertices;
   std::vector<std::vector<optix::float3> > disk_vertices;
-  std::vector<std::vector<optix::float3> > alphamask_vertices;
+  std::vector<std::vector<optix::float3> > tile_vertices;
   std::vector<std::vector<optix::float3> > voxel_vertices;
+
+  //number of patch subdivisions for each tile - size is same as tile_vertices
+  std::vector<optix::int2> object_subdivisions;
+
+  std::vector<uint> objID_all = context->getAllObjectIDs();
+
+  //ID of object corresponding to each primitive - size Nprimitives
+  std::vector<uint> objectID;
+  objectID.resize(Nprimitives);
+
+  //UUID correspoinding to first primitive in object - size Nobjects
+  std::vector<uint> primitiveID;
 
   std::size_t patch_count = 0;
   std::size_t triangle_count = 0;
   std::size_t disk_count = 0;
-  std::size_t alphamask_count = 0;
+  std::size_t tile_count = 0;
   std::size_t voxel_count = 0;
+
+  area_global.resize(Nprimitives);
+
+  primitives.resize(0);
+  primitiveID.resize(0);
+
+  //Create a vector of primitive pointers 'primitives' (note: only add one pointer for compound objects)
+  uint objID = 0;
+  uint ID = 99999;
   for( std::size_t u=0; u<Nprimitives; u++ ){
+    
     uint p = context_UUIDs.at(u);
     
     helios::Primitive* prim = context->getPrimitivePointer(p);
 
+    //primitve area
+    area_global.at(u) = prim->getArea();
+    
+    uint parentID = prim->getParentObjectID();
+
+    if( ID!=parentID || parentID==0 || context->getObjectPointer(parentID)->getObjectType()!=helios::OBJECT_TYPE_TILE  ){//if this is a new object, or primitive does not belong to an object
+      primitives.push_back( prim );
+      primitiveID.push_back( u );
+      ID = parentID;
+      objID++;
+    }else{
+      ID = parentID;
+    }
+
+    assert(objID>0);
+
+    objectID.at(u) = objID-1;
+    
+  }
+
+  //Nobjects is the number of isolated primitives plus the number of compound objects (all primitives inside and object combined only counts as one element)
+  size_t Nobjects = primitives.size();
+
+  m_global.resize(Nobjects);
+  ptype_global.resize(Nobjects);
+  twosided_flag_global.resize(Nobjects);//initialize to be two-sided
+  for( size_t i=0; i<Nobjects; i++ ){
+    twosided_flag_global.at(i) = true;
+  }
+  
+  //Populate attributes for each primitive in the pointer vector 'primitives'
+  for( std::size_t u=0; u<Nobjects; u++ ){
+
+    Primitive* prim = primitives.at(u);
+
+    uint p = prim->getUUID();    
+
     //transformation matrix
     float m[16];
-    prim->getTransformationMatrix(m);
-
-    m_global.at(u).resize(16);
-    for( uint i=0; i<16; i++ ){
-      m_global.at(u).at(i) = m[i];
-    }
 
     //primitive type
     helios::PrimitiveType type = prim->getType();
     ptype_global.at(u) =  type;
-      
-    //primitve area
-    area_global.at(u) = prim->getArea();
+
+    assert( ptype_global.at(u)>=0 && ptype_global.at(u)<=4 );
 
     //primitive twosided flag
     if( prim->doesPrimitiveDataExist("twosided_flag") ){
       uint flag;
       prim->getPrimitiveData("twosided_flag",flag);
       if( flag ){
-    	twosided_flag_global.at(u) = true;
+	twosided_flag_global.at(u) = true;
       }else{
-  	twosided_flag_global.at(u) = false;
+	twosided_flag_global.at(u) = false;
       }
     }
 
-    //primitive geometry
-    if( type == helios::PRIMITIVE_TYPE_PATCH ){
+    uint ID = prim->getParentObjectID();
+
+    if( ID>0 && context->getObjectPointer(ID)->getObjectType()==helios::OBJECT_TYPE_TILE ){//tile objects
+
+      ptype_global.at(u) = 3;
+
+      context->getObjectPointer(ID)->getTransformationMatrix(m);
+
+      m_global.at(u).resize(16);
+      for( uint i=0; i<16; i++ ){
+	m_global.at(u).at(i) = m[i];
+      }
+
+      std::vector<vec3> vertices = context->getTileObjectPointer(ID)->getVertices();
+      std::vector<optix::float3> v;
+      v.push_back( optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z) );
+      v.push_back( optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z) );
+      v.push_back( optix::make_float3(vertices.at(2).x,vertices.at(2).y,vertices.at(2).z) );
+      v.push_back( optix::make_float3(vertices.at(3).x,vertices.at(3).y,vertices.at(3).z) );
+      tile_vertices.push_back(v);
+
+      helios::int2 subdiv = context->getTileObjectPointer(ID)->getSubdivisionCount();
+
+      object_subdivisions.push_back( optix::make_int2(subdiv.x,subdiv.y) );
+      
+      tile_UUID.push_back( primitiveID.at(u) );
+      tile_count ++;
+    
+    }else if( type == helios::PRIMITIVE_TYPE_PATCH ){ //patches
+
+      prim->getTransformationMatrix(m);
+
+      m_global.at(u).resize(16);
+      for( uint i=0; i<16; i++ ){
+	m_global.at(u).at(i) = m[i];
+      }
+
       std::vector<vec3> vertices = prim->getVertices();
       std::vector<optix::float3> v;
       v.push_back( optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z) );
@@ -2208,25 +2479,44 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
       v.push_back( optix::make_float3(vertices.at(2).x,vertices.at(2).y,vertices.at(2).z) );
       v.push_back( optix::make_float3(vertices.at(3).x,vertices.at(3).y,vertices.at(3).z) );
       patch_vertices.push_back(v);
-      patch_UUID.push_back(u);
+      object_subdivisions.push_back( optix::make_int2(1,1) );
+      patch_UUID.push_back( primitiveID.at(u) );
       patch_count ++;
-    }else if( type == helios::PRIMITIVE_TYPE_TRIANGLE ){
+    }else if( type == helios::PRIMITIVE_TYPE_TRIANGLE ){ //triangles
+
+      prim->getTransformationMatrix(m);
+
+      m_global.at(u).resize(16);
+      for( uint i=0; i<16; i++ ){
+	m_global.at(u).at(i) = m[i];
+      }
+      
       std::vector<vec3> vertices = prim->getVertices();
       std::vector<optix::float3> v;
       v.push_back( optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z) );
       v.push_back( optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z) );
       v.push_back( optix::make_float3(vertices.at(2).x,vertices.at(2).y,vertices.at(2).z) );
       triangle_vertices.push_back(v);
-      triangle_UUID.push_back(u);
+      object_subdivisions.push_back( optix::make_int2(1,1) );
+      triangle_UUID.push_back( primitiveID.at(u) );
       triangle_count ++;
-    }else if( type == helios::PRIMITIVE_TYPE_VOXEL ){
+    }else if( type == helios::PRIMITIVE_TYPE_VOXEL ){ //voxels
+
+      prim->getTransformationMatrix(m);
+
+      m_global.at(u).resize(16);
+      for( uint i=0; i<16; i++ ){
+	m_global.at(u).at(i) = m[i];
+      }
+      
       helios::vec3 center = context->getVoxelPointer(p)->getCenter();
       helios::vec3 size = context->getVoxelPointer(p)->getSize(); 
       std::vector<optix::float3> v;
       v.push_back( optix::make_float3(center.x-0.5*size.x, center.y-0.5*size.y, center.z-0.5*size.z ) );
       v.push_back( optix::make_float3(center.x+0.5*size.x, center.y+0.5*size.y, center.z+0.5*size.z ) );
       voxel_vertices.push_back(v);
-      voxel_UUID.push_back(u);
+      object_subdivisions.push_back( optix::make_int2(1,1) );
+      voxel_UUID.push_back( primitiveID.at(u) );
       voxel_count ++;
     }
 
@@ -2239,13 +2529,17 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   std::vector<int> maskID;
   std::vector<std::vector<optix::float2> > uvdata;
   std::vector<int> uvID;
-  maskID.resize(context->getPrimitiveCount());
-  uvID.resize(context->getPrimitiveCount());
+  maskID.resize(Nobjects);
+  uvID.resize(Nobjects);
 
-  for( size_t u=0; u<Nprimitives; u++ ){
-    uint p = context_UUIDs.at(u);
-    Primitive* prim = context->getPrimitivePointer(p);
+  for( size_t u=0; u<Nobjects; u++ ){
+ 
+    Primitive* prim = primitives.at(u);
     std::string maskfile = prim->getTextureFile();
+
+    uint p = prim->getUUID();
+
+    uint ID = prim->getParentObjectID();
     
     if( context->getPrimitivePointer(p)->getType()==PRIMITIVE_TYPE_VOXEL || maskfile.size()==0 || !prim->getTexture()->hasTransparencyChannel() ){ //does not have texture transparency
       
@@ -2265,14 +2559,19 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   	uint ID = maskdata.size();
   	maskID.at(u) = ID;
   	maskname[maskfile] = maskdata.size();
-  	maskdata.push_back( *context->getPrimitivePointer(p)->getTexture()->getTransparencyData() );
+	maskdata.push_back( *prim->getTexture()->getTransparencyData() );
   	uint sy = maskdata.back().size();
   	uint sx = maskdata.back().front().size();
   	masksize.push_back( optix::make_int2(sx,sy) );
       }
 
       // uv coordinates //
-      std::vector<vec2> uv = context->getPrimitivePointer(p)->getTextureUV();
+      std::vector<vec2> uv;
+
+      if( ID==0 || context->getObjectPointer(ID)->getObjectType()!=helios::OBJECT_TYPE_TILE ){ //primitives
+	uv = prim->getTextureUV();
+      }
+      
       if( uv.size()!=0 ){ //has custom (u,v) coordinates
   	std::vector<optix::float2> uvf2;
   	uvf2.resize(4);
@@ -2346,6 +2645,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
     v.at(3) = optix::make_float3(xbounds.x,ybounds.x,zbounds.y);
     bbox_vertices.push_back(v);
     bbox_UUID.push_back(Nprimitives+bbox_face_count);
+    objectID.push_back( Nobjects+bbox_face_count );
     ptype_global.push_back(5);
     bbox_face_count++;
 
@@ -2356,6 +2656,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
     v.at(3) = optix::make_float3(xbounds.y,ybounds.x,zbounds.y);
     bbox_vertices.push_back(v);
     bbox_UUID.push_back(Nprimitives+bbox_face_count);
+    objectID.push_back( Nobjects+bbox_face_count );
     ptype_global.push_back(5);
     bbox_face_count++;
 
@@ -2369,6 +2670,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
     v.at(3) = optix::make_float3(xbounds.x,ybounds.x,zbounds.y);
     bbox_vertices.push_back(v);
     bbox_UUID.push_back(Nprimitives+bbox_face_count);
+    objectID.push_back( Nobjects+bbox_face_count );
     ptype_global.push_back(5);
     bbox_face_count++;
 
@@ -2379,6 +2681,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
     v.at(3) = optix::make_float3(xbounds.x,ybounds.y,zbounds.y);
     bbox_vertices.push_back(v);
     bbox_UUID.push_back(Nprimitives+bbox_face_count);
+    objectID.push_back( Nobjects+bbox_face_count );
     ptype_global.push_back(5);
     bbox_face_count++;
 
@@ -2390,21 +2693,26 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   initializeBuffer1Dbool( twosided_flag_RTbuffer, twosided_flag_global );
   initializeBuffer2Dfloat3( patch_vertices_RTbuffer, patch_vertices );
   initializeBuffer2Dfloat3( triangle_vertices_RTbuffer, triangle_vertices );
-  initializeBuffer2Dfloat3( alphamask_vertices_RTbuffer, alphamask_vertices );
+  initializeBuffer2Dfloat3( tile_vertices_RTbuffer, tile_vertices );
   initializeBuffer2Dfloat3( voxel_vertices_RTbuffer, voxel_vertices );
   initializeBuffer2Dfloat3( bbox_vertices_RTbuffer, bbox_vertices );
+
+  initializeBuffer1Dint2( object_subdivisions_RTbuffer, object_subdivisions );
   
   initializeBuffer1Dui( patch_UUID_RTbuffer, patch_UUID );
   initializeBuffer1Dui( triangle_UUID_RTbuffer, triangle_UUID );
   initializeBuffer1Dui( disk_UUID_RTbuffer, disk_UUID );
-  initializeBuffer1Dui( alphamask_UUID_RTbuffer, alphamask_UUID );
+  initializeBuffer1Dui( tile_UUID_RTbuffer, tile_UUID );
   initializeBuffer1Dui( voxel_UUID_RTbuffer, voxel_UUID );
   initializeBuffer1Dui( bbox_UUID_RTbuffer, bbox_UUID );
+
+  initializeBuffer1Dui( objectID_RTbuffer, objectID );
+  initializeBuffer1Dui( primitiveID_RTbuffer, primitiveID );
 
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( patch, patch_count ) );
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( triangle, triangle_count ) );
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( disk, disk_count ) );
-  RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( alphamask, alphamask_count ) );
+  RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( tile, tile_count ) );
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( voxel, voxel_count ) );
   RT_CHECK_ERROR( rtGeometrySetPrimitiveCount( bbox, bbox_face_count ) );
 
@@ -2480,6 +2788,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
   
   char prop[100];
 
+  size_t Nobjects = primitives.size();
   size_t Nprimitives = context_UUIDs.size();
 
   rho.resize(Nprimitives);
@@ -2488,13 +2797,12 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
 
   for( size_t u=0; u<Nprimitives; u++ ){
 
-    uint p = context_UUIDs.at(u);
+    helios::Primitive* prim = context->getPrimitivePointer( context_UUIDs.at(u) );
 
-    helios::Primitive* prim = context->getPrimitivePointer(p);
-
-    helios::PrimitiveType type = prim->getType();
     uint UUID = prim->getUUID();
 
+    helios::PrimitiveType type = prim->getType();
+    
     isbandpropertyinitialized.at(band) = true;
     
     if( type==helios::PRIMITIVE_TYPE_VOXEL ){
@@ -2557,7 +2865,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
 	prim->getPrimitiveData(prop,rho[u]);
       }else{
 	rho[u] = rho_default;
-	prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&rho_default);  
+	//prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&rho_default);  
       }
 
       if( rho[u]<0 ){
@@ -2580,7 +2888,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
 	prim->getPrimitiveData(prop,tau[u]);
       }else{
 	tau[u] = tau_default;
-	prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&tau_default);
+	//prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&tau_default);
       }
 
       if( tau[u]<0 ){
@@ -2603,7 +2911,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
 	prim->getPrimitiveData(prop,eps[u]);
       }else{
 	eps[u] = eps_default;
-	prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&eps_default);
+	//prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&eps_default);
       }
     
       if( eps[u]<0 ){
@@ -2622,7 +2930,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
 	if( eps[u]!=1.f && rho[u]==0 && tau[u]==0 ){
 	  rho[u] = 1.f-eps[u];
 	}else if( eps[u]+tau[u]+rho[u]!=1.f && eps[u]>0.f ){
-	  std::cerr << "ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " << label << ", Primitive #" << p << ": eps=" << eps[u] << ", tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
+	  std::cerr << "ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " << label << ", Primitive #" << prim->getUUID() << ": eps=" << eps[u] << ", tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
 	  exit(EXIT_FAILURE);
 	}else if( scatteringDepth.at(band)==0 && eps[u]!=1.f  ){
 	  //std::cout << "WARNING (RadiationModel): emissivity must be 1 if the number of scattering iterations is set to 0" << std::endl;
@@ -2631,7 +2939,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
 	  tau[u] = 0.f;
 	}
       }else if( tau[u]+rho[u]>1.f ){
-      	std::cerr << "ERROR (RadiationModel): transmissivity and reflectivity cannot sum to greater than 1 ensure energy conservation. Band " << label << ", Primitive #" << p << ": tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
+      	std::cerr << "ERROR (RadiationModel): transmissivity and reflectivity cannot sum to greater than 1 ensure energy conservation. Band " << label << ", Primitive #" << prim->getUUID() << ": tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
 	exit(EXIT_FAILURE);
       }
  
@@ -2687,6 +2995,7 @@ void RadiationModel::runBand( const char* label ){
   
   updateRadiativeProperties(label);
 
+  size_t Nobjects = primitives.size();
   size_t Nprimitives = context_UUIDs.size();
 
   bool to_be_scattered;
@@ -2699,7 +3008,7 @@ void RadiationModel::runBand( const char* label ){
   zeroBuffer1D( Rsky_RTbuffer, Nprimitives );
 
   std::vector<float> TBS_top, TBS_bottom;
-  TBS_top.resize(context->getPrimitiveCount(),0.f);
+  TBS_top.resize(Nprimitives,0.f);
   TBS_bottom = TBS_top;
 
   size_t maxRays = 50e9; //maximum number of total rays in a launch
@@ -2739,15 +3048,15 @@ void RadiationModel::runBand( const char* label ){
 
       size_t maxPrims = maxRays/float(n*n);
       
-      int Nlaunches = ceil( n*n*Nprimitives/float(maxRays) );
+      int Nlaunches = ceil( n*n*Nobjects/float(maxRays) );
 
-      size_t prims_per_launch = fmin( Nprimitives, maxPrims );
+      size_t prims_per_launch = fmin( Nobjects, maxPrims );
 
       for( uint launch=0; launch<Nlaunches; launch++ ){
 
 	size_t prims_this_launch;
-	if( (launch+1)*prims_per_launch > Nprimitives ){
-	  prims_this_launch = Nprimitives-launch*prims_per_launch;
+	if( (launch+1)*prims_per_launch > Nobjects ){
+	  prims_this_launch = Nobjects-launch*prims_per_launch;
 	}else{
 	  prims_this_launch = prims_per_launch;
 	}
@@ -2780,9 +3089,9 @@ void RadiationModel::runBand( const char* label ){
   
   // --- Diffuse/Emission launch ---- //
 
-  if( emission_flag[band] || to_be_scattered || diffuseFlux.at(band)>0.f ){
+  if( emission_flag.at(band) || to_be_scattered || diffuseFlux.at(band)>0.f ){
 
-    if( emission_flag[band] || diffuseFlux.at(band)>0.f ){
+    if( emission_flag.at(band) || diffuseFlux.at(band)>0.f ){
     
       /* Set Diffuse Flux Variable */
       RT_CHECK_ERROR( rtVariableSet1f( diffuseFlux_RTvariable, diffuseFlux.at(band) ));
@@ -2805,7 +3114,11 @@ void RadiationModel::runBand( const char* label ){
   	sprintf(prop,"emissivity_%s",label);
   	for( size_t u=0; u<Nprimitives; u++ ){
 	  uint p = context_UUIDs.at(u);
-	  context->getPrimitiveData(p,prop,eps);
+	  if( context->doesPrimitiveDataExist(p,prop) ){
+	    context->getPrimitiveData(p,prop,eps);
+	  }else{
+	    eps = eps_default;
+	  }
 	  if( scatteringDepth.at(band)==0 && eps!=1.f ){
 	    eps = 1.f;
 	  }
@@ -2838,14 +3151,14 @@ void RadiationModel::runBand( const char* label ){
 
       size_t maxPrims = maxRays/float(n*n);
       
-      int Nlaunches = ceil( n*n*Nprimitives/float(maxRays) );
+      int Nlaunches = ceil( n*n*Nobjects/float(maxRays) );
 
-      size_t prims_per_launch = fmin( Nprimitives, maxPrims );
+      size_t prims_per_launch = fmin( Nobjects, maxPrims );
 
       for( uint launch=0; launch<Nlaunches; launch++ ){
 
 	size_t prims_this_launch;
-	if( (launch+1)*prims_per_launch > Nprimitives ){
+	if( (launch+1)*prims_per_launch > Nobjects ){
 	  prims_this_launch = Nprimitives-launch*prims_per_launch;
 	}else{
 	  prims_this_launch = prims_per_launch;
@@ -2874,9 +3187,9 @@ void RadiationModel::runBand( const char* label ){
 
       size_t maxPrims = maxRays/float(n*n);
       
-      int Nlaunches = ceil( n*n*Nprimitives/float(maxRays) );
+      int Nlaunches = ceil( n*n*Nobjects/float(maxRays) );
 
-      size_t prims_per_launch = fmin( Nprimitives, maxPrims );
+      size_t prims_per_launch = fmin( Nobjects, maxPrims );
 
       uint s;
       for( s=0; s<scatteringDepth.at(band); s++ ){
@@ -2888,7 +3201,6 @@ void RadiationModel::runBand( const char* label ){
 	TBS_bottom=getOptiXbufferData( scatter_buff_bottom_RTbuffer );
 	float TBS_max = 0;
 	for( size_t u=0; u<Nprimitives; u++ ){
-	  size_t p = context_UUIDs.at(u);
 	  if( TBS_top.at(u)+TBS_bottom.at(u)>TBS_max ){
 	    TBS_max = TBS_top.at(u)+TBS_bottom.at(u);
 	  }
@@ -2906,8 +3218,8 @@ void RadiationModel::runBand( const char* label ){
 	for( uint launch=0; launch<Nlaunches; launch++ ){
 
 	  size_t prims_this_launch;
-	  if( (launch+1)*prims_per_launch > Nprimitives ){
-	    prims_this_launch = Nprimitives-launch*prims_per_launch;
+	  if( (launch+1)*prims_per_launch > Nobjects ){
+	    prims_this_launch = Nobjects-launch*prims_per_launch;
 	  }else{
 	    prims_this_launch = prims_per_launch;
 	  }
@@ -2947,11 +3259,10 @@ void RadiationModel::runBand( const char* label ){
   char prop[100];
   sprintf(prop,"radiation_flux_%s",label);
   for( size_t u=0; u<Nprimitives; u++ ){
-    size_t p = context_UUIDs.at(u);
     float R = radiation_flux_data.at(u)+TBS_top.at(u)+TBS_bottom.at(u);
-    context->setPrimitiveData(p,prop,R);
+    context->setPrimitiveData(context_UUIDs.at(u),prop,R);
     if( radiation_flux_data.at(u)!=radiation_flux_data.at(u) ){
-      std::cout << "NaN here " << p << std::endl;
+      std::cout << "NaN here " << u << std::endl;
     }
   }
 
@@ -4273,10 +4584,9 @@ float RadiationModel::calculateGtheta( helios::Context* context, const helios::v
 
   float Gtheta = 0;
   float total_area = 0;
-  for( std::size_t u=0; u<context_UUIDs.size(); u++ ){
-    std::size_t p = context_UUIDs.at(u);
+  for( std::size_t u=0; u<primitives.size(); u++ ){
     
-    helios::Primitive* prim = context->getPrimitivePointer(p);
+    helios::Primitive* prim = primitives.at(u);
 
     vec3 normal = prim->getNormal();
     float area = prim->getArea();
@@ -4289,7 +4599,7 @@ float RadiationModel::calculateGtheta( helios::Context* context, const helios::v
 
   return Gtheta/total_area;
   
-}
+} 
 
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line)
 {

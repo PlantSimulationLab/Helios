@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.10</span>
+   &#160;<span id="projectnumber">v1.2.11</span>
    </div>
   </td>
  </tr>
@@ -92,7 +92,8 @@ $(function() {
 <li class="level2"><a href="#Texture">Texture Mapping</a></li>
 <li class="level2"><a href="#TextureColor">Coloring Primitives by Texture Map</a></li>
 <li class="level2"><a href="#TextureMask">Masking Primitives by Image Transparency Channel</a></li>
-<li class="level2"><a href="#Compound">Compound Objects</a></li>
+<li class="level2"><a href="#Compound">Compound Geometry</a></li>
+<li class="level2"><a href="#Objects">Objects</a></li>
 </ul>
 </li>
 <li class="level1"><a href="#Data">Data Structures</a><ul><li class="level2"><a href="#PrimData">Primitive Data</a><ul><li class="level3"><a href="#SetPrimData">Setting Primitive Data Values</a></li>
@@ -560,17 +561,19 @@ Masking Primitives by Image Transparency Channel</h2>
 <img src="AlphaMask_leaf.png" alt=""/>
 <div class="caption">
 Rectangular patch masked by an image with a transparency channel.</div></div>
-<div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> A very important performance note when using texture-masked primitives with transparency: When a texture-masked primitive with transparency is added to the Context, the solid surface area of the primitive is calculated by determining which fraction of pixels are non-transparent. This is a computationally expensive process when the images is high resolution (e.g., millions of pixels).</div><div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> If you are adding many identical primitives/objects with transparency, it is better to add it to the Context one time, then copy and translate it as many times as you need. An example of this is given in the code below. </div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
+<div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> A very important performance note when using texture-masked primitives with transparency: When a texture-masked primitive with transparency is added to the Context, the solid surface area of the primitive is calculated by determining which fraction of pixels are non-transparent. This is a computationally expensive process when the image is high resolution (e.g., millions of pixels).</div><div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> If you are adding many identical primitives/objects with transparency, it is better to add it to the Context one time, then copy and translate it as many times as you need. An example of this is given in the code below. </div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
  using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Initialize the Context
     Context context;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Add 'Patch' primitive with transparency mask
     <code></code>// We will add a patch at the origin and with unit size, and copy it multiple times
     vec3 center = make_vec3(0,0,0);
     vec2 size = make_vec2(1,1);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    uint UUID = context.addPatch( center, size, make_SphericalCoord(0,0), "GrapeLeaf.png" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    for( int i=0; i&lt;10; i++ ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>          uint UUID_copy = context.copyPrimitive(UUID);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>          vec3 position = make_vec3( i*3, 0, 0 );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     context.translatePrimitive( position );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    }</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    <code></code>// Let's delete the original "template"
     context.deletePrimitive(UUID);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre> </div><h2><a class="anchor" id="Compound"></a>
-Compound Objects</h2>
+Compound Geometry</h2>
+<p>The Context has functions to rapidly generate various shapes, which consist of many primitives. These functions simply add the primitives needed to make the specified geometry, and return a vector of UUIDs corresponding to each of the primitives. The important distinction between these functions and those to add "Objects" (described below) is that Objects retain information about the overall 3D object such as the radius of the sphere.</p>
+<p>Functions for adding compound geometry are listed below.</p>
 <table class="doxtable">
 <tr>
-<th>Object </th><th>Description </th><th>Adder function(s) </th><th>Example  </th></tr>
+<th>Geometry </th><th>Description </th><th>Adder function(s) </th><th>Example  </th></tr>
 <tr>
 <td>Tile </td><td>Patch subdivided into uniform grid of sub-patches. </td><td><ul>
 <li>
@@ -590,6 +593,8 @@ Compound Objects</h2>
 <a class="el" href="group__compoundobjects.html#ga58166467cf1372dd4775e519ef904a9f">addSphere( uint Ndivs, vec3 center, float radius )</a>  </li>
 <li>
 <a class="el" href="group__compoundobjects.html#ga1b09b894171a2f583a1f5579b857d8a0">addSphere( uint Ndivs, vec3 center, float radius, RGBcolor color )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#ga6424014d5d3fa293bc097f55c0c532d5">addSphere( uint Ndivs, vec3 center, float radius, const char* texturefille )</a>  </li>
 </ul>
 </td><td><div class="image">
 <img src="Sphere.png" alt=""/>
@@ -607,7 +612,7 @@ Compound Objects</h2>
 </div>
   </td></tr>
 <tr>
-<td>Box </td><td>Rectangular prism object tesselated with Patch primitives.. </td><td><ul>
+<td>Box </td><td>Rectangular prism object tesselated with Patch primitives. </td><td><ul>
 <li>
 <a class="el" href="group__compoundobjects.html#ga2acbc90885fa5d0d36f5d355b368a5c4">addBox( vec3 center, vec3 size, int3 subdiv )</a>  </li>
 <li>
@@ -620,22 +625,247 @@ Compound Objects</h2>
 </div>
   </td></tr>
 <tr>
-<td>Disk </td><td>Ellipsoidal disk object tesselated with Triangle primitives.. </td><td><ul>
+<td>Disk </td><td>Ellipsoidal disk object tesselated with Triangle primitives. </td><td><ul>
 <li>
-addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size )  </li>
+<a class="el" href="group__compoundobjects.html#ga801930824e29ee2db469bd966f72e297">addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size )</a>  </li>
 <li>
-addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation )  </li>
+<a class="el" href="group__compoundobjects.html#ga391832434ffae93f08fffc9092f792ee">addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation )</a>  </li>
 <li>
-addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBcolor color )  </li>
+<a class="el" href="group__compoundobjects.html#gac52b0a5f3a28589a5e4cc19936080aae">addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBcolor color )</a>  </li>
 <li>
-addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBAcolor color )  </li>
+<a class="el" href="group__compoundobjects.html#gaeece5a0042590dcac02c93d7558cfc4d">addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBAcolor color )</a>  </li>
 <li>
-addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, const char* texture_file )  </li>
+<a class="el" href="group__compoundobjects.html#ga6d91616a67fef0c3ee8b75ecd064f508">addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, const char* texture_file )</a>  </li>
 </ul>
 </td><td><div class="image">
 <img src="Disk.png" alt=""/>
 </div>
   </td></tr>
+</table>
+<h2><a class="anchor" id="Objects"></a>
+Objects</h2>
+<p>Objects are geometries consisting of many primitive elements. The critical difference between "Objects" and the compound objects described above is that Objects retain information about the overall geometry such as length, radius, etc., and have many sub-functions for manipulating them and assigning data. This is often useful when you want to know information about the overall object or want to manipulate the entire object in unison.</p>
+<p>Functions for adding objects return a uint that serves as a unique identifier for the object, which can be used for later reference and manipulation. Functions for adding objects are listed in the table below.</p>
+<table class="doxtable">
+<tr>
+<th>Object </th><th>Description </th><th>Adder function(s) </th><th>Example  </th></tr>
+<tr>
+<td>Tile </td><td>Patch subdivided into uniform grid of sub-patches. </td><td><ul>
+<li>
+<a class="el" href="group__compoundobjects.html#ga186152afcd84130b8fa1e90595ca2573">addTileObject( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#gac5bb075fb544705841cbe68316308097">addTileObject( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const RGBcolor color )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#gab70a6adb765a23e9c9acebd71ed31623">addTileObject( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const char* texturefile )</a>  </li>
+</ul>
+</td><td><div class="image">
+<img src="Tile.png" alt=""/>
+</div>
+  </td></tr>
+<tr>
+<td>Sphere </td><td>Spherical object tesselated with Triangle primitives. </td><td><ul>
+<li>
+<a class="el" href="group__compoundobjects.html#ga54f57876f1040faf96052c2b8ed0ea2e">addSphere( uint Ndivs, vec3 center, float radius )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#gaae577891f84949cee44ece00f52d848b">addSphereObject ( uint Ndivs, vec3 center, float radius, RGBcolor color )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#ga18b5bc77e165be70f9ddf7b862ce1712">addSphereObject ( uint Ndivs, vec3 center, float radius, const char* texturefile )</a>  </li>
+</ul>
+</td><td><div class="image">
+<img src="Sphere.png" alt=""/>
+</div>
+  </td></tr>
+<tr>
+<td>Tube </td><td>Cylindrical tube object tesselated with Triangle primitives. Follows a specified path and can change radius along its length. </td><td><ul>
+<li>
+<a class="el" href="group__compoundobjects.html#gabbc4a883e94ee553b3c2a6782b53f8ac">addTubeObject( uint Ndivs, vector&lt;vec3&gt; nodes, vector&lt;float&gt; radius )</a> </li>
+<li>
+<a class="el" href="group__compoundobjects.html#ga3c624f43048f73e72db1d6dcc7716ba1">addTubeObject( uint Ndivs, vector&lt;vec3&gt; nodes, vector&lt;float&gt; radius, RGBcolor color )</a> </li>
+</ul>
+</td><td><div class="image">
+<img src="Tube.png" alt=""/>
+</div>
+  </td></tr>
+<tr>
+<td>Box </td><td>Rectangular prism object tesselated with Patch primitives. </td><td><ul>
+<li>
+<a class="el" href="group__compoundobjects.html#ga5c58785f839941542045d43f3b2ec748">addBoxObject( vec3 center, vec3 size, int3 subdiv )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#ga84848888b3269720256d1c33d39260e4">addBoxObject( vec3 center, vec3 size, int3 subdiv, RGBcolor color )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#ga0c4d4a405e464b527f2e7ecce9a83b34">addBoxObject( vec3 center, vec3 size, int3 subdiv, RGBcolor color, bool reverse_normals )</a>  </li>
+</ul>
+</td><td><div class="image">
+<img src="Box.png" alt=""/>
+</div>
+  </td></tr>
+<tr>
+<td>Disk </td><td>Ellipsoidal disk object tesselated with Triangle primitives. </td><td><ul>
+<li>
+<a class="el" href="group__compoundobjects.html#ga58f666827c3dad889c423ba1b5bed62f">addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#ga2c43adcdb6252ef9e96218db0c44def8">addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#gafc870694e670fb39f7deeec920054f13">addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBcolor color )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#gafb0ab2f270d4160ae2329a7385f17ea4">addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBAcolor color )</a>  </li>
+<li>
+<a class="el" href="group__compoundobjects.html#gac9dfa9789b28b7ef0cf9d9ae2efe0ef3">addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, const char* texture_file )</a>  </li>
+</ul>
+</td><td><div class="image">
+<img src="Disk.png" alt=""/>
+</div>
+  </td></tr>
+<tr>
+<td>Cone </td><td>Tapered cylinder/cone object tesselated with triangles. </td><td><ul>
+<li>
+<a class="el" href="group__compoundobjects.html#gaf6e47e4eddef3ce52971a97efc40b2e0">addConeObject( uint Ndivs, helios::vec3 node0, helios::vec3 node1, float radius0, float radius1 )</a> </li>
+<li>
+<a class="el" href="group__compoundobjects.html#gaa60ff16f51792cdbc076d0ed6f0ac974">addConeObject( uint Ndivs, helios::vec3 node0, helios::vec3 node1, float radius0, float radius1, RGBcolor color )</a> </li>
+<li>
+<a class="el" href="group__compoundobjects.html#gaf6c5dc9469e477e184748c4b6a05d457">addConeObject( uint Ndivs, helios::vec3 node0, helios::vec3 node1, float radius0, float radius1, const char* texturefile )</a> </li>
+</ul>
+</td><td><div class="image">
+<img src="Cone.png" alt=""/>
+</div>
+  </td></tr>
+</table>
+<p>Similar to individual primitives, objects have functions to perform transformations on the entire object in unison. These functions are member functions of the <a class="el" href="classhelios_1_1_compound_object.html">helios::CompoundObject</a> class. As with primitives, you can use the identifier to an object to get its pointer, from which you can access member functions.</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> uint objID; //unique identifier to object
+ objID = context.addTileObject( center, size, rotation, make_int2(2,2) );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> CompoundObject* object = context.getObjectPointer(objID);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> float area = object-&gt;getArea();</code></pre> </div><p>or a shorthand would be</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> uint objID; //object identifier
+ float area = context.getObjectPointer(objID)-&gt;getArea();</code></pre> </div><p>The table below gives a list of availalbe Object functions.</p>
+<table class="doxtable">
+<tr>
+<th>Property</th><th>Getter Function </th></tr>
+<tr>
+<td>Object ID</td><td><a class="el" href="classhelios_1_1_compound_object.html#ae0b7fae37c30e028d8a64b7e98b1e3fb">getObjectID()</a> </td></tr>
+<tr>
+<td>Object Type</td><td><a class="el" href="classhelios_1_1_compound_object.html#aae135ccbd750a326eb8b59791cdeaa3f">getObjectType()</a> </td></tr>
+<tr>
+<td>Primitive Count</td><td><a class="el" href="classhelios_1_1_compound_object.html#a0eb06d37710a7dc9f5b915fc33f191a0">getPrimitiveCount()</a> </td></tr>
+<tr>
+<td>Member Primitive UUIDs</td><td><a class="el" href="classhelios_1_1_compound_object.html#a8b5a196bbf3262e25a2d405b2ec1e18b">getPrimitiveUUIDs()</a> </td></tr>
+<tr>
+<td>Member Primitive Check</td><td><a class="el" href="classhelios_1_1_compound_object.html#a3914f00e27f18985a84f6f12c01c6e88">doesObjectContainPrimitive()</a> </td></tr>
+<tr>
+<td>Object Center</td><td><a class="el" href="classhelios_1_1_compound_object.html#a49ad4d021a83dcbb9a73402c14c1944a">getObjectCenter()</a> </td></tr>
+<tr>
+<td>Surface Area</td><td><a class="el" href="classhelios_1_1_compound_object.html#a8bb518f6166e2a2831a68a7626787ac1">getArea()</a> </td></tr>
+<tr>
+<td>Diffuse R-G-B color code</td><td><a class="el" href="classhelios_1_1_compound_object.html#a3e6aa5c92c23e973c09a5560568755db">getColor()</a> </td></tr>
+<tr>
+<td>Diffuse R-G-B color code</td><td><a class="el" href="classhelios_1_1_compound_object.html#afea80362a31fcbdf9ad00cc672d8b411">getRGBColor()</a> </td></tr>
+<tr>
+<td>Diffuse R-G-B-A color code</td><td><a class="el" href="classhelios_1_1_compound_object.html#add85074243c39f631ba54fdc504b69e0">getRGBAColor()</a> </td></tr>
+<tr>
+<td>Override Texture</td><td><a class="el" href="classhelios_1_1_compound_object.html#a457525dba2009afbaef3e4261ee8f862">overrideTextureColor()</a> </td></tr>
+<tr>
+<td>Use Texture</td><td><a class="el" href="classhelios_1_1_compound_object.html#a25365114f7c031b723aa69a99eda25ec">useTextureColor()</a> </td></tr>
+</table>
+<p>Objects can be translated and rotated using functions similar to that of primitives:</p>
+<table class="doxtable">
+<tr>
+<th>Transformation</th><th>Function </th></tr>
+<tr>
+<td>Translate in x, y, or z direction</td><td><a class="el" href="classhelios_1_1_compound_object.html#a666110e5b2d760f3650fe1d0f39cefc6">translate( vec3 shift )</a> </td></tr>
+<tr>
+<td>Rotate about x, y, or z axis</td><td><a class="el" href="classhelios_1_1_compound_object.html#a25a5b7cb357363f46342ef094abb044f">rotate( float rot, const char* axis )</a> </td></tr>
+<tr>
+<td>Rotate about arbitrary axis</td><td><a class="el" href="classhelios_1_1_compound_object.html#a6cafffbdbf3f6b5ea7b16b8e5ea42de7">rotate( float rot, vec3 axis )</a> </td></tr>
+</table>
+<p>Some objects have special functions specific to that type of object, which are listed below. In order to access these functions, you need to get a pointer to that type of object using thhe appropriate get[*]ObjectPointer() function.</p>
+<table class="doxtable">
+<tr>
+<th>Object Type</th><th>Pointer Getter Function</th><th>Special Function </th></tr>
+<tr>
+<td>Tile</td><td><a class="el" href="classhelios_1_1_context.html#a17f75e8099d343c8117567d56e118349">getTileObjectPointer()</a></td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_tile.html#a2e1b05469db46986c8d1e1d6c4f9809f">getSize()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_tile.html#ae73ae9baf9b974cd7fb05ffdfbb0d5e5">getCenter()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_tile.html#add5c0c3b38fe96336eb3710ff2eed242">getSubdivisionCount()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_tile.html#ad99859309abeeee8b25184c9fb287105">getVertices()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_tile.html#acb35f9bff9867fe5cbec906df9d059d2">getNormal()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_tile.html#a447fe90dcc5180b5b7f27b94ac718727">getTextureUV()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_tile.html#a3518d5c6f89016f07b7ef06564f185d2">scale()</a> </li>
+</ul>
+</td></tr>
+<tr>
+<td>Sphere</td><td><a class="el" href="classhelios_1_1_context.html#a5c8cb607a36b59e7f3d8e2249180ee11">getSphereObjectPointer()</a></td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_sphere.html#a55fa2b1a042a27e0b9983550525e3273">getRadius()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_sphere.html#a7cfe53514be9186c9c5ec02faa38c35e">getCenter()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_sphere.html#a6fed0a367281eb4aae1227c74d3dbf78">getSubdivisionCount()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_sphere.html#a6b24121c33482955b6382e4fed868225">scale()</a> </li>
+</ul>
+</td></tr>
+<tr>
+<td>Tube</td><td><a class="el" href="classhelios_1_1_context.html#a3bb939f21302a24a3b363365fa6d41aa">getTubeObjectPointer()</a></td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_tube.html#a1ff8ca36775cf0b75508db4635f1ccde">getNodes()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_tube.html#af53659b3461908031e10fe895d98a32b">getNodeRadii()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_tube.html#ade59bcc6ae899953ff460b11c041a1f5">getSubdivisionCount()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_tube.html#a04881902bb0a2cc02b04e5b050bec02b">scale()</a> </li>
+</ul>
+</td></tr>
+<tr>
+<td>Box</td><td><a class="el" href="classhelios_1_1_context.html#a3bddb008576060c664317f47c0384ab4">getBoxObjectPointer()</a></td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_box.html#a691b04617bcc95ae0ba15bd5d94acde1">getSize()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_box.html#aa6706c4de5db287698706f098df14740">getCenter()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_box.html#a41daccd5f17da58a687e498539472927">getSubdivisionCount()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_box.html#a7497d9564e9249537781235e9ff2f7f8">scale()</a> </li>
+</ul>
+</td></tr>
+<tr>
+<td>Disk</td><td><a class="el" href="classhelios_1_1_context.html#a0d782306c7d09fb9c3a68cb4caca8507">getDiskObjectPointer()</a></td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_disk.html#a1aed97dac768ad94b6c01d00c16e90e0">getSize()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_disk.html#aff7700f86bbcdb2861724b5fa63f1c53">getCenter()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_disk.html#a3913de590b3b88816b7b4e9b77a392ee">getSubdivisionCount()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_disk.html#a460bea4bc38ef0795b9f65ef8b29a36a">scale()</a> </li>
+</ul>
+</td></tr>
+<tr>
+<td>Cone</td><td><a class="el" href="classhelios_1_1_context.html#a72b92acf4fa2088baffbfcc717040a15">getConeObjectPointer()</a></td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_cone.html#a5e564a3619dc80b0bfc89b7e09f65a5c">getNodes()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_cone.html#a8bd53050e5e2e1e5b428e5245d34c036">getNode()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_cone.html#af39773e318f99d63b472ee990f605cfd">getNodeRadii()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_cone.html#a957ca80e79fd4bb3bb14dbcec85959df">getNodeRadius()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_cone.html#ac413c23e3ce67f2e5f970796292c3cbb">getSubdivisionCount()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_cone.html#a60fc92fbb15149017956449123c0e4d0">getAxisUnitVector()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_cone.html#a0005a1e1b1c070b57564c615b69fc51e">getLength()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_cone.html#aa8d4a01f456a09e74ae4d838afce0ae4">scaleLength()</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_cone.html#ab036ff4a17e374741bdb3af737db6cf5">scaleGirth()</a> </li>
+</ul>
+</td></tr>
 </table>
 <h1><a class="anchor" id="Data"></a>
 Data Structures</h1>
