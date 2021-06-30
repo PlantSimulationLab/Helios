@@ -54,10 +54,8 @@ var searchData=
   ['aerial_20_25lidar_20point_20cloud_20plugin_20documentation_51',['Aerial %LiDAR Point Cloud Plugin Documentation',['../_aerial_li_d_a_r_doc.html',1,'PlugIns']]],
   ['aerialscanmetadata_52',['AerialScanMetadata',['../struct_aerial_scan_metadata.html',1,'AerialScanMetadata'],['../struct_aerial_scan_metadata.html#a7335ab6e76b88c50520e3fd205d4c575',1,'AerialScanMetadata::AerialScanMetadata()']]],
   ['alpha_53',['alpha',['../struct_soil_properties.html#a414e4c3e1a35b7b203d5993b43c2c511',1,'SoilProperties']]],
-  ['alphamask_5fbounds_54',['alphamask_bounds',['../primitive_intersection_8cu.html#a0c166eb8e1c3101b9e2c4e8e96987994',1,'primitiveIntersection.cu']]],
-  ['alphamask_5fintersect_55',['alphamask_intersect',['../primitive_intersection_8cu.html#ae71d96ad4ce015409acb904d5f3a3b5e',1,'primitiveIntersection.cu']]],
-  ['area_56',['area',['../struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407',1,'PerRayData']]],
-  ['asin_5fsafe_57',['asin_safe',['../global_8h.html#ac400d6d37ff2494ec592a9f0a17ee9ab',1,'helios']]],
-  ['atan2_5f2pi_58',['atan2_2pi',['../group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54',1,'helios']]],
-  ['azimuth_59',['azimuth',['../structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59',1,'helios::SphericalCoord']]]
+  ['area_54',['area',['../struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407',1,'PerRayData']]],
+  ['asin_5fsafe_55',['asin_safe',['../global_8h.html#ac400d6d37ff2494ec592a9f0a17ee9ab',1,'helios']]],
+  ['atan2_5f2pi_56',['atan2_2pi',['../group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54',1,'helios']]],
+  ['azimuth_57',['azimuth',['../structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59',1,'helios::SphericalCoord']]]
 ];

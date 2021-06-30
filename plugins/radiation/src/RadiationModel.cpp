@@ -935,7 +935,7 @@ int RadiationModel::selfTest( void ){
   radiation_9.disableEmission("direct");
   radiation_9.setDirectRayCount("direct",Ndirect_9);
   theta_s = 0.2*M_PI;
-  uint ID = radiation_9.addCollimatedRadiationSource( make_SphericalCoord(0.5*M_PI-theta_s,0.f) );
+  ID = radiation_9.addCollimatedRadiationSource( make_SphericalCoord(0.5*M_PI-theta_s,0.f) );
   radiation_9.setSourceFlux(ID,"direct",1.f/cos(theta_s));
 
   radiation_9.addRadiationBand("diffuse");

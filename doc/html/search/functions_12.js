@@ -1,8 +1,10 @@
 var searchData=
 [
-  ['texture_1298',['Texture',['../classhelios_1_1_texture.html#a219d0c23431e27022fbac3c0b38befd6',1,'helios::Texture']]],
-  ['tic_1299',['tic',['../structhelios_1_1_timer.html#a4f8d30e7978cdee4a41e1f16fc0a1382',1,'helios::Timer']]],
-  ['tile_1300',['Tile',['../classhelios_1_1_tile.html#ad44120d7a6577cec5645a7e94a2ace4f',1,'helios::Tile']]],
+  ['texture_1296',['Texture',['../classhelios_1_1_texture.html#a219d0c23431e27022fbac3c0b38befd6',1,'helios::Texture']]],
+  ['tic_1297',['tic',['../structhelios_1_1_timer.html#a4f8d30e7978cdee4a41e1f16fc0a1382',1,'helios::Timer']]],
+  ['tile_1298',['Tile',['../classhelios_1_1_tile.html#ad44120d7a6577cec5645a7e94a2ace4f',1,'helios::Tile']]],
+  ['tile_5fbounds_1299',['tile_bounds',['../primitive_intersection_8cu.html#a4fd84a7124be9fea427690a9a2442b3b',1,'primitiveIntersection.cu']]],
+  ['tile_5fintersect_1300',['tile_intersect',['../primitive_intersection_8cu.html#ac645addc8bc3071933ca33a0f053af07',1,'primitiveIntersection.cu']]],
   ['time_1301',['Time',['../structhelios_1_1_time.html#a0747fd371d0279c975d1f62e5021263f',1,'helios::Time::Time(void)'],['../structhelios_1_1_time.html#a277133d2c1e8497b4dfbaa7e9cc49af4',1,'helios::Time::Time(int __hour, int __minute)'],['../structhelios_1_1_time.html#a74c12316596555447a1dddd4bc7df951',1,'helios::Time::Time(int __hour, int __minute, int __second)']]],
   ['toc_1302',['toc',['../structhelios_1_1_timer.html#a01fc840a288a49832a17faefa2c8e820',1,'helios::Timer::toc(void)'],['../structhelios_1_1_timer.html#a67822a2083031e051fe3527b2987ccc6',1,'helios::Timer::toc(const char *message)']]],
   ['tomato_1303',['tomato',['../class_canopy_generator.html#ab40c3ed5d61e37bbacfe99d036c80566',1,'CanopyGenerator']]],
