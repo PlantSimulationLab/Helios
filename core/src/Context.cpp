@@ -477,12 +477,23 @@ int Context::selfTest(void){
   
   const char* texture = "lib/images/disk_texture.png";
 
-  vec2 uv0(1,0);
-  vec2 uv1(0,0);
-  vec2 uv2(0,1);
-  vec2 uv3(1,1);
+  // uv.at(0) = uv_center+make_vec2(-0.5*uv_size.x,-0.5*uv_size.y);
+  // uv.at(1) = uv_center+make_vec2(+0.5*uv_size.x,-0.5*uv_size.y);
+  // uv.at(2) =  uv_center+make_vec2(+0.5*uv_size.x,+0.5*uv_size.y);
+  // uv.at(3) =  uv_center+make_vec2(-0.5*uv_size.x,+0.5*uv_size.y);
 
-  uint UUIDp = context_test.addPatch( make_vec3(2,3,4), sizep, make_SphericalCoord(0,0), texture, 0.5*(uv3+uv1), uv3-uv1 );
+  // vec2 uv0(1,0);
+  // vec2 uv1(0,0);
+  // vec2 uv2(0,1);
+  // vec2 uv3(1,1);
+
+  vec2 uv0(0,0);
+  vec2 uv1(1,0);
+  vec2 uv2(1,1);
+  vec2 uv3(0,1);
+
+  //uint UUIDp = context_test.addPatch( make_vec3(2,3,4), sizep, make_SphericalCoord(0,0), texture, 0.5*(uv3+uv1), uv3-uv1 );
+  uint UUIDp = context_test.addPatch( make_vec3(2,3,4), sizep, make_SphericalCoord(0,0), texture, 0.5*(uv0+uv2), uv2-uv0 );
 
   if( !context_test.getPrimitivePointer(UUIDp)->hasTexture() ){
     error_count ++;
@@ -4504,10 +4515,10 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
   std::vector<helios::vec2> uv;
   uv.resize(4);
-  uv.at(0) = uv_center+make_vec2(+0.5*uv_size.x,-0.5*uv_size.y);
-  uv.at(1) = uv_center+make_vec2(-0.5*uv_size.x,-0.5*uv_size.y);
-  uv.at(2) =  uv_center+make_vec2(-0.5*uv_size.x,+0.5*uv_size.y);
-  uv.at(3) =  uv_center+make_vec2(+0.5*uv_size.x,+0.5*uv_size.y);
+  uv.at(0) = uv_center+make_vec2(-0.5*uv_size.x,-0.5*uv_size.y);
+  uv.at(1) = uv_center+make_vec2(+0.5*uv_size.x,-0.5*uv_size.y);
+  uv.at(2) =  uv_center+make_vec2(+0.5*uv_size.x,+0.5*uv_size.y);
+  uv.at(3) =  uv_center+make_vec2(-0.5*uv_size.x,+0.5*uv_size.y);
 
   float solid_fraction;
   if( texture->hasTransparencyChannel() ){
@@ -4515,8 +4526,8 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
     int A = 0;
     int At = 0;
     int2 sz = texture->getSize();
-    int2 uv_min( floor(uv.at(1).x*sz.x), floor(uv.at(1).y*sz.y) );
-    int2 uv_max( floor(uv.at(3).x*sz.x), floor(uv.at(3).y*sz.y) );
+    int2 uv_min( floor(uv.at(0).x*sz.x), floor(uv.at(0).y*sz.y) );
+    int2 uv_max( floor(uv.at(2).x*sz.x), floor(uv.at(2).y*sz.y) );
     for( int j=uv_min.y; j<uv_max.y; j++ ){
       for( int i=uv_min.x; i<uv_max.x; i++ ){
 	At += 1;
@@ -4603,7 +4614,13 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
       for( int i=uv_min.x; i<uv_max.x; i++ ){
 	xy.x = float(i+0.5)/float(sz.x-1);
 	xy.y = float(j+0.5)/float(sz.y-1);
-	if( edgeFunction( uv.at(0), uv.at(1), xy ) && edgeFunction( uv.at(1), uv.at(2), xy )&& edgeFunction( uv.at(2), uv.at(0), xy ) ){
+
+	bool test_0 = edgeFunction( uv.at(0), uv.at(1), xy);
+	bool test_1 = edgeFunction( uv.at(1), uv.at(2), xy );
+	bool test_2 = edgeFunction( uv.at(2), uv.at(0), xy ) ;
+	uint test_sum =  test_0 + test_1 + test_2;
+	
+	if(test_sum == 0 || test_sum == 3){
 	  At += 1;
 	  if( alpha->at(j).at(i) ){
 	    A += 1;
@@ -4858,6 +4875,64 @@ uint Context::copyPrimitive( const uint UUID ){
   markGeometryDirty();
   currentUUID++;
   return currentUUID-1;
+}
+
+void Context::copyPrimitiveData(const uint UUID, const uint currentUUID){
+  //copy the primitive data
+  std::vector<std::string> plabel = getPrimitivePointer(UUID)->listPrimitiveData();
+  for( uint p=0; p<plabel.size(); p++ ){
+    
+    HeliosDataType type = getPrimitiveDataType( UUID, plabel.at(p).c_str() );
+    
+    if( type==HELIOS_TYPE_INT ){
+      std::vector<int> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_INT, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_UINT ){
+      std::vector<uint> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_UINT, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_FLOAT ){
+      std::vector<float> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_FLOAT, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_DOUBLE ){
+      std::vector<double> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_DOUBLE, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC2 ){
+      std::vector<vec2> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_VEC2, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC3 ){
+      std::vector<vec3> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_VEC3, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC4 ){
+      std::vector<vec4> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_VEC4, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT2 ){
+      std::vector<int2> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_INT2, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT3 ){
+      std::vector<int3> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_INT3, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT4 ){
+      std::vector<int4> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_INT4, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_STRING ){
+      std::vector<std::string> pdata;
+      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
+      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_STRING, pdata.size(), &pdata.at(0) );
+    }else{
+      assert(false);
+    }
+    
+  }
 }
 
 Primitive* Context::getPrimitivePointer( uint UUID ) const{
@@ -5299,37 +5374,44 @@ void Context::cropDomainZ( const helios::vec2 zbounds ){
 
 }
 
-void Context::cropDomain( const helios::vec2 xbounds, const helios::vec2 ybounds, const helios::vec2 zbounds ){
+void Context::cropDomain( const std::vector<uint> UUIDs, const helios::vec2 xbounds, const helios::vec2 ybounds, const helios::vec2 zbounds ){
 
   std::vector<vec3> vertices;
 
-  std::vector<uint> UUIDs_all = getAllUUIDs();
-  
-  for( size_t p=0; p<UUIDs_all.size(); p++ ){
+  size_t delete_count = 0;
+  for( size_t p=0; p<UUIDs.size(); p++ ){
 
-    vertices = getPrimitivePointer(UUIDs_all.at(p))->getVertices();
+    vertices = getPrimitivePointer(UUIDs.at(p))->getVertices();
 
     for( int i=0; i<vertices.size(); i++ ){
       if( vertices.at(i).x<xbounds.x || vertices.at(i).x>xbounds.y ){
-	deletePrimitive( UUIDs_all.at(p) );
+	deletePrimitive( UUIDs.at(p) );
+	delete_count ++;
 	break;
       }
       if( vertices.at(i).y<ybounds.x || vertices.at(i).y>ybounds.y ){
-	deletePrimitive( UUIDs_all.at(p) );
+	deletePrimitive( UUIDs.at(p) );
+	delete_count ++;
 	break;
       }
       if( vertices.at(i).z<zbounds.x || vertices.at(i).z>zbounds.y ){
-	deletePrimitive( UUIDs_all.at(p) );
+	deletePrimitive( UUIDs.at(p) );
+	delete_count ++;
 	break;
       }
     }
     
   }
 
-  if( getPrimitiveCount()==0 ){
-    std::cout << "WARNING (cropDomain): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
+  if( delete_count==UUIDs.size() ){
+    std::cout << "WARNING (cropDomain): No specified primitives were entirely inside cropped area, and thus all specified primitives were deleted." << std::endl;
   }
 
+}
+
+void Context::cropDomain( const helios::vec2 xbounds, const helios::vec2 ybounds, const helios::vec2 zbounds ){
+  std::vector<uint> UUIDs_all = getAllUUIDs();
+  cropDomain( UUIDs_all, xbounds, ybounds, zbounds );
 }
 
 uint CompoundObject::getObjectID( void ) const{
@@ -5482,7 +5564,7 @@ void CompoundObject::rotate( const float rot, const char* axis ){
 
   if( strcmp(axis,"z")==0 ){
     float Rz[16], Rz_prim[16];
-    makeRotationMatrix(rot,"z",Rz);
+    makeRotationMatrix(-rot,"z",Rz);
     matmult(Rz,transform,transform);
 
     for( size_t o=0; o<UUIDs.size(); o++ ){
@@ -6420,7 +6502,7 @@ uint Context::copyObject( const uint ObjID ){
     vec2 size = o->getSize();
     uint subdiv = o->getSubdivisionCount();
 
-    Disk* disk_new = (new Disk( currentObjectID, UUIDs_copy, size, subdiv, this ) );
+    Disk* disk_new = (new Disk( currentObjectID, UUIDs_copy, subdiv, this ) );
 
     objects[currentObjectID] = disk_new;
 
@@ -6597,8 +6679,14 @@ Sphere* Context::getSphereObjectPointer( const uint ObjID ) const{
 }
 
 float Sphere::getRadius( void ) const{
+
+  vec3 n0(0,0,0), n1(1,0,0);
+  vec3 n0_T, n1_T;
+
+  vecmult(transform,n0,n0_T);
+  vecmult(transform,n1,n1_T);
   
-  return transform[0];
+  return  (n1_T-n0_T).magnitude();
   
 }
   
@@ -6735,7 +6823,20 @@ Box* Context::getBoxObjectPointer( const uint ObjID ) const{
 
 vec3 Box::getSize( void ) const{
 
-  return make_vec3( transform[0], transform[5], transform[10] );
+  vec3 n0(0,0,0), nx(1,0,0), ny(0,1,0), nz(0,0,1);
+
+  vec3 n0_T, nx_T, ny_T, nz_T;
+
+  vecmult(transform,n0,n0_T);
+  vecmult(transform,nx,nx_T);
+  vecmult(transform,ny,ny_T);
+  vecmult(transform,nz,nz_T);
+
+  float x = (nx_T-n0_T).magnitude();
+  float y = (ny_T-n0_T).magnitude();
+  float z = (nz_T-n0_T).magnitude();
+
+  return make_vec3( x, y, z );
   
 }
   
@@ -6779,14 +6880,13 @@ void Box::scale( const vec3 S ){
   
 }
 
-Disk::Disk( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec2 __size, const uint __subdiv, helios::Context* __context ){
+Disk::Disk( const uint __OID, const std::vector<uint> __UUIDs, const uint __subdiv, helios::Context* __context ){
 
   makeIdentityMatrix( transform );
 
   OID = __OID;
   type = helios::OBJECT_TYPE_DISK;
   UUIDs = __UUIDs;
-  size = __size;
   subdiv = __subdiv;
   context = __context;
   
@@ -6802,7 +6902,17 @@ Disk* Context::getDiskObjectPointer( const uint ObjID ) const{
 
 vec2 Disk::getSize( void ) const{
 
-  return size*transform[0];
+  vec3 n0(0,0,0), nx(1,0,0), ny(0,1,0);
+  vec3 n0_T, nx_T, ny_T;
+
+  vecmult(transform,n0,n0_T);
+  vecmult(transform,nx,nx_T);
+  vecmult(transform,ny,ny_T);
+
+  float x = (nx_T-n0_T).magnitude();
+  float y = (ny_T-n0_T).magnitude();
+
+  return make_vec2(x,y);
   
 }
   
@@ -8021,7 +8131,7 @@ uint Context::addDiskObject( const uint Ndivs, const vec3& center, const vec2& s
     
   }
 
-  Disk* disk_new = (new Disk( currentObjectID, UUID, size, Ndivs, this ));
+  Disk* disk_new = (new Disk( currentObjectID, UUID, Ndivs, this ));
 
   float T[16], transform[16];
   disk_new->getTransformationMatrix( transform );
@@ -8062,7 +8172,7 @@ uint Context::addDiskObject( const uint Ndivs, const vec3& center, const vec2& s
     
   }
 
-  Disk* disk_new = (new Disk( currentObjectID, UUID, size, Ndivs, this ));
+  Disk* disk_new = (new Disk( currentObjectID, UUID, Ndivs, this ));
 
   float T[16], transform[16];
   disk_new->getTransformationMatrix( transform );

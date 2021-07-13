@@ -35,6 +35,8 @@ HomogeneousCanopyParameters::HomogeneousCanopyParameters(void){
   canopy_extent = make_vec2(5,5);
 
   canopy_origin = make_vec3(0,0,0);
+
+  buffer = "z";
   
 }
 
@@ -621,7 +623,7 @@ void CanopyGenerator::buildCanopy( const HomogeneousCanopyParameters params ){
   float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
   int Nleaves = round(params.leaf_area_index*params.canopy_extent.x*params.canopy_extent.y/leafArea);
 
-  float Lmax = fmax(params.leaf_size.x,params.leaf_size.y);
+  float Lmax = sqrtf(params.leaf_size.x*params.leaf_size.x + params.leaf_size.y*params.leaf_size.y);
 
   uint ID0;
   if( params.leaf_texture_file.size()==0 ){
@@ -638,7 +640,16 @@ void CanopyGenerator::buildCanopy( const HomogeneousCanopyParameters params ){
 
     float rp = unif_distribution(generator);
 
-    vec3 position = params.canopy_origin + make_vec3( (-0.5+rx)*params.canopy_extent.x, (-0.5+ry)*params.canopy_extent.y, 0.5*Lmax+rz*(params.canopy_height-Lmax) );
+    vec3 position;
+
+      
+    if(params.buffer == "z"){
+      position = params.canopy_origin + make_vec3( (-0.5+rx)*params.canopy_extent.x, (-0.5+ry)*params.canopy_extent.y,0.5*Lmax+rz*(params.canopy_height-Lmax) );
+    }else if(params.buffer == "xyz"){
+      position = params.canopy_origin + make_vec3( 0.5*Lmax + (rx)*(params.canopy_extent.x-Lmax) + -0.5*params.canopy_extent.x,0.5*Lmax + (ry)*(params.canopy_extent.y-Lmax) + -0.5*params.canopy_extent.y,0.5*Lmax + rz*(params.canopy_height-Lmax) );        
+    }else{
+      position = params.canopy_origin + make_vec3( (-0.5+rx)*params.canopy_extent.x,(-0.5+ry)*params.canopy_extent.y,(rz)*(params.canopy_height) );
+    }
 
     SphericalCoord rotation( 1.f, sampleLeafPDF(params.leaf_angle_distribution.c_str()), 2.f*M_PI*rp );
 

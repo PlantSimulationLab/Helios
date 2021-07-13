@@ -408,16 +408,17 @@ void helios::matmult( const float ML[16], const float MR[16], float (&T)[16] ){
 
 void helios::vecmult( const float M[16], const helios::vec3 v3, helios::vec3& result ){
 
-  float v[3];
+  float v[4];
   v[0] = v3.x;
   v[1] = v3.y;
   v[2] = v3.z;
+  v[3] = 1.f;
 
-  float V[3]={0.f};
+  float V[4]={0.f};
 
-  for(int j=0;j<3;j++){
+  for(int j=0;j<4;j++){
     for(int k=0;k<4;k++){
-      V[j]=V[j]+v[k]*M[4*k+j];
+      V[j]=V[j]+v[k]*M[k+4*j];
     }
   }
 
@@ -433,7 +434,7 @@ void helios::vecmult( const float M[16], const float v[3], float (&result)[3] ){
 
   for(int j=0;j<4;j++){
     for(int k=0;k<4;k++){
-      V[j]=V[j]+v[k]*M[4*k+j];
+      V[j]=V[j]+v[k]*M[k+4*j];
     }
   }
 

@@ -67,6 +67,7 @@
  <tr><td>canopy_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Height/depth of the canopy.</td><td>1.0</td></tr>
  <tr><td>canopy_extent</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Dimension of the canopy in the x- and y-directions.</td><td>(5,5)</td></tr>
  <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+ <tr><td>buffer</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>String specifying whether leaves should be placed so that leaf edges do not fall outside the specified canopy dimensions ("z", "xyz", or "none").</td><td>"z"</td></tr>
  </table>
 
  \subsection CGenSphere Canopy of Spherical Crowns

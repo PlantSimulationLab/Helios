@@ -64,6 +64,22 @@ class RadiationModel{
   */
   void setDiffuseRadiationFlux( const char* label, float flux );
 
+  //! Extinction coefficient of diffuse ambient radiation
+  /** The angular distribution of diffuse ambient radiation is computed according to N = Psi^-K, where Psi is the angle between the distribution peak (usually the sun direction) and the ambient direction, and K is the extinction coefficient. When K=0 the ambient distribution is uniform, which is the default setting
+      \param[in] "label" Label used to reference the radiative band
+      \param[in] "K" Extinction coefficient value
+      \param[in] "peak_dir" Unit vector pointing in the direction of the peak in diffuse radiation (this is usually the sun direction)
+  */
+  void setDiffuseRadiationExtinctionCoeff( const char* label, const float K, const helios::vec3 peak_dir );
+
+  //! Extinction coefficient of diffuse ambient radiation
+  /** The angular distribution of diffuse ambient radiation is computed according to N = Psi^-K, where Psi is the angle between the distribution peak (usually the sun direction) and the ambient direction, and K is the extinction coefficient. When K=0 the ambient distribution is uniform, which is the default setting
+      \param[in] "label" Label used to reference the radiative band
+      \param[in] "K" Extinction coefficient value
+      \param[in] "peak_dir" Spherical direction of the peak in diffuse radiation (this is usually the sun direction)
+  */
+  void setDiffuseRadiationExtinctionCoeff( const char* label, const float K, const helios::SphericalCoord peak_dir );
+
   //! Add a spectral radiation band to the model
   /** Runs radiation calculations for a continuous spectral band (e.g., PAR: 400-700nm)
       \param[in] "label" Label used to reference the band
@@ -221,6 +237,15 @@ protected:
 
   //! Default diffuse radiation flux
   float diffuseFlux_default;
+
+  //! Distribution coefficient of ambient diffuse radiation
+  std::vector<float> diffuseExtinction;
+
+  //! Direction of peak in ambient diffuse radiation
+  std::vector<helios::vec3> diffusePeakDir;
+
+  //! Diffuse distribution normalization factor
+  std::vector<float> diffuseDistNorm;
 
   //! Scattering depth for each band
   std::vector<uint> scatteringDepth;
@@ -489,6 +514,15 @@ protected:
 
   //! Flux of ambient/diffuse radiation
   RTvariable diffuseFlux_RTvariable;
+
+  //! Diffuse distribution coefficient of diffuse ambient radiation
+  RTvariable diffuse_extinction_RTvariable;
+
+  //! Direction of peak diffuse radiation
+  RTvariable diffuse_peak_dir_RTvariable;
+
+  //! Diffuse distribution normalization factor
+  RTvariable diffuse_dist_norm_RTvariable;
 
   //! Bounding sphere radius
   RTvariable bound_sphere_radius_RTvariable;

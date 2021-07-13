@@ -32,6 +32,10 @@ rtDeclareVariable( unsigned int, UUID, attribute UUID, );
 
 rtDeclareVariable(float, diffuseFlux,, );
 
+rtDeclareVariable(float, diffuse_extinction,, );
+rtDeclareVariable(float3, diffuse_peak_dir,, );
+rtDeclareVariable(float, diffuse_dist_norm,, );
+
 rtDeclareVariable(float2, periodic_flag,, );
 
 rtBuffer<float, 1> rho, tau, eps;
@@ -284,18 +288,28 @@ RT_PROGRAM void miss_diffuse(){
     atomicAdd( &scatter_buff_top[prd.origin_UUID], diffuseFlux*prd.strength*sigma_s/beta );
 
   }else{ //ray was NOT launched from voxel
+
+    float fd = 1.f;
+    if( diffuse_extinction>0.f ){
+      float psi = acos_safe( dot(diffuse_peak_dir,ray.direction) );
+      if( psi<M_PI/180.f ){
+	fd = pow(M_PI/180.f,-diffuse_extinction)*diffuse_dist_norm;
+      }else{
+	fd = pow(psi,-diffuse_extinction)*diffuse_dist_norm;
+      }
+    }
   
     //absorption
-    atomicAdd( &radiation_in[prd.origin_UUID], diffuseFlux*(1.f-t_rho-t_tau)*prd.strength );
+    atomicAdd( &radiation_in[prd.origin_UUID], fd*diffuseFlux*(1.f-t_rho-t_tau)*prd.strength );
 
     if( t_rho>0 || t_tau>0 ){
 
       if( prd.face ){//reflection from top, transmission from bottom
-	atomicFloatAdd( &scatter_buff_top[prd.origin_UUID], diffuseFlux*t_rho*prd.strength ); //reflection
-	atomicFloatAdd( &scatter_buff_bottom[prd.origin_UUID], diffuseFlux*t_tau*prd.strength ); //transmission
+	atomicFloatAdd( &scatter_buff_top[prd.origin_UUID], fd*diffuseFlux*t_rho*prd.strength ); //reflection
+	atomicFloatAdd( &scatter_buff_bottom[prd.origin_UUID], fd*diffuseFlux*t_tau*prd.strength ); //transmission
       }else{//reflection from bottom, transmission from top
-	atomicFloatAdd( &scatter_buff_bottom[prd.origin_UUID], diffuseFlux*t_rho*prd.strength ); //reflection
-	atomicFloatAdd( &scatter_buff_top[prd.origin_UUID], diffuseFlux*t_tau*prd.strength ); //transmission
+	atomicFloatAdd( &scatter_buff_bottom[prd.origin_UUID], fd*diffuseFlux*t_rho*prd.strength ); //reflection
+	atomicFloatAdd( &scatter_buff_top[prd.origin_UUID], fd*diffuseFlux*t_tau*prd.strength ); //transmission
       }
     }
 

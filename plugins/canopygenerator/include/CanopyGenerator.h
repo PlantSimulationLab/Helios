@@ -55,6 +55,9 @@ struct HomogeneousCanopyParameters{
 
   //! 
   std::vector<float> leaf_angle_PDF;
+
+  //! String specifying whether leaves should be placed so that leaf edges do not fall outside the specified canopy dimensions ("z", "xyz", or "none")
+  std::string buffer;
   
 };
 

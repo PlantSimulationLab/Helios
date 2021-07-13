@@ -1549,6 +1549,46 @@ void RadiationModel::setDiffuseRadiationFlux( const char* label, float flux ){
   diffuseFlux.at(band) = flux;
 }
 
+void RadiationModel::setDiffuseRadiationExtinctionCoeff( const char* label, const float K, const helios::SphericalCoord peak_dir ){
+  setDiffuseRadiationExtinctionCoeff( label,K,sphere2cart(peak_dir) );
+}
+
+void RadiationModel::setDiffuseRadiationExtinctionCoeff( const char* label, const float K, const helios::vec3 peak_dir ){
+  if( band_names.find(label) == band_names.end() ){
+    std::cerr << "ERROR (setDiffuseRadiationExtinctionCoeff): Cannot set diffuse extinction value for band " << label << " because it is not a valid band." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  vec3 dir = peak_dir;
+  dir.normalize();
+
+  int N=100;
+  float norm = 0.f;
+  for( int j=0; j<N; j++ ){
+    for( int i=0; i<N; i++ ){
+      float theta = 0.5*M_PI/float(N)*(0.5f+float(i));
+      float phi = 2.f*M_PI/float(N)*(0.5f+float(j));
+      vec3 n = sphere2cart( make_SphericalCoord(0.5*M_PI-theta,phi) );
+
+      float psi = acos_safe( n*dir );
+      float fd;
+      if( psi<M_PI/180.f ){
+	fd = pow(M_PI/180.f,-K);
+      }else{
+	fd = pow(psi,-K);
+      }
+
+      norm += fd/float(N*N);
+      //note: the multipication factors are dtheta*dphi/pi = (0.5*pi/N)*(2*pi/N)/pi^2
+    }
+  }
+  
+  uint band = band_names.at(label);
+  diffuseExtinction.at(band) = K;
+  diffusePeakDir.at(band) = dir;
+  diffuseDistNorm.at(band) = 1.f/norm;
+}
+
 uint RadiationModel::addRadiationBand( const char* label ){
 
   if( strlen(label)>80 ){
@@ -1577,6 +1617,9 @@ uint RadiationModel::addRadiationBand( const char* label ){
   directRayCount.push_back( directRayCount_default );
   diffuseRayCount.push_back( diffuseRayCount_default );
   diffuseFlux.push_back( diffuseFlux_default );
+  diffuseExtinction.push_back( 0.f );
+  diffusePeakDir.push_back( make_vec3(0,0,0) );
+  diffuseDistNorm.push_back( 1.f );
   scatteringDepth.push_back( scatteringDepth_default );
   minScatterEnergy.push_back( minScatterEnergy_default );
 
@@ -1961,6 +2004,18 @@ void RadiationModel::initializeOptiX( void ){
   //Flux of diffuse radiation
   RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "diffuseFlux", &diffuseFlux_RTvariable ) );
   RT_CHECK_ERROR( rtVariableSet1f( diffuseFlux_RTvariable, 0.f ));
+
+  //Diffuse distribution extinction coefficient of ambient diffuse radiation
+  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "diffuse_extinction", &diffuse_extinction_RTvariable ) );
+  RT_CHECK_ERROR( rtVariableSet1f( diffuse_extinction_RTvariable, 0.f ));
+
+  //Direction of peak diffuse radiation
+  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "diffuse_peak_dir", &diffuse_peak_dir_RTvariable ) );
+  RT_CHECK_ERROR( rtVariableSet3f( diffuse_peak_dir_RTvariable, 0.f, 0.f, 0.f ));
+
+  //Diffuse distribution normalization factor
+  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "diffuse_dist_norm", &diffuse_dist_norm_RTvariable ) );
+  RT_CHECK_ERROR( rtVariableSet1f( diffuse_dist_norm_RTvariable, 0.f ));
 
   //Bounding sphere radius and center
   RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "bound_sphere_radius", &bound_sphere_radius_RTvariable ) );
@@ -3095,6 +3150,11 @@ void RadiationModel::runBand( const char* label ){
     
       /* Set Diffuse Flux Variable */
       RT_CHECK_ERROR( rtVariableSet1f( diffuseFlux_RTvariable, diffuseFlux.at(band) ));
+
+      /* Set Diffuse Angluar Distribution Variables */
+      RT_CHECK_ERROR( rtVariableSet1f( diffuse_extinction_RTvariable, diffuseExtinction.at(band) ));
+      RT_CHECK_ERROR( rtVariableSet3f( diffuse_peak_dir_RTvariable, diffusePeakDir.at(band).x, diffusePeakDir.at(band).y, diffusePeakDir.at(band).z  ));
+      RT_CHECK_ERROR( rtVariableSet1f( diffuse_dist_norm_RTvariable, diffuseDistNorm.at(band) ));
       
       std::vector<float> flux_top, flux_bottom;
       flux_top.resize(Nprimitives,0.f);
@@ -3367,7 +3427,12 @@ void RadiationModel::runBand_MCRT( const char* label ){
 
     /* Set Diffuse Flux Variable */
     RT_CHECK_ERROR( rtVariableSet1f( diffuseFlux_RTvariable, diffuseFlux.at(band) ));
-      
+
+    /* Set Diffuse Angluar Distribution Variables */
+    RT_CHECK_ERROR( rtVariableSet1f( diffuse_extinction_RTvariable, diffuseExtinction.at(band) ));
+      RT_CHECK_ERROR( rtVariableSet3f( diffuse_peak_dir_RTvariable, diffusePeakDir.at(band).x, diffusePeakDir.at(band).y, diffusePeakDir.at(band).z  ));
+      RT_CHECK_ERROR( rtVariableSet1f( diffuse_dist_norm_RTvariable, diffuseDistNorm.at(band) ));
+    
     // Compute diffuse launch dimension
     size_t n = ceil(sqrt(double(diffuseRayCount[band])));
     optix::int2 launch_dim_diff = optix::make_int2( round(n), round(n) );

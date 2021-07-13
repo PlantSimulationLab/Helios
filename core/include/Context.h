@@ -607,6 +607,10 @@ namespace helios {
     /** \return Surface area of the Triangle. */
     float getArea(void) const;
 
+    //! Get the primitive solid fraction
+    /** \return solid fraction of the Triangle. */
+    float getSolidFraction(void) const;
+
     //! Get a unit vector normal to the primitive surface
     /** \return Unit vector normal to the surface of the Triangle. */
     helios::vec3 getNormal(void) const;
@@ -1223,7 +1227,7 @@ namespace helios {
   public:
 
     //! Default constructor
-    Disk( const uint __OID, const std::vector<uint> __UUIDs, const helios::vec2 __size, const uint __subdiv, helios::Context* __context );
+    Disk( const uint __OID, const std::vector<uint> __UUIDs, const uint __subdiv, helios::Context* __context );
 
     //! Disk destructor
     ~Disk(){};
@@ -1244,8 +1248,6 @@ namespace helios {
 
   protected:
     
-    helios::vec2 size;
-
     uint subdiv;
     
   };
@@ -1654,6 +1656,12 @@ public:
       \return UUIDs for copied primitives
   */
   std::vector<uint> copyPrimitive( const std::vector<uint> UUIDs );
+
+  //! copy all primitive data from one primitive to another
+  /** \param[in] "UUID" uint unique universal identifier (UUID) of primitive that is the source of data for copying
+   \param[in] "currentUUID" uint unique universal identifier (UUID) of primitive that is the destintation for data copying
+   */
+  void copyPrimitiveData( const uint UUID, const uint currentUUID);
   
   //!Get a pointer to a Primitive element from the Context
   /** \param[in] "UUID" Unique universal identifier (UUID) of primitive element
@@ -3859,6 +3867,14 @@ public:
   /** \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
    */
   void cropDomainZ( const helios::vec2 zbounds );
+
+  //! Crop specified UUIDs such that they lie within some specified axis-aligned box
+  /** \param[in] "UUIDs" vector of UUIDs to crop 
+      \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.
+      \param[in] "ybounds" Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction.
+      \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
+   */
+  void cropDomain( const std::vector<uint> UUIDs, const helios::vec2 xbounds, const helios::vec2 ybounds, const helios::vec2 zbounds );
 
   //! Crop the domain such that all primitives lie within some specified axis-aligned box
   /** \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.

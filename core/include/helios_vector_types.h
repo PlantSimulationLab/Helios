@@ -330,6 +330,8 @@ public:
   vec2 operator-(const float a) const;
   //! Cross product of two vec2 vectors
   vec2 operatorx(const vec2& a) const;
+  //! check for equality of two vec2 vectors
+  bool operator==(const vec2& a) const;
 
 };
 
@@ -408,6 +410,11 @@ inline vec2 vec2::operator/(const float a) const{
   return c;
 }
 
+inline bool vec2::operator==(const vec2& a) const{
+  bool c = (x == a.x && y == a.y);
+  return c;
+}
+
 //! Vector of three elements of type 'float'. 
 /** \ingroup vectors */
 struct vec3{
@@ -478,6 +485,8 @@ public:
   vec3 operator-(const float a) const;
   //! Cross product of two vec3 vectors
   vec3 operatorx(const vec3& a) const;
+  //! check for equality of two vec3 vectors
+  bool operator==(const vec3& a) const;
 
 };
 
@@ -564,6 +573,11 @@ inline vec3 vec3::operator/(const float a) const{
   return c;
 }
 
+inline bool vec3::operator==(const vec3& a) const{
+  bool c = (x == a.x && y == a.y && z == a.z);
+  return c;
+}
+
 //! Vector of four elements of type 'float'. 
 /** \ingroup vectors */
 struct vec4{
@@ -638,6 +652,8 @@ public:
   vec4 operator+(const float a) const;
   //!Subtract a scalar from each element (scalar is subtracted on right: vec4-a)
   vec4 operator-(const float a) const;
+  //! check for equality of two vec4 vectors
+  bool operator==(const vec4& a) const;
 
 };
 
@@ -717,6 +733,11 @@ inline vec4 vec4::operator/(const float a) const{
   c.y=y/a;
   c.z=z/a;
   c.w=w/a;
+  return c;
+}
+
+inline bool vec4::operator==(const vec4& a) const{
+  bool c = (x == a.x && y == a.y && z == a.z && w == a.w);
   return c;
 }
 
