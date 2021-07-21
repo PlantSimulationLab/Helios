@@ -283,18 +283,22 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
 }
 
 Visualizer::Visualizer( uint __Wdisplay ){
-  initialize(__Wdisplay,__Wdisplay*0.8,16);
+  initialize(__Wdisplay,__Wdisplay*0.8,16,true);
 }
   
 Visualizer::Visualizer( uint __Wdisplay, uint __Hdisplay ){
-  initialize(__Wdisplay,__Hdisplay,16);
+  initialize(__Wdisplay,__Hdisplay,16,true);
 }
 
 Visualizer::Visualizer( uint __Wdisplay, uint __Hdisplay, int aliasing_samples ){
-  initialize(__Wdisplay,__Hdisplay,aliasing_samples);
+  initialize(__Wdisplay,__Hdisplay,aliasing_samples,true);
 }
 
-void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samples ){
+Visualizer::Visualizer( uint __Wdisplay, uint __Hdisplay, int aliasing_samples, bool window_decorations ){
+  initialize(__Wdisplay,__Hdisplay,aliasing_samples,window_decorations);
+}
+
+void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samples, bool window_decorations ){
   
   Wdisplay = __Wdisplay;
   Hdisplay = __Hdisplay;
@@ -345,6 +349,10 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //We don't want the old OpenGL
   glfwWindowHint( GLFW_VISIBLE, 0 );
+
+  if( !window_decorations ){
+    glfwWindowHint( GLFW_DECORATED, GLFW_FALSE );
+  }
 
   // Open a window and create its OpenGL context
   GLFWwindow* _window;
@@ -3566,6 +3574,14 @@ void Visualizer::plotUpdate( void ){
   
   glfwPollEvents();
   getViewKeystrokes( eye, center );
+
+  int width, height;
+  //glfwGetWindowSize((GLFWwindow*)window, &width, &height );
+  //Wdisplay = width;
+  //Hdisplay = height;
+  glfwGetFramebufferSize((GLFWwindow*)window, &width, &height );
+  Wframebuffer = width;
+  Hframebuffer = height;
   
   glfwSwapBuffers((GLFWwindow*)window);
 

@@ -72,7 +72,7 @@
 
  \subsection CGenSphere Canopy of Spherical Crowns
 
- The spherical crowns canopy consists of spherical volumes of vegetation filled with homogeneous leaves. 
+ The spherical crowns canopy consists of spherical/ellipsoidal volumes of vegetation filled with homogeneous leaves. 
 
  \image html SphericalCanopy.png
 
@@ -91,7 +91,7 @@
  <tr><td>leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for texture mapping/masking of leaves.</td><td>none</td></tr>
  <tr><td>leaf_angle_distribution</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Leaf angle distribution - one of "spherical", "uniform", "erectophile", "planophile", "plagiophile", "extremophile"</td><td>"spherical"</td></tr>
  <tr><td>leaf_area_density</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>One-sided leaf area density in each crown (i.e., LAD is equal to the total leaf area in a crown divided by \f$4/3\pi R^3\f$).</td><td>1.0</td></tr>
- <tr><td>crown_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of spherical crown.</td><td>0.5</td></tr>
+ <tr><td>crown_radius</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Principal radii of spherical/ellipsoidal crown.</td><td>(0.5,0.5,0.5)</td></tr>
 
  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr> 
  <tr><td>canopy_configuration</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Horizontal arrangement of crowns. Either "uniform", evenly spaced crowns in x- or y-direction, or "random", randomly arranged crowns such that crowns do not overlap.</td><td>"uniform"</td></tr>

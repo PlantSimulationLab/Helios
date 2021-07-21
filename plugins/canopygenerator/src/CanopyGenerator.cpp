@@ -52,7 +52,7 @@ SphericalCrownsCanopyParameters::SphericalCrownsCanopyParameters(void){
 
   leaf_area_density = 1.f;
 
-  crown_radius = 0.5f;
+  crown_radius = make_vec3(0.5f,0.5f,0.5f);
 
   canopy_configuration = "uniform";
 
@@ -683,7 +683,7 @@ void CanopyGenerator::buildCanopy( const SphericalCrownsCanopyParameters params 
 
   std::uniform_real_distribution<float> unif_distribution;
 
-  float r = params.crown_radius;
+  vec3 r = params.crown_radius;
 
   float solidFractionx;
   if(params.leaf_texture_file.size()==0){
@@ -694,7 +694,7 @@ void CanopyGenerator::buildCanopy( const SphericalCrownsCanopyParameters params 
   }
 
   float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
-  int Nleaves = round(4.f/3.f*M_PI*r*r*r*params.leaf_area_density/leafArea);
+  int Nleaves = round(4.f/3.f*M_PI*r.x*r.y*r.z*params.leaf_area_density/leafArea);
 
   vec2 canopy_extent( params.plant_spacing.x*float(params.plant_count.x), params.plant_spacing.y*float(params.plant_count.y) );
 
@@ -720,11 +720,11 @@ void CanopyGenerator::buildCanopy( const SphericalCrownsCanopyParameters params 
 
       vec3 center;
       if( cconfig.compare("uniform")==0 ){
-	center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+(i+0.5)*params.plant_spacing.x, -0.5*canopy_extent.y+(j+0.5)*params.plant_spacing.y, r );
+	center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+(i+0.5)*params.plant_spacing.x, -0.5*canopy_extent.y+(j+0.5)*params.plant_spacing.y, r.z );
       }else if( cconfig.compare("random")==0 ){
 	float rx = unif_distribution(generator);
 	float ry = unif_distribution(generator);
-	center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+i*params.plant_spacing.x+r+(params.plant_spacing.x-2.f*r)*rx, -0.5*canopy_extent.y+j*params.plant_spacing.y+r+(params.plant_spacing.y-2.f*r)*ry, r );
+	center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+i*params.plant_spacing.x+r.x+(params.plant_spacing.x-2.f*r.x)*rx, -0.5*canopy_extent.y+j*params.plant_spacing.y+r.y+(params.plant_spacing.y-2.f*r.y)*ry, r.z );
       }
 
       if( params.canopy_rotation!=0 ){
@@ -733,22 +733,34 @@ void CanopyGenerator::buildCanopy( const SphericalCrownsCanopyParameters params 
 	
       for (int l=0; l<Nleaves; l++ ){
 	  
-	float u = unif_distribution(generator);
-	float v = unif_distribution(generator);
-	float theta = u * 2.0 * M_PI;
-	float phi = acosf(2.0 * v - 1.0);
-	float rad = pow(unif_distribution(generator),1.f/3.f);
-	float x = r * rad * sinf(phi) * cosf(theta);
-	float y = r * rad * sinf(phi) * sinf(theta);
-	float z = r * rad * cosf(phi);
+	// float u = unif_distribution(generator);
+	// float v = unif_distribution(generator);
+	// float theta = u * 2.0 * M_PI;
+	// float phi = acosf(2.0 * v - 1.0);
+	// float rad = pow(unif_distribution(generator),1.f/3.f);
+	// float x = r * rad * sinf(phi) * cosf(theta);
+	// float y = r * rad * sinf(phi) * sinf(theta);
+	// float z = r * rad * cosf(phi);
 
-	theta = sampleLeafPDF(params.leaf_angle_distribution.c_str());
-	phi = 2.f*M_PI*unif_distribution(generator);
+	vec3 position(-9999,-9999,-9999);
+
+	while( pow(position.x,2)/pow(params.crown_radius.x,2)+pow(position.y,2)/pow(params.crown_radius.y,2)+pow(position.z,2)/pow(params.crown_radius.z,2) > 1.f ){
+
+	  float u = unif_distribution(generator);
+	  float v = unif_distribution(generator);
+	  float w = unif_distribution(generator);
+
+	  position = make_vec3( (-1+2.f*u)*r.x, (-1+2.f*v)*r.y, (-1+2.f*w)*r.z );
+
+	}
+
+	float theta = sampleLeafPDF(params.leaf_angle_distribution.c_str());
+	float phi = 2.f*M_PI*unif_distribution(generator);
 
 	uint ID = context->copyObject(ID0);
 	context->getObjectPointer(ID)->rotate(-theta,"y");
 	context->getObjectPointer(ID)->rotate(phi,"z");
-	context->getObjectPointer(ID)->translate(center+make_vec3(x,y,z));
+	context->getObjectPointer(ID)->translate(center+position);
 
 	std::vector<uint> UUID = context->getObjectPointer(ID)->getPrimitiveUUIDs();
 

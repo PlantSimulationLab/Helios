@@ -257,6 +257,29 @@ The spherical sun source is defined in a similar manner as the collimated radiat
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>radiationmodel.setDiffuseRayCount("PAR",200); //set the number of rays</code></pre></div>	  
 
+ By default, the diffuse radiation distribution is isotropic. An anisotropic diffuse radiation distribution can be utilized using the function \ref RadiationModel::setDiffuseRadiationExtinctionCoeff() "setDiffuseRadiationExtinctionCoeff()". This function applies an anisotropic diffuse distribution in which intensity declines exponentially away from the peak direction (usually the solar direction). The relative diffuse intensity is given by <a href="https://doi.org/10.1016/0038-092X(88)90072-2">(Harrison and Coombes, 1988)</a>
+
+ \f[ f_d(\theta,\phi) = f_0\Psi^{-K},\f]
+
+ where 
+
+ \f[ \Psi = acos\left( cos\,\theta\,cos\,\theta_s + sin\,\theta\,sin\,\theta_s\,cos\,(\phi-\phi_s) \right), \f]
+
+ and \f$\theta_s\f$ and \f$\phi_s\f$ are the zenith and azimuth angles of the peak direction. If \f$\Psi<1^\circ\f$, \f$\Psi\f$ is clamped to a value of 1 degree. The \f$f_0\f$ is a normalization factor that is computed such that the integral of \f$f_d\f$ for a one-sided horizontal element is equal to 1, i.e.,
+
+\f[ \frac{1}{\pi}\int\limits_0^{2\pi}\int\limits_0^{\pi/2}\,f_d\,\mathrm{cos}\,\theta\,\mathrm{sin}\,\theta\,d\theta d\phi = 1. \f]
+
+ The figure below shows the diffuse distribution for different values of \f$K\f$ for a solar zenith of 45 degrees. Note that a value of \f$K=0\f$ yields an anisotropic distribution, and as \f$K\f$ gets large the distribution becomes increasingly anisotropic.
+
+ \image html diffuse_distribution.png
+
+ An example implementation is given below.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> vec3 sun_dir(0,0,1); //sun direction
+ float K = 0.1; //diffuse radiation distribution extinction coefficient
+ radiation.setDiffuseRadiationExtinctionCoeff("PAR", K, sun_dir);</code></pre></div>
+
  \subsection RadScatter Scattering Iterations
  
  If the reflectivity or tranmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively until there is no energy left to be scattered.  The number of scattering iterations is defined using:

@@ -257,6 +257,9 @@ public:
 
   Visualizer( uint Wdisplay, uint Hdisplay, int aliasing_samples );
 
+  //! Visualizer constructior with option to remove window decorationos (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this function will likely be removed
+  Visualizer( uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations );
+
   // !Visualizer destructor
   ~Visualizer(void);
 
@@ -798,7 +801,7 @@ public:
 
 private:
 
-  void initialize( uint Wdisplay, uint Hdisplay, int aliasing_samples );
+  void initialize( uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations );
 
   void render( bool shadow );
 

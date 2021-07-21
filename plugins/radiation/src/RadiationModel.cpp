@@ -1500,6 +1500,64 @@ int RadiationModel::selfTest( void ){
     std::cout << "passed." << std::endl;
   }
 
+  // -------- Test #14: anisotropoic diffuse radiation for a horizontal patch---------- //
+
+  std::cout << "Test #14: anisotropic diffuse radiation horizontal patch..." << std::flush;
+
+  bool failure_14 = false;
+  
+  uint Ndiffuse_14 = 10000;
+
+  Context context_14;
+
+  std::vector<float> K_14;
+  K_14.push_back( 0.f );
+  K_14.push_back( 0.25f );
+  K_14.push_back( 1.f );
+
+  std::vector<float> thetas_14;
+  thetas_14.push_back(0.f);
+  thetas_14.push_back(0.25*M_PI);
+
+  uint UUID_14 = context_14.addPatch();
+
+  context_14.setPrimitiveData( UUID_14, "twosided_flag", uint(0) );
+
+  RadiationModel radiation_14(&context_14);
+  radiation_14.disableMessages();
+
+  radiation_14.addRadiationBand( "diffuse" );
+
+  radiation_14.disableEmission( "diffuse" );
+  radiation_14.setDiffuseRayCount( "diffuse", Ndiffuse_14 );
+  radiation_14.setDiffuseRadiationFlux( "diffuse", 1.f );
+
+  radiation_14.updateGeometry();
+
+  for( int t=0; t<thetas_14.size(); t++ ){
+    for( int k=0; k<K_14.size(); k++ ){
+
+      radiation_14.setDiffuseRadiationExtinctionCoeff( "diffuse", K_14.at(k), make_SphericalCoord( 0.5*M_PI-thetas_14.at(t), 0.f ) );
+
+      radiation_14.runBand( "diffuse" );
+
+      float Rdiff;
+      context_14.getPrimitiveData( UUID_14, "radiation_flux_diffuse", Rdiff );
+
+      if( fabs(Rdiff-1.f)>2.f*error_threshold ){
+	failure_14 = true;
+      }
+      
+    }
+  }
+
+  if( failure_14 ){
+    std::cout << "failed." << std::endl;
+    failure=true;
+  }else{
+    std::cout << "passed." << std::endl;
+  }
+  
 
   // ------------- //
   
@@ -1578,8 +1636,8 @@ void RadiationModel::setDiffuseRadiationExtinctionCoeff( const char* label, cons
 	fd = pow(psi,-K);
       }
 
-      norm += fd/float(N*N);
-      //note: the multipication factors are dtheta*dphi/pi = (0.5*pi/N)*(2*pi/N)/pi^2
+      norm += fd*cos(theta)*sin(theta)*M_PI/float(N*N);
+      //note: the multipication factors are dtheta*dphi/pi = (0.5*pi/N)*(2*pi/N)/pi = pi/N^2
     }
   }
   

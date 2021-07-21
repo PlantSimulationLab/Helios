@@ -86,7 +86,7 @@ struct SphericalCrownsCanopyParameters{
   float leaf_area_density;
 
   //! Radius of the spherical crowns
-  float crown_radius;
+  helios::vec3 crown_radius;
 
   //! Specifies whether to use a uniformly spaced canopy (canopy_configuration="uniform") or a randomly arranged canopy with non-overlapping crowns (canopy_configuration="random").
   std::string canopy_configuration;
