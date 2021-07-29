@@ -232,6 +232,13 @@
 	 \<Ny> 3 </Ny> \<!-- OPTIONAL - default: 1 -->
 	 \<Nz> 3 </Nz> \<!-- OPTIONAL - default: 1 -->
   </grid></code></pre></div>
+
+
+ One way to figure out the appropriate dimension and position of the voxel grid is using the visualizer and trial-and-error. Make a guess of the voxel parameters, then visualize the point cloud and voxels together and adjust accordingly. This can be tedious and time-consuming because you need to re-run the entire code each time.
+
+An often faster way to figure out the dimensions of the voxel grid is to use point cloud visualization software such as <a href="https://www.cloudcompare.org">Cloud Compare</a>. Load the point cloud data into Cloud Compare, then add a Box (file->Primitive Factory). You can translate or rotate the box by clicking on the Box object in the DB Tree pane, then select the menu item Edit->Translate/Rotate. To change the box size, click on the box vertices in the DB Tree pane, then go to Edit->Multiply/Scale. You can then find the resulting box location and dimensions in the Properties pane.
+
+ \image html LiDARvoxelgrid.png
   
  \section LiDARprocess Processing LiDAR data
   
@@ -397,6 +404,8 @@
       pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
 
       pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5
+
+      pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell
 
       uint Ncells = pointcloud.getGridCellCount(); //Get the number of grid cells
       

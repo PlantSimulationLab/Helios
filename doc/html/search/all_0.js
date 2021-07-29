@@ -54,7 +54,7 @@ var searchData=
   ['aerial_20_25lidar_20point_20cloud_20plugin_20documentation_51',['Aerial %LiDAR Point Cloud Plugin Documentation',['../_aerial_li_d_a_r_doc.html',1,'PlugIns']]],
   ['aerialscanmetadata_52',['AerialScanMetadata',['../struct_aerial_scan_metadata.html',1,'AerialScanMetadata'],['../struct_aerial_scan_metadata.html#a7335ab6e76b88c50520e3fd205d4c575',1,'AerialScanMetadata::AerialScanMetadata()']]],
   ['alpha_53',['alpha',['../struct_soil_properties.html#a414e4c3e1a35b7b203d5993b43c2c511',1,'SoilProperties']]],
-  ['approxsame_54',['approxSame',['../class_voxel_intersection.html#a7b67a822c84c1086e3d0a8e05114c4bc',1,'VoxelIntersection']]],
+  ['approxsame_54',['approxSame',['../class_voxel_intersection.html#a7b67a822c84c1086e3d0a8e05114c4bc',1,'VoxelIntersection::approxSame(float a, float b, float absTol, float relTol)'],['../class_voxel_intersection.html#af78fea330c0c2e38e3a02db732ed7dd7',1,'VoxelIntersection::approxSame(helios::vec3 a, helios::vec3 b, float absTol)']]],
   ['area_55',['area',['../struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407',1,'PerRayData']]],
   ['asin_5fsafe_56',['asin_safe',['../global_8h.html#ac400d6d37ff2494ec592a9f0a17ee9ab',1,'helios']]],
   ['atan2_5f2pi_57',['atan2_2pi',['../group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54',1,'helios']]],

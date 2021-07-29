@@ -302,8 +302,6 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   
   Wdisplay = __Wdisplay;
   Hdisplay = __Hdisplay;
-  //Hdisplay = Wdisplay*0.8f;
-  //Hdisplay = Wdisplay*1.45f;
 
   message_flag = true;
 
@@ -343,7 +341,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
     throw(1);
   }
 
-  glfwWindowHint(GLFW_SAMPLES, aliasing_samples ); // antialiasing
+  glfwWindowHint(GLFW_SAMPLES, std::max(0,aliasing_samples) ); // antialiasing
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
@@ -390,6 +388,17 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
   //glEnable(GL_DEPTH_CLAMP);
 
+  if( aliasing_samples<=0 ){
+    glDisable( GL_MULTISAMPLE );
+    glDisable( GL_MULTISAMPLE_ARB );
+  }
+
+  if( aliasing_samples<=1 ){
+    glDisable( GL_POLYGON_SMOOTH );
+  }else{
+    glEnable( GL_POLYGON_SMOOTH );
+  }
+
   //glEnable(GL_TEXTURE0);
   //glEnable(GL_TEXTURE_RECTANGLE);
   glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -398,7 +407,6 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   assert( checkerrors() );
 
   //glEnable(GL_TEXTURE1);
-  glEnable(GL_POLYGON_SMOOTH);
   glEnable(GL_POLYGON_OFFSET_FILL);
   glPolygonOffset(1.0f, 1.0f);
   glDisable(GL_CULL_FACE);
@@ -453,7 +461,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); 
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 
@@ -2839,15 +2847,15 @@ void Visualizer::buildContextGeometry_private( void ){
 		context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), colorValue );
 	      }else if( type==HELIOS_TYPE_INT ){
 		int cv;
-		context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+		context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), cv );
 		colorValue = float(cv);
 	      }else if( type==HELIOS_TYPE_UINT ){
 		uint cv;
-		context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+		context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), cv );
 		colorValue = float(cv);
 	      }else if( type==HELIOS_TYPE_DOUBLE ){
 	        double cv;
-		context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+		context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), cv );
 		colorValue = float(cv);
 	      }else{
 		colorValue = 0;
@@ -2941,15 +2949,15 @@ void Visualizer::buildContextGeometry_private( void ){
 	      context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), colorValue );
 	    }else if( type==HELIOS_TYPE_INT ){
 	      int cv;
-	      context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+	      context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), cv );
 	      colorValue = float(cv);
 	    }else if( type==HELIOS_TYPE_UINT ){
 	      uint cv;
-	      context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+	      context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), cv );
 	      colorValue = float(cv);
 	    }else if( type==HELIOS_TYPE_DOUBLE ){
 	      double cv;
-	      context->getObjectData( UUID, colorPrimitivesByObjectData.c_str(), cv );
+	      context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), cv );
 	      colorValue = float(cv);
 	    }else{
 	      colorValue = 0;

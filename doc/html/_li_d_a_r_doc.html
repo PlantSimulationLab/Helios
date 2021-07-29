@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.14</span>
+   &#160;<span id="projectnumber">v1.2.15</span>
    </div>
   </td>
  </tr>
@@ -209,21 +209,21 @@ Hit point data</h2>
 <h1><a class="anchor" id="ScanIO"></a>
 Loading scan data from file</h1>
 <p>Scan metadata is typically specified by loading an XML file containing the relevant metadata for each scan. The XML file specifies the path to an ASCII text file that contains the data for each scan. The code below gives a sample XML file for loading multiple scans. As specified in the metadata table above, not all entries are required.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> &lt;helios&gt;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   &lt;scan&gt;
-     &lt;filename&gt; /path/to/data/file.xyz &lt;/filename&gt;
-     &lt;ASCII_format&gt; zenith azimuth x y z r255 g255 b255 &lt;/ASCII_format&gt;
-     &lt;origin&gt; 0 0 0 &lt;/origin&gt;
-     &lt;size&gt; 2500 4500 &lt;/size&gt;
-     &lt;thetaMin&gt; 30 &lt;/thetaMin&gt; &lt;!-- OPTIONAL - default: 0 --&gt;
-     &lt;thetaMax&gt; 130 &lt;/thetaMax&gt; &lt;!-- OPTIONAL - default: 180 --&gt;
-     &lt;phiMin&gt; 0 &lt;/phiMin&gt; &lt;!-- OPTIONAL - default: 0 --&gt;
-     &lt;phiMax&gt; 360 &lt;/phiMax&gt; &lt;!-- OPTIONAL - default: 360 --&gt;
-     &lt;translation&gt; 1.2 1.5 -10.2 &lt;/translation&gt; &lt;!-- OPTIONAL - default: 0 0 0 --&gt;
-     &lt;rotation&gt; 20 180 &lt;/rotation&gt; &lt;!-- OPTIONAL - default: 0 0 --&gt;
-     &lt;distanceFilter&gt; 50 &lt;/distanceFilter&gt; &lt;!-- OPTIONAL - default: Infinity --&gt;
-     &lt;reflectance&gt; 1300 &lt;/reflectance&gt; &lt;!-- OPTIONAL - user-defined data --&gt;
-   &lt;/scan&gt;
-&lt;/helios&gt;</code></pre></div><p>The ASCII text file containing the data is a plain text file, where each row corresponds to a hit point and each column is some data value associated with that hit point. The "ASCII_format" tag defines the column format of the ASCII text file (in this case, file.xyz). Each entry in the list specifies the meaning of each column. Possible fields are listed in the table below:</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> &lt;helios&gt;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    &lt;scan&gt;
+      &lt;filename&gt; /path/to/data/file.xyz &lt;/filename&gt;
+      &lt;ASCII_format&gt; zenith azimuth x y z r255 g255 b255 &lt;/ASCII_format&gt;
+      &lt;origin&gt; 0 0 0 &lt;/origin&gt;
+      &lt;size&gt; 2500 4500 &lt;/size&gt;
+      &lt;thetaMin&gt; 30 &lt;/thetaMin&gt; &lt;!-- OPTIONAL - default: 0 --&gt;
+      &lt;thetaMax&gt; 130 &lt;/thetaMax&gt; &lt;!-- OPTIONAL - default: 180 --&gt;
+      &lt;phiMin&gt; 0 &lt;/phiMin&gt; &lt;!-- OPTIONAL - default: 0 --&gt;
+      &lt;phiMax&gt; 360 &lt;/phiMax&gt; &lt;!-- OPTIONAL - default: 360 --&gt;
+      &lt;translation&gt; 1.2 1.5 -10.2 &lt;/translation&gt; &lt;!-- OPTIONAL - default: 0 0 0 --&gt;
+      &lt;rotation&gt; 20 180 &lt;/rotation&gt; &lt;!-- OPTIONAL - default: 0 0 --&gt;
+      &lt;distanceFilter&gt; 50 &lt;/distanceFilter&gt; &lt;!-- OPTIONAL - default: Infinity --&gt;
+      &lt;reflectance&gt; 1300 &lt;/reflectance&gt; &lt;!-- OPTIONAL - user-defined data --&gt;
+    &lt;/scan&gt;
+ &lt;/helios&gt;</code></pre></div><p>The ASCII text file containing the data is a plain text file, where each row corresponds to a hit point and each column is some data value associated with that hit point. The "ASCII_format" tag defines the column format of the ASCII text file (in this case, file.xyz). Each entry in the list specifies the meaning of each column. Possible fields are listed in the table below:</p>
 <table class="doxtable">
 <tr>
 <th>Label</th><th>Description</th><th>Default behavior </th></tr>
@@ -248,7 +248,7 @@ Loading scan data from file</h1>
 </table>
 <p>The XML file can be automatically loaded into the point cloud using the loadXML() function, as illustrated below.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
-  #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.loadXML("/path/to/file.xml");</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>}</code></pre></div><h1><a class="anchor" id="LiDARgrid"></a>
+   #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      pointcloud.loadXML("/path/to/file.xml");</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre></div><h1><a class="anchor" id="LiDARgrid"></a>
 Establishing grid cells</h1>
 <p>Rectangular grid cells are used as the basis for processing point cloud data. For example, total leaf area (or leaf area density) may be calculated for each grid cell. Grid cells or "voxels" are parallelpiped volumes. The top and bottom faces are always horizontal, but the cells can be rotated in the azimuthal direction.</p>
 <p>Grid cells are defined by specifying the (x,y,z) position of its center, and the size of the cell in the x, y, and z directions. Additional optional information can also be provided for grid cells, which are detailed below.</p>
@@ -271,13 +271,18 @@ Establishing grid cells</h1>
 <p>The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells. For example, Nx=Ny=Nz=3 would create 27 grid cells similar to a "Rubik's cube".</p>
 <p>Grid cell options can be specified in an XML file using the tags listed in the table above. Multiple grid cells are added by simply adding more &lt;grid&gt;...&lt;/grid&gt; groups to the XML file.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> &lt;grid&gt;
-    &lt;center&gt; 0 0 0.5 &lt;/center&gt;
-    &lt;size&gt; 1 1 1 &lt;/size&gt;
-    &lt;rotation&gt; 30 &lt;/rotation&gt; &lt;!-- OPTIONAL - default: 0 --&gt;
-    &lt;Nx&gt; 3 &lt;/Nx&gt; &lt;!-- OPTIONAL - default: 1 --&gt;
-    &lt;Ny&gt; 3 &lt;/Ny&gt; &lt;!-- OPTIONAL - default: 1 --&gt;
-    &lt;Nz&gt; 3 &lt;/Nz&gt; &lt;!-- OPTIONAL - default: 1 --&gt;
- &lt;/grid&gt;</code></pre></div><h1><a class="anchor" id="LiDARprocess"></a>
+     &lt;center&gt; 0 0 0.5 &lt;/center&gt;
+     &lt;size&gt; 1 1 1 &lt;/size&gt;
+     &lt;rotation&gt; 30 &lt;/rotation&gt; &lt;!-- OPTIONAL - default: 0 --&gt;
+     &lt;Nx&gt; 3 &lt;/Nx&gt; &lt;!-- OPTIONAL - default: 1 --&gt;
+     &lt;Ny&gt; 3 &lt;/Ny&gt; &lt;!-- OPTIONAL - default: 1 --&gt;
+     &lt;Nz&gt; 3 &lt;/Nz&gt; &lt;!-- OPTIONAL - default: 1 --&gt;
+  &lt;/grid&gt;</code></pre></div><p>One way to figure out the appropriate dimension and position of the voxel grid is using the visualizer and trial-and-error. Make a guess of the voxel parameters, then visualize the point cloud and voxels together and adjust accordingly. This can be tedious and time-consuming because you need to re-run the entire code each time.</p>
+<p>An often faster way to figure out the dimensions of the voxel grid is to use point cloud visualization software such as <a href="https://www.cloudcompare.org">Cloud Compare</a>. Load the point cloud data into Cloud Compare, then add a Box (file-&gt;Primitive Factory). You can translate or rotate the box by clicking on the Box object in the DB Tree pane, then select the menu item Edit-&gt;Translate/Rotate. To change the box size, click on the box vertices in the DB Tree pane, then go to Edit-&gt;Multiply/Scale. You can then find the resulting box location and dimensions in the Properties pane.</p>
+<div class="image">
+<img src="LiDARvoxelgrid.png" alt=""/>
+</div>
+<h1><a class="anchor" id="LiDARprocess"></a>
 Processing LiDAR data</h1>
 <h2><a class="anchor" id="LiDARtri"></a>
 Hit point triangulation</h2>
@@ -286,12 +291,12 @@ Hit point triangulation</h2>
 <p>Another optional parameter is the maximum allowable aspect ratio of a triangle, which is the ratio of the length of the longest triangle side to the shortest triangle side. This has a similar effect as the <img class="formulaInl" alt="$L_{max}$" src="form_60.png" width="33" height="15"/> parameter, and works better in some cases.</p>
 <p>The following code sample illustrates how to perform a triangulation.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre></div><h2><a class="anchor" id="LiDARleafarea"></a>
+  #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  }</code></pre></div><h2><a class="anchor" id="LiDARleafarea"></a>
 Calculating leaf area for each grid cell</h2>
 <p>Using the triangulation and defined grid cells, the plug-in can calculate the leaf area (and leaf area density) for each grid cell. The algorithm for calculating leaf area is described in detail in <a href="dx.doi.org/doi:10.1088/1361-6501/aa5cfd">Bailey and Mahaffee (2017b)</a>.</p>
 <p>Performing the calculations is simple and requires no inputs, which is illustrated with the following code sample. Note that the leaf area calculation requires that the triangulation has been performed beforehand. If no triangulation is available, the plug-in will assume a uniformly distributed leaf angle orientation ( <img class="formulaInl" alt="$G=0.5$" src="form_61.png" width="51" height="12"/>). The leaf area calculation also requires that at least one grid cell was defined.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre></div><h2><a class="anchor" id="LiDARresonstruction"></a>
+  #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  }</code></pre></div><h2><a class="anchor" id="LiDARresonstruction"></a>
 Plant reconstruction</h2>
 <p>A leaf-by-leaf reconstruction can be performed for the plant of interest using the method described in <a href="https://www.sciencedirect.com/science/article/pii/S0034425718300191?via%3Dihub">Bailey and Ochoa (2018)</a>. The reconstruction utilizes the triangulation and leaf area computations to ensure the correct leaf angle and area distributions on average, and thus requires that these routines have been run before performing the reconstruction.</p>
 <p>There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it doesn not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the leafReconstructionTriangular() function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.</p>
@@ -299,7 +304,7 @@ Plant reconstruction</h2>
 <p>There is a function that can automatically add all reconstructed elements (triangles or alpha masks) to the Helios Context, which is addLeafReconstructionToContext().</p>
 <p>Below is an example of performing a reconstruction using alpha masks and adding the alpha masks to the Context.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.leafReconstructionAlphaMask( 0.001, 0.02, "plugins/visualizer/textures/ElmLeaf.png" ); //Perform the reconstruction</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    Context context; //Initialize the Context</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>    pointcloud.addLeafReconstructionToContext( &amp;context );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code> }</code></pre></div><h1><a class="anchor" id="LiDARvis"></a>
+  #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.leafReconstructionAlphaMask( 0.001, 0.02, "plugins/visualizer/textures/ElmLeaf.png" ); //Perform the reconstruction</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Context context; //Initialize the Context</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.addLeafReconstructionToContext( &amp;context );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  }</code></pre></div><h1><a class="anchor" id="LiDARvis"></a>
 Visualizing results</h1>
 <p>Results can be visualized using the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> plug-in for Helios. There are two possible means for doing so. First, is to add the relevant geometry to the Context, then visualize primitives in the Context using the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>. This works for the triangulation and plant reconstructions, but cannot be used to visualize just the point cloud since there is no "point" primitive in the Context. The next section describes how to accomplish this.</p>
 <p>The second option is to add any geometry directly to the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>. There are several functions build in to the LiDAR plug-in that can to this automatically, which are listed below.</p>
@@ -317,8 +322,8 @@ Visualizing results</h1>
 </table>
 <p>The following code sample illustrates how to visualize the point cloud.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
-  #include "LiDAR.h"
-  #include "Visualizer.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     Visualizer vis( 1000 ); //Initialize the visualizer</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.addHitsToVisualizer( &amp;vis, 1 );  //Add the hit points to visualizer</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     vis.plotInteractive();</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  }</code></pre></div><h1><a class="anchor" id="LiDARoutput"></a>
+   #include "LiDAR.h"
+   #include "Visualizer.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      Visualizer vis( 1000 ); //Initialize the visualizer</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      pointcloud.addHitsToVisualizer( &amp;vis, 1 );  //Add the hit points to visualizer</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      vis.plotInteractive();</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   }</code></pre></div><h1><a class="anchor" id="LiDARoutput"></a>
 Writing results to file</h1>
 <p>Results of data processing can be easily written to file for external analysis. The following table lists these functions. Data is written to an ASCII text file, where each line in the file corresponds to a different data point (e.g., hit point, triangle, etc.).</p>
 <table class="doxtable">
@@ -339,15 +344,15 @@ Writing results to file</h1>
 </table>
 <p>The following code sample illustrates an example of how to write results to file.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
-  #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     uint Ncells = pointcloud.getGridCellCount(); //Get the number of grid cells</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>     char f_normals[50], f_areas[50];
-     for( uint i=0; i&lt;Ncells; i++ ){ //loop over grid cells
-          <code></code>// define strings with output file names
-          sprintf(f_normals,"../output/triangle_normals_%d.txt",i);
-          sprintf(f_areas,"../output/triangle_areas_%d.txt",i);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>          pointcloud.exportTriangleNormals( f_normals, i );
-          pointcloud.exportTriangleAreas( f_areas, i );
-     }
-     pointcloud.exportLeafAreas( "../output/leaf_areas.txt" );
-     pointcloud.exportLeafAreaDensities( "../output/leaf_area_densities.txt" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  }</code></pre></div> </div></div><!-- contents -->
+   #include "LiDAR.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   using namespace helios;</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   int main( void ){</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      LiDARcloud pointcloud; //Initialize the LiDAR point cloud</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      pointcloud.loadXML("/path/to/file.xml");  //Load the XML file</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      uint Ncells = pointcloud.getGridCellCount(); //Get the number of grid cells</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>      char f_normals[50], f_areas[50];
+      for( uint i=0; i&lt;Ncells; i++ ){ //loop over grid cells
+           <code></code>// define strings with output file names
+           sprintf(f_normals,"../output/triangle_normals_%d.txt",i);
+           sprintf(f_areas,"../output/triangle_areas_%d.txt",i);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>           pointcloud.exportTriangleNormals( f_normals, i );
+           pointcloud.exportTriangleAreas( f_areas, i );
+      }
+      pointcloud.exportLeafAreas( "../output/leaf_areas.txt" );
+      pointcloud.exportLeafAreaDensities( "../output/leaf_area_densities.txt" );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>   }</code></pre></div> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

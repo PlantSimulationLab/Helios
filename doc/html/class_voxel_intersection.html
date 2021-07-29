@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.14</span>
+   &#160;<span id="projectnumber">v1.2.15</span>
    </div>
   </td>
  </tr>
@@ -109,6 +109,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a7b67a822c84c1086e3d0a8e05114c4bc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_voxel_intersection.html#a7b67a822c84c1086e3d0a8e05114c4bc">approxSame</a> (float a, float b, float absTol, float relTol)</td></tr>
 <tr class="memdesc:a7b67a822c84c1086e3d0a8e05114c4bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">compare two floating point numbers to within an absolute and relative error tolerance  <a href="class_voxel_intersection.html#a7b67a822c84c1086e3d0a8e05114c4bc">More...</a><br /></td></tr>
 <tr class="separator:a7b67a822c84c1086e3d0a8e05114c4bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af78fea330c0c2e38e3a02db732ed7dd7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_voxel_intersection.html#af78fea330c0c2e38e3a02db732ed7dd7">approxSame</a> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> a, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> b, float absTol)</td></tr>
+<tr class="memdesc:af78fea330c0c2e38e3a02db732ed7dd7"><td class="mdescLeft">&#160;</td><td class="mdescRight">compare two vec3's to within an absolute and relative error tolerance  <a href="class_voxel_intersection.html#af78fea330c0c2e38e3a02db732ed7dd7">More...</a><br /></td></tr>
+<tr class="separator:af78fea330c0c2e38e3a02db732ed7dd7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -144,7 +147,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
 <a id="a7b67a822c84c1086e3d0a8e05114c4bc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7b67a822c84c1086e3d0a8e05114c4bc">&#9670;&nbsp;</a></span>approxSame()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a7b67a822c84c1086e3d0a8e05114c4bc">&#9670;&nbsp;</a></span>approxSame() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -193,7 +196,54 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>boolean true if absolute difference between a and b is within absolute or relative tolerances </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01190">1190</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01498">1498</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af78fea330c0c2e38e3a02db732ed7dd7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af78fea330c0c2e38e3a02db732ed7dd7">&#9670;&nbsp;</a></span>approxSame() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool VoxelIntersection::approxSame </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td>
+          <td class="paramname"><em>a</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td>
+          <td class="paramname"><em>b</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>absTol</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>compare two vec3's to within an absolute and relative error tolerance </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">a</td><td>first vec3 to be compared </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">b</td><td>second vec3 to be compared </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">absTol</td><td>absolute tolerance for comparison </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>boolean true if absolute difference between each element of a and b is within the absolute tolerance </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01504">1504</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -244,7 +294,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <dl class="section return"><dt>Returns</dt><dd>2D vector of UUIDs within grid cells with grid cell ID as the first index and primitive ID as second index </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>vector is one element longer than the number of grid cells, with the last element storing UUIDs that didn't fall into any grid cell </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01184">1184</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01492">1492</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -299,7 +349,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <dl class="section note"><dt>Note</dt><dd>this function assumes that the lines intersect - behavior for lines that don't intersect currently untested </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>coordinate of the intersection point between the two lines </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l00374">374</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l00472">472</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -339,7 +389,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>the number of new triangles created by slicing the original primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l00395">395</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l00493">493</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -393,7 +443,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>vector of new planar primitives representing the original surfaces provided in UUIDs </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01032">1032</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01240">1240</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>

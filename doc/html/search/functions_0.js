@@ -47,7 +47,7 @@ var searchData=
   ['addvoxelbycenter_906',['addVoxelByCenter',['../class_visualizer.html#a061f7500e9d13c55eff1500f17aef078',1,'Visualizer::addVoxelByCenter(const helios::vec3 center, const helios::vec3 size, const helios::SphericalCoord rotation, const helios::RGBcolor color, const CoordinateSystem coordFlag)'],['../class_visualizer.html#a14ed825b9d188e4a7e67c59a098e0743',1,'Visualizer::addVoxelByCenter(const helios::vec3 center, const helios::vec3 size, const helios::SphericalCoord rotation, const helios::RGBAcolor color, const CoordinateSystem coordFlag)']]],
   ['aeriallidarcloud_907',['AerialLiDARcloud',['../class_aerial_li_d_a_rcloud.html#acbcca37e844dc4e5e72c703c619d8962',1,'AerialLiDARcloud']]],
   ['aerialscanmetadata_908',['AerialScanMetadata',['../struct_aerial_scan_metadata.html#a7335ab6e76b88c50520e3fd205d4c575',1,'AerialScanMetadata']]],
-  ['approxsame_909',['approxSame',['../class_voxel_intersection.html#a7b67a822c84c1086e3d0a8e05114c4bc',1,'VoxelIntersection']]],
+  ['approxsame_909',['approxSame',['../class_voxel_intersection.html#a7b67a822c84c1086e3d0a8e05114c4bc',1,'VoxelIntersection::approxSame(float a, float b, float absTol, float relTol)'],['../class_voxel_intersection.html#af78fea330c0c2e38e3a02db732ed7dd7',1,'VoxelIntersection::approxSame(helios::vec3 a, helios::vec3 b, float absTol)']]],
   ['asin_5fsafe_910',['asin_safe',['../global_8h.html#ac400d6d37ff2494ec592a9f0a17ee9ab',1,'helios']]],
   ['atan2_5f2pi_911',['atan2_2pi',['../group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54',1,'helios']]]
 ];

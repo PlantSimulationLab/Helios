@@ -4253,15 +4253,43 @@ Voxel::Voxel( const RGBAcolor _color_, const uint _UUID_ ){
 
 float Voxel::getVolume(void){
   
-  return transform[0]*transform[5]*transform[10];
+  vec3 size = getSize();
+
+  return size.x*size.y*size.z;
 }
 
 vec3 Voxel::getCenter(void){
-  return make_vec3(transform[3],transform[7],transform[11]);
+
+  vec3 center;
+  vec3 Y;
+  Y.x = 0.f;
+  Y.y = 0.f;
+  Y.z = 0.f;
+
+  center.x = transform[0] * Y.x + transform[1] * Y.y + transform[2] * Y.z + transform[3];
+  center.y = transform[4] * Y.x + transform[5] * Y.y + transform[6] * Y.z + transform[7];
+  center.z = transform[8] * Y.x + transform[9] * Y.y + transform[10] * Y.z + transform[11];
+
+  return center;
+
 }
 
 vec3 Voxel::getSize(void){
-  return make_vec3(transform[0],transform[5],transform[10]);
+
+  vec3 n0(0,0,0), nx(1,0,0), ny(0,1,0), nz(0,0,1);
+  vec3 n0_T, nx_T, ny_T, nz_T;
+
+  vecmult(transform,n0,n0_T);
+  vecmult(transform,nx,nx_T);
+  vecmult(transform,ny,ny_T);
+  vecmult(transform,nz,nz_T);
+
+  float x = (nx_T-n0_T).magnitude();
+  float y = (ny_T-n0_T).magnitude();
+  float z = (nz_T-n0_T).magnitude();
+  
+  return make_vec3(x,y,z);
+  
 }
 
 void Context::setDate( int day, int month, int year ){
@@ -4761,6 +4789,8 @@ uint Context::copyPrimitive( const uint UUID ){
   }
 
   PrimitiveType type = primitives.at(UUID)->getType();
+  uint parentID = primitives.at(UUID)->getParentObjectID();
+  bool textureoverride = primitives.at(UUID)->isTextureColorOverridden();
 
   if( type==PRIMITIVE_TYPE_PATCH ){
     Patch* p = getPatchPointer(UUID);
@@ -4781,7 +4811,7 @@ uint Context::copyPrimitive( const uint UUID ){
     float transform[16];
     p->getTransformationMatrix(transform);
     patch_new->setTransformationMatrix(transform);
-    patch_new->setParentObjectID(0);
+    patch_new->setParentObjectID(parentID);
     primitives[currentUUID] = patch_new;
   }else if( type==PRIMITIVE_TYPE_TRIANGLE ){
     Triangle* p = getTrianglePointer(UUID);
@@ -4798,7 +4828,7 @@ uint Context::copyPrimitive( const uint UUID ){
     float transform[16];
     p->getTransformationMatrix(transform);
     tri_new->setTransformationMatrix(transform);
-    tri_new->setParentObjectID(0);
+    tri_new->setParentObjectID(parentID);
     primitives[currentUUID] = tri_new;
   }else if( type==PRIMITIVE_TYPE_VOXEL ){
     Voxel* p = getVoxelPointer(UUID);
@@ -4812,64 +4842,14 @@ uint Context::copyPrimitive( const uint UUID ){
     float transform[16];
     p->getTransformationMatrix(transform);
     voxel_new->setTransformationMatrix(transform);
-    voxel_new->setParentObjectID(0);
+    voxel_new->setParentObjectID(parentID);
     primitives[currentUUID] = voxel_new;
   }
 
-  //copy the primitive data
-  std::vector<std::string> plabel = getPrimitivePointer(UUID)->listPrimitiveData();
-  for( uint p=0; p<plabel.size(); p++ ){
+  copyPrimitiveData( UUID, currentUUID );
 
-    HeliosDataType type = getPrimitiveDataType( UUID, plabel.at(p).c_str() );
-
-    if( type==HELIOS_TYPE_INT ){
-      std::vector<int> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_INT, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_UINT ){
-      std::vector<uint> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_UINT, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_FLOAT ){
-      std::vector<float> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_FLOAT, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_DOUBLE ){
-      std::vector<double> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_DOUBLE, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_VEC2 ){
-      std::vector<vec2> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_VEC2, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_VEC3 ){
-      std::vector<vec3> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_VEC3, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_VEC4 ){
-      std::vector<vec4> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_VEC4, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_INT2 ){
-      std::vector<int2> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_INT2, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_INT3 ){
-      std::vector<int3> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_INT3, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_INT4 ){
-      std::vector<int4> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_INT4, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_STRING ){
-      std::vector<std::string> pdata;
-      getPrimitiveData( UUID, plabel.at(p).c_str(), pdata );
-      setPrimitiveData( currentUUID, plabel.at(p).c_str(), HELIOS_TYPE_STRING, pdata.size(), &pdata.at(0) );
-    }else{
-      assert(false);
-    }
-    
+  if( textureoverride ){
+    getPrimitivePointer(currentUUID)->overrideTextureColor();
   }
   
   markGeometryDirty();
@@ -6451,6 +6431,9 @@ uint Context::copyObject( const uint ObjID ){
   std::vector<uint> UUIDs = getObjectPointer(ObjID)->getPrimitiveUUIDs();
   
   std::vector<uint> UUIDs_copy = copyPrimitive( UUIDs );
+  for( size_t p=0; p<UUIDs_copy.size(); p++ ){
+    getPrimitivePointer(UUIDs_copy.at(p))->setParentObjectID( currentObjectID );
+  }
   
   if( type==OBJECT_TYPE_TILE ){
     
@@ -6527,6 +6510,11 @@ uint Context::copyObject( const uint ObjID ){
     objects[currentObjectID] = cone_new;
 
   }
+
+  float T[16];
+  getObjectPointer( ObjID )->getTransformationMatrix( T );
+
+  getObjectPointer( currentObjectID )->setTransformationMatrix( T );
 
    
   markGeometryDirty();
@@ -6772,7 +6760,15 @@ std::vector<float> Tube::getNodeRadii( void ) const{
   std::vector<float> radius_T;
   radius_T.resize(radius.size());
   for( int i=0; i<radius.size(); i++ ){
-    radius_T.at(i) = radius.at(i)*transform[0];
+
+    vec3 n0(0,0,0), nx(radius.at(i),0,0);
+    vec3 n0_T, nx_T;
+        
+    vecmult(transform,n0,n0_T);
+    vecmult(transform,nx,nx_T);
+        
+    radius_T.at(i) = (nx_T-n0_T).magnitude();
+    
   }
   return radius_T; 
 }
@@ -7035,7 +7031,15 @@ std::vector<float> Cone::getNodeRadii( void ) const{
     std::vector<float> radii_T;
     radii_T.resize(2);
     for( int i=0; i<2; i++ ){
-        radii_T.at(i) = radii.at(i)*transform[0];
+
+      vec3 n0(0,0,0), nx(radii.at(i),0,0);
+      vec3 n0_T, nx_T;
+        
+      vecmult(transform,n0,n0_T);
+      vecmult(transform,nx,nx_T);
+      
+      radii_T.at(i) = (nx_T-n0_T).magnitude();
+
     }
     return radii_T; 
 }
@@ -7045,8 +7049,14 @@ float Cone::getNodeRadius( int number ) const{
         std::cerr << "getNodeRadius ERROR: node number must be 0 or 1." << std::endl;
         throw(1);
     }
-    float radius_T = radii.at(number)*transform[0];
-    return radius_T; 
+
+    vec3 n0(0,0,0), nx(radii.at(number),0,0);
+    vec3 n0_T, nx_T;
+    
+    vecmult(transform,n0,n0_T);
+    vecmult(transform,nx,nx_T);
+    
+    return (nx_T-n0_T).magnitude();
 }
 
 uint Cone::getSubdivisionCount( void ) const{

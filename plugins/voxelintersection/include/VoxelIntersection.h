@@ -84,7 +84,15 @@ class VoxelIntersection{
     \param[in] "relTol" relative tolerance for comparison
     \return boolean true if absolute difference between a and b is within absolute or relative tolerances
     */
-    bool approxSame(float a, float b, float absTol, float relTol);  
+    bool approxSame(float a, float b, float absTol, float relTol);
+
+    //! compare two vec3's to within an absolute and relative error tolerance
+    /** \param[in] "a" first vec3 to be compared
+     \param[in] "b" second vec3  to be compared
+     \param[in] "absTol" absolute tolerance for comparison
+     \return boolean true if absolute difference between each element of a and b is within the absolute tolerance
+     */
+    bool approxSame(helios::vec3 a, helios::vec3 b, float absTol);  
 
  private:
 

@@ -41,6 +41,7 @@ int VoxelIntersection::selfTest( void ){
     std::cout << "Running Test 1: patch with no slices..." << std::flush;
   }
   VoxelIntersection vi_1(&context_1);
+  vi_1.disableMessages();
   
   //create single patch
   vec3 center_1 = make_vec3(0.0,0.0,0.0);
@@ -67,6 +68,7 @@ int VoxelIntersection::selfTest( void ){
   Context context_2;
     
   VoxelIntersection vi_2(&context_2);
+  vi_2.disableMessages();
     
   //create single patch
   vec3 center_2 = make_vec3(0.0,0.0,0.0);
@@ -96,6 +98,7 @@ int VoxelIntersection::selfTest( void ){
   Context context_3;
   
   VoxelIntersection vi_3(&context_3);
+  vi_3.disableMessages();
   
   //create single patch
   vec3 center_3 = make_vec3(0.0,0.0,0.0);
@@ -124,6 +127,7 @@ int VoxelIntersection::selfTest( void ){
   Context context_4;
   
   VoxelIntersection vi_4(&context_4);
+  vi_4.disableMessages();
   
   //create single patch
   vec3 center_4 = make_vec3(0.05,0.05,0.05);
@@ -164,6 +168,7 @@ int VoxelIntersection::selfTest( void ){
   }
   Context context_5;
   VoxelIntersection vi_5(&context_5);
+  vi_5.disableMessages();
   
   for(uint i=0;i<100;i++)
     {
@@ -215,6 +220,7 @@ int VoxelIntersection::selfTest( void ){
   }
   Context context_6;
   VoxelIntersection vi_6(&context_6);
+  vi_6.disableMessages();
   
   for(uint i=0;i<100;i++)
     {
@@ -259,9 +265,101 @@ int VoxelIntersection::selfTest( void ){
   }
 
   //////////////////////////////////////////////////////////////////////////////////////
+  //------ many non-textured patches, check total area is consistent ------//
+  if( printmessages ){
+      std::cout << "Running Test 7: cropping non-textured primitives..." << std::flush;
+  }
+  Context context_7;
+  VoxelIntersection vi_7(&context_7);
+  vi_7.disableMessages();
+  
+  for(uint i=0;i<100;i++)
+  {
+      SphericalCoord rotation_7 = make_SphericalCoord(M_PI*randu(),M_PI*randu());
+      context_7.addPatch( make_vec3(randu(),randu(),randu()), make_vec2(0.05, 0.05), rotation_7);
+  }
+  
+  helios::vec3 grid_center_7 =  make_vec3(0.5,0.5,0.5);
+  helios::vec3 grid_size_7 = make_vec3(1,1,1);
+  helios::int3 grid_divisions_7 = make_int3(4,4,4);
+  
+  std::vector<uint> allUUIDs_7 = context_7.getAllUUIDs();
+  
+  std::vector<uint> s1_7 = vi_7.slicePrimitivesUsingGrid(allUUIDs_7, grid_center_7, grid_size_7, grid_divisions_7);
+  std::vector<std::vector<uint>> cell_primitives_7 = vi_7.getCellPrimitives();
+  
+  
+  uint UUIDs_in_cells_7 = 0;
+  for(uint i=0;i<s1_7.size();i++)
+  {
+      int cell_ID_7;
+      context_7.getPrimitiveData(s1_7.at(i), "cell_ID", cell_ID_7);
+      if(cell_ID_7 != -1){UUIDs_in_cells_7 ++;}
+  }
+  
+  
+  context_7.cropDomain(make_vec2(grid_center_7.x - grid_size_7.x*0.5 , grid_center_7.x + grid_size_7.x*0.5 ),make_vec2(grid_center_7.y - grid_size_7.y*0.5 , grid_center_7.y + grid_size_7.y*0.5 ),make_vec2(grid_center_7.z - grid_size_7.z*0.5 , grid_center_7.z + grid_size_7.z*0.5 ));
+  
+  
+  std::vector<uint> UUIDs_after_crop_7 = context_7.getAllUUIDs();
+  
+  if( UUIDs_after_crop_7.size() == UUIDs_in_cells_7)
+  {
+      std::cout << "passed: number of primitives after cropping matches number in grid cells" << std::endl;
+  }else{
+      error_count ++;
+      std::cerr << "failed: number of primitives after cropping doesn't match number in grid cells: " << UUIDs_after_crop_7.size() << " vs. " << UUIDs_in_cells_7 << std::endl;
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////
+  //------ many textured patches, check number of primitives in cells matches number after cropping ------//
+  if( printmessages ){
+      std::cout << "Running Test 8: cropping textured primitives..." << std::flush;
+  }
+  Context context_8;
+  VoxelIntersection vi_8(&context_8);
+  vi_8.disableMessages();
+  for(uint i=0;i<100;i++)
+  {
+      SphericalCoord rotation_8 = make_SphericalCoord(M_PI*randu(),M_PI*randu());
+      context_8.addPatch( make_vec3(randu(),randu(),randu()), make_vec2(0.05, 0.05), rotation_8, "../../../plugins/visualizer/textures/GrapeLeaf.png", make_vec2(0.5, 0.5), make_vec2(1,1) );
+      
+  }
+  
+  helios::vec3 grid_center_8 =  make_vec3(0.5,0.5,0.5);
+  helios::vec3 grid_size_8 = make_vec3(1,1,1);
+  helios::int3 grid_divisions_8 = make_int3(4,4,4);
+  
+  std::vector<uint> allUUIDs_8 = context_8.getAllUUIDs();
+  
+  std::vector<uint> s1_8 = vi_8.slicePrimitivesUsingGrid(allUUIDs_8, grid_center_8, grid_size_8, grid_divisions_8);
+  std::vector<std::vector<uint>> cell_primitives_8 = vi_8.getCellPrimitives();
+  
+  
+  uint UUIDs_in_cells_8 = 0;
+  for(uint i=0;i<s1_8.size();i++)
+  {
+      int cell_ID_8;
+      context_8.getPrimitiveData(s1_8.at(i), "cell_ID", cell_ID_8);
+      if(cell_ID_8 != -1){UUIDs_in_cells_8 ++;}
+  }
+  
+  context_8.cropDomain(make_vec2(grid_center_8.x - grid_size_8.x*0.5 , grid_center_8.x + grid_size_8.x*0.5 ),make_vec2(grid_center_8.y - grid_size_8.y*0.5 , grid_center_8.y + grid_size_8.y*0.5 ),make_vec2(grid_center_8.z - grid_size_8.z*0.5 , grid_center_8.z + grid_size_8.z*0.5 ));
+  
+  std::vector<uint> UUIDs_after_crop_8 = context_8.getAllUUIDs();
+  
+  if( UUIDs_after_crop_8.size() == UUIDs_in_cells_8)
+  {
+      std::cout << "passed: number of primitives after cropping matches number in grid cells" << std::endl;
+  }else{
+      error_count ++;
+      std::cerr << "failed: number of primitives after cropping doesn't match number in grid cells: " << UUIDs_after_crop_8.size() << " vs. " << UUIDs_in_cells_8 << std::endl;
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////
   //------ Voxel-patch intersection test ------//
   if( printmessages ){
-    std::cout << "Running Test 7: intersection of voxels and patches..." << std::flush;
+    std::cout << "Running Test 9: intersection of voxels and patches..." << std::flush;
   }
 
 
@@ -395,25 +493,22 @@ helios::vec3 VoxelIntersection::linesIntersection(helios::vec3 line1_point, heli
 std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helios::vec3> voxel_face_vertices)
 {
     
-    std::vector<uint> resulting_UUIDs;
-    
-    if(voxel_face_vertices.size() < 3)
+   if(voxel_face_vertices.size() < 3)
     {
         std::cerr << "ERROR (slicePrimitive): voxel_face_verticies must contain at least three points" << std::endl;
         throw(1); 
     }
+    
     helios::vec3 face_normal = cross(voxel_face_vertices.at(1) - voxel_face_vertices.at(0), voxel_face_vertices.at(2) - voxel_face_vertices.at(1));
-
     face_normal.normalize();
-
     
     std::vector<helios::vec3> patch_vertices = context->getPrimitivePointer(UUID)->getVertices();
-
-    
     helios::vec3 patch_normal = context->getPrimitivePointer(UUID)->getNormal();
-
     patch_normal.normalize();
 
+    //BNB
+    helios::RGBAcolor patch_color = context->getPrimitivePointer(UUID)->getColorRGBA();
+    
     bool patchHasTexture = context->getPrimitivePointer(UUID)->hasTexture();
     std::string texa;
     const char * tex;
@@ -423,11 +518,11 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
     }
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // find the equation of the line where the patch and voxel face intersect
+    // find the equation of the line where the planes of the patch and voxel face intersect
     
     // direction of the plane intersection line
     helios::vec3 direction_vector = cross(face_normal, patch_normal); 
-
+    
     // find a point on the plane intersection line
     // based on https://vicrucann.github.io/tutorials/3d-geometry-algorithms/
     helios::vec3 a = helios::make_vec3(fabs(direction_vector.x),  fabs(direction_vector.y), fabs(direction_vector.z));
@@ -474,7 +569,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
     }
     
     helios::vec3  ipoint = make_vec3(xi, yi, zi);
-
+    
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     // get points of intersection between each edge of the patch and the patch-voxel intersection line
     
@@ -518,12 +613,11 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             bool test_x = ( (possible_points.at(i).x >= vi1.x && possible_points.at(i).x <= vi0.x) || (possible_points.at(i).x >= vi0.x && possible_points.at(i).x <= vi1.x) ); 
             bool test_y = ( (possible_points.at(i).y >= vi1.y && possible_points.at(i).y <= vi0.y) || (possible_points.at(i).y >= vi0.y && possible_points.at(i).y <= vi1.y) ); 
             bool test_z = ( (possible_points.at(i).z >= vi1.z && possible_points.at(i).z <= vi0.z) || (possible_points.at(i).z >= vi0.z && possible_points.at(i).z <= vi1.z) ); 
-
+            
             if( test_x && test_y && test_z){
                 actual_points.push_back(possible_points.at(i)); 
                 actual_points_edge_ID.push_back(i); 
             }
-            
         }  
         
     }else if(patch_vertices.size() == 3){
@@ -560,181 +654,284 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         
     }
     
+    //vector UUIDs that will be output
+    std::vector<uint> resulting_UUIDs;
     
+    // the primitive did not intersect with the voxel face
     if(actual_points.size() == 0){
         resulting_UUIDs.push_back(UUID);
         return resulting_UUIDs;
     }
-
+    
+    // the primitive intersected with the face at a single point (a corner) - no slicing needed
     if(actual_points.size() == 1){
         resulting_UUIDs.push_back(UUID);
+        if(printmessages){
+            std::cout << "the primitive intersected with the face at a single point (a corner) - no slicing needed" << std::endl;
+        }
         return resulting_UUIDs;
     }
     
+    // the primitive intersected with the face along an edge - no need to slice
     if(actual_points_edge_ID.at(0) == actual_points_edge_ID.at(1)){
         resulting_UUIDs.push_back(UUID);
+        if(printmessages){
+            std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
+        }
         return resulting_UUIDs;
-
     }
     
+    float absTol = pow(10, -6);
+    float relTol = pow(10, -20);
     
     if(patch_vertices.size() == 4)
     {
-        if((actual_points.at(0) == patch_vertices.at(0) && actual_points.at(1) == patch_vertices.at(1)) ||
-           (actual_points.at(0) == patch_vertices.at(1) && actual_points.at(1) == patch_vertices.at(0)) ||
-           (actual_points.at(0) == patch_vertices.at(1) && actual_points.at(1) == patch_vertices.at(2)) ||
-           (actual_points.at(0) == patch_vertices.at(2) && actual_points.at(1) == patch_vertices.at(1)) ||
-           (actual_points.at(0) == patch_vertices.at(2) && actual_points.at(1) == patch_vertices.at(3)) ||
-           (actual_points.at(0) == patch_vertices.at(3) && actual_points.at(1) == patch_vertices.at(2)) ||
-           (actual_points.at(0) == patch_vertices.at(3) && actual_points.at(1) == patch_vertices.at(0)) ||
-           (actual_points.at(0) == patch_vertices.at(0) && actual_points.at(1) == patch_vertices.at(3)) ){
-            
+        if((approxSame(actual_points.at(0), patch_vertices.at(0), absTol) && approxSame(actual_points.at(1), patch_vertices.at(1), absTol))  ||
+           (approxSame(actual_points.at(0), patch_vertices.at(1), absTol) && approxSame(actual_points.at(1), patch_vertices.at(0), absTol)) ||
+           (approxSame(actual_points.at(0), patch_vertices.at(1), absTol) && approxSame(actual_points.at(1), patch_vertices.at(2), absTol)) ||
+           (approxSame(actual_points.at(0), patch_vertices.at(2), absTol) && approxSame(actual_points.at(1), patch_vertices.at(1), absTol)) ||
+           (approxSame(actual_points.at(0), patch_vertices.at(2), absTol) && approxSame(actual_points.at(1), patch_vertices.at(3), absTol)) ||
+           (approxSame(actual_points.at(0), patch_vertices.at(3), absTol) && approxSame(actual_points.at(1), patch_vertices.at(2), absTol)) ||
+           (approxSame(actual_points.at(0), patch_vertices.at(3), absTol) && approxSame(actual_points.at(1), patch_vertices.at(0), absTol)) ||
+           (approxSame(actual_points.at(0), patch_vertices.at(0), absTol) && approxSame(actual_points.at(1), patch_vertices.at(3), absTol)) )
+        {
+            if(printmessages){
+                std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
+            }
             resulting_UUIDs.push_back(UUID);
             return resulting_UUIDs;
-
         }
- 
+        
     }else if(patch_vertices.size() == 3){
         
-        if((actual_points.at(0) == patch_vertices.at(0) || actual_points.at(0) == patch_vertices.at(1) ||  actual_points.at(0) == patch_vertices.at(2)) &&
-           (actual_points.at(1) == patch_vertices.at(0) || actual_points.at(1) == patch_vertices.at(1) ||  actual_points.at(1) == patch_vertices.at(2)) ){
+        if((approxSame(actual_points.at(0), patch_vertices.at(0), absTol) || approxSame(actual_points.at(0), patch_vertices.at(1), absTol) ||
+           approxSame(actual_points.at(0), patch_vertices.at(2), absTol)) && 
+           (approxSame(actual_points.at(1), patch_vertices.at(0), absTol) || approxSame(actual_points.at(1), patch_vertices.at(1), absTol) ||
+           approxSame(actual_points.at(1), patch_vertices.at(2), absTol))){
             resulting_UUIDs.push_back(UUID);
+            if(printmessages){
+                std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
+            }
             return resulting_UUIDs;
-
         } 
-        
     }
     
-
     
-    // //added primitives
-    // std::vector<uint> addedPrimitives;
     
+    
+    
+    
+    
+    
+    //determine which side of the plane vertex 0 is on and use that to determine the sign of the buffer to add to the face coordinate
+    // the buffer ensures that the vertices will be categorized into grid cells correctly
+    // note that some of these checks are based on the assumption of a axis aligned grid - would need to be re-worked if implementing rotated grid
+    
+    helios::vec3 face_coordinate = make_vec3(fabs(face_normal.x)*voxel_face_vertices.at(0).x,fabs(face_normal.y)*voxel_face_vertices.at(0).y, fabs(face_normal.z)*voxel_face_vertices.at(0).z) ;
+    float buffer_value = powf(float(10), float(-6));
+    helios::vec3 buffer = make_vec3(0,0,0);
+    if(fabs(face_normal.x) > 0.5)
+    {
+        if(patch_vertices.at(0).x < face_coordinate.x)
+        {
+            buffer = make_vec3(float(-1)*buffer_value, 0, 0);
+        }else if(patch_vertices.at(0).x > face_coordinate.x){
+            buffer = make_vec3(buffer_value, 0, 0);
+        }else{
+            if(printmessages){
+                std::cout << "vertex 0 exactly at face" << std::endl;
+            }
+        }
+        
+    }else if(fabs(face_normal.y) > 0.5){
+        if(patch_vertices.at(0).y < face_coordinate.y )
+        {
+            buffer = make_vec3( 0,float(-1)*buffer_value, 0);
+        }else if(patch_vertices.at(0).y > face_coordinate.y){
+            buffer = make_vec3( 0,buffer_value, 0);
+        }else{
+            if(printmessages){
+                std::cout << "vertex 0 exactly at face" << std::endl;
+            }
+        }
+        
+    }else if(fabs(face_normal.z) > 0.5){
+        if(patch_vertices.at(0).z < face_coordinate.z )
+        {
+            buffer = make_vec3( 0, 0, float(-1)*buffer_value);
+        }else if(patch_vertices.at(0).z > face_coordinate.z){
+            buffer = make_vec3(0, 0, buffer_value);
+        } else{
+            if(printmessages){
+                std::cout << "vertex 0 exactly at face" << std::endl;
+            }
+        }
+    }
+    
+    // UUIDs for triangles to be created below
     uint t0;
     uint t1;
     uint t2;
     uint t3;
     
+    //if a resulting triangle area is below this value, delete it
+    float minArea = pow(10, -13);
+    
     /////////////////////////////////////////////////////////////////////////////////////////////
     // if the primitive isn't texture masked
     if(patchHasTexture == false){
-    
+        
         if(patch_vertices.size() == 4)
         {
             //cases where intersection points are on opposite sides
             if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 2))
             {
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(3));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(2));
+	      t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 0)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(3));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(2));
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 3)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(2), patch_vertices.at(3));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(1));
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(3) - buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(2) - buffer, patch_vertices.at(3) - buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 3 && actual_points_edge_ID.at(1) == 1)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(2), patch_vertices.at(3));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(1));
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(3) - buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_vertices.at(3) - buffer, patch_color);
                 //cases where intersection points are on adjacent sides
             }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 3)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2)); //****
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(2));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(2), patch_vertices.at(3));
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_vertices.at(3) - buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 3 && actual_points_edge_ID.at(1) == 0)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2)); //****
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(2));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(2), patch_vertices.at(3));//****
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(2) - buffer, patch_vertices.at(3) - buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 1)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(2), patch_vertices.at(3));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(3));
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(3) + buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(2) + buffer, patch_vertices.at(3) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 0)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(2), patch_vertices.at(3));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(3));
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(3) + buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(2) + buffer, patch_vertices.at(3) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 2)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(3));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(1));
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 1)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(3));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(1));
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 3 && actual_points_edge_ID.at(1) == 2)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(1));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(2));
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(3) - buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(2) + buffer, patch_color);
             }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 3)){
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(1));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(2));
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(3) - buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, patch_color);
+                t3 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(2) + buffer, patch_color);
             }
             
-            resulting_UUIDs.push_back(t0);
-            resulting_UUIDs.push_back(t1);
-            resulting_UUIDs.push_back(t2);
-            resulting_UUIDs.push_back(t3);
+            //delete triangles with area of zero, otherwise add to resulting_UUIDs vector
+            if(context->getPrimitivePointer(t0)->getArea() < minArea)
+            {
+                context->deletePrimitive(t0); 
+            }else{
+                resulting_UUIDs.push_back(t0);
+            }
+            if(context->getPrimitivePointer(t1)->getArea() < minArea)
+            {
+                context->deletePrimitive(t1); 
+            }else{
+                resulting_UUIDs.push_back(t1);
+            }
+            if(context->getPrimitivePointer(t2)->getArea() < minArea)
+            {
+                context->deletePrimitive(t2); 
+            }else{
+                resulting_UUIDs.push_back(t2);
+            }
+            if(context->getPrimitivePointer(t3)->getArea() < minArea)
+            {
+                context->deletePrimitive(t3); 
+            }else{
+                resulting_UUIDs.push_back(t3);
+            }
             
             
         }else if( patch_vertices.size() == 3){
-           
-           if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 1))
-           {
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-               t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(2));
-           }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 0)){
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-               t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(2));
-           }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 2)){
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-               t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(2));
-           }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 0)){
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-               t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(2));
-           }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 2)){
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-               t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(0));
-           }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 1)){
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2));
-               t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(0));
-           }
-           
-           resulting_UUIDs.push_back(t0);
-           resulting_UUIDs.push_back(t1);
-           resulting_UUIDs.push_back(t2);
-           
-   
+            
+            if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 1))
+            {
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(2) + buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(2) + buffer, patch_color);
+            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 0)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(2) + buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(2) + buffer, patch_color);
+            }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 2)){
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+            }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 0)){
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+                t2 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
+            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 2)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);//
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);//
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+            }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 1)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);//
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);//
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+            }
+            
+            
+            //delete triangles with area of zero, otherwise add to resulting_UUIDs vector
+            if(context->getPrimitivePointer(t0)->getArea() < minArea)
+            {
+                context->deletePrimitive(t0); 
+            }else{
+                resulting_UUIDs.push_back(t0);
+            }
+            if(context->getPrimitivePointer(t1)->getArea() < minArea)
+            {
+                context->deletePrimitive(t1); 
+            }else{
+                resulting_UUIDs.push_back(t1);
+            }
+            if(context->getPrimitivePointer(t2)->getArea() < minArea)
+            {
+                context->deletePrimitive(t2); 
+            }else{
+                resulting_UUIDs.push_back(t2);
+            }
+            
         }
-    
+        
         
     }else if(patchHasTexture){
         
         //////////////////////////////////////////////////////////////////////////////////////////////
         // rotate patch vertices and intersection points into the x-y plane for purposes of calculating uv coordinates 
-        
-        
         helios::vec3 xy = make_vec3(0,0,1);
         helios::vec3 line_direction = cross(patch_normal, xy);
         std::vector<helios::vec3> rotated_actual_points_t = actual_points;
@@ -742,7 +939,6 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         
         if(line_direction == make_vec3(0,0,0))
         {
-            
         }else{
             
             float theta = acos_safe((patch_normal.z*xy.z)/(patch_normal.magnitude())*xy.magnitude());
@@ -757,17 +953,15 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             }  
             
         }
-
         
         //get uv coordinates of the vertices
         std::vector<helios::vec2> v_uv = context->getPrimitivePointer(UUID)->getTextureUV();
         std::vector<helios::vec3> v_v = context->getPrimitivePointer(UUID)->getVertices();
-
         
         //get uv coordinates of the intersection points
         std::vector<helios::vec2> ip_uv;
         ip_uv.resize(2);
-
+        
         if(patch_vertices.size() == 4)
         {
             for(uint i=0;i<rotated_actual_points_t.size();i++)
@@ -801,12 +995,11 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                     point_1uv = v_uv.at(0);
                 }
                 
-                float absTol = 0.000000001;
-                float relTol = 0.00000000000000001;
+                float absTol = pow(10, -9);
+                float relTol = pow(10, -20);
                 
                 if(approxSame(point_1.x, point_0.x, absTol, relTol))
                 {
-                  
                     point_uv.x =  point_0uv.x;
                 }else{
                     point_uv.x =  point_0uv.x + (rotated_actual_points_t.at(i).x - point_0.x)/(point_1.x - point_0.x)*(point_1uv.x-point_0uv.x);
@@ -820,17 +1013,16 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 }
                 
                 ip_uv.at(i) = point_uv;
-                
             }
-           
+            
         }else if(patch_vertices.size() == 3){
-
+            
             for(uint i=0;i<rotated_actual_points_t.size();i++)
             {
                 //vectors to hold point coordinates and uv coordinates for the points on the current point's edge
                 helios::vec3 point_0;
                 helios::vec3 point_1;
-
+                
                 helios::vec2 point_0uv;
                 helios::vec2 point_1uv;
                 helios::vec2 point_uv;
@@ -853,8 +1045,8 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                     point_1uv = v_uv.at(0);
                 }
                 
-                float absTol = 0.000000001;
-                float relTol = 0.000000000000000000001;
+                float absTol = pow(10, -9);
+                float relTol = pow(10, -20);
                 
                 if(approxSame(point_1.x, point_0.x, absTol, relTol))
                 {
@@ -871,148 +1063,163 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 }
                 
                 ip_uv.at(i) = point_uv;
-
             }
         }
         
         if(patch_vertices.size() == 4)
         {
             //cases where intersection points are on opposite sides
-            if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 2))//checked
+            if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 2))
             {
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(3), tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(3));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(2), tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(2));
-                
-            }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 0)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(3), tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(3));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(2), tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(2));
-                
-            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 3)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(2), patch_vertices.at(3), tex, ip_uv.at(0), v_uv.at(2) ,v_uv.at(3));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(1), tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(1));
-                
-            }else if((actual_points_edge_ID.at(0) == 3 && actual_points_edge_ID.at(1) == 1)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(2), patch_vertices.at(3), tex, ip_uv.at(1), v_uv.at(2) ,v_uv.at(3));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(1), tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(1));
-                
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer,  patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(3));
+                t3 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(2));
+            }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 0)){
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(3));
+                t3 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(2));
+            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 3)){
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(3) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(1));
+                t3 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(2) - buffer, patch_vertices.at(3) - buffer, tex, ip_uv.at(0), v_uv.at(2) ,v_uv.at(3));
+            }else if((actual_points_edge_ID.at(0) == 3 && actual_points_edge_ID.at(1) == 1)){
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(3) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(1));
+                t3 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_vertices.at(3) - buffer, tex, ip_uv.at(1), v_uv.at(2) ,v_uv.at(3));
                 //cases where intersection points are on adjacent sides
-            }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 3)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(2), tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(2));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(2), patch_vertices.at(3), tex, ip_uv.at(1), v_uv.at(2) ,v_uv.at(3));
-                
-            }else if((actual_points_edge_ID.at(0) == 3 && actual_points_edge_ID.at(1) == 0)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(2), tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(2));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(2), patch_vertices.at(3), tex, ip_uv.at(0), v_uv.at(2) ,v_uv.at(3));
-                
-            }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 1)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(2), patch_vertices.at(3), tex, ip_uv.at(1), v_uv.at(2) ,v_uv.at(3));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(3), tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(3));
-                
-            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 0)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(2), patch_vertices.at(3), tex, ip_uv.at(0), v_uv.at(2) ,v_uv.at(3));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(3), tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(3));
-                
-            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 2)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(3), tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(3));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(1), tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(1));
-                
-            }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 1)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(3), tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(3));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(1), tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(1));
-                
-            }else if((actual_points_edge_ID.at(0) == 3 && actual_points_edge_ID.at(1) == 2)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
-                t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(1), tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(1));
-                t3 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(2), tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(2));
-                
+            }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 3)){
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(2));
+                t3 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_vertices.at(3) - buffer, tex, ip_uv.at(1), v_uv.at(2) ,v_uv.at(3));
+            }else if((actual_points_edge_ID.at(0) == 3 && actual_points_edge_ID.at(1) == 0)){
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(2));
+                t3 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(2) - buffer, patch_vertices.at(3) - buffer, tex, ip_uv.at(0), v_uv.at(2) ,v_uv.at(3));
+            }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 1)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(2) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(1), v_uv.at(2) ,v_uv.at(3));
+                t3 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(3));
+            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 0)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(2) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(0), v_uv.at(2) ,v_uv.at(3));
+                t3 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(3));
+            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 2)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(3));
+                t3 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(1));
+            }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 1)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(3));
+                t3 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(1));
+            }else if((actual_points_edge_ID.at(0) == 3 && actual_points_edge_ID.at(1) == 2)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(3) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(1));
+                t3 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(2) + buffer, tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(2));
             }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 3)){//checked
-                
-                t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(3), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
-                t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
-                t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(1), tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(1));
-                t3 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(2), tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(2));
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(3) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(1));
+                t3 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(2) + buffer, tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(2));
             } 
             
-            
-            resulting_UUIDs.push_back(t0);
-            resulting_UUIDs.push_back(t1);
-            resulting_UUIDs.push_back(t2);
-            resulting_UUIDs.push_back(t3);
-            
+            //delete triangles with area of zero, otherwise add to resulting_UUIDs vector
+            if(context->getPrimitivePointer(t0)->getArea() < minArea)
+            {
+                context->deletePrimitive(t0); 
+            }else{
+                resulting_UUIDs.push_back(t0);
+            }
+            if(context->getPrimitivePointer(t1)->getArea() < minArea)
+            {
+                context->deletePrimitive(t1); 
+            }else{
+                resulting_UUIDs.push_back(t1);
+            }
+            if(context->getPrimitivePointer(t2)->getArea() < minArea)
+            {
+                context->deletePrimitive(t2); 
+            }else{
+                resulting_UUIDs.push_back(t2);
+            }
+            if(context->getPrimitivePointer(t3)->getArea() < minArea)
+            {
+                context->deletePrimitive(t3); 
+            }else{
+                resulting_UUIDs.push_back(t3);
+            }
             
         }else if(patch_vertices.size() == 3){
-           
-           //cases where intersection points are on opposite sides
-           if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 1))//checked
-           {
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-               t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(0), patch_vertices.at(2), tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(2));
-           }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 0)){//checked
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(1), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-               t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(0), patch_vertices.at(2), tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(2));
-           }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 2)){//checked
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-               t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(2), tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(2));
-           }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 0)){//checked
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-               t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(2), tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(2));
-           }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 2)){//checked
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-               t2 = context->addTriangle(actual_points.at(0), patch_vertices.at(1), patch_vertices.at(0), tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(0));
-           }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 1)){//checked
-               t0 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(0), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-               t1 = context->addTriangle(actual_points.at(0), actual_points.at(1), patch_vertices.at(2), tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-               t2 = context->addTriangle(actual_points.at(1), patch_vertices.at(1), patch_vertices.at(0), tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(0));//
-           }
-           
-           
-           resulting_UUIDs.push_back(t0);
-           resulting_UUIDs.push_back(t1);
-           resulting_UUIDs.push_back(t2);
-           
-           
+            
+            //cases where intersection points are on opposite sides
+            if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 1))
+            {
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(2) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(2) + buffer, tex, ip_uv.at(0), v_uv.at(0) ,v_uv.at(2));
+            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 0)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(2) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(2) + buffer, tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(2));
+            }else if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 2)){
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(2));
+            }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 0)){
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(2));
+            }else if((actual_points_edge_ID.at(0) == 1 && actual_points_edge_ID.at(1) == 2)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(0));
+            }else if((actual_points_edge_ID.at(0) == 2 && actual_points_edge_ID.at(1) == 1)){
+                t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
+                t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
+                t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(0));
+            }
+            
+            //delete triangles with area of zero, otherwise add to resulting_UUIDs vector
+            if(context->getPrimitivePointer(t0)->getArea() < minArea)
+            {
+                context->deletePrimitive(t0); 
+            }else{
+                resulting_UUIDs.push_back(t0);
+            }
+            if(context->getPrimitivePointer(t1)->getArea() < minArea)
+            {
+                context->deletePrimitive(t1); 
+            }else{
+                resulting_UUIDs.push_back(t1);
+            }
+            if(context->getPrimitivePointer(t2)->getArea() < minArea)
+            {
+                context->deletePrimitive(t2); 
+            }else{
+                resulting_UUIDs.push_back(t2);
+            }
         }
     }
     
     // copy over primitive data to the new triangles
     for(uint i=0;i<resulting_UUIDs.size();i++){
         context->copyPrimitiveData(UUID, resulting_UUIDs.at(i));
+	//BNB
+	uint parentID = context->getPrimitivePointer(UUID)->getParentObjectID();
+	context->getPrimitivePointer(resulting_UUIDs.at(i))->setParentObjectID(parentID);
+	if( context->getPrimitivePointer(UUID)->isTextureColorOverridden() ){
+	  context->getPrimitivePointer(resulting_UUIDs.at(i))->overrideTextureColor();
+	}
     }
     
     // delete the original primitive
@@ -1026,12 +1233,14 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         std::cout << "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\" << std::endl;
     }
     
-     return resulting_UUIDs;
+    return resulting_UUIDs;
 }
 
+//ERK
 std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> UUIDs, helios::vec3 grid_center, helios::vec3 grid_size, helios::int3 grid_divisions)
 {
-
+    
+    //set up the grid
     std::vector<std::vector<helios::vec3>> grid_face_vertices;
     helios::vec3 grid_min = make_vec3(grid_center.x - grid_size.x*0.5, grid_center.y - grid_size.y*0.5, grid_center.z - grid_size.z*0.5);
     helios::vec3 grid_max = make_vec3(grid_center.x + grid_size.x*0.5, grid_center.y + grid_size.y*0.5, grid_center.z + grid_size.z*0.5);
@@ -1046,7 +1255,6 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         this_face_vertices.push_back(make_vec3(grid_min.x + k*grid_spacing.x, grid_max.y, grid_min.z));
         this_face_vertices.push_back(make_vec3(grid_min.x + k*grid_spacing.x, grid_max.y, grid_max.z));
         grid_face_vertices.push_back(this_face_vertices);
-        
     }
     
     //faces in the x-z plane (change y)
@@ -1058,7 +1266,6 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_min.y + k*grid_spacing.y, grid_min.z));
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_min.y + k*grid_spacing.y, grid_max.z));
         grid_face_vertices.push_back(this_face_vertices); 
-        
     }
     
     //faces in the x-z plane (change y)
@@ -1070,82 +1277,50 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_min.y, grid_min.z + k*grid_spacing.z));
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_max.y, grid_min.z + k*grid_spacing.z));
         grid_face_vertices.push_back(this_face_vertices); 
-        
     }
     
-    std::vector<uint> UUIDs_to_slice = UUIDs;
-    std::vector<uint> primitives_to_remove;
-    std::vector<uint> primitives_to_add;
-    uint s1;
+    if( printmessages ){
+        std::cout << UUIDs.size() << " input primitives" << std::endl;
+        std::cout << grid_face_vertices.size() << " grid faces used for slicing" << std::endl;
+        std::cout << grid_divisions.x*grid_divisions.y*grid_divisions.z << " total grid cells" << std::endl;
+    }
     
-    //loop through each voxel face
-     for(uint i=0;i<grid_face_vertices.size();i++)
+    
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    // do an initial classification of primitives into grid cells based on if all their vertices fall into a given voxel
+    
+    cell_primitives.resize(grid_divisions.x*grid_divisions.y*grid_divisions.z + 1);
+    
+    //initially set all UUIDs as outside any voxel
+    context->setPrimitiveData(UUIDs, "cell_ID", int(-1));
+    
+    //vectors for UUIDs that do and do not need to be sliced
+    std::vector<uint> UUIDs_to_slice;
+    std::vector<uint> UUIDs_no_slice;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    for(uint p=0;p<UUIDs.size();p++)
     {
-        
-        for(uint j=0;j<UUIDs_to_slice.size();j++)
+        int cell_ID = 0;
+        bool flag = false;
+        for(uint k=0;k< (grid_divisions.z); k++)
         {
-            //slice
-            std::vector<uint> resulting_UUIDs;
-            resulting_UUIDs = slicePrimitive(UUIDs_to_slice.at(j), grid_face_vertices.at(i));
-            
-            //update the UUIDs_to_slice vector so it doesn't include deleted primitives (the originals that were split)
-            bool exists = context->doesPrimitiveExist(UUIDs_to_slice.at(j));
-
-            if(!exists)
+            for(uint j=0;j< (grid_divisions.y); j++)
             {
-                primitives_to_remove.push_back(j);
-                primitives_to_add.insert(primitives_to_add.end(), resulting_UUIDs.begin(), resulting_UUIDs.end());
-            }
-            
-        }
-        
-        
-        
-        for(int k=primitives_to_remove.size()-1; k>=0; k--)
-        {
-
-            UUIDs_to_slice.erase(UUIDs_to_slice.begin() + primitives_to_remove.at(k));
-        }
-        primitives_to_remove.clear();
-        
-        UUIDs_to_slice.insert( UUIDs_to_slice.end(), primitives_to_add.begin(), primitives_to_add.end() );
-        primitives_to_add.clear();
-        
-    }
-
-     // now go through and determine which voxel each primitive is in
-     // save the cell_ID as primitive data for the triangle
-     // save the primitive UUID to a vector of UUIDs that are in a given cell and save that 
-     
-     cell_primitives.resize(grid_divisions.x*grid_divisions.y*grid_divisions.z + 1);
-     
-     context->setPrimitiveData(UUIDs_to_slice, "cell_ID", int(-1));
-     
-     for(uint p=0;p<UUIDs_to_slice.size();p++)
-     {
-         int cell_ID = 0;
-         bool flag = false;
-         for(uint i=0;i< (grid_divisions.x); i++)
-         {
-             for(uint j=0;j< (grid_divisions.y); j++)
-             {
-                 for(uint k=0;k< (grid_divisions.z); k++)
-                 {
-                    helios::vec3 cell_min = make_vec3(grid_min.x + i*grid_spacing.x, grid_min.y + j*grid_spacing.y, grid_min.z + k*grid_spacing.z);
-                    helios::vec3 cell_max = make_vec3(grid_min.x + i*grid_spacing.x + grid_spacing.x, grid_min.y + j*grid_spacing.y + grid_spacing.y, grid_min.z + k*grid_spacing.z + grid_spacing.z);
- 
-                    std::vector<helios::vec3> verts = context->getPrimitivePointer(UUIDs_to_slice.at(p))->getVertices();
+                for(uint i=0;i< (grid_divisions.x); i++)
+                {
+                    helios::vec3 cell_min = make_vec3(grid_min.x + float(i)*grid_spacing.x, grid_min.y + float(j)*grid_spacing.y, grid_min.z + float(k)*grid_spacing.z);
+                    helios::vec3 cell_max = make_vec3(grid_min.x + float(i)*grid_spacing.x + grid_spacing.x, grid_min.y + float(j)*grid_spacing.y + grid_spacing.y, grid_min.z + float(k)*grid_spacing.z + grid_spacing.z);
+                    std::vector<helios::vec3> verts = context->getPrimitivePointer(UUIDs.at(p))->getVertices();
+                    
                     uint v_in = 0;
                     for(uint v=0;v<verts.size();v++)
                     {
-
-                        float absTol = 0.001;
-                        float relTol = 0.00000001;
-                        bool test2_x = (verts.at(v).x > cell_min.x || approxSame(verts.at(v).x, cell_min.x, absTol, relTol)) && (verts.at(v).x < cell_max.x || approxSame(verts.at(v).x, cell_max.x, absTol, relTol));
-                        bool test2_y = (verts.at(v).y > cell_min.y || approxSame(verts.at(v).y, cell_min.y, absTol, relTol)) && (verts.at(v).y < cell_max.y || approxSame(verts.at(v).y, cell_max.y, absTol, relTol));
-                        bool test2_z =  (verts.at(v).z > cell_min.z || approxSame(verts.at(v).z, cell_min.z, absTol, relTol)) && (verts.at(v).z < cell_max.z || approxSame(verts.at(v).z, cell_max.z, absTol, relTol)) ;
-
-
+                        
+                        bool test2_x = (verts.at(v).x >= cell_min.x) && (verts.at(v).x <= cell_max.x );
+                        bool test2_y = (verts.at(v).y >= cell_min.y ) && (verts.at(v).y <= cell_max.y );
+                        bool test2_z =  (verts.at(v).z >= cell_min.z ) && (verts.at(v).z <= cell_max.z ) ;
+                        
                         if( test2_x && test2_y && test2_z)
                         {
                             v_in ++;
@@ -1154,31 +1329,164 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
                     
                     if(v_in == verts.size())
                     {
- 
+                        //the UUID doesn't need to be sliced
+                        context->setPrimitiveData(UUIDs.at(p), "cell_ID", cell_ID);
+                        cell_primitives.at(cell_ID).push_back(UUIDs.at(p));
+                        UUIDs_no_slice.push_back(UUIDs.at(p));
+                        cell_ID ++;    
+                        flag = true;
+                        break;
+                    }else if(v_in != 0){
+                        //some verticies in and some out: UUID needs to be sliced
+                        UUIDs_to_slice.push_back(UUIDs.at(p));
+                        flag = true;
+                        break;
+                    }
+                    cell_ID ++;
+                }
+                if(flag == true){break;}
+            }
+            if(flag == true){break;}
+        }
+        
+        // if all vertices fell outside of all grid cells, add it to be sliced just in case (corner cases)
+        if(flag == false){
+            UUIDs_to_slice.push_back(UUIDs.at(p));;
+        }
+        
+    }
+    
+    if( printmessages ){
+        
+      auto stop = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+        std::cout << duration.count() << " seconds to do initial grid cell classification" << std::endl;
+        std::cout << UUIDs_no_slice.size() << " input primitives (" << float(UUIDs_no_slice.size())/float(UUIDs.size())*100 << "%) not sliced" << std::endl;
+        std::cout << UUIDs_to_slice.size() << " input primitives (" << float(UUIDs_to_slice.size())/float(UUIDs.size())*100 << "%) being sliced" << std::endl;
+    }
+    
+    
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    // do the slicing
+    
+    std::vector<uint> primitives_to_remove;
+    std::vector<uint> primitives_to_add;
+    uint s1;
+    
+    auto start2 = std::chrono::high_resolution_clock::now();
+    //loop through each voxel face
+    for(uint i=0;i<grid_face_vertices.size();i++)
+    {
+        for(uint j=0;j<UUIDs_to_slice.size();j++)
+        {
+            //slice
+            std::vector<uint> resulting_UUIDs;
+            resulting_UUIDs = slicePrimitive(UUIDs_to_slice.at(j), grid_face_vertices.at(i));
+            
+            //update the UUIDs_to_slice vector so it doesn't include deleted primitives (the originals that were split)
+            bool exists = context->doesPrimitiveExist(UUIDs_to_slice.at(j));
+            if(!exists)
+            {
+                primitives_to_remove.push_back(j);
+                primitives_to_add.insert(primitives_to_add.end(), resulting_UUIDs.begin(), resulting_UUIDs.end());
+            }
+        }
+        
+        for(int k=primitives_to_remove.size()-1; k>=0; k--)
+        {
+            UUIDs_to_slice.erase(UUIDs_to_slice.begin() + primitives_to_remove.at(k));
+        }
+        primitives_to_remove.clear();
+        
+        UUIDs_to_slice.insert( UUIDs_to_slice.end(), primitives_to_add.begin(), primitives_to_add.end() );
+        primitives_to_add.clear();
+    }
+    
+    if( printmessages ){
+        
+      auto stop2 = std::chrono::high_resolution_clock::now();
+        auto duration2 = std::chrono::duration_cast<std::chrono::seconds>(stop2 - start2);
+        std::cout << duration2.count() << " seconds to do slicing" << std::endl;
+        
+    }
+    
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    // now classify the sliced primitives into grid cells
+    // save the cell_ID as primitive data for the triangle
+    // save the primitive UUID to a vector of UUIDs that are in a given cell and save that 
+    
+    auto start3 = std::chrono::high_resolution_clock::now();
+    
+    for(uint p=0;p<UUIDs_to_slice.size();p++)
+    {
+        int cell_ID = 0;
+        bool flag = false;
+        
+        for(uint k=0;k< (grid_divisions.z); k++)
+        {
+            for(uint j=0;j< (grid_divisions.y); j++)
+            {
+                for(uint i=0;i< (grid_divisions.x); i++)
+                {
+                    
+                    helios::vec3 cell_min = make_vec3(grid_min.x + i*grid_spacing.x, grid_min.y + j*grid_spacing.y, grid_min.z + k*grid_spacing.z);
+                    helios::vec3 cell_max = make_vec3(grid_min.x + i*grid_spacing.x + grid_spacing.x, grid_min.y + j*grid_spacing.y + grid_spacing.y, grid_min.z + k*grid_spacing.z + grid_spacing.z);
+                    
+                    std::vector<helios::vec3> verts = context->getPrimitivePointer(UUIDs_to_slice.at(p))->getVertices();
+                    uint v_in = 0;
+                    for(uint v=0;v<verts.size();v++)
+                    {
+                        
+                        float absTol = pow(10, -6);
+                        float relTol = pow(10, -20);
+                        bool test2_x = (verts.at(v).x > cell_min.x || approxSame(verts.at(v).x, cell_min.x, absTol, relTol)) && (verts.at(v).x < cell_max.x || approxSame(verts.at(v).x, cell_max.x, absTol, relTol));
+                        bool test2_y = (verts.at(v).y > cell_min.y || approxSame(verts.at(v).y, cell_min.y, absTol, relTol)) && (verts.at(v).y < cell_max.y || approxSame(verts.at(v).y, cell_max.y, absTol, relTol));
+                        bool test2_z =  (verts.at(v).z > cell_min.z || approxSame(verts.at(v).z, cell_min.z, absTol, relTol)) && (verts.at(v).z < cell_max.z || approxSame(verts.at(v).z, cell_max.z, absTol, relTol)) ;
+                        
+                        if( test2_x && test2_y && test2_z)
+                        {
+                            v_in ++;
+                        }
+                    }
+                    
+                    if(v_in == verts.size())
+                    {
                         context->setPrimitiveData(UUIDs_to_slice.at(p), "cell_ID", cell_ID);
                         cell_primitives.at(cell_ID).push_back(UUIDs_to_slice.at(p));
-                    
-                    cell_ID ++;    
-                    flag = true;
-
-                    break;
-                        
+                        cell_ID ++;    
+                        flag = true;
+                        break;
                     }
-                     cell_ID ++;
-                 }
-                 
-                 if(flag == true){break;}
-             }
+                    cell_ID ++;
+                }
                 if(flag == true){break;}
-         }
-     
-     if(flag == false){
-         cell_primitives.at(cell_primitives.size()-1).push_back(UUIDs_to_slice.at(p));
-         
-     }
-
+            }
+            if(flag == true){break;}
+        }
+        
+        if(flag == false){
+            cell_primitives.at(cell_primitives.size()-1).push_back(UUIDs_to_slice.at(p));
+        }
+        
     }
-     return UUIDs_to_slice;
+    
+    if( printmessages ){
+      auto stop3 = std::chrono::high_resolution_clock::now();
+        auto duration3 = std::chrono::duration_cast<std::chrono::seconds>(stop3 - start3);
+        std::cout << duration3.count() << " seconds to do second classification" << std::endl;
+    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    //Join the unsliced and sliced primitive UUIDs back into a single vector
+    std::vector<uint>  UUIDs_out = UUIDs_no_slice;
+    UUIDs_out.insert(UUIDs_out.end(), UUIDs_to_slice.begin(), UUIDs_to_slice.end());
+    
+    if( printmessages ){
+        std::cout << UUIDs_to_slice.size() << " primitives created from slicing" << std::endl;
+        std::cout << UUIDs_out.size() << " total output primitives" << std::endl;
+    }
+    
+    return UUIDs_out;
+  
 }
 
 std::vector<std::vector<uint>> VoxelIntersection::getCellPrimitives(void){
@@ -1191,4 +1499,9 @@ bool VoxelIntersection::approxSame(float a, float b, float absTol, float relTol)
     
   return fabs(a-b) <= absTol || fabs(a-b) <= relTol*(std::max(fabs(a), fabs(b)));
 
+}
+
+bool VoxelIntersection::approxSame(helios::vec3 a, helios::vec3 b, float absTol)
+{
+    return fabs(a.x-b.x) <= absTol && fabs(a.y-b.y) <= absTol && fabs(a.z-b.z) <= absTol ;
 }
