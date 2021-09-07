@@ -19,7 +19,7 @@
 using namespace std;
 using namespace helios;
 
-ScanMetadata::ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax, const float __exitDiameter, const float __beamDivergence ){
+ScanMetadata::ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax, const float __exitDiameter, const float __beamDivergence, const std::vector<std::string> __columnFormat ){
 
   //Copy arguments into structure variables
   origin = __origin;
@@ -31,6 +31,7 @@ ScanMetadata::ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, co
   phiMax = __phiMax;
   exitDiameter = __exitDiameter;
   beamDivergence = __beamDivergence;
+  columnFormat = __columnFormat;
 
 }
 
@@ -38,8 +39,7 @@ helios::SphericalCoord ScanMetadata::rc2direction( const uint row, const uint co
 
   float zenith = thetaMin + (thetaMax-thetaMin)/float(Ntheta)*float(row);
   float elevation = 0.5f*M_PI - zenith;
-  /** \todo Add in support for clockwise-rotating scanners */
-  float phi = phiMin - (phiMax-phiMin)/float(Nphi)*float(column); //counter-clockwise scanner rotation
+  float phi = phiMin - (phiMax-phiMin)/float(Nphi)*float(column);
   return make_SphericalCoord(1,elevation,phi);
   
 };
@@ -148,7 +148,9 @@ int LiDARcloud::selfTest(void){
   
   LAD_exact = float(N.x*N.y*N.z)*4.f*diskR*diskR/(gsize.x*gsize.y*gsize.z);
 
-  synthetic_1.syntheticScan( &context_2, "plugins/lidar/xml/synthetic_test.xml" );
+  synthetic_1.loadXML(  "plugins/lidar/xml/synthetic_test.xml" );
+  
+  synthetic_1.syntheticScan( &context_2 );
 
   synthetic_1.triangulateHitPoints( 0.04, 10 );
   synthetic_1.calculateLeafAreaGPU();
@@ -170,7 +172,9 @@ int LiDARcloud::selfTest(void){
   LiDARcloud synthetic_2;
   synthetic_2.disableMessages();
 
-  synthetic_2.syntheticScan( &context_2, "plugins/lidar/xml/synthetic_test_8.xml" );
+  synthetic_2.loadXML( "plugins/lidar/xml/synthetic_test_8.xml" );
+  
+  synthetic_2.syntheticScan( &context_2 );
 
   synthetic_2.triangulateHitPoints( 0.04, 10 );
   synthetic_2.calculateLeafAreaGPU();
@@ -255,7 +259,9 @@ int LiDARcloud::selfTest(void){
   LiDARcloud synthetic_3;
   synthetic_3.disableMessages();
 
-  synthetic_3.syntheticScan( &context_3, "plugins/lidar/xml/synthetic_test.xml" );
+  synthetic_3.loadXML( "plugins/lidar/xml/synthetic_test.xml" );
+  
+  synthetic_3.syntheticScan( &context_3 );
 
   synthetic_3.triangulateHitPoints( 0.04, 10 );
   synthetic_3.calculateLeafAreaGPU();
@@ -280,8 +286,10 @@ int LiDARcloud::selfTest(void){
 
   LiDARcloud synthetic_4;
   synthetic_4.disableMessages();
+
+  synthetic_4.loadXML( "plugins/lidar/xml/almond.xml" );
   
-  synthetic_4.syntheticScan( &context_4, "plugins/lidar/xml/almond.xml" );
+  synthetic_4.syntheticScan( &context_4 );
 
   synthetic_4.calculateSyntheticLeafArea( &context_4 );
   synthetic_4.calculateSyntheticGtheta( &context_4 );
@@ -571,6 +579,14 @@ float LiDARcloud::getScanBeamDivergence( const uint scanID ) const{
     exit(EXIT_FAILURE);
   }
   return scans.at(scanID).beamDivergence;
+}
+
+std::vector<std::string> LiDARcloud::getScanColumnFormat( const uint scanID ) const{
+  if( scanID>=scans.size() ){
+    cerr << "ERROR (getScanColumnFormat): Cannot get column format for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
+    exit(EXIT_FAILURE);
+  }
+  return scans.at(scanID).columnFormat;
 }
 
 helios::vec3 LiDARcloud::getHitXYZ( const uint index ) const{
@@ -910,6 +926,83 @@ void LiDARcloud::addTrianglesToVisualizer( Visualizer* visualizer, const uint gr
 
   }
 
+}
+
+void LiDARcloud::addGrid(helios::vec3 gcenter, helios::vec3 gsize, helios::int3 ndiv, float rotation)
+{
+    if( gsize.x<=0 || gsize.y<=0 || gsize.z<=0 ){
+        cerr << "failed.\nERROR (addGrid): The gridcell size must be positive." << endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    if( ndiv.x <=0 || ndiv.y <=0 || ndiv.z <=0 ){
+        cerr << "failed.\nERROR (addGrid): The number of grid cells in each direciton must be positive." << endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    //add cells to grid
+    vec3 gsubsize = make_vec3(float(gsize.x)/float(ndiv.x),float(gsize.y)/float(ndiv.y),float(gsize.z)/float(ndiv.z));
+    
+    float x, y, z;
+    uint count = 0;
+    for( int k=0; k<ndiv.z; k++ ){
+        z = -0.5f*float(gsize.z) + (float(k)+0.5f)*float(gsubsize.z);
+        for( int j=0; j<ndiv.y; j++ ){
+            y = -0.5f*float(gsize.y) + (float(j)+0.5f)*float(gsubsize.y);
+            for( int i=0; i<ndiv.x; i++ ){
+                x = -0.5f*float(gsize.x) + (float(i)+0.5f)*float(gsubsize.x);
+                
+                vec3 subcenter = make_vec3(x,y,z);
+                
+                vec3 subcenter_rot = rotatePoint(subcenter, make_SphericalCoord(0,rotation*M_PI/180.f) );
+                
+                if( printmessages ){
+                    cout << "Adding grid cell #" << count << " with center " << subcenter_rot.x+gcenter.x << "," << subcenter_rot.y+gcenter.y << "," << subcenter.z+gcenter.z << " and size " << gsubsize.x << " x " << gsubsize.y << " x " << gsubsize.z << endl;
+                }
+                
+                addGridCell( subcenter+gcenter, gcenter, gsubsize, gsize, rotation*M_PI/180.f, make_int3(i,j,k), ndiv );
+                
+                count++;
+                
+            }
+        }
+    }
+    
+}
+
+void LiDARcloud::addGridWireFrametoVisualizer(Visualizer* visualizer) const{ 
+    
+    
+    for(int i=0; i< getGridCellCount();i++)
+    {
+        helios::vec3 center = getCellCenter(i);
+        helios::vec3 size = getCellSize(i);
+        
+        helios::vec3 boxmin, boxmax;
+        boxmin = make_vec3(center.x - 0.5*size.x, center.y - 0.5*size.y, center.z - 0.5*size.z);
+        boxmax = make_vec3(center.x + 0.5*size.x, center.y + 0.5*size.y, center.z + 0.5*size.z);
+        
+        //vertical edges of the cell
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmin.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmax.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        
+        //horizontal top edges
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        
+        //horizontal bottom edges
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        
+    }
+    
+    
 }
 
 void LiDARcloud::addLeafReconstructionToVisualizer( Visualizer* visualizer ) const{
@@ -1755,7 +1848,7 @@ float LiDARcloud::getCellRotation( const uint index ) const{
   
 }
 
-void LiDARcloud::calculateSyntheticGtheta( const helios::Context* context ){
+std::vector<float> LiDARcloud::calculateSyntheticGtheta( const helios::Context* context ){
 
   size_t Nprims = context->getPrimitiveCount();
 
@@ -1813,15 +1906,18 @@ void LiDARcloud::calculateSyntheticGtheta( const helios::Context* context ){
     }
   }
 
-  std::ofstream file;
 
-  file.open("../output/synthetic_Gtheta.txt");
+  std::vector<float> output_Gtheta;
+  output_Gtheta.resize(Ncells,0.f);
   
   for( int v=0; v<Ncells; v++ ){
-    file << Gtheta.at(v) << std::endl;
+    output_Gtheta.at(v) = Gtheta.at(v);
+    if( context->getPrimitivePointer(UUIDs.at(v))->doesPrimitiveDataExist("gridCell") ){
+      context->getPrimitivePointer(UUIDs.at(v))->setPrimitiveData("synthetic_Gtheta",Gtheta.at(v));
+    }
   }
-
-  file.close();
+  
+  return output_Gtheta;
   
 }
 

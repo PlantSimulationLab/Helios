@@ -666,7 +666,7 @@ vec3 helios::sphere2cart( const SphericalCoord& Spherical ){
 
 vec2 helios::string2vec2( const char* str ){
 
-  float o[2];
+  float o[2] = {99999,99999};
   float tmp;
   
   std::istringstream stream(str);
@@ -684,7 +684,7 @@ vec2 helios::string2vec2( const char* str ){
 
 vec3 helios::string2vec3( const char* str ){
 
-  float o[3];
+  float o[3]  = {99999,99999,99999};
   float tmp;
   
   std::istringstream stream(str);
@@ -700,9 +700,27 @@ vec3 helios::string2vec3( const char* str ){
 
 }
 
+vec4 helios::string2vec4( const char* str ){
+
+  float o[4]  = {99999,99999,99999,99999};
+  float tmp;
+  
+  std::istringstream stream(str);
+  int c=0;
+  while( stream >> tmp ){
+    if( c==4 ){
+      break;
+    }
+    o[c] = tmp;
+    c++;
+  }
+  return make_vec4( o[0], o[1], o[2], o[3] );
+
+}
+
 int2 helios::string2int2( const char* str ){
 
-  int o[2];
+  int o[2] = {99999,99999};
   int tmp;
   
   std::istringstream stream(str);
@@ -720,7 +738,7 @@ int2 helios::string2int2( const char* str ){
 
 int3 helios::string2int3( const char* str ){
 
-  int o[3];
+  int o[3] = {99999,99999,99999};
   int tmp;
   
   std::istringstream stream(str);
@@ -736,10 +754,27 @@ int3 helios::string2int3( const char* str ){
 
 }
 
+int4 helios::string2int4( const char* str ){
+
+  int o[4] = {99999,99999,99999,99999};
+  int tmp;
+  
+  std::istringstream stream(str);
+  int c=0;
+  while( stream >> tmp ){
+    if( c==4 ){
+      break;
+    }
+    o[c] = tmp;
+    c++;
+  }
+  return make_int4( o[0], o[1], o[2], o[3] );
+
+}
+
 RGBAcolor helios::string2RGBcolor( const char* str ){
 
-  float o[4];
-  o[3] = 1.f;
+  float o[4] = {0,0,0,1};
   float tmp;
   
   std::istringstream stream(str);
@@ -1492,4 +1527,169 @@ helios::vec3 helios::spline_interp3( const float _u, const helios::vec3 x_start,
 
   return make_vec3(xq[0],xq[1],xq[2]);
 
+}
+
+float helios::XMLloadfloat( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  float value;
+  if( strlen(field_str)==0 ){
+    value = 99999;
+  }else{
+    value = atof( field_str ); //note: pugi loads xml data as a character.  need to separate it into float
+  }
+  
+  return value;
+  
+}
+
+int helios::XMLloadint( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  int value;
+  if( strlen(field_str)==0 ){
+    value = 99999;
+  }else{
+    value = atoi( field_str ); //note: pugi loads xml data as a character.  need to separate it into int
+  }
+  
+  return value;
+  
+}
+
+std::string helios::XMLloadstring( pugi::xml_node node, const char* field ){
+
+  const char* field_str = deblank(node.child_value(field));
+    
+  std::string value;
+  if( strlen(field_str)==0 ){
+    value = "99999";
+  }else{
+    value = field_str; //note: pugi loads xml data as a character.  need to separate it into int
+  }
+  
+  return value;
+  
+}
+
+helios::vec2 helios::XMLloadvec2( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  helios::vec2 value;
+  if( strlen(field_str)==0 ){
+    value = make_vec2(99999,99999);
+  }else{
+    value = string2vec2( field_str ); //note: pugi loads xml data as a character.  need to separate it into 2 floats
+  }
+  
+  return value;
+  
+}
+
+helios::vec3 helios::XMLloadvec3( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  helios::vec3 value;
+  if( strlen(field_str)==0 ){
+    value = make_vec3(99999,99999,99999);
+  }else{
+    value = string2vec3( field_str ); //note: pugi loads xml data as a character.  need to separate it into 3 floats
+  }
+  
+  return value;
+  
+}
+
+helios::vec4 helios::XMLloadvec4( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  helios::vec4 value;
+  if( strlen(field_str)==0 ){
+    value = make_vec4(99999,99999,99999,99999);
+  }else{
+    value = string2vec4( field_str ); //note: pugi loads xml data as a character.  need to separate it into 4 floats
+  }
+  
+  return value;
+  
+}
+
+helios::int2 helios::XMLloadint2( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  helios::int2 value;
+  if( strlen(field_str)==0 ){
+    value = make_int2(99999,99999);
+  }else{
+    value = string2int2( field_str ); //note: pugi loads xml data as a character.  need to separate it into 2 ints
+  }
+  
+  return value;
+  
+}
+
+helios::int3 helios::XMLloadint3( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  helios::int3 value;
+  if( strlen(field_str)==0 ){
+    value = make_int3(99999,99999,99999);
+  }else{
+    value = string2int3( field_str ); //note: pugi loads xml data as a character.  need to separate it into 3 ints
+  }
+  
+  return value;
+  
+}
+
+helios::int4 helios::XMLloadint4( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  helios::int4 value;
+  if( strlen(field_str)==0 ){
+    value = make_int4(99999,99999,99999,99999);
+  }else{
+    value = string2int4( field_str ); //note: pugi loads xml data as a character.  need to separate it into 4 ints
+  }
+  
+  return value;
+  
+}
+
+helios::RGBcolor helios::XMLloadrgb( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  helios::RGBAcolor value;
+  if( strlen(field_str)==0 ){
+    value = make_RGBAcolor(99999,99999,99999,99999);
+  }else{
+    value = string2RGBcolor( field_str ); //note: pugi loads xml data as a character.  need to separate it into 3 floats
+  }
+  
+  return make_RGBcolor(value.r,value.g,value.b);
+  
+}
+
+helios::RGBAcolor helios::XMLloadrgba( pugi::xml_node node, const char* field ){
+
+  const char* field_str = node.child_value(field);
+    
+  helios::RGBAcolor value;
+  if( strlen(field_str)==0 ){
+    value = make_RGBAcolor(99999,99999,99999,99999);
+  }else{
+    value = string2RGBcolor( field_str ); //note: pugi loads xml data as a character.  need to separate it into 3 floats
+  }
+  
+  return value;
+  
 }

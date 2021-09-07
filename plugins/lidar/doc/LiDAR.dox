@@ -62,35 +62,65 @@
 
  \image html RectangularScan.png "The rectangular scan pattern creates quadrilateral polygons between four neighboring points."
 
+ \subsection LiDARreturn Difference between discrete-return and full-waveform LiDAR data
+
+ The laser beam emitted from a LiDAR instrument has some finite diameter, which increases with distance from the scanner. In many cases, the beam diameter may be larger than the width of individual leaves by the time it reaches the canopy. This means that a single laser pulse may intersect multiple objects along its path to the ground.
+
+ For a "discrete-return" instrument, only one (or sometimes a few) hit points are recorded per laser pulse. The distance from the scanner recorded for the hit point is an effective average distance to all objects intersected by the beam.
+
+ By contrast "full-waveform" instruments are able to record multiple hit point locations along a single laser pulse by analyzing the return timeseries or "waveform". This class of instruments is able to process the timeseries of pulse returns into separate distances. Full-waveform instruments are preferred because they provide more information, particularly in dense canopies where a discrete-return instrument would rarely record the location of the ground. Technically, full-waveform instruments ultimately output discrete hit points, but for the purposes of this documentation we will consider discrete-return data to have a single hit point per laser pulse, and full-waveform data to have an unlimited number of hit points per laser pulse.
+
+ There is sometimes ambiguity or inconsitency in usage of the terms discrete-return and full-waveform LiDAR data in the literature. For the purposes of this documentation, we will call "discrete-return" data as a scan that records only a single hit point per laser pulse, and "full-waveform" data as a scan that can record a large number of hit points per laser pulse.
+
+ \image html WaveformSchematic.jpeg
+
  \subsection ScanMetadata Scan metadata
 
- Each scan has a set of parameters or "metadata" that must be specified in order to process the data.  Some parameters are optional, while some are required.  The following metadata is needed to define the overall scan itself, in addition to individual scan hit points:
+ Each scan has a set of parameters or "metadata" that must be specified in order to process the data.  Some parameters are optional, while some are required.  The following metadata is needed to define the overall scan itself, in addition to individual scan hit points. Note that XML tags are case-sensitive.
 
  <table>
- <tr><th>Metadata</th><th>Description</th><th>Default behavior</th></tr>
- <tr><td>Origin</td><td>(x,y,z) coordinate of the scanner.  This is the position where the scanner rays are sent from.</td><td>None: REQUIRED</td></tr>
- <tr><td>N<sub>theta</sub></td><td>Number of scan points in the theta (zenithal) direction, i.e., number of rows in scan point table.</td><td>None: REQUIRED</td></tr>
- <tr><td>\f$\theta\f$<sub>min</sub> (degrees)</td><td>Minimum scan theta (zenital) angle. \f$\theta\f$<sub>min</sub>=0 if the scan starts from upward vertical, \f$\theta\f$<sub>min</sub>=90 is the scan starts from horizontal, etc. </td><td>0</td></tr>
- <tr><td>\f$\theta\f$<sub>max</sub> (degrees)</td><td>Maximum scan theta (zenital) angle. \f$\theta\f$<sub>max</sub>=90 if the scan ends at horizontal, \f$\theta\f$<sub>min</sub>=180 is the scan ends at downward vertical, etc. </td><td>180</td></tr>
- <tr><td>N<sub>phi</sub></td><td>Number of scan points in the phi (azimuthal) direction, i.e., number of rows in scan point table.</td><td>None: REQUIRED</td></tr>
- <tr><td>\f$\varphi\f$<sub>min</sub> (degrees)</td><td>Minimum scan phi (azimuthal) angle. \f$\varphi\f$<sub>min</sub>=0 if the scan starts pointing in the +x direction, \f$\varphi\f$<sub>min</sub>=90 if the scan starts pointing in the +y direction, etc. </td><td>0</td></tr>
- <tr><td>\f$\varphi\f$<sub>max</sub> (degrees)</td><td>Maximum scan phi (azimuthal) angle. \f$\varphi\f$<sub>max</sub>=90 if the scan ends pointing in the +y direction, \f$\varphi\f$<sub>min</sub>=180 if the scan ends pointing in the -x direction, etc. NOTE: \f$\varphi\f$<sub>max</sub> could be greater than 360 if \f$\varphi\f$<sub>min</sub>>0 and the scanner makes a full rotation in the in the azimuthal direction, in which case \f$\varphi\f$<sub>max</sub>=\f$\varphi\f$<sub>min</sub>+360.</td><td>360</td></tr>
- <tr><td>translation</td><td>Global (x,y,z) translation to be applied to entire scan, including the origin and all hit ponts.</td><td>No translation.</td></tr>
- <tr><td>rotation (degrees)</td><td>Global spherical rotation (theta,phi) to be applied to the entire scan, including the origin and all hit ponts.</td><td>No rotation.</td></tr>
+ <tr><th>Metadata</th><th>XML tag</th><th>Description</th><th>Default behavior</th></tr>
+ <tr><td>Scanner origin</td><td>\<origin></td><td>(x,y,z) coordinate of the scanner.  This is the position where the scanner rays are sent from. Values should be separated by a space in the XML file.</td><td>None: REQUIRED</td></tr>
+ <tr><td>size</sub></td><td>\<size></td><td>Number of scan points in the theta (zenithal) and phi (azimuthal) directions. Values should be separated by a space in the XML file.</td><td>None: REQUIRED</td></tr>
+ <tr><td>\f$\theta\f$<sub>min</sub> (degrees)</td><td>\<thetaMin></td><td>Minimum scan theta (zenital) angle. \f$\theta\f$<sub>min</sub>=0 if the scan starts from upward vertical, \f$\theta\f$<sub>min</sub>=90 is the scan starts from horizontal, etc. </td><td>0</td></tr>
+ <tr><td>\f$\theta\f$<sub>max</sub> (degrees)</td><td>\<thetaMax></td><td>Maximum scan theta (zenital) angle. \f$\theta\f$<sub>max</sub>=90 if the scan ends at horizontal, \f$\theta\f$<sub>min</sub>=180 is the scan ends at downward vertical, etc. </td><td>180</td></tr>
+ <tr><td>\f$\varphi\f$<sub>min</sub> (degrees)</td><td>\<phiMin></td><td>Minimum scan phi (azimuthal) angle. \f$\varphi\f$<sub>min</sub>=0 if the scan starts pointing in the +x direction, \f$\varphi\f$<sub>min</sub>=90 if the scan starts pointing in the +y direction, etc. </td><td>0</td></tr>
+ <tr><td>\f$\varphi\f$<sub>max</sub> (degrees)</td><td>\<phiMax></td><td>Maximum scan phi (azimuthal) angle. \f$\varphi\f$<sub>max</sub>=90 if the scan ends pointing in the +y direction, \f$\varphi\f$<sub>min</sub>=180 if the scan ends pointing in the -x direction, etc. NOTE: \f$\varphi\f$<sub>max</sub> could be greater than 360 if \f$\varphi\f$<sub>min</sub>>0 and the scanner makes a full rotation in the in the azimuthal direction, in which case \f$\varphi\f$<sub>max</sub>=\f$\varphi\f$<sub>min</sub>+360.</td><td>360</td></tr>
+ <tr><td>translation</td><td>\<translation></td><td>Global (x,y,z) translation to be applied to entire scan, including the origin and all hit ponts.</td><td>No translation.</td></tr>
+ <tr><td>rotation (degrees)</td><td>\<rotation></td><td>Global spherical rotation (theta,phi) to be applied to the entire scan, including the origin and all hit ponts.</td><td>No rotation.</td></tr>
+ <tr><td>beam exit diameter (meters)</td><td>\<exitDiameter></td><td>Effective diameter of laser beam exiting the instrument. Only used for full-waveform synthetic data generation.</td><td>0 (discrete return)</td></tr>
+<tr><td>beam divergence angle (rad)</td><td>\<beamDivergence></td><td>Angle of laser beam divergence after exiting the instrument. Only used for full-waveform sythetic data generation.</td><td>0</td></tr>
+<tr><td>ASCII point cloud file</td><td>\<filename></td><td>File containing point cloud data to be read.</td><td>No file will be read.</td></tr>
+<tr><td>ASCII file column format</td><td>\<ASCII_format></td><td>Labels for columns in ASCII point cloud file. See section below for possible values and examples. Labels should be separated by a space in the XML file.</td><td>x y z</td></tr>
  </table>
 
  \subsection AddHits Hit point data
 
- In addition to scan metadata, the data collected by the scan itself must also be added to the plug-in.  At a minimum, this consists of the Cartesian (x,y,z) coordinates of each hit in the scan.  Additionally, hit points may also have an associated r-g-b color value, or some other scalar data value such as reflectance or temperature.  For the processing algorithms to work, the scan direction associated with each hit point must also be known.  This can be specified as a (\f$\theta\f$,\f$\varphi\f$) spherical coordinate, or using the row (i.e., index in the scanline: 1...\f$\mathrm{N}_\theta\f$) and column (i.e., scanline index: 1...\f$\mathrm{N}_\varphi\f$).
- 
+ In addition to scan metadata, the data collected by the scan itself must also be added to the plug-in.  This can be achieved by either reading data from an ASCII text file, or performing a synthetic scan. At a minimum, point cloud data consists of the Cartesian (x,y,z) coordinates of each hit in the scan.  Additionally, hit points may also have an associated r-g-b color value, or some other scalar data value such as intensity or temperature.
+
+ For the processing algorithms to work, the scan direction associated with each hit point must also be known.  This can be specified directly as a (\f$\theta\f$,\f$\varphi\f$) spherical coordinate, or using the row (i.e., index in the scanline: 1...\f$\mathrm{N}_\theta\f$) and column (i.e., scanline index: 1...\f$\mathrm{N}_\varphi\f$). Otherwise, it will calculate the scan direction by drawing a line between the scan origin position and the hit point.
+
+ For full-waveform data, additional information is needed about the hit points. Specifically, the total number of hit points along the pulse. IfThe index can start at 0 or 1 for the first hit along the pulse, it just should be consistent for all points.
+
+<!--
  <table>
- <tr><th>Data</th><th>Description</th><th>Default behavior</th></tr>
- <tr><td>(x,y,z) position</td><td>(x,y,z) coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td><td>None: REQUIRED</td></tr>
- <tr><td>ray direction</td><td>Spherical direction (theta, phi) of the ray.  Ray directions are used to construct the scan hit table.  There could be multiple hits for a given ray direction if a full-waveform instrument is used in multiple return mode.</td><td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td></tr>
- <tr><td>color</td><td>r-g-b color of scan hit point.</td><td>red</td></tr>
- <tr><td>data</td><td>Floating point data values associated with the hit point.  This could be reflectance, temperature, etc.</td><td>No data created.</td></tr>
+ <tr><th>Data</th><th>XML tag string</th><th>Description</th><th>Default behavior</th></tr>
+ <tr><td>x position</td><td>x</td><td>x coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td><td>None: REQUIRED</td></tr>
+ <tr><td>y position</td><td>y</td><td>x coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td><td>None: REQUIRED</td></tr>
+ <tr><td>z position</td><td>z</td><td>x coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td><td>None: REQUIRED</td></tr>
+ <tr><td>ray zenith direction</td><td>zenith or zenith_rad</td><td>Angle from zenith of the ray. For 'zenith' units are in degrees, and for 'zenith_rad' units are in radians. There could be multiple hits for a given ray direction if a full-waveform instrument is used in multiple return mode.</td><td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td></tr>
+ <tr><td>ray azimuth direction</td><td>azimuth or azimuth_rad</td><td>Azimuthal angle of the ray. For 'azimuth' units are in degrees, and for 'azimuth_rad' units are in radians.  There could be multiple hits for a given ray direction if a full-waveform instrument is used in multiple return mode.</td><td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td></tr>
+ <tr><td>red</td><td>r or r255</td><td>red component of color of scan hit point. For 'r', values are normalized between 0 and 1, and for 'r255' values are normalized between 0 and 255.</td><td>red</td></tr>
+ <tr><td>green</td><td>g or g255</td><td>green component of color of scan hit point. For 'g', values are normalized between 0 and 1, and for 'g255' values are normalized between 0 and 255.</td><td>red</td></tr>
+ <tr><td>blue</td><td>b or b255</td><td>blue component of color of scan hit point. For 'b', values are normalized between 0 and 1, and for 'b255' values are normalized between 0 and 255.</td><td>red</td></tr>
+ <tr><td>target count</td><td>target_count</td><td>Total number of hits for the pulse.</td><td>REQUIRED for full-waveform data</td></tr>
+ <tr><td>target index</td><td>target_index</td><td>Index of hit along the pulse. Can be 0 or 1 offset.</td><td>REQUIRED for full-waveform data</td></tr>
+ <tr><td>timestamp</td><td>timestamp</td><td>Unique timestamp for the hit point.</td><td>REQUIRED for full-waveform data</td></tr>
+ <tr><td>deviation</td><td>deviation</td><td>Indication of variability in return within a given hit point. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>intensity</td><td>intensity</td><td>Intensity of return. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>data</td><td>user-defined</td><td>Floating point data values associated with the hit point.  This could be intensity, temperature, etc.</td><td>No data created.</td></tr>
  </table>
- 
+ -->
 
  <!--
   Some scanners provide the row and column of the point in the data table instead of the ray direction.  Functions are available in the code to convert between (row,column) and direction formats: \ref Scan::rc2direction() and \ref Scan::direction2rc().
@@ -151,25 +181,28 @@
 
  \section ScanIO Loading scan data from file
 
- Scan metadata is typically specified by loading an XML file containing the relevant metadata for each scan.  The XML file specifies the path to an ASCII text file that contains the data for each scan.  The code below gives a sample XML file for loading multiple scans.  As specified in the metadata table above, not all entries are required.
+  Scan metadata is typically specified by loading an XML file containing the relevant metadata for each scan.  For real data, the XML file specifies the path to an ASCII text file that contains the data for each scan. For synthetic data, the parameters of the simulated scan are loaded from the XML file and used to perform the scan.
+
+  The code below gives a sample XML file for loading multiple scans.  As specified in the metadata table above, not all entries are required (see above).
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
   <pre><code> <helios>
 
 	<scan>
 	  <filename> /path/to/data/file.xyz </filename>
-	  <ASCII_format> zenith azimuth x y z r255 g255 b255 </ASCII_format>
+	  <ASCII_format> x y z r255 g255 b255 target_count target_index timestamp </ASCII_format>
 	  <origin> 0 0 0 </origin>
 	  <size> 2500 4500 </size>
-	  <thetaMin> 30 </thetaMin> \<!-- OPTIONAL - default: 0 -->
-	  <thetaMax> 130 </thetaMax> \<!-- OPTIONAL - default: 180 -->
-	  <phiMin> 0 </phiMin> \<!-- OPTIONAL - default: 0 -->
-	  <phiMax> 360 </phiMax> \<!-- OPTIONAL - default: 360 -->
-	  <translation> 1.2 1.5 -10.2 </translation> \<!-- OPTIONAL - default: 0 0 0 -->
-	  <rotation> 20 180 </rotation> \<!-- OPTIONAL - default: 0 0 -->
-	  <distanceFilter> 50 </distanceFilter> \<!-- OPTIONAL - default: Infinity -->
-	  <reflectance> 1300 </reflectance> \<!-- OPTIONAL - user-defined data -->
+	  <thetaMin> 30 </thetaMin>
+	  <thetaMax> 130 </thetaMax>
+	  <phiMin> 0 </phiMin>
+	  <phiMax> 360 </phiMax> 
+	  <translation> 1.2 1.5 -10.2 </translation>
+	  <rotation> 20 180 </rotation>
+	  <exitDiameter> 0.005 </exitDiameter>
+	  <beamDivergence> 0.003 </beamDivergence>
 	</scan>
+	
  </helios></code></pre></div>
 
  The ASCII text file containing the data is a plain text file, where each row corresponds to a hit point and each column is some data value associated with that hit point.  The "ASCII_format" tag defines the column format of the ASCII text file (in this case, file.xyz).  Each entry in the list specifies the meaning of each column.  Possible fields are listed in the table below:
@@ -181,27 +214,32 @@
  <tr><td>z</td><td>z-component of the (x,y,z) Cartesian coordinate of the hit point.</td><td>None: REQUIRED</td></tr>
  <tr><td>zenith (or zenith_rad)</td><td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees.</td><td>Calculated from scan origin and hit (x,y,z).</td></tr>
  <tr><td>azimuth (or phi_rad)</td><td>Azithal angle (degrees) of scan ray direction corresponding to the hit point. If "phi_rad" is used, phi has units of radians rather than degrees.</td><td>Calculated from scan origin and hit (x,y,z).</td></tr>
- <tr><td>r (or r255)</td><td>red component of (r,g,b) hit color.  If "r" tag is used, r is a floating point value and 0<r<1.  If "r255" is used, r is an integer and 0<r<255.</td><td>r=1 or r255=255</td></tr>
- <tr><td>g (or g255)</td><td>green component of (r,g,b) hit color.  If "g" tag is used, g is a floating point value and 0<g<1.  If "g255" is used, g is an integer and 0<g<255.</td><td>g=0 or g255=0</td></tr>
- <tr><td>b (or b255)</td><td>blue component of (r,g,b) hit color.  If "b" tag is used, b is a floating point value and 0<b<1.  If "b255" is used, b is an integer and 0<b<255.</td><td>b=0 or b255=0</td></tr>
- <tr><td>(label)</td><td>User-defined floating-point data value.  "label" can be any string describing data.  For example, "reflectance", "temperature", etc. </td><td>N/A</td></tr>
+ <tr><td>r (or r255)</td><td>red component of (r,g,b) hit color.  If "r" tag is used, r is a floating point value between 0 and 1.  If "r255" is used, r is an integer and betwen 0 and 255.</td><td>r=1 or r255=255</td></tr>
+ <tr><td>g (or g255)</td><td>green component of (r,g,b) hit color.  If "g" tag is used, g is a floating point value between 0 and 1.  If "g255" is used, g is an integer between 0 and 255.</td><td>g=0 or g255=0</td></tr>
+ <tr><td>b (or b255)</td><td>blue component of (r,g,b) hit color.  If "b" tag is used, b is a floating point value between 0 and 1.  If "b255" is used, b is an integer between 0 and 255.</td><td>b=0 or b255=0</td></tr>
+ <tr><td>target_count</td><td>Number of hits along scan pulse.</td><td>Assumed to be discrete return data.</td></tr>
+ <tr><td>target_index</td><td>Index of hit along scan pulse.</td><td>Assumed to be discrete return data.</td></tr>
+ <tr><td>timestamp</td><td>Unique timestamp of hit point.</td><td>Assumed to be discrete return data.</td></tr>
+ <tr><td>deviation</td><td>Indication of variability in return within a given hit point. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>intensity</td><td>Intensity of return. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>(label)</td><td>User-defined floating-point data value.  "label" can be any string describing data.  For example, "temperature", etc. </td><td>N/A</td></tr>
  </table>
 
  The XML file can be automatically loaded into the point cloud using the \ref loadXML() function, as illustrated below.
   
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> #include "Context.h"
-   #include "LiDAR.h"
+ <pre><code>  #include "Context.h"
+  #include "LiDAR.h"
 
-   using namespace helios;
+  using namespace helios;
 
-   int main( void ){
+  int main( void ){
 
-      %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+     %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
-      pointcloud.loadXML("/path/to/file.xml");
+     pointcloud.loadXML("/path/to/file.xml");
       
- }</code></pre></div>
+  }</code></pre></div>
 
  \section LiDARgrid Establishing grid cells
 
@@ -227,10 +265,10 @@
   <pre><code> <grid>
 	 \<center> 0 0 0.5 \</center>
 	 \<size> 1 1 1 </size>
-	 \<rotation> 30 </rotation> \<!-- OPTIONAL - default: 0 -->
-	 \<Nx> 3 </Nx> \<!-- OPTIONAL - default: 1 -->
-	 \<Ny> 3 </Ny> \<!-- OPTIONAL - default: 1 -->
-	 \<Nz> 3 </Nz> \<!-- OPTIONAL - default: 1 -->
+	 \<rotation> 30 </rotation> 
+	 \<Nx> 3 </Nx> 
+	 \<Ny> 3 </Ny> 
+	 \<Nz> 3 </Nz> 
   </grid></code></pre></div>
 
 
@@ -334,6 +372,125 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
       
   }</code></pre></div>
 
+
+  \section LiDARsynthetic Generating Synthetic (Simulated) LiDAR Data
+
+  The LiDAR plug-in can simulate the measurements of discrete-return and full-waveform instruments based on the geometry in the Context. Ray-tracing is used to simulate the emission of radiation from the instrument, and based on ray-object intersection tests with primitive geometry in the model domain, the simulated hit points can be determined. Currently, only a rectangular scan pattern is supported.
+
+  To simulate discrete-return instruments, each laser pulse is modeled by a single ray emanating from the scanner origin. Rays are launched according to the scan parameters currently specified in the \ref LiDARcloud. After calling the appropriate synthetic scan generation function (see below), the simulated scan data will be added to the \ref LiDARcloud as if it was imported from real LiDAR data. In addition to the (x,y,z) location of the ray intersection, the model also produces estimates of return intensity, deviation, and can return an identifier for the intersected object.
+
+  For full-waveform data simulation, multiple rays are cast for a single laser beam pulse. The density of rays is Gaussian, with the peak at the center of the beam. The model will also record the target count, target index, and timestamp associated with each hit point.
+
+  \subsection LiDARsynthxml XML parameter file
+
+  To generate synthetic discrete-return LiDAR data, first add all desired model geometry to the Context. Then declare an instance of the \ref LiDARcloud class as above, and load an XML file containing the scan parameters. As in the case of importing a real point cloud dataset, the XML file must specify the scan origin and the scan resolution at a minimum (see above). However, in the case of synthetic data generation, you will not specify a filename to read containing point cloud data, as this data will be generated by the simulation. You can optionally specify the ASCII_format tag, which will determine which additional data fields should be recorded for each hit point. Valid hit point data fields are listed above in \ref ScanIO.
+  <!--Note that if you specify the name of a user-defined scalar data field, the synthetic scan will query intersected primitives for the primitive data matching the specified data field name. For example, if the field "temperature" was specified as a column in the ASCII_format tag, the value of primitive data "temperature" for the primitive corresponding to each hit point would be recorded. If the primitive data is not defined for a primitive, a value of -9999 will be recorded. -->
+
+  If no ASCII_format tag is provided in the XML file, the default is to record the (x,y,z) position of the hit point. If the function \ref LiDARcloud::exportPointCloud() is called, it will export the simulated point cloud according to the provided ASCII_format tag (or the default if not provided).
+
+  Note that you can add multipe \<scan></scan> blocks in a single XML file to perform multiple scans.
+  
+  \subsection LiDARsynthdiscrete Synthetic discrete-return data
+
+  Once the \ref LiDARcloud has been declared, and an XML file containing the scan parameters has been read, a discrete-return synthetic scan can be perfomed by calling \ref LiDARcloud::syntheticScan( helios::Context*, const char* ). This version (i.e., without the optional rays_per_pulse and pulse_distance_threshold arguments) will perform a discrete-return synthetic scan. 
+
+  The code block below gives an example XML file. As a reminder, you can place this XML file anywhere, but the path given to the LiDARcloud::loadXML() function should either be absolute or relative to the directory in which the executable is being run (usually build/).
+  
+  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code> <helios>
+
+	<scan>
+	  <ASCII_format> x y z r255 g255 b255 </ASCII_format>
+	  <origin> 0 0 1.0 </origin>
+	  <size> 2500 4500 </size>
+	  <thetaMin> 30 </thetaMin>
+	  <thetaMax> 130 </thetaMax>
+	  <phiMin> 0 </phiMin>
+	  <phiMax> 360 </phiMax> 
+	</scan>
+	
+  </helios></code></pre></div>
+
+  Example code is given below for generating synthetic discrete-return data and writing to an ASCII text file.
+
+  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code>  #include "Context.h"
+  #include "LiDAR.h"
+
+  using namespace helios;
+
+  int main( void ){
+
+     %Context context;
+
+     \// create some model geometry here
+     context.addPatch();
+
+     %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+
+     pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
+
+     pointcloud.syntheticScan( &context );  //generate synthetic data
+
+     pointcloud.exportPointCloud( "/path/to/file.xyz" );  //write to ASCII file
+      
+  }</code></pre></div>
+
+  \subsection LiDARsynthwaveform Synthetic waveform data
+
+  Generation of synthetic full-waveform data is similar to discrete-return, except that additional information is needed to define the scan and simulation. In the XML file, the user must specify the diameter of the laser beam at the scan origin using the \<exitDiameter> \</exitDiameter> tags, as well as the angle of beam divergence in radians using the \<beamDivergence> \</beamDivergence> tags. If the exit diameter value is not specified, the default value of 0 is used, which means that the model will revert to discrete-return data generation. If the beam divergence value is not specified, a default beam divergence of 0 will be assumed, which effectively just means that the beam will remain perfectly cylindrical with diameter of exitDiameter.
+
+  Contents of an example XML file is given below.
+
+   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+   <pre><code> <helios>
+
+	<scan>
+	  <ASCII_format> x y z r255 g255 b255 target_count target_index timestamp </ASCII_format>
+	  <origin> 0 0 1.0 </origin>
+	  <size> 2500 4500 </size>
+	  <thetaMin> 30 </thetaMin>
+	  <thetaMax> 130 </thetaMax>
+	  <phiMin> 0 </phiMin>
+	  <phiMax> 360 </phiMax> 
+	  <exitDiameter> 0.005 </exitDiameter>
+	  <beamDivergence> 0.003 </beamDivergence>
+	</scan>
+	
+  </helios></code></pre></div>
+
+   Running the synthetic data generation function requires the specificaiton of parameters associated with the simulation. The first is the number of rays to use per laser pulse in performing ray-tracing calculations, which sets the maximum possible number of hits possible per pulse. Specifying 1 ray/pulse effectively creates a discrete-return simulation, because that would mean you could only have a maximum of 1 hit/pulse. Ideally, you want a large number of rays/pulse because it allows for more hits/pulse if needed and results in more accureate simulations. The drawback to a very high number of rays/pulse is that the simulation will take longer to run. A value on the order of 100 is usually reasonable.
+
+  Second, the user needs to specify the distance threshold for aggregation of similar ray hit distances. For each simulated laser pulse, the number of rays/pulse specified above are launched from the scan origin. When some or all of those rays intersect the same surface, they will record a distance from the scanner to the hit point that is slightly different for each ray. Similar distances, which are presumed to lie on the same surface, are aggregated into a single hit point if they are within this distance threshold of each other. This is similar to how a real LiDAR instrument works as indicated in the sketch above, in that it aggregates similar returns into a single hit point. Specifying too small of a distance threshold may result in many duplicate hit points on the same surface. Specifying too large of a threshold may result in hit points that lie in between two disconnected surfaces (e.g., leaves). A threshold value that is smaller than the leaf or branch with is usually reasonable.
+
+  Below is example code with a rays/pulse value of 100 and distance threshold of 0.02.
+
+  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code>  #include "Context.h"
+  #include "LiDAR.h"
+
+  using namespace helios;
+
+  int main( void ){
+
+     %Context context;
+
+     // create some model geometry here
+     context.addPatch();
+
+     %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+
+     pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
+
+     int rays_per_pulse = 100;
+     float pulse_distance_threshold = 0.02; 
+      
+     pointcloud.syntheticScan( &context, rays_per_pulse, pulse_distance_threshold );  //generate synthetic data
+
+     pointcloud.exportPointCloud( "/path/to/file.xyz" );  //write to ASCII file
+      
+  }</code></pre></div>
+
   \section LiDARvis Visualizing results
 
   Results can be visualized using the Visualizer plug-in for Helios.  There are two possible means for doing so.  First, is to add the relevant geometry to the Context, then visualize primitives in the Context using the Visualizer.  This works for the triangulation and plant reconstructions, but cannot be used to visualize just the point cloud since there is no "point" primitive in the Context. The next section describes how to accomplish this.
@@ -351,7 +508,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   The following code sample illustrates how to visualize the point cloud.
 
   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>  #include "Context.h"
+  <pre><code>   #include "Context.h"
    #include "LiDAR.h"
    #include "Visualizer.h"   
 
@@ -381,6 +538,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
  <table>
  <tr><th>Function</th><th>Description</th></tr>
+ <tr><td>\ref LiDARcloud::exportPointCloud( const char* filename ) </td><td>Write the entire point cloud to ASCII file (this is usually only used for generated synthetic data).</td></tr>
  <tr><td>\ref LiDARcloud::exportTriangleNormals( const char* filename ) </td><td>Write the unit normal vectors [nx ny nz] of all triangles formed from triangulation.</td></tr>
  <tr><td>\ref LiDARcloud::exportTriangleNormals( const char* filename, const int gridcell ) </td><td>Write the unit normal vectors of triangles formed from triangulation that reside in a specified grid cell.</td></tr>
  <tr><td>\ref LiDARcloud::exportTriangleAreas( const char* filename ) </td><td>Write the areas of all triangles formed from triangulation.</td></tr>
@@ -392,7 +550,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   The following code sample illustrates an example of how to write results to file.
 
   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>  #include "Context.h"
+  <pre><code>   #include "Context.h"
    #include "LiDAR.h"
 
    using namespace helios;
@@ -420,6 +578,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
       }
       pointcloud.exportLeafAreas( "../output/leaf_areas.txt" );
       pointcloud.exportLeafAreaDensities( "../output/leaf_area_densities.txt" );
+
+      pointcloud.exportPointCloud( "../output/pointcloud.xyz" );			       
       
    }</code></pre></div>
   

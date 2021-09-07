@@ -1,5 +1,5 @@
 /** \file "LiDAR.h" Primary header file for LiDAR plug-in.
-    \author Brian Bailey
+    \author Brian Bailey, Eric Kent
 
     Copyright (C) 2018  Brian Bailey
 
@@ -204,7 +204,7 @@ struct ScanMetadata{
       \param[in] "phimin" Minimum scan angle in the phi (azimuthal) direction
       \param[in] "phimax" Maximum scan angle in the phi (azimuthal) direction
   */
-  ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax, const float __exitDiameter, const float __beamDivergence );
+  ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax, const float __exitDiameter, const float __beamDivergence, const std::vector<std::string> __columnFormat );
 
   //! Convert the (row,column) of hit point in a scan to a direction vector
   /** \param[in] "row" Index of hit point in the theta (zenithal) direction.
@@ -251,6 +251,8 @@ struct ScanMetadata{
   /** \note This is not needed for discrete return instruments. */
   float beamDivergence;
 
+  //! Vector of strings specifying the columns of the scan ASCII file for intput/output
+  std::vector<std::string> columnFormat;
   
 };
 
@@ -424,6 +426,10 @@ class LiDARcloud{
   */
   float getScanBeamExitDiameter( const uint scanID ) const;
 
+  //! Get the labels for columns in ASCII input/output file
+  /** \param[in] "scanID" ID of scan. */
+  std::vector<std::string> getScanColumnFormat( const uint scanID ) const;
+
   //! Divergence angle of the laser beam in radians
    /** \param[in] "scanID" ID of scan.
       \return Divergence angle of the beam.
@@ -520,9 +526,9 @@ class LiDARcloud{
 
   //! Read an XML file containing scan information
   /** \param[in] "filename" Path to XML file
-      \param[in] "loadGridOnly" if true only the voxel grid defined in the xml file will be loaded, the scans themselves will not be loaded.
+      \param[in] "load_grid_only" if true only the voxel grid defined in the xml file will be loaded, the scans themselves will not be loaded.
    */
-  void loadXML( const char* filename, const bool loadGridOnly );
+  void loadXML( const char* filename, const bool load_grid_only );
   
   //! Read all XML files currently loaded into the Helios context
   void readContextXML( void );
@@ -571,11 +577,19 @@ class LiDARcloud{
   */
   void exportGtheta( const char* filename );
 
-  //! Export to file all points in the point cloud
+  //! Export to file all points in the point cloud to an ASCII text file following the column format specified by the <ASCII_format></ASCII_format> tag in the scan XML file 
   /** 
       \param[in] "filename" Name of file
+      \note If there are multiple scans in the point cloud, each scan will be exported to a different file with the scan ID appended to the filename. This is because different scans may have a different column format.
   */
   void exportPointCloud( const char* filename );
+
+  //! Export to file all points from a given scan to an ASCII text file following the column format specified by the <ASCII_format></ASCII_format> tag in the scan XML file 
+  /** 
+      \param[in] "filename" Name of file
+      \param[in] "scanID" Identifier of scan to be exported
+  */
+  void exportPointCloud( const char* filename, const uint scanID );
 
   // ------- VISUALIZER --------- //
   
@@ -596,6 +610,19 @@ class LiDARcloud{
   /** \param[in] "visualizer" Pointer to the Visualizer plugin object.
    */
   void addGridToVisualizer( Visualizer* visualizer ) const;
+
+  //! Add wire frame of the grid to the visualizer plug-in
+  /** \param[in] "visualizer" Pointer to the Visualizer plugin object.
+   */
+  void addGridWireFrametoVisualizer( Visualizer* visualizer ) const;
+  
+  //! Add a grid to point cloud instead of reading in from an xml file
+  /** \param[in] "center" center of the grid.
+   \param[in] "size" Size of the grid in each dimension.
+   \param[in] "ndiv" number of cells in the grid in each dimension.
+   \param[in] "rotation" horizontal rotation in degrees.
+   */
+  void addGrid( helios::vec3 center, helios::vec3 size, helios::int3 ndiv , float rotation);
 
   //! Add all triangles to the visualizer plug-in, and color them by their r-g-b color
   /** \param[in] "visualizer" Pointer to the Visualizer plugin object.
@@ -763,9 +790,16 @@ d the last cell's index is Ncells-1. */
 
   //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
   /** \param[in] "context" Pointer to the Helios context 
-      \param[in] "xml_file" Path to an XML file with LiDAR scan and grid information 
   */
-  void syntheticScan( helios::Context* context, const char* xml_file );
+  void syntheticScan( helios::Context* context );
+
+  //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
+  /** \param[in] "context" Pointer to the Helios context 
+      \param[in] "scan_grid_only" If true, only record hit points for rays that intersect the voxel grid.
+      \param[in] "record_misses" If true, "miss" points (i.e., beam did not hit any primitives) are recorded in the scan.
+      \note Calling syntheticScan() with scan_grid_only=true can save substantial memory for contexts with large domains.
+  */
+  void syntheticScan( helios::Context* context, const bool scan_grid_only, const bool record_misses );
 
   //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
   /** \param[in] "context" Pointer to the Helios context 
@@ -774,17 +808,28 @@ d the last cell's index is Ncells-1. */
       \param[in] "pulse_distance_threshold" Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
       \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
   */
-  void syntheticScan( helios::Context* context, const char* xml_file, const int rays_per_pulse, const float pulse_distance_threshold );
+  void syntheticScan( helios::Context* context, const int rays_per_pulse, const float pulse_distance_threshold );
+
+  //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
+  /** \param[in] "context" Pointer to the Helios context 
+      \param[in] "xml_file" Path to an XML file with LiDAR scan and grid information
+      \param[in] "rays_per_pulse" Number of ray launches per laser pulse direction
+      \param[in] "pulse_distance_threshold" Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
+      \param[in] "record_misses" If true, "miss" points (i.e., beam did not hit any primitives) are recorded in the scan.
+      \note Calling syntheticScan() with scan_grid_only=true can save substantial memory for contexts with large domains.
+      \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
+  */
+  void syntheticScan( helios::Context* context, const int rays_per_pulse, const float pulse_distance_threshold, const bool scan_grid_only, const bool record_misses );
 
   //! Calculate the surface area of all primitives in the context
   /** \param[in] "context" Pointer to the Helios context 
   */
-  void calculateSyntheticLeafArea( helios::Context* context );
+  std::vector<float> calculateSyntheticLeafArea( helios::Context* context );
 
   //! Calculate the G(theta) of all primitives in the context
   /** \param[in] "context" Pointer to the Helios context 
   */
-  void calculateSyntheticGtheta( const helios::Context* context );
+  std::vector<float> calculateSyntheticGtheta( const helios::Context* context );
 
   // -------- LEAF AREA -------- //
 
@@ -818,12 +863,30 @@ d the last cell's index is Ncells-1. */
   void calculateLeafAreaGPU( void );
 
   //! Calculate the leaf area for each grid volume
-  /** \param [in] "minVoxelHits" Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than minVoxelHits, the calculated leaf area will be set to zero. */
-  void calculateLeafAreaGPU( const int minVoxelHits );
+  /** \param [in] "min_voxel_hits" Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than min_voxel_hits, the calculated leaf area will be set to zero. 
+   \note Currently, this version assumes all data is discrete-return. The function calculateLeafAreaGPU_testing() deals with waveform data, but may not be working correctly. In the next version, these two functions will be combined.*/
+  void calculateLeafAreaGPU( const int min_voxel_hits );
 
-  //! Calculate the leaf area for each grid volume - testing version to investigate new scheme for filling in missing hit points that hit the sky
-  /** \param [in] "minVoxelHits" Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than minVoxelHits, the calculated leaf area will be set to zero. */
-  void calculateLeafAreaGPU_testing( const int minVoxelHits );
+  //! Calculate the leaf area for each grid volume
+  /** \param [in] "min_voxel_hits" Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than min_voxel_hits, the calculated leaf area will be set to zero. */
+  void calculateLeafAreaGPU_testing( const int min_voxel_hits );
+
+ //! Calculate the leaf area for each grid volume in a synthetic scan using several different method for estimating P 
+  /** \param [in] "context" Pointer to the Helios context
+      \param [in] "beamoutput" if true writes detailed data about each beam to ../beamoutput/beam_data_s_[scan index]_c_[grid cell index].txt
+      \param [in] "fillAnalytic" if true, when the iterative LAD inversion fails, the analytic solution using mean dr will be substituted. If false LAD is set to 999.
+      \note writes voxel level data to ../voxeloutput/voxeloutput.txt
+      \note 
+  */
+  void calculateLeafAreaGPU_synthetic(helios::Context* context,  bool beamoutput, bool fillAnalytic );
+  
+  //! Perform inversion to estimate LAD 
+  /** \param[in] "P" Vector of floats where each element is the P value of a given grid cell
+   \param[in] "Gtheta" Vector of floats where each element is the Gtheta value of a given grid cell  
+   \param[in] "dr_array"  2D Vector of floats where the first index is the grid cell and the second index is the beam index
+   \param[in] "fillAnalytic" If true the analytic solution using mean dr will be used when the inversion fails. If false, LAD will be set as 999.
+   */
+  std::vector<float> LAD_inversion( std::vector<float> P, std::vector<float> Gtheta, std::vector<std::vector<float>> dr_array, bool fillAnalytic);
 
   // -------- RECONSTRUCTION --------- //
 

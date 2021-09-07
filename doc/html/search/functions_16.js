@@ -1,18 +1,14 @@
 var searchData=
 [
-  ['_7eaeriallidarcloud_1354',['~AerialLiDARcloud',['../class_aerial_li_d_a_rcloud.html#acdf5d5239f43e8809a615d4c6e1323e3',1,'AerialLiDARcloud']]],
-  ['_7ebox_1355',['~Box',['../classhelios_1_1_box.html#a644e78f7764f3c3fcdf0040176633d03',1,'helios::Box']]],
-  ['_7econe_1356',['~Cone',['../classhelios_1_1_cone.html#a76d21f33bcbb88c31a84e3affc9fc785',1,'helios::Cone']]],
-  ['_7econtext_1357',['~Context',['../classhelios_1_1_context.html#a4c146723cbd2daa6ceb6c095274a6ca7',1,'helios::Context']]],
-  ['_7edisk_1358',['~Disk',['../classhelios_1_1_disk.html#a4085396f8399025b0d814e1a692d94a6',1,'helios::Disk']]],
-  ['_7elidarcloud_1359',['~LiDARcloud',['../class_li_d_a_rcloud.html#abd5040ee6cd5008a6c74e24068b77b81',1,'LiDARcloud']]],
-  ['_7epatch_1360',['~Patch',['../classhelios_1_1_patch.html#ad752072d536a72f4e8a7c6b0d6b5a0aa',1,'helios::Patch']]],
-  ['_7epolymesh_1361',['~Polymesh',['../classhelios_1_1_polymesh.html#af5f34802164cec35a3d756f41de59d82',1,'helios::Polymesh']]],
-  ['_7eprimitive_1362',['~Primitive',['../classhelios_1_1_primitive.html#a9169f50665f6634ac3d22030f4069462',1,'helios::Primitive']]],
-  ['_7eradiationmodel_1363',['~RadiationModel',['../class_radiation_model.html#aeae03b4de9b9c57ac987407fdfd6afa4',1,'RadiationModel']]],
-  ['_7esphere_1364',['~Sphere',['../classhelios_1_1_sphere.html#ae0626ac8b0c81f27055dd0abcd91fed9',1,'helios::Sphere']]],
-  ['_7etile_1365',['~Tile',['../classhelios_1_1_tile.html#ad32b1e7167647837835564c986eb5259',1,'helios::Tile']]],
-  ['_7etriangle_1366',['~Triangle',['../classhelios_1_1_triangle.html#ac3ab4ba024c6edbf54b100d6e0a0dbe4',1,'helios::Triangle']]],
-  ['_7etube_1367',['~Tube',['../classhelios_1_1_tube.html#a675831cd6c8876beb26e0dd91e4b08b5',1,'helios::Tube']]],
-  ['_7evoxel_1368',['~Voxel',['../classhelios_1_1_voxel.html#a61eb465eff4071cd8994cae08a7cf036',1,'helios::Voxel']]]
+  ['xmlloadfloat',['XMLloadfloat',['../global_8h.html#a74ae3a9e16e2ca39dab735a1ac97a506',1,'helios']]],
+  ['xmlloadint',['XMLloadint',['../global_8h.html#a4b756357236942bec6cc7f853aa77fc5',1,'helios']]],
+  ['xmlloadint2',['XMLloadint2',['../global_8h.html#ae55d4cef14213f642705952dc1ad4659',1,'helios']]],
+  ['xmlloadint3',['XMLloadint3',['../global_8h.html#ae4661a50a9f13eb6fb645e9f767b51a2',1,'helios']]],
+  ['xmlloadint4',['XMLloadint4',['../global_8h.html#a08c21d08fc1e1dd07ff612f8b503e295',1,'helios']]],
+  ['xmlloadrgb',['XMLloadrgb',['../global_8h.html#acb80e4e13497682968468c596a9b3690',1,'helios']]],
+  ['xmlloadrgba',['XMLloadrgba',['../global_8h.html#a148e80cd6b8477c0704e642243ab2547',1,'helios']]],
+  ['xmlloadstring',['XMLloadstring',['../global_8h.html#a8240b43ac3ce36bc7a4d52128bc9fda3',1,'helios']]],
+  ['xmlloadvec2',['XMLloadvec2',['../global_8h.html#a1f3041e69cbe61a909866a24c8d77457',1,'helios']]],
+  ['xmlloadvec3',['XMLloadvec3',['../global_8h.html#aa4c58cabe7bc5244435613ffdb00cf34',1,'helios']]],
+  ['xmlloadvec4',['XMLloadvec4',['../global_8h.html#a928c91522128145370150652ca59f3af',1,'helios']]]
 ];

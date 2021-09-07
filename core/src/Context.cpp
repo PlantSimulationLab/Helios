@@ -4193,7 +4193,7 @@ helios::vec3 Patch::getCenter(void) const{
 Triangle::Triangle(  const vec3 vertex0, const vec3 vertex1, const vec3 vertex2, const RGBAcolor _color_, const uint _UUID_ ){
 
   makeTransformationMatrix(vertex0,vertex1,vertex2);
-    color = _color_;
+  color = _color_;
   UUID = _UUID_;
   prim_type = PRIMITIVE_TYPE_TRIANGLE;
   texture = 0;

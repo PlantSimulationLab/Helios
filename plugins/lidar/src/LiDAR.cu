@@ -1,5 +1,5 @@
 /** \file "LiDAR.cu" CUDA-related LiDAR plug-in functions 
-    \author Brian Bailey
+    \author Brian Bailey, Eric Kent
 
     Copyright (C) 2018  Brian Bailey
 
@@ -228,45 +228,24 @@ __host__ int LIDAR_CUDA::randu( int imin, int imax  ){
 
 __device__ float2 LIDAR_CUDA::d_sampleDisk( float radius, uint seed ){
 
-  // Map Sample to disk - from Suffern (2007) "Ray tracing fom the ground up" Chap. 6
-
+  // use Box-Muller tranform approach
+  // the input radius is the place where the intensity decreases to 1/e^2 (~0.1353) of the intensity at the beam center
+    
+  // sample from uniform random distribution [0,1] for radial distance and angle  
+  float U1 = rnd(seed);
+  float U2 = rnd(seed);
+  
+  // calculate the standard deviation of a normal distribution where  intensity decreases to 1/e^2 at the input radius
+  float sd = sqrt(0.25*radius*radius);
+  
+  // formula from https://www.alanzucconi.com/2015/09/16/how-to-sample-from-a-gaussian-distribution/
+  float R = sqrt(-2.f*logf(U1))*sd;
+  float angle = 2.f*M_PI*U2;
+  
   float2 sp;
-
-  float Rx = rnd(seed);
-  float Ry = rnd(seed);
-  
-  //first map sample point to rectangle [-1,1] [-1,1]
-  sp.x = -1.f + 2.f*Rx;
-  sp.y = -1.f + 2.f*Ry;
-
-  float r, p;
-  if( sp.x>-sp.y) {
-    if( sp.x > sp.y ){
-      r = sp.x;
-      p = sp.y/sp.x;
-    }else{
-      r = sp.y;
-      p = 2.f-sp.x/sp.y;
-    }
-  }else{
-    if( sp.x < sp.y ){
-      r = -sp.x;
-      p = 4.f + sp.y/sp.x;
-    }else{
-      r = -sp.y;
-      if( sp.y!=0.f ){ //avoid division by zero at origin
-	p = 6.f - sp.x/sp.y;
-      }else{
-	p = 0.f;
-      } 
-    }
-  }
-  p*=0.25f*M_PI;
-  
   //find x,y point on unit disk
-  sp.x = radius*r*cosf(p);
-  sp.y = radius*r*sinf(p);
-
+  sp.x = R*cosf(angle);
+  sp.y = R*sinf(angle);
   return sp;
   
 }
@@ -636,7 +615,6 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses( const int scan ){
   for( size_t r=0; r<hit_table_clean.size()-1; r++ ){
     
     hit_table2D.at(column).push_back( hit_table_clean.at(r) );
-    //ERK
     //for small scans (like the rectangle test case, this needs to change to < 0 or some smaller angle (that is larger than noise))
     // if( dtheta_clean.at(r) < 0 ){
     // for normal scans, this threshold allows for 10 degrees drops in theta within a given sweep as noise. This can be adjusted as appropriate. 
@@ -673,7 +651,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses( const int scan ){
   }
   
   dt_avg = dt_avg/float(dt_sum);
-  //ERK calculate the average dtheta to use for extrapolation
+  //Calculate the average dtheta to use for extrapolation
   dtheta_avg = dtheta_avg/float(dtheta_sum);
   
   //identify gaps and fill
@@ -726,7 +704,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses( const int scan ){
       // this commented out section extrapolates based on the last dphi - this can cause intersections of the different sweeps
       // float dphi = hit_table2D.at(j).at(1).at(3)-hit_table2D.at(j).at(0).at(3);
       //float phi = hit_table2D.at(j).at(0).at(3) - dphi;
-      //ERK just use the the last value of phi in the sweep instead
+      //just use the the last value of phi in the sweep instead
       float phi =  hit_table2D.at(j).at(0).at(3);
 
       if( dtheta==0 ){
@@ -1575,6 +1553,735 @@ void LiDARcloud::calculateLeafAreaGPU_testing( const int minVoxelHits ){
     
 }
 
+void LiDARcloud::calculateLeafAreaGPU_synthetic( helios::Context* context, bool beamoutput, bool fillAnalytic  ){
+    
+    // calculates LAD using several different methods investigated in Kent & Bailey (2021)
+    // writes all voxel level variables to a file
+    // optionally writes detailed information about each beam
+    // unlike previous calculateLeafAreaGPU versions, this one does not set the cell leaf area variable and does not filter based on minVoxelHits argument 
+    
+    if( printmessages ){
+        std::cout << "Calculating leaf area..." << std::endl;
+    }
+    
+    if( !triangulationcomputed ){
+        std::cerr << "ERROR (calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    if( !hitgridcellcomputed ){
+        calculateHitGridCellGPU();
+    }
+    
+    const uint Nscans = getScanCount();
+    const uint Ncells = getGridCellCount();
+    
+    //variable aggregates over all scans where we just keep tacking hits on the end for all scans
+    std::vector<std::vector<float> > dr_agg; //dr is path length through grid cell
+    dr_agg.resize(Ncells);
+    std::vector<float> G_agg; //G is dot product between ray direction and triangle normal that was hit (only relevant for hits)
+    G_agg.resize(Ncells,0);
+    std::vector<float> hit_before_agg; //hit_before corresponds to scan points that hit something before encountering a particular grid cell
+    hit_before_agg.resize(Ncells,0);
+    std::vector<float> hit_after_agg; //hit_after corresponds to scan points that hit something after encountering a particular grid cell (including something inside that cell)
+    hit_after_agg.resize(Ncells,0);
+    std::vector<float> hit_inside_agg; //hit_inside corresponds to scan points that hit something within a particular grid cell.
+    hit_inside_agg.resize(Ncells,0);
+    
+    //average G(theta)
+    std::vector<float> Gtheta_bar;
+    Gtheta_bar.resize(Ncells,0.f);
+    
+    // nested vectors to save P calculation terms
+    // cell, scan, variable, value
+    std::vector<std::vector<float>>  P_first_numerator_array(Ncells);
+    std::vector<std::vector<float>>  P_first_denominator_array(Ncells);
+    
+    std::vector<std::vector<float>>  P_sequal_numerator_array(Ncells);
+    std::vector<std::vector<float>>  P_sequal_denominator_array(Ncells);
+    
+    std::vector<std::vector<float>>  P_equal_numerator_array(Ncells);
+    std::vector<std::vector<float>>  P_equal_denominator_array(Ncells);
+    
+    std::vector<std::vector<float>>  P_intensity_numerator_array(Ncells);
+    std::vector<std::vector<float>>  P_intensity_denominator_array(Ncells);
+    
+    std::vector<std::vector<float>>  P_exact_numerator_array(Ncells);
+    std::vector<std::vector<float>>  P_exact_denominator_array(Ncells);
+    
+    std::vector<std::vector<uint>>  voxel_beam_count_array(Ncells);
+    
+    
+    std::vector<std::vector<float>>  dr_array(Ncells);
+    
+    
+    // r is the index of all hitpoints (all scans)
+    // it is saved for the current scan in this_scan_index
+    // i is the index of this_scan_index
+    // so when accessing the things using getHitData(), getHitXYZ(), etc, 
+    // for only one of the scans (this_scan), 
+    // need to use getHitData(this_scan_index[i]) not getHitData(i)
+    
+    ////////////// We are going to perform all calculations on a scan-by-scan basis: loop through each scan
+    for( uint s=0; s<Nscans; s++ ){
+        
+        if( printmessages ){
+            std::cout << "------------------------SCAN = " << s << std::endl;
+        }
+        
+        //only work with hitpoints assoicated with current scan
+        std::vector<helios::vec3> this_scan_xyz;
+        std::vector<uint> this_scan_index;
+        for( size_t r=0; r<getHitCount(); r++ ){
+            if( getHitScanID(r)==s ){
+                this_scan_xyz.push_back( getHitXYZ(r) );
+                this_scan_index.push_back(r);
+            }
+        }
+        // size of the array of all the hits in this scan
+        size_t Nhits = this_scan_xyz.size();
+        
+        if( printmessages ){
+            std::cout << "Number of hitpoints associated with this scan = Nhits = " << Nhits << std::endl;
+        }
+        
+        // count the number of beams (i.e. don't count multiple hits per beam)
+        float previous_time = -1.f;
+        uint Nbeams = 0;
+        for(uint i=0; i < Nhits; i++)
+        {
+            float current_time = getHitData(this_scan_index[i], "timestamp");
+            if(current_time != previous_time){
+                Nbeams ++;
+                previous_time = current_time;
+            }
+        }
+        
+        if( printmessages ){
+            std::cout << "Number of beams associated with this scan = Nbeams = " << Nbeams << std::endl;
+        }
+        
+        // create a vector each element of which represents a unique beam and is another vector of the hit point indices of this_scan_xyz that is associated with this beam
+        float previous_beam = 0;
+        uint beam_ID = 0;
+        std::vector<std::vector<uint>> beam_array(Nbeams);
+        for(uint i=0; i < Nhits; i++)
+        {
+            float current_beam = getHitData(this_scan_index[i], "timestamp");
+            
+            if(current_beam == previous_beam)
+            {
+                beam_array.at(beam_ID).push_back(i); //ERK 
+            }else{
+                beam_ID ++;
+                beam_array.at(beam_ID).push_back(i); //ERK
+                previous_beam = current_beam;
+            }
+            
+        }
+        
+        // set up GPU things for current scan
+        const float3 origin = vec3tofloat3(getScanOrigin(s));
+        float3* scan_xyz = (float3*)malloc( Nhits*sizeof(float3) );
+        float* scan_weight = (float*)malloc( Nhits*sizeof(float) );
+        
+        for( size_t i=0; i<Nhits; i++ ){
+            scan_xyz[i] = vec3tofloat3(this_scan_xyz.at(i));
+            scan_weight[i] = 1.f;
+        }
+        
+        float* hit_before = (float*)malloc( sizeof(float));
+        float* hit_after = (float*)malloc( sizeof(float));
+        float* d_hit_before;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_before, sizeof(float)) );
+        float* d_hit_after;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_after, sizeof(float)) );
+        
+        float3* d_scan_xyz;
+        CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_xyz, Nhits*sizeof(float3)) );
+        CUDA_CHECK_ERROR( cudaMemcpy(d_scan_xyz, scan_xyz, Nhits*sizeof(float3), cudaMemcpyHostToDevice) );
+        
+        float* d_scan_weight;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_scan_weight, Nhits*sizeof(float)) );
+        CUDA_CHECK_ERROR( cudaMemcpy(d_scan_weight, scan_weight, Nhits*sizeof(float), cudaMemcpyHostToDevice) );
+        
+        float* dr = (float*)malloc( Nhits*sizeof(float));
+        float* d_dr;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr, Nhits*sizeof(float)) );
+        
+        uint* hit_location = (uint*)malloc( Nhits*sizeof(uint));
+        uint* d_hit_location;
+        CUDA_CHECK_ERROR( cudaMalloc((uint**)&d_hit_location, Nhits*sizeof(uint)) );
+        
+        
+        /////////////////////////////////////////////////////////////////////
+        // now loop through each voxel
+        for( uint c=0; c<Ncells; c++ ){
+            
+            if( printmessages ){
+                std::cout << "----CELL = " << c << std::endl;
+            }
+            
+            std::ofstream file_beam;
+            if( beamoutput){
+                // set up header of file that outputs one row for each beam in the current scan that interacts with the current voxel
+                
+                file_beam.open("../beamoutput/beam_data_s_" + std::to_string(s) + "_c_" + std::to_string(c) + ".txt");
+                file_beam << "scan, cell, beam, R_before, R_inside, R_after, R_miss, E_before, E_inside, E_after, E_miss, sin_theta, dr, last_dr"  << std::endl;
+            }
+            
+            //load the attributes of the grid cell
+            float3 center = vec3tofloat3(getCellCenter(c));
+            float3 anchor = vec3tofloat3(getCellGlobalAnchor(c));
+            float3 size = vec3tofloat3(getCellSize(c));
+            float rotation = getCellRotation(c);
+            
+            CUDA_CHECK_ERROR( cudaMemset( d_hit_location, 0, Nhits*sizeof(uint)) );
+            CUDA_CHECK_ERROR( cudaMemset( d_dr, 0, Nhits*sizeof(float)) );
+            CUDA_CHECK_ERROR( cudaMemset( d_hit_before, 0, sizeof(float)) );
+            CUDA_CHECK_ERROR( cudaMemset( d_hit_after, 0, sizeof(float)) );
+            
+            uint3 dimBlock = make_uint3( min(size_t(512),Nhits), 1, 1 );
+            uint3 dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), 1, 1  );
+            
+            if( dimBlock.x==0 && dimGrid.x==0 ){
+                continue;
+            }
+            
+            float scanner_range = 5000.0;
+            intersectGridcell_synthetic <<< dimGrid, dimBlock >>>( Nhits, origin, d_scan_xyz, d_scan_weight, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after, d_hit_location, scanner_range );
+            
+            cudaDeviceSynchronize();
+            CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
+            
+            //copy results back to host
+            CUDA_CHECK_ERROR( cudaMemcpy( hit_before, d_hit_before, sizeof(float), cudaMemcpyDeviceToHost));
+            CUDA_CHECK_ERROR( cudaMemcpy( hit_after, d_hit_after, sizeof(float), cudaMemcpyDeviceToHost));
+            CUDA_CHECK_ERROR( cudaMemcpy( dr, d_dr, Nhits*sizeof(float), cudaMemcpyDeviceToHost));
+            CUDA_CHECK_ERROR( cudaMemcpy( hit_location, d_hit_location, Nhits*sizeof(uint), cudaMemcpyDeviceToHost));
+            
+            float P_first_numerator = 0;
+            float P_first_denominator = 0;
+            float P_sequal_numerator = 0;
+            float P_sequal_denominator = 0;
+            float P_equal_numerator = 0;
+            float P_equal_denominator = 0;
+            float P_intensity_numerator = 0;
+            float P_intensity_denominator = 0;
+            float P_exact_numerator = 0;
+            float P_exact_denominator = 0;
+            uint voxel_beam_count = 0;
+            
+            if( printmessages ){
+                std::cout << "Nbeams = " << Nbeams << std::endl;
+            }
+            ////////////////////////// loop through each beam associated with the current scan
+            for(int k = 0; k < Nbeams; k++){
+                
+                float R_before = 0;
+                float R_inside = 0;
+                float R_after = 0;
+                float R_miss = 0;
+                
+                float E_before = 0;
+                float E_inside = 0;
+                float E_after = 0;
+                float E_miss = 0;
+                
+                float sin_theta;
+                float W = 0;
+                float drr = 0;
+                float last_drr = 0;
+                
+                ////////// loop through the hitpoints in the current beam to get number of rays in each location
+                for(int j = 0; j < beam_array.at(k).size(); j++){
+                    
+                    // pull out the index of the current scan's current beam's current hit (which is used to access the overall hit index r through this_scan_index[i])
+                    uint i = beam_array.at(k).at(j);
+                    
+                    helios::vec3 direction = getHitXYZ(this_scan_index[i])-getScanOrigin(getHitScanID(this_scan_index[i]));
+                    direction.normalize();
+                    sin_theta = sin(acos_safe(direction.z));
+                    
+                    last_drr = dr[i];
+                    drr += dr[i];
+                    
+                    if(hit_location[i] == 1){
+                        R_before = R_before +  getHitData(this_scan_index[i], "nRaysHit");
+                        E_before ++;
+                    }else if(hit_location[i] == 2){
+                        R_inside = R_inside +  getHitData(this_scan_index[i], "nRaysHit");
+                        E_inside ++;
+                    }else if(hit_location[i] == 3){
+                        R_after = R_after +  getHitData(this_scan_index[i], "nRaysHit");
+                        E_after ++;
+                        if(getHitData(this_scan_index[i], "target_index") == 0){ // if this is the first hitpoint for this beam,
+                            W = 1.0;
+                        }
+                    }else if(hit_location[i] == 4){
+                        R_miss = R_miss +  getHitData(this_scan_index[i], "nRaysHit");
+                        E_miss ++;
+                    } // or this hitpoint / beam did not intersect the voxel and should not be added to the total number of beams for this voxel
+                    
+                } // end of loop through each hit in the current beam
+                
+                // calculate the average dr across all hitpoints for the beam (they should all be the same anyway... but just in case)
+                float drrx = drr / float(beam_array.at(k).size());
+                
+                // if the path length is greater than 0 (it passes throught the current voxel), save it as an element of
+                if( drrx > 0.f )
+                {
+                    dr_array.at(c).push_back(drrx);
+                }
+                
+                if( beamoutput ){
+                    // output info about the current beam to file
+                    file_beam << s << "," << c << "," << k << "," << R_before << "," << R_inside << "," << R_after << "," << R_miss << "," << E_before << "," << E_inside << "," << E_after << "," << E_miss << "," << sin_theta << "," << drrx << "," << last_drr << std::endl;
+                }
+                
+                ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                // calculate terms for different P methods
+                
+                // P_exact
+                if(R_inside != 0 || R_after != 0 || R_miss != 0){ // only count this beam for P_exact if some energy made it to the voxel
+                    P_exact_numerator += ((R_after + R_miss) / (R_before + R_inside + R_after + R_miss))*sin_theta;
+                    P_exact_denominator += ((R_inside + R_after + R_miss) / (R_before + R_inside + R_after + R_miss))*sin_theta;
+                    voxel_beam_count++;
+                }
+                
+                // P_intensity
+                if(R_inside != 0 || R_after != 0){ // only count this beam for P_intensity if some energy hit inside or after the voxel (not including misses)
+                    P_intensity_numerator += (R_after / (R_before + R_inside + R_after))*sin_theta;
+                    P_intensity_denominator += ((R_inside + R_after) / (R_before + R_inside + R_after))*sin_theta;
+                }else if(R_inside == 0 && R_after == 0 && R_before == 0 && R_miss != 0){ // also count this beam if all the energy missed (but still went throught the voxel)
+                    P_intensity_numerator += 1*sin_theta;
+                    P_intensity_denominator += 1*sin_theta;
+                }
+                
+                // P_equal
+                if(E_inside != 0 || E_after != 0){ // only count for P_equal if some hit points were inside or after the voxel
+                    P_equal_numerator += (E_after / (E_before + E_inside + E_after))*sin_theta;
+                    P_equal_denominator += ((E_inside + E_after) / (E_before + E_inside + E_after))*sin_theta;
+                }else if(E_inside == 0 && E_after == 0 && E_before == 0 && E_miss != 0){ // also count this beam if there is only a "hitpoint" that missed (far after the voxel)
+                    P_equal_numerator += 1*sin_theta;
+                    P_equal_denominator += 1*sin_theta;
+                }
+                
+                // P_sequal
+                if(E_inside != 0 || E_after != 0){ // only count for P_sequal if some hit points were inside or after the voxel
+                    P_sequal_numerator += E_after / (E_inside + E_after);
+                    P_sequal_denominator += 1;
+                }else if(E_inside == 0 && E_after == 0 && E_before == 0 && E_miss != 0){ // also count this beam if there is only a "hitpoint" that missed (far after the voxel)
+                    P_sequal_numerator += 1;
+                    P_sequal_denominator += 1;
+                }
+                
+                // P_first
+                if(E_before == 0 && (E_inside != 0 || E_after != 0)){ // only count for P_sequal if some hit points were inside or after the voxel
+                    P_first_numerator += W*sin_theta;
+                    P_first_denominator += 1*sin_theta;
+                }else if(E_inside == 0 && E_after == 0 && E_before == 0 && E_miss != 0){ // also count this beam if there is only a "hitpoint" that missed (far after the voxel)
+                    P_first_numerator += 1*sin_theta;
+                    P_first_denominator += 1*sin_theta;
+                }
+                
+                
+            }// end of loop through all beams for the current cell
+            
+            // save results for the current cell to the arrays
+            
+            P_first_numerator_array.at(c).push_back(P_first_numerator);
+            P_first_denominator_array.at(c).push_back(P_first_denominator);
+            
+            P_sequal_numerator_array.at(c).push_back(P_sequal_numerator);
+            P_sequal_denominator_array.at(c).push_back(P_sequal_denominator);
+            
+            P_equal_numerator_array.at(c).push_back(P_equal_numerator);
+            P_equal_denominator_array.at(c).push_back(P_equal_denominator);
+            
+            P_intensity_numerator_array.at(c).push_back(P_intensity_numerator);
+            P_intensity_denominator_array.at(c).push_back(P_intensity_denominator);
+            
+            P_exact_numerator_array.at(c).push_back(P_exact_numerator);
+            P_exact_denominator_array.at(c).push_back(P_exact_denominator);
+            
+            voxel_beam_count_array.at(c).push_back(voxel_beam_count);
+            
+            hit_before_agg.at(c) += *hit_before;
+            hit_after_agg.at(c) += *hit_after;
+            
+            for( size_t i=0; i<Nhits; i++ ){
+                if( dr[i]>0.f ){
+                    dr_agg.at(c).push_back(dr[i]);
+                }
+            }
+            
+            file_beam.close();
+        } // end of loop through all cells
+        
+        free( scan_xyz );
+        free( scan_weight );
+        free( dr );
+        free( hit_before );
+        free( hit_after );
+        CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
+        CUDA_CHECK_ERROR( cudaFree(d_scan_weight) );
+        CUDA_CHECK_ERROR( cudaFree(d_dr) );
+        CUDA_CHECK_ERROR( cudaFree(d_hit_before) );
+        CUDA_CHECK_ERROR( cudaFree(d_hit_after) );
+        
+    }//end scan loop
+    
+    std::vector<float> P_first(Ncells);
+    std::vector<float> P_sequal(Ncells);
+    std::vector<float> P_equal(Ncells);
+    std::vector<float> P_intensity(Ncells);
+    std::vector<float> P_exact(Ncells);
+    std::vector<uint> voxel_beam_count_tot(Ncells);
+    std::vector<float> dr_bar(Ncells);
+    
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // now aggregate over all scans
+    for( uint c=0; c<Ncells; c++ ){
+        
+        float P_first_numerator_array_agg = 0;
+        float P_first_denominator_array_agg = 0;
+        
+        float P_sequal_numerator_array_agg = 0;
+        float P_sequal_denominator_array_agg = 0;
+        
+        float P_equal_numerator_array_agg = 0;
+        float P_equal_denominator_array_agg = 0;
+        
+        float P_intensity_numerator_array_agg= 0;
+        float P_intensity_denominator_array_agg= 0;
+        
+        float P_exact_numerator_array_agg= 0;
+        float P_exact_denominator_array_agg= 0;
+        
+        uint voxel_beam_count_array_agg=0;
+        
+        
+        for( uint s=0; s<Nscans; s++ ){
+            
+            P_first_numerator_array_agg += P_first_numerator_array.at(c).at(s);
+            P_first_denominator_array_agg += P_first_denominator_array.at(c).at(s);
+            
+            P_sequal_numerator_array_agg += P_sequal_numerator_array.at(c).at(s);
+            P_sequal_denominator_array_agg += P_sequal_denominator_array.at(c).at(s);
+            
+            P_equal_numerator_array_agg += P_equal_numerator_array.at(c).at(s);
+            P_equal_denominator_array_agg += P_equal_denominator_array.at(c).at(s);
+            
+            P_intensity_numerator_array_agg += P_intensity_numerator_array.at(c).at(s);
+            P_intensity_denominator_array_agg += P_intensity_denominator_array.at(c).at(s);
+            
+            P_exact_numerator_array_agg += P_exact_numerator_array.at(c).at(s);
+            P_exact_denominator_array_agg += P_exact_denominator_array.at(c).at(s);
+            voxel_beam_count_array_agg += voxel_beam_count_array.at(c).at(s);
+        }
+        
+        
+        P_first[c] = P_first_numerator_array_agg / P_first_denominator_array_agg ;
+        P_sequal[c] = P_sequal_numerator_array_agg / P_sequal_denominator_array_agg ;
+        P_equal[c] = P_equal_numerator_array_agg / P_equal_denominator_array_agg ;
+        P_intensity[c] = P_intensity_numerator_array_agg / P_intensity_denominator_array_agg ;
+        P_exact[c] = P_exact_numerator_array_agg / P_exact_denominator_array_agg ;
+        voxel_beam_count_tot[c] = voxel_beam_count_array_agg;
+        if( printmessages ){
+            std::cout << "Cell " << c << ", voxel_beam_count = " << voxel_beam_count_tot[c]  << std::endl;
+            std::cout << "Cell " << c << ", P_first = " << P_first[c] << std::endl;
+            std::cout << "Cell " << c << ", P_sequal = " << P_sequal[c] << std::endl;
+            std::cout << "Cell " << c << ", P_equal = " << P_equal[c] << std::endl;
+            std::cout << "Cell " << c << ", P_intensity = " << P_intensity[c] << std::endl;
+            std::cout << "Cell " << c << ", P_exact = " << P_exact[c] << std::endl;
+        }
+        
+        float mean_dr = 0;
+        for(int j = 0; j < dr_array.at(c).size(); j++)
+        {
+            mean_dr += dr_array.at(c).at(j);
+        }
+        dr_bar[c] = mean_dr/ float(dr_array.at(c).size());
+        if( printmessages ){
+            std::cout << "Cell " << c << ", dr_bar = " <<  dr_bar[c] << std::endl;
+        }
+    } //end of loop through cells to aggregate all scans
+    
+    
+    /// old code in original calculateLeafAreaGPU_testing() ... do we need to keep this??
+    //----------- Calculate number of hits in voxels -------------- //
+    
+    //figure out hits for all scans
+    for( size_t r=0; r<getHitCount(); r++ ){
+        if( getHitGridCell(r)>=0 ){
+            helios::vec3 direction = getHitXYZ(r)-getScanOrigin(getHitScanID(r));
+            direction.normalize();
+            hit_inside_agg.at(getHitGridCell(r)) += sin(acos_safe(direction.z));
+        }
+    }
+    
+    //---------------------- Calculate G(theta) from triangulation --------------------------//
+    
+    std::vector<float> Gtheta;
+    Gtheta.resize(Ncells,0.f);
+    
+    const size_t Ntri = getTriangleCount();
+    
+    std::vector<uint> cell_tri_count;
+    cell_tri_count.resize(Ncells,0);
+    
+    std::vector<float> area_sin_sum;
+    area_sin_sum.resize(Ncells,0.f);
+    
+    for( size_t t=0; t<Ntri; t++ ){
+        
+        Triangulation tri = getTriangle(t);
+        
+        int cell = tri.gridcell;
+        
+        if( cell>=0 && cell<Ncells ){ //triangle is inside a grid cell
+            
+            helios::vec3 t0 = tri.vertex0;
+            helios::vec3 t1 = tri.vertex1;
+            helios::vec3 t2 = tri.vertex2;
+            
+            helios::vec3 v0 = t1-t0;
+            helios::vec3 v1 = t2-t0;
+            helios::vec3 v2 = t2-t1;
+            
+            float L0 = v0.magnitude();
+            float L1 = v1.magnitude();
+            float L2 = v2.magnitude();
+            
+            float S = 0.5f*(L0+L1+L2);
+            float area = sqrt( S*(S-L0)*(S-L1)*(S-L2) );
+            
+            helios::vec3 normal = cross( v0, v2 );
+            normal.normalize();
+            
+            helios::vec3 raydir = t0-getScanOrigin( tri.scanID );
+            raydir.normalize();
+            
+            float theta = fabs(acos_safe(raydir.z));
+            
+            if( area==area ){ //in rare cases you can get area=NaN
+                
+                Gtheta.at(cell) += fabs(normal*raydir)*area*fabs(sin(theta));
+                
+                area_sin_sum.at(cell) += area*fabs(sin(theta));
+                cell_tri_count.at(cell) += 1;
+                
+            }
+            
+        }
+    }
+    
+    for( uint c=0; c<Ncells; c++ ){
+        if( cell_tri_count[c]>0 ){
+            //Gtheta[c] *= float(cell_tri_count[c])/(area_sum[c]*sin_sum[c]);
+            //Gtheta[c] *= float(cell_tri_count[c])/(area_sin_sum[c]);
+            Gtheta[c] *= 1.0/(area_sin_sum[c]);
+            
+            Gtheta_bar[c] += Gtheta[c]/float(Nscans);
+        }
+    }
+    
+    
+    //------------------Calculate "Reference" P and also mean and variance of dr --------------------//
+    // this is the value of P calculated using the reference values of LAD and Gtheta (from calculateSyntheticLeafArea, calculateSyntheticGtheta),
+    // and the path length from all beams for a given cell
+    
+    // first get the reference LA and Gtheta using modified functions that save output to arrays
+    std::vector<float> LA_ref = calculateSyntheticLeafArea(context);
+    std::vector<float> Gtheta_ref = calculateSyntheticGtheta(context);
+    
+    std::vector<float> P_ref(Ncells);
+    P_ref.resize(Ncells,0.f);
+    
+    std::vector<float> dr_bar_ref(Ncells);
+    dr_bar_ref.resize(Ncells,0.f);
+    
+    std::vector<float> dr_var_ref(Ncells);
+    dr_var_ref.resize(Ncells,0.f);
+    
+    for(uint c=0; c<Ncells; c++)
+    {
+        helios::vec3 gridsize = getCellSize(c);
+        float LAD_ref = LA_ref.at(c) / (gridsize.x*gridsize.y*gridsize.z);
+        float G_ref = Gtheta_ref.at(c);
+        
+        float dr_bar_tmp = 0;
+        float sum_term = 0;
+        for(uint j=0; j<dr_array.at(c).size(); j++)
+        {
+            dr_bar_tmp += dr_array.at(c).at(j);
+            sum_term += exp(-1.0*LAD_ref*G_ref*dr_array.at(c).at(j));
+        }
+        sum_term /= float(dr_array.at(c).size());
+        dr_bar_tmp /= float(dr_array.at(c).size());
+        
+        dr_bar_ref[c] = dr_bar_tmp;
+        P_ref[c] = sum_term;
+    }
+    
+    for(uint c=0; c<Ncells; c++)
+    {
+        float dr_var = 0;
+        for(uint j=0; j<dr_array.at(c).size(); j++)
+        {
+            dr_var += pow(dr_array.at(c).at(j) - dr_bar_ref[c], 2.0);
+        }
+        dr_var /= float(dr_array.at(c).size());
+        dr_var_ref[c] = dr_var;
+    }
+    
+    if( printmessages ){
+        std::cout << "finished P_ref and dr calculations" << std::endl;
+    }
+    
+    //------------------ Perform inversions to get LAD using the different methods for P --------------------//
+    
+    if( printmessages ){
+        std::cout << "Inverting to find LAD..." << std::flush;
+    }
+    
+    // perform LAD inversion using reference Gtheta
+    std::vector<float> LAD_refcheck_Gref = LAD_inversion(P_ref, Gtheta_ref, dr_array, fillAnalytic);
+    std::vector<float> LAD_first_Gref = LAD_inversion(P_first, Gtheta_ref, dr_array, fillAnalytic);
+    std::vector<float> LAD_sequal_Gref = LAD_inversion(P_sequal, Gtheta_ref, dr_array, fillAnalytic);
+    std::vector<float> LAD_equal_Gref = LAD_inversion(P_equal, Gtheta_ref, dr_array, fillAnalytic);
+    std::vector<float> LAD_intensity_Gref = LAD_inversion(P_intensity, Gtheta_ref, dr_array, fillAnalytic);
+    std::vector<float> LAD_exact_Gref = LAD_inversion(P_exact, Gtheta_ref, dr_array, fillAnalytic );
+    
+    // perform LAD inversion using triangulation-estimated Gtheta
+    std::vector<float> LAD_refcheck = LAD_inversion(P_ref, Gtheta, dr_array, fillAnalytic);
+    std::vector<float> LAD_first = LAD_inversion(P_first, Gtheta, dr_array, fillAnalytic);
+    std::vector<float> LAD_sequal = LAD_inversion(P_sequal, Gtheta, dr_array, fillAnalytic);
+    std::vector<float> LAD_equal = LAD_inversion(P_equal, Gtheta, dr_array, fillAnalytic);
+    std::vector<float> LAD_intensity = LAD_inversion(P_intensity, Gtheta, dr_array, fillAnalytic);
+    std::vector<float> LAD_exact = LAD_inversion(P_exact, Gtheta, dr_array, fillAnalytic);
+    
+    if( printmessages ){
+        std::cout << "finished LAD inversions" << std::endl;
+    }
+    
+    // output the voxel level variables
+    std::ofstream file_output;
+    file_output.open("../voxeloutput/voxeloutput.txt");
+    file_output << "cell, grid_center_x, grid_center_y, grid_center_z, grid_size_x, grid_size_y, grid_size_z, Nbeams, LAD_ref, G_ref, dr_bar, dr_var, P_ref, G, P_first, P_sequal, P_equal, P_intensity, P_exact, LADGref_refcheck, LADGref_first, LADGref_sequal, LADGref_equal, LADGref_intensity, LADGref_exact, LAD_refcheck, LAD_first, LAD_sequal, LAD_equal, LAD_intensity, LAD_exact"  << std::endl;
+    
+    for(uint c=0; c<Ncells; c++)
+    {
+        helios::vec3 grid_size = getCellSize(c);
+        helios::vec3 grid_center = getCellCenter(c);
+        
+        file_output << c << "," << grid_center.x << "," << grid_center.y << "," << grid_center.z << "," << grid_size.x << "," << grid_size.y << "," << grid_size.z << "," << voxel_beam_count_tot.at(c) << "," << LA_ref[c]/(grid_size.x*grid_size.y*grid_size.z) << "," << Gtheta_ref[c] << "," << dr_bar_ref[c] << "," << dr_var_ref[c] << "," << P_ref[c] << "," << Gtheta[c] << "," << P_first[c] << "," << P_sequal[c] << "," << P_equal[c] << "," << P_intensity[c] << "," << P_exact[c] << "," << LAD_refcheck_Gref[c] << "," << LAD_first_Gref[c] << "," << LAD_sequal_Gref[c] << "," << LAD_equal_Gref[c] << "," << LAD_intensity_Gref[c] << "," << LAD_exact_Gref[c] << "," << LAD_refcheck[c] << "," << LAD_first[c] << "," << LAD_sequal[c] << "," << LAD_equal[c] << "," << LAD_intensity[c] << "," << LAD_exact[c] << std::endl;
+    }
+    file_output.close();
+    
+    if( printmessages ){
+        std::cout << "done." << std::endl;
+    }
+    
+}
+
+std::vector<float> LiDARcloud::LAD_inversion(std::vector<float> P, std::vector<float> Gtheta, std::vector<std::vector<float>> dr_array, bool fillAnalytic){
+    
+    float etol = 5e-5;
+    uint maxiter = 100;
+    
+    int Ncells = getGridCellCount();
+    
+    float error, eold, aold, tmp;
+    
+    std::vector<float> LAD(Ncells);  
+    LAD.resize(Ncells,0.f);
+    
+    for( uint v=0; v<Ncells; v++ ){
+        
+        //initial guesses
+        float a = 0.1f;
+        float h = 0.01f;
+        
+        float mean = 0.f;
+        uint count=0;
+        //loop through dr value for each beam
+        for( int j=0; j<dr_array.at(v).size(); j++ ){
+            mean += exp(-a*dr_array.at(v).at(j)*Gtheta[v]);
+            count++;
+        }
+        mean /= float(count);      
+        error = fabs(mean-P[v])/P[v];
+        
+        tmp = a;
+        a = a + h;
+        
+        uint iter = 0;
+        while( error>etol && iter<maxiter){
+            
+            aold = tmp;
+            eold = error;
+            
+            float mean = 0.f;
+            uint count = 0;
+            for( int j=0; j<dr_array.at(v).size(); j++ ){
+                mean += exp(-a*dr_array.at(v).at(j)*Gtheta[v]);
+                count ++;
+            }
+            assert( count!=0 );
+            mean /= float(count);      
+            error = fabs(mean-P[v])/P[v];
+            
+            tmp = a;
+            
+            if( error==eold ){
+                break;
+            }
+            
+            a = fabs( (aold*error-a*eold)/(error-eold) );
+            iter++;
+            //  std::cout << "iter = " << iter << ", a = " << a << std::endl;
+        }
+        
+        // check if the inversion failed
+        if( iter>=maxiter-1 || a!=a || a>100 ){
+            
+            if(fillAnalytic)
+            {
+                
+                if( printmessages ){
+                    std::cout << "WARNING: LAD inversion failed for volume #" << v << ". Using average dr formulation." << std::endl;
+                }
+                
+                // calculate the mean dr for the cell
+                float dr_bar = 0;
+                for(uint j=0; j<dr_array.at(v).size(); j++)
+                {
+                    dr_bar += dr_array.at(v).at(j);
+                }
+                dr_bar /= float(dr_array.at(v).size());
+                
+                //do the analytic solution
+                a =   -log(P.at(v))/(dr_bar*Gtheta.at(v));
+                
+            }else{
+                
+                if( printmessages ){
+                    std::cout << "WARNING: LAD inversion failed for volume #" << v << ". setting LAD to 999"  << std::endl;
+                }
+                
+                a = 999.0;
+            }
+        }
+        
+        LAD[v] = a;
+    }
+    
+    return LAD;
+} 
+
+
 __global__ void LIDAR_CUDA::insideVolume( const uint Nhits, const float3* d_hit_xyz, const uint Ngridcells, const float3* d_grid_size, const float3* d_grid_center, const float3* d_grid_anchor, const float* d_grid_rotation, int* d_hit_vol ){
   
   uint t = blockIdx.x*blockDim.x+threadIdx.x;
@@ -1861,6 +2568,108 @@ __global__ void LIDAR_CUDA::intersectGridcell( const size_t Nhitsbb, const float
 
 }
 
+__global__ void LIDAR_CUDA::intersectGridcell_synthetic( const size_t Nhitsbb, const float3 origin, float3* d_scan_xyz, float* d_scan_weight, const float3 center, const float3 anchor, const float3 size, const float rotation, float* d_dr, float* hit_before, float* hit_after, uint* d_hit_location, const float scanner_range ){
+    
+    size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
+    
+    if( idx>=Nhitsbb ){
+        return;
+    }
+    
+    float3 scan_xyz = d_scan_xyz[ idx ];
+    
+    //Inverse rotate the ray
+    
+    float3 origin_rot = d_rotatePoint(origin-anchor,0,-rotation) + anchor;
+    float3 scan_xyz_rot = d_rotatePoint(scan_xyz-anchor,0,-rotation) + anchor;
+    
+    float3 direction = normalize(scan_xyz_rot-origin_rot);
+    
+    float ox = origin_rot.x; float oy = origin_rot.y; float oz = origin_rot.z;
+    float dx = direction.x; float dy = direction.y; float dz = direction.z;
+    
+    float x0 = center.x - 0.5f*size.x; float x1 = center.x + 0.5f*size.x;
+    float y0 = center.y - 0.5f*size.y; float y1 = center.y + 0.5f*size.y;
+    float z0 = center.z - 0.5f*size.z; float z1 = center.z + 0.5f*size.z;
+    
+    float tx_min, ty_min, tz_min;
+    float tx_max, ty_max, tz_max; 
+    
+    float a = 1.0 / dx;
+    if (a >= 0) {
+        tx_min = (x0 - ox) * a;
+        tx_max = (x1 - ox) * a;
+    }
+    else {
+        tx_min = (x1 - ox) * a;
+        tx_max = (x0 - ox) * a;
+    }
+    
+    float b = 1.0 / dy;
+    if (b >= 0) {
+        ty_min = (y0 - oy) * b;
+        ty_max = (y1 - oy) * b;
+    }
+    else {
+        ty_min = (y1 - oy) * b;
+        ty_max = (y0 - oy) * b;
+    }
+    
+    float c = 1.0 / dz;
+    if (c >= 0) {
+        tz_min = (z0 - oz) * c;
+        tz_max = (z1 - oz) * c;
+    }
+    else {
+        tz_min = (z1 - oz) * c;
+        tz_max = (z0 - oz) * c;
+    }
+    
+    float t0, t1;
+    
+    // find largest entering t value
+    
+    if (tx_min > ty_min)
+        t0 = tx_min;
+    else
+        t0 = ty_min;
+    
+    if (tz_min > t0)
+        t0 = tz_min;	
+    
+    // find smallest exiting t value
+    
+    if (tx_max < ty_max)
+        t1 = tx_max;
+    else
+        t1 = ty_max;
+    
+    if (tz_max < t1)
+        t1 = tz_max;
+    
+    if (t0 < t1 && t1 > 1e-6){ //Ray passed through box
+        float t = magnitude( scan_xyz_rot - origin_rot );  //t-distance to hit point
+        
+        if( t>=t0 && t<= t1 ){ //hit lies within the volume
+            atomicAdd( hit_after, sin(acos_safe(dz))*d_scan_weight[idx] );
+            d_hit_location[ idx ] = 2;        
+            d_dr[ idx ] = fabs(t1-t0);
+        }else if( t > t1 && t < scanner_range){ //hit lies after the volume (but not a miss)
+            d_hit_location[ idx ] = 3;
+            d_dr[ idx ] = fabs(t1-t0);
+        }else if( t > t1 && t >= scanner_range){ //hit lies after volume but out of range of scanner (miss)
+            d_hit_location[ idx ] = 4;
+            d_dr[ idx ] = fabs(t1-t0);
+        }else if( t<t0 ){ //hit lies before the volume
+            d_hit_location[ idx ] = 1;
+            atomicAdd( hit_before, sin(acos_safe(dz))*d_scan_weight[idx] );
+            
+        }
+        
+    }
+    
+}
+
 void LiDARcloud::trunkReconstruction( const helios::vec3 box_center, const helios::vec3 box_size, const float Lmax, const float max_aspect_ratio ){
 
   if( printmessages ){
@@ -2115,11 +2924,19 @@ void LiDARcloud::trunkReconstruction( const helios::vec3 box_center, const helio
 
 }
 
-void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file ){
-  syntheticScan( context, xml_file, 1, 0 );
+void LiDARcloud::syntheticScan( helios::Context* context ){
+  syntheticScan( context, 1, 0, false, false );
 }
 
-void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, const int rays_per_pulse, const float pulse_distance_threshold ){
+void LiDARcloud::syntheticScan( helios::Context* context, const bool scan_grid_only, const bool record_misses ){
+  syntheticScan( context, 1, 0, scan_grid_only, record_misses );
+}
+
+void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pulse, const float pulse_distance_threshold ){
+  syntheticScan( context, rays_per_pulse, pulse_distance_threshold, false, false );
+}
+
+void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pulse, const float pulse_distance_threshold, const bool scan_grid_only, const bool record_misses ){
 
   int Npulse;
   if( rays_per_pulse<1 ){
@@ -2136,35 +2953,32 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
     }
   }
 
-  if( printmessages ){
-    disableMessages();
-    loadXML(xml_file);
-    enableMessages();
-  }else{
-    loadXML(xml_file);
-  }
-  
-  LiDARcloud synthscan;
-
-  if( !printmessages ){
-    synthscan.disableMessages();
-  }
-    
-  //Load the synthetic scan metedata
-  synthscan.loadXML(xml_file);
-
-  if( synthscan.getScanCount()==0 ){
+  if( getScanCount()==0 ){
     std::cout << "WARNING (syntheticScan): No scans added to the point cloud. Exiting.." << std::endl;
     return;
   }
 
-  //Determine bounding box for Context geometry
-  helios::vec2 xbounds, ybounds, zbounds;
-  context->getDomainBoundingBox(xbounds,ybounds,zbounds);
-
-  float3 bb_center = make_float3(xbounds.x+0.5*(xbounds.y-xbounds.x),ybounds.x+0.5*(ybounds.y-ybounds.x),zbounds.x+0.5*(zbounds.y-zbounds.x));
-  float3 bb_size = make_float3(xbounds.y-xbounds.x,ybounds.y-ybounds.x,zbounds.y-zbounds.x);
-
+  float3 bb_center;
+  float3 bb_size;
+    
+  if(scan_grid_only == false){
+    
+    //Determine bounding box for Context geometry
+    helios::vec2 xbounds, ybounds, zbounds;
+    context->getDomainBoundingBox(xbounds,ybounds,zbounds);
+    bb_center = make_float3(xbounds.x+0.5*(xbounds.y-xbounds.x),ybounds.x+0.5*(ybounds.y-ybounds.x),zbounds.x+0.5*(zbounds.y-zbounds.x));
+    bb_size = make_float3(xbounds.y-xbounds.x,ybounds.y-ybounds.x,zbounds.y-zbounds.x);
+    
+  }else{
+    
+    // Determine bounding box for voxels instead of whole domain
+    helios::vec3 boxmin, boxmax;
+    getGridBoundingBox(boxmin, boxmax);  
+    bb_center = make_float3(boxmin.x + 0.5*(boxmax.x-boxmin.x),boxmin.y + 0.5*(boxmax.y-boxmin.y),boxmin.z + 0.5*(boxmax.z-boxmin.z) );
+    bb_size = make_float3(boxmax.x-boxmin.x, boxmax.y-boxmin.y, boxmax.z-boxmin.z );
+    
+  }
+  
   //get geometry information and copy to GPU
 
   size_t c=0;
@@ -2176,6 +2990,8 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
 
   std::vector<uint> UUIDs_all = context->getAllUUIDs();
 
+  std::vector<uint> ID_mapping;
+
   //----- PATCHES ----- //
 
   //figure out how many patches
@@ -2186,6 +3002,8 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
       Npatches++;
     }
   }
+
+  ID_mapping.resize(Npatches);
 
   float3* patch_vertex = (float3*)malloc(4*Npatches * sizeof(float3)); //allocate host memory
   int* patch_textureID = (int*)malloc(Npatches * sizeof(int)); //allocate host memory
@@ -2200,6 +3018,8 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
       patch_vertex[4*c+1] = vec3tofloat3(verts.at(1));
       patch_vertex[4*c+2] = vec3tofloat3(verts.at(2));
       patch_vertex[4*c+3] = vec3tofloat3(verts.at(3));
+
+      ID_mapping.at(c) = UUIDs_all.at(p);
 
       if( prim->hasTexture() && prim->getTexture()->hasTransparencyChannel() ){
 	std::string tex = prim->getTextureFile();
@@ -2253,6 +3073,8 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
     }
   }
 
+  ID_mapping.resize(Npatches+Ntriangles);
+
   float3* tri_vertex = (float3*)malloc(3*Ntriangles * sizeof(float3)); //allocate host memory
   int* tri_textureID = (int*)malloc(Ntriangles * sizeof(int)); //allocate host memory
   float2* tri_uv = (float2*)malloc(3*Ntriangles * sizeof(float2)); //allocate host memory
@@ -2265,6 +3087,8 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
       tri_vertex[3*c] = vec3tofloat3(verts.at(0));
       tri_vertex[3*c+1] = vec3tofloat3(verts.at(1));
       tri_vertex[3*c+2] = vec3tofloat3(verts.at(2));
+
+      ID_mapping.at(Npatches+c) = UUIDs_all.at(p);
 
       if( prim->hasTexture() && prim->getTexture()->hasTransparencyChannel() ){
 	std::string tex = prim->getTextureFile();
@@ -2348,19 +3172,21 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
   CUDA_CHECK_ERROR( cudaMalloc((void**)&d_masksize, Ntextures * sizeof(int2)) ); //allocate device memory
   CUDA_CHECK_ERROR( cudaMemcpy(d_masksize, masksize, Ntextures * sizeof(int2), cudaMemcpyHostToDevice) );
 
-  for( int s=0; s<synthscan.getScanCount(); s++ ){
+  for( int s=0; s<getScanCount(); s++ ){
 
-    float3 scan_origin = vec3tofloat3(synthscan.getScanOrigin(s));
+    float3 scan_origin = vec3tofloat3(getScanOrigin(s));
 
-    int Ntheta = synthscan.getScanSizeTheta(s);
-    int Nphi = synthscan.getScanSizePhi(s);
+    int Ntheta = getScanSizeTheta(s);
+    int Nphi = getScanSizePhi(s);
 
-    helios::vec2 thetarange = synthscan.getScanRangeTheta(s);
+    helios::vec2 thetarange = getScanRangeTheta(s);
     float thetamin = thetarange.x;
     float thetamax = thetarange.y;
-    helios::vec2 phirange = synthscan.getScanRangePhi(s);
+    helios::vec2 phirange = getScanRangePhi(s);
     float phimin = phirange.x;
     float phimax = phirange.y;
+
+    std::vector<std::string> column_format = getScanColumnFormat(s);
     
     std::vector<helios::vec3> raydir;
     raydir.resize(Ntheta*Nphi);
@@ -2449,6 +3275,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
     }
     CUDA_CHECK_ERROR( cudaMemcpy(d_hit_t, hit_t, N*Npulse*sizeof(float), cudaMemcpyHostToDevice) );
 
+    //Dot product of primitive normal and ray direction (for calculating intensity)
     float* d_hit_fnorm;
     CUDA_CHECK_ERROR( cudaMalloc((void**)&d_hit_fnorm,N*Npulse*sizeof(float)) ); //allocate device memory
     float* hit_fnorm = (float*)malloc(N*Npulse * sizeof(float)); //allocate host memory
@@ -2457,20 +3284,29 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
     }
     CUDA_CHECK_ERROR( cudaMemcpy(d_hit_fnorm, hit_fnorm, N*Npulse*sizeof(float), cudaMemcpyHostToDevice) );
 
-    float exit_diameter = synthscan.getScanBeamExitDiameter(s);
-    float beam_divergence = synthscan.getScanBeamDivergence(s);
+    //Dot product of primitive normal and ray direction (for calculating intensity)
+    int* d_hit_ID;
+    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_hit_ID,N*Npulse*sizeof(int)) ); //allocate device memory
+    int* hit_ID = (int*)malloc(N*Npulse * sizeof(int)); //allocate host memory
+    for( int i=0; i<N*Npulse; i++ ){
+      hit_ID[i] = 999999999;
+    }
+    CUDA_CHECK_ERROR( cudaMemcpy(d_hit_ID, hit_ID, N*Npulse*sizeof(float), cudaMemcpyHostToDevice) );
+
+    float exit_diameter = getScanBeamExitDiameter(s);
+    float beam_divergence = getScanBeamDivergence(s);
 
     dimBlock = make_uint3( 128, 8, 1 );
     dimGrid = make_uint3( ceil(float(N)/float(dimBlock.x)), ceil(float(Npulse)/float(dimBlock.y)), 1 );
 
     //---- patch kernel ----//
-    intersectPatches<<< dimGrid, dimBlock >>>( N, Npulse, scan_origin, d_raydir, exit_diameter, beam_divergence, Npatches, d_patch_vertex, d_patch_textureID, Ntextures, d_masksize, masksize_max, d_maskdata, d_patch_uv, d_hit_t, d_hit_fnorm );
+    intersectPatches<<< dimGrid, dimBlock >>>( N, Npulse, scan_origin, d_raydir, exit_diameter, beam_divergence, Npatches, d_patch_vertex, d_patch_textureID, Ntextures, d_masksize, masksize_max, d_maskdata, d_patch_uv, d_hit_t, d_hit_fnorm, d_hit_ID );
 
     cudaDeviceSynchronize();
     CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
       
     //---- triangle kernel ----//
-    intersectTriangles<<< dimGrid, dimBlock >>>( N, Npulse, scan_origin, d_raydir, exit_diameter, beam_divergence, Ntriangles, d_tri_vertex, d_tri_textureID, Ntextures, d_masksize, masksize_max, d_maskdata, d_tri_uv, d_hit_t, d_hit_fnorm );
+    intersectTriangles<<< dimGrid, dimBlock >>>( N, Npulse, scan_origin, d_raydir, exit_diameter, beam_divergence, Ntriangles, Npatches, d_tri_vertex, d_tri_textureID, Ntextures, d_masksize, masksize_max, d_maskdata, d_tri_uv, d_hit_t, d_hit_fnorm, d_hit_ID );
     
     cudaDeviceSynchronize();
     CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
@@ -2478,30 +3314,35 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
     //copy back
     CUDA_CHECK_ERROR( cudaMemcpy(hit_t, d_hit_t, N*Npulse*sizeof(float), cudaMemcpyDeviceToHost) );
     CUDA_CHECK_ERROR( cudaMemcpy(hit_fnorm, d_hit_fnorm, N*Npulse*sizeof(float), cudaMemcpyDeviceToHost) );
+    CUDA_CHECK_ERROR( cudaMemcpy(hit_ID, d_hit_ID, N*Npulse*sizeof(int), cudaMemcpyDeviceToHost) );
 
     size_t Nhits = 0;
+    //looping over beams
     for( size_t r=0; r<N; r++ ){
 
       std::vector<std::vector<float> > t_pulse;
       std::vector<std::vector<float> > t_hit;
 
+      //looping over rays in each beam
       for( size_t p=0; p<Npulse; p++ ){
 	
-    	float t = hit_t[r*Npulse+p];
-	float i = hit_fnorm[r*Npulse+p];
+    	float t = hit_t[r*Npulse+p];  //distance to hit (misses t=1e6)
+	float i = hit_fnorm[r*Npulse+p]; //dot product between beam direction and primitive normal
+	float ID = float(hit_ID[r*Npulse+p]);   //ID of intersected primitive
 
-    	if( t<1e6 ){
-	  std::vector<float> v{t,i};
-    	  t_pulse.push_back(v);
-    	}
+    	if( record_misses || (!record_misses && t<1e5) ){ 
+	  std::vector<float> v{t,i,ID};
+	  t_pulse.push_back(v);
+	}
 
       }
 
-      if( t_pulse.size()==1 ){
+      if( t_pulse.size()==1 ){ //this is discrete-return data, or we only had one hit for this pulse
 
-    	t_hit.push_back(t_pulse.front());
+	std::vector<float> v{t_pulse.front().at(0),t_pulse.front().at(1),1,t_pulse.front().at(2)};
+    	t_hit.push_back( v );
 
-      }else if( t_pulse.size()>1 ){
+      }else if( t_pulse.size()>1 ){ //more than one hit for this pulse
 	
     	std::sort( t_pulse.begin(), t_pulse.end(), LIDAR_CUDA::sortcol0 );
 
@@ -2509,27 +3350,39 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
     	float d=t_pulse.at(0).at(0);
 	float f=t_pulse.at(0).at(1);
     	int count=1;
-    	for( size_t hit=1; hit<t_pulse.size(); hit++ ){
 
-    	  if( t_pulse.at(hit).at(0)-t0>pulse_distance_threshold || hit==t_pulse.size()-1 ){
-
-	    std::vector<float> v{d/float(count), f/float(Npulse)};
-    	    t_hit.push_back( v );
-	    
-    	    Nhits++;
-    	    count=1;
-    	    d=t_pulse.at(hit).at(0);
-    	    t0=t_pulse.at(hit).at(0);
+	//loop over rays in each beam and group into hit points
+	for( size_t hit=1; hit<=t_pulse.size(); hit++ ){
+                    
+	  // if the end has been reached, output the last hitpoint
+	  if( hit == t_pulse.size()){
+                        
+	    std::vector<float> v{d/float(count), f/float(Npulse), float(count), t_pulse.at(hit-1).at(2) }; //Note: the last index of t_pulse (.at(2)) is the object identifier. We don't want object identifiers to be averaged, so we'll assign the hit identifier based on the last ray in the group
+	    t_hit.push_back( v );
+                        
+	    // else if the current ray is more than the pulse threshold distance from t0,  it is part of the next hitpoint so output the previous hitpoint and reset
+	  }else if( t_pulse.at(hit).at(0)-t0>pulse_distance_threshold ){
+                        
+	    std::vector<float> v{d/float(count), f/float(Npulse), float(count), t_pulse.at(hit-1).at(2)}; //included the ray count here
+	    //Note: the last index of t_pulse (.at(2)) is the object identifier. We don't want object identifiers to be averaged, so we'll assign the hit identifier based on the last ray in the group
+	    t_hit.push_back( v );
+            
+	    Nhits++;
+	    count=1;
+	    d=t_pulse.at(hit).at(0);
+	    t0=t_pulse.at(hit).at(0);
 	    f=t_pulse.at(hit).at(1);
-    	  }else{
-
-    	    count++;
-    	    d+=t_pulse.at(hit).at(0);
-	    f+=t_pulse.at(hit).at(1);
+            
+	   // or else the current ray is less than pulse threshold and is part of current hitpoint; add it to the current hit point and continue on
+	  }else{
 	    
-    	  }
-	  
-    	}
+	    count++;
+	    d+=t_pulse.at(hit).at(0);
+	    f+=t_pulse.at(hit).at(1);
+            
+	  }
+          
+	}
 
       }
 
@@ -2546,11 +3399,31 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
 	data["deviation"] = fabs(t_hit.at(hit).at(0)-average);
 	data["timestamp"] = r;
 	data["intensity"] = t_hit.at(hit).at(1);
+	data["distance"] = t_hit.at(hit).at(0);
+	data["nRaysHit"] = t_hit.at(hit).at(2);
+
+	float UUID = t_hit.at(hit).at(3);
+	if( UUID>=0 && UUID<ID_mapping.size() ){
+	  UUID = ID_mapping.at(int(t_hit.at(hit).at(3)));
+	}
+
+	helios::RGBcolor color = helios::RGB::red;
+	
+	if( UUID>=0 && context->doesPrimitiveExist(uint(UUID)) ){
+	  
+	  color = context->getPrimitivePointer(uint(UUID))->getColor();
+	  
+	  if( context->doesPrimitiveDataExist(uint(UUID),"object_label") && context->getPrimitiveDataType(uint(UUID),"object_label")==helios::HELIOS_TYPE_INT ){
+	    int label;
+	    context->getPrimitiveData(uint(UUID),"object_label",label);
+	    data["object_label"] = double(label);
+	  }
+	}
 
     	helios::vec3 dir = helios::make_vec3(direction[r].x,direction[r].y,direction[r].z);
     	helios::vec3 origin = helios::make_vec3(scan_origin.x,scan_origin.y,scan_origin.z);
     	helios::vec3 p = origin+dir*t_hit.at(hit).at(0);
-    	addHitPoint( s, p, helios::cart2sphere(dir), helios::RGB::red, data );
+    	addHitPoint( s, p, helios::cart2sphere(dir), color, data );
 
 	Nhits++;
       }
@@ -2559,11 +3432,13 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
 
     CUDA_CHECK_ERROR( cudaFree(d_hit_t) );
     CUDA_CHECK_ERROR( cudaFree(d_hit_fnorm) );
+    CUDA_CHECK_ERROR( cudaFree(d_hit_ID) );
     CUDA_CHECK_ERROR( cudaFree(d_raydir) );
     free(hit_xyz);
     free(direction);
     free(hit_t);
     free(hit_fnorm);
+    free(hit_ID);
 
     if( printmessages ){
       std::cout << "Created synthetic scan #" << s << " with " << Nhits << " hit points." << std::endl;
@@ -2594,7 +3469,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const char* xml_file, 
   
 }
 
-void LiDARcloud::calculateSyntheticLeafArea( helios::Context* context ){
+std::vector<float> LiDARcloud::calculateSyntheticLeafArea( helios::Context* context ){
 
   float3* d_prim_xyz;
 
@@ -2686,15 +3561,15 @@ void LiDARcloud::calculateSyntheticLeafArea( helios::Context* context ){
     }
   }
 
-  std::ofstream file;
+  std::vector<float> output_LeafArea;
+  output_LeafArea.resize(Ncells,0.f);
 
-  file.open("../output/synthetic_leaf_areas.txt");
-  
   for( int v=0; v<Ncells; v++ ){
-    file << total_area.at(v) << std::endl;
+    output_LeafArea.at(v) =  total_area.at(v);
+    if( context->getPrimitivePointer(UUIDs_all.at(v))->doesPrimitiveDataExist("gridCell") ){
+      context->setPrimitiveData(UUIDs_all.at(v),"synthetic_leaf_area",total_area.at(v));
+    }
   }
-
-  file.close();
   
   free(prim_vol);
 
@@ -2703,11 +3578,13 @@ void LiDARcloud::calculateSyntheticLeafArea( helios::Context* context ){
   CUDA_CHECK_ERROR( cudaFree(d_grid_center) );
   CUDA_CHECK_ERROR( cudaFree(d_grid_anchor) );
   CUDA_CHECK_ERROR( cudaFree(d_grid_size) );
-  CUDA_CHECK_ERROR( cudaFree(d_grid_rotation) );  
+  CUDA_CHECK_ERROR( cudaFree(d_grid_rotation) );
+
+  return output_LeafArea;
 
 }
 
-__global__ void LIDAR_CUDA::intersectPatches( const size_t Npulse, const int rays_per_pulse, const float3 origin, float3* d_raydir, const float exit_diameter, const float beam_divergence,const int Npatches, float3* d_patch_vertex, int* d_patch_textureID, const int Ntextures, int2* d_masksize, int2 masksize_max, bool* d_maskdata, float2* d_patch_uv, float* d_hit_t, float* d_hit_fnorm ){
+__global__ void LIDAR_CUDA::intersectPatches( const size_t Npulse, const int rays_per_pulse, const float3 origin, float3* d_raydir, const float exit_diameter, const float beam_divergence,const int Npatches, float3* d_patch_vertex, int* d_patch_textureID, const int Ntextures, int2* d_masksize, int2 masksize_max, bool* d_maskdata, float2* d_patch_uv, float* d_hit_t, float* d_hit_fnorm, int* d_hit_ID ){
 
   int idx = blockIdx.x*blockDim.x+threadIdx.x;
 
@@ -2732,7 +3609,7 @@ __global__ void LIDAR_CUDA::intersectPatches( const size_t Npulse, const int ray
   float3 disk_pt3 = d_rotatePoint( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );
 
   float tmin = d_hit_t[i_global];
-  float nmin=d_hit_fnorm[i_global];
+  float nmin = d_hit_fnorm[i_global];
   for( int p=0; p<Npatches; p++ ){
 
     float3 v0 = d_patch_vertex[4*p];
@@ -2765,6 +3642,7 @@ __global__ void LIDAR_CUDA::intersectPatches( const size_t Npulse, const int ray
 	    
 	    tmin = t;
 	    nmin = fabs(normal*raydir);
+	    d_hit_ID[i_global] = p; 
 
 	  }else{ //has texture mask
 
@@ -2785,6 +3663,7 @@ __global__ void LIDAR_CUDA::intersectPatches( const size_t Npulse, const int ray
 
 	      tmin = t;
 	      nmin = fabs(normal*raydir);
+	      d_hit_ID[i_global] = p; 
 	    
 	    }
 	    
@@ -2802,7 +3681,7 @@ __global__ void LIDAR_CUDA::intersectPatches( const size_t Npulse, const int ray
   
 }
 
-__global__ void LIDAR_CUDA::intersectTriangles( const size_t Npulse, const int rays_per_pulse, const float3 origin, float3* d_raydir, const float exit_diameter, const float beam_divergence, const int Ntriangles, float3* d_tri_vertex, int* d_tri_textureID, const int Ntextures, int2* d_masksize, const int2 masksize_max, bool* d_maskdata, float2* d_tri_uv, float* d_hit_t, float* d_hit_fnorm ){
+__global__ void LIDAR_CUDA::intersectTriangles( const size_t Npulse, const int rays_per_pulse, const float3 origin, float3* d_raydir, const float exit_diameter, const float beam_divergence, const int Ntriangles, const int Npatches, float3* d_tri_vertex, int* d_tri_textureID, const int Ntextures, int2* d_masksize, const int2 masksize_max, bool* d_maskdata, float2* d_tri_uv, float* d_hit_t, float* d_hit_fnorm, int* d_hit_ID ){
 
   int idx = blockIdx.x*blockDim.x+threadIdx.x;
 
@@ -2863,6 +3742,7 @@ __global__ void LIDAR_CUDA::intersectTriangles( const size_t Npulse, const int r
 	    tmin = t;
 	    float3 normal = normalize( cross( v1-v0, v2-v0 ) );
 	    nmin = fabs(normal*raydir);
+	    d_hit_ID[i_global] = Npatches+tri; 
 	  }else{//has texture mask
 
 	  int ID = d_tri_textureID[tri];
@@ -2883,6 +3763,7 @@ __global__ void LIDAR_CUDA::intersectTriangles( const size_t Npulse, const int r
 	      tmin = t;
 	      float3 normal = normalize( cross( v1-v0, v2-v0 ) );
 	      nmin = fabs(normal*raydir);
+	      d_hit_ID[i_global] = Npatches+tri; 
 	    }
 	    
 	    

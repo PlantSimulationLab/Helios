@@ -683,6 +683,10 @@ class CanopyGenerator{
   //! Unit testing routine
   int selfTest( void );
 
+  //! Build canopy geometries based on parameters specified in an XML file
+  /** \param[in] "filename" Path to XML file to be read */
+  void loadXML( const char* filename );
+
   //! Build a canopy consisting of a homogeneous volume of leaves
   /** \param[in] "params" Structure containing parameters for homogeneous canopy.
    */

@@ -17,9 +17,6 @@
 #ifndef __CONTEXT__
 #define __CONTEXT__
 
-//pugi XML parser
-#include "pugixml.hpp"
-
 #include "global.h"
 
 //! Timeseries-related functions

@@ -51,6 +51,9 @@ typedef unsigned int uint;
 
 #include "helios_vector_types.h"
 
+//pugi XML parser
+#include "pugixml.hpp"
+
 // *** Groups *** //
 
 //! Miscellaneous helper functions
@@ -164,15 +167,23 @@ vec2 string2vec2( const char* str );
 /** \ingroup functions */
 vec3 string2vec3( const char* str );
 
+//! Convert a space-delimited string into a vec4 vector
+/** \ingroup functions */
+vec4 string2vec4( const char* str );
+
 //! Convert a space-delimited string into an int2 vector
 /** \ingroup functions */
 int2 string2int2( const char* str );
 
- //! Convert a space-delimited string into an int3 vector
+//! Convert a space-delimited string into an int3 vector
 /** \ingroup functions */
 int3 string2int3( const char* str );
 
-//! Convert a space-delimited string into an RGBAcolor vector
+//! Convert a space-delimited string into an int4 vector
+/** \ingroup functions */
+int4 string2int4( const char* str );
+
+//! Convert a space-delimited string into an RGBcolor vector
 /** \ingroup functions */
 RGBAcolor string2RGBcolor( const char* str );
 
@@ -473,7 +484,74 @@ void wait( float seconds );
      \return Interpolated (x,y,z) Cartesian point.
   */
   helios::vec3 spline_interp3( const float u, const helios::vec3 x_start, const helios::vec3 tan_start, const helios::vec3 x_end, const helios::vec3 tan_end );
- 
+
+
+  //! Function to load and convert a field in a pugi XML node into a float
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  float XMLloadfloat( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into an int
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  int XMLloadint( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into a string
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  std::string XMLloadstring( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into a vec2
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  helios::vec2 XMLloadvec2( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into a vec3
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  helios::vec3 XMLloadvec3( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into a vec4
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  helios::vec4 XMLloadvec4( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into a vec2
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  helios::int2 XMLloadint2( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into a int3
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  helios::int3 XMLloadint3( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into a int4
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  helios::int4 XMLloadint4( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into an RGB color vector
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  helios::RGBcolor XMLloadrgb( pugi::xml_node node, const char* field );
+
+  //! Function to load and convert a field in a pugi XML node into an RGBA color vector
+  /** \param[in] "node" Pugi XML node
+      \param[in] "field" String corresponding to field value to be read
+  */
+  helios::RGBAcolor XMLloadrgba( pugi::xml_node node, const char* field );
+  
 }
 
 #endif

@@ -24,7 +24,7 @@ void LiDARcloud::loadXML( const char* filename ){
   loadXML( filename, false );
 }
 
-void LiDARcloud::loadXML( const char* filename, const bool loadGridOnly ){
+void LiDARcloud::loadXML( const char* filename, const bool load_grid_only ){
 
   if( printmessages ){
     cout << "Reading XML file: " << filename << "..." << flush;
@@ -65,7 +65,7 @@ void LiDARcloud::loadXML( const char* filename, const bool loadGridOnly ){
   uint scan_count = 0; //counter variable for scans
   uint total_hits = 0;
 
-  if(loadGridOnly == false){
+  if(load_grid_only == false){
 
     //looping over any scans specified in XML file
     for (pugi::xml_node s = helios.child("scan"); s; s = s.next_sibling("scan")){
@@ -178,23 +178,29 @@ void LiDARcloud::loadXML( const char* filename, const bool loadGridOnly ){
       }
       
       // ----- exitDiameter ------//
-      const char* exitDiameter_str = s.child_value("exitdiameter");
+      const char* exitDiameter_str_uc = s.child_value("exitDiameter");
+      const char* exitDiameter_str_lc = s.child_value("exitdiameter");
       
       float exitDiameter;
-      if( strlen(exitDiameter_str)==0 ){
+      if( strlen(exitDiameter_str_uc)==0 && strlen(exitDiameter_str_lc)==0 ){
 	exitDiameter=0;
+      }else if( strlen(exitDiameter_str_uc)>0 ){
+	exitDiameter = fmax(0,atof(exitDiameter_str_uc));
       }else{
-	exitDiameter = fmax(0,atof(exitDiameter_str));
+	exitDiameter = fmax(0,atof(exitDiameter_str_lc));
       }
       
       // ----- beamDivergence ------//
-      const char* beamDivergence_str = s.child_value("beamdivergence");
+      const char* beamDivergence_str_uc = s.child_value("beamDivergence");
+      const char* beamDivergence_str_lc = s.child_value("beamdivergence");
       
       float beamDivergence;
-      if( strlen(beamDivergence_str)==0 ){
+      if( strlen(beamDivergence_str_uc)==0 && strlen(beamDivergence_str_lc)==0 ){
 	beamDivergence=0;
+      }else if( strlen(beamDivergence_str_uc)>0 ){
+	beamDivergence = fmax(0,atof(beamDivergence_str_uc));
       }else{
-	beamDivergence = fmax(0,atof(beamDivergence_str));
+	beamDivergence = fmax(0,atof(beamDivergence_str_lc));
       }
       
       // ----- distanceFilter ------//
@@ -204,9 +210,25 @@ void LiDARcloud::loadXML( const char* filename, const bool loadGridOnly ){
       if( strlen(dFilter_str)>0 ){
 	distanceFilter = atof(dFilter_str);
       }
+
+      // ------ ASCII data file format ------- //
+	
+      const char* data_format = s.child_value("ASCII_format");
+	
+      std::vector<std::string> column_format;
+      if( strlen(data_format)!=0 ){
+
+	std::string tmp;
+	  
+	std::istringstream stream(data_format);
+	while( stream >> tmp ){
+	  column_format.push_back(tmp);
+	}
+	
+      }
       
       //create a temporary scan object
-      ScanMetadata scan(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence );
+      ScanMetadata scan(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence, column_format );
       
       addScan( scan );
       
@@ -232,22 +254,6 @@ void LiDARcloud::loadXML( const char* filename, const bool loadGridOnly ){
 	    exit(EXIT_FAILURE);
 	  }
 	  f.close();
-	}
-	
-	// ------ ASCII data file format ------- //
-	
-	const char* data_format = s.child_value("ASCII_format");
-	
-	std::vector<std::string> column_format;
-	if( strlen(data_format)!=0 ){
-
-	  std::string tmp;
-	  
-	  std::istringstream stream(data_format);
-	  while( stream >> tmp ){
-	    column_format.push_back(tmp);
-	  }
-	  
 	}
 	
 	//add hit points to scan if data file was given
@@ -628,6 +634,39 @@ void LiDARcloud::exportGtheta( const char* filename ){
 }
 
 void LiDARcloud::exportPointCloud( const char* filename ){
+  
+  if( getScanCount()==1 ){
+    exportPointCloud( filename, 0 );
+  }else{
+
+    for( int i=0; i<getScanCount(); i++ ){
+
+      std::string filename_a = filename;
+      char scan[20];
+      sprintf(scan,"%d",i);
+
+      size_t dotindex = filename_a.find_last_of(".");
+      if( dotindex == filename_a.size()-1 || filename_a.size()-1-dotindex>4  ){//no file extension was provided
+	filename_a = filename_a + "_" + scan;
+      }else{ //has file extension
+	std::string ext = filename_a.substr(dotindex,filename_a.size()-1);
+	filename_a = filename_a.substr(0,dotindex) + "_" + scan + ext;
+      }
+
+      exportPointCloud( filename_a.c_str(), i );
+
+    }
+      
+  }
+}
+
+
+void LiDARcloud::exportPointCloud( const char* filename, const uint scanID ){
+
+  if( scanID>getScanCount() ){
+    std::cerr << "ERROR (LiDARcloud::exportPointCloud): Cannot export scan " << scanID << " because this scan does not exist." << std::endl;
+    throw 1;
+  }
 
   ofstream file;
 
@@ -644,22 +683,59 @@ void LiDARcloud::exportPointCloud( const char* filename ){
     }
   }
 
+  std::vector<std::string> ASCII_format = getScanColumnFormat(scanID);
+
+  if( ASCII_format.size()==0 ){
+    ASCII_format.push_back("x");
+    ASCII_format.push_back("y");
+    ASCII_format.push_back("z");
+  }
+
   for( int r=0; r<getHitCount(); r++ ){
+
+    if( getHitScanID(r) != scanID ){
+      continue;
+    }
 
     vec3 xyz = getHitXYZ(r);
     RGBcolor color = getHitColor(r);
+   
+    for( int c=0; c<ASCII_format.size(); c++ ){
 
-    file << xyz.x << " " << xyz.y << " " << xyz.z << " " << color.r << " " << color.g << " " << color.b;
-
-    for( int i=0; i<hit_data.size(); i++ ){
-      std::string label = hit_data.at(i);
-      std::map<std::string, double> hit_data = hits.at(i).data;
-      if( hit_data.find(label) != hit_data.end() ){
-	file << " " << getHitData(r,label.c_str());
+      if( ASCII_format.at(c).compare("x")==0 ){
+	file << xyz.x;
+      }else if( ASCII_format.at(c).compare("y")==0 ){
+	file << xyz.y;
+      }else if( ASCII_format.at(c).compare("z")==0 ){
+	file << xyz.z;
+      }else if( ASCII_format.at(c).compare("r")==0 ){
+	file << color.r;
+      }else if( ASCII_format.at(c).compare("g")==0 ){
+	file << color.g;
+      }else if( ASCII_format.at(c).compare("b")==0 ){
+	file << color.b;
+      }else if( ASCII_format.at(c).compare("r255")==0 ){
+	file << round(color.r*255);
+      }else if( ASCII_format.at(c).compare("g255")==0 ){
+	file << round(color.g*255);
+      }else if( ASCII_format.at(c).compare("b255")==0 ){
+	file << round(color.b*255);
+      }else if( ASCII_format.at(c).compare("zenith")==0 ){
+	file << getHitRaydir(r).zenith;
+      }else if( ASCII_format.at(c).compare("azimuth")==0 ){
+	file << getHitRaydir(r).azimuth;
+      }else if( hits.at(r).data.find(ASCII_format.at(c))!=hits.at(r).data.end() ){ //hit scalar data
+	file << getHitData(r,ASCII_format.at(c).c_str());
       }else{
-	file << " " << -9999 << std::endl;
+	file << -9999 << std::endl;
       }
+
+      if( c<ASCII_format.size()-1 ){
+	file << " ";
+      }
+
     }
+
     file << std::endl;
     
   }
