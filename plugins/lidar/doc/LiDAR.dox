@@ -15,7 +15,8 @@
 
   \section LiDARissues Known Issues
 
-  - The LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file. 
+  - The LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file.
+  - The current version of calculateLeafAreaGPU() assumes data is discrete-return. The version calculateLeafAreaGPU_testing() does both discrete-return and waveform data, but it has not been thoroughly tested.
 
   \section LiDARintro Introduction
 
@@ -423,8 +424,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
      %Context context;
 
-     \// create some model geometry here
-     context.addPatch();
+     context.addPatch(); // create some model geometry here
 
      %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
@@ -475,8 +475,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
      %Context context;
 
-     // create some model geometry here
-     context.addPatch();
+     context.addPatch(); // create some model geometry here
 
      %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
@@ -490,6 +489,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
      pointcloud.exportPointCloud( "/path/to/file.xyz" );  //write to ASCII file
       
   }</code></pre></div>
+
+  Synthetic hit points can be labeled based on the primitive they intersect based on the value of the primitive data "object_label". Primitive groups can be labeled in any way by setting a common value for the "object_label" primitive data. In order to enable synthetic data labeling, the column "object_label" must be included within the <ASCII_format> tag in the scan XML file. The object_label value for each hit point will be recorded and a column will be written if the point cloud is exported to file.
 
   \section LiDARvis Visualizing results
 
