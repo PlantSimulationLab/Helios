@@ -89,11 +89,11 @@ VSPGrapevineParameters::VSPGrapevineParameters(void){
 
   shoot_length = 0.9;
 
-  shoot_radius = 0.0025;
+  shoot_radius = 0.005;
 
   shoots_per_cordon = 10;
 
-  leaf_spacing_fraction = 0.6;
+  leaf_spacing_fraction = 0.5;
 
   grape_radius = 0.0075;
 

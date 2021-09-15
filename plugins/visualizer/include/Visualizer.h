@@ -761,6 +761,13 @@ public:
   //! Update the graphics window based on current geometry, then continue the program
   void plotUpdate(void);
 
+
+    //! Update the graphics window based on current geometry, then continue the program, with the option not to display the graphic window
+    /* If running a large number of renderings, or running remotely, it can be desirable to not open the graphic window.
+     * \param[in] "hide_window" If false, do not display the graphic window.
+     */
+    void plotUpdate( const bool hide_window );
+
   //! Print the current graphics window to a JPEG image file. File will be given a default filename and saved to the current directory from which the executable was run.
   void printWindow( void );
   

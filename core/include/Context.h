@@ -590,7 +590,7 @@ namespace helios {
   */
   class Triangle : public Primitive{
   public:
-    
+
     //! Triangle constructor 
     Triangle( const helios::vec3 vertex0, const helios::vec3 vertex1, const helios::vec3 vertex2, const helios::RGBAcolor color, const uint UUID );
 

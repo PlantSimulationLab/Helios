@@ -266,7 +266,7 @@
 
       vec3 center = make_vec3(0,0,0);
       vec2 size = make_vec2(1,1);
-      context.addRectangleByCenter(center,size);
+      context.addPatch(center,size);
       
       %Visualizer vis( 1200 );
 
@@ -361,7 +361,7 @@
 
       vec3 center = make_vec3(0,0,0);
       vec2 size = make_vec2(1,1);
-      context.addRectangleByCenter(center,size);
+      context.addPatch(center,size);
       
       %Visualizer vis( 1200 );
 

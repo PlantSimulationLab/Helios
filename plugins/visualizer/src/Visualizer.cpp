@@ -2739,6 +2739,13 @@ void Visualizer::buildContextGeometry( helios::Context* __context ){
 }
 
 void Visualizer::buildContextGeometry( helios::Context* __context, const std::vector<uint>& UUIDs ){
+
+    if( UUIDs.size()==0 ){
+        std::cerr << "WARNING (Visualizer::buildContextGeometry): There is no Context geometry to build...exiting." << std::endl;
+        return;
+    }
+
+
   context = __context;
   contextGeomNeedsUpdate = true;
 
@@ -3048,7 +3055,7 @@ void Visualizer::buildContextGeometry_private( void ){
 	//top
 	top_vertices.at(0) = v_vertices.at(4);
 	top_vertices.at(1) = v_vertices.at(5);
-        top_vertices.at(2) = v_vertices.at(6);
+    top_vertices.at(2) = v_vertices.at(6);
 	top_vertices.at(3) = v_vertices.at(7);
 
 	//-x
@@ -3458,16 +3465,20 @@ void Visualizer::render( bool shadow ){
 
 }
 
-void Visualizer::plotUpdate( void ){
+void Visualizer::plotUpdate( void ) {
+    plotUpdate( false );
+}
+
+void Visualizer::plotUpdate( const bool hide_window ){
 
   if( message_flag ){
     std::cout << "Updating the plot..." << std::flush;
   }
     
-  //if( glfwGetWindowAttrib( (GLFWwindow*) window, GLFW_VISIBLE)==0 ){
-  glfwShowWindow( (GLFWwindow*) window);
-  //}
-  
+   if( !hide_window ) {
+      glfwShowWindow((GLFWwindow *) window);
+  }
+
   //Update the Context geometry (if needed)
   if( contextGeomNeedsUpdate ){
     buildContextGeometry_private();
@@ -3584,10 +3595,7 @@ void Visualizer::plotUpdate( void ){
   getViewKeystrokes( eye, center );
 
   int width, height;
-  //glfwGetWindowSize((GLFWwindow*)window, &width, &height );
-  //Wdisplay = width;
-  //Hdisplay = height;
-  glfwGetFramebufferSize((GLFWwindow*)window, &width, &height );
+  glfwGetFramebufferSize((GLFWwindow *) window, &width, &height);
   Wframebuffer = width;
   Hframebuffer = height;
   
