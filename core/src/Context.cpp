@@ -4128,6 +4128,28 @@ void Context::getGlobalData( const char* label, std::vector<std::string>& data )
   
 }
 
+HeliosDataType Context::getGlobalDataType( const char* label ) const{
+
+    if( !doesGlobalDataExist( label ) ){
+        std::cerr << "ERROR (getGlobalDataType): Global data " << label << " does not exist." << std::endl;
+        throw(1);
+    }
+
+    return globaldata.at(label).type;
+
+}
+
+size_t Context::getGlobalDataSize(const char *label) const {
+
+    if( !doesGlobalDataExist( label ) ){
+        std::cerr << "ERROR (getGlobalDataSize): Global data " << label << " does not exist." << std::endl;
+        throw(1);
+    }
+
+    return globaldata.at(label).size;
+
+}
+
 bool Context::doesGlobalDataExist( const char* label ) const{
 
   if( globaldata.find(label) == globaldata.end() ){

@@ -1,9 +1,24 @@
 var searchData=
 [
-  ['initialize',['initialize',['../struct_shader.html#a168524d306867180df143651ed73ce3b',1,'Shader']]],
-  ['int2',['int2',['../structhelios_1_1int2.html',1,'helios::int2'],['../structhelios_1_1int2.html#a32fe4aaf05429537425bcef0527ffce2',1,'helios::int2::int2(void)'],['../structhelios_1_1int2.html#a8c8d9e654ba8d0124c380e01d141b3b2',1,'helios::int2::int2(std::vector&lt; int &gt; v)'],['../structhelios_1_1int2.html#a59f8c4b7c642aa2393b93a01aeaa6893',1,'helios::int2::int2(int v[2])'],['../structhelios_1_1int2.html#aa5d8b588ac6ea94d0a30b0bce4e8f198',1,'helios::int2::int2(int v0, int v1)']]],
-  ['int3',['int3',['../structhelios_1_1int3.html',1,'helios::int3'],['../structhelios_1_1int3.html#a1d740350bf6ecfc1c215ed72b6c53967',1,'helios::int3::int3(void)'],['../structhelios_1_1int3.html#a068f8d0369b1161f3c516d8344e9c00c',1,'helios::int3::int3(std::vector&lt; int &gt; v)'],['../structhelios_1_1int3.html#ad73ab5569c7fcc144711163ea6cb21b2',1,'helios::int3::int3(int v[3])'],['../structhelios_1_1int3.html#a3522bf2be027f0897d62a56fe412096c',1,'helios::int3::int3(int v0, int v1, int v2)']]],
-  ['int4',['int4',['../structhelios_1_1int4.html',1,'helios::int4'],['../structhelios_1_1int4.html#aced40da8e41977c64ea38dafa3477132',1,'helios::int4::int4(void)'],['../structhelios_1_1int4.html#a5a4c9f5ba511aa1f8c97c5d551ae5a12',1,'helios::int4::int4(std::vector&lt; int &gt; v)'],['../structhelios_1_1int4.html#a82c68969a10892886d9c28eaa8f2b2ef',1,'helios::int4::int4(int v[3])'],['../structhelios_1_1int4.html#a56c4775603496c334254104c76608e1f',1,'helios::int4::int4(int v0, int v1, int v2, int v3)']]],
-  ['isgeometrydirty',['isGeometryDirty',['../classhelios_1_1_context.html#a3455716330268b1663f10a9ea6c9a6f2',1,'helios::Context']]],
-  ['istexturecoloroverridden',['isTextureColorOverridden',['../classhelios_1_1_primitive.html#a209c6d8ff4bce55abdc732452e222835',1,'helios::Primitive']]]
+  ['hastexture_372',['hasTexture',['../classhelios_1_1_primitive.html#a779603c54cb46b81ea7cc63bb70be17e',1,'helios::Primitive']]],
+  ['hastransparencychannel_373',['hasTransparencyChannel',['../classhelios_1_1_texture.html#a6eeb7ad5d7994e8a93355aa09278da9b',1,'helios::Texture']]],
+  ['helios_20documentation_20v1_2e2_2e18_374',['Helios Documentation v1.2.18',['../index.html',1,'']]],
+  ['helios_5ftype_5fdouble_375',['HELIOS_TYPE_DOUBLE',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a520daf05a1b3086aabd6cbe6a712c1c3',1,'helios']]],
+  ['helios_5ftype_5ffloat_376',['HELIOS_TYPE_FLOAT',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0',1,'helios']]],
+  ['helios_5ftype_5fint_377',['HELIOS_TYPE_INT',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a7a7039490fc92b5d76ca18b70563ed52',1,'helios']]],
+  ['helios_5ftype_5fint2_378',['HELIOS_TYPE_INT2',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3ad586d734313fa5492db5b8cc84d9eabd',1,'helios']]],
+  ['helios_5ftype_5fint3_379',['HELIOS_TYPE_INT3',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a28e69c60e380496c8c35892e76ee4ad3',1,'helios']]],
+  ['helios_5ftype_5fint4_380',['HELIOS_TYPE_INT4',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa6e12ea3a9160f59a1208f7cbb6c1ce7',1,'helios']]],
+  ['helios_5ftype_5fstring_381',['HELIOS_TYPE_STRING',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a7c1f526f519f173e5931fd73b78ccbb3',1,'helios']]],
+  ['helios_5ftype_5fuint_382',['HELIOS_TYPE_UINT',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f',1,'helios']]],
+  ['helios_5ftype_5fvec2_383',['HELIOS_TYPE_VEC2',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233',1,'helios']]],
+  ['helios_5ftype_5fvec3_384',['HELIOS_TYPE_VEC3',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a8da4db5333fb4d726d17ad82300c9d6c',1,'helios']]],
+  ['helios_5ftype_5fvec4_385',['HELIOS_TYPE_VEC4',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3ade0fe2a24f299ca147b95a0eebe43e5d',1,'helios']]],
+  ['helios_5fvector_5ftypes_2eh_386',['helios_vector_types.h',['../helios__vector__types_8h.html',1,'']]],
+  ['heliosdatatype_387',['HeliosDataType',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3',1,'helios']]],
+  ['hidewatermark_388',['hideWatermark',['../class_visualizer.html#a28a7fd56eacbad1ec915584aa5c3fa64',1,'Visualizer']]],
+  ['hitpoint_389',['HitPoint',['../struct_hit_point.html',1,'']]],
+  ['hittable_390',['HitTable',['../class_hit_table.html',1,'']]],
+  ['homogeneouscanopyparameters_391',['HomogeneousCanopyParameters',['../struct_homogeneous_canopy_parameters.html',1,'HomogeneousCanopyParameters'],['../struct_homogeneous_canopy_parameters.html#a9793c0a8b0090c358aee0c46c03e6b92',1,'HomogeneousCanopyParameters::HomogeneousCanopyParameters()']]],
+  ['hour_392',['hour',['../structhelios_1_1_time.html#a6ec639cf61cf283c5e999d152d27839f',1,'helios::Time']]]
 ];

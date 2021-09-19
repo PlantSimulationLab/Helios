@@ -667,7 +667,7 @@ vec3 helios::sphere2cart( const SphericalCoord& Spherical ){
 vec2 helios::string2vec2( const char* str ){
 
   float o[2] = {99999,99999};
-  float tmp;
+  std::string tmp;
   
   std::istringstream stream(str);
   int c=0;
@@ -675,7 +675,7 @@ vec2 helios::string2vec2( const char* str ){
     if( c==2 ){
       break;
     }
-    o[c] = tmp;
+    o[c] = stof(tmp);
     c++;
   }
   return make_vec2( o[0], o[1] );
@@ -685,7 +685,7 @@ vec2 helios::string2vec2( const char* str ){
 vec3 helios::string2vec3( const char* str ){
 
   float o[3]  = {99999,99999,99999};
-  float tmp;
+  std::string tmp;
   
   std::istringstream stream(str);
   int c=0;
@@ -693,7 +693,7 @@ vec3 helios::string2vec3( const char* str ){
     if( c==3 ){
       break;
     }
-    o[c] = tmp;
+    o[c] = stof(tmp);
     c++;
   }
   return make_vec3( o[0], o[1], o[2] );
@@ -703,7 +703,7 @@ vec3 helios::string2vec3( const char* str ){
 vec4 helios::string2vec4( const char* str ){
 
   float o[4]  = {99999,99999,99999,99999};
-  float tmp;
+  std::string tmp;
   
   std::istringstream stream(str);
   int c=0;
@@ -711,7 +711,7 @@ vec4 helios::string2vec4( const char* str ){
     if( c==4 ){
       break;
     }
-    o[c] = tmp;
+    o[c] = stof(tmp);
     c++;
   }
   return make_vec4( o[0], o[1], o[2], o[3] );
@@ -721,15 +721,15 @@ vec4 helios::string2vec4( const char* str ){
 int2 helios::string2int2( const char* str ){
 
   int o[2] = {99999,99999};
-  int tmp;
-  
+  std::string tmp;
+
   std::istringstream stream(str);
   int c=0;
   while( stream >> tmp ){
     if( c==2 ){
       break;
     }
-    o[c] = tmp;
+    o[c] = stoi(tmp);
     c++;
   }
   return make_int2( o[0], o[1] );
@@ -739,7 +739,7 @@ int2 helios::string2int2( const char* str ){
 int3 helios::string2int3( const char* str ){
 
   int o[3] = {99999,99999,99999};
-  int tmp;
+  std::string tmp;
   
   std::istringstream stream(str);
   int c=0;
@@ -747,7 +747,7 @@ int3 helios::string2int3( const char* str ){
     if( c==3 ){
       break;
     }
-    o[c] = tmp;
+    o[c] = stoi(tmp);
     c++;
   }
   return make_int3( o[0], o[1], o[2] );
@@ -757,7 +757,7 @@ int3 helios::string2int3( const char* str ){
 int4 helios::string2int4( const char* str ){
 
   int o[4] = {99999,99999,99999,99999};
-  int tmp;
+  std::string tmp;
   
   std::istringstream stream(str);
   int c=0;
@@ -765,7 +765,7 @@ int4 helios::string2int4( const char* str ){
     if( c==4 ){
       break;
     }
-    o[c] = tmp;
+    o[c] = stoi(tmp);
     c++;
   }
   return make_int4( o[0], o[1], o[2], o[3] );
@@ -775,7 +775,7 @@ int4 helios::string2int4( const char* str ){
 RGBAcolor helios::string2RGBcolor( const char* str ){
 
   float o[4] = {0,0,0,1};
-  float tmp;
+  std::string tmp;
   
   std::istringstream stream(str);
   int c=0;
@@ -783,7 +783,7 @@ RGBAcolor helios::string2RGBcolor( const char* str ){
     if( c==4 ){
       break;
     }
-    o[c] = tmp;
+    o[c] = stof(tmp);
     c++;
   }
   return make_RGBAcolor( o[0], o[1], o[2], o[3] );

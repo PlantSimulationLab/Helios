@@ -3377,6 +3377,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
 	  }else{
 	    
 	    count++;
+        t0=t_pulse.at(hit).at(0);
 	    d+=t_pulse.at(hit).at(0);
 	    f+=t_pulse.at(hit).at(1);
             

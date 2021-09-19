@@ -332,7 +332,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   //Initialize OpenGL context and open graphic window
 
   if( message_flag ){
-    std::cout << "Opening graphic window..." << std::flush;
+    std::cout << "Initializing graphics..." << std::flush;
   }
     
   // Initialise GLFW
@@ -357,7 +357,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
   //_window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", NULL, NULL);
   _window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", NULL, NULL); 
   if( _window == NULL ){
-    fprintf( stderr, "Failed to open graphics window.\n" );
+    fprintf( stderr, "Failed to initialize graphics.\n" );
     fprintf( stderr, "Common causes for this error:\n");
     fprintf( stderr, "-- OSX\n  - Is XQuartz installed (xquartz.org) and configured as the default X11 window handler?  When running the visualizer, XQuartz should automatically open and appear in the dock, indicating it is working.\n" );
     fprintf( stderr, "-- Linux\n  - Are you running this program remotely via SSH? Remote X11 graphics along with OpenGL are not natively supported.  Installing and using VirtualGL is a good solution for this (virtualgl.org).\n" );

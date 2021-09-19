@@ -35,7 +35,7 @@ fi
 
 #----- build the CMakeLists.txt file ------#
 
-echo -e '# Helios standard CMakeLists.txt file version 1.3\n' > CMakeLists.txt
+echo -e '# Helios standard CMakeLists.txt file version 1.4\n' > CMakeLists.txt
 
 echo -e '#-------- USER INPUTS ---------#\n' >> CMakeLists.txt
 
@@ -72,11 +72,11 @@ echo -e 'SET(CMAKE_CXX_COMPILER_ID "GNU")\nSET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAG
 
 echo -e 'if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)\nset(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")\nendif()' >> CMakeLists.txt
 
-echo -e 'set( EXECUTABLE_NAME_EXT ${EXECUTABLE_NAME}_exe )\nset( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib )\nadd_executable( ${EXECUTABLE_NAME_EXT} ${SOURCE_FILES} )\nadd_subdirectory( ${BASE_DIRECTORY}/core "lib" )\ntarget_link_libraries( ${EXECUTABLE_NAME_EXT} helios)' >> CMakeLists.txt
+echo -e 'set( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib )\nadd_executable( ${EXECUTABLE_NAME} ${SOURCE_FILES} )\nadd_subdirectory( ${BASE_DIRECTORY}/core "lib" )\ntarget_link_libraries( ${EXECUTABLE_NAME} helios)' >> CMakeLists.txt
 
-echo -e 'LIST(LENGTH PLUGINS PLUGIN_COUNT)\nmessage("-- Loading ${PLUGIN_COUNT} plug-ins")\nforeach(PLUGIN ${PLUGINS})\n\tmessage("-- loading plug-in ${PLUGIN}")\n\tadd_subdirectory( ${BASE_DIRECTORY}/plugins/${PLUGIN} "plugins/${PLUGIN}" )\n\ttarget_link_libraries( ${EXECUTABLE_NAME_EXT} ${PLUGIN} )\nendforeach(PLUGIN)' >> CMakeLists.txt
+echo -e 'LIST(LENGTH PLUGINS PLUGIN_COUNT)\nmessage("-- Loading ${PLUGIN_COUNT} plug-ins")\nforeach(PLUGIN ${PLUGINS})\n\tmessage("-- loading plug-in ${PLUGIN}")\n\tif( ${PLUGIN} STREQUAL ${EXECUTABLE_NAME} )\n\t\tmessage( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )\n\tendif()\n\tadd_subdirectory( ${BASE_DIRECTORY}/plugins/${PLUGIN} "plugins/${PLUGIN}" )\n\ttarget_link_libraries( ${EXECUTABLE_NAME} ${PLUGIN} )\nendforeach(PLUGIN)' >> CMakeLists.txt
 
-echo -e 'include_directories( "${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIRECTORY}" )\nadd_custom_command( TARGET ${EXECUTABLE_NAME_EXT} POST_BUILD COMMAND ${CMAKE_COMMAND} -E rename ${EXECUTABLE_NAME_EXT} ${EXECUTABLE_NAME} )' >> CMakeLists.txt
+echo -e 'include_directories( "${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIRECTORY}" )\n' >> CMakeLists.txt
 
 #----- build the main.cpp file ------#
 

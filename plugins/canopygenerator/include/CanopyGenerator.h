@@ -650,10 +650,10 @@ struct WalnutCanopyParameters{
   float row_spacing;
 
 
-  //! Radius of strawberry fruit
+  //! Radius of walnuts
   float fruit_radius;
 
-  //! Texture map for strawberry fruit
+  //! Texture map for walnut fruit
   std::string fruit_texture_file;
 
   //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly grape_subdivisions^2 triangles per fruit)
