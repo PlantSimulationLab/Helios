@@ -35,6 +35,8 @@ cmake_dependent_option(USE_MSVC_RUNTIME_LIBRARY_DLL "Use MSVC runtime library DL
 
 if (BUILD_SHARED_LIBS)
     set(_GLFW_BUILD_DLL 1)
+else()
+    set(_GLFW_BUILD_DLL 0) #BNB 10/13/2021
 endif()
 
 if (BUILD_SHARED_LIBS AND UNIX)

@@ -133,7 +133,7 @@ Chen et al. (1986) mention that the equation for \f$\theta_L\leq 75^\circ\f$ is 
   uint UUID1 = context.addPatch();
 
   \c// Initialize the boundary-layer conductance Model
-  %BLconductanceModel boundarylayerconductance(&context);
+  %BLConductanceModel boundarylayerconductance(&context);
 
   \c// This changes the boundary-layer conductance model for all (both) primitives
   boundarylayerconductance.setBoundaryLayerModel( "InclinedPlate" );

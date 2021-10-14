@@ -41,9 +41,9 @@ helios::SphericalCoord ScanMetadata::rc2direction( const uint row, const uint co
   float elevation = 0.5f*M_PI - zenith;
   float phi = phiMin - (phiMax-phiMin)/float(Nphi)*float(column);
   return make_SphericalCoord(1,elevation,phi);
-  
+
 };
-    
+
 helios::int2 ScanMetadata::direction2rc( const helios::SphericalCoord direction ) const{
 
   float theta = direction.zenith;
@@ -67,21 +67,21 @@ helios::int2 ScanMetadata::direction2rc( const helios::SphericalCoord direction 
   //assert( column>=0 && column<Nphi );
 
   return helios::make_int2(row,column);
-  
+
 };
 
- 
+
 LiDARcloud::LiDARcloud( void ){
 
   Nhits=0;
   hitgridcellcomputed = false;
   triangulationcomputed = false;
   printmessages = true;
-  
+
 }
 
 LiDARcloud::~LiDARcloud( void ){
-  
+
 }
 
 int LiDARcloud::selfTest(void){
@@ -95,7 +95,7 @@ int LiDARcloud::selfTest(void){
   //------ Sphere Inside One Voxel ------//
 
   std::cout << "Running single voxel sphere test..." << std::flush;
-  
+
   LiDARcloud pointcloud;
   pointcloud.disableMessages();
 
@@ -107,7 +107,7 @@ int LiDARcloud::selfTest(void){
 
   pointcloud.addTrianglesToContext( &context_1 );
 
-  if( context_1.getPrimitiveCount() != 393 ){
+  if( context_1.getPrimitiveCount() != 386 ){
     std::cout << "failed." << std::endl;
     fail_flag++;
   }else{
@@ -117,39 +117,39 @@ int LiDARcloud::selfTest(void){
   //------ Isotropic Patches Inside One Voxel ------//
 
   std::cout << "Running single voxel isotropic patches test..." << std::flush;
-  
+
   LiDARcloud synthetic_1;
   synthetic_1.disableMessages();
-  
+
   vec3 gcenter(0,0,0.5);
   vec3 gsize(1,1,1);
-  
+
   Context context_2;
 
   int3 N = make_int3(6,6,6);
   float diskR = 0.02;
 
   vec3 dx = make_vec3((gsize.x-2.f*diskR)/float(N.x),(gsize.y-2.f*diskR)/float(N.y),(gsize.z-2.f*diskR)/float(N.z));
- 
+
   for( int kk=0; kk<N.z; kk++ ){
     for( int jj=0; jj<N.y; jj++ ){
       for( int ii=0; ii<N.x; ii++ ){
-	
+
        vec3 shift = make_vec3((context_2.randu()+ii)*dx.x,(context_2.randu()+jj)*dx.y,(context_2.randu()+kk)*dx.z);
- 
+
        float theta = acos_safe(1.f-2.f*context_2.randu());
        float phi = context_2.randu()*2.f*M_PI;
-       
+
        context_2.addPatch( gcenter - 0.5*gsize + shift + 2.f*make_vec3(diskR,diskR,diskR), 2.f*make_vec2(diskR,diskR), make_SphericalCoord(theta,phi) );
-       
+
       }
     }
   }
-  
+
   LAD_exact = float(N.x*N.y*N.z)*4.f*diskR*diskR/(gsize.x*gsize.y*gsize.z);
 
   synthetic_1.loadXML(  "plugins/lidar/xml/synthetic_test.xml" );
-  
+
   synthetic_1.syntheticScan( &context_2 );
 
   synthetic_1.triangulateHitPoints( 0.04, 10 );
@@ -168,12 +168,12 @@ int LiDARcloud::selfTest(void){
   //------ Isotropic Patches Inside Eight Voxels ------//
 
   std::cout << "Running eight voxel isotropic patches test..." << std::flush;
-  
+
   LiDARcloud synthetic_2;
   synthetic_2.disableMessages();
 
   synthetic_2.loadXML( "plugins/lidar/xml/synthetic_test_8.xml" );
-  
+
   synthetic_2.syntheticScan( &context_2 );
 
   synthetic_2.triangulateHitPoints( 0.04, 10 );
@@ -181,7 +181,7 @@ int LiDARcloud::selfTest(void){
 
   float RMSE = 0.f;
   for( int i=0; i<synthetic_2.getGridCellCount(); i++ ){
-  
+
     float LAD = synthetic_2.getCellLeafAreaDensity( i );
 
     RMSE += pow(LAD-LAD_exact,2)/float(synthetic_2.getGridCellCount());
@@ -218,7 +218,7 @@ int LiDARcloud::selfTest(void){
   leafAnglePDF.at(5) = 0.0670;
   leafAnglePDF.at(6) = 0.0446;
   leafAnglePDF.at(7) = 0.0223;
-  
+
   float tsum = 0;
   for( int i=0; i<8; i++ ){
     tsum += leafAnglePDF.at(i)*dTheta;
@@ -232,7 +232,7 @@ int LiDARcloud::selfTest(void){
   for( int kk=0; kk<N.z; kk++ ){
     for( int jj=0; jj<N.y; jj++ ){
       for( int ii=0; ii<N.x; ii++ ){
-	
+
        vec3 shift = make_vec3((context_3.randu()+ii)*dx.x,(context_3.randu()+jj)*dx.y,(context_3.randu()+kk)*dx.z);
 
        float rt = context_3.randu();
@@ -247,9 +247,9 @@ int LiDARcloud::selfTest(void){
 
        //theta = acos_safe(1.f-2.f*context_3.randu());
        float phi = context_3.randu()*2.f*M_PI;
-       
+
        context_3.addPatch( gcenter - 0.5*gsize + shift + 2.f*make_vec3(diskR,diskR,diskR), 2.f*make_vec2(diskR,diskR), make_SphericalCoord(theta,phi) );
-       
+
       }
     }
   }
@@ -260,7 +260,7 @@ int LiDARcloud::selfTest(void){
   synthetic_3.disableMessages();
 
   synthetic_3.loadXML( "plugins/lidar/xml/synthetic_test.xml" );
-  
+
   synthetic_3.syntheticScan( &context_3 );
 
   synthetic_3.triangulateHitPoints( 0.04, 10 );
@@ -288,7 +288,7 @@ int LiDARcloud::selfTest(void){
   synthetic_4.disableMessages();
 
   synthetic_4.loadXML( "plugins/lidar/xml/almond.xml" );
-  
+
   synthetic_4.syntheticScan( &context_4 );
 
   synthetic_4.calculateSyntheticLeafArea( &context_4 );
@@ -300,7 +300,7 @@ int LiDARcloud::selfTest(void){
   //calculate exact leaf area
 
   uint Ncells = synthetic_4.getGridCellCount();
-  
+
   std::vector<float> total_area;
   total_area.resize(Ncells);
 
@@ -313,7 +313,7 @@ int LiDARcloud::selfTest(void){
   sin_sum.resize(Ncells,0.f);
   std::vector<uint> cell_tri_count;
   cell_tri_count.resize(Ncells,0);
-  
+
   std::vector<uint> UUIDs = context_4.getAllUUIDs();
   for( int p=0; p<UUIDs.size(); p++ ){
 
@@ -327,7 +327,7 @@ int LiDARcloud::selfTest(void){
       if( gridCell>=0 && gridCell<Ncells ){
   	total_area.at(gridCell) += context_4.getPrimitivePointer(UUID)->getArea();
       }
-      
+
       for( int s=0; s<synthetic_4.getScanCount(); s++ ){
 	vec3 origin = synthetic_4.getScanOrigin(s);
 	std::vector<vec3> vertices = context_4.getPrimitivePointer(p)->getVertices();
@@ -338,16 +338,16 @@ int LiDARcloud::selfTest(void){
 	float theta = fabs(acos_safe(raydir.z));
 
 	if( area==area ){ //in rare cases you can get area=NaN
-	
+
 	  Gtheta.at(gridCell) += fabs(normal*raydir)*area*fabs(sin(theta));
-	  
+
 	  area_sum.at(gridCell) += area;
 	  sin_sum.at(gridCell) += fabs(sin(theta));
 	  cell_tri_count.at(gridCell) += 1;
-	  
+
 	}
       }
-	
+
     }
   }
 
@@ -394,7 +394,7 @@ int LiDARcloud::selfTest(void){
     std::cout << "Failed " << fail_flag << " tests." << std::endl;
     return 1;
   }
-  
+
 }
 
 void LiDARcloud::disableMessages( void ){
@@ -427,22 +427,41 @@ void LiDARcloud::validateRayDirections( void ){
 
 	}
       }
-    }	
+    }
   }
-    
+
 }
 
 uint LiDARcloud::getScanCount( void ){
   return scans.size();
 }
 
-void LiDARcloud::addScan( const ScanMetadata newscan ){
+void LiDARcloud::addScan( ScanMetadata newscan ){
+
+    float epsilon = 1e-5;
+
+    if( newscan.thetaMin<0 ){
+        std::cerr << "WARNING (LiDARcloud::addScan): Specified scan minimum zenith angle of " << newscan.thetaMin << " is less than 0. Truncating to 0." << std::endl;
+        newscan.thetaMin = 0;
+    }
+    if( newscan.phiMin<0 ){
+        std::cerr << "WARNING (LiDARcloud::addScan): Specified scan minimum azimuth angle of " << newscan.phiMin << " is less than 0. Truncating to 0." << std::endl;
+        newscan.phiMin = 0;
+    }
+    if( newscan.thetaMax>M_PI+epsilon ){
+        std::cerr << "WARNING (LiDARcloud::addScan): Specified scan maximum zenith angle of " << newscan.thetaMax << " is greater than pi. Truncating to pi. Did you mistakenly use degrees instead of radians?" << std::endl;
+        newscan.thetaMax = M_PI;
+    }
+    if( newscan.phiMax>2.f*M_PI+epsilon ){
+        std::cerr << "WARNING (LiDARcloud::addScan): Specified scan maximum azimuth angle of " << newscan.phiMax << " is greater than 2pi. Truncating to 2pi. Did you mistakenly use degrees instead of radians?" << std::endl;
+        newscan.phiMax = 2.f*M_PI;
+    }
 
   //initialize the hit table to `-1' (all misses)
   HitTable<int> table;
   table.resize(newscan.Ntheta,newscan.Nphi,-1);
   hit_tables.push_back( table );
-  
+
   scans.push_back(newscan);
 }
 
@@ -453,7 +472,7 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 
   //empty data
   std::map<std::string, double> data;
-  
+
   addHitPoint( scanID, xyz, direction, color, data );
 
 }
@@ -464,16 +483,16 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
   RGBcolor color = make_RGBcolor(1,0,0);
 
   addHitPoint( scanID, xyz, direction, color, data );
-  
+
 }
 
 void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const helios::RGBcolor color ){
 
   //empty data
   std::map<std::string, double> data;
-  
+
   addHitPoint( scanID, xyz, direction, color, data );
-  
+
 }
 
 void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const helios::RGBcolor color, const std::map<std::string, double> data ){
@@ -487,7 +506,7 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
   ScanMetadata scan = scans.at(scanID);
   int2 row_column = scan.direction2rc( direction );
 
-  HitPoint hit( scanID, xyz, direction, row_column, color, data ); 
+  HitPoint hit( scanID, xyz, direction, row_column, color, data );
 
   hits.push_back(hit);
 
@@ -498,7 +517,7 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
   ScanMetadata scan = scans.at(scanID);
   SphericalCoord direction = scan.rc2direction( row_column.x, row_column.y );
 
-  HitPoint hit( scanID, xyz, direction, row_column, color, data ); 
+  HitPoint hit( scanID, xyz, direction, row_column, color, data );
 
   hits.push_back(hit);
 
@@ -510,7 +529,7 @@ void LiDARcloud::deleteHitPoint( const uint index ){
     cerr << "WARNING (deleteHitPoint): Hit point #" << index << " cannot be deleted from the scan because there have only been " << hits.size() << " hit points added." << endl;
     return;
   }
-  
+
   HitPoint hit = hits.at(index);
 
   int scanID = hit.scanID;
@@ -518,7 +537,7 @@ void LiDARcloud::deleteHitPoint( const uint index ){
   //erase from vector of hits (use swap-and-pop method)
   std::swap( hits.at(index), hits.back() );
   hits.pop_back();
-    
+
 }
 
 uint LiDARcloud::getHitCount( void ) const{
@@ -622,7 +641,7 @@ void LiDARcloud::setHitData( const uint index, const char* label, const double v
   }
 
   hits.at(index).data[label] = value;
-  
+
 }
 
 double LiDARcloud::getHitData( const uint index, const char* label ) const{
@@ -676,7 +695,7 @@ int LiDARcloud::getHitScanID( const uint index ) const{
   }
 
   return hits.at(index).scanID;
-  
+
 }
 
 int LiDARcloud::getHitIndex( const uint scanID, const uint row, const uint column ) const{
@@ -707,7 +726,7 @@ int LiDARcloud::getHitGridCell( const uint index ) const{
   }
 
   return hits.at(index).gridcell;
-  
+
 }
 
 void LiDARcloud::setHitGridCell( const uint index, const int cell ){
@@ -718,7 +737,7 @@ void LiDARcloud::setHitGridCell( const uint index, const int cell ){
   }
 
   hits.at(index).gridcell = cell;
-  
+
 }
 
 void LiDARcloud::coordinateShift( const helios::vec3 shift ){
@@ -726,11 +745,11 @@ void LiDARcloud::coordinateShift( const helios::vec3 shift ){
   for( uint s=0; s<scans.size(); s++ ){
     scans.at(s).origin = scans.at(s).origin + shift;
   }
-  
+
   for( uint r=0; r<hits.size(); r++ ){
     hits.at(r).position = hits.at(r).position + shift;
   }
-  
+
 }
 
 void LiDARcloud::coordinateRotation( const SphericalCoord rotation ){
@@ -738,12 +757,12 @@ void LiDARcloud::coordinateRotation( const SphericalCoord rotation ){
   for( uint s=0; s<scans.size(); s++ ){
     scans.at(s).origin = rotatePoint(scans.at(s).origin,rotation);
   }
-  
+
   for( uint r=0; r<hits.size(); r++ ){
     hits.at(r).position = rotatePoint(hits.at(r).position,rotation);
     hits.at(r).direction = cart2sphere(hits.at(r).position - scans.at( hits.at(r).scanID ).origin);
   }
-  
+
 }
 
 void LiDARcloud::coordinateRotation( const float rotation, const helios::vec3 line_base, const helios::vec3 line_direction ){
@@ -751,18 +770,18 @@ void LiDARcloud::coordinateRotation( const float rotation, const helios::vec3 li
   for( uint s=0; s<scans.size(); s++ ){
     scans.at(s).origin = rotatePointAboutLine(scans.at(s).origin,line_base,line_direction,rotation);
   }
-  
+
   for( uint r=0; r<hits.size(); r++ ){
     hits.at(r).position = rotatePointAboutLine(hits.at(r).position,line_base,line_direction,rotation);
     hits.at(r).direction = cart2sphere(hits.at(r).position - scans.at( hits.at(r).scanID ).origin);
   }
-  
+
 }
 
 uint LiDARcloud::getTriangleCount( void ) const{
   return triangles.size();
 }
-    
+
 Triangulation LiDARcloud::getTriangle( const uint index ) const{
   if( index>=triangles.size() ){
     cerr << "ERROR (getTriangle): Triangle index out of bounds. Tried to get triangle #" << index << " but point cloud only has " << triangles.size() << " triangles." << endl;
@@ -770,7 +789,7 @@ Triangulation LiDARcloud::getTriangle( const uint index ) const{
   }
 
   return triangles.at(index);
-  
+
 }
 
 void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsize ) const{
@@ -811,7 +830,7 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
   }
 
   for( uint i=0; i<getHitCount(); i++ ){
-    
+
     if( strcmp(color_value,"")==0 ){
       color = getHitColor(i);
     }else if( strcmp(color_value,"gridcell")==0 ){
@@ -832,7 +851,7 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
     vec3 center = getHitXYZ(i);
 
     visualizer->addPoint( center, color, pointsize, Visualizer::COORDINATES_CARTESIAN );
-    
+
   }
 
 }
@@ -874,7 +893,7 @@ void LiDARcloud::addGridToVisualizer( Visualizer* visualizer ) const{
 
     center = rotatePointAboutLine( center, anchor, make_vec3(0,0,1), rotation.azimuth );
     vec3 size = getCellSize(i);
-    
+
     //RGBAcolor color = make_RGBAcolor(RGB::green,0.5);
 
     RGBAcolor color = make_RGBAcolor(cmap.query(getCellLeafAreaDensity(i)),0.5);
@@ -882,14 +901,14 @@ void LiDARcloud::addGridToVisualizer( Visualizer* visualizer ) const{
     visualizer->addVoxelByCenter( center, size, rotation, color, Visualizer::COORDINATES_CARTESIAN );
 
     origin = origin + center/float(getGridCellCount());
- 
+
   }
 
   vec3 boxmin, boxmax;
   getHitBoundingBox(boxmin,boxmax);
 
   float R = 2.f*sqrt( pow(boxmax.x-boxmin.x,2) + pow(boxmax.y-boxmin.y,2) + pow(boxmax.z-boxmin.z,2) );
-  
+
 }
 
 void LiDARcloud::addTrianglesToVisualizer( Visualizer* visualizer ) const{
@@ -934,15 +953,15 @@ void LiDARcloud::addGrid(helios::vec3 gcenter, helios::vec3 gsize, helios::int3 
         cerr << "failed.\nERROR (addGrid): The gridcell size must be positive." << endl;
         exit(EXIT_FAILURE);
     }
-    
+
     if( ndiv.x <=0 || ndiv.y <=0 || ndiv.z <=0 ){
         cerr << "failed.\nERROR (addGrid): The number of grid cells in each direciton must be positive." << endl;
         exit(EXIT_FAILURE);
     }
-    
+
     //add cells to grid
     vec3 gsubsize = make_vec3(float(gsize.x)/float(ndiv.x),float(gsize.y)/float(ndiv.y),float(gsize.z)/float(ndiv.z));
-    
+
     float x, y, z;
     uint count = 0;
     for( int k=0; k<ndiv.z; k++ ){
@@ -951,58 +970,58 @@ void LiDARcloud::addGrid(helios::vec3 gcenter, helios::vec3 gsize, helios::int3 
             y = -0.5f*float(gsize.y) + (float(j)+0.5f)*float(gsubsize.y);
             for( int i=0; i<ndiv.x; i++ ){
                 x = -0.5f*float(gsize.x) + (float(i)+0.5f)*float(gsubsize.x);
-                
+
                 vec3 subcenter = make_vec3(x,y,z);
-                
+
                 vec3 subcenter_rot = rotatePoint(subcenter, make_SphericalCoord(0,rotation*M_PI/180.f) );
-                
+
                 if( printmessages ){
                     cout << "Adding grid cell #" << count << " with center " << subcenter_rot.x+gcenter.x << "," << subcenter_rot.y+gcenter.y << "," << subcenter.z+gcenter.z << " and size " << gsubsize.x << " x " << gsubsize.y << " x " << gsubsize.z << endl;
                 }
-                
+
                 addGridCell( subcenter+gcenter, gcenter, gsubsize, gsize, rotation*M_PI/180.f, make_int3(i,j,k), ndiv );
-                
+
                 count++;
-                
+
             }
         }
     }
-    
+
 }
 
-void LiDARcloud::addGridWireFrametoVisualizer(Visualizer* visualizer) const{ 
-    
-    
+void LiDARcloud::addGridWireFrametoVisualizer(Visualizer* visualizer) const{
+
+
     for(int i=0; i< getGridCellCount();i++)
     {
         helios::vec3 center = getCellCenter(i);
         helios::vec3 size = getCellSize(i);
-        
+
         helios::vec3 boxmin, boxmax;
         boxmin = make_vec3(center.x - 0.5*size.x, center.y - 0.5*size.y, center.z - 0.5*size.z);
         boxmax = make_vec3(center.x + 0.5*size.x, center.y + 0.5*size.y, center.z + 0.5*size.z);
-        
+
         //vertical edges of the cell
         visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmin.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
         visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
         visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
         visualizer->addLine(make_vec3(boxmax.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
-        
+
         //horizontal top edges
         visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
         visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
         visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
         visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
-        
+
         //horizontal bottom edges
         visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
         visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
         visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
         visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
-        
+
     }
-    
-    
+
+
 }
 
 void LiDARcloud::addLeafReconstructionToVisualizer( Visualizer* visualizer ) const{
@@ -1018,14 +1037,14 @@ void LiDARcloud::addLeafReconstructionToVisualizer( Visualizer* visualizer ) con
   ctable.push_back( RGB::yellow );
   ctable.push_back( RGB::orange );
   ctable.push_back( RGB::red );
-  
+
   clocs.push_back( 0.f );
   clocs.push_back( 0.2f );
   clocs.push_back( 0.4f );
   clocs.push_back( 0.6f );
   clocs.push_back( 0.8f );
   clocs.push_back( 1.f );
-  
+
   Colormap colormap( ctable, clocs, 100, 0, Ngroups-1);
 
   for( size_t g=0; g<Ngroups; g++ ){
@@ -1040,7 +1059,7 @@ void LiDARcloud::addLeafReconstructionToVisualizer( Visualizer* visualizer ) con
       helios::vec3 v2 = reconstructed_triangles.at(g).at(t).vertex2;
 
       //RGBcolor color = reconstructed_triangles.at(g).at(t).color;
-      
+
       visualizer->addTriangle( v0, v1, v2, color, Visualizer::COORDINATES_CARTESIAN );
 
     }
@@ -1070,7 +1089,7 @@ void LiDARcloud::addTrunkReconstructionToVisualizer( Visualizer* visualizer ) co
       helios::vec3 v2 = reconstructed_trunk_triangles.at(g).at(t).vertex2;
 
       RGBcolor color = reconstructed_trunk_triangles.at(g).at(t).color;
-      
+
       visualizer->addTriangle( v0, v1, v2, color, Visualizer::COORDINATES_CARTESIAN );
 
     }
@@ -1162,7 +1181,7 @@ std::vector<uint> LiDARcloud::addReconstructedTriangleGroupsToContext( helios::C
       helios::vec3 v2 = reconstructed_triangles.at(g).at(t).vertex2;
 
       RGBcolor color = reconstructed_triangles.at(g).at(t).color;
-      
+
       UUIDs.push_back( context->addTriangle( v0, v1, v2, color ) );
 
       uint zone = reconstructed_triangles.at(g).at(t).gridcell;
@@ -1191,7 +1210,7 @@ std::vector<uint> LiDARcloud::addTrunkReconstructionToContext( Context* context 
       helios::vec3 v2 = reconstructed_trunk_triangles.at(g).at(t).vertex2;
 
       RGBcolor color = reconstructed_trunk_triangles.at(g).at(t).color;
-      
+
       UUIDs.push_back( context->addTriangle( v0, v1, v2, color ) );
 
     }
@@ -1201,7 +1220,7 @@ std::vector<uint> LiDARcloud::addTrunkReconstructionToContext( Context* context 
   return UUIDs;
 
 }
-  
+
 void LiDARcloud::getHitBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax ) const{
 
   if( printmessages && hits.size()==0 ){
@@ -1213,7 +1232,7 @@ void LiDARcloud::getHitBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax )
   boxmax = make_vec3( -1e6, -1e6, -1e6 );
 
   for( std::size_t i=0; i<hits.size(); i++ ){
- 
+
     vec3 xyz = getHitXYZ(i);
 
     if( xyz.x<boxmin.x ){
@@ -1236,7 +1255,7 @@ void LiDARcloud::getHitBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax )
     }
 
   }
-    
+
 }
 
 void LiDARcloud::getGridBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax ) const{
@@ -1251,7 +1270,7 @@ void LiDARcloud::getGridBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax 
 
   std::size_t count = 0;
   for( uint c=0; c<getGridCellCount(); c++ ){
- 
+
     vec3 center = getCellCenter(c);
     vec3 size = getCellSize(c);
     vec3 cellanchor = getCellGlobalAnchor(c);
@@ -1283,7 +1302,7 @@ void LiDARcloud::getGridBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax 
 
   }
 
-  
+
 }
 
 void LiDARcloud::distanceFilter( const float maxdistance ){
@@ -1294,20 +1313,20 @@ void LiDARcloud::distanceFilter( const float maxdistance ){
     vec3 xyz = getHitXYZ(i);
 
     uint scanID = getHitScanID(i);
-    
+
     vec3 r = xyz-getScanOrigin(scanID);
 
     if( r.magnitude()>maxdistance ){
       deleteHitPoint(i);
       delete_count++;
     }
-    
+
   }
 
   if( printmessages ){
     std::cout << "Removed " << delete_count << " hit points based on distance filter." << std::endl;
   }
-  
+
 }
 
 void LiDARcloud::reflectanceFilter( const float minreflectance ){
@@ -1326,7 +1345,7 @@ void LiDARcloud::reflectanceFilter( const float minreflectance ){
   if( printmessages ){
     std::cout << "Removed " << delete_count << " hit points based on reflectance filter." << std::endl;
   }
-  
+
 }
 
 void LiDARcloud::scalarFilter( const char* scalar_field, const float threshold, const char* comparator ){
@@ -1357,7 +1376,7 @@ void LiDARcloud::scalarFilter( const char* scalar_field, const float threshold, 
   if( printmessages ){
     std::cout << "Removed " << delete_count << " hit points based on scalar filter." << std::endl;
   }
-  
+
 }
 
 // bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 ){
@@ -1384,7 +1403,7 @@ void LiDARcloud::maxPulseFilter( const char* scalar ){
 
   std::vector<std::vector<double> > timestamps;
   timestamps.resize(getHitCount());
-  
+
   std::size_t delete_count = 0;
   for( std::size_t r=0; r<getHitCount(); r++ ){
 
@@ -1412,21 +1431,21 @@ void LiDARcloud::maxPulseFilter( const char* scalar ){
     if( timestamps.at(r).at(0)!=time_old ){
 
       if( isort.size()>1 ){
-      
+
 	std::sort( isort.begin(), isort.end(), sortcol1 );
-	
+
 	for( int i=0; i<isort.size()-1; i++ ){
 	  to_delete.push_back( int(isort.at(i).at(2)) );
 	}
 
       }
-	
+
       isort.resize(0);
       time_old = timestamps.at(r).at(0);
     }
 
     isort.push_back(timestamps.at(r));
-      
+
   }
 
   std::sort( to_delete.begin(), to_delete.end() );
@@ -1434,12 +1453,12 @@ void LiDARcloud::maxPulseFilter( const char* scalar ){
   for( int i=to_delete.size()-1; i>=0; i-- ){
     deleteHitPoint( to_delete.at(i) );
   }
-    
+
   if( printmessages ){
     std::cout << "done." << std::endl;
   }
-  
-  
+
+
 }
 
 void LiDARcloud::minPulseFilter( const char* scalar ){
@@ -1450,7 +1469,7 @@ void LiDARcloud::minPulseFilter( const char* scalar ){
 
   std::vector<std::vector<double> > timestamps;
   timestamps.resize(getHitCount());
-  
+
   std::size_t delete_count = 0;
   for( std::size_t r=0; r<getHitCount(); r++ ){
 
@@ -1478,7 +1497,7 @@ void LiDARcloud::minPulseFilter( const char* scalar ){
     if( timestamps.at(r).at(0)!=time_old ){
 
       if( isort.size()>1 ){
-      
+
 	std::sort( isort.begin(), isort.end(), sortcol1 );
 
 	for( int i=1; i<isort.size(); i++ ){
@@ -1486,13 +1505,13 @@ void LiDARcloud::minPulseFilter( const char* scalar ){
 	}
 
       }
-	
+
       isort.resize(0);
       time_old = timestamps.at(r).at(0);
     }
 
     isort.push_back(timestamps.at(r));
-      
+
   }
 
   std::sort( to_delete.begin(), to_delete.end() );
@@ -1500,12 +1519,12 @@ void LiDARcloud::minPulseFilter( const char* scalar ){
   for( int i=to_delete.size()-1; i>=0; i-- ){
     deleteHitPoint( to_delete.at(i) );
   }
-    
+
   if( printmessages ){
     std::cout << "done." << std::endl;
   }
-  
-  
+
+
 }
 
 void LiDARcloud::firstHitFilter( void ){
@@ -1517,7 +1536,7 @@ void LiDARcloud::firstHitFilter( void ){
   std::vector<float> target_index;
   target_index.resize(getHitCount());
   int min_tindex = 1;
-  
+
   for( std::size_t r=0; r<target_index.size(); r++ ){
 
     if( !doesHitDataExist(r,"target_index") ){
@@ -1538,7 +1557,7 @@ void LiDARcloud::firstHitFilter( void ){
     if( target_index.at(r)!=min_tindex ){
       deleteHitPoint(r);
     }
-    
+
   }
 
   if( printmessages ){
@@ -1557,7 +1576,7 @@ void LiDARcloud::lastHitFilter( void ){
   std::vector<float> target_index;
   target_index.resize(getHitCount());
   int min_tindex = 1;
-  
+
   for( std::size_t r=0; r<target_index.size(); r++ ){
 
     if( !doesHitDataExist(r,"target_index") ){
@@ -1583,13 +1602,13 @@ void LiDARcloud::lastHitFilter( void ){
     if( target_index.at(r)==target_count-1+min_tindex ){
       deleteHitPoint(r);
     }
-    
+
   }
 
   if( printmessages ){
     std::cout << "done." << std::endl;
   }
-  
+
 }
 
 void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_ratio ){
@@ -1609,7 +1628,7 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
   int Ntriangles=0;
 
   for( uint s=0; s<getScanCount(); s++ ){
-    
+
     std::vector<int> Delaunay_inds;
 
     std::vector<Shx> pts, pts_copy;
@@ -1618,17 +1637,17 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
     for( int r=0; r<getHitCount(); r++ ){
 
       if( getHitScanID(r)==s && getHitGridCell(r)>=0 ){
-      
+
 	helios::SphericalCoord direction = getHitRaydir(r);
 
 	helios::vec3 direction_cart = getHitXYZ(r)-getScanOrigin(s);
 	direction = cart2sphere( direction_cart );
-	
+
 	Shx pt;
 	pt.id = count;
 	pt.r = direction.zenith;
 	pt.c = direction.azimuth;
-	
+
 	pts.push_back(pt);
 
 	Delaunay_inds.push_back(r);
@@ -1636,7 +1655,7 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
 	count++;
 
       }
-	
+
     }
 
     if( pts.size()==0 ){
@@ -1667,28 +1686,28 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
 	}
       }
     }
-    
+
     std::vector<int> dupes;
     int nx = de_duplicate( pts, dupes);
     pts_copy = pts;
 
     std::vector<Triad> triads;
 
-    if( printmessages ){ 
+    if( printmessages ){
       std::cout << "starting triangulation for scan " << s << "..." << std::endl;
     }
-      
+
     int success = 0;
     int Ntries = 0;
     while( success!=1 && Ntries<3 ){
       Ntries++;
-      
+
       success = s_hull_pro( pts, triads );
 
       if( success!=1 ){
-      
+
 	//try a 90 degree coordinate shift
-	if( printmessages ){ 
+	if( printmessages ){
 	  std::cout << "Shifting scan " << s << " (try " << Ntries << " of 3)" << std::endl;
 	}
 	for( int r=0; r<pts.size(); r++ ){
@@ -1698,7 +1717,7 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
 	  }
 	}
       }
-    
+
     }
 
     if( success!=1 ){
@@ -1709,22 +1728,22 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
     }else if( printmessages ){
       std::cout << "finished triangulation" << std::endl;
     }
-      
+
     for( int t=0; t<triads.size(); t++ ){
 
       int ID0 = Delaunay_inds.at(triads.at(t).a);
       int ID1 = Delaunay_inds.at(triads.at(t).b);
       int ID2 = Delaunay_inds.at(triads.at(t).c);
-      
+
       helios::vec3 vertex0 = getHitXYZ( ID0 );
       helios::SphericalCoord raydir0 = getHitRaydir( ID0 );
-      
+
       helios::vec3 vertex1 = getHitXYZ( ID1 );
       helios::SphericalCoord raydir1 = getHitRaydir( ID1 );
-      
+
       helios::vec3 vertex2 = getHitXYZ( ID2 );
       helios::SphericalCoord raydir2 = getHitRaydir( ID2 );
-      
+
       helios::vec3 v;
       v=vertex0-vertex1;
       float L0 = v.magnitude();
@@ -1732,13 +1751,13 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
       float L1 = v.magnitude();
       v=vertex1-vertex2;
       float L2 = v.magnitude();
-      
+
       float aspect_ratio = max(max(L0,L1),L2)/min(min(L0,L1),L2);
 
       if( L0>Lmax || L1>Lmax || L2>Lmax || aspect_ratio>max_aspect_ratio ){
 	continue;
       }
-	    
+
       int gridcell = getHitGridCell( ID0 );
 
       if( printmessages && gridcell==-2 ){
@@ -1749,7 +1768,7 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
       color.r = (hits.at(ID0).color.r + hits.at(ID1).color.r + hits.at(ID2).color.r )/3.f;
       color.g = (hits.at(ID0).color.g + hits.at(ID1).color.g + hits.at(ID2).color.g )/3.f;
       color.b = (hits.at(ID0).color.b + hits.at(ID1).color.b + hits.at(ID2).color.b )/3.f;
-  
+
       Triangulation tri( s, vertex0, vertex1, vertex2, ID0, ID1, ID2, color, gridcell );
 
       triangles.push_back(tri);
@@ -1766,7 +1785,7 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
     cout << "\r                                           " ;
     cout << "\rTriangulating...formed " << Ntriangles << " total triangles." << endl;
   }
-    
+
 }
 
 void LiDARcloud::addTrianglesToContext( Context* context ) const{
@@ -1777,15 +1796,15 @@ void LiDARcloud::addTrianglesToContext( Context* context ) const{
     }
     return;
   }
- 
+
   for( std::size_t i=0; i<getTriangleCount(); i++ ){
 
     Triangulation tri = getTriangle(i);
- 
+
     context->addTriangle( tri.vertex0, tri.vertex1, tri.vertex2, tri.color );
- 
+
   }
-   
+
 }
 
 uint LiDARcloud::getGridCellCount( void ) const{
@@ -1801,7 +1820,7 @@ void LiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 glob
   GridCell newcell( center, global_anchor, size, global_size, rotation, global_ijk, global_count );
 
   grid_cells.push_back(newcell);
-  
+
 }
 
 helios::vec3 LiDARcloud::getCellCenter( const uint index ) const{
@@ -1812,7 +1831,7 @@ helios::vec3 LiDARcloud::getCellCenter( const uint index ) const{
   }
 
   return grid_cells.at(index).center;
-  
+
 }
 
 helios::vec3 LiDARcloud::getCellGlobalAnchor( const uint index ) const{
@@ -1823,7 +1842,7 @@ helios::vec3 LiDARcloud::getCellGlobalAnchor( const uint index ) const{
   }
 
   return grid_cells.at(index).global_anchor;
-  
+
 }
 
 helios::vec3 LiDARcloud::getCellSize( const uint index ) const{
@@ -1834,7 +1853,7 @@ helios::vec3 LiDARcloud::getCellSize( const uint index ) const{
   }
 
   return grid_cells.at(index).size;
-  
+
 }
 
 float LiDARcloud::getCellRotation( const uint index ) const{
@@ -1845,7 +1864,7 @@ float LiDARcloud::getCellRotation( const uint index ) const{
   }
 
   return grid_cells.at(index).azimuthal_rotation;
-  
+
 }
 
 std::vector<float> LiDARcloud::calculateSyntheticGtheta( const helios::Context* context ){
@@ -1865,7 +1884,7 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( const helios::Context* 
   sin_sum.resize(Ncells,0.f);
   std::vector<uint> cell_tri_count;
   cell_tri_count.resize(Ncells,0);
-  
+
   std::vector<uint> UUIDs = context->getAllUUIDs();
   for( int p=0; p<UUIDs.size(); p++ ){
 
@@ -1879,7 +1898,7 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( const helios::Context* 
       std::vector<vec3> vertices = context->getPrimitivePointer(UUID)->getVertices();
       float area = context->getPrimitivePointer(UUID)->getArea();
       vec3 normal = context->getPrimitivePointer(UUID)->getNormal();
-      
+
       for( int s=0; s<Nscans; s++ ){
 	vec3 origin = getScanOrigin(s);
 	vec3 raydir = vertices.front()-origin;
@@ -1887,16 +1906,16 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( const helios::Context* 
 	float theta = fabs(acos_safe(raydir.z));
 
 	if( area==area ){ //in rare cases you can get area=NaN
-	
+
 	  Gtheta.at(gridCell) += fabs(normal*raydir)*area*fabs(sin(theta));
-	  
+
 	  area_sum.at(gridCell) += area;
 	  sin_sum.at(gridCell) += fabs(sin(theta));
 	  cell_tri_count.at(gridCell) += 1;
-	  
+
 	}
       }
-	
+
     }
   }
 
@@ -1909,16 +1928,16 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( const helios::Context* 
 
   std::vector<float> output_Gtheta;
   output_Gtheta.resize(Ncells,0.f);
-  
+
   for( int v=0; v<Ncells; v++ ){
     output_Gtheta.at(v) = Gtheta.at(v);
     if( context->getPrimitivePointer(UUIDs.at(v))->doesPrimitiveDataExist("gridCell") ){
       context->getPrimitivePointer(UUIDs.at(v))->setPrimitiveData("synthetic_Gtheta",Gtheta.at(v));
     }
   }
-  
+
   return output_Gtheta;
-  
+
 }
 
 void LiDARcloud::setCellLeafArea( const float area, const uint index ){
@@ -1976,7 +1995,7 @@ float LiDARcloud::getCellGtheta( const uint index ) const{
 }
 
 void LiDARcloud::leafReconstructionFloodfill( void ){
-  
+
   size_t group_count = 0;
   int current_group = 0;
 
@@ -1993,11 +2012,11 @@ void LiDARcloud::leafReconstructionFloodfill( void ){
       nodes.at( tri.ID0 ).push_back(t);
       nodes.at( tri.ID1 ).push_back(t);
       nodes.at( tri.ID2 ).push_back(t);
-      
+
       Ntri++;
 
     }
-    
+
   }
 
   std::vector<int> fill_flag;
@@ -2015,18 +2034,18 @@ void LiDARcloud::leafReconstructionFloodfill( void ){
       current_group ++;
 
     }
-      
+
   }
 
   for( size_t t=0; t<Ntri; t++ ){//looping through all triangles
 
     if( fill_flag.at(t)>=0 ){
       int fill_group = fill_flag.at(t);
-      
+
       if( fill_group>=reconstructed_triangles.size() ){
 	reconstructed_triangles.resize( fill_group+1 );
       }
-      
+
       reconstructed_triangles.at(fill_group).push_back(triangles.at(t));
 
     }
@@ -2038,7 +2057,7 @@ void LiDARcloud::leafReconstructionFloodfill( void ){
 void LiDARcloud::floodfill( size_t t, std::vector<Triangulation> &t_triangles, std::vector<int> &fill_flag, std::vector<std::vector<int> > &nodes, const int tag, const int depth, const int maxdepth ){
 
   Triangulation tri = t_triangles.at(t);
-  
+
   int verts[3] = {tri.ID0, tri.ID1, tri.ID2};
 
   std::vector<int> connection_list;
@@ -2059,25 +2078,25 @@ void LiDARcloud::floodfill( size_t t, std::vector<Triangulation> &t_triangles, s
   	int index = connection_list.at(tt-1);
 
   	if( fill_flag.at(index)==-1 && index!=t ){
-	
+
   	  fill_flag.at(index) = tag;
 
   	  if( depth<maxdepth ){
   	    floodfill( index, t_triangles, fill_flag, nodes, tag, depth+1, maxdepth );
   	  }
-	  
+
   	}
-	  
+
       }
-      
+
       count = 1;
     }else{
       count++;
     }
-    
+
   }
 
-  
+
 }
 
 void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_area, const float maximum_leaf_group_area, const float leaf_aspect_ratio, const char* mask_file ){
@@ -2089,7 +2108,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
   if( printmessages ){
     cout << "Performing alphamask leaf reconstruction..." << flush;
   }
-    
+
   if( triangles.size()==0 ){
     std::cout << "Performing alphamask leaf reconstruction...failed." << std::endl;
     std::cerr << "There are no triangulated points.  Either the triangulation failed or 'triangulateHitPoints()' was not called." << std::endl;
@@ -2121,7 +2140,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
   }
 
   float solidfraction = float(Asolid)/float(Atotal);
-  
+
   float total_area = 0.f;
 
   std::vector<std::vector<float> > group_areas;
@@ -2139,13 +2158,13 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
 
   std::vector<bool> group_filter_flag;
   group_filter_flag.resize(reconstructed_triangles.size());
-  
+
   for( int group=group_count-1; group>=0; group-- ){
-      
+
     float garea = 0.f;
-    
+
     for( size_t t=0; t<reconstructed_triangles.at(group).size(); t++ ){
-	
+
       float triangle_area = reconstructed_triangles.at(group).at(t).area;
 
       garea += triangle_area;
@@ -2162,14 +2181,14 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     }
 
   }
-  
+
   vector<float> Lavg;
   Lavg.resize( getGridCellCount(), 0.f );
 
   int Navg = 20;
-  
+
   for( int v=0; v<getGridCellCount(); v++ ){
-    
+
     std::sort( group_areas.at(v).begin(), group_areas.at(v).end() );
     //std::partial_sort( group_areas.at(v).begin(), group_areas.at(v).begin()+Navg,group_areas.at(v).end(), std::greater<float>() );
 
@@ -2190,7 +2209,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     }
 
   }
-  
+
   //Form alphamasks
 
   for( int group=0; group<reconstructed_triangles.size(); group++ ){
@@ -2198,7 +2217,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     if( !group_filter_flag.at(group) ){
       continue;
     }
-    
+
     int cell = reconstructed_triangles.at(group).front().gridcell;
 
     helios::vec3 position = make_vec3(0,0,0);
@@ -2207,7 +2226,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     }
 
     int gind = round( randu()*(reconstructed_triangles.at(group).size()-1) );
-      
+
     reconstructed_alphamasks_center.push_back( position );
     float l = Lavg.at(reconstructed_triangles.at(group).front().gridcell)*sqrt(leaf_aspect_ratio/solidfraction);
     float w = l/leaf_aspect_ratio;
@@ -2222,7 +2241,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     cout << "done." << endl;
     cout << "Directly reconstructed " << reconstructed_alphamasks_center.size() << " leaf groups." << endl;
   }
-    
+
   backfillLeavesAlphaMask( Lavg, leaf_aspect_ratio, solidfraction, group_filter_flag );
 
   for( int group=0; group<reconstructed_triangles.size(); group++ ){
@@ -2233,18 +2252,18 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     }
 
   }
-  
+
   //reconstructed_triangles.resize(0);
-  
+
 }
-  
+
 
 void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, const float leaf_aspect_ratio, const float solidfraction, const std::vector<bool> group_filter_flag ){
 
   if( printmessages ){
     cout << "Backfilling leaves..." << endl;
   }
-    
+
   srand (time(NULL));
 
   unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -2276,7 +2295,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
     }
   }
 
-  std::vector<int> deleted_groups; 
+  std::vector<int> deleted_groups;
   int backfill_count = 0;
 
   //Get the total theoretical leaf area for each grid cell based on LiDAR scan
@@ -2285,7 +2304,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
     float leaf_area_total = getCellLeafArea(v);
 
     float reconstruct_frac = (leaf_area_total-leaf_area_current.at(v))/leaf_area_total;
- 
+
     if( leaf_area_total==0 || reconstructed_alphamasks_size.size()==0 ){//no leaves in gridcell
       if( printmessages ){
 	cout << "WARNING: skipping volume #" << v << " because it has no measured leaf area." << endl;
@@ -2299,7 +2318,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
     }else if( leaf_area_current.at(v)==0 ){//no directly reconstructed leaves in gridcell
 
       std::vector<SphericalCoord> tri_rots;
-      
+
       size_t Ntri = 0;
       for( size_t t=0; t<getTriangleCount(); t++ ){
 	Triangulation tri = getTriangle(t);
@@ -2308,7 +2327,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	  tri_rots.push_back( make_SphericalCoord(cart2sphere(normal).zenith,cart2sphere(normal).azimuth)  );
 	}
       }
-      
+
       while( leaf_area_current.at(v)<leaf_area_total ){
 
 	int randi = round(randu()*(tri_rots.size()-1));
@@ -2316,32 +2335,32 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	helios::vec3 cellsize = getCellSize(v);
 	helios::vec3 cellcenter = getCellCenter(v);
 	float rotation = getCellRotation(v);
-	
+
 	helios::vec3 shift = cellcenter + rotatePoint(helios::make_vec3( (randu()-0.5)*cellsize.x, (randu()-0.5)*cellsize.y, (randu()-0.5)*cellsize.z ),0,rotation);
-	
+
 	reconstructed_alphamasks_center.push_back( shift );
 	reconstructed_alphamasks_size.push_back( reconstructed_alphamasks_size.front() );
 	reconstructed_alphamasks_rotation.push_back( tri_rots.at(randi) );
 	reconstructed_alphamasks_gridcell.push_back( v );
 	reconstructed_alphamasks_direct_flag.push_back( false );
-	
+
 	leaf_area_current.at(v) += reconstructed_alphamasks_size.back().x*reconstructed_alphamasks_size.back().y*solidfraction;
-	
+
       }
 
-      
+
     }else if( leaf_area_current.at(v)>leaf_area_total ){//too much leaf area in gridcell
-      
+
       while( leaf_area_current.at(v)>leaf_area_total ){
 
 	int randi = round(randu()*(group_gridcell.at(v).size()-1));
-	
+
 	int group_index = group_gridcell.at(v).at(randi);
 
 	deleted_groups.push_back(group_index);
-	
+
 	leaf_area_current.at(v) -= reconstructed_alphamasks_size.at(group_index).x*reconstructed_alphamasks_size.at(group_index).y*solidfraction;
-	
+
       }
 
     }else{ //not enough leaf area in gridcell
@@ -2351,17 +2370,17 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	int randi = round(randu()*(group_gridcell.at(v).size()-1));
 
 	int group_index = group_gridcell.at(v).at(randi);
-	
+
 	helios::vec3 cellsize = getCellSize(v);
 	helios::vec3 cellcenter = getCellCenter(v);
 	float rotation = getCellRotation(v);
 	helios::vec3 cellanchor = getCellGlobalAnchor(v);
-	
+
 	//helios::vec3 shift = reconstructed_alphamasks_center.at(group_index) + helios::make_vec3( 0.45*(randu()-0.5)*cellsize.x, 0.45*(randu()-0.5)*cellsize.y, 0.45*(randu()-0.5)*cellsize.z ); //uniform shift about group
 	helios::vec3 shift = reconstructed_alphamasks_center.at(group_index) + helios::make_vec3( 0.25*randn(generator)*cellsize.x, 0.25*randn(generator)*cellsize.y, 0.25*randn(generator)*cellsize.z ); //Gaussian shift about group
 	//helios::vec3 shift = cellcenter + helios::make_vec3( (randu()-0.5)*cellsize.x, (randu()-0.5)*cellsize.y, (randu()-0.5)*cellsize.z ); //uniform shift within voxel
 	shift = rotatePointAboutLine(shift,cellanchor,make_vec3(0,0,1),rotation);
-	
+
 	if( group_index>=reconstructed_alphamasks_center.size() ){
 	  std::cout << "FAILED: " << group_index << " " << reconstructed_alphamasks_center.size() << " " << randi << std::endl;
 	  exit(EXIT_FAILURE);
@@ -2369,17 +2388,17 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	  std::cout << "FAILED: selected leaf group is not from this gridcell" << std::endl;
 	  exit(EXIT_FAILURE);
 	}
-	
+
 	reconstructed_alphamasks_center.push_back( shift );
 	reconstructed_alphamasks_size.push_back( reconstructed_alphamasks_size.at(group_index) );
 	reconstructed_alphamasks_rotation.push_back( reconstructed_alphamasks_rotation.at(group_index) );
 	reconstructed_alphamasks_gridcell.push_back( v );
 	reconstructed_alphamasks_direct_flag.push_back( false );
-	
+
 	leaf_area_current.at(v) += reconstructed_alphamasks_size.at(group_index).x*reconstructed_alphamasks_size.at(group_index).y*solidfraction;
 
 	backfill_count++;
-	
+
       }
 
     }
@@ -2403,7 +2422,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
     cout << "Backfilled " << backfill_count << " total leaf groups." << endl;
     cout << "Deleted " << deleted_groups.size() << " total leaf groups." << endl;
   }
-    
+
   for( int i=deleted_groups.size()-1; i>=0; i-- ){
     int group_index = deleted_groups.at(i);
     if( group_index>=0 && group_index<reconstructed_alphamasks_center.size() ){
@@ -2424,7 +2443,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
   if( printmessages ){
     cout << "done." << endl;
   }
-    
+
 }
 
 void LiDARcloud::calculateLeafAngleCDF( const uint Nbins, std::vector<std::vector<float> > &CDF_theta, std::vector<std::vector<float> > &CDF_phi ){
@@ -2448,11 +2467,11 @@ void LiDARcloud::calculateLeafAngleCDF( const uint Nbins, std::vector<std::vecto
   //calculate PDF
   for( size_t g=0; g<reconstructed_triangles.size(); g++ ){
     for( size_t t=0; t<reconstructed_triangles.at(g).size(); t++ ){
-    
+
       float triangle_area = reconstructed_triangles.at(g).at(t).area;
 
       int gridcell = reconstructed_triangles.at(g).at(t).gridcell;
-      
+
       helios::vec3 normal = cross( reconstructed_triangles.at(g).at(t).vertex1-reconstructed_triangles.at(g).at(t).vertex0, reconstructed_triangles.at(g).at(t).vertex2-reconstructed_triangles.at(g).at(t).vertex0 );
 
       helios::SphericalCoord normal_dir = cart2sphere(normal);
@@ -2478,7 +2497,7 @@ void LiDARcloud::calculateLeafAngleCDF( const uint Nbins, std::vector<std::vecto
 
       PDF_theta.at(gridcell).at(bin_theta) += triangle_area;
       PDF_phi.at(gridcell).at(bin_phi) += triangle_area;
-      
+
     }
   }
 

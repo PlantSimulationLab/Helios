@@ -49,8 +49,10 @@ endif( UNIX AND NOT APPLE)
 if( APPLE )
     set( ZLIB_LIBRARY ${PROJECT_BINARY_DIR}/libz.a )
 endif( APPLE )
+if( WIN32 )
+  set( ZLIB_LIBRARY ${PROJECT_BINARY_DIR}/zlibstatic.lib )#BNB 10/2/2021
+endif( WIN32 )
 include_directories(${ZLIB_INCLUDE_DIR})
-#include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../zlib")
 
 if(NOT WIN32)
   find_library(M_LIBRARY

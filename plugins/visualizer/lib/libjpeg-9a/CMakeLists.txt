@@ -8,7 +8,7 @@ project ( libjpeg C )
 cmake_minimum_required ( VERSION 2.8 )
 include ( cmake/dist.cmake )
 
-OPTION(BUILD_STATIC OFF) #BNB 3/7/17 ("OFF")
+OPTION(BUILD_STATIC ON) #BNB 10/13/2021 ("ON")
 OPTION(BUILD_EXECUTABLES OFF) #BNB 3/7/17 ("OFF")
 OPTION(BUILD_TESTS OFF) #BNB 3/7/17 ("OFF")
 

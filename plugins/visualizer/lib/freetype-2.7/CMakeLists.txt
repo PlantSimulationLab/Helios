@@ -82,6 +82,8 @@ include(CheckIncludeFile)
 
 set( WITH_HarfBuzz OFF )
 
+set( BUILD_SHARED_LIBS OFF ) #BNB 10/13/2021
+
 # CMAKE_TOOLCHAIN_FILE must be set before `project' is called, which
 # configures the base build environment and references the toolchain file
 if (APPLE)

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['overview_1569',['Overview',['../_overview.html',1,'']]]
+  ['photosynthesis_20model_20plugin_20documentation',['Photosynthesis Model Plugin Documentation',['../_photosynthesis_doc.html',1,'PlugIns']]],
+  ['plug_2dins',['Plug-ins',['../_plug_ins.html',1,'']]]
 ];

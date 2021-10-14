@@ -235,18 +235,18 @@ void LiDARcloud::loadXML( const char* filename, const bool load_grid_only ){
       uint scanID = getScanCount()-1;
       
       // ----- ASCII data file name ------//
-      const char* data_filename = deblank(s.child_value("filename"));
+      std::string data_filename = deblank(s.child_value("filename"));
 
-      if( strlen(data_filename)!=0 ){
+      if( !data_filename.empty() ){
 	
 	char str[100];
 	strcpy(str,"input/"); //first look in the input directory
-	strcat(str,data_filename);
+	strcat(str,data_filename.c_str());
 	ifstream f(str);
 	if( !f.good() ){
 	  
 	  //if not in input directory, try absolute path
-	  strcpy(str,data_filename);
+	  strcpy(str,data_filename.c_str());
 	  f.open(str);
 	  
 	  if( !f.good() ){

@@ -1,7 +1,7 @@
 /** \file "global.cpp" global declarations. 
     \author Brian Bailey
 
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2016-2021  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
 #include "global.h"
 
 //PNG Libraries (reading and writing PNG images)
-#include <unistd.h>
 #define PNG_DEBUG 3
 #define PNG_SKIP_SETJMP_CHECK 1
 #include <png.h>
@@ -53,7 +52,7 @@ RGBcolor helios::blend( RGBcolor color0, RGBcolor color1, float weight ){
   return color;
 }
 
-RGBAcolor helios::blend( RGBAcolor color0, RGBAcolor color1, float weight ){
+RGBAcolor helios::blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight ){
   RGBAcolor color;
   color.r = weight*color1.r+(1.f-weight)*color0.r;
   color.g = weight*color1.g+(1.f-weight)*color0.g;
@@ -62,11 +61,11 @@ RGBAcolor helios::blend( RGBAcolor color0, RGBAcolor color1, float weight ){
   return color;
 }
 
-vec3 helios::rotatePoint(const vec3 position, const SphericalCoord rotation ) {
+vec3 helios::rotatePoint(const vec3& position, const SphericalCoord& rotation ) {
   return rotatePoint( position, rotation.elevation, rotation.azimuth );
 }
 
-vec3 helios::rotatePoint(const vec3 position, const float theta, const float phi) {
+vec3 helios::rotatePoint(const vec3& position, float theta, float phi) {
 
   float Ry[3][3], Rz[3][3];
 
@@ -119,7 +118,7 @@ vec3 helios::rotatePoint(const vec3 position, const float theta, const float phi
 	
 }
 
-vec3 helios::rotatePointAboutLine(const vec3 point, const vec3 line_base, const vec3 line_direction, const float theta) {
+vec3 helios::rotatePointAboutLine( const vec3& point, const vec3& line_base, const vec3& line_direction, float theta) {
 
   //for reference this was taken from http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
 
@@ -150,7 +149,7 @@ vec3 helios::rotatePointAboutLine(const vec3 point, const vec3 line_base, const 
 	
 }
 
-float helios::calculateTriangleArea( const vec3 v0, const vec3 v1, const vec3 v2 ){
+float helios::calculateTriangleArea( const vec3& v0, const vec3& v1, const vec3& v2 ){
   vec3 A( v1-v0 );
   vec3 B( v2-v0 );
   vec3 C( v2-v1 );
@@ -161,7 +160,7 @@ float helios::calculateTriangleArea( const vec3 v0, const vec3 v1, const vec3 v2
   return sqrtf( s*(s-a)*(s-b)*(s-c) );
 }
 
-int helios::Date::JulianDay( void ) const{
+int helios::Date::JulianDay() const{
 
   int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
   int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
@@ -177,7 +176,7 @@ int helios::Date::JulianDay( void ) const{
 
 }
 
-float helios::randu( void ){
+float helios::randu(){
 
   return float(rand()) / float(RAND_MAX + 1.); 
 
@@ -190,7 +189,7 @@ int helios::randu( int imin, int imax  ){
   if( imin==imax || imin>imax ){
     return imin;
   }else{
-    return imin + round(float(imax-imin)*ru);
+    return imin + (int)lround(float(imax-imin)*ru);
   }
     
 }
@@ -207,7 +206,7 @@ float helios::asin_safe( float x ){
   return asinf(x) ;
 }
 
-bool helios::lineIntersection( const helios::vec2 p1, const helios::vec2 q1, const helios::vec2 p2, const helios::vec2 q2)
+bool helios::lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, const vec2 &q2)
 {
  
     float ax = q1.x - p1.x;     // direction of line a
@@ -230,7 +229,7 @@ bool helios::lineIntersection( const helios::vec2 p1, const helios::vec2 q1, con
     
 }
 
-bool helios::pointInPolygon( const helios::vec2 point, const std::vector<helios::vec2> polygon_verts ){
+bool helios::pointInPolygon(const vec2 &point, const std::vector<vec2> &polygon_verts ){
 
   std::vector<vec2> pverts = polygon_verts;
   pverts.push_back( polygon_verts.front() );
@@ -262,12 +261,12 @@ bool helios::pointInPolygon( const helios::vec2 point, const std::vector<helios:
 
 void helios::wait( float seconds ){
 
-  int msec = round( seconds*1000.f );
+  int msec = (int)lround( seconds*1000.f );
   std::this_thread::sleep_for(std::chrono::milliseconds(msec));
 
 }
 
-void helios::makeRotationMatrix( const float rotation, const char* axis, float (&T)[16] ){
+void helios::makeRotationMatrix( float rotation, const char* axis, float (&T)[16] ){
 
   float sx = sin(rotation);
   float cx = cos(rotation);
@@ -312,15 +311,14 @@ void helios::makeRotationMatrix( const float rotation, const char* axis, float (
     T[10] = 1.f;//(2,2)
     T[11] = 0.f;//(2,3)
   }else{
-    std::cerr << "ERROR (makeRotationMatrix): Rotation axis should be one of x, y, or z." << std::endl;
-    exit(EXIT_FAILURE);
+    throw(std::runtime_error("ERROR (makeRotationMatrix): Rotation axis should be one of x, y, or z."));
   }
   T[12]=T[13]=T[14]=0.f;
   T[15]=1.f;
 
 }
 
-void helios::makeRotationMatrix( const float rotation, const helios::vec3 axis, float (&T)[16] ){
+void helios::makeRotationMatrix( float rotation, const helios::vec3& axis, float (&T)[16] ){
 
   vec3 u = axis;
   u.normalize();
@@ -346,7 +344,7 @@ void helios::makeRotationMatrix( const float rotation, const helios::vec3 axis, 
 
 }
 
-void helios::makeTranslationMatrix( const helios::vec3 translation, float (&T)[16] ){
+void helios::makeTranslationMatrix( const helios::vec3& translation, float (&T)[16] ){
 
   T[0] = 1.f; //(0,0)
   T[1] = 0.f; //(0,1)
@@ -367,7 +365,7 @@ void helios::makeTranslationMatrix( const helios::vec3 translation, float (&T)[1
   
 }
 
-void helios::makeScaleMatrix( const helios::vec3 scale, float (&T)[16] ){
+void helios::makeScaleMatrix( const helios::vec3& scale, float (&T)[16] ){
 
   T[0] = scale.x; //(0,0)
   T[1] = 0.f; //(0,1)
@@ -406,7 +404,7 @@ void helios::matmult( const float ML[16], const float MR[16], float (&T)[16] ){
 
 }
 
-void helios::vecmult( const float M[16], const helios::vec3 v3, helios::vec3& result ){
+void helios::vecmult( const float M[16], const helios::vec3& v3, helios::vec3& result ){
 
   float v[4];
   v[0] = v3.x;
@@ -465,149 +463,12 @@ void helios::makeIdentityMatrix( float (&T)[16] ){
 
 }
 
-// void helios::makeTransformationMatrix( const vec3 anchor, const vec3 size, float (&transform)[16] ){
-
-//   float Rx[3][3], Ry[3][3], Rz[3][3];
-
-//   //It causes problems if size=0
-//   vec3 sz = size;
-//   if( size.x == 0 ){
-//     sz.x = 1.f;
-//   }else if( size.y == 0 ){
-//     sz.y = 1.f;
-//   }else if( size.z == 0 ){
-//     sz.z = 1.f;
-//   }
-
-//   // float sx = sin(rotation.x);
-//   // float cx = cos(rotation.x);
-
-//   // float sy = sin(rotation.y);
-//   // float cy = cos(rotation.y);
-
-//   // float sz = sin(rotation.z);
-//   // float cz = cos(rotation.z);
-	
-//   // // Setup the rotation matrix, this matrix is based off of the rotation matrix used in glRotatef.
-//   // Rx[0][0] = 1.f*size.x;
-//   // Rx[0][1] = 0.f;
-//   // Rx[0][2] = 0.f;
-//   // Rx[1][0] = 0.f;
-//   // Rx[1][1] = cx*size.y;
-//   // Rx[1][2] = -sx*size.z;
-//   // Rx[2][0] = 0.f;
-//   // Rx[2][1] = sx*size.y;
-//   // Rx[2][2] = cx*size.z;
-
-//   // Ry[0][0] = cy;
-//   // Ry[0][1] = 0.f;
-//   // Ry[0][2] = sy;
-//   // Ry[1][0] = 0.f;
-//   // Ry[1][1] = 1.f;
-//   // Ry[1][2] = 0.f;
-//   // Ry[2][0] = -sy;
-//   // Ry[2][1] = 0.f;
-//   // Ry[2][2] = cy;
-
-//   // Rz[0][0] = cz;
-//   // Rz[0][1] = -sz;
-//   // Rz[0][2] = 0.f;
-//   // Rz[1][0] = sz;
-//   // Rz[1][1] = cz;
-//   // Rz[1][2] = 0.f;
-//   // Rz[2][0] = 0.f;
-//   // Rz[2][1] = 0.f;
-//   // Rz[2][2] = 1.f;
-
-//   // float R[4][4]={0.f};
-//   // float Rtemp[4][4]={0.f};
-
-//   // // Multiply Rx*Ry
-//   // for( int i=0;i<3;i++){
-//   //   for(int j=0;j<3;j++){
-//   //     for(int k=0;k<3;k++){
-//   // 	Rtemp[i][j]=Rtemp[i][j]+Ry[i][k]*Rx[k][j];
-//   //     }
-//   //   }
-//   // }
-
-//   // // Multiply Rtemp*Rz
-//   // for( int i=0;i<3;i++){
-//   //   for(int j=0;j<3;j++){
-//   //     for(int k=0;k<3;k++){
-//   // 	R[i][j]=R[i][j]+Rz[i][k]*Rtemp[k][j];
-//   //     }
-//   //   }
-//   // }
-
-//   // R[3][3] = 1.f;
-
-//   // // Translation Matrix
-
-//   // float T[4][4]={0.f};
-  
-//   // T[0][0] = T[1][1] = T[2][2] = T[3][3] = 1.f;
-
-//   // T[0][3] = anchor.x;
-//   // T[1][3] = anchor.y;
-//   // T[2][3] = anchor.z;
-
-//   // // Multiply T*R (should rotate about origin first, then translate)
-
-//   // float M[4][4]={0.f};
-
-//   // for( int i=0;i<4;i++){
-//   //   for(int j=0;j<4;j++){
-//   //     for(int k=0;k<4;k++){
-//   // 	M[i][j]=M[i][j]+T[i][k]*R[k][j];
-//   //     }
-//   //   }
-//   // }
-
-
-//   // // Rearrange 4x4 Matrix into 16x1 Array
-//   // /* [0,0] */ transform[0] =  M[0][0];
-//   // /* [0,1] */ transform[1] =  M[0][1];
-//   // /* [0,2] */ transform[2] =  M[0][2];
-//   // /* [0,3] */ transform[3] =  M[0][3];
-//   // /* [1,0] */ transform[4] =  M[1][0];
-//   // /* [1,1] */ transform[5] =  M[1][1];
-//   // /* [1,2] */ transform[6] =  M[1][2];
-//   // /* [1,3] */ transform[7] =  M[1][3];
-//   // /* [2,0] */ transform[8] =  M[2][0];
-//   // /* [2,1] */ transform[9] =  M[2][1];
-//   // /* [2,2] */ transform[10] = M[2][2];
-//   // /* [2,3] */ transform[11] = M[2][3];
-//   // /* [3,0] */ transform[12] = M[3][0];
-//   // /* [3,1] */ transform[13] = M[3][1];
-//   // /* [3,2] */ transform[14] = M[3][2];
-//   // /* [3,3] */ transform[15] = M[3][3];
-
-//   /* [0,0] */ transform[0] = sz.x; 
-//   /* [0,1] */ transform[1] = 0.f;
-//   /* [0,2] */ transform[2] = 0.f;
-//   /* [0,3] */ transform[3] = anchor.x;
-//   /* [1,0] */ transform[4] = 0.f;
-//   /* [1,1] */ transform[5] = sz.y;
-//   /* [1,2] */ transform[6] =  0.f;
-//   /* [1,3] */ transform[7] = anchor.y;
-//   /* [2,0] */ transform[8] = 0.f;
-//   /* [2,1] */ transform[9] = 0.f;
-//   /* [2,2] */ transform[10] = sz.z;
-//   /* [2,3] */ transform[11] = anchor.z;
-//   /* [3,0] */ transform[12] = 0.f;
-//   /* [3,1] */ transform[13] = 0.f;
-//   /* [3,2] */ transform[14] = 0.f;
-//   /* [3,3] */ transform[15] = 1.f;
-
-// }
-
 float helios::deg2rad( const float& deg ){
-  return deg*M_PI/180.f;
+  return deg*float(M_PI)/180.f;
 }
 
 float helios::rad2deg( const float& rad ){
-  return rad*180.f/M_PI;
+  return rad*180.f/float(M_PI);
 }
 
 float helios::atan2_2pi( const float& y, const float& x){
@@ -615,22 +476,22 @@ float helios::atan2_2pi( const float& y, const float& x){
   float v=0;
 
   if(x>0.f){
-    v=atan(y/x);
+    v=atanf(y/x);
   }
   if(y>=0.f && x<0.f){
-    v=M_PI+atan(y/x);
+    v=float(M_PI)+atanf(y/x);
   }
   if(y<0.f && x<0.f){
-    v=-M_PI+atan(y/x);
+    v=-float(M_PI)+atanf(y/x);
   }
   if(y>0.f && x==0.f){
-    v=0.5f*M_PI;
+    v=0.5f*float(M_PI);
   }
   if(y<0.f && x==0.f){
-    v=-0.5f*M_PI;
+    v=-0.5f*float(M_PI);
   }
   if(v<0.f){
-    v=v+2.f*M_PI;
+    v=v+2.f*float(M_PI);
   }
   return v;
 
@@ -644,7 +505,7 @@ SphericalCoord helios::cart2sphere( const vec3& Cartesian ){
 
   Spherical.elevation = asin( Cartesian.z/Spherical.radius );
 
-  Spherical.zenith = 0.5f*M_PI - Spherical.elevation;
+  Spherical.zenith = 0.5f*float(M_PI) - Spherical.elevation;
 
   Spherical.azimuth = atan2_2pi( Cartesian.x, Cartesian.y );
 
@@ -791,10 +652,11 @@ RGBAcolor helios::string2RGBcolor( const char* str ){
 }
 
 
-const char* helios::deblank(const char* input)                                         
+std::string helios::deblank(const char* input)
 {
     int i,j;
-    char* output = strdup(input);
+    char output[255];
+    std::strcpy(output,input);
     for (i = 0, j = 0; i<strlen(input); i++,j++)          
     {
         if (input[i]!=' ')                           
@@ -803,8 +665,9 @@ const char* helios::deblank(const char* input)
             j--;                                     
     }
     output[j]=0;
-    const char* output_c = output;
+    std::string output_c = output;
     return output_c;
+
 }
 
 template <typename anytype>
@@ -817,16 +680,15 @@ anytype helios::clamp( anytype value, anytype min, anytype max ){
   return value;
 }
 
-float helios::mean( std::vector<float> vect ){
+float helios::mean( const std::vector<float>& vect ){
 
-  if( vect.size()==0 ){
-    std::cerr << "ERROR (mean): Vector is empty." << std::endl;
-    exit(EXIT_FAILURE);
+  if( vect.empty() ){
+    throw(std::runtime_error("ERROR (mean): Vector is empty."));
   }
 
   float m = 0;
-  for( uint i=0; i<vect.size(); i++ ){
-    m += vect.at(i);
+  for( float i : vect){
+    m += i;
   }
   m /= float(vect.size());
 
@@ -834,33 +696,30 @@ float helios::mean( std::vector<float> vect ){
 
 }
 
-float helios::min( std::vector<float> vect ){
+float helios::min( const std::vector<float>& vect ){
 
-  if( vect.size()==0 ){
-    std::cerr << "ERROR (min): Vector is empty." << std::endl;
-    exit(EXIT_FAILURE);
+  if( vect.empty() ){
+    throw(std::runtime_error("ERROR (min): Vector is empty."));
   }
 
   return *std::min_element(vect.begin(),vect.end());
 
 }
 
-int helios::min( std::vector<int> vect ){
+int helios::min( const std::vector<int>& vect ){
 
-  if( vect.size()==0 ){
-    std::cerr << "ERROR (min): Vector is empty." << std::endl;
-    exit(EXIT_FAILURE);
+  if( vect.empty() ){
+      throw(std::runtime_error("ERROR (min): Vector is empty."));
   }
 
   return *std::min_element(vect.begin(),vect.end());
 
 }
 
-vec3 helios::min( std::vector<vec3> vect ){
+vec3 helios::min( const std::vector<vec3>& vect ){
 
-  if( vect.size()==0 ){
-    std::cerr << "ERROR (min): Vector is empty." << std::endl;
-    exit(EXIT_FAILURE);
+  if( vect.empty() ){
+      throw(std::runtime_error("ERROR (min): Vector is empty."));
   }
 
   vec3 vmin = vect.at(0);
@@ -883,33 +742,30 @@ vec3 helios::min( std::vector<vec3> vect ){
 
 }
 
-float helios::max( std::vector<float> vect ){
+float helios::max( const std::vector<float>& vect ){
 
-  if( vect.size()==0 ){
-    std::cerr << "ERROR (max): Vector is empty." << std::endl;
-    exit(EXIT_FAILURE);
+  if( vect.empty() ){
+      throw(std::runtime_error("ERROR (max): Vector is empty."));
   }
 
   return *std::max_element(vect.begin(),vect.end());
 
 }
 
-int helios::max( std::vector<int> vect ){
+int helios::max( const std::vector<int>& vect ){
 
-  if( vect.size()==0 ){
-    std::cerr << "ERROR (max): Vector is empty." << std::endl;
-    exit(EXIT_FAILURE);
+  if( vect.empty() ){
+      throw(std::runtime_error("ERROR (max): Vector is empty."));
   }
 
   return *std::max_element(vect.begin(),vect.end());
 
 }
 
-vec3 helios::max( std::vector<vec3> vect ){
+vec3 helios::max( const std::vector<vec3>& vect ){
 
-  if( vect.size()==0 ){
-    std::cerr << "ERROR (max): Vector is empty." << std::endl;
-    exit(EXIT_FAILURE);
+  if( vect.empty() ){
+      throw(std::runtime_error("ERROR (max): Vector is empty."));
   }
 
   vec3 vmax = vect.at(0);
@@ -968,11 +824,9 @@ void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > >
 Date helios::CalendarDay( int Julian_day, int year ){
 
   if( Julian_day<1 || Julian_day>366 ){
-    std::cerr << "ERROR (CalendarDay): Julian day out of range." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (CalendarDay): Julian day out of range."));
   }else if( year<1000 ){
-    std::cerr << "ERROR (CalendarDay): Year should be specified in YYYY format." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (CalendarDay): Year should be specified in YYYY format."));
   }
 
   int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 214, 244, 274, 305, 335};
@@ -988,6 +842,7 @@ Date helios::CalendarDay( int Julian_day, int year ){
   
   //set month
   int i;
+  month = 1;
   for( i=0; i<12; i++ ){
     if(i==11){
       month=12;
@@ -1015,21 +870,18 @@ int helios::JulianDay( int day, int month, int year ){
     
 }
 
-int helios::JulianDay( Date date ){
+int helios::JulianDay( const Date& date ){
 
   int day = date.day;
   int month = date.month;
   int year = date.year;
 
   if( day<1 || day>31 ){
-    std::cerr << "ERROR (JulianDay): Day of month is out of range (day of " << day << " was given)." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (JulianDay): Day of month is out of range (day of " + std::to_string(day) + " was given)."));
   }else if( month<1 || month>12){
-    std::cerr << "ERROR (JulianDay): Month of year is out of range (month of " << month << " was given)." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (JulianDay): Month of year is out of range (month of " + std::to_string(month) + " was given)."));
   }else if( year<1000 ){
-    std::cerr << "ERROR (JulianDay): Year should be specified in YYYY format." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (JulianDay): Year should be specified in YYYY format."));
   }
 
   int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 214, 244, 274, 305, 335};
@@ -1108,28 +960,24 @@ bool helios::PNGHasAlpha( const char* filename ){
   /* open file and test for it being a png */
   FILE *fp = fopen(filename, "rb");
   if (!fp){
-    std::cerr << "ERROR (readPNGAlpha): File " << filename << " could not be opened for reading. The file either does not exist or you do not have permission to read it." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading. The file either does not exist or you do not have permission to read it."));
   }
   fread(header, 1, 8, fp);
   
   /* initialize stuff */
-  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
   if (!png_ptr){
-    std::cerr << "ERROR (read_png_alpha): png_create_read_struct failed." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (read_png_alpha): png_create_read_struct failed."));
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr){
-    std::cerr << "ERROR (read_png_alpha): png_create_info_struct failed." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (read_png_alpha): png_create_info_struct failed."));
   }
   
   if (setjmp(png_jmpbuf(png_ptr))){
-    std::cerr << "ERROR (read_png_alpha): init_io failed." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (read_png_alpha): init_io failed."));
   }  
 
   png_init_io(png_ptr, fp);
@@ -1149,17 +997,13 @@ bool helios::PNGHasAlpha( const char* filename ){
 
 std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
 
-  int x, y;
+  int y;
   uint height, width;
 
   std::vector<std::vector<bool> > mask;
-
-  png_byte color_type;
-  png_byte bit_depth;
   
   png_structp png_ptr;
   png_infop info_ptr;
-  int number_of_passes;
   png_bytep * row_pointers;
 
   char header[8];    // 8 is the maximum size that can be checked
@@ -1167,8 +1011,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
   /* open file and test for it being a png */
   FILE *fp = fopen(filename, "rb");
   if (!fp){
-    std::cerr << "ERROR (readPNGAlpha): File " << filename << " could not be opened for reading." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading."));
   }
   fread(header, 1, 8, fp);
   // if (png_sig_cmp(header, 0, 8)){
@@ -1177,22 +1020,19 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
   // }
 
   /* initialize stuff */
-  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
   if (!png_ptr){
-    std::cerr << "ERROR (read_png_alpha): png_create_read_struct failed." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (read_png_alpha): png_create_read_struct failed."));
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr){
-    std::cerr << "ERROR (read_png_alpha): png_create_info_struct failed." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (read_png_alpha): png_create_info_struct failed."));
   }
   
   if (setjmp(png_jmpbuf(png_ptr))){
-    std::cerr << "ERROR (read_png_alpha): init_io failed." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (read_png_alpha): init_io failed."));
   }  
 
   png_init_io(png_ptr, fp);
@@ -1202,21 +1042,20 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
 
   width = png_get_image_width(png_ptr, info_ptr);
   height = png_get_image_height(png_ptr, info_ptr);
-  color_type = png_get_color_type(png_ptr, info_ptr);
-  bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+//  color_type = png_get_color_type(png_ptr, info_ptr);
+//  bit_depth = png_get_bit_depth(png_ptr, info_ptr);
 
   mask.resize( height );
   for( uint i=0; i<height; i++ ){
     mask.at(i).resize(width);
   }
 
-  number_of_passes = png_set_interlace_handling(png_ptr);
+//  number_of_passes = png_set_interlace_handling(png_ptr);
   png_read_update_info(png_ptr, info_ptr);
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr))){
-    std::cerr << "ERROR (read_png_alpha): read_image failed." << std::endl;
-    exit(EXIT_FAILURE);
+      throw(std::runtime_error("ERROR (read_png_alpha): read_image failed."));
   }
 
   row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
@@ -1246,253 +1085,252 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
   
 }
 
-std::vector<int> helios::flatten( const std::vector<std::vector<int> > vec ){
+std::vector<int> helios::flatten( const std::vector<std::vector<int> > &vec ){
 
-  std::vector<int> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<uint> helios::flatten( const std::vector<std::vector<uint> > vec ){
-
-  std::vector<uint> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<float> helios::flatten( const std::vector<std::vector<float> > vec ){
-
-  std::vector<float> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<double> helios::flatten( const std::vector<std::vector<double> > vec ){
-
-  std::vector<double> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<helios::vec2> > vec ){
-
-  std::vector<helios::vec2> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<helios::vec3> > vec ){
-
-  std::vector<helios::vec3> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<helios::vec4> > vec ){
-
-  std::vector<helios::vec4> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<helios::int2> helios::flatten( const std::vector<std::vector<helios::int2> > vec ){
-
-  std::vector<helios::int2> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<helios::int3> helios::flatten( const std::vector<std::vector<helios::int3> > vec ){
-
-  std::vector<helios::int3> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<helios::int4> helios::flatten( const std::vector<std::vector<helios::int4> > vec ){
-
-  std::vector<helios::int4> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<std::string> helios::flatten( const std::vector<std::vector<std::string> > vec ){
-
-  std::vector<std::string> flat;
-  for( size_t i=0; i<vec.size(); i++ ){
-    flat.insert( flat.end(), vec.at(i).begin(), vec.at(i).end() );
-  }
-  return flat;
-  
-}
-
-std::vector<int> helios::flatten( const std::vector<std::vector<std::vector<int> > > vec ){
-
-  std::vector<int> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<int> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-std::vector<uint> helios::flatten( const std::vector<std::vector<std::vector<uint> > > vec ){
+std::vector<uint> helios::flatten( const std::vector<std::vector<uint> > &vec ){
 
-  std::vector<uint> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<uint> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
- 
+    return flat;
+
 }
 
-std::vector<float> helios::flatten( const std::vector<std::vector<std::vector<float> > > vec ){
+std::vector<float> helios::flatten( const std::vector<std::vector<float> > &vec ){
 
-  std::vector<float> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<float> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-std::vector<double> helios::flatten( const std::vector<std::vector<std::vector<double> > > vec ){
+std::vector<double> helios::flatten( const std::vector<std::vector<double> > &vec ){
 
-  std::vector<double> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<double> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<std::vector<helios::vec2> > > vec ){
+std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<helios::vec2> > &vec ){
 
-  std::vector<helios::vec2> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<helios::vec2> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<std::vector<helios::vec3> > > vec ){
+std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<helios::vec3> > &vec ){
 
-  std::vector<helios::vec3> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<helios::vec3> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<std::vector<helios::vec4> > > vec ){
+std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<helios::vec4> > &vec ){
 
-  std::vector<helios::vec4> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<helios::vec4> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-std::vector<helios::int2> helios::flatten( const std::vector<std::vector<std::vector<helios::int2> > > vec ){
+std::vector<helios::int2> helios::flatten( const std::vector<std::vector<helios::int2> > &vec ){
 
-  std::vector<helios::int2> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<helios::int2> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-std::vector<helios::int3> helios::flatten( const std::vector<std::vector<std::vector<helios::int3> > > vec ){
+std::vector<helios::int3> helios::flatten( const std::vector<std::vector<helios::int3> > &vec ){
 
-  std::vector<helios::int3> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<helios::int3> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-std::vector<helios::int4> helios::flatten( const std::vector<std::vector<std::vector<helios::int4> > > vec ){
+std::vector<helios::int4> helios::flatten( const std::vector<std::vector<helios::int4> > &vec ){
 
-  std::vector<helios::int4> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<helios::int4> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-std::vector<std::string> helios::flatten( const std::vector<std::vector<std::vector<std::string> > > vec ){
+std::vector<std::string> helios::flatten( const std::vector<std::vector<std::string> > &vec ){
 
-  std::vector<std::string> flat;
-  for( size_t j=0; j<vec.size(); j++ ){
-    for( size_t i=0; i<vec.at(j).size(); i++ ){
-      flat.insert( flat.end(), vec.at(j).at(i).begin(), vec.at(j).at(i).end() );
+    std::vector<std::string> flat;
+    for(const auto & i : vec){
+        flat.insert( flat.end(), i.begin(), i.end() );
     }
-  }
-  return flat;
-  
+    return flat;
+
 }
 
-helios::vec3 helios::spline_interp3( const float _u, const helios::vec3 x_start, const helios::vec3 tan_start, const helios::vec3 x_end, const helios::vec3 tan_end ){
+std::vector<int> helios::flatten( const std::vector<std::vector<std::vector<int> > > &vec ){
+
+    std::vector<int> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<uint> helios::flatten( const std::vector<std::vector<std::vector<uint> > > &vec ){
+
+    std::vector<uint> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<float> helios::flatten( const std::vector<std::vector<std::vector<float> > > &vec ){
+
+    std::vector<float> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<double> helios::flatten( const std::vector<std::vector<std::vector<double> > > &vec ){
+
+    std::vector<double> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<std::vector<helios::vec2> > > &vec ){
+
+    std::vector<helios::vec2> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<std::vector<helios::vec3> > > &vec ){
+
+    std::vector<helios::vec3> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<std::vector<helios::vec4> > > &vec ){
+
+    std::vector<helios::vec4> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::int2> helios::flatten( const std::vector<std::vector<std::vector<helios::int2> > > &vec ){
+
+    std::vector<helios::int2> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::int3> helios::flatten( const std::vector<std::vector<std::vector<helios::int3> > > &vec ){
+
+    std::vector<helios::int3> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::int4> helios::flatten( const std::vector<std::vector<std::vector<helios::int4> > > &vec ){
+
+    std::vector<helios::int4> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+std::vector<std::string> helios::flatten( const std::vector<std::vector<std::vector<std::string> > > &vec ){
+
+    std::vector<std::string> flat;
+    for( const auto & j : vec){
+        for( const auto & i : j ){
+            flat.insert( flat.end(), i.begin(), i.end() );
+        }
+    }
+    return flat;
+
+}
+
+helios::vec3 helios::spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end ){
 
   //Perform interpolation between two 3D points using Cubic Hermite Spline
 
-  float u = _u;
   if( u<0 || u>1.f ){
     std::cout << "WARNING (spline_interp3): Clamping query point 'u' to the interval (0,1)" << std::endl;
     u = clamp( u, 0.f, 1.f );
@@ -1537,7 +1375,7 @@ float helios::XMLloadfloat( pugi::xml_node node, const char* field ){
   if( strlen(field_str)==0 ){
     value = 99999;
   }else{
-    value = atof( field_str ); //note: pugi loads xml data as a character.  need to separate it into float
+    value = std::stof( field_str ); //note: pugi loads xml data as a character.  need to separate it into float
   }
   
   return value;
@@ -1552,7 +1390,7 @@ int helios::XMLloadint( pugi::xml_node node, const char* field ){
   if( strlen(field_str)==0 ){
     value = 99999;
   }else{
-    value = atoi( field_str ); //note: pugi loads xml data as a character.  need to separate it into int
+    value = std::stoi( field_str ); //note: pugi loads xml data as a character.  need to separate it into int
   }
   
   return value;
@@ -1561,10 +1399,10 @@ int helios::XMLloadint( pugi::xml_node node, const char* field ){
 
 std::string helios::XMLloadstring( pugi::xml_node node, const char* field ){
 
-  const char* field_str = deblank(node.child_value(field));
+  std::string field_str = deblank(node.child_value(field));
     
   std::string value;
-  if( strlen(field_str)==0 ){
+  if( field_str.empty() ){
     value = "99999";
   }else{
     value = field_str; //note: pugi loads xml data as a character.  need to separate it into int

@@ -2,16 +2,6 @@ cmake_minimum_required(VERSION 2.5)
 
 project(helios)
 
-SET(CMAKE_CXX_COMPILER_ID "GNU")
-if( CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7 )
-    SET(CMAKE_CXX_FLAGS "-g -std=c++0x")
-else()
-    SET(CMAKE_CXX_FLAGS "-g -std=c++11")	
-endif()
-SET(CMAKE_C_FLAGS "-g" )
-
-SET( CMAKE_BUILD_TYPE Debug )
-
 include_directories(include)
 include_directories(../../core/include)
 
@@ -27,12 +17,10 @@ add_subdirectory("lib/freetype-2.7")
 target_link_libraries( visualizer freetype )
 
 #glew
-#include_directories("lib/glew-1.12.0/include")
-#add_subdirectory("lib/glew-1.12.0")
-#target_link_libraries( visualizer GLEW_static )
 include_directories("lib/glew-2.2.0/include")
 add_subdirectory("lib/glew-2.2.0/build/cmake")
 target_link_libraries( visualizer glew_s )
+#target_link_libraries( visualizer GLEW_static )
 
 #jpeg
 include_directories("lib/libjpeg-9a")
@@ -51,6 +39,7 @@ add_dependencies( png_static zlibstatic )
 include_directories("lib/glfw-3.3.2/include")
 add_subdirectory("lib/glfw-3.3.2")
 target_link_libraries( visualizer glfw )
+add_custom_command( TARGET visualizer POST_BUILD_COMMAND CMAKE_COMMAND -E copy "${CMAKE_BINARY_DIR}/lib/glfw3.dll" "${CMAKE_BINARY_DIR}/" )
 
 #glm
 include_directories("lib/glm")

@@ -1,7 +1,7 @@
 /** \file "global.h" Header file for all global function/object definitions. 
     \author Brian Bailey
 
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2016-2021  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -23,23 +23,26 @@
 #define DEPRECATED(func) func
 #endif
 
-#ifndef __GLOBAL__
-#define __GLOBAL__
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
-#include <stdlib.h>
-//#include <cstdlib>
-#include <stdio.h>
-#include <string.h>
+#ifndef HELIOS_GLOBAL
+#define HELIOS_GLOBAL
+
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <vector>
 #include <stdexcept>
 #include <exception>
-#include <assert.h>
+#include <cassert>
 #include <cmath>
 #include <memory>
-#include <time.h>
+#include <ctime>
 #include <map>
 #include <algorithm>
 #include <ctime>
@@ -76,7 +79,7 @@ namespace helios{
     \param[out] "transform" Transformation matrix in a 1D array
     \ingroup functions
 */
-void makeRotationMatrix( const float rotation, const char* axis, float (&transform)[16] );
+void makeRotationMatrix( float rotation, const char* axis, float (&transform)[16] );
 
 //! Construct a rotation matrix to perform rotation about an arbitrary axis.
 /** 4x4 Affine rotation matrix 
@@ -85,7 +88,7 @@ void makeRotationMatrix( const float rotation, const char* axis, float (&transfo
     \param[out] "transform" Transformation matrix in a 1D array
     \ingroup functions
 */
-void makeRotationMatrix( const float rotation, const helios::vec3, float (&transform)[16] );
+void makeRotationMatrix( float rotation, const helios::vec3& , float (&transform)[16] );
 
 //! Construct translation matrix
 /** 4x4 Affine translation matrix 
@@ -93,7 +96,7 @@ void makeRotationMatrix( const float rotation, const helios::vec3, float (&trans
     \param[out] "transform" Transformation matrix in a 1D array
     \ingroup functions
 */
-void makeTranslationMatrix( const helios::vec3 translation, float (&transform)[16] );
+void makeTranslationMatrix( const helios::vec3& translation, float (&transform)[16] );
 
  //! Construct matrix to scale
 /** 4x4 Affine scaling matrix 
@@ -101,7 +104,7 @@ void makeTranslationMatrix( const helios::vec3 translation, float (&transform)[1
     \param[out] "transform" Transformation matrix in a 1D array
     \ingroup functions
 */
-void makeScaleMatrix( const helios::vec3 scale, float (&T)[16] );
+void makeScaleMatrix( const helios::vec3& scale, float (&T)[16] );
 
 //! Multiply 4x4 matrices: T=ML*MR 
 void matmult( const float ML[16], const float MR[16], float (&T)[16] );
@@ -110,16 +113,7 @@ void matmult( const float ML[16], const float MR[16], float (&T)[16] );
 void vecmult( const float M[16], const float v[3], float (&result)[3] );
 
 //! Multiply 4x4 transformation matrix by 3-element vector: T=M*v 
- void vecmult( const float M[16], const helios::vec3 v3, helios::vec3& result );
-
-/* //! Construct a transformation matrix */
-/* /\** 4x4 Affine transformation matrix  */
-/*     \param[in] "translation" Translation distance in x,y,z directions  */
-/*     \param[in] "scale" Scaling factor in x,y,z directions */
-/*     \param[out] "transform" Transformation matrix in a 1D array */
-/*     \ingroup functions */
-/* *\/ */
-/* void makeTransformationMatrix( const vec3 translation, const vec3 scale, float (&transform)[16] ); */
+ void vecmult( const float M[16], const helios::vec3& v3, helios::vec3& result );
 
  //! Construct an identity matrix
  void makeIdentityMatrix( float (&T)[16] );
@@ -189,7 +183,7 @@ RGBAcolor string2RGBcolor( const char* str );
 
 //! Remove whitespace from character array
 /** \ingroup functions */
-const char* deblank(const char* input);
+    std::string deblank(const char* input);
 
 //! Clamp value to be within some specified bounds
 /** \param[in] "value" Value to be clamped
@@ -203,43 +197,43 @@ anytype clamp( anytype value, anytype min, anytype max );
 /** \param[in] "vect" C++ vector of floats 
  \ingroup functions
 */
-float mean( std::vector<float> vect );
+float mean( const std::vector<float>& vect );
 
 //! Minimum value of a vector of floats
 /** \param[in] "vect" C++ vector of floats 
  \ingroup functions
 */
-float min( std::vector<float> vect );
+float min( const std::vector<float>& vect );
 
 //! Minimum value of a vector of ints
 /** \param[in] "vect" C++ vector of ints 
  \ingroup functions
 */
-int min( std::vector<int> vect );
+int min( const std::vector<int>& vect );
 
 //! Minimum value of a vector of vec3's
 /** \param[in] "vect" C++ vector of vec3's 
  \ingroup functions
 */
-vec3 min( std::vector<vec3> vect );
+vec3 min( const std::vector<vec3>& vect );
 
 //! Maximum value of a vector of floats
 /** \param[in] "vect" C++ vector of floats
 \ingroup functions
 */
-float max( std::vector<float> vect );
+float max( const std::vector<float>& vect );
 
 //! Maximum value of a vector of ints
 /** \param[in] "vect" C++ vector of ints
 \ingroup functions
 */
-int max( std::vector<int> vect );
+int max( const std::vector<int>& vect );
 
 //! Maximum value of a vector of vec3's
 /** \param[in] "vect" C++ vector of vec3's
 \ingroup functions
 */
-vec3 max( std::vector<vec3> vect );
+vec3 max( const std::vector<vec3>& vect );
 
 //! Resize 2D C++ vector
 /** \param[in] "vec" C++ vector
@@ -276,7 +270,7 @@ void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > >
     \param[in] "rotation" Spherical rotation angles (elevation,azimuth)
     \ingroup functions
 */
-vec3 rotatePoint(const vec3 position, const SphericalCoord rotation );
+vec3 rotatePoint(const vec3& position, const SphericalCoord& rotation );
 
 //! Function to rotate a 3D vector given spherical angles elevation and azimuth
 /** \param[in] "position" 3D coordinate of point to be rotated.
@@ -284,7 +278,7 @@ vec3 rotatePoint(const vec3 position, const SphericalCoord rotation );
     \param[in] "phi" azimuthal angle of rotation. 
     \ingroup functions
 */
-vec3 rotatePoint(const vec3 position, const float theta, const float phi);
+vec3 rotatePoint(const vec3& position, float theta, float phi);
 
 //! Rotate a 3D vector about an arbitrary line
 /** \param[in] "point" 3D coordinate of point to be rotated
@@ -292,7 +286,7 @@ vec3 rotatePoint(const vec3 position, const float theta, const float phi);
     \param[in] "line_direction" Unit vector pointing in the direction of the line
     \param[in] "theta" Rotation angle in radians
 */
- vec3 rotatePointAboutLine(const vec3 point, const vec3 line_base, const vec3 line_direction, const float theta);
+ vec3 rotatePointAboutLine(const vec3& point, const vec3& line_base, const vec3& line_direction, float theta);
 
 //! Calculate the area of a triangle given its three vertices
 /** \param[in] "v0" (x,y,z) coordinate of first vertex
@@ -301,7 +295,7 @@ vec3 rotatePoint(const vec3 position, const float theta, const float phi);
     \return One-sided surface area of triangle
     \ingroup functions
 */
-float calculateTriangleArea( const vec3 v0, const vec3 v1, const vec3 v2 );
+float calculateTriangleArea( const vec3& v0, const vec3& v1, const vec3& v2 );
 
 //! Convert Julian day to calendar day (day,month,year)
 /** 
@@ -331,11 +325,11 @@ int JulianDay( int day, int month, int year );
    \ingroup functions
    \ingroup sun
 */
-int JulianDay( Date date );
+int JulianDay( const Date& date );
 
 //! Random number from a uniform distribution between 0 and 1
 /** \ingroup functions */
-float randu( void );
+float randu();
 
 //! Random integer from a uniform distribution between imin and imax
 /** \ingroup functions */
@@ -348,41 +342,45 @@ float acos_safe( float x );
 float asin_safe( float x );
 
 //!Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2).
-bool lineIntersection( const helios::vec2 p1, const helios::vec2 q1, const helios::vec2 p2, const helios::vec2 q2);
+bool lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, const vec2 &q2);
 
 //!Determine whether point lines within a polygon
-bool pointInPolygon( const helios::vec2 point, const std::vector<helios::vec2> polygon_verts );
+bool pointInPolygon(const vec2 &point, const std::vector<vec2> &polygon_verts );
 
 //! MATLAB-style timer.  Call tic() to start timer, call \ref toc() to stop timer and print duration
 struct Timer{
 public:
 
-  Timer(void){
+  Timer(){
     running=false;
   }
 
   //! Start timer
-  void tic(void){
+  void tic(){
     timer_start = std::chrono::high_resolution_clock::now();
     running = true;
   };
 
   //! Stop timer and print elapsed time
-  double toc(void){
+  double toc() const{
     return toc("");
   }
   
   //! Stop timer and print elapsed time and a user-defined message
-  double toc( const char* message ){
-    if( !running ){
-      std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..." << std::endl;
-      return 0;
-    }
+  /* \note the timer print message can be turned off by passing the message argument  "mute" */
+  double toc( const char* message ) const {
+      if (!running) {
+          std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..."
+                    << std::endl;
+          return 0;
+      }
 
-    auto timer_end = std::chrono::high_resolution_clock::now();;
-    double duration = std::chrono::duration<double>(timer_end-timer_start).count();
-    std::cout << "Elapsed time is " << duration << " seconds: " << message << std::endl;
-    return duration;
+      auto timer_end = std::chrono::high_resolution_clock::now();;
+      double duration = std::chrono::duration<double>(timer_end - timer_start).count();
+      if (!strcmp(message, "mute")) {
+          std::cout << "Elapsed time is " << duration << " seconds: " << message << std::endl;
+      }
+      return duration;
   }
 
 private:
@@ -409,71 +407,71 @@ void wait( float seconds );
  */
  std::vector<std::vector<bool> > readPNGAlpha( const char* filename );
 
- //! Function to flatten a 2D int vector into a 1D vector
- std::vector<int> flatten( std::vector<std::vector<int> > vec );
-  
- //! Function to flatten a 2D uint vector into a 1D vector
- std::vector<uint> flatten( std::vector<std::vector<uint> > vec );
+    //! Function to flatten a 2D int vector into a 1D vector
+    std::vector<int> flatten( const std::vector<std::vector<int> > &vec );
 
- //! Function to flatten a 2D float vector into a 1D vector
- std::vector<float> flatten( std::vector<std::vector<float> > vec );
+    //! Function to flatten a 2D uint &vector into a 1D vector
+    std::vector<uint> flatten( const std::vector<std::vector<uint> > &vec );
 
- //! Function to flatten a 2D double vector into a 1D vector
- std::vector<double> flatten( std::vector<std::vector<double> > vec );
+    //! Function to flatten a 2D float vector into a 1D vector
+    std::vector<float> flatten( const std::vector<std::vector<float> > &vec );
 
- //! Function to flatten a 2D vec2 vector into a 1D vector
- std::vector<helios::vec2> flatten( std::vector<std::vector<helios::vec2> > vec );
+    //! Function to flatten a 2D double vector into a 1D vector
+    std::vector<double> flatten( const std::vector<std::vector<double> > &vec );
 
- //! Function to flatten a 2D vec3 vector into a 1D vector
- std::vector<helios::vec3> flatten( std::vector<std::vector<helios::vec3> > vec );
+    //! Function to flatten a 2D vec2 vector into a 1D vector
+    std::vector<helios::vec2> flatten( const std::vector<std::vector<helios::vec2> > &vec );
 
- //! Function to flatten a 2D vec4 vector into a 1D vector
- std::vector<helios::vec4> flatten( std::vector<std::vector<helios::vec4> > vec );
+    //! Function to flatten a 2D vec3 vector into a 1D vector
+    std::vector<helios::vec3> flatten( const std::vector<std::vector<helios::vec3> > &vec );
 
- //! Function to flatten a 2D int2 vector into a 1D vector
- std::vector<helios::int2> flatten( std::vector<std::vector<helios::int2> > vec );
+    //! Function to flatten a 2D vec4 vector into a 1D vector
+    std::vector<helios::vec4> flatten( const std::vector<std::vector<helios::vec4> > &vec );
 
- //! Function to flatten a 2D int3 vector into a 1D vector
- std::vector<helios::int3> flatten( std::vector<std::vector<helios::int3> > vec );
+    //! Function to flatten a 2D int2 vector into a 1D vector
+    std::vector<helios::int2> flatten( const std::vector<std::vector<helios::int2> > &vec );
 
- //! Function to flatten a 2D int4 vector into a 1D vector
- std::vector<helios::int4> flatten( std::vector<std::vector<helios::int4> > vec );
+    //! Function to flatten a 2D int3 vector into a 1D vector
+    std::vector<helios::int3> flatten( const std::vector<std::vector<helios::int3> > &vec );
 
- //! Function to flatten a 2D string vector into a 1D vector
- std::vector<std::string> flatten( std::vector<std::vector<std::string> > vec );
+    //! Function to flatten a 2D int4 vector into a 1D vector
+    std::vector<helios::int4> flatten( const std::vector<std::vector<helios::int4> > &vec );
 
- //! Function to flatten a 3D int vector into a 1D vector
- std::vector<int> flatten( std::vector<std::vector<std::vector<int> > > vec );
-  
- //! Function to flatten a 3D uint vector into a 1D vector
- std::vector<uint> flatten( std::vector<std::vector<std::vector<uint> > > vec );
+    //! Function to flatten a 2D string vector into a 1D vector
+    std::vector<std::string> flatten( const std::vector<std::vector<std::string> > &vec );
 
- //! Function to flatten a 3D float vector into a 1D vector
- std::vector<float> flatten( std::vector<std::vector<std::vector<float> > > vec );
+    //! Function to flatten a 3D int vector into a 1D vector
+    std::vector<int> flatten( const std::vector<std::vector<std::vector<int> > > &vec );
 
- //! Function to flatten a 3D double vector into a 1D vector
- std::vector<double> flatten( std::vector<std::vector<std::vector<double> > > vec );
+    //! Function to flatten a 3D uint vector into a 1D vector
+    std::vector<uint> flatten( const std::vector<std::vector<std::vector<uint> > > &vec );
 
- //! Function to flatten a 3D vec2 vector into a 1D vector
- std::vector<helios::vec2> flatten( std::vector<std::vector<std::vector<helios::vec2> > > vec );
+    //! Function to flatten a 3D float vector into a 1D vector
+    std::vector<float> flatten( const std::vector<std::vector<std::vector<float> > > &vec );
 
- //! Function to flatten a 3D vec3 vector into a 1D vector
- std::vector<helios::vec3> flatten( std::vector<std::vector<std::vector<helios::vec3> > > vec );
+    //! Function to flatten a 3D double vector into a 1D vector
+    std::vector<double> flatten( const std::vector<std::vector<std::vector<double> > > &vec );
 
- //! Function to flatten a 3D vec4 vector into a 1D vector
- std::vector<helios::vec4> flatten( std::vector<std::vector<std::vector<helios::vec4> > > vec );
+    //! Function to flatten a 3D vec2 vector into a 1D vector
+    std::vector<helios::vec2> flatten( const std::vector<std::vector<std::vector<helios::vec2> > > &vec );
 
- //! Function to flatten a 3D int2 vector into a 1D vector
- std::vector<helios::int2> flatten( std::vector<std::vector<std::vector<helios::int2> > > vec );
+    //! Function to flatten a 3D vec3 vector into a 1D vector
+    std::vector<helios::vec3> flatten( const std::vector<std::vector<std::vector<helios::vec3> > > &vec );
 
- //! Function to flatten a 3D int3 vector into a 1D vector
- std::vector<helios::int3> flatten( std::vector<std::vector<std::vector<helios::int3> > > vec );
+    //! Function to flatten a 3D vec4 vector into a 1D vector
+    std::vector<helios::vec4> flatten( const std::vector<std::vector<std::vector<helios::vec4> > > &vec );
 
- //! Function to flatten a 3D int4 vector into a 1D vector
- std::vector<helios::int4> flatten( std::vector<std::vector<std::vector<helios::int4> > > vec );
+    //! Function to flatten a 3D int2 vector into a 1D vector
+    std::vector<helios::int2> flatten( const std::vector<std::vector<std::vector<helios::int2> > > &vec );
 
- //! Function to flatten a 3D string vector into a 1D vector
- std::vector<std::string> flatten( std::vector<std::vector<std::vector<std::string> > > vec );
+    //! Function to flatten a 3D int3 vector into a 1D vector
+    std::vector<helios::int3> flatten( const std::vector<std::vector<std::vector<helios::int3> > > &vec );
+
+    //! Function to flatten a 3D int4 vector into a 1D vector
+    std::vector<helios::int4> flatten( const std::vector<std::vector<std::vector<helios::int4> > > &vec );
+
+    //! Function to flatten a 3D string vector into a 1D vector
+    std::vector<std::string> flatten( const std::vector<std::vector<std::vector<std::string> > > &vec );
 
   //! Function to perform cubic Hermite spline interpolation
   /* \param[in] "u" Interpolation point as a fraction of the distance between the start and end points (must be between 0 and 1).
@@ -483,8 +481,7 @@ void wait( float seconds );
      \param[in] "tan_end" Vector tangent to spline at ending point.
      \return Interpolated (x,y,z) Cartesian point.
   */
-  helios::vec3 spline_interp3( const float u, const helios::vec3 x_start, const helios::vec3 tan_start, const helios::vec3 x_end, const helios::vec3 tan_end );
-
+  helios::vec3 spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end );
 
   //! Function to load and convert a field in a pugi XML node into a float
   /** \param[in] "node" Pugi XML node

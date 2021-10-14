@@ -36,7 +36,7 @@ if [ ! -e "../utilities/create_project.sh" ];then
     ERROR_COUNT=$((ERROR_COUNT+1))
     rm -rf temp
 else
-    ../utilities/create_project.sh temp energybalance lidar photosynthesis radiation solarposition stomatalconductance visualizer voxelintersection weberpenntree
+    ../utilities/create_project.sh temp energybalance lidar aeriallidar photosynthesis radiation solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance
     cd temp
     if [ ! -e "main.cpp" ] || [ ! -e "CMakeLists.txt" ] || [ ! -e "build" ]; then
 	echo -e "\r\e[31mProject creation script failed to create correct structure...failed.\e[39m"

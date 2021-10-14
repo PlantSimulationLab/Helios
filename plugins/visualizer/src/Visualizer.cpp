@@ -134,7 +134,7 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
   glfwSwapBuffers((GLFWwindow*)_window);
   glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
 
-  //depending on the ative frame buffer, we may get all zero data and need to swap it again.
+  //depending on the active frame buffer, we may get all zero data and need to swap it again.
   bool zeros = true;
   for( int i=0; i<bsize; i++ ){
     if( screen_shot_trans[i]!=0 ){
@@ -354,7 +354,6 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
 
   // Open a window and create its OpenGL context
   GLFWwindow* _window;
-  //_window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", NULL, NULL);
   _window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", NULL, NULL); 
   if( _window == NULL ){
     fprintf( stderr, "Failed to initialize graphics.\n" );
@@ -1628,10 +1627,7 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBcolor
 
 void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolor color, CoordinateSystem coordFlag ){
 
-  std::vector<vec3> v;
-  v.push_back(vertex0);
-  v.push_back(vertex1);
-  v.push_back(vertex2);
+  std::vector<vec3> v{vertex0, vertex1, vertex2};
 
   if( coordFlag == 0 ){ //No vertex transformation (i.e., identity matrix)
 
@@ -1660,11 +1656,11 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolo
  
   }
 
-  std::vector<GLfloat> position_data, color_data, normal_data, uv_data;
-  position_data.resize(9);
-  color_data.resize(12);
-  normal_data.resize(9);
-  uv_data.resize(6);
+std::vector<GLfloat> position_data(9), color_data(12), normal_data(9), uv_data(6);
+//  position_data.resize(9);
+//  color_data.resize(12);
+//  normal_data.resize(9);
+//  uv_data.resize(6);
 
   vec3 normal = cross( vertex1-vertex0, vertex2-vertex0 );
   normal.normalize();
@@ -1722,10 +1718,7 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolo
 
 void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const char* texture_file, helios::vec2 uv0, helios::vec2 uv1, helios::vec2 uv2, CoordinateSystem coordFlag){
 
-  std::vector<vec3> v;
-  v.push_back(vertex0);
-  v.push_back(vertex1);
-  v.push_back(vertex2);
+  std::vector<vec3> v{vertex0, vertex1, vertex2};
 
   if( coordFlag == 0 ){ //No vertex transformation (i.e., identity matrix)
 
@@ -1758,11 +1751,12 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   int2 texture_size;
   primaryShader.setTextureMap(texture_file,textureID,texture_size);
 
-  std::vector<GLfloat> position_data, color_data, normal_data, uv_data;
-  position_data.resize(9);
-  color_data.resize(12);
-  normal_data.resize(9);
-  uv_data.resize(6);
+  std::vector<GLfloat> position_data(9), color_data(12), normal_data(9), uv_data(6);
+//  std::vector<GLfloat> position_data, color_data, normal_data, uv_data;
+//  position_data.resize(9);
+//  color_data.resize(12);
+//  normal_data.resize(9);
+//  uv_data.resize(6);
 
   vec3 normal = cross( vertex1-vertex0, vertex2-vertex0 );
   normal.normalize();
@@ -1816,10 +1810,7 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
 
 void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const char* texture_file, helios::vec2 uv0, helios::vec2 uv1, helios::vec2 uv2, RGBAcolor color, CoordinateSystem coordFlag){
 
-  std::vector<vec3> v;
-  v.push_back(vertex0);
-  v.push_back(vertex1);
-  v.push_back(vertex2);
+    std::vector<vec3> v{vertex0, vertex1, vertex2};
 
   if( coordFlag == 0 ){ //No vertex transformation (i.e., identity matrix)
 
@@ -1852,11 +1843,12 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
   int2 texture_size;
   primaryShader.setTextureMap(texture_file,textureID,texture_size);
 
-  std::vector<GLfloat> position_data, color_data, normal_data, uv_data;
-  position_data.resize(9);
-  color_data.resize(12);
-  normal_data.resize(9);
-  uv_data.resize(6);
+  std::vector<GLfloat> position_data(9), color_data(12), normal_data(9), uv_data(6);
+//  std::vector<GLfloat> position_data, color_data, normal_data, uv_data;
+//  position_data.resize(9);
+//  color_data.resize(12);
+//  normal_data.resize(9);
+//  uv_data.resize(6);
 
   vec3 normal = cross( vertex1-vertex0, vertex2-vertex0 );
   normal.normalize();

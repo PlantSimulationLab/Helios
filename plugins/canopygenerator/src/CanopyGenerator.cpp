@@ -445,7 +445,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_0.disableMessages();
   HomogeneousCanopyParameters params_0;
   canopygenerator_0.buildCanopy(params_0);
-  context.deletePrimitive( context.getAllUUIDs() );
+  context.deletePrimitive(context.getAllUUIDs());
   
   std::cout << "done." << std::endl;
 
@@ -455,7 +455,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_1.disableMessages();
   SphericalCrownsCanopyParameters params_1;
   canopygenerator_1.buildCanopy(params_1);
-  context.deletePrimitive( context.getAllUUIDs() );
+  context.deletePrimitive(context.getAllUUIDs());
   
   std::cout << "done." << std::endl;
 
@@ -465,7 +465,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_2.disableMessages();
   VSPGrapevineParameters params_2;
   canopygenerator_2.buildCanopy(params_2);
-  context.deletePrimitive( context.getAllUUIDs() );
+  context.deletePrimitive(context.getAllUUIDs());
   
   std::cout << "done." << std::endl;
 
@@ -475,7 +475,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_3.disableMessages();
   SplitGrapevineParameters params_3;
   canopygenerator_3.buildCanopy(params_3);
-  context.deletePrimitive( context.getAllUUIDs() );
+  context.deletePrimitive(context.getAllUUIDs());
   
   std::cout << "done." << std::endl;
 
@@ -485,7 +485,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_4.disableMessages();
   UnilateralGrapevineParameters params_4;
   canopygenerator_4.buildCanopy(params_4);
-  context.deletePrimitive( context.getAllUUIDs() );
+  context.deletePrimitive(context.getAllUUIDs());
   
   std::cout << "done." << std::endl;
 
@@ -495,7 +495,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_5.disableMessages();
   GobletGrapevineParameters params_5;
   canopygenerator_5.buildCanopy(params_5);
-  context.deletePrimitive( context.getAllUUIDs() );
+  context.deletePrimitive(context.getAllUUIDs());
   
   std::cout << "done." << std::endl;
 
@@ -505,7 +505,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_7.disableMessages();
   StrawberryParameters params_7;
   canopygenerator_7.buildCanopy(params_7);
-  context.deletePrimitive( context.getAllUUIDs() );
+  context.deletePrimitive(context.getAllUUIDs());
   
   std::cout << "done." << std::endl;
 
@@ -515,7 +515,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_8.disableMessages();
   WalnutCanopyParameters params_8;
   canopygenerator_8.buildCanopy(params_8);
-  context.deletePrimitive( context.getAllUUIDs() );
+  context.deletePrimitive(context.getAllUUIDs());
   
   std::cout << "done." << std::endl;
 
@@ -551,7 +551,7 @@ int CanopyGenerator::selfTest( void ){
     }
   }
   
-  context.deletePrimitive( context.getAllUUIDs() );
+  context.deletePrimitive(context.getAllUUIDs());
 
   std::cout << "done." << std::endl;
   

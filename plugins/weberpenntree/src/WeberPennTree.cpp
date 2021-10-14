@@ -1302,8 +1302,8 @@ void WeberPennTree::loadXML( const char* filename ){
     // * LeafFile * //
     pugi::xml_node leaffile_node = p.child("LeafFile");
     
-    const char* leaffile_str = deblank(leaffile_node.child_value());
-    if( strlen(leaffile_str)==0 ){
+    std::string leaffile_str = deblank(leaffile_node.child_value());
+    if( leaffile_str.empty() ){
       std::cout << "failed." << std::endl;
       std::cerr << "ERROR (WeberPennTree::loadXML): LeafFile was not given for tree " << label << "." << std::endl;
       exit(EXIT_FAILURE);
@@ -1349,8 +1349,8 @@ void WeberPennTree::loadXML( const char* filename ){
     // * WoodFile * //
     pugi::xml_node woodfile_node = p.child("WoodFile");
     
-    const char* woodfile_str = deblank(woodfile_node.child_value());
-    if( strlen(woodfile_str)==0 ){
+    std::string woodfile_str = deblank(woodfile_node.child_value());
+    if( woodfile_str.empty() ){
       params.WoodFile = "none";
     }else{
       params.WoodFile = woodfile_str;

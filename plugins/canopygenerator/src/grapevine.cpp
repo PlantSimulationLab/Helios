@@ -696,7 +696,7 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
                     context->getObjectPointer(ID)->rotate(Rphi,"z");
                     context->getObjectPointer(ID)->translate(position);
 
-                    UUID_leaf_plant.push_back( context->getObjectPointer(ID)->getPrimitiveUUIDs() );
+                    UUID_leaf_plant.push_back(context->getObjectPointer(ID)->getPrimitiveUUIDs());
 
                     lfrac = lfrac - params.leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
 
@@ -888,7 +888,7 @@ void CanopyGenerator::grapevineUnilateral( const UnilateralGrapevineParameters p
             context->getObjectPointer(ID)->rotate(Rphi,"z");
             context->getObjectPointer(ID)->translate(position);
 
-            UUID_leaf_plant.push_back( context->getObjectPointer(ID)->getPrimitiveUUIDs() );
+            UUID_leaf_plant.push_back(context->getObjectPointer(ID)->getPrimitiveUUIDs());
 
             lfrac = lfrac - params.leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
 
@@ -1038,7 +1038,7 @@ void CanopyGenerator::grapevineGoblet( const GobletGrapevineParameters params, c
                 context->getObjectPointer(ID)->rotate(Rphi,"z");
                 context->getObjectPointer(ID)->translate(position);
 
-                UUID_leaf_plant.push_back( context->getObjectPointer(ID)->getPrimitiveUUIDs() );
+                UUID_leaf_plant.push_back(context->getObjectPointer(ID)->getPrimitiveUUIDs());
 
                 lfrac = lfrac - params.leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
 
