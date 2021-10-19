@@ -221,7 +221,7 @@ int LiDARcloud::selfTest(void){
 
   float tsum = 0;
   for( int i=0; i<8; i++ ){
-    tsum += leafAnglePDF.at(i)*dTheta;
+    tsum += leafAnglePDF.at(i);
     leafAngleCDF.at(i) = tsum;
   }
 
@@ -236,7 +236,7 @@ int LiDARcloud::selfTest(void){
        vec3 shift = make_vec3((context_3.randu()+ii)*dx.x,(context_3.randu()+jj)*dx.y,(context_3.randu()+kk)*dx.z);
 
        float rt = context_3.randu();
-       float theta;
+       float theta=0;
        float dTheta = 0.5*M_PI/float(leafAngleCDF.size());
        for( int i=0; i<leafAngleCDF.size(); i++ ){
 	 if( rt<leafAngleCDF.at(i) ){
@@ -1192,6 +1192,8 @@ std::vector<uint> LiDARcloud::addReconstructedTriangleGroupsToContext( helios::C
     }
 
   }
+
+  return UUIDs;
 
 }
 

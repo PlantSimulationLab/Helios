@@ -15,10 +15,6 @@ find_package(CUDA REQUIRED)
 
 LIST( APPEND CUDA_NVCC_FLAGS "-g --use_fast_math" )
 
-#if( ${UNIX} AND NOT ${APPLE} )
-    LIST( APPEND CUDA_NVCC_FLAGS "-std=c++11" )
-#endif()
-
 SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
 CUDA_ADD_LIBRARY( voxelintersection STATIC "src/VoxelIntersection.cu" "src/VoxelIntersection.cpp" )

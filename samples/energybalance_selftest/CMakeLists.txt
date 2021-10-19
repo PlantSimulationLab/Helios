@@ -1,4 +1,4 @@
-# Helios standard CMakeLists.txt file version 1.4
+# Helios standard CMakeLists.txt file version 1.5
 #-------- USER INPUTS ---------#
 
 #provide the path to Helios base directory, either as an absolut path or a path relative to the location of this file
@@ -14,13 +14,17 @@ set( SOURCE_FILES "main.cpp" )
 set( PLUGINS "energybalance" )
 
 #-------- MAIN CODE (Dont Modify) ---------#
-cmake_minimum_required(VERSION 2.4)
-project(helios)
 if ( WIN32 )
+    cmake_minimum_required(VERSION 3.15)
     SET(CMAKE_C_COMPILER_ID "MSVC")
     SET(CMAKE_CXX_COMPILER_ID "MSVC")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
+    string(REGEX REPLACE "/MD*" "/MT" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REGEX REPLACE "/MD*" "/MT" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    cmake_policy(SET CMP0091 NEW)
+    set( CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
 else()
+    cmake_minimum_required(VERSION 2.5)
     SET(CMAKE_C_COMPILER_ID "GNU")
     SET(CMAKE_CXX_COMPILER_ID "GNU")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -29,6 +33,7 @@ else()
         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
     endif()
 endif()
+project(helios)
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
     set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 endif()

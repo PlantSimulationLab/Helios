@@ -3,7 +3,9 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-#include <unistd.h> //BNB 1/19/2021
+#ifndef _WIN32
+    #include <unistd.h> //BNB 10/16/2021
+#endif
 
 #ifdef _LARGEFILE64_SOURCE
 #  ifndef _LARGEFILE_SOURCE

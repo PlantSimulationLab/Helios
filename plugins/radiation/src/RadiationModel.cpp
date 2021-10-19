@@ -3111,7 +3111,7 @@ void RadiationModel::runBand( const char* label ){
   size_t Nobjects = primitives.size();
   size_t Nprimitives = context_UUIDs.size();
 
-  bool to_be_scattered;
+  bool to_be_scattered = false;
 
   // Zero buffers
   zeroBuffer1D( radiation_in_RTbuffer, Nprimitives );
@@ -3632,7 +3632,7 @@ std::vector<float> RadiationModel::getOptiXbufferData( RTbuffer buffer ){
   RT_CHECK_ERROR( rtBufferMap( buffer, &_data_ ) );
   float* data_ptr = (float*)_data_;
 
-  unsigned long int size;
+  RTsize size;
   RT_CHECK_ERROR( rtBufferGetSize1D( buffer, &size ) );
 
   std::vector<float> data_vec;
@@ -3653,7 +3653,7 @@ std::vector<double> RadiationModel::getOptiXbufferData_d( RTbuffer buffer ){
   RT_CHECK_ERROR( rtBufferMap( buffer, &_data_ ) );
   double* data_ptr = (double*)_data_;
 
-  unsigned long int size;
+  RTsize size;
   RT_CHECK_ERROR( rtBufferGetSize1D( buffer, &size ) );
 
   std::vector<double> data_vec;

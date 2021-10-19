@@ -4,7 +4,9 @@
  */
 
 #include "gzguts.h"
-#include <unistd.h>
+#ifndef _WIN32
+    #include <unistd.h> //BNB 10/16/2021
+#endif
 
 /* Local functions */
 local int gz_load OF((gz_statep, unsigned char *, unsigned, unsigned *));

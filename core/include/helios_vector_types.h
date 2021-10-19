@@ -17,9 +17,15 @@
 #ifndef HELIOS_VECTOR_TYPES
 #define HELIOS_VECTOR_TYPES
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+typedef unsigned int uint;
+
 #include <vector>
 #include <iostream>
-#include <cstring>
+#include <string>
 #include <cassert>
 
 //! Vector data structures

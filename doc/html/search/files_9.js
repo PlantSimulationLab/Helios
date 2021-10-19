@@ -1,8 +1,6 @@
 var searchData=
 [
-  ['radiationmodel_2ecpp',['RadiationModel.cpp',['../_radiation_model_8cpp.html',1,'']]],
-  ['radiationmodel_2eh',['RadiationModel.h',['../_radiation_model_8h.html',1,'']]],
-  ['raygeneration_2ecu',['rayGeneration.cu',['../ray_generation_8cu.html',1,'']]],
-  ['rayhit_2ecu',['rayHit.cu',['../ray_hit_8cu.html',1,'']]],
-  ['raytracing_2ecu_2eh',['RayTracing.cu.h',['../_ray_tracing_8cu_8h.html',1,'']]]
+  ['photosynthesismodel_2ecpp_863',['PhotosynthesisModel.cpp',['../_photosynthesis_model_8cpp.html',1,'']]],
+  ['photosynthesismodel_2eh_864',['PhotosynthesisModel.h',['../_photosynthesis_model_8h.html',1,'']]],
+  ['primitiveintersection_2ecu_865',['primitiveIntersection.cu',['../primitive_intersection_8cu.html',1,'']]]
 ];

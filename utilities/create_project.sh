@@ -36,7 +36,7 @@ fi
 
 #----- build the CMakeLists.txt file ------#
 
-echo -e '# Helios standard CMakeLists.txt file version 1.4\n' > CMakeLists.txt
+echo -e '# Helios standard CMakeLists.txt file version 1.5\n' > CMakeLists.txt
 
 echo -e '#-------- USER INPUTS ---------#\n' >> CMakeLists.txt
 
@@ -67,7 +67,7 @@ else
     echo -e '" )\n\n' >> CMakeLists.txt
 fi
 
-cat "${UTILPATH}/CMakeLists_main_v1.4" >> CMakeLists.txt
+cat "${UTILPATH}/CMakeLists_main_v1.5" >> CMakeLists.txt
 
 #echo -e '#-------- MAIN CODE (Dont Modify) ---------#\ncmake_minimum_required(VERSION 2.4)\nproject(helios)' >> CMakeLists.txt
 #

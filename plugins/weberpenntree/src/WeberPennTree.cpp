@@ -15,8 +15,10 @@
 */
 
 #include "WeberPennTree.h"
+#ifndef _WIN32
 #include <chrono>
 #include <unistd.h>
+#endif
 
 using namespace helios;
 
@@ -100,9 +102,11 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
   if( file.substr(file.find_last_of(".") + 1) != "png") {
     std::cerr << "ERROR (WeberPennTree::buildTree): Leaf image file for tree " << treename << " is not a PNG image." << std::endl;
     exit(EXIT_FAILURE);
+  #ifndef _WIN32
   }else if( access( file.c_str(), F_OK ) == -1 ){
     std::cerr << "ERROR (WeberPennTree::buildTree): Leaf image file " << treename <<  " does not exist." << std::endl;
     exit(EXIT_FAILURE);
+  #endif
   }
 
   uint ID_leaf_template = context->addTileObject( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), leaf_segs, parameters.LeafFile.c_str() );

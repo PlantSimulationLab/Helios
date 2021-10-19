@@ -154,6 +154,8 @@ public:
     if( clocs.size() != Ncolors ){
       std::cerr << "ERROR: colormap - sizes of ctable and clocs must match." << std::endl;
       exit(EXIT_FAILURE);
+    }else if( minval_==maxval_ || minval_>maxval_ ){
+        throw( std::runtime_error("ERROR(Colormap::set): Cannot initialize colormap because minimum colormap value must be less than the maximum value."));
     }
     
     cmap.resize(Ncolors);
@@ -816,8 +818,8 @@ private:
   
   //~~~~~~~~~~~~~~~~ Primitives ~~~~~~~~~~~~~~~~~~~~//
 
-  std::string colorPrimitivesByObjectData,colorPrimitivesByData,colorPrimitivesByValue;
-  std::map<uint,uint> colorPrimitives_UUIDs;
+  std::string colorPrimitivesByObjectData,colorPrimitivesByData;
+  std::map<uint,uint> colorPrimitives_UUIDs, colorPrimitives_objIDs;
 
   std::vector<int> contextPrimitiveIDs;
 

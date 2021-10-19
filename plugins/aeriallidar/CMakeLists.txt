@@ -17,10 +17,6 @@ find_package(CUDA REQUIRED)
 
 LIST( APPEND CUDA_NVCC_FLAGS "-g --use_fast_math" )
 
-#if( ${UNIX} AND NOT ${APPLE} )
-    LIST( APPEND CUDA_NVCC_FLAGS "-std=c++11" )
-    #endif()
-
 LIST( APPEND CUDA_NVCC_FLAGS "-D_MWAITXINTRIN_H_INCLUDED -D__STRICT_ANSI__" )
 
 SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
@@ -34,7 +30,7 @@ target_link_libraries( aeriallidar ${CUDA_LIBRARIES} )
 target_link_libraries( aeriallidar visualizer )
 add_dependencies( aeriallidar visualizer )
 
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;$${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
+set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
 
 file( COPY xml DESTINATION ${CMAKE_BINARY_DIR}/plugins/aeriallidar/ )
 

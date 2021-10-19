@@ -14,6 +14,12 @@
 
 */
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+typedef unsigned int uint;
+
 void queryGPUMemory( void );
 
 /** OptiX ray payload - contains data for each ray traversal. */

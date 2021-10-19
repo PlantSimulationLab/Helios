@@ -1,15 +1,21 @@
 var searchData=
 [
-  ['x',['x',['../structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7',1,'helios::int2::x()'],['../structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50',1,'helios::int3::x()'],['../structhelios_1_1int4.html#a1ac3b0b91901dc1d1497267bd3f3b4c3',1,'helios::int4::x()'],['../structhelios_1_1vec2.html#a8dda241c2560b203a3b0a479d1c9e12e',1,'helios::vec2::x()'],['../structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1',1,'helios::vec3::x()'],['../structhelios_1_1vec4.html#a96036e1d3ac15f03190a7bbf74ce0d73',1,'helios::vec4::x()']]],
-  ['xmlloadfloat',['XMLloadfloat',['../global_8h.html#a74ae3a9e16e2ca39dab735a1ac97a506',1,'helios']]],
-  ['xmlloadint',['XMLloadint',['../global_8h.html#a4b756357236942bec6cc7f853aa77fc5',1,'helios']]],
-  ['xmlloadint2',['XMLloadint2',['../global_8h.html#ae55d4cef14213f642705952dc1ad4659',1,'helios']]],
-  ['xmlloadint3',['XMLloadint3',['../global_8h.html#ae4661a50a9f13eb6fb645e9f767b51a2',1,'helios']]],
-  ['xmlloadint4',['XMLloadint4',['../global_8h.html#a08c21d08fc1e1dd07ff612f8b503e295',1,'helios']]],
-  ['xmlloadrgb',['XMLloadrgb',['../global_8h.html#acb80e4e13497682968468c596a9b3690',1,'helios']]],
-  ['xmlloadrgba',['XMLloadrgba',['../global_8h.html#a148e80cd6b8477c0704e642243ab2547',1,'helios']]],
-  ['xmlloadstring',['XMLloadstring',['../global_8h.html#a8240b43ac3ce36bc7a4d52128bc9fda3',1,'helios']]],
-  ['xmlloadvec2',['XMLloadvec2',['../global_8h.html#a1f3041e69cbe61a909866a24c8d77457',1,'helios']]],
-  ['xmlloadvec3',['XMLloadvec3',['../global_8h.html#aa4c58cabe7bc5244435613ffdb00cf34',1,'helios']]],
-  ['xmlloadvec4',['XMLloadvec4',['../global_8h.html#a928c91522128145370150652ca59f3af',1,'helios']]]
+  ['w_720',['w',['../structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937',1,'helios::vec4::w()'],['../structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f',1,'helios::int4::w()']]],
+  ['wait_721',['wait',['../group__functions.html#gad28da0b06687dc68c1212c1624e54bd0',1,'helios']]],
+  ['walnut_722',['walnut',['../class_canopy_generator.html#abcf6ce1ecd6bb5bd1638500c70e8ae1f',1,'CanopyGenerator']]],
+  ['walnutcanopyparameters_723',['WalnutCanopyParameters',['../struct_walnut_canopy_parameters.html',1,'WalnutCanopyParameters'],['../struct_walnut_canopy_parameters.html#aadff28f8e52015c00f6b7b47ae8dcb73',1,'WalnutCanopyParameters::WalnutCanopyParameters()']]],
+  ['weber_2dpenn_20tree_20plugin_20documentation_724',['Weber-Penn Tree Plugin Documentation',['../_weber_penn_doc.html',1,'PlugIns']]],
+  ['weberpenntree_725',['WeberPennTree',['../class_weber_penn_tree.html#a5b949a2008b9e4817f2df4b5861c49b5',1,'WeberPennTree::WeberPennTree()'],['../class_weber_penn_tree.html',1,'WeberPennTree']]],
+  ['weberpenntree_2ecpp_726',['WeberPennTree.cpp',['../_weber_penn_tree_8cpp.html',1,'']]],
+  ['weberpenntree_2eh_727',['WeberPennTree.h',['../_weber_penn_tree_8h.html',1,'']]],
+  ['weberpenntreeparameters_728',['WeberPennTreeParameters',['../struct_weber_penn_tree_parameters.html',1,'']]],
+  ['whitespruce_729',['whitespruce',['../class_canopy_generator.html#af3e5aaf296cb0e25d71c272fcb10656c',1,'CanopyGenerator']]],
+  ['whitesprucecanopyparameters_730',['WhiteSpruceCanopyParameters',['../struct_white_spruce_canopy_parameters.html',1,'WhiteSpruceCanopyParameters'],['../struct_white_spruce_canopy_parameters.html#ac35a9a04003e6cc0f42607a6b6018698',1,'WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters()']]],
+  ['wood_5fsubdivisions_731',['wood_subdivisions',['../struct_v_s_p_grapevine_parameters.html#a1012ba0f6b4bc2caf3fe29ae1ad34972',1,'VSPGrapevineParameters::wood_subdivisions()'],['../struct_split_grapevine_parameters.html#a24dc9b172a166c514dc6ba0e6126611d',1,'SplitGrapevineParameters::wood_subdivisions()'],['../struct_unilateral_grapevine_parameters.html#a7e71c7ad211405a9373b609998259480',1,'UnilateralGrapevineParameters::wood_subdivisions()'],['../struct_white_spruce_canopy_parameters.html#a57cc0a77f816bddab4701f2777c13317',1,'WhiteSpruceCanopyParameters::wood_subdivisions()'],['../struct_walnut_canopy_parameters.html#a1c61b154388db34cd6cff475de3e2dd7',1,'WalnutCanopyParameters::wood_subdivisions()'],['../struct_goblet_grapevine_parameters.html#a497fc669d5bfb4996f811ef31179f707',1,'GobletGrapevineParameters::wood_subdivisions()']]],
+  ['wood_5ftexture_5ffile_732',['wood_texture_file',['../struct_v_s_p_grapevine_parameters.html#a47d1aca2ca7afa61ba8399f8ee903ddb',1,'VSPGrapevineParameters::wood_texture_file()'],['../struct_split_grapevine_parameters.html#abc931d81d711f5b6760c5022dd6c7761',1,'SplitGrapevineParameters::wood_texture_file()'],['../struct_unilateral_grapevine_parameters.html#afb00f8955a18fa6fc0982043c839c252',1,'UnilateralGrapevineParameters::wood_texture_file()'],['../struct_goblet_grapevine_parameters.html#aaae9d1abc057d8b3d39a3080cb13edcc',1,'GobletGrapevineParameters::wood_texture_file()'],['../struct_white_spruce_canopy_parameters.html#a3062fb397f90b7f5d29faf21794a04aa',1,'WhiteSpruceCanopyParameters::wood_texture_file()'],['../struct_walnut_canopy_parameters.html#aaa467205c3f449a3b11bd4fe19c4716e',1,'WalnutCanopyParameters::wood_texture_file()']]],
+  ['write_5fjpeg_5ffile_733',['write_JPEG_file',['../_visualizer_8h.html#ad3f56eae845124b2bdc251944e6676ca',1,'write_JPEG_file(const char *filename, const uint width, const uint height, void *_window):&#160;Visualizer.cpp'],['../_visualizer_8cpp.html#ad3f56eae845124b2bdc251944e6676ca',1,'write_JPEG_file(const char *filename, const uint width, const uint height, void *_window):&#160;Visualizer.cpp']]],
+  ['writeobj_734',['writeOBJ',['../classhelios_1_1_context.html#ab8e4192dda89caff1d678a5411b42c71',1,'helios::Context']]],
+  ['writeply_735',['writePLY',['../classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7',1,'helios::Context']]],
+  ['writexml_736',['writeXML',['../classhelios_1_1_context.html#a9e8c0878f34db3fb5d6cbd4e61d2f2a4',1,'helios::Context']]],
+  ['writing_20plugins_737',['Writing Plugins',['../_plugins.html',1,'']]]
 ];

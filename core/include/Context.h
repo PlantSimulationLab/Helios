@@ -3192,7 +3192,7 @@ public:
       \note Assumes default color of green
       \ingroup compoundobjects
   */
-  uint addTileObject(const vec3 &center, const vec2 &size, const int2 &subdiv, const SphericalCoord &rotation);
+  uint addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv);
 
   //! Add a patch that is subdivided into a regular grid of sub-patches (tiled) 
   /** 

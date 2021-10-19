@@ -327,7 +327,7 @@ int Context::selfTest(){
     normal_r = context_test.getPrimitivePointer(UUIDs.at(2))->getNormal();
     rotation_r = make_SphericalCoord( 0.5f*float(M_PI)-asinf( normal_r.z ), atan2f(normal_r.x,normal_r.y) );
 
-    if( fabsf(rotation_r.zenith-0.f)>errtol || fabsf(rotation_r.azimuth-0.5f*M_PI)>errtol ){
+    if( fabsf(rotation_r.zenith-0.f)>errtol || fabsf(rotation_r.azimuth-0.5f*float(M_PI))>errtol ){
         error_count++;
         std::cerr << "failed: addBox(). Face normals incorrect." << std::endl;
     }
@@ -352,7 +352,7 @@ int Context::selfTest(){
     size = make_vec2(3,2);
     int2 subdiv2(3,3);
     rotation = make_SphericalCoord( 0.25f*M_PI, 1.4f*M_PI );
-    objID = context_test.addTileObject(center, size, subdiv2, rotation);
+    objID = context_test.addTileObject(center, size, rotation, subdiv2);
     UUIDs = context_test.getObjectPointer(objID)->getPrimitiveUUIDs();
 
     for( uint UUIDp : UUIDs){
@@ -495,7 +495,7 @@ int Context::selfTest(){
 
     float Ap = context_test.getPrimitivePointer(UUIDp)->getArea();
 
-    if( fabsf(Ap-0.25f*M_PI*sizep.x*sizep.y)/(0.25f*M_PI*sizep.x*sizep.y)>0.01f ){
+    if( fabsf(Ap-0.25f*float(M_PI)*sizep.x*sizep.y)/(0.25f*float(M_PI)*sizep.x*sizep.y)>0.01f ){
         error_count ++;
         std::cerr << "failed: Texture-masked patch does not have correct area." << std::endl;
     }
@@ -534,7 +534,7 @@ int Context::selfTest(){
 
     area = context_test.getPrimitivePointer(UUIDp3)->getArea();
 
-    if( fabsf(area-0.5f*0.25f*M_PI*sizep.x*sizep.y)>0.01f ){
+    if( fabsf(area-0.5f*0.25f*float(M_PI)*sizep.x*sizep.y)>0.01f ){
         error_count ++;
         std::cerr << "failed: Triangle masked with (u,v) coordinates did not return correct area." << std::endl;
     }
@@ -586,8 +586,8 @@ int Context::selfTest(){
 
     //------- Compound Object Data --------//
 
-    uint IDtile = context_test.addTileObject(make_vec3(0, 0, 0), make_vec2(3, 1), make_int2(3, 3),
-                                             make_SphericalCoord(0, 0));
+    uint IDtile = context_test.addTileObject(make_vec3(0, 0, 0), make_vec2(3, 1),
+                                             make_SphericalCoord(0, 0), make_int2(3, 3));
 
     float objdata = 5;
     context_test.setObjectData( IDtile, "some_data", objdata);
@@ -926,7 +926,7 @@ int Context::selfTest(){
         failio = true;
     }
     for( int i=0; i<gdatad_io.size(); i++ ){
-        if( fabsf(gdatad.at(i)-gdatad_io.at(i))>1e-3 ){
+        if( fabs(gdatad.at(i)-gdatad_io.at(i))>1e-3 ){
             failio = true;
         }
     }
@@ -7043,7 +7043,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
 
 }
 
-uint Context::addTileObject(const vec3 &center, const vec2 &size, const int2 &subdiv, const SphericalCoord &rotation) {
+uint Context::addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv) {
 
     RGBcolor color = make_RGBcolor(0.f,0.75f,0.f); //Default color is green
 
@@ -11347,14 +11347,14 @@ void Context::writeOBJ( const char* filename ) const{
         size_t mtl_index = 0;
         size_t mtl_index_f = 0;
         for (size_t index = 0; index < exsit_mtl_list2.size(); index++) {
-            if (not (texture_list.at(f) != texture_list.at(exsit_mtl_list2.at(index)))) {
+            if ( !(texture_list.at(f) != texture_list.at(exsit_mtl_list2.at(index)))) {
                 mtl_exist_flag = true;
                 mtl_index = index;
                 mtl_index_f = exsit_mtl_list2[index];
                 break;
             }
         }
-        if (not mtl_exist_flag) {
+        if ( !mtl_exist_flag) {
 
             if (texture_list.at(f).empty()) {
                 if (current_color.r != colors.at(f).r

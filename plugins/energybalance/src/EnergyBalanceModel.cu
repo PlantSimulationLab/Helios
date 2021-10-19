@@ -33,19 +33,19 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 __device__ float evaluateEnergyBalance( float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, float heatcapacity, float dt, float Tprev ){
 
   //Outgoing emission flux
-  float Rout = float(Nsides)*eps*5.67e-8*pow(T,4);
+  float Rout = float(Nsides)*eps*5.67e-8F*T*T*T*T;
     
   //Sensible heat flux
-  float cp = 29.25; //Molar specific heat of air. Units: J/mol
+  float cp = 29.25f; //Molar specific heat of air. Units: J/mol
   float QH = cp*gH*(T-Ta); // (see Campbell and Norman Eq. 6.8)
 
   //Latent heat flux
   float es = 611.f*exp(17.502f*(T-273.f)/((T-273.f)+240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in Kelvin, and result is in Pascals
-  float gM = 0.97*gH*gS/(0.97*gH+gS); //resistors in series
+  float gM = 0.97f*gH*gS/(0.97f*gH+gS); //resistors in series
   if( gH==0 && gS==0 ){//if somehow both go to zero, can get NaN
     gM = 0;
   }
-  float lambda = 44000; //Latent heat of vaporization for water. Units: J/mol
+  float lambda = 44000.f; //Latent heat of vaporization for water. Units: J/mol
   float QL = gM*lambda*(es-ea)/pressure;
 
   //Storage heat flux

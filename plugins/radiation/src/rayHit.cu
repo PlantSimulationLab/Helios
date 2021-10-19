@@ -293,7 +293,7 @@ RT_PROGRAM void miss_diffuse(){
     if( diffuse_extinction>0.f ){
       float psi = acos_safe( dot(diffuse_peak_dir,ray.direction) );
       if( psi<M_PI/180.f ){
-	fd = pow(M_PI/180.f,-diffuse_extinction)*diffuse_dist_norm;
+	fd = pow(float(M_PI)/180.f,-diffuse_extinction)*diffuse_dist_norm;
       }else{
 	fd = pow(psi,-diffuse_extinction)*diffuse_dist_norm;
       }
