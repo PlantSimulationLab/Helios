@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.20</span>
+   &#160;<span id="projectnumber">v1.2.21</span>
    </div>
   </td>
  </tr>
@@ -1566,7 +1566,7 @@ $(function() {
 <div class="line"><a name="l01508"></a><span class="lineno"> 1508</span>&#160;    </div>
 <div class="line"><a name="l01509"></a><span class="lineno"> 1509</span>&#160;  <a class="code" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> value;</div>
 <div class="line"><a name="l01510"></a><span class="lineno"> 1510</span>&#160;  <span class="keywordflow">if</span>( strlen(field_str)==0 ){</div>
-<div class="line"><a name="l01511"></a><span class="lineno"> 1511</span>&#160;    value = <a class="code" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor</a>(99999,99999,99999,99999);</div>
+<div class="line"><a name="l01511"></a><span class="lineno"> 1511</span>&#160;    value = <a class="code" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor</a>(1,1,1,0);</div>
 <div class="line"><a name="l01512"></a><span class="lineno"> 1512</span>&#160;  }<span class="keywordflow">else</span>{</div>
 <div class="line"><a name="l01513"></a><span class="lineno"> 1513</span>&#160;    value = <a class="code" href="group__functions.html#ga8180158609698aae15da7574b085b817">string2RGBcolor</a>( field_str ); <span class="comment">//note: pugi loads xml data as a character.  need to separate it into 3 floats</span></div>
 <div class="line"><a name="l01514"></a><span class="lineno"> 1514</span>&#160;  }</div>
@@ -1581,7 +1581,7 @@ $(function() {
 <div class="line"><a name="l01523"></a><span class="lineno"> 1523</span>&#160;    </div>
 <div class="line"><a name="l01524"></a><span class="lineno"> 1524</span>&#160;  <a class="code" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> value;</div>
 <div class="line"><a name="l01525"></a><span class="lineno"> 1525</span>&#160;  <span class="keywordflow">if</span>( strlen(field_str)==0 ){</div>
-<div class="line"><a name="l01526"></a><span class="lineno"> 1526</span>&#160;    value = <a class="code" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor</a>(99999,99999,99999,99999);</div>
+<div class="line"><a name="l01526"></a><span class="lineno"> 1526</span>&#160;    value = <a class="code" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor</a>(1,1,1,0);</div>
 <div class="line"><a name="l01527"></a><span class="lineno"> 1527</span>&#160;  }<span class="keywordflow">else</span>{</div>
 <div class="line"><a name="l01528"></a><span class="lineno"> 1528</span>&#160;    value = <a class="code" href="group__functions.html#ga8180158609698aae15da7574b085b817">string2RGBcolor</a>( field_str ); <span class="comment">//note: pugi loads xml data as a character.  need to separate it into 3 floats</span></div>
 <div class="line"><a name="l01529"></a><span class="lineno"> 1529</span>&#160;  }</div>
@@ -1589,6 +1589,51 @@ $(function() {
 <div class="line"><a name="l01531"></a><span class="lineno"> 1531</span>&#160;  <span class="keywordflow">return</span> value;</div>
 <div class="line"><a name="l01532"></a><span class="lineno"> 1532</span>&#160;  </div>
 <div class="line"><a name="l01533"></a><span class="lineno"> 1533</span>&#160;}</div>
+<div class="line"><a name="l01534"></a><span class="lineno"> 1534</span>&#160; </div>
+<div class="line"><a name="l01535"></a><span class="lineno"><a class="line" href="global_8h.html#a464923f1888b6ba4dc1a3b6881fa9e80"> 1535</a></span>&#160;<span class="keywordtype">float</span> <a class="code" href="global_8h.html#a464923f1888b6ba4dc1a3b6881fa9e80">helios::fzero</a>(<span class="keywordtype">float</span>(*<span class="keyword">function</span>)(<span class="keywordtype">float</span> value, std::vector&lt;float&gt; &amp;variables, <span class="keyword">const</span> <span class="keywordtype">void</span> *parameters), std::vector&lt;float&gt; &amp;variables, <span class="keyword">const</span> <span class="keywordtype">void</span> *parameters, <span class="keywordtype">float</span> init_guess, <span class="keywordtype">float</span> err_tol, <span class="keywordtype">int</span> max_iterations ){</div>
+<div class="line"><a name="l01536"></a><span class="lineno"> 1536</span>&#160; </div>
+<div class="line"><a name="l01537"></a><span class="lineno"> 1537</span>&#160;    <span class="keywordtype">float</span> T;</div>
+<div class="line"><a name="l01538"></a><span class="lineno"> 1538</span>&#160; </div>
+<div class="line"><a name="l01539"></a><span class="lineno"> 1539</span>&#160;    <span class="keywordtype">float</span> T_old_old = 1.1f*init_guess;</div>
+<div class="line"><a name="l01540"></a><span class="lineno"> 1540</span>&#160; </div>
+<div class="line"><a name="l01541"></a><span class="lineno"> 1541</span>&#160;    <span class="keywordtype">float</span> T_old = init_guess;</div>
+<div class="line"><a name="l01542"></a><span class="lineno"> 1542</span>&#160; </div>
+<div class="line"><a name="l01543"></a><span class="lineno"> 1543</span>&#160;    <span class="keywordtype">float</span> resid_old = <span class="keyword">function</span>(T_old,variables,parameters);</div>
+<div class="line"><a name="l01544"></a><span class="lineno"> 1544</span>&#160;    <span class="keywordtype">float</span> resid_old_old = <span class="keyword">function</span>(T_old_old,variables,parameters);</div>
+<div class="line"><a name="l01545"></a><span class="lineno"> 1545</span>&#160; </div>
+<div class="line"><a name="l01546"></a><span class="lineno"> 1546</span>&#160;    <span class="keywordtype">float</span> resid = 100;</div>
+<div class="line"><a name="l01547"></a><span class="lineno"> 1547</span>&#160;    <span class="keywordtype">float</span> err = resid;</div>
+<div class="line"><a name="l01548"></a><span class="lineno"> 1548</span>&#160;    uint iter = 0;</div>
+<div class="line"><a name="l01549"></a><span class="lineno"> 1549</span>&#160;    <span class="keywordflow">while</span>( err&gt;err_tol &amp;&amp; iter&lt;max_iterations ){</div>
+<div class="line"><a name="l01550"></a><span class="lineno"> 1550</span>&#160; </div>
+<div class="line"><a name="l01551"></a><span class="lineno"> 1551</span>&#160;        <span class="keywordflow">if</span>( resid_old==resid_old_old ){<span class="comment">//this condition will cause NaN</span></div>
+<div class="line"><a name="l01552"></a><span class="lineno"> 1552</span>&#160;            err=0;</div>
+<div class="line"><a name="l01553"></a><span class="lineno"> 1553</span>&#160;            <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l01554"></a><span class="lineno"> 1554</span>&#160;        }</div>
+<div class="line"><a name="l01555"></a><span class="lineno"> 1555</span>&#160; </div>
+<div class="line"><a name="l01556"></a><span class="lineno"> 1556</span>&#160;        T = fabs((T_old_old*resid_old-T_old*resid_old_old)/(resid_old-resid_old_old));</div>
+<div class="line"><a name="l01557"></a><span class="lineno"> 1557</span>&#160; </div>
+<div class="line"><a name="l01558"></a><span class="lineno"> 1558</span>&#160;        resid = <span class="keyword">function</span>(T,variables,parameters);</div>
+<div class="line"><a name="l01559"></a><span class="lineno"> 1559</span>&#160; </div>
+<div class="line"><a name="l01560"></a><span class="lineno"> 1560</span>&#160;        resid_old_old = resid_old;</div>
+<div class="line"><a name="l01561"></a><span class="lineno"> 1561</span>&#160;        resid_old = resid;</div>
+<div class="line"><a name="l01562"></a><span class="lineno"> 1562</span>&#160; </div>
+<div class="line"><a name="l01563"></a><span class="lineno"> 1563</span>&#160;        err = fabs(T_old-T_old_old)/fabs(T_old_old);</div>
+<div class="line"><a name="l01564"></a><span class="lineno"> 1564</span>&#160; </div>
+<div class="line"><a name="l01565"></a><span class="lineno"> 1565</span>&#160;        T_old_old = T_old;</div>
+<div class="line"><a name="l01566"></a><span class="lineno"> 1566</span>&#160;        T_old = T;</div>
+<div class="line"><a name="l01567"></a><span class="lineno"> 1567</span>&#160; </div>
+<div class="line"><a name="l01568"></a><span class="lineno"> 1568</span>&#160;        iter++;</div>
+<div class="line"><a name="l01569"></a><span class="lineno"> 1569</span>&#160; </div>
+<div class="line"><a name="l01570"></a><span class="lineno"> 1570</span>&#160;    }</div>
+<div class="line"><a name="l01571"></a><span class="lineno"> 1571</span>&#160; </div>
+<div class="line"><a name="l01572"></a><span class="lineno"> 1572</span>&#160;    <span class="keywordflow">if</span>( err&gt;err_tol ){</div>
+<div class="line"><a name="l01573"></a><span class="lineno"> 1573</span>&#160;        printf(<span class="stringliteral">&quot;WARNING: fzero solution did not converge.\n&quot;</span>);</div>
+<div class="line"><a name="l01574"></a><span class="lineno"> 1574</span>&#160;    }</div>
+<div class="line"><a name="l01575"></a><span class="lineno"> 1575</span>&#160; </div>
+<div class="line"><a name="l01576"></a><span class="lineno"> 1576</span>&#160;    <span class="keywordflow">return</span> T;</div>
+<div class="line"><a name="l01577"></a><span class="lineno"> 1577</span>&#160; </div>
+<div class="line"><a name="l01578"></a><span class="lineno"> 1578</span>&#160;}</div>
 <div class="ttc" id="aglobal_8h_html"><div class="ttname"><a href="global_8h.html">global.h</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a07b0dda8b9aee4100e9f6332dbfe7f64"><div class="ttname"><a href="global_8h.html#a07b0dda8b9aee4100e9f6332dbfe7f64">helios::PNGHasAlpha</a></div><div class="ttdeci">bool PNGHasAlpha(const char *filename)</div><div class="ttdoc">Check whether PNG image file has an alpha/transparency channel.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00951">global.cpp:951</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a08c21d08fc1e1dd07ff612f8b503e295"><div class="ttname"><a href="global_8h.html#a08c21d08fc1e1dd07ff612f8b503e295">helios::XMLloadint4</a></div><div class="ttdeci">helios::int4 XMLloadint4(pugi::xml_node node, const char *field)</div><div class="ttdoc">Function to load and convert a field in a pugi XML node into a int4.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l01490">global.cpp:1490</a></div></div>
@@ -1600,6 +1645,7 @@ $(function() {
 <div class="ttc" id="aglobal_8h_html_a32a34b00e0a28f4b35e501b8b34cfccd"><div class="ttname"><a href="global_8h.html#a32a34b00e0a28f4b35e501b8b34cfccd">helios::cart2sphere</a></div><div class="ttdeci">SphericalCoord cart2sphere(const vec3 &amp;Cartesian)</div><div class="ttdoc">Convert Cartesian coordinates to spherical coordinates.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00500">global.cpp:500</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a35cf3fa6f900627c962472dd550e3d39"><div class="ttname"><a href="global_8h.html#a35cf3fa6f900627c962472dd550e3d39">helios::CalendarDay</a></div><div class="ttdeci">Date CalendarDay(int Julian_day, int year)</div><div class="ttdoc">Convert Julian day to calendar day (day,month,year)</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00824">global.cpp:824</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a3fd112746616c33aae6ac56d9863c9a6"><div class="ttname"><a href="global_8h.html#a3fd112746616c33aae6ac56d9863c9a6">helios::lineIntersection</a></div><div class="ttdeci">bool lineIntersection(const vec2 &amp;p1, const vec2 &amp;q1, const vec2 &amp;p2, const vec2 &amp;q2)</div><div class="ttdoc">Determine if two line segments intersect. The lines segments are defined by vertices (p1,...</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00209">global.cpp:209</a></div></div>
+<div class="ttc" id="aglobal_8h_html_a464923f1888b6ba4dc1a3b6881fa9e80"><div class="ttname"><a href="global_8h.html#a464923f1888b6ba4dc1a3b6881fa9e80">helios::fzero</a></div><div class="ttdeci">float fzero(float(*function)(float value, std::vector&lt; float &gt; &amp;variables, const void *parameters), std::vector&lt; float &gt; &amp;variables, const void *parameters, float init_guess, float err_tol=0.0001f, int max_iterations=100)</div><div class="ttdoc">Use Newton-Raphson method to find the zero of a function.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l01535">global.cpp:1535</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a4b756357236942bec6cc7f853aa77fc5"><div class="ttname"><a href="global_8h.html#a4b756357236942bec6cc7f853aa77fc5">helios::XMLloadint</a></div><div class="ttdeci">int XMLloadint(pugi::xml_node node, const char *field)</div><div class="ttdoc">Function to load and convert a field in a pugi XML node into an int.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l01385">global.cpp:1385</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a63078317bc68017a19f722b81b3b3e20"><div class="ttname"><a href="global_8h.html#a63078317bc68017a19f722b81b3b3e20">helios::readPNGAlpha</a></div><div class="ttdeci">std::vector&lt; std::vector&lt; bool &gt; &gt; readPNGAlpha(const char *filename)</div><div class="ttdoc">Function to read the alpha channel from a PNG image.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00998">global.cpp:998</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a74ae3a9e16e2ca39dab735a1ac97a506"><div class="ttname"><a href="global_8h.html#a74ae3a9e16e2ca39dab735a1ac97a506">helios::XMLloadfloat</a></div><div class="ttdeci">float XMLloadfloat(pugi::xml_node node, const char *field)</div><div class="ttdoc">Function to load and convert a field in a pugi XML node into a float.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l01370">global.cpp:1370</a></div></div>

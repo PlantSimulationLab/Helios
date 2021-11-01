@@ -83,7 +83,9 @@ cat "${UTILPATH}/CMakeLists_main_v1.5" >> CMakeLists.txt
 
 #----- build the main.cpp file ------#
 
-echo -e '#include "Context.h"' > main.cpp
+if [ "$#" == 1 ]; then
+  echo -e '#include "Context.h"' > main.cpp
+fi
 
 for argin in "${@:2}"; do
     FOUND=0
@@ -103,4 +105,4 @@ done
 
 echo -e '\nusing namespace helios;\n' >> main.cpp
 
-echo -e 'int main( void ){\n\n\n}' >> main.cpp
+echo -e 'int main(){\n\n\n}' >> main.cpp

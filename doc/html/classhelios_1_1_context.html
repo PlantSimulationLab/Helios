@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.20</span>
+   &#160;<span id="projectnumber">v1.2.21</span>
    </div>
   </td>
  </tr>
@@ -422,6 +422,57 @@ std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a 
 <tr class="memitem:ab4cc7c915a03f7eb5dbbce24bbbc6903"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#ab4cc7c915a03f7eb5dbbce24bbbc6903">clearPrimitiveData</a> (const std::vector&lt; uint &gt; &amp;UUIDs, const char *label)</td></tr>
 <tr class="memdesc:ab4cc7c915a03f7eb5dbbce24bbbc6903"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear primitive data for multiple primitives based on a vector of UUIDs.  <a href="classhelios_1_1_context.html#ab4cc7c915a03f7eb5dbbce24bbbc6903">More...</a><br /></td></tr>
 <tr class="separator:ab4cc7c915a03f7eb5dbbce24bbbc6903"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67bfd66f0a445f6485f1099f9eadc949"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601">PrimitiveType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a67bfd66f0a445f6485f1099f9eadc949">getPrimitiveType</a> (uint UUID) const</td></tr>
+<tr class="memdesc:a67bfd66f0a445f6485f1099f9eadc949"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to get the <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> type.  <a href="classhelios_1_1_context.html#a67bfd66f0a445f6485f1099f9eadc949">More...</a><br /></td></tr>
+<tr class="separator:a67bfd66f0a445f6485f1099f9eadc949"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d7974e92bd4ac128ffae0c36cfad85d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a5d7974e92bd4ac128ffae0c36cfad85d">setPrimitiveParentObjectID</a> (uint UUID, uint objID)</td></tr>
+<tr class="memdesc:a5d7974e92bd4ac128ffae0c36cfad85d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to set the ID of the parent object the primitive belongs to (default is object 0)  <a href="classhelios_1_1_context.html#a5d7974e92bd4ac128ffae0c36cfad85d">More...</a><br /></td></tr>
+<tr class="separator:a5d7974e92bd4ac128ffae0c36cfad85d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac97ab81d1324437cadae575a76f5ef80"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#ac97ab81d1324437cadae575a76f5ef80">setPrimitiveParentObjectID</a> (const std::vector&lt; uint &gt; &amp;UUIDs, uint objID)</td></tr>
+<tr class="memdesc:ac97ab81d1324437cadae575a76f5ef80"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to set the ID of the parent object the primitive belongs to (default is object 0) for a vector of UUIDs.  <a href="classhelios_1_1_context.html#ac97ab81d1324437cadae575a76f5ef80">More...</a><br /></td></tr>
+<tr class="separator:ac97ab81d1324437cadae575a76f5ef80"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d3e254d04f913e590a645b54886436e"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a2d3e254d04f913e590a645b54886436e">getPrimitiveParentObjectID</a> (uint UUID) const</td></tr>
+<tr class="memdesc:a2d3e254d04f913e590a645b54886436e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the ID of the parent object the primitive belongs to (default is object 0)  <a href="classhelios_1_1_context.html#a2d3e254d04f913e590a645b54886436e">More...</a><br /></td></tr>
+<tr class="separator:a2d3e254d04f913e590a645b54886436e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1dafe58b3251d2ef9d09112258b2e85d"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">getPrimitiveArea</a> (uint UUID) const</td></tr>
+<tr class="memdesc:a1dafe58b3251d2ef9d09112258b2e85d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the surface area of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>.  <a href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">More...</a><br /></td></tr>
+<tr class="separator:a1dafe58b3251d2ef9d09112258b2e85d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfeadf8e6a35eb97da1439abc21c434e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#abfeadf8e6a35eb97da1439abc21c434e">getPrimitiveNormal</a> (uint UUID) const</td></tr>
+<tr class="memdesc:abfeadf8e6a35eb97da1439abc21c434e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the normal vector of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>.  <a href="classhelios_1_1_context.html#abfeadf8e6a35eb97da1439abc21c434e">More...</a><br /></td></tr>
+<tr class="separator:abfeadf8e6a35eb97da1439abc21c434e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a046e855d15fa88088be01adea38a67fd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a046e855d15fa88088be01adea38a67fd">getPrimitiveTransformationMatrix</a> (uint UUID, float(&amp;T)[16]) const</td></tr>
+<tr class="memdesc:a046e855d15fa88088be01adea38a67fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the Affine transformation matrix of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>.  <a href="classhelios_1_1_context.html#a046e855d15fa88088be01adea38a67fd">More...</a><br /></td></tr>
+<tr class="separator:a046e855d15fa88088be01adea38a67fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af7d8333251195bcc4788792d9aa6f37c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#af7d8333251195bcc4788792d9aa6f37c">setPrimitiveTransformationMatrix</a> (uint UUID, float(&amp;T)[16])</td></tr>
+<tr class="memdesc:af7d8333251195bcc4788792d9aa6f37c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to set the Affine transformation matrix of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>.  <a href="classhelios_1_1_context.html#af7d8333251195bcc4788792d9aa6f37c">More...</a><br /></td></tr>
+<tr class="separator:af7d8333251195bcc4788792d9aa6f37c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9447c0c5ad7f1f19d606f227d164f679"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a9447c0c5ad7f1f19d606f227d164f679">setPrimitiveTransformationMatrix</a> (const std::vector&lt; uint &gt; &amp;UUIDs, float(&amp;T)[16])</td></tr>
+<tr class="memdesc:a9447c0c5ad7f1f19d606f227d164f679"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to set the Affine transformation matrix of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> for a vector UUIDs.  <a href="classhelios_1_1_context.html#a9447c0c5ad7f1f19d606f227d164f679">More...</a><br /></td></tr>
+<tr class="separator:a9447c0c5ad7f1f19d606f227d164f679"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae8542fd1452150d3302675a0a3d991ed"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">getPrimitiveVertices</a> (uint UUID) const</td></tr>
+<tr class="memdesc:ae8542fd1452150d3302675a0a3d991ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the (x,y,z) coordinates of the vertices of a Primitve.  <a href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">More...</a><br /></td></tr>
+<tr class="separator:ae8542fd1452150d3302675a0a3d991ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1223205f1080b0b7024b8f97950779b8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a1223205f1080b0b7024b8f97950779b8">getPrimitiveColor</a> (uint UUID) const</td></tr>
+<tr class="memdesc:a1223205f1080b0b7024b8f97950779b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>.  <a href="classhelios_1_1_context.html#a1223205f1080b0b7024b8f97950779b8">More...</a><br /></td></tr>
+<tr class="separator:a1223205f1080b0b7024b8f97950779b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8550633570ee91e4f09ec1464810bd7b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a8550633570ee91e4f09ec1464810bd7b">getPrimitiveColorRGB</a> (uint UUID) const</td></tr>
+<tr class="memdesc:a8550633570ee91e4f09ec1464810bd7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>.  <a href="classhelios_1_1_context.html#a8550633570ee91e4f09ec1464810bd7b">More...</a><br /></td></tr>
+<tr class="separator:a8550633570ee91e4f09ec1464810bd7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e29adcb908d55172efd239f294b49e5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a4e29adcb908d55172efd239f294b49e5">getPrimitiveColorRGBA</a> (uint UUID) const</td></tr>
+<tr class="memdesc:a4e29adcb908d55172efd239f294b49e5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> with transparency.  <a href="classhelios_1_1_context.html#a4e29adcb908d55172efd239f294b49e5">More...</a><br /></td></tr>
+<tr class="separator:a4e29adcb908d55172efd239f294b49e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a029f95ee0056f027866f8bad2fe9e48e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a029f95ee0056f027866f8bad2fe9e48e">setPrimitiveColor</a> (uint UUID, const <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &amp;color)</td></tr>
+<tr class="memdesc:a029f95ee0056f027866f8bad2fe9e48e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>.  <a href="classhelios_1_1_context.html#a029f95ee0056f027866f8bad2fe9e48e">More...</a><br /></td></tr>
+<tr class="separator:a029f95ee0056f027866f8bad2fe9e48e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af445c8f33a279ce7374d1b2691ef1f1c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#af445c8f33a279ce7374d1b2691ef1f1c">setPrimitiveColor</a> (const std::vector&lt; uint &gt; &amp;UUIDs, const <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &amp;color)</td></tr>
+<tr class="memdesc:af445c8f33a279ce7374d1b2691ef1f1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> for a vector of UUIDs.  <a href="classhelios_1_1_context.html#af445c8f33a279ce7374d1b2691ef1f1c">More...</a><br /></td></tr>
+<tr class="separator:af445c8f33a279ce7374d1b2691ef1f1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a22dce781917215d2e80784ae5eb78d60"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a22dce781917215d2e80784ae5eb78d60">setPrimitiveColor</a> (uint UUID, const <a class="el" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> &amp;color)</td></tr>
+<tr class="memdesc:a22dce781917215d2e80784ae5eb78d60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> with transparency.  <a href="classhelios_1_1_context.html#a22dce781917215d2e80784ae5eb78d60">More...</a><br /></td></tr>
+<tr class="separator:a22dce781917215d2e80784ae5eb78d60"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa4e3d7f71aaa0823edd9341b3c2d786c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#aa4e3d7f71aaa0823edd9341b3c2d786c">setPrimitiveColor</a> (const std::vector&lt; uint &gt; &amp;UUIDs, const <a class="el" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> &amp;color)</td></tr>
+<tr class="memdesc:aa4e3d7f71aaa0823edd9341b3c2d786c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> with transparency for a vector of UUIDs.  <a href="classhelios_1_1_context.html#aa4e3d7f71aaa0823edd9341b3c2d786c">More...</a><br /></td></tr>
+<tr class="separator:aa4e3d7f71aaa0823edd9341b3c2d786c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6ad7971a0c42fcf3b185d92354cb95b2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a6ad7971a0c42fcf3b185d92354cb95b2">setObjectData</a> (uint objID, const char *label, const int &amp;data)</td></tr>
 <tr class="memdesc:a6ad7971a0c42fcf3b185d92354cb95b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (int) associated with a compound object.  <a href="classhelios_1_1_context.html#a6ad7971a0c42fcf3b185d92354cb95b2">More...</a><br /></td></tr>
 <tr class="separator:a6ad7971a0c42fcf3b185d92354cb95b2"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -4460,6 +4511,118 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a1dafe58b3251d2ef9d09112258b2e85d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1dafe58b3251d2ef9d09112258b2e85d">&#9670;&nbsp;</a></span>getPrimitiveArea()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Context::getPrimitiveArea </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to return the surface area of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11429">11429</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1223205f1080b0b7024b8f97950779b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1223205f1080b0b7024b8f97950779b8">&#9670;&nbsp;</a></span>getPrimitiveColor()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> Context::getPrimitiveColor </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to return the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11456">11456</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8550633570ee91e4f09ec1464810bd7b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8550633570ee91e4f09ec1464810bd7b">&#9670;&nbsp;</a></span>getPrimitiveColorRGB()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> Context::getPrimitiveColorRGB </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to return the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11460">11460</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4e29adcb908d55172efd239f294b49e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e29adcb908d55172efd239f294b49e5">&#9670;&nbsp;</a></span>getPrimitiveColorRGBA()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> Context::getPrimitiveColorRGBA </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to return the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> with transparency. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11464">11464</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a802b10b84762052e52b9ff1861604c58"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a802b10b84762052e52b9ff1861604c58">&#9670;&nbsp;</a></span>getPrimitiveData() <span class="overload">[1/22]</span></h2>
 
@@ -5550,6 +5713,157 @@ Static Public Member Functions</h2></td></tr>
 <dl class="section see"><dt>See also</dt><dd>HeliosDataType </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02766">2766</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abfeadf8e6a35eb97da1439abc21c434e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abfeadf8e6a35eb97da1439abc21c434e">&#9670;&nbsp;</a></span>getPrimitiveNormal()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> Context::getPrimitiveNormal </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to return the normal vector of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11433">11433</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2d3e254d04f913e590a645b54886436e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2d3e254d04f913e590a645b54886436e">&#9670;&nbsp;</a></span>getPrimitiveParentObjectID()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint Context::getPrimitiveParentObjectID </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to return the ID of the parent object the primitive belongs to (default is object 0) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11425">11425</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a046e855d15fa88088be01adea38a67fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a046e855d15fa88088be01adea38a67fd">&#9670;&nbsp;</a></span>getPrimitiveTransformationMatrix()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::getPrimitiveTransformationMatrix </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float(&amp;)&#160;</td>
+          <td class="paramname"><em>T</em>[16]&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to return the Affine transformation matrix of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">T</td><td>1D vector corresponding to <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> transformation matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11437">11437</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a67bfd66f0a445f6485f1099f9eadc949"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a67bfd66f0a445f6485f1099f9eadc949">&#9670;&nbsp;</a></span>getPrimitiveType()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601">PrimitiveType</a> Context::getPrimitiveType </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to get the <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> type. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. sa PrimitiveType </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11411">11411</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae8542fd1452150d3302675a0a3d991ed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae8542fd1452150d3302675a0a3d991ed">&#9670;&nbsp;</a></span>getPrimitiveVertices()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; Context::getPrimitiveVertices </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to return the (x,y,z) coordinates of the vertices of a Primitve. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11451">11451</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9183,6 +9497,162 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="aa4e3d7f71aaa0823edd9341b3c2d786c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa4e3d7f71aaa0823edd9341b3c2d786c">&#9670;&nbsp;</a></span>setPrimitiveColor() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setPrimitiveColor </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> &amp;&#160;</td>
+          <td class="paramname"><em>color</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> with transparency for a vector of UUIDs. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Vector of universal unique identifiers of primitives. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>New color of primitive </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11482">11482</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af445c8f33a279ce7374d1b2691ef1f1c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af445c8f33a279ce7374d1b2691ef1f1c">&#9670;&nbsp;</a></span>setPrimitiveColor() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setPrimitiveColor </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &amp;&#160;</td>
+          <td class="paramname"><em>color</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> for a vector of UUIDs. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Vector of universal unique identifiers of primitives. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>New color of primitive </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11472">11472</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a22dce781917215d2e80784ae5eb78d60"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a22dce781917215d2e80784ae5eb78d60">&#9670;&nbsp;</a></span>setPrimitiveColor() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setPrimitiveColor </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> &amp;&#160;</td>
+          <td class="paramname"><em>color</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> with transparency. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>New color of primitive </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11478">11478</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a029f95ee0056f027866f8bad2fe9e48e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a029f95ee0056f027866f8bad2fe9e48e">&#9670;&nbsp;</a></span>setPrimitiveColor() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setPrimitiveColor </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &amp;&#160;</td>
+          <td class="paramname"><em>color</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to set the diffuse color of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>New color of primitive </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11468">11468</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a67cd49500d77ca6308b9d78a19bf88e1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a67cd49500d77ca6308b9d78a19bf88e1">&#9670;&nbsp;</a></span>setPrimitiveData() <span class="overload">[1/45]</span></h2>
 
@@ -11260,6 +11730,162 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02343">2343</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac97ab81d1324437cadae575a76f5ef80"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac97ab81d1324437cadae575a76f5ef80">&#9670;&nbsp;</a></span>setPrimitiveParentObjectID() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setPrimitiveParentObjectID </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>objID</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to set the ID of the parent object the primitive belongs to (default is object 0) for a vector of UUIDs. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Vector of universal unique identifiers of primitives. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">objID</td><td>Identifier of primitive's parent object. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11419">11419</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5d7974e92bd4ac128ffae0c36cfad85d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d7974e92bd4ac128ffae0c36cfad85d">&#9670;&nbsp;</a></span>setPrimitiveParentObjectID() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setPrimitiveParentObjectID </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>objID</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to set the ID of the parent object the primitive belongs to (default is object 0) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">objID</td><td>Identifier of primitive's parent object. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11415">11415</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9447c0c5ad7f1f19d606f227d164f679"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9447c0c5ad7f1f19d606f227d164f679">&#9670;&nbsp;</a></span>setPrimitiveTransformationMatrix() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setPrimitiveTransformationMatrix </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float(&amp;)&#160;</td>
+          <td class="paramname"><em>T</em>[16]&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to set the Affine transformation matrix of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> for a vector UUIDs. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Vector of universal unique identifiers of primitives. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">T</td><td>1D vector corresponding to <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> transformation matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11445">11445</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af7d8333251195bcc4788792d9aa6f37c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af7d8333251195bcc4788792d9aa6f37c">&#9670;&nbsp;</a></span>setPrimitiveTransformationMatrix() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setPrimitiveTransformationMatrix </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>UUID</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float(&amp;)&#160;</td>
+          <td class="paramname"><em>T</em>[16]&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to set the Affine transformation matrix of a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier of primitive. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">T</td><td>1D vector corresponding to <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> transformation matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11441">11441</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

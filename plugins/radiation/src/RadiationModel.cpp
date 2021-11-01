@@ -3550,7 +3550,8 @@ void RadiationModel::runBand_MCRT( const char* label ){
     initializeBuffer1Df( radiation_out_bottom_RTbuffer, flux_bottom );
       
     // Compute emission launch dimension
-    size_t n = ceil(sqrt(double(directRayCount[band])));//TODO: fix this - should not be based on 'directRayCount'
+//    size_t n = ceil(sqrt(double(directRayCount[band])));//TODO: fix this - should not be based on 'directRayCount'
+      size_t n = ceil(sqrt(double(diffuseRayCount[band])));
     optix::int3 launch_dim_emiss = optix::make_int3( round(n), round(n), Nprimitives );
     assert( launch_dim_emiss.x>0 && launch_dim_emiss.y>0 );
       

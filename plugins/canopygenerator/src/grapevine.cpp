@@ -29,7 +29,7 @@ std::vector<std::vector<uint> > CanopyGenerator::addGrapeCluster( vec3 position,
     float RB;
     int N = 100;
     int count=0;
-    int max_grape_levels = 13-4*unif_distribution(generator);
+    int max_grape_levels = 13.f-4.f*unif_distribution(generator);
 
     vec3 xgrape;
 
@@ -38,30 +38,34 @@ std::vector<std::vector<uint> > CanopyGenerator::addGrapeCluster( vec3 position,
     while( (N>3 || count<3) && count<max_grape_levels ){
 
         if(count<3){
-            RB=cluster_rad*pow(0.5,2-count);
+            RB=cluster_rad*powf(0.5f,2-count);
         }else if(count==3){
             RB=cluster_rad;
         }
 
         N=floor( M_PI*RB/grape_rad )+1;
 
-        float dtheta=2.f*M_PI/N;
+        float dtheta=2.f*M_PI/float(N);
         for( int j=0; j<N; j++ ){
 
-            xgrape.x = position.x+RB*sin(theta)+unif_distribution(generator)*0.25*grape_rad;
-            xgrape.y = position.y+RB*cos(theta)+unif_distribution(generator)*0.25*grape_rad;
-            xgrape.z = z+unif_distribution(generator)*0.25*grape_rad;
+            xgrape.x = position.x+RB*sin(theta)+unif_distribution(generator)*0.25f*grape_rad;
+            xgrape.y = position.y+RB*cos(theta)+unif_distribution(generator)*0.25f*grape_rad;
+            xgrape.z = z+unif_distribution(generator)*0.25f*grape_rad;
 
-            std::vector<uint> U=context->addSphere( fmax(2,grape_subdiv), xgrape, grape_rad, grape_color );
+            std::vector<uint> U=context->addSphere( fmax(2.f,float(grape_subdiv)), xgrape, grape_rad, grape_color );
             UUID.push_back(U);
 
             theta=theta+dtheta;
 
         }
         z=z-1.8f*grape_rad;
-        theta=theta+0.5*dtheta;
-        RB=RB*0.85+unif_distribution(generator)*RB*0.15;
+        theta=theta+0.5f*dtheta;
+        RB=RB*0.85f+unif_distribution(generator)*RB*0.15f;
         count=count+1;
+    }
+
+    if( enable_element_labels ) {
+        context->setPrimitiveData( UUID, "element_label", "berry");
     }
 
     return UUID;
@@ -139,7 +143,7 @@ std::vector<uint> leafPrototype( const int2 leaf_subdivisions, const char* leaf_
 
 }
 
-void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const vec3 origin ){
+void CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const vec3 &origin ){
 
     float mean_shoot_angle = 0.1*M_PI;
 
@@ -153,12 +157,12 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
     //------ trunks -------//
 
     std::vector<float> rad_main;
-    rad_main.push_back(0.75*params.trunk_radius);
+    rad_main.push_back(0.75f*params.trunk_radius);
     rad_main.push_back(0.8f*params.trunk_radius);
     rad_main.push_back(1.f*params.trunk_radius);
     rad_main.push_back(0.7f*params.trunk_radius);
     rad_main.push_back(0.95f*params.trunk_radius);
-    rad_main.push_back(0.1*params.trunk_radius);
+    rad_main.push_back(0.1f*params.trunk_radius);
     std::vector<vec3> pos_main;
     pos_main.push_back(make_vec3(0.,0.,0.0));
     pos_main.push_back(make_vec3(0,0,0.2f*params.trunk_height));
@@ -172,6 +176,9 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
     }
 
     UUID_trunk_plant = context->addTube(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
+    if( enable_element_labels ) {
+        context->setPrimitiveData(UUID_trunk_plant, "element_label", "trunk");
+    }
 
     //---- Cordons -----//
 
@@ -187,15 +194,15 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
     std::vector<float> rad_cordw;
     rad_cordw.push_back(params.cordon_radius);
     std::vector<vec3> pos_cordw;
-    pos_cordw.push_back(make_vec3(0.01f*0.5*params.plant_spacing*cost,0.01f*0.5*params.plant_spacing*sint,0.95*params.trunk_height));
-    vec3 n_start = sphere2cart(make_SphericalCoord(params.cordon_height,0.4*M_PI*(1+getVariation(0.2,generator)),getVariation(0.2*M_PI,generator)));
-    vec3 n_end = make_vec3(0.5*params.cordon_height,0,0);
+    pos_cordw.push_back(make_vec3(0.01f*0.5f*params.plant_spacing*cost,0.01f*0.5f*params.plant_spacing*sint,0.95*params.trunk_height));
+    vec3 n_start = sphere2cart(make_SphericalCoord(params.cordon_height,0.4f*M_PI*(1+getVariation(0.2,generator)),getVariation(0.2f*M_PI,generator)));
+    vec3 n_end = make_vec3(0.5f*params.cordon_height,0,0);
 
     for( int i=1; i<Ncord; i++ ){
         float frac = float(i)/float(Ncord-1);
-        vec3 n = spline_interp3( frac, pos_cordw.front(), n_start, make_vec3(0.5*params.plant_spacing*cost,0.5*params.plant_spacing*sint,params.trunk_height+diff),n_end);
+        vec3 n = spline_interp3( frac, pos_cordw.front(), n_start, make_vec3(0.5f*params.plant_spacing*cost,0.5f*params.plant_spacing*sint,params.trunk_height+diff),n_end);
         pos_cordw.push_back(n);
-        rad_cordw.push_back( params.cordon_radius*(1-0.6*frac) );
+        rad_cordw.push_back( params.cordon_radius*(1.f-0.6f*frac) );
     }
 
     std::vector<vec3> tmp;
@@ -210,15 +217,15 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
     std::vector<float> rad_corde;
     rad_corde.push_back(params.cordon_radius);
     std::vector<vec3> pos_corde;
-    pos_corde.push_back(make_vec3(-0.01f*0.5*params.plant_spacing*cost,-0.01f*0.5*params.plant_spacing*sint,0.95*params.trunk_height));
-    n_start = sphere2cart(make_SphericalCoord(params.cordon_height,0.4*M_PI*(1+getVariation(0.2,generator)),M_PI+getVariation(0.2*M_PI,generator)));
-    n_end = make_vec3(-0.5*params.cordon_height,0,0);
+    pos_corde.push_back(make_vec3(-0.01f*0.5f*params.plant_spacing*cost,-0.01f*0.5f*params.plant_spacing*sint,0.95f*params.trunk_height));
+    n_start = sphere2cart(make_SphericalCoord(params.cordon_height,0.4f*M_PI*(1+getVariation(0.2,generator)),M_PI+getVariation(0.2*M_PI,generator)));
+    n_end = make_vec3(-0.5f*params.cordon_height,0,0);
 
     for( int i=1; i<Ncord; i++ ){
         float frac = float(i)/float(Ncord-1);
-        vec3 n = spline_interp3( frac, pos_corde.front(), n_start, make_vec3(-0.5*params.plant_spacing*cost,-0.5*params.plant_spacing*sint,params.trunk_height+diff),n_end);
+        vec3 n = spline_interp3( frac, pos_corde.front(), n_start, make_vec3(-0.5f*params.plant_spacing*cost,-0.5f*params.plant_spacing*sint,params.trunk_height+diff),n_end);
         pos_corde.push_back(n);
-        rad_corde.push_back( params.cordon_radius*(1-0.6*frac) );
+        rad_corde.push_back( params.cordon_radius*(1.f-0.6f*frac) );
     }
 
     tmp.resize(pos_corde.size());
@@ -228,6 +235,10 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
 
     U = context->addTube(params.wood_subdivisions,tmp,rad_corde,params.wood_texture_file.c_str() );
     UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
+
+    if( enable_element_labels ) { //note: only need to set label once because the UUID vector contains both cordons
+        context->setPrimitiveData(UUID_branch_plant, "element_label", "cordon");
+    }
 
     //------- primary shoots ---------//
 
@@ -271,26 +282,26 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
             pos_pshoot.push_back( cane_base );
 
             //shoot nodes
-            float phirot = (0.5f-unif_distribution(generator))*0.5*M_PI;
+            float phirot = (0.5f-unif_distribution(generator))*0.5f*M_PI;
             phirot=0.5*M_PI;
             if( unif_distribution(generator)<0.5 ){
                 phirot+=M_PI;
             }
 
             //tangent vector for start of shoot
-            vec3 n_start = sphere2cart(make_SphericalCoord( 0.3*height, 0.5*M_PI*(1-unif_distribution(generator)),2*M_PI*unif_distribution(generator)));
+            vec3 n_start = sphere2cart(make_SphericalCoord( 0.3f*height, 0.5f*M_PI*(1-unif_distribution(generator)),2.f*M_PI*unif_distribution(generator)));
             //tangent vector for middle of shoot
-            vec3 n_mid = sphere2cart(make_SphericalCoord(0.3*height, 0.5*M_PI*(1-unif_distribution(generator)*0.15),2*M_PI*unif_distribution(generator)));
+            vec3 n_mid = sphere2cart(make_SphericalCoord(0.3f*height, 0.5f*M_PI*(1-unif_distribution(generator)*0.15),2.f*M_PI*unif_distribution(generator)));
             //tangent vector for end of shoot
-            vec3 n_end = sphere2cart(make_SphericalCoord(0.3*height, 0.5*M_PI*(1-unif_distribution(generator)*0.5),2*M_PI*unif_distribution(generator)));
+            vec3 n_end = sphere2cart(make_SphericalCoord(0.3f*height, 0.5f*M_PI*(1-unif_distribution(generator)*0.5),2.f*M_PI*unif_distribution(generator)));
 
             uint Nz = 2*params.wood_subdivisions;
             float dz = ((1+getVariation(0.1,generator))*height-params.cordon_height)/float(Nz);
 
             //position of middle of shoot
-            vec3 cane_mid = cane_base + make_vec3(0.1*getVariation(params.plant_spacing,generator),0.1*getVariation(params.plant_spacing,generator),0.75*Nz*dz);
+            vec3 cane_mid = cane_base + make_vec3(0.1f*getVariation(params.plant_spacing,generator),0.1f*getVariation(params.plant_spacing,generator),0.75f*Nz*dz);
             //position of end of shoot
-            vec3 cane_end = cane_base + make_vec3(0.15*getVariation(params.plant_spacing,generator),0.15*getVariation(params.plant_spacing,generator),Nz*dz);
+            vec3 cane_end = cane_base + make_vec3(0.15f*getVariation(params.plant_spacing,generator),0.15f*getVariation(params.plant_spacing,generator),Nz*dz);
 
             float zfrac_mid = (cane_mid.z-cane_base.z)/(cane_end.z-cane_base.z);
 
@@ -308,7 +319,7 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
 
                 pos_pshoot.push_back( n );
 
-                rad_pshoot.push_back( params.shoot_radius*(1-0.5*float(k)/float(Nz)) );
+                rad_pshoot.push_back( params.shoot_radius*(1.f-0.5f*float(k)/float(Nz)) );
 
             }
 
@@ -322,18 +333,21 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
 
             U = context->addTube(params.wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
             UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
+            if( enable_element_labels ) {
+                context->setPrimitiveData( U, "element_label", "cane");
+            }
 
             //grape clusters
             std::vector<std::vector<uint> > UUID_grapes;
             if( params.grape_radius>0 && params.cluster_radius>0 ){
 
-                float fgrape = 0.035+(params.cluster_height_max-0.035)*unif_distribution(generator);
+                float fgrape = 0.035f+(params.cluster_height_max-0.035)*unif_distribution(generator);
                 vec3 p_grape = interpolateTube( tmp, fgrape );
                 int sgn=1;
                 if( unif_distribution(generator)<0.5 ){
                     sgn = -1;
                 }
-                vec3 offset(sgn*(0.25*params.cluster_radius+getVariation(0.1,generator))*sint,sgn*(0.1*params.cluster_radius+getVariation(0.1,generator))*cost,0.f);
+                vec3 offset(sgn*(0.25f*params.cluster_radius+getVariation(0.1,generator))*sint,sgn*(0.1f*params.cluster_radius+getVariation(0.1,generator))*cost,0.f);
                 UUID_grapes = addGrapeCluster( p_grape+offset, params.grape_radius, params.cluster_radius, params.grape_color, params.grape_subdivisions );
             }
             UUID_fruit_plant.push_back( UUID_grapes );
@@ -346,13 +360,13 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
             float lfrac = 1.f;
             while( lfrac>0.75*params.leaf_width ){
 
-                float lsize = fmaxf(params.leaf_width*(1.f-exp(-5.f*(1-lfrac))),0.1*params.leaf_width);
+                float lsize = fmaxf(params.leaf_width*(1.f-exp(-5.f*(1-lfrac))),0.1f*params.leaf_width);
 
                 vec3 pos_leaf = interpolateTube( pos_pshoot, lfrac );
 
                 vec3 parent_normal = interpolateTube( pos_pshoot, fmax(0,lfrac-0.001) )-pos_leaf;
                 parent_normal.normalize();
-                vec3 leaf_offset = rotatePointAboutLine(make_vec3(getVariation(0.1*lsize,generator),getVariation(0.75*lsize,generator),0), make_vec3(0,0,0), parent_normal, flip*M_PI+getVariation(0.25*M_PI,generator) );
+                vec3 leaf_offset = rotatePointAboutLine(make_vec3(getVariation(0.1f*lsize,generator),getVariation(0.75f*lsize,generator),0), make_vec3(0,0,0), parent_normal, flip*M_PI+getVariation(0.25*M_PI,generator) );
 
                 float s;
                 if( int(flip)%2==0 ){
@@ -388,6 +402,10 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
 
                 flip++;
 
+                if( enable_element_labels ) {
+                    context->setPrimitiveData( UUID_leaf, "element_label", "leaf");
+                }
+
             }
 
         }
@@ -404,7 +422,7 @@ void CanopyGenerator::grapevineVSP( const VSPGrapevineParameters params, const v
 
 }
 
-void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, const vec3 origin ){
+void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, const vec3 &origin ){
 
     vector<uint> U;
     std::vector<uint> UUID_trunk_plant, UUID_branch_plant;
@@ -718,7 +736,7 @@ void CanopyGenerator::grapevineSplit( const SplitGrapevineParameters params, con
 
 }
 
-void CanopyGenerator::grapevineUnilateral( const UnilateralGrapevineParameters params, const vec3 origin){
+void CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &params, const vec3 &origin){
 
     float mean_shoot_angle = 0.1*M_PI;
 
@@ -907,7 +925,7 @@ void CanopyGenerator::grapevineUnilateral( const UnilateralGrapevineParameters p
 
 }
 
-void CanopyGenerator::grapevineGoblet( const GobletGrapevineParameters params, const vec3 origin ){
+void CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, const vec3 &origin ){
 
     vector<uint> U;
     std::vector<uint> UUID_trunk_plant, UUID_branch_plant;

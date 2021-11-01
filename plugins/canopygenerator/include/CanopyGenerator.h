@@ -1,7 +1,7 @@
 /** \file "CanopyGenerator.h" Primary header file for canopy geometry generator plug-in.
     \author Brian Bailey
     
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2016-2021  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
 
 */
 
-#ifndef __CANOPYGENERATOR__
-#define __CANOPYGENERATOR__
+#ifndef CANOPY_GENERATOR
+#define CANOPY_GENERATOR
 
 #include "Context.h"
 #include <random>
@@ -24,7 +24,7 @@
 struct HomogeneousCanopyParameters{
 
   //! Default constructor
-  HomogeneousCanopyParameters( void );
+  HomogeneousCanopyParameters();
 
   //! Length of leaf in x- and y- directions (prior to rotation)
   helios::vec2 leaf_size;
@@ -65,7 +65,7 @@ struct HomogeneousCanopyParameters{
 struct SphericalCrownsCanopyParameters{
 
   //! Default constructor
-  SphericalCrownsCanopyParameters( void );
+  SphericalCrownsCanopyParameters();
 
   //! Length of leaf in x- and y- directions (prior to rotation)
   helios::vec2 leaf_size;
@@ -112,7 +112,7 @@ struct SphericalCrownsCanopyParameters{
 struct VSPGrapevineParameters{
 
   //! Default constructor
-  VSPGrapevineParameters( void );
+  VSPGrapevineParameters();
 
   //! Maximum width of leaves. Leaf width increases logarithmically from the shoot tip, so leaf_width is the width at the base of the shoot.
   float leaf_width;
@@ -192,7 +192,7 @@ struct VSPGrapevineParameters{
 struct SplitGrapevineParameters{
 
   //! Default constructor
-  SplitGrapevineParameters( void );
+  SplitGrapevineParameters();
 
   //! Maximum width of leaves. Leaf width increases logarithmically from the shoot tip, so leaf_width is the width at the base of the shoot.
   float leaf_width;
@@ -281,7 +281,7 @@ struct SplitGrapevineParameters{
 struct UnilateralGrapevineParameters{
 
   //! Default constructor
-  UnilateralGrapevineParameters( void );
+  UnilateralGrapevineParameters();
 
   //! Maximum width of leaves. Leaf width increases logarithmically from the shoot tip, so leaf_width is the width at the base of the shoot.
   float leaf_width;
@@ -362,7 +362,7 @@ struct UnilateralGrapevineParameters{
 struct GobletGrapevineParameters{
 
   //! Default constructor
-  GobletGrapevineParameters( void );
+  GobletGrapevineParameters();
 
   //! Maximum width of leaves. Leaf width increases logarithmically from the shoot tip, so leaf_width is the width at the base of the shoot.
   float leaf_width;
@@ -442,7 +442,7 @@ struct GobletGrapevineParameters{
 struct WhiteSpruceCanopyParameters{
 
   //! Default constructor
-  WhiteSpruceCanopyParameters( void );
+  WhiteSpruceCanopyParameters();
 
   //! Width of needles
   float needle_width;
@@ -507,7 +507,7 @@ struct WhiteSpruceCanopyParameters{
 struct TomatoParameters{
 
   //! Default constructor
-  TomatoParameters( void );
+  TomatoParameters();
 
   //! Maximum width of leaves. 
   float leaf_length;
@@ -557,7 +557,7 @@ struct TomatoParameters{
 struct StrawberryParameters{
 
   //! Default constructor
-  StrawberryParameters( void );
+  StrawberryParameters();
 
   //! Maximum width of leaves. 
   float leaf_length;
@@ -616,7 +616,7 @@ struct StrawberryParameters{
 struct WalnutCanopyParameters{
 
   //! Default constructor
-  WalnutCanopyParameters( void );
+  WalnutCanopyParameters();
 
   //! Maximum length of leaves along midrib. 
   float leaf_length;
@@ -678,10 +678,10 @@ class CanopyGenerator{
   //! Canopy geometry generator constructor
   /**  \param[in] "context" Pointer to the Helios context
   */
-  CanopyGenerator( helios::Context* context );
+  explicit CanopyGenerator( helios::Context* context );
 
   //! Unit testing routine
-  int selfTest( void );
+ int selfTest();
 
   //! Build canopy geometries based on parameters specified in an XML file
   /** \param[in] "filename" Path to XML file to be read */
@@ -690,52 +690,52 @@ class CanopyGenerator{
   //! Build a canopy consisting of a homogeneous volume of leaves
   /** \param[in] "params" Structure containing parameters for homogeneous canopy.
    */
-  void buildCanopy( const HomogeneousCanopyParameters params );
+  void buildCanopy( const HomogeneousCanopyParameters &params );
 
   //! Build a canopy consisting of spherical crowns filled with homogeneous leaves.
   /** \param[in] "params" Structure containing parameters for spherical crown canopy.
    */
-  void buildCanopy( const SphericalCrownsCanopyParameters params );
+  void buildCanopy( const SphericalCrownsCanopyParameters &params );
 
   //! Build a canopy consisting of grapevines on VSP trellis.
   /** \param[in] "params" Structure containing parameters for VSP grapevine canopy.
    */
-  void buildCanopy( const VSPGrapevineParameters params );
+  void buildCanopy( const VSPGrapevineParameters &params );
 
   //! Build a canopy consisting of grapevines on split trellis.
   /** \param[in] "params" Structure containing parameters for split trellis grapevine canopy.
    */
-  void buildCanopy( const SplitGrapevineParameters params );
+  void buildCanopy( const SplitGrapevineParameters &params );
 
   //! Build a canopy consisting of grapevines on unilateral trellis.
   /** \param[in] "params" Structure containing parameters for unilateral grapevine canopy.
    */
-  void buildCanopy( const UnilateralGrapevineParameters params );
+  void buildCanopy( const UnilateralGrapevineParameters &params );
 
   //! Build a canopy consisting of grapevines on Goblet trellis.
   /** \param[in] "params" Structure containing parameters for Goblet grapevine canopy.
    */
-  void buildCanopy( const GobletGrapevineParameters params );
+  void buildCanopy( const GobletGrapevineParameters &params );
 
   //! Build a canopy consisting of white spruce trees
   /** \param[in] "params" Structure containing parameters for white spruce canopy.
    */
-  void buildCanopy( const WhiteSpruceCanopyParameters params );
+  void buildCanopy( const WhiteSpruceCanopyParameters &params );
 
   //! Build a canopy consisting of tomato plants
   /** \param[in] "params" Structure containing parameters for tomato canopy.
    */
-  void buildCanopy( const TomatoParameters params );
+  void buildCanopy( const TomatoParameters &params );
 
   //! Build a canopy consisting of strawberry plants
   /** \param[in] "params" Structure containing parameters for strawberry canopy.
    */
-  void buildCanopy( const StrawberryParameters params );
+  void buildCanopy( const StrawberryParameters &params );
 
   //! Build a canopy consisting of walnut trees
   /** \param[in] "params" Structure containing parameters for walnut tree canopy.
    */
-  void buildCanopy( const WalnutCanopyParameters params );
+  void buildCanopy(const WalnutCanopyParameters &params );
 
   //! Build a ground consisting of texture sub-tiles and sub-patches, which can be different sizes
   /** \param[in] "ground_origin" x-, y-, and z-position of the ground center point.
@@ -744,7 +744,7 @@ class CanopyGenerator{
       \param[in] "texture_subpatches" Number of sub-divisions of each texture tile into sub-patches in the x- and y-directions.
       \param[in] "ground_texture_file" Path to file used for tile texture mapping.
   */
-  void buildGround( const helios::vec3 ground_origin, const helios::vec2 ground_extent, const helios::int2 texture_subtiles, const helios::int2 texture_subpatches, const char* ground_texture_file  );
+  void buildGround( const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, const char* ground_texture_file  );
 
   //! Build a ground with azimuthal rotation consisting of texture sub-tiles and sub-patches, which can be different sizes
   /** \param[in] "ground_origin" x-, y-, and z-position of the ground center point.
@@ -754,41 +754,41 @@ class CanopyGenerator{
       \param[in] "ground_texture_file" Path to file used for tile texture mapping.
       \param[in] "ground_rotation" Azimuthal rotation angle of ground in radians.
   */
-  void buildGround( const helios::vec3 ground_origin, const helios::vec2 ground_extent, const helios::int2 texture_subtiles, const helios::int2 texture_subpatches, const char* ground_texture_file, const float ground_rotation  );
+  void buildGround( const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation  );
  
   //! Get the unique universal identifiers (UUIDs) for the primitives that make up the plant trunk
   /** \param[in] "PlantID" Identifer of plant.
   */
-  std::vector<uint> getTrunkUUIDs( const uint PlantID );
+  std::vector<uint> getTrunkUUIDs( uint PlantID );
 
   //! Get the unique universal identifiers (UUIDs) for all trunk primitives in a single 1D vector
-  std::vector<uint> getTrunkUUIDs(void);
+  std::vector<uint> getTrunkUUIDs();
 
   //! Get the unique universal identifiers (UUIDs) for the primitives that make up the plant branches
   /** \param[in] "PlantID" Identifer of plant.
   */
-  std::vector<uint> getBranchUUIDs( const uint PlantID );
+  std::vector<uint> getBranchUUIDs( uint PlantID );
 
   //! Get the unique universal identifiers (UUIDs) for all branch primitives in a single 1D vector
-  std::vector<uint> getBranchUUIDs(void);
+  std::vector<uint> getBranchUUIDs();
 
   //! Get the unique universal identifiers (UUIDs) for the primitives that make up the plant leaves
   /** \param[in] "PlantID" Identifer of plant.
       \note The first index is the leaf, second index is the UUIDs making up the sub-primitives of the leaf (if appplicable).
   */
-  std::vector<std::vector<uint> > getLeafUUIDs( const uint PlantID );
+  std::vector<std::vector<uint> > getLeafUUIDs( uint PlantID );
 
   //! Get the unique universal identifiers (UUIDs) for all leaf primitives in a single 1D vector
-  std::vector<uint> getLeafUUIDs(void);
+  std::vector<uint> getLeafUUIDs();
 
   //! Get the unique universal identifiers (UUIDs) for the primitives that make up the tree fruit
   /** \param[in] "PlantID" Identifer of tree.
       \note First index is the cluster of fruit (if applicable), second index is the fruit, third index is the UUIDs making up the sub-primitives of the fruit.
   */
-  std::vector<std::vector<std::vector<uint> > > getFruitUUIDs( const uint PlantID );
+  std::vector<std::vector<std::vector<uint> > > getFruitUUIDs( uint PlantID );
 
   //! Get the unique universal identifiers (UUIDs) for all fruit primitives in a single 1D vector
-  std::vector<uint> getFruitUUIDs(void);
+  std::vector<uint> getFruitUUIDs();
 
   //! Get the unique universal identifiers (UUIDs) for the primitives that make up the ground
   std::vector<uint> getGroundUUIDs();
@@ -796,79 +796,94 @@ class CanopyGenerator{
   //! Get the unique universal identifiers (UUIDs) for all primitives that make up the tree
   /** \param[in] "PlantID" Identifer of tree.
   */
-  std::vector<uint> getAllUUIDs( const uint PlantID );
+  std::vector<uint> getAllUUIDs( uint PlantID );
 
   //! Get the current number of plants added to the Canopy Generator
-  uint getPlantCount( void );
+  uint getPlantCount();
 
   //! Seed the random number generator. This can be useful for generating repeatable trees, say, within a loop.
   /** \param[in] "seed" Random number seed */
-  void seedRandomGenerator( const uint seed );
+  void seedRandomGenerator( uint seed );
 
   //! Disable standard messages from being printed to screen (default is to enable messages)
-  void disableMessages( void );
+  void disableMessages();
 
   //! Enable standard messages to be printed to screen (default is to enable messages)
-  void enableMessages( void );
+  void enableMessages();
 
   //---------- PLANT GEOMETRIES ------------ //
 
   //! Function to add an individual grape berry cluster
-  /* \param[in] "position" Cartesian (x,y,z) position of the cluster main stem.
-     \param[in] "grape_rad" Maximum grape berry radius.
-     \param[in] "cluster_rad" Radius of berry cluster at widest point.
-     \param[in] "grape_subdiv" Number of azimuthal and zenithal berry sub-triangle subdivisions.
-     \return 2D vector of primitive UUIDs. The first index is the UUID for each primitive (triangles) comprising individual berries, second index corresponds to each berry in the cluster.
+  /**
+   * \param[in] "position" Cartesian (x,y,z) position of the cluster main stem.
+   * \param[in] "grape_rad" Maximum grape berry radius.
+   * \param[in] "cluster_rad" Radius of berry cluster at widest point.
+   * \param[in] "grape_subdiv" Number of azimuthal and zenithal berry sub-triangle subdivisions.
+   * \return 2D vector of primitive UUIDs. The first index is the UUID for each primitive (triangles) comprising individual berries, second index corresponds to each berry in the cluster.
   */
   std::vector<std::vector<uint> > addGrapeCluster( helios::vec3 position, float grape_rad, float cluster_rad, helios::RGBcolor grape_color, uint grape_subdiv );
 
 //! Function to add an individual grapevine plant on a vertical shoot positioned (VSP) trellis.
-/* \param[in] "params" Set of parameters defining grapevine plant.
-   \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+/**
+ * \param[in] "params" Set of parameters defining grapevine plant.
+ * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
 */ 
-void grapevineVSP( const VSPGrapevineParameters params, const helios::vec3 origin );
+void grapevineVSP(const VSPGrapevineParameters &params, const helios::vec3 &origin );
 
 //! Function to add an individual grapevine plant on a split trellis.
-/* \param[in] "params" Set of parameters defining grapevine plant.
-   \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+/**
+ * \param[in] "params" Set of parameters defining grapevine plant.
+ * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
 */ 
-void grapevineSplit( const SplitGrapevineParameters params, const helios::vec3 origin );
+void grapevineSplit( const SplitGrapevineParameters &params, const helios::vec3 &origin );
 
 //! Function to add an individual grapevine plant on a unilateral trellis.
-/* \param[in] "params" Set of parameters defining grapevine plant.
-   \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+/**
+ * \param[in] "params" Set of parameters defining grapevine plant.
+ * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
 */ 
-void grapevineUnilateral( const UnilateralGrapevineParameters params, const helios::vec3 origin );
+void grapevineUnilateral( const UnilateralGrapevineParameters &params, const helios::vec3 &origin );
 
 //! Function to add an individual grapevine plant on a goblet (vent a taille) trellis.
-/* \param[in] "params" Set of parameters defining grapevine plant.
-   \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+/**
+ * \param[in] "params" Set of parameters defining grapevine plant.
+ * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
 */ 
-void grapevineGoblet( const GobletGrapevineParameters params, const helios::vec3 origin );
+void grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec3 &origin );
 
   //! Function to add an individual white spruce tree
-  /* \param[in] "params" Set of parameters defining white spruce tree.
-     \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+  /**
+   * \param[in] "params" Set of parameters defining white spruce tree.
+   * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
   */ 
-  void whitespruce( const WhiteSpruceCanopyParameters params, const helios::vec3 origin );
+  void whitespruce( const WhiteSpruceCanopyParameters &params, const helios::vec3 &origin );
 
   //! Function to add an individual tomato plant
-  /* \param[in] "params" Set of parameters defining tomato plants/canopy.
-     \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+  /**
+   * \param[in] "params" Set of parameters defining tomato plants/canopy.
+   * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
   */ 
-  void tomato( const TomatoParameters params, const helios::vec3 origin );
+  void tomato( const TomatoParameters &params, const helios::vec3 &origin );
 
   //! Function to add an individual strawberry plant
-  /* \param[in] "params" Set of parameters defining strawberry plants/canopy.
-     \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+  /**
+   * \param[in] "params" Set of parameters defining strawberry plants/canopy.
+   * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
   */ 
-  void strawberry( const StrawberryParameters params, const helios::vec3 origin );
+  void strawberry( const StrawberryParameters &params, const helios::vec3 &origin );
 
   //! Function to add an individual walnut tree
-  /* \param[in] "params" Set of parameters defining walnut trees/canopy.
-     \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+  /**
+   * \param[in] "params" Set of parameters defining walnut trees/canopy.
+   * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
   */ 
-  void walnut( const WalnutCanopyParameters params, const helios::vec3 origin );
+  void walnut(const WalnutCanopyParameters &params, const helios::vec3 &origin );
+
+  //! Create primitive data that explicitly labels all primitives according to the plant element they correspond to
+  void createElementLabels();
+
+  //! Toggle off primitive data element type labels
+  void disableElementLabels();
 
  private:
 
@@ -893,7 +908,7 @@ void grapevineGoblet( const GobletGrapevineParameters params, const helios::vec3
   //! UUIDs for ground primitives
   std::vector<uint> UUID_ground;
 
-  float sampleLeafAngle( const std::vector<float> leafAngleDist );
+  float sampleLeafAngle( const std::vector<float> &leafAngleDist );
 
   float sampleLeafPDF( const char* distribution );
  
@@ -901,13 +916,15 @@ void grapevineGoblet( const GobletGrapevineParameters params, const helios::vec3
 
   bool printmessages;
 
+  bool enable_element_labels;
+
 };
 
 float getVariation( float V, std::minstd_rand0& generator );
 
-helios::vec3 interpolateTube( const std::vector<helios::vec3> P, const float frac );
+helios::vec3 interpolateTube( const std::vector<helios::vec3> &P, float frac );
 
-float interpolateTube( const std::vector<float> P, const float frac );
+float interpolateTube( const std::vector<float> &P, float frac );
 
 
 #endif

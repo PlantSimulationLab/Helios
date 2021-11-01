@@ -11407,3 +11407,80 @@ Context::~Context(){
     }
 
 }
+
+PrimitiveType Context::getPrimitiveType(uint UUID) const {
+    return getPrimitivePointer(UUID)->getType();
+}
+
+void Context::setPrimitiveParentObjectID(uint UUID, uint objID){
+    getPrimitivePointer(UUID)->setParentObjectID(objID);
+}
+
+void Context::setPrimitiveParentObjectID(const std::vector<uint> &UUIDs, uint objID) {
+    for( uint UUID : UUIDs){
+        getPrimitivePointer(UUID)->setParentObjectID(UUID);
+    }
+}
+
+uint Context::getPrimitiveParentObjectID(uint UUID) const {
+    return getPrimitivePointer(UUID)->getParentObjectID();
+}
+
+float Context::getPrimitiveArea(uint UUID) const {
+    return getPrimitivePointer(UUID)->getArea();
+}
+
+helios::vec3 Context::getPrimitiveNormal(uint UUID) const {
+    return getPrimitivePointer(UUID)->getNormal();
+}
+
+void Context::getPrimitiveTransformationMatrix(uint UUID, float (&T)[16] ) const {
+    getPrimitivePointer(UUID)->getTransformationMatrix( T );
+}
+
+void Context::setPrimitiveTransformationMatrix(uint UUID, float (&T)[16] ) {
+    getPrimitivePointer(UUID)->setTransformationMatrix(T);
+}
+
+void Context::setPrimitiveTransformationMatrix(const std::vector<uint> &UUIDs, float (&T)[16] ) {
+    for( uint UUID : UUIDs){
+        getPrimitivePointer(UUID)->setTransformationMatrix(T);
+    }
+}
+
+std::vector<helios::vec3> Context::getPrimitiveVertices(uint UUID) const {
+    return getPrimitivePointer(UUID)->getVertices();
+}
+
+
+helios::RGBcolor Context::getPrimitiveColor(uint UUID) const {
+    return getPrimitivePointer(UUID)->getColor();
+}
+
+helios::RGBcolor Context::getPrimitiveColorRGB(uint UUID) const {
+    return getPrimitivePointer(UUID)->getColorRGB();
+}
+
+helios::RGBAcolor Context::getPrimitiveColorRGBA(uint UUID) const {
+    return getPrimitivePointer(UUID)->getColorRGBA();
+}
+
+void Context::setPrimitiveColor(uint UUID, const RGBcolor &color) {
+    getPrimitivePointer(UUID)->setColor( color );
+}
+
+void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBcolor &color) {
+    for( uint UUID : UUIDs){
+        getPrimitivePointer(UUID)->setColor(color);
+    }
+}
+
+void Context::setPrimitiveColor(uint UUID, const RGBAcolor &color) {
+    getPrimitivePointer(UUID)->setColor( color );
+}
+
+void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBAcolor &color) {
+    for( uint UUID : UUIDs){
+        getPrimitivePointer(UUID)->setColor(color);
+    }
+}

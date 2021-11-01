@@ -377,7 +377,7 @@ public:
 
       auto timer_end = std::chrono::high_resolution_clock::now();;
       double duration = std::chrono::duration<double>(timer_end - timer_start).count();
-      if (!strcmp(message, "mute")) {
+      if (strcmp(message, "mute")!=0) {
           std::cout << "Elapsed time is " << duration << " seconds: " << message << std::endl;
       }
       return duration;
@@ -548,7 +548,15 @@ void wait( float seconds );
       \param[in] "field" String corresponding to field value to be read
   */
   helios::RGBAcolor XMLloadrgba( pugi::xml_node node, const char* field );
-  
+
+  //! Use Newton-Raphson method to find the zero of a function
+  /* \param[in] "function" Function to be evaluated. The function should take as its first argument the value at which the function should be evaluated, as second argument any function arguments.
+   * \param[in] "initial_guess" Initial guess for the zero of the function.
+   * \param[in] "err_tol" Maximum allowable relative error in solution.
+   * \param[in] "max_iterations" Maximum number of iterations to allow before exiting solver.
+   */
+  float fzero(float(*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100 );
+
 }
 
 #endif

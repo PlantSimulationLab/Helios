@@ -1,15 +1,13 @@
-#include "Context.h"
 #include "CanopyGenerator.h"
 
 using namespace helios;
 
-int main(void){
-
+int main(){
+  
+  //Run the self-test
   Context context;
 
   CanopyGenerator canopygenerator(&context);
-  
-  //Run the self-test
   return canopygenerator.selfTest();
 	
 }
