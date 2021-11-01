@@ -1,7 +1,7 @@
 /** \file "PhotosynthesisModel.h" Primary header file for photosynthesis plug-in.
     \author Brian Bailey
 
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2016-2021  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,14 +14,14 @@
 
 */
 
-#ifndef __PHOTOSYNTHESISMODEL__
-#define __PHOTOSYNTHESISMODEL__
+#ifndef PHOTOSYNTHESIS_MODEL
+#define PHOTOSYNTHESIS_MODEL
 
 #include "Context.h"
 
 struct EmpiricalModelCoefficients{
 
-  EmpiricalModelCoefficients(void){
+  EmpiricalModelCoefficients(){
     Tref = 298; //K
     Ci_ref = 290;  //umol CO2/mol air
     Asat = 18.18;  //umol/m^2-s
@@ -58,7 +58,7 @@ struct EmpiricalModelCoefficients{
 
 struct FarquharModelCoefficients{
 
-  FarquharModelCoefficients(void){
+  FarquharModelCoefficients(){
     
     //parameters (at TL = 25C)
     Vcmax = 78.5; //umol/m^2/s
@@ -115,35 +115,35 @@ public:
   //! Default constructor
   /** \param[in] "__context" Pointer to the helios context
    */
-  PhotosynthesisModel( helios::Context* __context );
+  explicit PhotosynthesisModel( helios::Context* a_context );
 
-  int selfTest( void );
+  int selfTest();
 
   //! Sets photosynthesis to be calculated according to the empirical model
-  void setModelType_Empirical( void );
+  void setModelType_Empirical();
 
   //! Sets photosynthesis to be calculated according to the Farquhar-von Caemmerer-Berry model
-  void setModelType_Farquhar( void );
+  void setModelType_Farquhar();
 
   //! Set the empricial model coefficients
   /** \note You must also call \ref setModelType_Empirical() in order to ensure that the emprical model is being used */
-  void setModelCoefficients( const EmpiricalModelCoefficients modelcoefficients );
+  void setModelCoefficients(const EmpiricalModelCoefficients &modelcoefficients );
 
   //! Set the Farquhar-von Caemmerer-Berry model coefficients
   /** \note You must also call \ref setModelType_Farquhar() in order to ensure that the emprical model is being used */
-  void setModelCoefficients( const FarquharModelCoefficients modelcoefficients );
+  void setModelCoefficients(const FarquharModelCoefficients &modelcoefficients );
 
   //! Run the model for all UUIDs in the Context
-  void run( void );
+  void run();
 
   //! Run the model for a select sub-set of UUIDs
-  void run( const std::vector<uint> lUUIDs );
+  void run(const std::vector<uint> &lUUIDs );
 
   //! Get the current model coefficients for the empirical model
-  EmpiricalModelCoefficients getEmpiricalModelCoefficients( void );
+  EmpiricalModelCoefficients getEmpiricalModelCoefficients();
 
   //! Get the current model coefficients for the Farquhar-von Caemmerer-Berry model
-  FarquharModelCoefficients getFarquharModelCoefficients( void );
+  FarquharModelCoefficients getFarquharModelCoefficients();
 
   //! Add optional output primitive data values to the Context
   /** \param[in] "label" Name of primitive data (e.g., Ci)
@@ -158,13 +158,14 @@ private:
   EmpiricalModelCoefficients empiricalmodelcoeffs;
   FarquharModelCoefficients farquharmodelcoeffs;
 
-  float evaluateEmpiricalModel( const float i_PAR, const float TL, const float CO2, const float gM );
+  float evaluateEmpiricalModel( float i_PAR, float TL, float CO2, float gM );
 
-  float evaluateFarquharModel( const float i_PAR, const float TL, const float CO2, const float gM, float& Ci, int& limitation_state );
+  float evaluateFarquharModel( float i_PAR, float TL, float CO2, float gM, float& Ci, int& limitation_state );
 
-  float evaluateCi_Empirical( const float Ci, const float CO2, const float fL, const float Rd, const float gM );
+  float evaluateCi_Empirical( float Ci, float CO2, float fL, float Rd, float gM ) const;
 
-  float evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float TL, const float gM, float& A, int& limitation_state );
+  //float evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float TL, const float gM, float& A, int& limitation_state ) const;
+  static float evaluateCi_Farquhar( float Ci, std::vector<float> &variables, const void *parameters );
 
   float i_PAR_default;
   float TL_default;

@@ -1508,7 +1508,7 @@ helios::RGBcolor helios::XMLloadrgb( pugi::xml_node node, const char* field ){
     
   helios::RGBAcolor value;
   if( strlen(field_str)==0 ){
-    value = make_RGBAcolor(99999,99999,99999,99999);
+    value = make_RGBAcolor(1,1,1,0);
   }else{
     value = string2RGBcolor( field_str ); //note: pugi loads xml data as a character.  need to separate it into 3 floats
   }
@@ -1523,11 +1523,56 @@ helios::RGBAcolor helios::XMLloadrgba( pugi::xml_node node, const char* field ){
     
   helios::RGBAcolor value;
   if( strlen(field_str)==0 ){
-    value = make_RGBAcolor(99999,99999,99999,99999);
+    value = make_RGBAcolor(1,1,1,0);
   }else{
     value = string2RGBcolor( field_str ); //note: pugi loads xml data as a character.  need to separate it into 3 floats
   }
   
   return value;
   
+}
+
+float helios::fzero(float(*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol, int max_iterations ){
+
+    float T;
+
+    float T_old_old = 1.1f*init_guess;
+
+    float T_old = init_guess;
+
+    float resid_old = function(T_old,variables,parameters);
+    float resid_old_old = function(T_old_old,variables,parameters);
+
+    float resid = 100;
+    float err = resid;
+    uint iter = 0;
+    while( err>err_tol && iter<max_iterations ){
+
+        if( resid_old==resid_old_old ){//this condition will cause NaN
+            err=0;
+            break;
+        }
+
+        T = fabs((T_old_old*resid_old-T_old*resid_old_old)/(resid_old-resid_old_old));
+
+        resid = function(T,variables,parameters);
+
+        resid_old_old = resid_old;
+        resid_old = resid;
+
+        err = fabs(T_old-T_old_old)/fabs(T_old_old);
+
+        T_old_old = T_old;
+        T_old = T;
+
+        iter++;
+
+    }
+
+    if( err>err_tol ){
+        printf("WARNING: fzero solution did not converge.\n");
+    }
+
+    return T;
+
 }

@@ -1,15 +1,13 @@
-#include "Context.h"
 #include "PhotosynthesisModel.h"
 
 using namespace helios;
 
-int main(int argc, char* argv[])
+int main()
 {
-  
-  Context context;
 
-  PhotosynthesisModel photosynthesis(&context);
+    Context context;
+    PhotosynthesisModel photosynthesis(&context);
 
-  return photosynthesis.selfTest();
+    return photosynthesis.selfTest();
 
 }

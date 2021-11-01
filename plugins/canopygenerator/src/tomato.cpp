@@ -132,7 +132,7 @@ void tomatoShoot( const TomatoParameters params, const helios::vec3 base_positio
     
 }
 
-void CanopyGenerator::tomato( const TomatoParameters params, const vec3 origin ){
+void CanopyGenerator::tomato(const TomatoParameters &params, const vec3 &origin ){
 
   //main stem
 

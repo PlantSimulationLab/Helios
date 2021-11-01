@@ -3,7 +3,7 @@
 using namespace helios;
 using namespace std;
 
-void CanopyGenerator::whitespruce( const WhiteSpruceCanopyParameters params, const vec3 origin ){
+void CanopyGenerator::whitespruce(const WhiteSpruceCanopyParameters &params, const vec3 &origin ){
 
   vector<uint> U;
   std::vector<uint> UUID_trunk_plant, UUID_branch_plant;

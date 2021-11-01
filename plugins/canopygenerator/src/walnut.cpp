@@ -326,7 +326,7 @@ void branchRecursion( const std::vector<vec3> position_parent, const std::vector
   
 
 
-void CanopyGenerator::walnut( const WalnutCanopyParameters params, const vec3 origin ){
+void CanopyGenerator::walnut(const WalnutCanopyParameters &params, const vec3 &origin ){
 
   std::vector<uint> leaf_prototype = leafPrototype( params, generator, context );
 

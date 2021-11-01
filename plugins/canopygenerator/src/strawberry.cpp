@@ -197,7 +197,7 @@ void strawberryShoot( const StrawberryParameters params, const helios::vec3 base
     
 }
 
-void CanopyGenerator::strawberry( const StrawberryParameters params, const vec3 origin ){
+void CanopyGenerator::strawberry(const StrawberryParameters &params, const vec3 &origin ){
 
   std::vector<uint> leaf_prototype = leafPrototype( params, context );
 

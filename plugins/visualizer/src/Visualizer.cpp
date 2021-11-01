@@ -2934,7 +2934,9 @@ void Visualizer::buildContextGeometry_private(){
         }
     }
 
-    assert( colorbar_min <= colorbar_max );
+    if( colorPrimitivesByData.size()!=0 ) {
+        assert(colorbar_min <= colorbar_max);
+    }
 
     //------- Simulation Geometry -------//
 
