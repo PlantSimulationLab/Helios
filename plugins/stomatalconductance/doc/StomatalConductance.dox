@@ -262,6 +262,8 @@
      modelcoeffs.k = 672;
      modelcoeffs.b = 6.7;
 
+     stomatalmodel.setModelCoefficients( modelcoeffs );
+
      \c//-- Normally you would initialize and run some other models (e.g., radiation, energybalance) here --//
 
      \c//Run the stomatal conductance model (for all primitives)

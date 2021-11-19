@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.21</span>
+   &#160;<span id="projectnumber">v1.2.22</span>
    </div>
   </td>
  </tr>
@@ -153,6 +153,12 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hre
 <tr class="memitem:gaa3b7bf55e065bf2ab8a9d975963ce7ca"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaa3b7bf55e065bf2ab8a9d975963ce7ca">helios::max</a> (const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; &amp;vect)</td></tr>
 <tr class="memdesc:gaa3b7bf55e065bf2ab8a9d975963ce7ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum value of a vector of <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>'s.  <a href="group__functions.html#gaa3b7bf55e065bf2ab8a9d975963ce7ca">More...</a><br /></td></tr>
 <tr class="separator:gaa3b7bf55e065bf2ab8a9d975963ce7ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga8a9b7ab24b0bb17b901c3ba41af760ec"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga8a9b7ab24b0bb17b901c3ba41af760ec">helios::stdev</a> (const std::vector&lt; float &gt; &amp;vect)</td></tr>
+<tr class="memdesc:ga8a9b7ab24b0bb17b901c3ba41af760ec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard deviation of a vector of floats.  <a href="group__functions.html#ga8a9b7ab24b0bb17b901c3ba41af760ec">More...</a><br /></td></tr>
+<tr class="separator:ga8a9b7ab24b0bb17b901c3ba41af760ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga461699c384fe606656ce1cc59618e727"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga461699c384fe606656ce1cc59618e727">helios::median</a> (std::vector&lt; float &gt; vect)</td></tr>
+<tr class="memdesc:ga461699c384fe606656ce1cc59618e727"><td class="mdescLeft">&#160;</td><td class="mdescRight">Median of a vector of floats.  <a href="group__functions.html#ga461699c384fe606656ce1cc59618e727">More...</a><br /></td></tr>
+<tr class="separator:ga461699c384fe606656ce1cc59618e727"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8b6573f58a513ebbc539ae7529daa748"><td class="memTemplParams" colspan="2">template&lt;typename anytype &gt; </td></tr>
 <tr class="memitem:ga8b6573f58a513ebbc539ae7529daa748"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__functions.html#ga8b6573f58a513ebbc539ae7529daa748">helios::resize_vector</a> (std::vector&lt; std::vector&lt; anytype &gt; &gt; &amp;vec, uint Nx, uint Ny)</td></tr>
 <tr class="memdesc:ga8b6573f58a513ebbc539ae7529daa748"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize 2D C++ vector.  <a href="group__functions.html#ga8b6573f58a513ebbc539ae7529daa748">More...</a><br /></td></tr>
@@ -376,7 +382,7 @@ template&lt;typename anytype &gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a35cf3fa6f900627c962472dd550e3d39">CalendarDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00873">873</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00919">919</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -659,6 +665,34 @@ template&lt;typename anytype &gt; </div>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00683">683</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga461699c384fe606656ce1cc59618e727"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga461699c384fe606656ce1cc59618e727">&#9670;&nbsp;</a></span>median()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float helios::median </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; float &gt;&#160;</td>
+          <td class="paramname"><em>vect</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Median of a vector of floats. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">vect</td><td>C++ vector of floats </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00813">813</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1017,6 +1051,34 @@ template&lt;typename anytype &gt; </div>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00068">68</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga8a9b7ab24b0bb17b901c3ba41af760ec"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga8a9b7ab24b0bb17b901c3ba41af760ec">&#9670;&nbsp;</a></span>stdev()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float helios::stdev </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;&#160;</td>
+          <td class="paramname"><em>vect</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Standard deviation of a vector of floats. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">vect</td><td>C++ vector of floats </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00791">791</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

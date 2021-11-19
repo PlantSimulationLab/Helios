@@ -9,8 +9,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 
 add_library(visualizer STATIC src/Visualizer.cpp)
 
-target_link_libraries( visualizer helios )
-
 #freetype
 include_directories("lib/freetype-2.7/include")
 add_subdirectory("lib/freetype-2.7")
@@ -57,6 +55,8 @@ if(X11_FOUND)
 	include_directories(${X11_INCLUDE_DIRS})
 	target_link_libraries( visualizer ${X11_LIBRARIES} )
 endif(X11_FOUND)
+
+target_link_libraries( visualizer helios )
 
 set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/glm" PARENT_SCOPE )
 

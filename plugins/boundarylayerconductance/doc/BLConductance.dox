@@ -139,7 +139,7 @@ Chen et al. (1986) mention that the equation for \f$\theta_L\leq 75^\circ\f$ is 
   boundarylayerconductance.setBoundaryLayerModel( "InclinedPlate" );
 
   \c// This changes the boundary-layer conductance model for the second primitive (while the first will keep the model set above)
-  boundarylayerconductance.setBoundaryLayerModel( "ground" );</code></pre></div>
+  boundarylayerconductance.setBoundaryLayerModel( UUID1, "ground" );</code></pre></div>
 
  \subsection BLCRun Running the Model
 

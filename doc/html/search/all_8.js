@@ -2,7 +2,7 @@ var searchData=
 [
   ['hastexture_385',['hasTexture',['../classhelios_1_1_primitive.html#a117f166ead4099f6fdca0c4b77bf2a6c',1,'helios::Primitive']]],
   ['hastransparencychannel_386',['hasTransparencyChannel',['../classhelios_1_1_texture.html#a44d0d36861494725a85bfbc100f398da',1,'helios::Texture']]],
-  ['helios_20documentation_20v1_2e2_2e21_387',['Helios Documentation v1.2.21',['../index.html',1,'']]],
+  ['helios_20documentation_20v1_2e2_2e22_387',['Helios Documentation v1.2.22',['../index.html',1,'']]],
   ['helios_5ftype_5fdouble_388',['HELIOS_TYPE_DOUBLE',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a520daf05a1b3086aabd6cbe6a712c1c3',1,'helios']]],
   ['helios_5ftype_5ffloat_389',['HELIOS_TYPE_FLOAT',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0',1,'helios']]],
   ['helios_5ftype_5fint_390',['HELIOS_TYPE_INT',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3a7a7039490fc92b5d76ca18b70563ed52',1,'helios']]],

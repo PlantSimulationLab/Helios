@@ -1,4 +1,4 @@
-# Helios standard CMakeLists.txt file version 1.5
+# Helios standard CMakeLists.txt file version 1.6
 
 #-------- USER INPUTS ---------#
 
@@ -17,6 +17,7 @@ set( PLUGINS "visualizer" )
 #-------- MAIN CODE (Dont Modify) ---------#
 if ( WIN32 )
    cmake_minimum_required(VERSION 3.15)
+   project(helios)
    SET(CMAKE_C_COMPILER_ID "MSVC")
    SET(CMAKE_CXX_COMPILER_ID "MSVC")
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
@@ -26,6 +27,7 @@ if ( WIN32 )
    set( CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
 else()
    cmake_minimum_required(VERSION 2.5)
+   project(helios)
    SET(CMAKE_C_COMPILER_ID "GNU")
    SET(CMAKE_CXX_COMPILER_ID "GNU")
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -34,7 +36,6 @@ else()
       SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
    endif()
 endif()
-project(helios)
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
    set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 endif()

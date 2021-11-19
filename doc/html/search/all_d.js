@@ -23,9 +23,10 @@ var searchData=
   ['max_464',['max',['../group__functions.html#ga828d302d1bb6e0aee3e2bf5efd670f86',1,'helios::max(const std::vector&lt; float &gt; &amp;vect)'],['../group__functions.html#ga812947a11191483677a73636e0b7ed06',1,'helios::max(const std::vector&lt; int &gt; &amp;vect)'],['../group__functions.html#gaa3b7bf55e065bf2ab8a9d975963ce7ca',1,'helios::max(const std::vector&lt; vec3 &gt; &amp;vect)']]],
   ['maxpulsefilter_465',['maxPulseFilter',['../class_li_d_a_rcloud.html#aa5c2bd82b67b3e84069090d75ed2973d',1,'LiDARcloud']]],
   ['mean_466',['mean',['../group__functions.html#gadfcde1fcf4db2a62012ed5ddf43c943d',1,'helios']]],
-  ['min_467',['min',['../group__functions.html#ga522f5d4232ccb2c899ff620eafc744b5',1,'helios::min(const std::vector&lt; float &gt; &amp;vect)'],['../group__functions.html#gabdeaa8440597bcdcf1f43cd3a8f2383f',1,'helios::min(const std::vector&lt; int &gt; &amp;vect)'],['../group__functions.html#ga656494728a1221b22464a693936d41f5',1,'helios::min(const std::vector&lt; vec3 &gt; &amp;vect)']]],
-  ['minpulsefilter_468',['minPulseFilter',['../class_li_d_a_rcloud.html#a530582b532eb13ca938d5e843d902327',1,'LiDARcloud']]],
-  ['minute_469',['minute',['../structhelios_1_1_time.html#a744b90da076192b90a3ee4ce2ff3743a',1,'helios::Time']]],
-  ['month_470',['month',['../structhelios_1_1_date.html#a5d75f8c8616d778e470a59e0b3e890a3',1,'helios::Date']]],
-  ['my_5ferror_5fmgr_471',['my_error_mgr',['../structmy__error__mgr.html',1,'']]]
+  ['median_467',['median',['../group__functions.html#ga461699c384fe606656ce1cc59618e727',1,'helios']]],
+  ['min_468',['min',['../group__functions.html#ga522f5d4232ccb2c899ff620eafc744b5',1,'helios::min(const std::vector&lt; float &gt; &amp;vect)'],['../group__functions.html#gabdeaa8440597bcdcf1f43cd3a8f2383f',1,'helios::min(const std::vector&lt; int &gt; &amp;vect)'],['../group__functions.html#ga656494728a1221b22464a693936d41f5',1,'helios::min(const std::vector&lt; vec3 &gt; &amp;vect)']]],
+  ['minpulsefilter_469',['minPulseFilter',['../class_li_d_a_rcloud.html#a530582b532eb13ca938d5e843d902327',1,'LiDARcloud']]],
+  ['minute_470',['minute',['../structhelios_1_1_time.html#a744b90da076192b90a3ee4ce2ff3743a',1,'helios::Time']]],
+  ['month_471',['month',['../structhelios_1_1_date.html#a5d75f8c8616d778e470a59e0b3e890a3',1,'helios::Date']]],
+  ['my_5ferror_5fmgr_472',['my_error_mgr',['../structmy__error__mgr.html',1,'']]]
 ];

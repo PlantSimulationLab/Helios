@@ -27,6 +27,8 @@ typedef unsigned int uint;
 #include <iostream>
 #include <string>
 #include <cassert>
+#include <stdexcept>
+#include <exception>
 
 //! Vector data structures
 /** \defgroup vectors Vectors */

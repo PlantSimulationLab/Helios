@@ -235,6 +235,18 @@ int max( const std::vector<int>& vect );
 */
 vec3 max( const std::vector<vec3>& vect );
 
+//! Standard deviation of a vector of floats
+/** \param[in] "vect" C++ vector of floats
+ \ingroup functions
+ */
+float stdev( const std::vector<float> &vect );
+
+//! Median of a vector of floats
+/** \param[in] "vect" C++ vector of floats
+ \ingroup functions
+ */
+float median( std::vector<float> vect );
+
 //! Resize 2D C++ vector
 /** \param[in] "vec" C++ vector
     \param[in] "Nx" Size of vector in x-direction, i.e., vec.at(0).size()

@@ -45,7 +45,11 @@ endif(NOT DEFINED OPTIX_PATH)
 
 set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${OPTIX_PATH}include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
 
-SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; --use_fast_math )
+#set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --use_fast_math" )
+
+if( CMAKE_BUILD_TYPE STREQUAL Debug )
+#	set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -g" )
+endif()
 
 set( CUDA_SOURCES "src/primitiveIntersection.cu;src/rayGeneration.cu;src/rayHit.cu;src/rayHit_MCRT.cu" )
 cuda_compile_ptx(  cuda_ptx_files ${CUDA_SOURCES} )

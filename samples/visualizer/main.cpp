@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
   sun_dir.elevation = 20*M_PI/180.f;
   sun_dir.azimuth = 205*M_PI/180.f;
 
-  Visualizer vis( 2000 );
+  Visualizer vis( 1000 );
 
   vis.setLightDirection( sphere2cart(sun_dir) );
   

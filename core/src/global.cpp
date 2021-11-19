@@ -788,6 +788,52 @@ vec3 helios::max( const std::vector<vec3>& vect ){
 
 }
 
+float helios::stdev( const std::vector<float> &vect ){
+
+    if( vect.empty() ){
+        throw(std::runtime_error("ERROR (stdev): Vector is empty."));
+    }
+
+    size_t size = vect.size();
+
+    float m = 0;
+    for(float i : vect){
+        m += i;
+    }
+    m /= float(size);
+
+    float stdev = 0;
+    for(float i : vect){
+        stdev += powf(i - m, 2.0);
+    }
+
+    return sqrtf(stdev/float(size));
+}
+
+float helios::median( std::vector<float> vect ){
+
+    if( vect.empty() ){
+        throw(std::runtime_error("ERROR (median): Vector is empty."));
+    }
+
+    size_t size = vect.size();
+
+    sort(vect.begin(), vect.end());
+
+    int mid = size/2;
+
+    int midm1 = mid -1;
+
+    float median ;
+    if( size % 2 == 0)
+    {
+        median = (vect.at(mid) + vect.at(mid-1))/2.f;
+    }else{
+        median = vect.at(mid);
+    }
+    return median;
+}
+
 template <typename anytype>
 void resize_vector( std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny ){
   vec.resize(Ny);
