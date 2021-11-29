@@ -113,10 +113,13 @@ std::vector<uint> leafPrototype( const int2 leaf_subdivisions, const char* leaf_
             z = a0*(y+dy)/(e0+y+dy) + a0*x/(e0+x);
             vec3 v3( x, y+dy, z );
 
-            vec2 uv0( x, 0.5+j*dy);
-            vec2 uv1( x+dx, 0.5+j*dy );
-            vec2 uv2( x+dx, 0.5+(j+1)*dy );
-            vec2 uv3( x, 0.5+(j+1)*dy );
+            float dj = float(j)*dy;
+            float dj_plus = float(j+1)*dy;
+
+            vec2 uv0( 1.f-x, 0.5f+dj);
+            vec2 uv1( 1.f-x-dx, 0.5f+dj );
+            vec2 uv2( 1.f-x-dx, 0.5f+dj_plus );
+            vec2 uv3( 1.f-x, 0.5f+dj_plus );
 
             UUIDs.push_back( context->addTriangle( v0, v1, v2, leaf_texture_file, uv0, uv1, uv2 ) );
             UUIDs.push_back( context->addTriangle( v0, v2, v3, leaf_texture_file, uv0, uv2, uv3 ) );
@@ -126,10 +129,10 @@ std::vector<uint> leafPrototype( const int2 leaf_subdivisions, const char* leaf_
             v2.y = -v2.y;
             v3.y = -v3.y;
 
-            uv0 = make_vec2( x, 0.5-j*dy);
-            uv1 = make_vec2( x+dx, 0.5-j*dy );
-            uv2 = make_vec2( x+dx, 0.5-(j+1)*dy );
-            uv3 = make_vec2( x, 0.5-(j+1)*dy );
+            uv0 = make_vec2( 1.f-x, 0.5f-dj);
+            uv1 = make_vec2( 1.f-x-dx, 0.5f-dj );
+            uv2 = make_vec2( 1.f-x-dx, 0.5f-dj_plus );
+            uv3 = make_vec2( 1.f-x, 0.5f-dj_plus );
 
             UUIDs.push_back( context->addTriangle( v0, v2, v1, leaf_texture_file, uv0, uv2, uv1 ) );
             UUIDs.push_back( context->addTriangle( v0, v3, v2, leaf_texture_file, uv0, uv3, uv2 ) );
@@ -434,12 +437,12 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     //------ trunks -------//
 
     std::vector<float> rad_main;
-    rad_main.push_back(0.75*params.trunk_radius);
+    rad_main.push_back(0.75f*params.trunk_radius);
     rad_main.push_back(0.8f*params.trunk_radius);
     rad_main.push_back(1.f*params.trunk_radius);
     rad_main.push_back(0.7f*params.trunk_radius);
     rad_main.push_back(0.95f*params.trunk_radius);
-    rad_main.push_back(0.1*params.trunk_radius);
+    rad_main.push_back(0.1f*params.trunk_radius);
     std::vector<vec3> pos_main;
     pos_main.push_back(make_vec3(0.,0.,0.0));
     pos_main.push_back(make_vec3(0,0,0.2f*params.trunk_height));
@@ -458,22 +461,22 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
     float diff = params.cordon_height-params.trunk_height;
 
-    float cost = cosf(params.canopy_rotation+0.5*M_PI);
-    float sint = sinf(params.canopy_rotation+0.5*M_PI);
+    float cost = cosf(params.canopy_rotation+0.5f*M_PI);
+    float sint = sinf(params.canopy_rotation+0.5f*M_PI);
 
     std::vector<float> rad_crown;
-    rad_crown.push_back(0.6*params.trunk_radius);
+    rad_crown.push_back(0.6f*params.trunk_radius);
     rad_crown.push_back(0.55f*params.trunk_radius);
     rad_crown.push_back(0.5f*params.trunk_radius);
     rad_crown.push_back(0.45f*params.trunk_radius);
     rad_crown.push_back(0.4f*params.trunk_radius);
 
     std::vector<vec3> pos_crownw;
-    pos_crownw.push_back(make_vec3(0.,0.,0.95*params.trunk_height));
-    pos_crownw.push_back(make_vec3(0.05f*0.5*params.cordon_spacing*cost,0.05f*0.5*params.cordon_spacing*sint,params.trunk_height));
-    pos_crownw.push_back(make_vec3(0.25f*0.5*params.cordon_spacing*cost,0.25f*0.5*params.cordon_spacing*sint,params.trunk_height+0.1f*diff));
-    pos_crownw.push_back(make_vec3(0.45f*0.5*params.cordon_spacing*cost,0.45f*0.5*params.cordon_spacing*sint,params.trunk_height+0.65f*diff));
-    pos_crownw.push_back(make_vec3(0.75f*0.5*params.cordon_spacing*cost,0.75f*0.5*params.cordon_spacing*sint,params.cordon_height));
+    pos_crownw.push_back(make_vec3(0.,0.,0.95f*params.trunk_height));
+    pos_crownw.push_back(make_vec3(0.05f*0.5f*params.cordon_spacing*cost,0.05f*0.5f*params.cordon_spacing*sint,params.trunk_height));
+    pos_crownw.push_back(make_vec3(0.25f*0.5f*params.cordon_spacing*cost,0.25f*0.5f*params.cordon_spacing*sint,params.trunk_height+0.1f*diff));
+    pos_crownw.push_back(make_vec3(0.45f*0.5f*params.cordon_spacing*cost,0.45f*0.5f*params.cordon_spacing*sint,params.trunk_height+0.65f*diff));
+    pos_crownw.push_back(make_vec3(0.75f*0.5f*params.cordon_spacing*cost,0.75f*0.5f*params.cordon_spacing*sint,params.cordon_height));
 
     for( uint i=0; i<rad_crown.size(); i++ ){
         pos_crownw.at(i) = pos_crownw.at(i) + origin;
@@ -483,11 +486,11 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     UUID_trunk_plant.insert( UUID_trunk_plant.end(), U.begin(), U.end() );
 
     std::vector<vec3> pos_crowne;
-    pos_crowne.push_back(make_vec3(0.,0.,0.95*params.trunk_height));
-    pos_crowne.push_back(make_vec3(-0.05f*0.5*params.cordon_spacing*cost,-0.05f*0.5*params.cordon_spacing*sint,params.trunk_height));
-    pos_crowne.push_back(make_vec3(-0.25f*0.5*params.cordon_spacing*cost,-0.25f*0.5*params.cordon_spacing*sint,params.trunk_height+0.1f*diff));
-    pos_crowne.push_back(make_vec3(-0.45f*0.5*params.cordon_spacing*cost,-0.45f*0.5*params.cordon_spacing*sint,params.trunk_height+0.65f*diff));
-    pos_crowne.push_back(make_vec3(-0.75f*0.5*params.cordon_spacing*cost,-0.75f*0.5*params.cordon_spacing*sint,params.cordon_height));
+    pos_crowne.push_back(make_vec3(0.,0.,0.95f*params.trunk_height));
+    pos_crowne.push_back(make_vec3(-0.05f*0.5f*params.cordon_spacing*cost,-0.05f*0.5f*params.cordon_spacing*sint,params.trunk_height));
+    pos_crowne.push_back(make_vec3(-0.25f*0.5f*params.cordon_spacing*cost,-0.25f*0.5f*params.cordon_spacing*sint,params.trunk_height+0.1f*diff));
+    pos_crowne.push_back(make_vec3(-0.45f*0.5f*params.cordon_spacing*cost,-0.45f*0.5f*params.cordon_spacing*sint,params.trunk_height+0.65f*diff));
+    pos_crowne.push_back(make_vec3(-0.75f*0.5f*params.cordon_spacing*cost,-0.75f*0.5f*params.cordon_spacing*sint,params.cordon_height));
 
     for( uint i=0; i<rad_crown.size(); i++ ){
         pos_crowne.at(i) = pos_crowne.at(i) + origin;
@@ -500,22 +503,22 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
     std::vector<float> rad_cord;
     rad_cord.push_back(params.cordon_radius);
-    rad_cord.push_back(0.95*params.cordon_radius);
+    rad_cord.push_back(0.95f*params.cordon_radius);
     rad_cord.push_back(0.9f*params.cordon_radius);
     rad_cord.push_back(0.9f*params.cordon_radius);
-    rad_cord.push_back(0.9*params.cordon_radius);
-    rad_cord.push_back(0.6*params.cordon_radius);
+    rad_cord.push_back(0.9f*params.cordon_radius);
+    rad_cord.push_back(0.6f*params.cordon_radius);
     rad_cord.push_back(0.2f*params.cordon_radius);
 
     //West Cordon
     std::vector<vec3> pos_cordnw;
-    pos_cordnw.push_back(make_vec3(0.7f*0.5*params.cordon_spacing*cost,0.7f*0.5*params.cordon_spacing*sint,0.99*params.cordon_height));
-    pos_cordnw.push_back(make_vec3(0.85f*0.5*params.cordon_spacing*cost+0.025*sint,0.85f*0.5*params.cordon_spacing*sint+0.025*cost,params.cordon_height));
-    pos_cordnw.push_back(make_vec3(0.95f*0.5*params.cordon_spacing*cost+0.075*sint,0.95f*0.5*params.cordon_spacing*sint+0.075*cost,params.cordon_height));
-    pos_cordnw.push_back(make_vec3(0.5*params.cordon_spacing*cost+0.12*sint,0.5*params.cordon_spacing*sint+0.12*cost,params.cordon_height));
-    pos_cordnw.push_back(make_vec3(0.5*params.cordon_spacing*cost+0.4*0.5*params.plant_spacing*sint,0.5*params.cordon_spacing*sint+0.4*0.5*params.plant_spacing*cost,0.94*params.cordon_height));
-    pos_cordnw.push_back(make_vec3(0.5*params.cordon_spacing*cost+0.8*0.5*params.plant_spacing*sint,0.5*params.cordon_spacing*sint+0.8*0.5*params.plant_spacing*cost,0.97*params.cordon_height));
-    pos_cordnw.push_back(make_vec3(0.5*params.cordon_spacing*cost+0.5*params.plant_spacing*sint,0.5*params.cordon_spacing*sint+0.5*params.plant_spacing*cost,params.cordon_height));
+    pos_cordnw.push_back(make_vec3(0.7f*0.5f*params.cordon_spacing*cost,0.7f*0.5f*params.cordon_spacing*sint,0.99f*params.cordon_height));
+    pos_cordnw.push_back(make_vec3(0.85f*0.5f*params.cordon_spacing*cost+0.025*sint,0.85f*0.5f*params.cordon_spacing*sint+0.025f*cost,params.cordon_height));
+    pos_cordnw.push_back(make_vec3(0.95f*0.5f*params.cordon_spacing*cost+0.075*sint,0.95f*0.5f*params.cordon_spacing*sint+0.075f*cost,params.cordon_height));
+    pos_cordnw.push_back(make_vec3(0.5f*params.cordon_spacing*cost+0.12f*sint,0.5f*params.cordon_spacing*sint+0.12f*cost,params.cordon_height));
+    pos_cordnw.push_back(make_vec3(0.5f*params.cordon_spacing*cost+0.4f*0.5f*params.plant_spacing*sint,0.5f*params.cordon_spacing*sint+0.4f*0.5f*params.plant_spacing*cost,0.94f*params.cordon_height));
+    pos_cordnw.push_back(make_vec3(0.5f*params.cordon_spacing*cost+0.8f*0.5f*params.plant_spacing*sint,0.5f*params.cordon_spacing*sint+0.8f*0.5f*params.plant_spacing*cost,0.97f*params.cordon_height));
+    pos_cordnw.push_back(make_vec3(0.5f*params.cordon_spacing*cost+0.5f*params.plant_spacing*sint,0.5f*params.cordon_spacing*sint+0.5f*params.plant_spacing*cost,params.cordon_height));
 
     std::vector<vec3> tmp;
     tmp.resize(pos_cordnw.size());
@@ -526,13 +529,13 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     UUID_branch_plant = context->addTube(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
 
     std::vector<vec3> pos_cordsw;
-    pos_cordsw.push_back(make_vec3(0.7f*0.5*params.cordon_spacing*cost,0.7f*0.5*params.cordon_spacing*sint,0.99*params.cordon_height));
-    pos_cordsw.push_back(make_vec3(0.85f*0.5*params.cordon_spacing*cost-0.025*sint,0.85f*0.5*params.cordon_spacing*sint-0.025*cost,params.cordon_height));
-    pos_cordsw.push_back(make_vec3(0.95f*0.5*params.cordon_spacing*cost-0.075*sint,0.95f*0.5*params.cordon_spacing*sint-0.075*cost,params.cordon_height));
-    pos_cordsw.push_back(make_vec3(0.5*params.cordon_spacing*cost-0.12*sint,0.5*params.cordon_spacing*sint-0.12*cost,params.cordon_height));
-    pos_cordsw.push_back(make_vec3(0.5*params.cordon_spacing*cost-0.4*0.5*params.plant_spacing*sint,0.5*params.cordon_spacing*sint-0.4*0.5*params.plant_spacing*cost,0.94*params.cordon_height));
-    pos_cordsw.push_back(make_vec3(0.5*params.cordon_spacing*cost-0.8*0.5*params.plant_spacing*sint,0.5*params.cordon_spacing*sint-0.8*0.5*params.plant_spacing*cost,0.97*params.cordon_height));
-    pos_cordsw.push_back(make_vec3(0.5*params.cordon_spacing*cost-0.5*params.plant_spacing*sint,0.5*params.cordon_spacing*sint-0.5*params.plant_spacing*cost,params.cordon_height));
+    pos_cordsw.push_back(make_vec3(0.7f*0.5f*params.cordon_spacing*cost,0.7f*0.5f*params.cordon_spacing*sint,0.99f*params.cordon_height));
+    pos_cordsw.push_back(make_vec3(0.85f*0.5f*params.cordon_spacing*cost-0.025*sint,0.85f*0.5f*params.cordon_spacing*sint-0.025f*cost,params.cordon_height));
+    pos_cordsw.push_back(make_vec3(0.95f*0.5f*params.cordon_spacing*cost-0.075*sint,0.95f*0.5f*params.cordon_spacing*sint-0.075f*cost,params.cordon_height));
+    pos_cordsw.push_back(make_vec3(0.5f*params.cordon_spacing*cost-0.12f*sint,0.5f*params.cordon_spacing*sint-0.12f*cost,params.cordon_height));
+    pos_cordsw.push_back(make_vec3(0.5f*params.cordon_spacing*cost-0.4f*0.5f*params.plant_spacing*sint,0.5f*params.cordon_spacing*sint-0.4f*0.5f*params.plant_spacing*cost,0.94f*params.cordon_height));
+    pos_cordsw.push_back(make_vec3(0.5f*params.cordon_spacing*cost-0.8f*0.5f*params.plant_spacing*sint,0.5f*params.cordon_spacing*sint-0.8f*0.5f*params.plant_spacing*cost,0.97f*params.cordon_height));
+    pos_cordsw.push_back(make_vec3(0.5f*params.cordon_spacing*cost-0.5f*params.plant_spacing*sint,0.5f*params.cordon_spacing*sint-0.5f*params.plant_spacing*cost,params.cordon_height));
 
     tmp.resize(pos_cordsw.size());
     for( uint i=0; i<pos_cordsw.size(); i++ ){
@@ -544,13 +547,13 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
     //East Cordon
     std::vector<vec3> pos_cordne;
-    pos_cordne.push_back(make_vec3(-0.7f*0.5*params.cordon_spacing*cost,-0.7f*0.5*params.cordon_spacing*sint,0.99*params.cordon_height));
-    pos_cordne.push_back(make_vec3(-0.85f*0.5*params.cordon_spacing*cost+0.025*sint,-0.85f*0.5*params.cordon_spacing*sint+0.025*cost,params.cordon_height));
-    pos_cordne.push_back(make_vec3(-0.95f*0.5*params.cordon_spacing*cost+0.075*sint,-0.95f*0.5*params.cordon_spacing*sint+0.075*cost,params.cordon_height));
-    pos_cordne.push_back(make_vec3(-0.5*params.cordon_spacing*cost+0.12*sint,-0.5*params.cordon_spacing*sint+0.12*cost,params.cordon_height));
-    pos_cordne.push_back(make_vec3(-0.5*params.cordon_spacing*cost+0.4*0.5*params.plant_spacing*sint,-0.5*params.cordon_spacing*sint+0.4*0.5*params.plant_spacing*cost,0.94*params.cordon_height));
-    pos_cordne.push_back(make_vec3(-0.5*params.cordon_spacing*cost+0.8*0.5*params.plant_spacing*sint,-0.5*params.cordon_spacing*sint+0.8*0.5*params.plant_spacing*cost,0.97*params.cordon_height));
-    pos_cordne.push_back(make_vec3(-0.5*params.cordon_spacing*cost+0.5*params.plant_spacing*sint,-0.5*params.cordon_spacing*sint+0.5*params.plant_spacing*cost,params.cordon_height));
+    pos_cordne.push_back(make_vec3(-0.7f*0.5f*params.cordon_spacing*cost,-0.7f*0.5f*params.cordon_spacing*sint,0.99f*params.cordon_height));
+    pos_cordne.push_back(make_vec3(-0.85f*0.5f*params.cordon_spacing*cost+0.025f*sint,-0.85f*0.5f*params.cordon_spacing*sint+0.025f*cost,params.cordon_height));
+    pos_cordne.push_back(make_vec3(-0.95f*0.5f*params.cordon_spacing*cost+0.075f*sint,-0.95f*0.5f*params.cordon_spacing*sint+0.075f*cost,params.cordon_height));
+    pos_cordne.push_back(make_vec3(-0.5f*params.cordon_spacing*cost+0.12f*sint,-0.5f*params.cordon_spacing*sint+0.12f*cost,params.cordon_height));
+    pos_cordne.push_back(make_vec3(-0.5f*params.cordon_spacing*cost+0.4f*0.5f*params.plant_spacing*sint,-0.5f*params.cordon_spacing*sint+0.4f*0.5f*params.plant_spacing*cost,0.94f*params.cordon_height));
+    pos_cordne.push_back(make_vec3(-0.5f*params.cordon_spacing*cost+0.8f*0.5f*params.plant_spacing*sint,-0.5f*params.cordon_spacing*sint+0.8f*0.5f*params.plant_spacing*cost,0.97f*params.cordon_height));
+    pos_cordne.push_back(make_vec3(-0.5f*params.cordon_spacing*cost+0.5f*params.plant_spacing*sint,-0.5f*params.cordon_spacing*sint+0.5f*params.plant_spacing*cost,params.cordon_height));
 
     tmp.resize(pos_cordne.size());
     for( uint i=0; i<pos_cordne.size(); i++ ){
@@ -561,13 +564,13 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     UUID_branch_plant.insert( UUID_branch_plant.end(), U.begin(), U.end() );
 
     std::vector<vec3> pos_cordse;
-    pos_cordse.push_back(make_vec3(-0.7f*0.5*params.cordon_spacing*cost,-0.7f*0.5*params.cordon_spacing*sint,0.99*params.cordon_height));
-    pos_cordse.push_back(make_vec3(-0.85f*0.5*params.cordon_spacing*cost-0.025*sint,-0.85f*0.5*params.cordon_spacing*sint-0.025*cost,params.cordon_height));
-    pos_cordse.push_back(make_vec3(-0.95f*0.5*params.cordon_spacing*cost-0.075*sint,-0.95f*0.5*params.cordon_spacing*sint-0.075*cost,params.cordon_height));
-    pos_cordse.push_back(make_vec3(-0.5*params.cordon_spacing*cost-0.12*sint,-0.5*params.cordon_spacing*sint-0.12*cost,params.cordon_height));
-    pos_cordse.push_back(make_vec3(-0.5*params.cordon_spacing*cost-0.4*0.5*params.plant_spacing*sint,-0.5*params.cordon_spacing*sint-0.4*0.5*params.plant_spacing*cost,0.94*params.cordon_height));
-    pos_cordse.push_back(make_vec3(0.5*params.cordon_spacing*cost-0.8*0.5*params.plant_spacing*sint,-0.5*params.cordon_spacing*sint-0.8*0.5*params.plant_spacing*cost,0.97*params.cordon_height));
-    pos_cordse.push_back(make_vec3(0.5*params.cordon_spacing*cost-0.5*params.plant_spacing*sint,-0.5*params.cordon_spacing*sint-0.5*params.plant_spacing*cost,params.cordon_height));
+    pos_cordse.push_back(make_vec3(-0.7f*0.5f*params.cordon_spacing*cost,-0.7f*0.5f*params.cordon_spacing*sint,0.99f*params.cordon_height));
+    pos_cordse.push_back(make_vec3(-0.85f*0.5f*params.cordon_spacing*cost-0.025f*sint,-0.85f*0.5f*params.cordon_spacing*sint-0.025f*cost,params.cordon_height));
+    pos_cordse.push_back(make_vec3(-0.95f*0.5f*params.cordon_spacing*cost-0.075f*sint,-0.95f*0.5f*params.cordon_spacing*sint-0.075f*cost,params.cordon_height));
+    pos_cordse.push_back(make_vec3(-0.5f*params.cordon_spacing*cost-0.12f*sint,-0.5*params.cordon_spacing*sint-0.12f*cost,params.cordon_height));
+    pos_cordse.push_back(make_vec3(-0.5f*params.cordon_spacing*cost-0.4f*0.5f*params.plant_spacing*sint,-0.5f*params.cordon_spacing*sint-0.4f*0.5f*params.plant_spacing*cost,0.94f*params.cordon_height));
+    pos_cordse.push_back(make_vec3(0.5f*params.cordon_spacing*cost-0.8f*0.5f*params.plant_spacing*sint,-0.5f*params.cordon_spacing*sint-0.8f*0.5f*params.plant_spacing*cost,0.97f*params.cordon_height));
+    pos_cordse.push_back(make_vec3(0.5f*params.cordon_spacing*cost-0.5f*params.plant_spacing*sint,-0.5f*params.cordon_spacing*sint-0.5f*params.plant_spacing*cost,params.cordon_height));
 
     tmp.resize(pos_cordse.size());
     for( uint i=0; i<pos_cordse.size(); i++ ){
@@ -579,7 +582,7 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
     //------- primary shoots ---------//
 
-    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
     float height = params.cordon_height + params.shoot_length;
 
@@ -621,7 +624,7 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
                 //cane nodes
                 bool inside=false;
-                float phirot=0.5*M_PI*(1+(-0.5+unif_distribution(generator))*1.0)+params.canopy_rotation;
+                float phirot=0.5f*M_PI*(1+(-0.5f+unif_distribution(generator))*1.0)+params.canopy_rotation;
                 if( unif_distribution(generator)<0.5 ){
                     phirot+=M_PI;
                     if( c==0 ){
@@ -635,7 +638,7 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
                 float theta0;
                 if( inside ){
-                    theta0 = 0.5*M_PI*unif_distribution(generator);//*(1.f+(-0.5+unif_distribution(generator))*0.6);
+                    theta0 = 0.5f*M_PI*unif_distribution(generator);//*(1.f+(-0.5+unif_distribution(generator))*0.6);
                 }else{
                     theta0 = params.shoot_angle_base*(1.f+(-0.5+unif_distribution(generator))*0.6);
                 }
@@ -805,7 +808,7 @@ void CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
 
     //------- primary shoots ---------//
 
-    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
     float height = params.cordon_height + params.shoot_length;
 
@@ -898,7 +901,7 @@ void CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
             float Rphi = -params.canopy_rotation - s*0.5*M_PI*(1.f+getVariation(0.4,generator));
             float Rtheta = 0.4*M_PI*(1.f+getVariation(0.1,generator));
 
-            vec3 position = origin+pos_leaf+leaf_offset;
+            vec3 position = origin+pos_leaf-leaf_offset;
 
             uint ID = context->copyObject(ID0);
             context->getTileObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
@@ -962,7 +965,7 @@ void CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
 
     //------- primary shoots ---------//
 
-    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
     for( uint c=0; c<2; c++ ){
 
@@ -1048,7 +1051,7 @@ void CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
                 float Rphi = -params.canopy_rotation - s*0.5*M_PI*(1.f+getVariation(0.4,generator));
                 float Rtheta = 0.4*M_PI*(1.f+getVariation(0.1,generator));
 
-                vec3 position = origin+pos_leaf+leaf_offset;
+                vec3 position = origin+pos_leaf-leaf_offset;
 
                 uint ID = context->copyObject(ID0);
                 context->getTileObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));

@@ -7153,18 +7153,18 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 
             subcenter = make_vec3(-0.5f*size.x+(float(i)+0.5f)*subsize.x,-0.5f*size.y+(float(j)+0.5f)*subsize.y,0.f);
 
-            uv.at(0) = make_vec2(1.f-float(i)*uv_sub.x,float(j)*uv_sub.y);
-            uv.at(1) = make_vec2(1.f-float(i+1)*uv_sub.x,float(j)*uv_sub.y);
-            uv.at(2) = make_vec2(1.f-float(i+1)*uv_sub.x,float(j+1)*uv_sub.y);
-            uv.at(3) = make_vec2(1.f-float(i)*uv_sub.x,float(j+1)*uv_sub.y);
+            uv.at(0) = make_vec2(float(i)*uv_sub.x,float(j)*uv_sub.y);
+            uv.at(1) = make_vec2(float(i+1)*uv_sub.x,float(j)*uv_sub.y);
+            uv.at(2) = make_vec2(float(i+1)*uv_sub.x,float(j+1)*uv_sub.y);
+            uv.at(3) = make_vec2(float(i)*uv_sub.x,float(j+1)*uv_sub.y);
 
             float solid_fraction;
             if( texture->hasTransparencyChannel() ){
                 int A = 0;
                 int At = 0;
 
-                int2 uv_min( floor(uv.at(1).x*(float(sz.x)-1.f)), floor(uv.at(1).y*(float(sz.y)-1.f)) );
-                int2 uv_max( floor(uv.at(3).x*(float(sz.x)-1.f)), floor(uv.at(3).y*(float(sz.y)-1.f)) );
+                int2 uv_min( floor(uv.at(0).x*(float(sz.x)-1.f)), floor(uv.at(0).y*(float(sz.y)-1.f)) );
+                int2 uv_max( floor(uv.at(2).x*(float(sz.x)-1.f)), floor(uv.at(2).y*(float(sz.y)-1.f)) );
 
                 assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
 
@@ -8321,18 +8321,18 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
             subcenter = make_vec3(-0.5f*size.x+(float(i)+0.5f)*subsize.x,-0.5f*size.y+(float(j)+0.5f)*subsize.y,0);
 
-            uv[0] = make_vec2(1.f-float(i)*uv_sub.x,float(j)*uv_sub.y);
-            uv[1] = make_vec2(1.f-float(i+1)*uv_sub.x,float(j)*uv_sub.y);
-            uv[2] = make_vec2(1.f-float(i+1)*uv_sub.x,float(j+1)*uv_sub.y);
-            uv[3] = make_vec2(1.f-float(i)*uv_sub.x,float(j+1)*uv_sub.y);
+            uv[0] = make_vec2(float(i)*uv_sub.x,float(j)*uv_sub.y);
+            uv[1] = make_vec2(float(i+1)*uv_sub.x,float(j)*uv_sub.y);
+            uv[2] = make_vec2(float(i+1)*uv_sub.x,float(j+1)*uv_sub.y);
+            uv[3] = make_vec2(float(i)*uv_sub.x,float(j+1)*uv_sub.y);
 
             float solid_fraction;
             if( texture->hasTransparencyChannel() ){
                 int A = 0;
                 int At = 0;
 
-                int2 uv_min( floor(uv[1].x*float(sz.x-1)), floor(uv[1].y*float(sz.y-1)) );
-                int2 uv_max( floor(uv[3].x*float(sz.x-1)), floor(uv[3].y*float(sz.y-1)) );
+                int2 uv_min( floor(uv[0].x*float(sz.x-1)), floor(uv[0].y*float(sz.y-1)) );
+                int2 uv_max( floor(uv[2].x*float(sz.x-1)), floor(uv[2].y*float(sz.y-1)) );
 
                 assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
 

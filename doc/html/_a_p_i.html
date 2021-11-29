@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.22</span>
+   &#160;<span id="projectnumber">v1.2.23</span>
    </div>
   </td>
  </tr>
@@ -641,15 +641,15 @@ Coloring Primitives by Texture Map</h2>
 <img src="Patch_textured.png" alt=""/>
 <div class="caption">
 Patch geometric primitive colored by texture map.</div></div>
-<p>By default, the image is stretched to fill the entire surface of the patch. Alternatively, custom mapping coordinates can be supplied.</p>
-<p>Patches:</p>
+<p>By default, the image is stretched to fill the entire surface of the patch. Alternatively, custom mapping coordinates can be supplied as illustrated below. Texture mapping coordinates are normalized to the dimensions of the image, such that the point (u,v)=(0,0) is in the lower left of the image, (u,v)=(1,1) is in the upper right of the image and so on.</p>
+<p>Patches: For patches, the center and size of the box used to crop the texture are specified in (u,v) coordinates. In this example, the portion of the image inside of the red box would be mapped onto the patch, while the rest would be discarded.</p>
 <div class="image">
-<img src="AspenLeaf_uv_patch.png" alt=""/>
+<img src="GrapeLeaf_uvpatch.jpeg" alt=""/>
 <div class="caption">
 .</div></div>
-<p>Triangles:</p>
+<p>Triangles: For triangles, the (u,v) coordinates of the three triangle vertices are specified. For triangles, custom (u,v) coordinates must be specified when texture mapping.</p>
 <div class="image">
-<img src="AspenLeaf_uv_triangle.png" alt=""/>
+<img src="GrapeLeaf_uvtriangle.jpeg" alt=""/>
 <div class="caption">
 .</div></div>
 <h2><a class="anchor" id="TextureMask"></a>

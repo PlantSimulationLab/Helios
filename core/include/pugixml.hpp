@@ -34,7 +34,7 @@
 #ifndef PUGIXML_NO_STL
 #	include <iterator>
 #	include <iosfwd>
-#	include <cstring>
+#	include <string>
 #endif
 
 // Macro for deprecated features

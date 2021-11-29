@@ -439,7 +439,7 @@ public:
       \param[in] "uvs" u-v coordinates for rectangle vertices
       \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
-  void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const char* texture_file, const std::vector<helios::vec2> uvs, const CoordinateSystem coordFlag );
+  void addRectangleByVertices(const std::vector<helios::vec3>& vertices, const char* texture_file, const std::vector<helios::vec2> &uvs, const CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices and mask by texture map transparency channel, but color by R-G-B value
   /** \param[in] "vertices" (x,y,z) coordinates of four vertices

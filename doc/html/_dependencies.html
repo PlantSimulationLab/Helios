@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.22</span>
+   &#160;<span id="projectnumber">v1.2.23</span>
    </div>
   </td>
  </tr>
@@ -68,44 +68,78 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#Libs">Installing dependent libraries</a></li>
-<li class="level1"><a href="#Depend">Helios dependencies</a><ul><li class="level2"><a href="#CMakeDep">CMake Package</a></li>
-<li class="level2"><a href="#CppDep">C++ Compiler</a></li>
+<ul><li class="level1"><a href="#IDE">Using and Interactive Development Environment (IDE)</a></li>
+<li class="level1"><a href="#SetupPC">Set-up on Windows PC</a><ul><li class="level2"><a href="#SetupPCMSVC">Install Microsoft Visual Studio C++ compiler tools</a></li>
+<li class="level2"><a href="#SetupPCCLion">Setting up basic build functionality</a></li>
+<li class="level2"><a href="#SetupPCCUDA">Setting up NVIDIA CUDA</a></li>
+</ul>
+</li>
+<li class="level1"><a href="#SetupLinux">Set-up on Linux</a><ul><li class="level2"><a href="#SetupLinuxCLion">Setting up basic build functionality</a></li>
+<li class="level2"><a href="#SetupLinuxCUDA">Setting up NVIDIA CUDA</a></li>
+<li class="level2"><a href="#SetupLinuxVis">Dependencies of the Visualizer Plug-in</a></li>
+</ul>
+</li>
+<li class="level1"><a href="#SetupMac">Set-up on Mac</a><ul><li class="level2"><a href="#SetupMacCLion">Setting up basic build functionality</a></li>
 </ul>
 </li>
 </ul>
 </div>
-<div class="textblock"><h1><a class="anchor" id="Libs"></a>
-Installing dependent libraries</h1>
-<p>Simple command-line tools are available to easily install dependent software libraries. The appropriate commands will be given in the documentaion to install any required libraries.</p>
-<p>For Mac OSX, <a href="https://brew.sh">homebrew</a> is a great package installer. Homebrew itself can be installed via a single command:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" </code></pre></div><p>For Unix systems, the apt-get command can be used, which comes pre-installed.</p>
-<h1><a class="anchor" id="Depend"></a>
-Helios dependencies</h1>
-<h2><a class="anchor" id="CMakeDep"></a>
-CMake Package</h2>
-<p>Components of Helios are compiled using the CMake package (<a href="www.cmake.org">www.cmake.org</a>). Version 2.4+ is required. CMake can be also installed via the Unix command line "$ sudo apt-get install cmake".</p>
-<h2><a class="anchor" id="CppDep"></a>
-C++ Compiler</h2>
-<p>You will also need a C/C++ compiler installed. Most systems come with a C compiler pre-installed, but some may need a C++ compiler. This can easily be accomplished via the command line "$ sudo apt-get install gcc g++".</p>
-<table class="doxtable">
-<tr>
-<th>Package </th><td><div class="image">
-<img src="apple-logo.jpg" alt=""/>
+<div class="textblock"><p>This page will guide you through installation and set-up of dependent software needed to build and run Helios-based programs.</p>
+<h1><a class="anchor" id="IDE"></a>
+Using and Interactive Development Environment (IDE)</h1>
+<p>Using an IDE for Helios programming can make development easier, particularly if you have minimal command-line experience. If using an IDE, we recommend <a href="https://www.jetbrains.com/clion/">CLion</a> by JetBrains. CLion is a rich-featured C++ IDE that integrates with the Helios documentation, GitHub, and allows you to do pretty much everything you need based on the graphical interface. CLion is also free to use for educational purposes. We especially recommend CLion if working on a PC, as it makes setup very easy. There is a separate documentation page showing how to set up Helios in CLion once you have it installed: <a class="el" href="_c_lion_i_d_e.html">Using the CLion IDE with Helios</a>.</p>
+<p>Other IDEs can also be used, such as Microsoft Visual Studio, but setup with Helios is not well documented or tested. On Linux and Mac, you can also use any text editor and the command line to run Helios, which is covered in the documentation.</p>
+<h1><a class="anchor" id="SetupPC"></a>
+Set-up on Windows PC</h1>
+<h2><a class="anchor" id="SetupPCMSVC"></a>
+Install Microsoft Visual Studio C++ compiler tools</h2>
+<p>Download and install Microsoft Visual Studio Community 2019. At the time of this writing, the latest version of Microsoft Visual Studio is 2022, but this version is not yet supported by CLion. In order to download older versions, follow this link <a href="https://visualstudio.microsoft.com/vs/older-downloads/">https://visualstudio.microsoft.com/vs/older-downloads/</a> and find the 2019 version. You will need to create a free "Dev Essentials" account in order to access this download.</p>
+<p>Once you have successfully downloaded the EXE install file, you can run it to perform the install. The important step is to be sure to install the optional packages for C++ Desktop Development. The figure below shows the check box to enable. When the installer finishes, there is no need to actually open Visual Studio, and you can move on to the next step.</p>
+<div class="image">
+<img src="MSVC_cpp_options.png" alt=""/>
 </div>
- </td><td><div class="image">
-<img src="unix-logo.png" alt=""/>
-</div>
- </td><td><div class="image">
-<img src="windows-logo.jpg" alt=""/>
-</div>
- </td></tr>
-<tr>
-<td>CMake </td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install cmake</code></div> </td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cmake</code></div> </td><td>See <a href="www.cmake.org">www.cmake.org</a> for the graphical version of CMake.  </td></tr>
-<tr>
-<td>GNU C/C++ Compiler </td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install gcc</code></div> </td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install gcc g++</code></div></td><td>Unknown  </td></tr>
-</table>
-<p>Note that individual plugins (see <a class="el" href="_plugins.html">Writing Plugins</a>) may have their own library dependencies. Consult their documentation for dependency information. </p>
+<h2><a class="anchor" id="SetupPCCLion"></a>
+Setting up basic build functionality</h2>
+<p>It is recommended for PC that you download and install the CLion IDE, found here: <a href="https://www.jetbrains.com/clion/download/#section=windows">https://www.jetbrains.com/clion/download/#section=windows</a>. Refer to the documentation page <a class="el" href="_c_lion_i_d_e.html">Using the CLion IDE with Helios</a> for information on how to get a free education license.</p>
+<p>When you open CLion, it will prompt you to open a project. You can have it automatically pull the Helios code from GitHub by clicking on the icon labeled "from VCS". By default, it should bring up GitHub as the default version control system. You may need to install Git, which can be done by simply clicking the button to download and install. Then, type in the URL for the Helios GitHub repository "https://www.github.com/PlantSimulationLab/Helios.git" as shown below. This should give you a fresh copy of Helios within CLion with the README file displayed.</p>
+<p>The next step is to set up the Microsoft Visual Studio C++ compiler in CLion. Go to File-&gt;Settings to open up the settings window. In the left pane, expand the item "Build, Execution, Deployment" and click on "Toolchains". With any luck, it should automatically add and detect Microsoft Visual Studio 2019. If it doesn't, click the "+" icon and click on "Visual Studio". It should then automatically detect everything.</p>
+<p>We then want to change the "Architecture" to "x64" to build in 64-bit mode. Note that this will likely not be an option in the drop-down menu, but you can just type it in.</p>
+<p>That should be all that is needed to build basic programs that do not require CUDA. You can test by building the context_selftest project in the "samples" directory. In the left Project pane, expand the "samples" folder, and the subdirectory called "context_selftest". Right-click on the CMakeLists.txt file in that directory and select "Load CMake Project". You should then be able to compile and run it by clicking the play icon in the upper right hand corner of the CLion window.</p>
+<h2><a class="anchor" id="SetupPCCUDA"></a>
+Setting up NVIDIA CUDA</h2>
+<p>The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. Currently, Visual Studio 2019 is compatible with CUDA 10.1 or higher, but you can also check the installation guide in the documentation for the specific CUDA version you want to install. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a>. Download the base CUDA Toolkit installer for your Windows OS. Installing from the "exe (network)" type will result in a smaller file being downloaded. Click through the installer and accept all the default options. By default, it should have installed to "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\", where v1X.X is the version that you installed. You can verify this installation location using the file browser.</p>
+<p>In order to use CUDA within CLion, you need to tell it where to find the CUDA toolkit. To do this, open up the settings in CLion, and go to "Build, Execution, Deployment" and then to CMake. Click the icon next to the "Environment" field to edit environmental variables. Find the variable named "Path", and double click to edit it. At the end of the list of directories, add the path to the CUDA bin folder, i.e., "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\bin;". Make sure there is a semicolon before and after the path, and that you replace the v1X.X with your actual CUDA version. It is important to hit the return key, which should cause the Path variable list to turn blue. When you hit OK, the Path variable should be listed under the Environment field.</p>
+<p>Once that is done, you can test it by building and running the self-test for a CUDA-based plug-in such as the energy balance model following similar steps above for the context_selftest. If you get a CMake error that asks you to "Specify CUDA_TOOLKIT_ROOT_DIR", it can't find your CUDA install, and most likely you set the "Path" variable incorrectly.</p>
+<h1><a class="anchor" id="SetupLinux"></a>
+Set-up on Linux</h1>
+<h2><a class="anchor" id="SetupLinuxCLion"></a>
+Setting up basic build functionality</h2>
+<p>Simple command-line tools are available to easily install dependent software libraries. The appropriate commands will be given in the documentaion to install any required libraries. For Linux systems, the apt-get command can be used, which comes pre-installed.</p>
+<p>CMake: Components of Helios are compiled using the CMake package (<a href="www.cmake.org">www.cmake.org</a>). Version 2.5+ is required on Linux. CMake can be easily installed via the Linux command line "sudo apt-get install cmake".</p>
+<p>C/C++ Compiler: You will also need a C/C++ compiler installed - we recommend using the GNU compilers. This can easily be installed via the command line "sudo apt-get install gcc g++".</p>
+<p>Once these have been installed at the system level, this is everything you will need to build basic Helios programs that do not use CUDA-based plug-ins or the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>. If you are using the CLion IDE, you'll need to set up CMake and the compilers. Open up the settings window, then go to "Build, Execution, Deployment", then "Toolchains". It should pick up CMake, Make, and compilers automatically. By default, it will likely look for the compilers in /usr/bin/cc and /usr/bin/c++, which may or may not be the GNU compilers depending on your system. You can overwrite the auto-detected compilers, such as to /usr/bin/gcc and /usr/bin/g++.</p>
+<h2><a class="anchor" id="SetupLinuxCUDA"></a>
+Setting up NVIDIA CUDA</h2>
+<p>The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. While CUDA can be installed on Linux via apt-get, this tends to often cause problems. It has proven more robust to simply download CUDA from the NVIDIA website and run the installer.</p>
+<p>Note that individual plugins may have their own library dependencies. Consult their documentation for dependency information. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a>. However, you'll want to be sure that the version of CUDA that you install works with your compiler version. This website has a table showing compatability for all versions: <a href="https://gist.github.com/ax3l/9489132">https://gist.github.com/ax3l/9489132</a>, check the g++ column. To figure out which version of g++ you have, you can type the command "g++ --version".</p>
+<p>The Linux installation guide for the latest version of CUDA can be found here: <a href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html">https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html</a>. If you are installing an older version, you can find its Linux installation guide within the documentation for that specific version. Note also that Table 1 gives gcc/g++ compiler compatability information.</p>
+<p>Probably the easiest installation approach is to use the runfile installer type. When you choose this option on the dowloads page, it will give you two commands to run the installer: 1) a 'wget' command to download the installer, 2) the command to run the downloaded installer. Complete instructions can be found in <a href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile">Section 7</a> of the latest Linux install guide. Note that one of the steps is disabling the Nouvou graphics drivers, which disables the "free" graphics driver that may be on your system and can conflict with the NVIDIA driver. This can be done in a few easy commands:</p>
+<ol type="1">
+<li>echo blacklist nouveau &gt; /etc/modprobe.d/blacklist-nvidia-nouveau.conf</li>
+<li>echo options nouveau modeset=0 &gt;&gt; /etc/modprobe.d/blacklist-nvidia-nouveau.conf</li>
+</ol>
+<p>A restart is then needed. It is usually a good idea to install the graphics driver that comes with the CUDA installer to avoid incompatability issues.</p>
+<h2><a class="anchor" id="SetupLinuxVis"></a>
+Dependencies of the Visualizer Plug-in</h2>
+<p>The last set of dependent packages you are likely to encounter are related to the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> plug-in. A single apt-get command is listed in the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> documentation to install these dependent packages.</p>
+<h1><a class="anchor" id="SetupMac"></a>
+Set-up on Mac</h1>
+<h2><a class="anchor" id="SetupMacCLion"></a>
+Setting up basic build functionality</h2>
+<p>Simple command-line tools are available to easily install dependent software libraries. The appropriate commands will be given in the documentaion to install any required libraries. For Mac OSX, <a href="https://brew.sh">homebrew</a> is a great package installer. Homebrew itself can be installed via a single command:</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" </code></pre></div><p>CMake: Components of Helios are compiled using the CMake package (<a href="www.cmake.org">www.cmake.org</a>). Version 2.5+ is required on Mac. CMake can be easily installed via the command line using homebrew "brew install cmake".</p>
+<p>C/C++ Compiler: You will also need a C/C++ compiler installed - we recommend using the GNU compilers or the AppleClang compilers. The GNU compilers can easily be installed via the command line "brew install gcc".</p>
+<p>Once these have been installed at the system level, this is everything you will need to build basic Helios programs that do not use CUDA-based plug-ins or the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>. If you are using the CLion IDE, you'll need to set up CMake and the compilers. Open up the settings window, then go to "Build, Execution, Deployment", then "Toolchains". It should pick up CMake, Make, and compilers automatically. If you have XCode installed on your system, CLion will probably pick up the AppleClang compilers instead of GNU. You can specify the path to the GNU compilers if desired (likely /usr/bin/gcc and /usr/bin/g++). You can use the command "which gcc" or "which g++" to figure out the path to the GNU compilers. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->

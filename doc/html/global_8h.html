@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.22</span>
+   &#160;<span id="projectnumber">v1.2.23</span>
    </div>
   </td>
  </tr>
@@ -71,7 +71,8 @@ $(function() {
 <a href="#nested-classes">Data Structures</a> &#124;
 <a href="#define-members">Macros</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
-<a href="#func-members">Functions</a>  </div>
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle">
 <div class="title">global.h File Reference</div>  </div>
 </div><!--header-->
@@ -423,6 +424,12 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a464923f1888b6ba4dc1a3b6881fa9e80">helios::fzero</a> (float(*function)(float value, std::vector&lt; float &gt; &amp;variables, const void *parameters), std::vector&lt; float &gt; &amp;variables, const void *parameters, float init_guess, float err_tol=0.0001f, int max_iterations=100)</td></tr>
 <tr class="memdesc:a464923f1888b6ba4dc1a3b6881fa9e80"><td class="mdescLeft">&#160;</td><td class="mdescRight">Use Newton-Raphson method to find the zero of a function. <br /></td></tr>
 <tr class="separator:a464923f1888b6ba4dc1a3b6881fa9e80"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:adcd5a98ec7c45292736ec8e19ce9de51"><td class="memItemLeft" align="right" valign="top"><a id="adcd5a98ec7c45292736ec8e19ce9de51"></a>
+<a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><b>helios::nullrotation</b> = make_SphericalCoord(0,0)</td></tr>
+<tr class="separator:adcd5a98ec7c45292736ec8e19ce9de51"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Header file for all global function/object definitions. </p><dl class="section author"><dt>Author</dt><dd>Brian Bailey</dd></dl>
@@ -468,7 +475,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
 <dl class="section return"><dt>Returns</dt><dd>int3, with int3::x = day, int3::y = month, int3::z = year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a7a889dd38f803c031f3e2ce6936b1cdc">JulianDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00870">870</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00872">872</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -498,7 +505,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
 <dl class="section return"><dt>Returns</dt><dd>SphericalCoord vector. </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a97e12cf9fda6bf8b65b3ccc17e788c12">sphere2cart()</a>, SphericalCoord </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00500">500</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00502">502</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -546,7 +553,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a35cf3fa6f900627c962472dd550e3d39">CalendarDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00913">913</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00915">915</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -574,7 +581,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00997">997</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00999">999</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -603,7 +610,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>2D mask, where false denotes no material </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01044">1044</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01046">1046</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -656,7 +663,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00121">121</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00123">123</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -686,7 +693,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
 <dl class="section return"><dt>Returns</dt><dd>vec3 vector of Cartesian coordinates </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a32a34b00e0a28f4b35e501b8b34cfccd">cart2sphere()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00516">516</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00518">518</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -725,7 +732,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01416">1416</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01418">1418</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -764,7 +771,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01431">1431</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01433">1433</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -803,7 +810,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01506">1506</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01508">1508</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -842,7 +849,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01521">1521</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01523">1523</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -881,7 +888,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01536">1536</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01538">1538</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -920,7 +927,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01551">1551</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01553">1553</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -959,7 +966,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01566">1566</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01568">1568</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -998,7 +1005,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01446">1446</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01448">1448</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1037,7 +1044,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01461">1461</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01463">1463</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1076,7 +1083,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01476">1476</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01478">1478</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1115,7 +1122,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glo
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01491">1491</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01493">1493</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

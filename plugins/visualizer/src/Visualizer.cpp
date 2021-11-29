@@ -1150,20 +1150,20 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     std::vector<vec2> uvs;
     uvs.resize(4);
     if( coordFlag==COORDINATES_CARTESIAN ){
-        uvs.at(0) = make_vec2(1,0);
-        uvs.at(1) = make_vec2(0,0);
-        uvs.at(2) = make_vec2(0,1);
-        uvs.at(3) = make_vec2(1,1);
+        uvs.at(0) = make_vec2(0,0);
+        uvs.at(1) = make_vec2(1,0);
+        uvs.at(2) = make_vec2(1,1);
+        uvs.at(3) = make_vec2(0,1);
     }else{
-        uvs.at(0) = make_vec2(0,1);
-        uvs.at(1) = make_vec2(1,1);
-        uvs.at(2) = make_vec2(1,0);
-        uvs.at(3) = make_vec2(0,0);
+        uvs.at(0) = make_vec2(0,0);
+        uvs.at(1) = make_vec2(1,0);
+        uvs.at(2) = make_vec2(1,1);
+        uvs.at(3) = make_vec2(0,1);
     }
     addRectangleByVertices(vertices,texture_file,uvs,coordFlag);
 }
 
-void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const char* texture_file, const std::vector<vec2> uvs, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const char* texture_file, const std::vector<vec2> &uvs, const CoordinateSystem coordFlag ){
 
     std::vector<vec3> v = vertices; //make a copy so we can modify
 
@@ -1218,42 +1218,48 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     position_data.at(1) = v.at(0).y;
     position_data.at(2) = v.at(0).z;
     uv_data.at(0) = uvs.at(0).x*(texture_size.x-1);
-    uv_data.at(1) = uvs.at(0).y*(texture_size.y-1);
+//    uv_data.at(1) = uvs.at(0).y*(texture_size.y-1);
+    uv_data.at(1) = (1.f-uvs.at(0).y)*(texture_size.y-1);
 
     //Lower right vertex
     position_data.at(3) = v.at(1).x;
     position_data.at(4) = v.at(1).y;
     position_data.at(5) = v.at(1).z;
     uv_data.at(2) = uvs.at(1).x*(texture_size.x-1);
-    uv_data.at(3) = uvs.at(1).y*(texture_size.y-1);
+//    uv_data.at(3) = uvs.at(1).y*(texture_size.y-1);
+    uv_data.at(3) = (1.f-uvs.at(1).y)*(texture_size.y-1);
 
     //Upper right vertex
     position_data.at(6) = v.at(2).x;
     position_data.at(7) = v.at(2).y;
     position_data.at(8) = v.at(2).z;
     uv_data.at(4) = uvs.at(2).x*(texture_size.x-1);
-    uv_data.at(5) = uvs.at(2).y*(texture_size.y-1);
+//    uv_data.at(5) = uvs.at(2).y*(texture_size.y-1);
+    uv_data.at(5) = (1.f-uvs.at(2).y)*(texture_size.y-1);
 
     //Lower left vertex
     position_data.at(9) = v.at(0).x;
     position_data.at(10) = v.at(0).y;
     position_data.at(11) = v.at(0).z;
     uv_data.at(6) = uvs.at(0).x*(texture_size.x-1);
-    uv_data.at(7) = uvs.at(0).y*(texture_size.y-1);
+//    uv_data.at(7) = uvs.at(0).y*(texture_size.y-1);
+    uv_data.at(7) = (1.f-uvs.at(0).y)*(texture_size.y-1);
 
     //Upper right vertex
     position_data.at(12) = v.at(2).x;
     position_data.at(13) = v.at(2).y;
     position_data.at(14) = v.at(2).z;
     uv_data.at(8) = uvs.at(2).x*(texture_size.x-1);
-    uv_data.at(9) = uvs.at(2).y*(texture_size.y-1);
+//    uv_data.at(9) = uvs.at(2).y*(texture_size.y-1);
+    uv_data.at(9) = (1.f-uvs.at(2).y)*(texture_size.y-1);
 
     //Upper left vertex
     position_data.at(15) = v.at(3).x;
     position_data.at(16) = v.at(3).y;
     position_data.at(17) = v.at(3).z;
     uv_data.at(10) = uvs.at(3).x*(texture_size.x-1);
-    uv_data.at(11) = uvs.at(3).y*(texture_size.y-1);
+//    uv_data.at(11) = uvs.at(3).y*(texture_size.y-1);
+    uv_data.at(11) = (1.f-uvs.at(3).y)*(texture_size.y-1);
 
     positionData["triangle"].insert( positionData["triangle"].end(), position_data.begin(), position_data.end() );
     colorData["triangle"].insert( colorData["triangle"].end(), color_data.begin(), color_data.end() );
@@ -1275,121 +1281,17 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     std::vector<vec2> uvs;
     uvs.resize(4);
     if( coordFlag==COORDINATES_CARTESIAN ){
-        uvs.at(0) = make_vec2(1,0);
-        uvs.at(1) = make_vec2(0,0);
-        uvs.at(2) = make_vec2(0,1);
-        uvs.at(3) = make_vec2(1,1);
+        uvs.at(0) = make_vec2(0,0);
+        uvs.at(1) = make_vec2(1,0);
+        uvs.at(2) = make_vec2(1,1);
+        uvs.at(3) = make_vec2(0,1);
     }else{
-        uvs.at(0) = make_vec2(0,1);
-        uvs.at(1) = make_vec2(1,1);
-        uvs.at(2) = make_vec2(1,0);
-        uvs.at(3) = make_vec2(0,0);
+        uvs.at(0) = make_vec2(0,0);
+        uvs.at(1) = make_vec2(1,0);
+        uvs.at(2) = make_vec2(1,1);
+        uvs.at(3) = make_vec2(0,1);
     }
     addRectangleByVertices( vertices, color, texture_file, uvs, coordFlag );
-
-    // std::vector<vec3> v = vertices; //make a copy so we can modify
-
-    // if( coordFlag == COORDINATES_WINDOW_NORMALIZED ){ //No vertex transformation (i.e., identity matrix)
-
-    //   //Check that coordinates are inside drawable area
-    //   for( uint i=0; i<vertices.size(); i++ ){
-    //     if( vertices.at(i).x<0.f || vertices.at(i).x>1.f ){
-    // 	std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
-    //     }else if( vertices.at(i).y<0.f || vertices.at(i).y>1.f ){
-    // 	std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
-    //     }else if( vertices.at(i).z<-1.f || vertices.at(i).z>1.f ){
-    // 	std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
-    //     }
-    //   }
-
-    //   //NOTE for vertex positions: OpenGL window coordinates range from -1 to 1, but our rectangle coordinates are from 0 to 1 ---- need to convert
-    //   for( uint i=0; i<vertices.size(); i++ ){
-    //     v.at(i).x = 2.f*v.at(i).x - 1.f;
-    //     v.at(i).y = 2.f*v.at(i).y - 1.f;
-    //   }
-
-    // }
-
-    // uint textureID;
-    // int2 texture_size;
-    // //primaryShader.setTextureMask(texture_file,textureID,texture_size);
-    // primaryShader.setTextureMap(texture_file,textureID,texture_size);
-
-    // std::vector<float> position_data, color_data, normal_data, uv_data;
-    // position_data.resize(18,0);
-    // color_data.resize(24,0);
-    // normal_data.resize(18,0);
-    // uv_data.resize(12,0);
-
-    // vec3 normal = cross( v.at(1)-v.at(0), v.at(2)-v.at(1) );
-    // normal.normalize();
-
-    // for( int i=0; i<6; i++ ){
-    //   color_data.at(i*4) = color.r;
-    //   color_data.at(i*4+1) = color.g;
-    //   color_data.at(i*4+2) = color.b;
-    //   color_data.at(i*4+3) = color.a;
-
-    //   normal_data.at(i*3) = normal.x;
-    //   normal_data.at(i*3+1) = normal.y;
-    //   normal_data.at(i*3+2) = normal.z;
-    // }
-
-    // //Lower left vertex
-    // position_data.at(0) = v.at(0).x;
-    // position_data.at(1) = v.at(0).y;
-    // position_data.at(2) = v.at(0).z;
-    // uv_data.at(0) = 0;
-    // uv_data.at(1) = texture_size.y;
-
-    // //Lower right vertex
-    // position_data.at(3) = v.at(1).x;
-    // position_data.at(4) = v.at(1).y;
-    // position_data.at(5) = v.at(1).z;
-    // uv_data.at(2) = texture_size.x;
-    // uv_data.at(3) = texture_size.y;
-
-    // //Upper right vertex
-    // position_data.at(6) = v.at(2).x;
-    // position_data.at(7) = v.at(2).y;
-    // position_data.at(8) = v.at(2).z;
-    // uv_data.at(4) = texture_size.x;
-    // uv_data.at(5) = 0;
-
-    // //Lower left vertex
-    // position_data.at(9) = v.at(0).x;
-    // position_data.at(10) = v.at(0).y;
-    // position_data.at(11) = v.at(0).z;
-    // uv_data.at(6) = 0;
-    // uv_data.at(7) = texture_size.y;
-
-    // //Upper right vertex
-    // position_data.at(12) = v.at(2).x;
-    // position_data.at(13) = v.at(2).y;
-    // position_data.at(14) = v.at(2).z;
-    // uv_data.at(8) = texture_size.x;
-    // uv_data.at(9) = 0;
-
-    // //Upper left vertex
-    // position_data.at(15) = v.at(3).x;
-    // position_data.at(16) = v.at(3).y;
-    // position_data.at(17) = v.at(3).z;
-    // uv_data.at(10) = 0;
-    // uv_data.at(11) = 0;
-
-    // positionData["triangle"].insert( positionData["triangle"].end(), position_data.begin(), position_data.end() );
-    // colorData["triangle"].insert( colorData["triangle"].end(), color_data.begin(), color_data.end() );
-    // normalData["triangle"].insert( normalData["triangle"].end(), normal_data.begin(), normal_data.end() );
-    // uvData["triangle"].insert( uvData["triangle"].end(), uv_data.begin(), uv_data.end() );
-
-    // std::vector<int> texture_data, coord_data;
-    // texture_data.resize(6,2);
-    // textureFlagData["triangle"].insert( textureFlagData["triangle"].end(), texture_data.begin(), texture_data.end() );
-    // texture_data.resize(0);
-    // texture_data.resize(6,textureID);
-    // textureIDData["triangle"].insert( textureIDData["triangle"].end(), texture_data.begin(), texture_data.end() );
-    // coord_data.resize(6,coordFlag);
-    // coordinateFlagData["triangle"].insert( coordinateFlagData["triangle"].end(), coord_data.begin(), coord_data.end() );
 
 }
 
@@ -1452,43 +1354,49 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     position_data.at(0) = v.at(0).x;
     position_data.at(1) = v.at(0).y;
     position_data.at(2) = v.at(0).z;
-    uv_data.at(0) = uvs.at(0).x*(texture_size.x-1);
-    uv_data.at(1) = uvs.at(0).y*(texture_size.y-1);
+    uv_data.at(0) = uvs.at(0).x*float(texture_size.x-1);
+//    uv_data.at(1) = uvs.at(0).y*(texture_size.y-1);
+    uv_data.at(1) = (1.f-uvs.at(0).y)*float(texture_size.y-1);
 
     //Lower right vertex
     position_data.at(3) = v.at(1).x;
     position_data.at(4) = v.at(1).y;
     position_data.at(5) = v.at(1).z;
-    uv_data.at(2) = uvs.at(1).x*(texture_size.x-1);
-    uv_data.at(3) = uvs.at(1).y*(texture_size.y-1);
+    uv_data.at(2) = uvs.at(1).x*float(texture_size.x-1);
+//    uv_data.at(3) = uvs.at(1).y*(texture_size.y-1);
+    uv_data.at(3) = (1.f-uvs.at(1).y)*float(texture_size.y-1);
 
     //Upper right vertex
     position_data.at(6) = v.at(2).x;
     position_data.at(7) = v.at(2).y;
     position_data.at(8) = v.at(2).z;
-    uv_data.at(4) = uvs.at(2).x*(texture_size.x-1);
-    uv_data.at(5) = uvs.at(2).y*(texture_size.y-1);
+    uv_data.at(4) = uvs.at(2).x*float(texture_size.x-1);
+//    uv_data.at(5) = uvs.at(2).y*(texture_size.y-1);
+    uv_data.at(5) = (1.f-uvs.at(2).y)*float(texture_size.y-1);
 
     //Lower left vertex
     position_data.at(9) = v.at(0).x;
     position_data.at(10) = v.at(0).y;
     position_data.at(11) = v.at(0).z;
-    uv_data.at(6) = uvs.at(0).x*(texture_size.x-1);
-    uv_data.at(7) = uvs.at(0).y*(texture_size.y-1);
+    uv_data.at(6) = uvs.at(0).x*float(texture_size.x-1);
+//    uv_data.at(7) = uvs.at(0).y*(texture_size.y-1);
+    uv_data.at(7) = (1.f-uvs.at(0).y)*float(texture_size.y-1);
 
     //Upper right vertex
     position_data.at(12) = v.at(2).x;
     position_data.at(13) = v.at(2).y;
     position_data.at(14) = v.at(2).z;
-    uv_data.at(8) = uvs.at(2).x*(texture_size.x-1);
-    uv_data.at(9) = uvs.at(2).y*(texture_size.y-1);
+    uv_data.at(8) = uvs.at(2).x*float(texture_size.x-1);
+//    uv_data.at(9) = uvs.at(2).y*(texture_size.y-1);
+    uv_data.at(9) = (1.f-uvs.at(2).y)*float(texture_size.y-1);
 
     //Upper left vertex
     position_data.at(15) = v.at(3).x;
     position_data.at(16) = v.at(3).y;
     position_data.at(17) = v.at(3).z;
-    uv_data.at(10) = uvs.at(3).x*(texture_size.x-1);
-    uv_data.at(11) = uvs.at(3).y*(texture_size.y-1);
+    uv_data.at(10) = uvs.at(3).x*float(texture_size.x-1);
+//    uv_data.at(11) = uvs.at(3).y*(texture_size.y-1);
+    uv_data.at(11) = (1.f-uvs.at(3).y)*float(texture_size.y-1);
 
     positionData["triangle"].insert( positionData["triangle"].end(), position_data.begin(), position_data.end() );
     colorData["triangle"].insert( colorData["triangle"].end(), color_data.begin(), color_data.end() );
@@ -1754,11 +1662,6 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     primaryShader.setTextureMap(texture_file,textureID,texture_size);
 
     std::vector<GLfloat> position_data(9), color_data(12), normal_data(9), uv_data(6);
-//  std::vector<GLfloat> position_data, color_data, normal_data, uv_data;
-//  position_data.resize(9);
-//  color_data.resize(12);
-//  normal_data.resize(9);
-//  uv_data.resize(6);
 
     vec3 normal = cross( vertex1-vertex0, vertex2-vertex0 );
     normal.normalize();
@@ -1767,8 +1670,10 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     position_data[0] = v.at(0).x;
     position_data[1] = v.at(0).y;
     position_data[2] = v.at(0).z;
-    uv_data[0] = (1.f-uv0.x)*texture_size.x;
-    uv_data[1] = uv0.y*texture_size.y;
+//    uv_data[0] = (1.f-uv0.x)*texture_size.x;
+//    uv_data[1] = uv0.y*texture_size.y;
+    uv_data[0] = uv0.x*texture_size.x;
+    uv_data[1] = (1.f-uv0.y)*texture_size.y;
     normal_data[0] = normal.x;
     normal_data[1] = normal.y;
     normal_data[2] = normal.z;
@@ -1777,8 +1682,10 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     position_data[3] = v.at(1).x;
     position_data[4] = v.at(1).y;
     position_data[5] = v.at(1).z;
-    uv_data[2] = (1.f-uv1.x)*texture_size.x;
-    uv_data[3] = uv1.y*texture_size.y;
+//    uv_data[2] = (1.f-uv1.x)*texture_size.x;
+//    uv_data[3] = uv1.y*texture_size.y;
+    uv_data[2] = uv1.x*texture_size.x;
+    uv_data[3] = (1.f-uv1.y)*texture_size.y;
     normal_data[3] = normal.x;
     normal_data[4] = normal.y;
     normal_data[5] = normal.z;
@@ -1787,8 +1694,10 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     position_data[6] = v.at(2).x;
     position_data[7] = v.at(2).y;
     position_data[8] = v.at(2).z;
-    uv_data[4] = (1.f-uv2.x)*texture_size.x;
-    uv_data[5] = uv2.y*texture_size.y;
+//    uv_data[4] = (1.f-uv2.x)*texture_size.x;
+//    uv_data[5] = uv2.y*texture_size.y;
+    uv_data[4] = uv2.x*texture_size.x;
+    uv_data[5] = (1.f-uv2.y)*texture_size.y;
     normal_data[6] = normal.x;
     normal_data[7] = normal.y;
     normal_data[8] = normal.z;
@@ -1846,11 +1755,6 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     primaryShader.setTextureMap(texture_file,textureID,texture_size);
 
     std::vector<GLfloat> position_data(9), color_data(12), normal_data(9), uv_data(6);
-//  std::vector<GLfloat> position_data, color_data, normal_data, uv_data;
-//  position_data.resize(9);
-//  color_data.resize(12);
-//  normal_data.resize(9);
-//  uv_data.resize(6);
 
     vec3 normal = cross( vertex1-vertex0, vertex2-vertex0 );
     normal.normalize();
@@ -1863,8 +1767,8 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     color_data[1] = color.g;
     color_data[2] = color.b;
     color_data[3] = color.a;
-    uv_data[0] = (1.f-uv0.x)*texture_size.x;
-    uv_data[1] = uv0.y*texture_size.y;
+    uv_data[0] = uv0.x*texture_size.x;
+    uv_data[1] = (1.f-uv0.y)*texture_size.y;
     normal_data[0] = normal.x;
     normal_data[1] = normal.y;
     normal_data[2] = normal.z;
@@ -1877,8 +1781,8 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     color_data[5] = color.g;
     color_data[6] = color.b;
     color_data[7] = color.a;
-    uv_data[2] = (1.f-uv1.x)*texture_size.x;
-    uv_data[3] = uv1.y*texture_size.y;
+    uv_data[2] = uv1.x*texture_size.x;
+    uv_data[3] = (1.f-uv1.y)*texture_size.y;
     normal_data[3] = normal.x;
     normal_data[4] = normal.y;
     normal_data[5] = normal.z;
@@ -1891,8 +1795,8 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
     color_data[9] = color.g;
     color_data[10] = color.b;
     color_data[11] = color.a;
-    uv_data[4] = (1.f-uv2.x)*texture_size.x;
-    uv_data[5] = uv2.y*texture_size.y;
+    uv_data[4] = uv2.x*texture_size.x;
+    uv_data[5] = (1.f-uv2.y)*texture_size.y;
     normal_data[6] = normal.x;
     normal_data[7] = normal.y;
     normal_data[8] = normal.z;

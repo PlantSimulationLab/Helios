@@ -95,10 +95,10 @@ std::vector<uint> leafPrototype( const StrawberryParameters params, Context* con
       z = a0*mag/(e0+mag);
       vec3 v3( x, y+dy, z );
 
-      vec2 uv0( x, 0.5+j*dy);
-      vec2 uv1( x+dx, 0.5+j*dy );
-      vec2 uv2( x+dx, 0.5+(j+1)*dy );
-      vec2 uv3( x, 0.5+(j+1)*dy );
+        vec2 uv0( 1.f-x, 0.5+j*dy);
+        vec2 uv1( 1.f-x-dx, 0.5+j*dy );
+        vec2 uv2( 1.f-x-dx, 0.5+(j+1)*dy );
+        vec2 uv3( 1.f-x, 0.5+(j+1)*dy );
 
       UUIDs.push_back( context->addTriangle( v0, v1, v2, params.leaf_texture_file.c_str(), uv0, uv1, uv2 ) );
       UUIDs.push_back( context->addTriangle( v0, v2, v3, params.leaf_texture_file.c_str(), uv0, uv2, uv3 ) );
@@ -108,12 +108,12 @@ std::vector<uint> leafPrototype( const StrawberryParameters params, Context* con
       v2.y = -v2.y;
       v3.y = -v3.y;
 
-      uv0 = make_vec2( x, 0.5-j*dy);
-      uv1 = make_vec2( x+dx, 0.5-j*dy );
-      uv2 = make_vec2( x+dx, 0.5-(j+1)*dy );
-      uv3 = make_vec2( x, 0.5-(j+1)*dy );
+        uv0 = make_vec2( 1.f-x, 0.5-j*dy);
+        uv1 = make_vec2( 1.f-x-dx, 0.5-j*dy );
+        uv2 = make_vec2( 1.f-x-dx, 0.5-(j+1)*dy );
+        uv3 = make_vec2( 1.f-x, 0.5-(j+1)*dy );
 
-      UUIDs.push_back( context->addTriangle( v0, v2, v1, params.leaf_texture_file.c_str(), uv0      , uv2, uv1 ) );
+      UUIDs.push_back( context->addTriangle( v0, v2, v1, params.leaf_texture_file.c_str(), uv0, uv2, uv1 ) );
       UUIDs.push_back( context->addTriangle( v0, v3, v2, params.leaf_texture_file.c_str(), uv0, uv3, uv2 ) );
       
     }

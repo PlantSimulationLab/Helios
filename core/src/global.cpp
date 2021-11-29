@@ -44,6 +44,8 @@ RGBcolor RGB::forestgreen = make_RGBcolor( 0.133f, 0.545f, 0.133f );
 RGBcolor RGB::yellowgreen = make_RGBcolor( 0.6, 0.8, 0.2 );
 RGBcolor RGB::goldenrod = make_RGBcolor( 0.855, 0.647, 0.126 );
 
+SphericalCoord helios::nullrotation = make_SphericalCoord(0,0);
+
 RGBcolor helios::blend( RGBcolor color0, RGBcolor color1, float weight ){
   RGBcolor color;
   color.r = weight*color1.r+(1.f-weight)*color0.r;

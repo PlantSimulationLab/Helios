@@ -109,7 +109,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
   #endif
   }
 
-  uint ID_leaf_template = context->addTileObject( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,0), leaf_segs, parameters.LeafFile.c_str() );
+  uint ID_leaf_template = context->addTileObject( make_vec3(0,0,0), make_vec2(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), make_SphericalCoord(0,M_PI), leaf_segs, parameters.LeafFile.c_str() );
      
   uint base_nodes = 20;
 

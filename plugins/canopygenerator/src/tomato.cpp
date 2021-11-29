@@ -41,7 +41,7 @@ std::vector<uint> lateralLeaves( const float bfrac, const TomatoParameters param
 
   std::vector<uint> U1, U2;
   
-  U1 = context->addTile( make_vec3(0,0,0), make_vec2(leaf_scale,leaf_scale*0.5), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+  U1 = context->addTile( make_vec3(0,0,0), make_vec2(leaf_scale,leaf_scale*0.5), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
   context->rotatePrimitive( U1, elevation, "x" );
   context->rotatePrimitive( U1, downangle, "y" );
@@ -49,7 +49,7 @@ std::vector<uint> lateralLeaves( const float bfrac, const TomatoParameters param
 
   context->translatePrimitive( U1, r0 + 0.6*leaf_scale*make_vec3( cosf(-azimuth), sinf(-azimuth), -0.5*sinf(downangle)) );
 
-  U2 = context->addTile( make_vec3(0,0,0), make_vec2(leaf_scale,leaf_scale*0.5), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+  U2 = context->addTile( make_vec3(0,0,0), make_vec2(leaf_scale,leaf_scale*0.5), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
   context->rotatePrimitive( U2, elevation, "x" );
   context->rotatePrimitive( U2, downangle, "y" );
@@ -103,12 +103,12 @@ void tomatoShoot( const TomatoParameters params, const helios::vec3 base_positio
   context->addTube( params.shoot_subdivisions, nodes, radius, color );
 
   //tip leaf
-  std::vector<uint> U = context->addTile( make_vec3(0,0,0), make_vec2(params.leaf_length,params.leaf_length*0.5), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+  std::vector<uint> U = context->addTile( make_vec3(0,0,0), make_vec2(params.leaf_length,params.leaf_length*0.5), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
   context->rotatePrimitive( U, -theta, "y" );
   context->rotatePrimitive( U, -base_angle.azimuth+0.5*M_PI, "z" );
 
-  context->translatePrimitive( U, nodes.back()+sphere2cart(make_SphericalCoord(0.45*params.leaf_length,theta,-base_angle.azimuth)) );
+  context->translatePrimitive( U, nodes.back()+sphere2cart(make_SphericalCoord(0.45*params.leaf_length,theta,base_angle.azimuth)) );
 
   //primary lateral leaves
 

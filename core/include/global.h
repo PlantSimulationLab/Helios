@@ -569,6 +569,8 @@ void wait( float seconds );
    */
   float fzero(float(*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100 );
 
+  extern SphericalCoord nullrotation;
+
 }
 
 #endif
