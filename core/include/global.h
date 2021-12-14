@@ -134,8 +134,8 @@ void vecmult( const float M[16], const float v[3], float (&result)[3] );
 */
  float rad2deg( const float& rad );
 
-//! Four quadrant arc tangent between 0 and \f$2\pi\f$
-/** \note atan2_2pi(0,1) = 0, atan2_2pi(1,0) = \f$0.5\pi\f$, etc.
+//! Four quadrant arc tangent between 0 and 2*pi
+/** \note atan2_2pi(0,1) = 0, atan2_2pi(1,0) = pi/2, etc.
     \ingroup functions */
  float atan2_2pi( const float& y, const float& x);
 
@@ -276,6 +276,22 @@ void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, int N
 */
 template <typename anytype>
 void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, int Nx, int Ny, int Nz, int Nw );
+
+//! Blend two RGB colors together
+/*
+ * \param[in] "color0" First color to blend
+ * \param[in] "color1" Second color to blend
+ * \param[in] "weight" Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.
+ */
+RGBcolor blend( RGBcolor color0, RGBcolor color1, float weight );
+
+//! Blend two RGBA colors together
+/*
+ * \param[in] "color0" First color to blend
+ * \param[in] "color1" Second color to blend
+ * \param[in] "weight" Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.
+ */
+RGBAcolor blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight );
 
 //! Function to rotate a 3D vector given spherical angles elevation and azimuth
 /** \param[in] "position" 3D coordinate of point to be rotated.
@@ -569,7 +585,16 @@ void wait( float seconds );
    */
   float fzero(float(*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100 );
 
-  extern SphericalCoord nullrotation;
+  //! Function to perform linear interpolation based on a vector of discrete (x,y) values
+    /*
+     * \param[in] "points" Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
+     * \param[in] "x" x value at which to interpolate. If x is less than the first x-value in points or greater than the last x-value in points, interp1 will respectively return the first or last y value.
+     * \return Value of y interpolated at location x.
+     */
+    float interp1( const std::vector<helios::vec2> &points, float x );
+
+
+    extern SphericalCoord nullrotation;
 
 }
 

@@ -179,10 +179,6 @@ namespace helios {
          */
         void setColor( const helios::RGBAcolor& color );
 
-        //! Function to return a pointer to the \ref Texture data associated with this primitive
-        /** \sa \ref Texture */
-        Texture* getTexture( ) const;
-
         //! Function to check whether this primitive has texture data
         bool hasTexture( ) const;
 
@@ -304,7 +300,6 @@ namespace helios {
         \param[in] "data" Primitive data value (scalar)
         */
         void setPrimitiveData( const char* label, const std::string& data );
-
         //! Add (array) data associated with a primitive element
         /**
         \param[in] "label" Name/label associated with data
@@ -314,7 +309,6 @@ namespace helios {
         \note While this function still works for scalar data, it is typically prefereable to use the scalar versions of this function.
         */
         void setPrimitiveData( const char* label, HeliosDataType type, uint size, void* data );
-
         //! Get data associated with a primitive element (integer scalar)
         /**
         \param[in] "label" Name/label associated with data
@@ -352,9 +346,9 @@ namespace helios {
         */
         void getPrimitiveData( const char* label, std::vector<float>& data ) const;
         //! Get data associated with a primitive element (double scalar)
-        /*
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
+        /**
+          *  \param[in] "label" Name/label associated with data
+          *  \param[out] "data" Primitive data structure
         */
         void getPrimitiveData( const char* label, double& data ) const;
         //! Get data associated with a primitive element (vector of doubles)
@@ -370,15 +364,15 @@ namespace helios {
         */
         void getPrimitiveData( const char* label, vec2& data ) const;
         //! Get data associated with a primitive element (vector of vec2's)
-        /*
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
+        /**
+           * \param[in] "label" Name/label associated with data
+           * \param[out] "data" Primitive data structure
         */
         void getPrimitiveData( const char* label, std::vector<vec2>& data ) const;
         //! Get data associated with a primitive element (vec3 scalar)
-        /*
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
+        /**
+          *  \param[in] "label" Name/label associated with data
+          *  \param[out] "data" Primitive data structure
         */
         void getPrimitiveData( const char* label, vec3& data ) const;
         //! Get data associated with a primitive element (vector of vec3's)
@@ -494,8 +488,8 @@ namespace helios {
         helios::RGBAcolor color;
 
         //! Texture data (pointer)
-        Texture* texture;
-
+//        Texture* texture;
+        std::string texturefile;
         //! Affine transformation matrix
         float transform[16];
 
@@ -535,10 +529,10 @@ namespace helios {
         Patch( const helios::RGBAcolor& color, uint UUID );
 
         //! Patch constructor - colored by texture map
-        Patch( Texture* texture, uint UUID );
+        Patch( const char* texturefile, float solid_fraction, uint UUID );
 
         //! Patch constructor - colored by texture map with custom (u,v) coordinates
-        Patch( Texture* texture, const std::vector<helios::vec2>& _uv_, float _solid_fraction_, uint UUID );
+        Patch( const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint UUID );
 
         //! Patch destructor
         ~Patch() override= default;
@@ -595,7 +589,7 @@ namespace helios {
         Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const helios::RGBAcolor& color, uint UUID );
 
         //! Triangle constructor
-        Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, Texture* texture, const std::vector<helios::vec2>& uv, float solid_fraction, uint UUID );
+        Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint UUID );
 
         //! Triangle destructor
         ~Triangle() override= default;
@@ -755,7 +749,8 @@ namespace helios {
         void setColor( const helios::RGBcolor& color );
 
         //! Function to set the diffuse color (with transparency) for all primitives in the Compound Object
-        /** /param[in] "color" New color of primitives
+        /**
+         * /param[in] "color" New color of primitives
          */
         void setColor( const helios::RGBAcolor& color );
 
@@ -763,10 +758,10 @@ namespace helios {
         helios::RGBcolor getColor() const;
 
         //! Function to return the R-G-B diffuse color of a Compound Object
-        helios::RGBcolor getRGBColor() const;
+        helios::RGBcolor getColorRGB() const;
 
         //! Function to return the R-G-B-A diffuse color of a Compound Object
-        helios::RGBAcolor getRGBAColor() const;
+        helios::RGBAcolor getColorRGBA() const;
 
         //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
         void overrideTextureColor();
@@ -774,30 +769,49 @@ namespace helios {
         //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
         void useTextureColor();
 
+        //! Function to check whether this object has texture data
+        bool hasTexture( ) const;
+
+        //! Function to return the texture map file of an Object
+        std::string getTextureFile( ) const;
+
         //! Function to translate/shift a Compound Object
-        /** \param[in] "shift" Distance to translate in (x,y,z) directions.
+        /**
+         * \param[in] "shift" Distance to translate in (x,y,z) directions.
         */
         void translate( const helios::vec3& shift );
 
         //! Function to rotate a Compound Object about the x-, y-, or z-axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
         */
         void rotate( float rot, const char* axis );
 
         //! Function to rotate a Compound Object about an arbitrary axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Vector describing axis about which to rotate.
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "axis" Vector describing axis about which to rotate.
         */
         void rotate( float rot, const helios::vec3& axis );
 
         //! Function to return the Affine transformation matrix of a Compound Object
-        /** \param[out] "T" 1D vector corresponding to Compound Object transformation matrix */
+        /**
+         * \param[out] "T" 1D vector corresponding to Compound Object transformation matrix
+         */
         void getTransformationMatrix( float (&T)[16] ) const;
 
         //! Function to set the Affine transformation matrix of a Compound Object
-        /** \param[in] "T" 1D vector corresponding to Compound Object transformation matrix */
+        /**
+         * \param[in] "T" 1D vector corresponding to Compound Object transformation matrix
+         */
         void setTransformationMatrix( float (&T)[16] );
+
+        //! Function to set the UUIDs of object child primitives
+        /**
+         * \param[in] "UUIDs" Set of UUIDs corresponding to child primitives of object
+         */
+        void setPrimitiveUUIDs( const std::vector<uint> &UUIDs );
 
         //-------- Object Data Functions ---------- //
 
@@ -810,154 +824,161 @@ namespace helios {
 
         //! Add data value (uint) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const uint& data );
 
         //! Add data value (float) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const float& data );
 
         //! Add data value (double) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const double& data );
 
         //! Add data value (vec2) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const helios::vec2& data );
 
         //! Add data value (vec3) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const helios::vec3& data );
 
         //! Add data value (vec4) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const helios::vec4& data );
 
         //! Add data value (int2) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const helios::int2& data );
 
         //! Add data value (int3) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const helios::int3& data );
 
         //! Add data value (int4) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const helios::int4& data );
 
         //! Add data value (string) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const std::string& data );
 
         //! Add (array) data associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "type" Helios data type of object data (see \ref HeliosDataType)
-        \param[in] "size" Number of data elements
-        \param[in] "data" Pointer to object data
-        \note While this function still works for scalar data, it is typically prefereable to use the scalar versions of this function.
+         * \param[in] "label" Name/label associated with data
+         * \param[in] "type" Helios data type of object data (see \ref HeliosDataType)
+         * \param[in] "size" Number of data elements
+         * \param[in] "data" Pointer to object data
+         * \note While this function still works for scalar data, it is typically prefereable to use the scalar versions of this function.
         */
         void setObjectData( const char* label, HeliosDataType type, uint size, void* data );
 
         //! Get data associated with a object element (integer scalar)
         /**
-        \param[in] "label" Name/label associated with data
-        \param[out] "data" Object data structure
+          * \param[in] "label" Name/label associated with data
+          * \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, int& data ) const;
+
         //! Get data associated with a object element (vector of integers)
         /**
-        \param[in] "label" Name/label associated with data
-        \param[out] "data" Object data structure
+          * \param[in] "label" Name/label associated with data
+          * \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, std::vector<int>& data ) const;
+
         //! Get data associated with a object element (unsigned integer scalar)
         /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
+          * \param[in] "label" Name/label associated with data
+          * \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, uint& data ) const;
+
         //! Get data associated with a object element (vector of unsigned integers)
         /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
+          * \param[in] "label" Name/label associated with data
+          * \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, std::vector<uint>& data ) const;
+
         //! Get data associated with a object element (float scalar)
         /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
+          * \param[in] "label" Name/label associated with data
+          * \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, float& data ) const;
+
         //! Get data associated with a object element (vector of floats)
         /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
+          * \param[in] "label" Name/label associated with data
+          * \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, std::vector<float>& data ) const;
+
         //! Get data associated with a object element (double scalar)
-        /*
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
+        /**
+          *  \param[in] "label" Name/label associated with data
+          *  \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, double& data ) const;
+
         //! Get data associated with a object element (vector of doubles)
         /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
+          * \param[in] "label" Name/label associated with data
+          * \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, std::vector<double>& data ) const;
+
         //! Get data associated with a object element (vec2 scalar)
         /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
+          * \param[in] "label" Name/label associated with data
+          * \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, vec2& data ) const;
+
         //! Get data associated with a object element (vector of vec2's)
-        /*
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
+        /**
+          *  \param[in] "label" Name/label associated with data
+          *  \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, std::vector<vec2>& data ) const;
+
         //! Get data associated with a object element (vec3 scalar)
-        /*
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
-        */
         void getObjectData( const char* label, vec3& data ) const;
+
         //! Get data associated with a object element (vector of vec3's)
         /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Object data structure
+          * \param[in] "label" Name/label associated with data
+          * \param[out] "data" Object data structure
         */
         void getObjectData( const char* label, std::vector<vec3>& data ) const;
         //! Get data associated with a object element (vec4 scalar)
@@ -1069,8 +1090,8 @@ namespace helios {
         //! Diffuse color of all primitives in object
         RGBAcolor color;
 
-        //! Texture data (pointer)
-        Texture* texture;
+        //! Path to texture map file
+        std::string texturefile;
 
         //! Affine transformation matrix
         float transform[16];
@@ -1095,7 +1116,7 @@ namespace helios {
     public:
 
         //! Default constructor
-        Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, helios::Context* a_context );
+        Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, const char *a_texturefile, helios::Context *a_context);
 
         //! Tile destructor
         ~Tile() override= default;
@@ -1109,6 +1130,12 @@ namespace helios {
         //! Get the number of sub-patch divisions of the tile
         helios::int2 getSubdivisionCount() const;
 
+        //! Set the number of tile sub-patch divisions
+        /**
+         * \param[in] "subdiv" Number of subdivisions in x- and y-directions.
+         */
+        void setSubdivisionCount( const helios::int2 &subdiv );
+
         //! Get the Cartesian coordinates of each of the four corners of the tile object
         std::vector<helios::vec3> getVertices() const;
 
@@ -1119,7 +1146,8 @@ namespace helios {
         std::vector<helios::vec2> getTextureUV() const;
 
         //! Function to scale the dimensions of a Compound Object
-        /** \param[in] "S" Scaling factor
+        /**
+         * \param[in] "S" Scaling factor
         */
         void scale(const vec3 &S );
 
@@ -1133,9 +1161,10 @@ namespace helios {
     public:
 
         //! Default constructor
-        Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, helios::Context* a_context );
+        Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile,
+               helios::Context *a_context);
 
-        //! Shpere destructor
+        //! Sphere destructor
         ~Sphere() override = default;
 
         //! Get the radius of the sphere
@@ -1147,8 +1176,15 @@ namespace helios {
         //! Get the number of sub-patch divisions of the sphere object
         uint getSubdivisionCount() const;
 
+        //! Set the number of sphere tesselation divisions
+        /**
+         * \param[in] "subdiv" Number of subdivisions in zenithal and azimuthal directions.
+         */
+        void setSubdivisionCount( const uint subdiv );
+
         //! Function to scale the dimensions of a Compound Object
-        /** \param[in] "S" Scaling factor
+        /**
+         * \param[in] "S" Scaling factor
         */
         void scale( float S );
 
@@ -1162,7 +1198,7 @@ namespace helios {
     public:
 
         //! Default constructor
-        Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, uint a_subdiv, helios::Context* a_context );
+        Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
 
         //! Tube destructor
         ~Tube() override = default;
@@ -1176,8 +1212,15 @@ namespace helios {
         //! Get the number of sub-triangle divisions of the tube object
         uint getSubdivisionCount() const;
 
+        //! Set the number of sphere tesselation divisions
+        /**
+         * \param[in] "subdiv" Number of subdivisions in zenithal and azimuthal directions.
+         */
+        void setSubdivisionCount( uint subdiv );
+
         //! Function to scale the dimensions of a Compound Object
-        /** \param[in] "S" Scaling factor
+        /**
+         * \param[in] "S" Scaling factor
         */
         void scale( float S );
 
@@ -1195,7 +1238,7 @@ namespace helios {
     public:
 
         //! Default constructor
-        Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, helios::Context* a_context );
+        Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, const char *a_texturefile, helios::Context *a_context);
 
         //! Box destructor
         ~Box() override = default;
@@ -1209,8 +1252,15 @@ namespace helios {
         //! Get the number of sub-patch divisions of the box object in each Cartesian direction
         helios::int3 getSubdivisionCount() const;
 
+        //! Set the number of box sub-patch divisions
+        /**
+         * \param[in] "subdiv" Number of patch subdivisions in each direction.
+         */
+        void setSubdivisionCount( const helios::int3 &subdiv );
+
         //! Function to scale the dimensions of a Compound Object
-        /** \param[in] "S" Scaling factor
+        /**
+         * \param[in] "S" Scaling factor
         */
         void scale(const vec3 &S );
 
@@ -1224,7 +1274,7 @@ namespace helios {
     public:
 
         //! Default constructor
-        Disk(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, helios::Context* a_context );
+        Disk(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
 
         //! Disk destructor
         ~Disk() override = default;
@@ -1238,8 +1288,15 @@ namespace helios {
         //! Get the number of sub-triangle divisions of the disk object
         uint getSubdivisionCount() const;
 
+        //! Set the number of disk sub-triangle divisions
+        /**
+         * \param[in] "subdiv" Number of triangle subdivisions.
+         */
+        void setSubdivisionCount( uint subdiv );
+
         //! Function to scale the dimensions of a Compound Object
-        /** \param[in] "S" Scaling factor
+        /**
+         * \param[in] "S" Scaling factor
         */
         void scale(const vec3 &S );
 
@@ -1253,7 +1310,7 @@ namespace helios {
     public:
 
         //! Default constructor
-        Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, helios::Context* a_context );
+        Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_texturefile, helios::Context *a_context);
 
         //! Polymesh destructor
         ~Polymesh() override = default;
@@ -1267,7 +1324,7 @@ namespace helios {
     public:
 
         //! Default constructor
-        Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, const vec3 &a_node1, float a_radius0, float a_radius1, uint a_subdiv, helios::Context* a_context );
+        Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, const vec3 &a_node1, float a_radius0, float a_radius1, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
 
         //! Cone destructor
         ~Cone() override = default;
@@ -1287,6 +1344,12 @@ namespace helios {
         //! Get the number of sub-triangle divisions of the cone object
         uint getSubdivisionCount() const;
 
+        //! Set the number of radial sub-triangle divisions
+        /**
+         * \param[in] "subdiv" Number of radial sub-triangle divisions.
+         */
+        void setSubdivisionCount( uint subdiv );
+
         //! Get a unit vector pointing in the direction of the cone central axis
         helios::vec3 getAxisUnitVector() const;
 
@@ -1294,12 +1357,14 @@ namespace helios {
         float getLength() const;
 
         //! Function to scale the length of the cone
-        /** \param[in] "S" Scaling factor
+        /**
+         * \param[in] "S" Scaling factor
          */
         void scaleLength( float S );
 
         //! Function to scale the girth of the cone
-        /** \param[in] "S" Scaling factor
+        /**
+         * \param[in] "S" Scaling factor
          */
         void scaleGirth( float S );
 
@@ -1339,7 +1404,7 @@ namespace helios {
 
         std::map<std::string,Texture> textures;
 
-        Texture* addTexture( const char* texture_file );
+        void addTexture( const char* texture_file );
 
         //----------- GLOBAL DATA -------------//
 
@@ -1380,6 +1445,12 @@ namespace helios {
 
         void loadPData( pugi::xml_node p, uint UUID );
 
+        void loadOData( pugi::xml_node p, uint ID );
+
+        void loadOsubPData( pugi::xml_node p, uint ID );
+
+        void writeDataToXMLstream( const char* data_group, const std::vector<std::string> &data_labels, void* ptr, std::ofstream &outfile ) const;
+
         //---------- CONTEXT INITIALIZATION FLAGS ---------//
 
         //! Flag indicating whether Context has been initialized
@@ -1403,11 +1474,11 @@ namespace helios {
         //! Context destructor
         ~Context();
 
-        //! Run a self-test of the Context
-        /** The Context self-test runs through validation checks of Context-related functions to ensure they are working properly.
-            \return 0 if test was successful, 1 if test failed.
+        //! Run a self-test of the Context. The Context self-test runs through validation checks of Context-related functions to ensure they are working properly.
+        /**
+          * \return 0 if test was successful, 1 if test failed.
         */
-        static int selfTest();
+        int selfTest();
 
         //! Mark the Context geometry as ``clean", meaning that the geometry has not been modified since last set as clean
         /** \sa \ref markGeometryDirty(), \ref isGeometryDirty() */
@@ -1655,10 +1726,11 @@ namespace helios {
         std::vector<uint> copyPrimitive(const std::vector<uint> &UUIDs );
 
         //! copy all primitive data from one primitive to another
-        /** \param[in] "UUID" uint unique universal identifier (UUID) of primitive that is the source of data for copying
-         \param[in] "currentUUID" uint unique universal identifier (UUID) of primitive that is the destintation for data copying
+        /**
+         * \param[in] "UUID" uint unique universal identifier (UUID) of primitive that is the source of data for copying
+         * \param[in] "currentUUID" uint unique universal identifier (UUID) of primitive that is the destination for data copying
          */
-        void copyPrimitiveData( uint UUID, uint oldUUID);
+        void copyPrimitiveData( uint UUID, uint currentUUID);
 
         //!Get a pointer to a Primitive element from the Context
         /** \param[in] "UUID" Unique universal identifier (UUID) of primitive element
@@ -1690,7 +1762,8 @@ namespace helios {
         Voxel* getVoxelPointer( uint UUID ) const;
 
         //!Get the total number of Primitives in the Context
-        /** \ingroup primitives
+        /**
+         * \ingroup primitives
         */
         uint getPrimitiveCount() const;
 
@@ -3263,7 +3336,8 @@ namespace helios {
         Tile* getTileObjectPointer(uint ObjID ) const;
 
         //! Get a pointer to a Sphere Compound Object
-        /** \param[in] "ObjID" Identifier for Sphere Compound Object.
+        /**
+         * \param[in] "ObjID" Identifier for Sphere Compound Object.
          */
         Sphere* getSphereObjectPointer(uint ObjID ) const;
 

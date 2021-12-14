@@ -946,12 +946,11 @@ int Context::selfTest(){
 
 }
 
-Texture* Context::addTexture( const char* texture_file ){
+void Context::addTexture( const char* texture_file ){
     if( textures.find(texture_file)==textures.end() ){//texture has not already been added
         Texture text( texture_file );
         textures[ texture_file ] = text;
     }
-    return &textures.at(texture_file);
 }
 
 Texture::Texture( const char* texture_file ){
@@ -1206,25 +1205,16 @@ void Primitive::setColor( const helios::RGBAcolor& newcolor ){
 
 }
 
-Texture* Primitive::getTexture() const{
-    return texture;
-}
-
 bool Primitive::hasTexture() const{
-    if( texture!=nullptr ){
-        return true;
-    }else{
+    if( texturefile.empty() ){
         return false;
+    }else{
+        return true;
     }
 }
 
 std::string Primitive::getTextureFile() const{
-    if( hasTexture() ){
-        return texture->getTextureFile();
-    }else{
-        std::string blank;
-        return blank;
-    }
+    return texturefile;
 }
 
 std::vector<vec2> Primitive::getTextureUV(){
@@ -3953,42 +3943,42 @@ bool Context::doesGlobalDataExist( const char* label ) const{
 }
 
 
-Patch::Patch( const RGBAcolor& newcolor, uint newUUID ){
+Patch::Patch( const RGBAcolor& a_color, uint a_UUID ){
 
     makeIdentityMatrix( transform );
 
-    color = newcolor;
+    color = a_color;
     assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
-    UUID = newUUID;
+    UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
     solid_fraction = 1.f;
-    texture = nullptr;
+    texturefile = "";
     texturecoloroverridden = false;
 
 }
 
-Patch::Patch( Texture* newtexture, uint newUUID ){
+Patch::Patch( const char* a_texturefile, float a_solid_fraction, uint a_UUID ){
 
     makeIdentityMatrix( transform );
 
-    UUID = newUUID;
+    UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
-    texture = newtexture;
-    solid_fraction = texture->getSolidFraction();
+    texturefile = a_texturefile;
+    solid_fraction = a_solid_fraction;
     texturecoloroverridden = false;
 
 }
 
-Patch::Patch( Texture* _texture_, const std::vector<vec2>& _uv_, float _solid_fraction_, uint newUUID ){
+Patch::Patch( const char* a_texturefile, const std::vector<vec2>& a_uv, float a_solid_fraction, uint a_UUID ){
 
     makeIdentityMatrix( transform );
 
-    UUID = newUUID;
+    UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
 
-    texture = _texture_;
-    uv = _uv_;
-    solid_fraction = _solid_fraction_;
+    texturefile = a_texturefile;
+    uv = a_uv;
+    solid_fraction = a_solid_fraction;
     texturecoloroverridden = false;
 
 }
@@ -4004,28 +3994,28 @@ helios::vec3 Patch::getCenter() const{
     return make_vec3(transform[3],transform[7],transform[11]);
 }
 
-Triangle::Triangle(  const vec3& _vertex0_, const vec3& _vertex1_, const vec3& _vertex2_, const RGBAcolor& _color_, uint newUUID ){
+Triangle::Triangle(  const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const RGBAcolor& a_color, uint a_UUID ){
 
-    makeTransformationMatrix(_vertex0_,_vertex1_,_vertex2_);
-    color = _color_;
-    UUID = newUUID;
+    makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
+    color = a_color;
+    UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_TRIANGLE;
-    texture = nullptr;
+    texturefile = "";
     solid_fraction = 1.f;
     texturecoloroverridden = false;
 
 }
 
-Triangle::Triangle( const vec3& vertex0, const vec3& vertex1, const vec3& vertex2, Texture* _texture_, const std::vector<vec2>& _uv_, float _solid_fraction_, uint newUUID ){
+Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const char* a_texturefile, const std::vector<vec2>& a_uv, float a_solid_fraction, uint a_UUID ){
 
-    makeTransformationMatrix(vertex0,vertex1,vertex2);
+    makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
     color = make_RGBAcolor(RGB::red,1);
-    UUID = newUUID;
+    UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_TRIANGLE;
 
-    texture = _texture_;
-    uv = _uv_;
-    solid_fraction = _solid_fraction_;
+    texturefile = a_texturefile;
+    uv = a_uv;
+    solid_fraction = a_solid_fraction;
     texturecoloroverridden = false;
 
 }
@@ -4051,15 +4041,15 @@ vec3 Triangle::getVertex( int number ){
 
 }
 
-Voxel::Voxel( const RGBAcolor& _color_, uint newUUID ){
+Voxel::Voxel( const RGBAcolor& a_color, uint a_UUID ){
 
     makeIdentityMatrix(transform);
 
-    color = _color_;
+    color = a_color;
     assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
-    UUID = newUUID;
+    UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_VOXEL;
-    texture = nullptr;
+    texturefile = "";
     texturecoloroverridden = false;
 
 }
@@ -4293,9 +4283,9 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file ){
 
-    Texture* texture = addTexture( texture_file );
+    addTexture( texture_file );
 
-    auto* patch_new = (new Patch( texture, currentUUID ));
+    auto* patch_new = (new Patch( texture_file, textures.at(texture_file).getSolidFraction(), currentUUID ));
 
     patch_new->setParentObjectID(0);
 
@@ -4317,7 +4307,7 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
     return currentUUID-1;
 }
 
-uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation,const char* texture_file, const helios::vec2& uv_center, const helios::vec2& uv_size ){
+uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file, const helios::vec2& uv_center, const helios::vec2& uv_size ){
 
     if( size.x==0 || size.y==0 ){
         throw( std::runtime_error("ERROR (addPatch): Size of patch must be greater than 0.") );
@@ -4327,7 +4317,7 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
         throw( std::runtime_error("ERROR (addPatch): Invalid texture coordinates. uv_center-0.5*uv_size should be >=0 and uv_center+0.5*uv_size should be <=1.") );
     }
 
-    Texture* texture = addTexture( texture_file );
+    addTexture( texture_file );
 
     std::vector<helios::vec2> uv;
     uv.resize(4);
@@ -4337,11 +4327,11 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
     uv.at(3) =  uv_center+make_vec2(-0.5f*uv_size.x,+0.5f*uv_size.y);
 
     float solid_fraction;
-    if( texture->hasTransparencyChannel() ){
-        std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
+    if( textures.at(texture_file).hasTransparencyChannel() ){
+        std::vector<std::vector<bool> >* alpha = textures.at(texture_file).getTransparencyData();
         int A = 0;
         int At = 0;
-        int2 sz = texture->getSize();
+        int2 sz = textures.at(texture_file).getSize();
         int2 uv_min( floor(uv.at(0).x*float(sz.x)), floor(uv.at(0).y*float(sz.y)) );
         int2 uv_max( floor(uv.at(2).x*float(sz.x)), floor(uv.at(2).y*float(sz.y)) );
         for( int j=uv_min.y; j<uv_max.y; j++ ){
@@ -4360,7 +4350,7 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
     }else{
         solid_fraction = 1.f;
     }
-    auto* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
+    auto* patch_new = (new Patch( texture_file, uv, solid_fraction, currentUUID ));
 
     patch_new->setParentObjectID(0);
 
@@ -4407,7 +4397,7 @@ uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3&
 
 uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texture_file, const helios::vec2& uv0, const helios::vec2& uv1, const helios::vec2& uv2 ){
 
-    Texture* texture = addTexture( texture_file );
+    addTexture( texture_file );
 
     std::vector<helios::vec2> uv;
     uv.resize(3);
@@ -4416,9 +4406,9 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
     uv.at(2) = uv2;
 
     float solid_fraction;
-    if( texture->hasTransparencyChannel() ){
-        std::vector<std::vector<bool> >* alpha = texture->getTransparencyData();
-        int2 sz = texture->getSize();
+    if( textures.at(texture_file).hasTransparencyChannel() ){
+        std::vector<std::vector<bool> >* alpha = textures.at(texture_file).getTransparencyData();
+        int2 sz = textures.at(texture_file).getSize();
         int2 uv_min( (int)lroundf(fmin(fmin(uv0.x,uv1.x),uv2.x)*float(sz.x)), (int)lroundf(fmin(fmin(uv0.y,uv1.y),uv2.y)*float(sz.y)) );
         int2 uv_max( (int)lroundf(fmax(fmax(uv0.x,uv1.x),uv2.x)*float(sz.x)), (int)lroundf(fmax(fmax(uv0.y,uv1.y),uv2.y)*float(sz.y)) );
         int A = 0;
@@ -4451,7 +4441,7 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
         solid_fraction = 1.f;
     }
 
-    auto* tri_new = (new Triangle( vertex0, vertex1, vertex2, texture, uv, solid_fraction, currentUUID ));
+    auto* tri_new = (new Triangle( vertex0, vertex1, vertex2, texture_file, uv, solid_fraction, currentUUID ));
 
     tri_new->setParentObjectID(0);
     primitives[currentUUID] = tri_new;
@@ -4587,11 +4577,11 @@ uint Context::copyPrimitive( uint UUID ){
         if( !p->hasTexture() ){
             patch_new = (new Patch( p->getColorRGBA(), currentUUID ));
         }else{
-            Texture* texture = p->getTexture();
+            std::string texture_file = p->getTextureFile();
             if( uv.size()==4 ){
-                patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
+                patch_new = (new Patch( texture_file.c_str(), uv, solid_fraction, currentUUID ));
             }else{
-                patch_new = (new Patch( texture, currentUUID ));
+                patch_new = (new Patch( texture_file.c_str(), solid_fraction, currentUUID ));
             }
         }
         float transform[16];
@@ -4607,9 +4597,9 @@ uint Context::copyPrimitive( uint UUID ){
         if( !p->hasTexture() ){
             tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), p->getColorRGBA(), currentUUID ));
         }else{
-            Texture* texture = p->getTexture();
+            std::string texture_file = p->getTextureFile();
             float solid_fraction = p->getArea()/calculateTriangleArea( vertices.at(0), vertices.at(1), vertices.at(2) );
-            tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), texture, uv, solid_fraction, currentUUID ));
+            tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), texture_file.c_str(), uv, solid_fraction, currentUUID ));
         }
         float transform[16];
         p->getTransformationMatrix(transform);
@@ -5060,7 +5050,12 @@ void Context::cropDomainX(const vec2 &xbounds ){
 
         for(auto & vertex : vertices){
             if( vertex.x<xbounds.x || vertex.x>xbounds.y ){
-                deletePrimitive( p );
+                uint parent_object_ID = getPrimitivePointer(p)->getParentObjectID();
+                if(parent_object_ID == 0) {
+                    deletePrimitive(p);
+                    break;
+                }
+                deleteObject(parent_object_ID);
                 break;
             }
         }
@@ -5085,7 +5080,12 @@ void Context::cropDomainY(const vec2 &ybounds ){
 
         for(auto & vertex : vertices){
             if( vertex.y<ybounds.x || vertex.y>ybounds.y ){
-                deletePrimitive( p );
+                uint parent_object_ID = getPrimitivePointer(p)->getParentObjectID();
+                if(parent_object_ID == 0) {
+                    deletePrimitive(p);
+                    break;
+                }
+                deleteObject(parent_object_ID);
                 break;
             }
         }
@@ -5110,7 +5110,12 @@ void Context::cropDomainZ(const vec2 &zbounds ){
 
         for(auto & vertex : vertices){
             if( vertex.z<zbounds.x || vertex.z>zbounds.y ){
-                deletePrimitive( p );
+                uint parent_object_ID = getPrimitivePointer(p)->getParentObjectID();
+                if(parent_object_ID == 0) {
+                    deletePrimitive(p);
+                    break;
+                }
+                deleteObject(parent_object_ID);
                 break;
             }
         }
@@ -5133,18 +5138,14 @@ void Context::cropDomain(const std::vector<uint> &UUIDs, const vec2 &xbounds, co
         vertices = getPrimitivePointer(UUID)->getVertices();
 
         for(auto & vertex : vertices){
-            if( vertex.x<xbounds.x || vertex.x>xbounds.y ){
-                deletePrimitive( UUID );
-                delete_count ++;
-                break;
-            }
-            if( vertex.y<ybounds.x || vertex.y>ybounds.y ){
-                deletePrimitive( UUID );
-                delete_count ++;
-                break;
-            }
-            if( vertex.z<zbounds.x || vertex.z>zbounds.y ){
-                deletePrimitive( UUID );
+            if( vertex.x<xbounds.x || vertex.x>xbounds.y || vertex.y<ybounds.x || vertex.y>ybounds.y || vertex.z<zbounds.x || vertex.z>zbounds.y ){
+                uint parent_object_ID = getPrimitivePointer(UUID)->getParentObjectID();
+                if(parent_object_ID == 0) {
+                    deletePrimitive(UUID);
+                    delete_count++;
+                    break;
+                }
+                deleteObject(parent_object_ID);
                 delete_count ++;
                 break;
             }
@@ -5260,11 +5261,11 @@ RGBcolor CompoundObject::getColor()const {
     return make_RGBcolor( color.r, color.g, color.b );
 }
 
-RGBcolor CompoundObject::getRGBColor()const {
+RGBcolor CompoundObject::getColorRGB()const {
     return make_RGBcolor( color.r, color.g, color.b );
 }
 
-RGBAcolor CompoundObject::getRGBAColor()const {
+RGBAcolor CompoundObject::getColorRGBA()const {
     return color;
 }
 
@@ -5286,6 +5287,18 @@ void CompoundObject::useTextureColor(){
         }
 
     }
+}
+
+bool CompoundObject::hasTexture() const{
+    if( getTextureFile().empty() ){
+        return false;
+    }else{
+        return true;
+    }
+}
+
+std::string CompoundObject::getTextureFile() const{
+    return texturefile;
 }
 
 void CompoundObject::translate( const helios::vec3& shift ){
@@ -5382,6 +5395,10 @@ void CompoundObject::setTransformationMatrix( float (&T)[16] ){
         transform[i] = T[i];
     }
 
+}
+
+void CompoundObject::setPrimitiveUUIDs( const std::vector<uint> &a_UUIDs ){
+    UUIDs = a_UUIDs;
 }
 
 void CompoundObject::setObjectData( const char* label, const int& data ){
@@ -6108,7 +6125,7 @@ uint Context::copyObject(uint ObjID ){
 
         int2 subdiv = o->getSubdivisionCount();
 
-        auto* tile_new = (new Tile( currentObjectID, UUIDs_copy, subdiv, this ) );
+        auto* tile_new = (new Tile(currentObjectID, UUIDs_copy, subdiv, nullptr, this));
 
         objects[currentObjectID] = tile_new;
 
@@ -6118,7 +6135,7 @@ uint Context::copyObject(uint ObjID ){
 
         uint subdiv = o->getSubdivisionCount();
 
-        auto* sphere_new = (new Sphere( currentObjectID, UUIDs_copy, subdiv, this ) );
+        auto* sphere_new = (new Sphere(currentObjectID, UUIDs_copy, subdiv, nullptr, this));
 
         objects[currentObjectID] = sphere_new;
 
@@ -6130,7 +6147,7 @@ uint Context::copyObject(uint ObjID ){
         std::vector<float> radius = o->getNodeRadii();
         uint subdiv = o->getSubdivisionCount();
 
-        auto* tube_new = (new Tube( currentObjectID, UUIDs_copy, nodes, radius, subdiv, this ) );
+        auto* tube_new = (new Tube(currentObjectID, UUIDs_copy, nodes, radius, subdiv, nullptr, this));
 
         objects[currentObjectID] = tube_new;
 
@@ -6141,7 +6158,7 @@ uint Context::copyObject(uint ObjID ){
         vec3 size = o->getSize();
         int3 subdiv = o->getSubdivisionCount();
 
-        auto* box_new = (new Box( currentObjectID, UUIDs_copy, subdiv, this ) );
+        auto* box_new = (new Box(currentObjectID, UUIDs_copy, subdiv, nullptr, this));
 
         objects[currentObjectID] = box_new;
 
@@ -6152,7 +6169,7 @@ uint Context::copyObject(uint ObjID ){
         vec2 size = o->getSize();
         uint subdiv = o->getSubdivisionCount();
 
-        auto* disk_new = (new Disk( currentObjectID, UUIDs_copy, subdiv, this ) );
+        auto* disk_new = (new Disk(currentObjectID, UUIDs_copy, subdiv, nullptr, this));
 
         objects[currentObjectID] = disk_new;
 
@@ -6160,7 +6177,7 @@ uint Context::copyObject(uint ObjID ){
 
         Polymesh* o = getPolymeshObjectPointer( ObjID );
 
-        auto* polymesh_new = (new Polymesh( currentObjectID, UUIDs_copy, this ) );
+        auto* polymesh_new = (new Polymesh(currentObjectID, UUIDs_copy, nullptr, this));
 
         objects[currentObjectID] = polymesh_new;
 
@@ -6172,7 +6189,8 @@ uint Context::copyObject(uint ObjID ){
         std::vector<float> radius = o->getNodeRadii();
         uint subdiv = o->getSubdivisionCount();
 
-        auto* cone_new = (new Cone( currentObjectID, UUIDs_copy, nodes.at(0), nodes.at(1), radius.at(0), radius.at(1), subdiv, this ) );
+        auto* cone_new = (new Cone(currentObjectID, UUIDs_copy, nodes.at(0), nodes.at(1), radius.at(0), radius.at(1),
+                                   subdiv, nullptr, this));
 
         objects[currentObjectID] = cone_new;
 
@@ -6189,7 +6207,46 @@ uint Context::copyObject(uint ObjID ){
     return currentObjectID-1;
 }
 
-Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, helios::Context* a_context ){
+//void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, int2 new_subdiv)
+//{
+//
+//    for(uint i=0;i<ObjectIDs.size();i++){
+//
+//        CompoundObject* obj_ptr = getObjectPointer(ObjectIDs.at(i));
+//
+//        std::vector<uint> UUIDs_old = obj_ptr->getPrimitiveUUIDs();
+//
+//        vec3 position = obj_ptr->getObjectCenter();
+//
+//        vec2 size = getTileObjectPointer(ObjectIDs.at(i))->getSize();
+//
+//        SphericalCoord rotation = cart2sphere(getPrimitiveNormal(UUIDs_old.front()));
+//
+//        std::string texturefile = getPrimitivePointer(UUIDs_old.front())->getTextureFile();
+//
+//        std::vector<uint> UUIDs_new;
+//
+//        if( texturefile.empty() ){
+//            RGBcolor color = obj_ptr->getColorRGB();
+//            UUIDs_new = addTile(position, size, rotation, new_subdiv, color );
+//        }else {
+//            UUIDs_new = addTile(position, size, rotation, new_subdiv, texturefile.c_str() );
+//        }
+//
+//        for( uint UUID : UUIDs_new ) {
+//            getPrimitivePointer(UUID)->setParentObjectID(ObjectIDs.at(i));
+//        }
+//
+//        //propose to add this member function
+//        //obj_ptr->setPrimitiveUUIDs(UUIDs_new);
+//
+//        deletePrimitive(UUIDs_old);
+//
+//    }
+//
+//}
+
+Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, const char *a_texturefile, helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
 
@@ -6197,6 +6254,7 @@ Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, h
     type = helios::OBJECT_TYPE_TILE;
     UUIDs = a_UUIDs;
     subdiv = a_subdiv;
+    texturefile = a_texturefile;
     context = a_context;
 
 }
@@ -6236,6 +6294,10 @@ helios::int2 Tile::getSubdivisionCount() const{
     return subdiv;
 }
 
+void Tile::setSubdivisionCount( const helios::int2 &a_subdiv ){
+    subdiv = a_subdiv;
+}
+
 std::vector<helios::vec3> Tile::getVertices() const{
 
     std::vector<helios::vec3> vertices;
@@ -6267,16 +6329,18 @@ vec3 Tile::getNormal() const{
 
 std::vector<helios::vec2> Tile::getTextureUV() const{
 
-    std::vector<helios::vec2> uv;
-    uv.resize(4);
+//    std::vector<helios::vec2> uv;
+//    uv.resize(4);
+//
+//    uv.at(0) = context->getPrimitivePointer( UUIDs.at( subdiv.x-1 ) )->getTextureUV().at(0);
+//
+//    uv.at(1) = context->getPrimitivePointer( UUIDs.at( 0) )->getTextureUV().at(1);
+//
+//    uv.at(2) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-subdiv.y ) )->getTextureUV().at(2);
+//
+//    uv.at(3) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-1 ) )->getTextureUV().at(3);
 
-    uv.at(0) = context->getPrimitivePointer( UUIDs.at( subdiv.x-1 ) )->getTextureUV().at(0);
-
-    uv.at(1) = context->getPrimitivePointer( UUIDs.at( 0) )->getTextureUV().at(1);
-
-    uv.at(2) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-subdiv.y ) )->getTextureUV().at(2);
-
-    uv.at(3) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-1 ) )->getTextureUV().at(3);
+    std::vector<helios::vec2> uv{ make_vec2(0,0), make_vec2(1,0), make_vec2(1,1), make_vec2(0,1) };
 
     return uv;
 
@@ -6302,7 +6366,7 @@ void Tile::scale(const vec3 &S ){
 
 }
 
-Sphere::Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, helios::Context* a_context ){
+Sphere::Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
 
@@ -6310,6 +6374,7 @@ Sphere::Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, heli
     type = helios::OBJECT_TYPE_SPHERE;
     UUIDs = a_UUIDs;
     subdiv = a_subdiv;
+    texturefile = a_texturefile;
     context = a_context;
 
 }
@@ -6353,6 +6418,10 @@ uint Sphere::getSubdivisionCount() const{
     return subdiv;
 }
 
+void Sphere::setSubdivisionCount( uint a_subdiv ){
+    subdiv = a_subdiv;
+}
+
 void Sphere::scale( float S ){
 
     float T[16], T_prim[16];
@@ -6373,8 +6442,8 @@ void Sphere::scale( float S ){
 
 }
 
-
-Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, uint a_subdiv, helios::Context* a_context ){
+Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes,
+           const std::vector<float> &a_radius, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
 
@@ -6384,6 +6453,7 @@ Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3>
     nodes = a_nodes;
     radius = a_radius;
     subdiv = a_subdiv;
+    texturefile = a_texturefile;
     context = a_context;
 
 }
@@ -6431,6 +6501,10 @@ uint Tube::getSubdivisionCount() const{
     return subdiv;
 }
 
+void Tube::setSubdivisionCount( uint a_subdiv ){
+    subdiv = a_subdiv;
+}
+
 void Tube::scale( float S ){
 
     float T[16], T_prim[16];
@@ -6451,7 +6525,8 @@ void Tube::scale( float S ){
 
 }
 
-Box::Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, helios::Context* a_context ){
+Box::Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, const char *a_texturefile,
+         helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
 
@@ -6459,6 +6534,7 @@ Box::Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, hel
     type = helios::OBJECT_TYPE_BOX;
     UUIDs = a_UUIDs;
     subdiv = a_subdiv;
+    texturefile = a_texturefile;
     context = a_context;
 
 }
@@ -6509,6 +6585,10 @@ helios::int3 Box::getSubdivisionCount() const{
     return subdiv;
 }
 
+void Box::setSubdivisionCount( const helios::int3 &a_subdiv ){
+    subdiv = a_subdiv;
+}
+
 void Box::scale(const vec3 &S ){
 
     float T[16], T_prim[16];
@@ -6529,7 +6609,8 @@ void Box::scale(const vec3 &S ){
 
 }
 
-Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, helios::Context* a_context ){
+Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile,
+           helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
 
@@ -6537,6 +6618,7 @@ Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, helios::
     type = helios::OBJECT_TYPE_DISK;
     UUIDs = a_UUIDs;
     subdiv = a_subdiv;
+    texturefile = a_texturefile;
     context = a_context;
 
 }
@@ -6584,6 +6666,10 @@ uint Disk::getSubdivisionCount() const{
     return subdiv;
 }
 
+void Disk::setSubdivisionCount( uint a_subdiv ){
+    subdiv = a_subdiv;
+}
+
 void Disk::scale(const vec3 &S ){
 
     float T[16], T_prim[16];
@@ -6604,13 +6690,15 @@ void Disk::scale(const vec3 &S ){
 
 }
 
-Polymesh::Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, helios::Context* a_context ){
+Polymesh::Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_texturefile,
+                   helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
 
     OID = a_OID;
     type = helios::OBJECT_TYPE_POLYMESH;
     UUIDs = a_UUIDs;
+    texturefile = a_texturefile;
     context = a_context;
 
 }
@@ -6622,7 +6710,8 @@ Polymesh* Context::getPolymeshObjectPointer(uint ObjID ) const{
     return dynamic_cast<Polymesh*>(objects.at(ObjID));
 }
 
-Cone::Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, const vec3 &a_node1, float a_radius0, float a_radius1, uint a_subdiv, helios::Context* a_context ){
+Cone::Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, const vec3 &a_node1, float a_radius0,
+           float a_radius1, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
 
@@ -6630,6 +6719,7 @@ Cone::Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, co
     type = helios::OBJECT_TYPE_CONE;
     UUIDs = a_UUIDs;
     subdiv = a_subdiv;
+    texturefile = a_texturefile;
     context = a_context;
     nodes = {a_node0, a_node1};
     radii = {a_radius0, a_radius1};
@@ -6706,6 +6796,10 @@ float Cone::getNodeRadius( int number ) const{
 
 uint Cone::getSubdivisionCount() const{
     return subdiv;
+}
+
+void Cone::setSubdivisionCount( uint a_subdiv ){
+    subdiv = a_subdiv;
 }
 
 helios::vec3 Cone::getAxisUnitVector() const{
@@ -6895,7 +6989,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
         }
     }
 
-    auto* sphere_new = (new Sphere( currentObjectID, UUID, Ndivs, this ));
+    auto* sphere_new = (new Sphere(currentObjectID, UUID, Ndivs, "", this));
 
     float T[16], transform[16];
     sphere_new->getTransformationMatrix( transform );
@@ -7019,7 +7113,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
         }
     }
 
-    auto* sphere_new = (new Sphere( currentObjectID, UUID, Ndivs, this ));
+    auto* sphere_new = (new Sphere(currentObjectID, UUID, Ndivs, texturefile, this));
 
     float T[16], transform[16];
     sphere_new->getTransformationMatrix( transform );
@@ -7085,7 +7179,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
         }
     }
 
-    auto* tile_new = (new Tile( currentObjectID, UUID, subdiv, this ));
+    auto* tile_new = (new Tile(currentObjectID, UUID, subdiv, "", this));
 
     float T[16], S[16], R[16];
 
@@ -7140,12 +7234,12 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
     uv_sub.x = 1.f/float(subdiv.x);
     uv_sub.y = 1.f/float(subdiv.y);
 
-    Texture* texture = addTexture( texturefile );
+    addTexture( texturefile );
     std::vector<std::vector<bool> >* alpha;
     int2 sz;
-    if( texture->hasTransparencyChannel() ){
-        alpha = texture->getTransparencyData();
-        sz = texture->getSize();
+    if( textures.at(texturefile).hasTransparencyChannel() ){
+        alpha = textures.at(texturefile).getTransparencyData();
+        sz = textures.at(texturefile).getSize();
     }
 
     for( uint j=0; j<subdiv.y; j++ ){
@@ -7159,7 +7253,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
             uv.at(3) = make_vec2(float(i)*uv_sub.x,float(j+1)*uv_sub.y);
 
             float solid_fraction;
-            if( texture->hasTransparencyChannel() ){
+            if( textures.at(texturefile).hasTransparencyChannel() ){
                 int A = 0;
                 int At = 0;
 
@@ -7185,7 +7279,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
                 solid_fraction = 1.f;
             }
 
-            auto* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
+            auto* patch_new = (new Patch( texturefile, uv, solid_fraction, currentUUID ));
 
             patch_new->setParentObjectID(0);
 
@@ -7212,7 +7306,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
         }
     }
 
-    auto* tile_new = (new Tile( currentObjectID, UUID, subdiv, this ));
+    auto* tile_new = (new Tile(currentObjectID, UUID, subdiv, texturefile, this));
 
     float T[16], S[16], R[16];
 
@@ -7355,7 +7449,7 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
         }
     }
 
-    auto* tube_new = (new Tube( currentObjectID, UUID, nodes, radius, Ndivs, this ));
+    auto* tube_new = (new Tube(currentObjectID, UUID, nodes, radius, Ndivs, "", this));
 
     float T[16],  transform[16];
     tube_new->getTransformationMatrix( transform );
@@ -7479,7 +7573,7 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
         }
     }
 
-    auto* tube_new = (new Tube( currentObjectID, UUID, nodes, radius, Ndivs, this ));
+    auto* tube_new = (new Tube(currentObjectID, UUID, nodes, radius, Ndivs, texturefile, this));
 
     float T[16],  transform[16];
     tube_new->getTransformationMatrix( transform );
@@ -7607,7 +7701,7 @@ uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &sub
 
     }
 
-    auto* box_new = (new Box( currentObjectID, UUID, subdiv, this ));
+    auto* box_new = (new Box(currentObjectID, UUID, subdiv, "", this));
 
     float T[16], transform[16];
     box_new->getTransformationMatrix( transform );
@@ -7723,7 +7817,7 @@ uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, co
 
     }
 
-    auto* box_new = (new Box( currentObjectID, UUID, subdiv, this ));
+    auto* box_new = (new Box(currentObjectID, UUID, subdiv, texturefile, this));
 
     float T[16], transform[16];
     box_new->getTransformationMatrix( transform );
@@ -7775,7 +7869,7 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
 
     }
 
-    auto* disk_new = (new Disk( currentObjectID, UUID, Ndivs, this ));
+    auto* disk_new = (new Disk(currentObjectID, UUID, Ndivs, "", this));
 
     float T[16], transform[16];
     disk_new->getTransformationMatrix( transform );
@@ -7816,7 +7910,7 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
 
     }
 
-    auto* disk_new = (new Disk( currentObjectID, UUID, Ndivs, this ));
+    auto* disk_new = (new Disk(currentObjectID, UUID, Ndivs, texture_file, this));
 
     float T[16], transform[16];
     disk_new->getTransformationMatrix( transform );
@@ -7841,7 +7935,7 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
 
 uint Context::addPolymeshObject(const std::vector<uint> &UUIDs ){
 
-    auto* polymesh_new = (new Polymesh( currentObjectID, UUIDs, this ));
+    auto* polymesh_new = (new Polymesh(currentObjectID, UUIDs, "", this));
 
     polymesh_new->setColor( getPrimitivePointer( UUIDs.front())->getColor() );
 
@@ -7951,7 +8045,7 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
         }
     }
 
-    auto* cone_new = (new Cone( currentObjectID, UUID, node0, node1, radius0, radius1, Ndivs, this ));
+    auto* cone_new = (new Cone(currentObjectID, UUID, node0, node1, radius0, radius1, Ndivs, "", this));
 
     float T[16],  transform[16];
     cone_new->getTransformationMatrix( transform );
@@ -8071,7 +8165,7 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
         }
     }
 
-    auto* cone_new = (new Cone( currentObjectID, UUID, node0, node1, radius0, radius1, Ndivs, this ));
+    auto* cone_new = (new Cone(currentObjectID, UUID, node0, node1, radius0, radius1, Ndivs, texturefile, this));
 
     float T[16],  transform[16];
     cone_new->getTransformationMatrix( transform );
@@ -8308,12 +8402,12 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
     uv_sub.x = 1.f/float(subdiv.x);
     uv_sub.y = 1.f/float(subdiv.y);
 
-    Texture* texture = addTexture( texturefile );
+    addTexture( texturefile );
     std::vector<std::vector<bool> > alpha;
     int2 sz;
-    if( texture->hasTransparencyChannel() ){
-        alpha = *texture->getTransparencyData();
-        sz = texture->getSize();
+    if( textures.at(texturefile).hasTransparencyChannel() ){
+        alpha = *textures.at(texturefile).getTransparencyData();
+        sz = textures.at(texturefile).getSize();
     }
 
     for( uint j=0; j<subdiv.y; j++ ){
@@ -8327,7 +8421,7 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
             uv[3] = make_vec2(float(i)*uv_sub.x,float(j+1)*uv_sub.y);
 
             float solid_fraction;
-            if( texture->hasTransparencyChannel() ){
+            if( textures.at(texturefile).hasTransparencyChannel() ){
                 int A = 0;
                 int At = 0;
 
@@ -8357,7 +8451,7 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
                 continue;
             }
 
-            auto* patch_new = (new Patch( texture, uv, solid_fraction, currentUUID ));
+            auto* patch_new = (new Patch( texturefile, uv, solid_fraction, currentUUID ));
 
             patch_new->setParentObjectID(0);
 
@@ -9356,6 +9450,640 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
 }
 
+void Context::loadOData( pugi::xml_node p, uint ID ){
+
+    for (pugi::xml_node data = p.child("data_int"); data; data = data.next_sibling("data_int")){
+
+        const char* data_str = data.child_value();
+        std::vector<int> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            int tmp;
+            while( data_stream >> tmp ){
+                datav.push_back(tmp);
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_INT,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_uint"); data; data = data.next_sibling("data_uint")){
+
+        const char* data_str = data.child_value();
+        std::vector<uint> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            uint tmp;
+            while( data_stream >> tmp ){
+                datav.push_back(tmp);
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_UINT,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_float"); data; data = data.next_sibling("data_float")){
+
+        const char* data_str = data.child_value();
+        std::vector<float> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            float tmp;
+            while( data_stream >> tmp ){
+                datav.push_back(tmp);
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_FLOAT,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_double"); data; data = data.next_sibling("data_double")){
+
+        const char* data_str = data.child_value();
+        std::vector<double> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            double tmp;
+            while( data_stream >> tmp ){
+                datav.push_back(tmp);
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_DOUBLE,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_vec2"); data; data = data.next_sibling("data_vec2")){
+
+        const char* data_str = data.child_value();
+        std::vector<vec2> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            std::vector<float> tmp;
+            tmp.resize(2);
+            int c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==2 ){
+                    datav.push_back(make_vec2(tmp.at(0),tmp.at(1)));
+                    c=0;
+                }
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_VEC2,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_vec3"); data; data = data.next_sibling("data_vec3")){
+
+        const char* data_str = data.child_value();
+        std::vector<vec3> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            std::vector<float> tmp;
+            tmp.resize(3);
+            int c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==3 ){
+                    datav.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
+                    c=0;
+                }
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_VEC3,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_vec4"); data; data = data.next_sibling("data_vec4")){
+
+        const char* data_str = data.child_value();
+        std::vector<vec4> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            std::vector<float> tmp;
+            tmp.resize(4);
+            int c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==4 ){
+                    datav.push_back(make_vec4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
+                    c=0;
+                }
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_VEC4,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_int2"); data; data = data.next_sibling("data_int2")){
+
+        const char* data_str = data.child_value();
+        std::vector<int2> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            std::vector<int> tmp;
+            tmp.resize(2);
+            int c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==2 ){
+                    datav.push_back(make_int2(tmp.at(0),tmp.at(1)));
+                    c=0;
+                }
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_INT2,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_int3"); data; data = data.next_sibling("data_int3")){
+
+        const char* data_str = data.child_value();
+        std::vector<int3> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            std::vector<int> tmp;
+            tmp.resize(3);
+            int c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==3 ){
+                    datav.push_back(make_int3(tmp.at(0),tmp.at(1),tmp.at(2)));
+                    c=0;
+                }
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_INT3,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_int4"); data; data = data.next_sibling("data_int4")){
+
+        const char* data_str = data.child_value();
+        std::vector<int4> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            std::vector<int> tmp;
+            tmp.resize(4);
+            int c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==4 ){
+                    datav.push_back(make_int4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
+                    c=0;
+                }
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_INT4,datav.size(),&datav[0]);
+        }
+
+    }
+
+    for (pugi::xml_node data = p.child("data_string"); data; data = data.next_sibling("data_string")){
+
+        const char* data_str = data.child_value();
+        std::vector<std::string> datav;
+        if( strlen(data_str)>0 ){
+            std::istringstream data_stream(data_str);
+            std::string tmp;
+            while( data_stream >> tmp ){
+                datav.push_back(tmp);
+            }
+        }
+
+        const char* label = data.attribute("label").value();
+
+        if( datav.size()==1 ){
+            setObjectData(ID,label,datav.front());
+        }else if( datav.size()>1 ){
+            setObjectData(ID,label,HELIOS_TYPE_STRING,datav.size(),&datav[0]);
+        }
+
+    }
+
+}
+
+void Context::loadOsubPData( pugi::xml_node p, uint ID ){
+
+    std::vector<uint> prim_UUIDs = getObjectPointer(ID)->getPrimitiveUUIDs();
+
+    int u;
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_int"); prim_data; prim_data = prim_data.next_sibling("primitive_data_int")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<int> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                int tmp;
+                while (data_stream >> tmp) {
+                    datav.push_back(tmp);
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_INT, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_uint"); prim_data; prim_data = prim_data.next_sibling("primitive_data_uint")) {
+
+        const char *label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<uint> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                uint tmp;
+                while (data_stream >> tmp) {
+                    datav.push_back(tmp);
+                }
+            }
+
+            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_UINT, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_float"); prim_data; prim_data = prim_data.next_sibling("primitive_data_float")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<float> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                float tmp;
+                while (data_stream >> tmp) {
+                    datav.push_back(tmp);
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_FLOAT, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_double"); prim_data; prim_data = prim_data.next_sibling("primitive_data_double")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<double> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                double tmp;
+                while (data_stream >> tmp) {
+                    datav.push_back(tmp);
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_DOUBLE, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_vec2"); prim_data; prim_data = prim_data.next_sibling("primitive_data_vec2")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<vec2> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                std::vector<float> tmp;
+                tmp.resize(2);
+                int c = 0;
+                while( data_stream >> tmp.at(c) ){
+                    c++;
+                    if( c==2 ){
+                        datav.push_back(make_vec2(tmp.at(0),tmp.at(1)));
+                        c=0;
+                    }
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_VEC2, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_vec3"); prim_data; prim_data = prim_data.next_sibling("primitive_data_vec3")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<vec3> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                std::vector<float> tmp;
+                tmp.resize(3);
+                int c = 0;
+                while( data_stream >> tmp.at(c) ){
+                    c++;
+                    if( c==3 ){
+                        datav.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
+                        c=0;
+                    }
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_VEC3, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_vec4"); prim_data; prim_data = prim_data.next_sibling("primitive_data_vec4")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<vec4> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                std::vector<float> tmp;
+                tmp.resize(4);
+                int c = 0;
+                while( data_stream >> tmp.at(c) ){
+                    c++;
+                    if( c==4 ){
+                        datav.push_back(make_vec4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
+                        c=0;
+                    }
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_VEC4, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_int2"); prim_data; prim_data = prim_data.next_sibling("primitive_data_int2")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<int2> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                std::vector<int> tmp;
+                tmp.resize(2);
+                int c = 0;
+                while( data_stream >> tmp.at(c) ){
+                    c++;
+                    if( c==2 ){
+                        datav.push_back(make_int2(tmp.at(0),tmp.at(1)));
+                        c=0;
+                    }
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_INT2, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_int3"); prim_data; prim_data = prim_data.next_sibling("primitive_data_int3")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<int3> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                std::vector<int> tmp;
+                tmp.resize(3);
+                int c = 0;
+                while( data_stream >> tmp.at(c) ){
+                    c++;
+                    if( c==3 ){
+                        datav.push_back(make_int3(tmp.at(0),tmp.at(1),tmp.at(2)));
+                        c=0;
+                    }
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_INT3, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_int4"); prim_data; prim_data = prim_data.next_sibling("primitive_data_int4")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<int4> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                std::vector<int> tmp;
+                tmp.resize(4);
+                int c = 0;
+                while( data_stream >> tmp.at(c) ){
+                    c++;
+                    if( c==4 ){
+                        datav.push_back(make_int4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
+                        c=0;
+                    }
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_INT4, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+    u = 0;
+    for (pugi::xml_node prim_data = p.child("primitive_data_string"); prim_data; prim_data = prim_data.next_sibling("primitive_data_string")){
+
+        const char* label = prim_data.attribute("label").value();
+
+        for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            const char *data_str = data.child_value();
+            std::vector<std::string> datav;
+            if (strlen(data_str) > 0) {
+                std::istringstream data_stream(data_str);
+                std::string tmp;
+                while( data_stream >> tmp ){
+                    datav.push_back(tmp);
+                }
+            }
+
+            if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
+                if (datav.size() == 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                } else if (datav.size() > 1) {
+                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_STRING, datav.size(), &datav[0]);
+                }
+            }
+            u++;
+        }
+    }
+
+}
+
 std::vector<uint> Context::loadXML( const char* filename ){
 
     std::cout << "Loading XML file: " << filename << "..." << std::flush;
@@ -9786,6 +10514,578 @@ std::vector<uint> Context::loadXML( const char* filename ){
 
     }
 
+    //-------------- COMPOUND OBJECTS ---------------//
+
+    //-------------- TILES ---------------//
+    for (pugi::xml_node p = helios.child("tile"); p; p = p.next_sibling("tile")) {
+
+        // * Tile Transformation Matrix * //
+        float transform[16];
+        pugi::xml_node transform_node = p.child("transform");
+
+        //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        const char *transform_str = transform_node.child_value();
+        if (strlen(transform_str) == 0) {
+            makeIdentityMatrix(transform);
+        } else {
+            std::istringstream stream(transform_str);
+            float tmp;
+            int i = 0;
+            while (stream >> tmp) {
+                transform[i] = tmp;
+                i++;
+            }
+            if (i != 16) {
+                std::cout
+                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
+                        << std::endl;
+                makeIdentityMatrix(transform);
+            }
+        }
+
+        // * Tile Texture * //
+        std::string texture_file;
+        pugi::xml_node texture_node = p.child("texture");
+        std::string texfile = deblank(texture_node.child_value());
+        if (texfile.empty()) {
+            texture_file = "none";
+        } else {
+            texture_file = texfile;
+        }
+
+        // * Tile Texture (u,v) Coordinates * //
+        std::vector<vec2> uv;
+        pugi::xml_node uv_node = p.child("textureUV");
+        const char *texUV = uv_node.child_value();
+        if (strlen(texUV) > 0) {
+            std::istringstream uv_stream(texUV);
+            std::vector<float> tmp;
+            tmp.resize(2);
+            int c = 0;
+            while (uv_stream >> tmp.at(c)) {
+                c++;
+                if (c == 2) {
+                    uv.push_back(make_vec2(tmp.at(0), tmp.at(1)));
+                    c = 0;
+                }
+            }
+            if (c != 0) {
+                std::cerr
+                        << "WARNING (loadXML): textureUV for tile does not contain an even number of elements. Skipping..."
+                        << std::endl;
+                uv.resize(0);
+            }
+            if (uv.size() != 4) {
+                std::cerr
+                        << "WARNING (loadXML): textureUV for tile does not contain four pairs of (u,v) coordinates. Skipping..."
+                        << std::endl;
+                uv.resize(0);
+            }
+        }
+
+        // * Tile Diffuse Colors * //
+        RGBAcolor color;
+        pugi::xml_node color_node = p.child("color");
+
+        //note: pugi loads xml data as a character.  need to separate it into 2 floats
+        const char *color_str = color_node.child_value();
+        if ( strlen(color_str) != 0) {
+            color = string2RGBcolor(color_str);
+        }
+
+        // * Tile Subdivisions * //
+        int2 subdiv;
+        pugi::xml_node subdiv_node = p.child("subdivisions");
+        const char* subdiv_str = subdiv_node.child_value();
+        if (strlen(subdiv_str) == 0) {
+            std::cerr << "WARNING (loadXML): Number of subdivisions for tile was not provided. Assuming 1x1." << std::endl;
+            subdiv = make_int2(1,1);
+        } else {
+            subdiv = string2int2(subdiv_str);
+        }
+
+        // * Add the Tile * //
+        if (strcmp(texture_file.c_str(), "none") == 0) {
+            if( strlen(color_str) == 0 ){
+                ID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), subdiv );
+            }else {
+                ID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), subdiv, make_RGBcolor(color.r, color.g, color.b));
+            }
+        } else {
+            ID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), subdiv, texture_file.c_str());
+        }
+        getObjectPointer(ID)->setTransformationMatrix(transform);
+
+        // * Tile Sub-Patch Data * //
+
+        loadOsubPData(p,ID);
+
+        // * Tile Object Data * //
+
+        loadOData(p,ID);
+
+//        UUID.push_back(ID);
+
+    }//end tiles
+
+    //-------------- SPHERES ---------------//
+    for (pugi::xml_node p = helios.child("sphere"); p; p = p.next_sibling("sphere")) {
+
+        // * Sphere Transformation Matrix * //
+        float transform[16];
+        pugi::xml_node transform_node = p.child("transform");
+
+        //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        const char *transform_str = transform_node.child_value();
+        if (strlen(transform_str) == 0) {
+            makeIdentityMatrix(transform);
+        } else {
+            std::istringstream stream(transform_str);
+            float tmp;
+            int i = 0;
+            while (stream >> tmp) {
+                transform[i] = tmp;
+                i++;
+            }
+            if (i != 16) {
+                std::cout
+                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
+                        << std::endl;
+                makeIdentityMatrix(transform);
+            }
+        }
+
+        // * Sphere Texture * //
+        std::string texture_file;
+        pugi::xml_node texture_node = p.child("texture");
+        std::string texfile = deblank(texture_node.child_value());
+        if (texfile.empty()) {
+            texture_file = "none";
+        } else {
+            texture_file = texfile;
+        }
+
+        // * Sphere Diffuse Colors * //
+        RGBAcolor color;
+        pugi::xml_node color_node = p.child("color");
+
+        //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        const char *color_str = color_node.child_value();
+        if ( strlen(color_str) != 0) {
+            color = string2RGBcolor(color_str);
+        }
+
+        // * Sphere Subdivisions * //
+        uint subdiv;
+        pugi::xml_node subdiv_node = p.child("subdivisions");
+        const char* subdiv_str = subdiv_node.child_value();
+        if (strlen(subdiv_str) == 0) {
+            std::cerr << "WARNING (loadXML): Number of subdivisions for sphere was not provided. Assuming 5." << std::endl;
+            subdiv = 5;
+        } else {
+            subdiv = std::stoi(subdiv_str);
+        }
+
+        // * Add the Sphere * //
+        if (strcmp(texture_file.c_str(), "none") == 0) {
+            if( strlen(color_str) == 0 ){
+                ID = addSphereObject( subdiv, make_vec3(0, 0, 0), 1 );
+            }else {
+                ID = addSphereObject( subdiv, make_vec3(0, 0, 0), 1, make_RGBcolor(color.r, color.g, color.b) );
+            }
+        } else {
+            ID = addSphereObject( subdiv, make_vec3(0, 0, 0), 1, texture_file.c_str());
+        }
+        getObjectPointer(ID)->setTransformationMatrix(transform);
+
+        // * Sphere Sub-Triangle Data * //
+
+        loadOsubPData(p,ID);
+
+        // * Sphere Object Data * //
+
+        loadOData(p,ID);
+
+    }//end spheres
+
+    //-------------- TUBES ---------------//
+    for (pugi::xml_node p = helios.child("tube"); p; p = p.next_sibling("tube")) {
+
+        // * Tube Transformation Matrix * //
+        float transform[16];
+        pugi::xml_node transform_node = p.child("transform");
+
+        //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        const char *transform_str = transform_node.child_value();
+        if (strlen(transform_str) == 0) {
+            makeIdentityMatrix(transform);
+        } else {
+            std::istringstream stream(transform_str);
+            float tmp;
+            int i = 0;
+            while (stream >> tmp) {
+                transform[i] = tmp;
+                i++;
+            }
+            if (i != 16) {
+                std::cout
+                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
+                        << std::endl;
+                makeIdentityMatrix(transform);
+            }
+        }
+
+        // * Tube Texture * //
+        std::string texture_file;
+        pugi::xml_node texture_node = p.child("texture");
+        std::string texfile = deblank(texture_node.child_value());
+        if (texfile.empty()) {
+            texture_file = "none";
+        } else {
+            texture_file = texfile;
+        }
+
+        // * Tube Subdivisions * //
+        uint subdiv;
+        pugi::xml_node subdiv_node = p.child("subdivisions");
+        const char* subdiv_str = subdiv_node.child_value();
+        if (strlen(subdiv_str) == 0) {
+            std::cerr << "WARNING (loadXML): Number of subdivisions for tube was not provided. Assuming 5." << std::endl;
+            subdiv = 5;
+        } else {
+            subdiv = std::stoi(subdiv_str);
+        }
+
+        // * Tube Nodes * //
+
+        pugi::xml_node nodes_node = p.child("nodes");
+        const char* nodes_str = nodes_node.child_value();
+
+        std::vector<vec3> nodes;
+        if (strlen(nodes_str) > 0) {
+            std::istringstream data_stream(nodes_str);
+            std::vector<float> tmp;
+            tmp.resize(3);
+            int c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==3 ){
+                    nodes.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
+                    c=0;
+                }
+            }
+        }
+
+        // * Tube Radius * //
+
+        pugi::xml_node radii_node = p.child("radius");
+        const char* radii_str = radii_node.child_value();
+
+        std::vector<float> radii;
+        if (strlen(radii_str) > 0) {
+            std::istringstream data_stream(radii_str);
+            float tmp;
+            int c = 0;
+            while( data_stream >> tmp ){
+                radii.push_back(tmp);
+            }
+        }
+
+        // * Add the Tube * //
+        ID = addTubeObject( subdiv, nodes, radii, texture_file.c_str());
+
+        getObjectPointer(ID)->setTransformationMatrix(transform);
+
+        // * Tube Sub-Triangle Data * //
+
+        loadOsubPData(p,ID);
+
+        // * tube Object Data * //
+
+        loadOData(p,ID);
+
+    }//end tubes
+
+    //-------------- BOXES ---------------//
+    for (pugi::xml_node p = helios.child("box"); p; p = p.next_sibling("box")) {
+
+        // * Box Transformation Matrix * //
+        float transform[16];
+        pugi::xml_node transform_node = p.child("transform");
+
+        //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        const char *transform_str = transform_node.child_value();
+        if (strlen(transform_str) == 0) {
+            makeIdentityMatrix(transform);
+        } else {
+            std::istringstream stream(transform_str);
+            float tmp;
+            int i = 0;
+            while (stream >> tmp) {
+                transform[i] = tmp;
+                i++;
+            }
+            if (i != 16) {
+                std::cout
+                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
+                        << std::endl;
+                makeIdentityMatrix(transform);
+            }
+        }
+
+        // * Box Texture * //
+        std::string texture_file;
+        pugi::xml_node texture_node = p.child("texture");
+        std::string texfile = deblank(texture_node.child_value());
+        if (texfile.empty()) {
+            texture_file = "none";
+        } else {
+            texture_file = texfile;
+        }
+
+        // * Box Diffuse Colors * //
+        RGBAcolor color;
+        pugi::xml_node color_node = p.child("color");
+
+        const char *color_str = color_node.child_value();
+        if ( strlen(color_str) != 0) {
+            color = string2RGBcolor(color_str);
+        }
+
+        // * Box Subdivisions * //
+        int3 subdiv;
+        pugi::xml_node subdiv_node = p.child("subdivisions");
+        const char* subdiv_str = subdiv_node.child_value();
+        if (strlen(subdiv_str) == 0) {
+            std::cerr << "WARNING (loadXML): Number of subdivisions for box was not provided. Assuming 1." << std::endl;
+            subdiv = make_int3(1,1,1);
+        } else {
+            subdiv = string2int3(subdiv_str);
+        }
+
+        // * Add the box * //
+        if (strcmp(texture_file.c_str(), "none") == 0) {
+            if( strlen(color_str) == 0 ){
+                ID = addBoxObject( make_vec3(0, 0, 0), make_vec3(1,1,1), subdiv  );
+            }else {
+                ID = addBoxObject( make_vec3(0, 0, 0), make_vec3(1,1,1), subdiv, make_RGBcolor(color.r, color.g, color.b) );
+            }
+        } else {
+            ID = addBoxObject( make_vec3(0, 0, 0), make_vec3(1,1,1), subdiv, texture_file.c_str());
+        }
+        getObjectPointer(ID)->setTransformationMatrix(transform);
+
+        // * Box Sub-Patch Data * //
+
+        loadOsubPData(p,ID);
+
+        // * Box Object Data * //
+
+        loadOData(p,ID);
+
+    }//end boxes
+
+    //-------------- DISKS ---------------//
+    for (pugi::xml_node p = helios.child("disk"); p; p = p.next_sibling("disk")) {
+
+        // * Disk Transformation Matrix * //
+        float transform[16];
+        pugi::xml_node transform_node = p.child("transform");
+
+        //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        const char *transform_str = transform_node.child_value();
+        if (strlen(transform_str) == 0) {
+            makeIdentityMatrix(transform);
+        } else {
+            std::istringstream stream(transform_str);
+            float tmp;
+            int i = 0;
+            while (stream >> tmp) {
+                transform[i] = tmp;
+                i++;
+            }
+            if (i != 16) {
+                std::cout
+                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
+                        << std::endl;
+                makeIdentityMatrix(transform);
+            }
+        }
+
+        // * Disk Texture * //
+        std::string texture_file;
+        pugi::xml_node texture_node = p.child("texture");
+        std::string texfile = deblank(texture_node.child_value());
+        if (texfile.empty()) {
+            texture_file = "none";
+        } else {
+            texture_file = texfile;
+        }
+
+        // * Disk Diffuse Colors * //
+        RGBAcolor color;
+        pugi::xml_node color_node = p.child("color");
+
+        const char *color_str = color_node.child_value();
+        if ( strlen(color_str) != 0) {
+            color = string2RGBcolor(color_str);
+        }
+
+        // * Disk Subdivisions * //
+        uint subdiv;
+        pugi::xml_node subdiv_node = p.child("subdivisions");
+        const char* subdiv_str = subdiv_node.child_value();
+        if (strlen(subdiv_str) == 0) {
+            std::cerr << "WARNING (loadXML): Number of subdivisions for disk was not provided. Assuming 5." << std::endl;
+            subdiv = 5;
+        } else {
+            subdiv = std::stoi(subdiv_str);
+        }
+
+        // * Add the disk * //
+        if (strcmp(texture_file.c_str(), "none") == 0) {
+            if( strlen(color_str) == 0 ){
+                ID = addDiskObject( subdiv, make_vec3(0, 0, 0), make_vec2(1,1) );
+            }else {
+                ID = addDiskObject( subdiv, make_vec3(0, 0, 0), make_vec2(1,1), nullrotation, make_RGBcolor(color.r, color.g, color.b) );
+            }
+        } else {
+            ID = addDiskObject( subdiv, make_vec3(0, 0, 0), make_vec2(1,1), nullrotation, texture_file.c_str());
+        }
+        getObjectPointer(ID)->setTransformationMatrix(transform);
+
+        // * Disk Sub-Triangle Data * //
+
+        loadOsubPData(p,ID);
+
+        // * Disk Object Data * //
+
+        loadOData(p,ID);
+
+    }//end disks
+
+    //-------------- CONES ---------------//
+    for (pugi::xml_node p = helios.child("cone"); p; p = p.next_sibling("cone")) {
+
+        // * Cone Transformation Matrix * //
+        float transform[16];
+        pugi::xml_node transform_node = p.child("transform");
+
+        //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        const char *transform_str = transform_node.child_value();
+        if (strlen(transform_str) == 0) {
+            makeIdentityMatrix(transform);
+        } else {
+            std::istringstream stream(transform_str);
+            float tmp;
+            int i = 0;
+            while (stream >> tmp) {
+                transform[i] = tmp;
+                i++;
+            }
+            if (i != 16) {
+                std::cout
+                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
+                        << std::endl;
+                makeIdentityMatrix(transform);
+            }
+        }
+
+        // * Cone Texture * //
+        std::string texture_file;
+        pugi::xml_node texture_node = p.child("texture");
+        std::string texfile = deblank(texture_node.child_value());
+        if (texfile.empty()) {
+            texture_file = "none";
+        } else {
+            texture_file = texfile;
+        }
+
+        // * Cone Diffuse Colors * //
+        RGBAcolor color;
+        pugi::xml_node color_node = p.child("color");
+
+        const char *color_str = color_node.child_value();
+        if ( strlen(color_str) != 0) {
+            color = string2RGBcolor(color_str);
+        }
+
+        // * Cone Subdivisions * //
+        uint subdiv;
+        pugi::xml_node subdiv_node = p.child("subdivisions");
+        const char* subdiv_str = subdiv_node.child_value();
+        if (strlen(subdiv_str) == 0) {
+            std::cerr << "WARNING (loadXML): Number of subdivisions for cone was not provided. Assuming 5." << std::endl;
+            subdiv = 5;
+        } else {
+            subdiv = std::stoi(subdiv_str);
+        }
+
+        // * Cone Nodes * //
+
+        pugi::xml_node nodes_node = p.child("nodes");
+        const char* nodes_str = nodes_node.child_value();
+
+        std::vector<vec3> nodes;
+        if (strlen(nodes_str) > 0) {
+            std::istringstream data_stream(nodes_str);
+            std::vector<float> tmp;
+            tmp.resize(3);
+            int c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==3 ){
+                    nodes.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
+                    break;
+                }
+            }
+            if( c!=3 ){
+                throw(std::runtime_error("ERROR (loadXML): Loading of cone failed. Cone end nodes must be specified as pairs of 3 x,y,z coordinates."));
+            }
+            c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==3 ){
+                    nodes.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
+                    break;
+                }
+            }
+            if( c!=3 ){
+                throw(std::runtime_error("ERROR (loadXML): Loading of cone failed. Cone end nodes must be specified as pairs of 3 x,y,z coordinates."));
+            }
+        }
+
+        // * Cone Radius * //
+
+        pugi::xml_node radii_node = p.child("radius");
+        const char* radii_str = radii_node.child_value();
+
+        std::vector<float> radii(2);
+        if (strlen(radii_str) > 0) {
+            std::istringstream data_stream(radii_str);
+            data_stream >> radii.at(0);
+            data_stream >> radii.at(1);
+        }
+
+        // * Add the Cone * //
+        if( texture_file.empty() ){
+            ID = addConeObject( subdiv, nodes.at(0), nodes.at(1), radii.at(0), radii.at(1), make_RGBcolor(color.r,color.g,color.b));
+        }else {
+            ID = addConeObject(subdiv, nodes.at(0), nodes.at(1), radii.at(0), radii.at(1), texture_file.c_str());
+        }
+
+        getObjectPointer(ID)->setTransformationMatrix(transform);
+
+        // * Tube Sub-Triangle Data * //
+
+        loadOsubPData(p,ID);
+
+        // * tube Object Data * //
+
+        loadOData(p,ID);
+
+    }//end cones
+
     //-------------- GLOBAL DATA ---------------//
 
     for (pugi::xml_node data = helios.child("globaldata_int"); data; data = data.next_sibling("globaldata_int")){
@@ -10150,6 +11450,221 @@ std::vector<std::string> Context::getLoadedXMLFiles() {
     return XMLfiles;
 }
 
+void Context::writeDataToXMLstream( const char* data_group, const std::vector<std::string> &data_labels, void* ptr, std::ofstream &outfile ) const{
+
+    for(const auto& label : data_labels ) {
+
+        size_t dsize;
+        HeliosDataType dtype;
+
+        if (strcmp(data_group, "primitive") == 0) {
+            dsize = ((Primitive *) ptr)->getPrimitiveDataSize(label.c_str());
+            dtype = ((Primitive *) ptr)->getPrimitiveDataType(label.c_str());
+        } else if (strcmp(data_group, "object") == 0) {
+            dsize = ((CompoundObject *) ptr)->getObjectDataSize(label.c_str());
+            dtype = ((CompoundObject *) ptr)->getObjectDataType(label.c_str());
+        } else if (strcmp(data_group, "global") == 0) {
+            dsize = getGlobalDataSize(label.c_str());
+            dtype = getGlobalDataType(label.c_str());
+        } else {
+            throw( std::runtime_error( "ERROR (writeDataToXMLstream): unknown data group argument of " + std::string(data_group) + ". Must be one of primitive, object, or global."));
+        }
+
+        if (dtype == HELIOS_TYPE_UINT) {
+            outfile << "\t<data_uint label=\"" << label << "\">" << std::flush;
+            std::vector<uint> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j) << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_uint>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_INT) {
+            outfile << "\t<data_int label=\"" << label << "\">" << std::flush;
+            std::vector<int> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j) << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_int>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_FLOAT) {
+            outfile << "\t<data_float label=\"" << label << "\">" << std::flush;
+            std::vector<float> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j) << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_float>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_DOUBLE) {
+            outfile << "\t<data_double label=\"" << label << "\">" << std::flush;
+            std::vector<double> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j) << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_double>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_VEC2) {
+            outfile << "\t<data_vec2 label=\"" << label << "\">" << std::flush;
+            std::vector<vec2> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j).x << " " << data.at(j).y << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_vec2>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_VEC3) {
+            outfile << "\t<data_vec3 label=\"" << label << "\">" << std::flush;
+            std::vector<vec3> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_vec3>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_VEC4) {
+            outfile << "\t<data_vec4 label=\"" << label << "\">" << std::flush;
+            std::vector<vec4> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w
+                        << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_vec4>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_INT2) {
+            outfile << "\t<data_int2 label=\"" << label << "\">" << std::flush;
+            std::vector<int2> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j).x << " " << data.at(j).y << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_int2>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_INT3) {
+            outfile << "\t<data_int3 label=\"" << label << "\">" << std::flush;
+            std::vector<int3> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_int3>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_INT4) {
+            outfile << "\t<data_int3 label=\"" << label << "\">" << std::flush;
+            std::vector<int4> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w
+                        << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_int4>" << std::endl;
+        } else if (dtype == HELIOS_TYPE_STRING) {
+            outfile << "\t<data_string label=\"" << label << "\">" << std::flush;
+            std::vector<std::string> data;
+            if (strcmp(data_group, "primitive") == 0) {
+                ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
+            } else if (strcmp(data_group, "object") == 0) {
+                ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else {
+                getGlobalData(label.c_str(), data);
+            }
+            for (int j = 0; j < data.size(); j++) {
+                outfile << data.at(j) << std::flush;
+                if (j != data.size() - 1) {
+                    outfile << " " << std::flush;
+                }
+            }
+            outfile << "</data_string>" << std::endl;
+        }
+
+    }
+
+}
+
 void Context::writeXML( const char* filename ) const{
     std::cout << "Writing XML file " << filename << "..." << std::flush;
 
@@ -10182,13 +11697,18 @@ void Context::writeXML( const char* filename ) const{
 
     outfile << "   </time>" << std::endl;
 
-    // -- primitive stuff -- //
+    // -- primitives -- //
 
     for(auto primitive : primitives){
 
         uint p = primitive.first;
 
         Primitive* prim = getPrimitivePointer(p);
+
+        //skip primitives that belong to objects
+        if( prim->getParentObjectID()!=0 ){
+            continue;
+        }
 
         RGBAcolor color = prim->getColorRGBA();
 
@@ -10209,133 +11729,9 @@ void Context::writeXML( const char* filename ) const{
         if( prim->hasTexture() ){
             outfile << "\t<texture>" << texture_file << "</texture>" << std::endl;
         }
+
         if( !pdata.empty() ){
-            for(const auto& label : pdata){
-                size_t dsize = prim->getPrimitiveDataSize( label.c_str() );
-                HeliosDataType dtype = prim->getPrimitiveDataType( label.c_str() );
-                if( dtype==HELIOS_TYPE_UINT ){
-                    outfile << "\t<data_uint label=\"" << label << "\">" << std::flush;
-                    std::vector<uint> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j) << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_uint>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_INT ){
-                    outfile << "\t<data_int label=\"" << label << "\">" << std::flush;
-                    std::vector<int> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j) << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_int>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_FLOAT ){
-                    outfile << "\t<data_float label=\"" << label << "\">" << std::flush;
-                    std::vector<float> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j) << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_float>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_DOUBLE ){
-                    outfile << "\t<data_double label=\"" << label << "\">" << std::flush;
-                    std::vector<double> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j) << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_double>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_VEC2 ){
-                    outfile << "\t<data_vec2 label=\"" << label << "\">" << std::flush;
-                    std::vector<vec2> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j).x << " " << data.at(j).y << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_vec2>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_VEC3 ){
-                    outfile << "\t<data_vec3 label=\"" << label << "\">" << std::flush;
-                    std::vector<vec3> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_vec3>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_VEC4 ){
-                    outfile << "\t<data_vec4 label=\"" << label << "\">" << std::flush;
-                    std::vector<vec4> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_vec4>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_INT2 ){
-                    outfile << "\t<data_int2 label=\"" << label << "\">" << std::flush;
-                    std::vector<int2> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j).x << " " << data.at(j).y << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_int2>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_INT3 ){
-                    outfile << "\t<data_int3 label=\"" << label << "\">" << std::flush;
-                    std::vector<int3> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_int3>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_INT4 ){
-                    outfile << "\t<data_int3 label=\"" << label << "\">" << std::flush;
-                    std::vector<int4> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_int4>" << std::endl;
-                }else if( dtype==HELIOS_TYPE_STRING ){
-                    outfile << "\t<data_string label=\"" << label << "\">" << std::flush;
-                    std::vector<std::string> data;
-                    prim->getPrimitiveData( label.c_str(), data );
-                    for( int j=0; j<data.size(); j++ ){
-                        outfile << data.at(j) << std::flush;
-                        if( j!=data.size()-1 ){
-                            outfile << " " << std::flush;
-                        }
-                    }
-                    outfile << "</data_string>" << std::endl;
-                }
-            }
+            writeDataToXMLstream( "primitive", pdata, prim, outfile );
         }
 
         //Patches
@@ -10405,6 +11801,367 @@ void Context::writeXML( const char* filename ) const{
         }
 
     }
+
+    // -- objects -- //
+
+    for( const auto &object : objects ){
+
+        uint o = object.first;
+
+        CompoundObject* obj = object.second;
+
+        RGBAcolor color = obj->getColorRGBA();
+
+        std::string texture_file = obj->getTextureFile();
+
+        std::vector<std::string> odata = obj->listObjectData();
+
+        if( obj->getObjectType()==OBJECT_TYPE_TILE ){
+            outfile << "   <tile>" << std::endl;
+        }else if( obj->getObjectType()==OBJECT_TYPE_BOX ){
+            outfile << "   <box>" << std::endl;
+        }else if( obj->getObjectType()==OBJECT_TYPE_CONE ){
+            outfile << "   <cone>" << std::endl;
+        }else if( obj->getObjectType()==OBJECT_TYPE_DISK ){
+            outfile << "   <disk>" << std::endl;
+        }else if( obj->getObjectType()==OBJECT_TYPE_SPHERE ){
+            outfile << "   <sphere>" << std::endl;
+        }else if( obj->getObjectType()==OBJECT_TYPE_TUBE ){
+            outfile << "   <tube>" << std::endl;
+        }else if( obj->getObjectType()==OBJECT_TYPE_POLYMESH ){
+            outfile << "   <polymesh>" << std::endl;
+        }
+
+        outfile << "\t<objID>" << o << "</objID>" << std::endl;
+        outfile << "\t<color>" << color.r << " " << color.g << " " << color.b << " " << color.a << "</color>" << std::endl;
+        if( obj->hasTexture() ){
+            outfile << "\t<texture>" << texture_file << "</texture>" << std::endl;
+        }
+
+        if( !odata.empty() ){
+            writeDataToXMLstream( "object", odata, obj, outfile );
+        }
+
+        std::vector<std::string> pdata_labels;
+        std::vector<HeliosDataType> pdata_types;
+        std::vector<uint> primitiveUUIDs = obj->getPrimitiveUUIDs();
+        for( uint UUID : primitiveUUIDs ){
+            std::vector<std::string> labels = getPrimitivePointer(UUID)->listPrimitiveData();
+            for( int i=0; i<labels.size(); i++ ){
+                if( find(pdata_labels.begin(),pdata_labels.end(),labels.at(i)) == pdata_labels.end() ){
+                    pdata_labels.push_back(labels.at(i));
+                    pdata_types.push_back(getPrimitiveDataType(UUID,labels.at(i).c_str()));
+                }
+            }
+        }
+        for( size_t l=0; l<pdata_labels.size(); l++ ) {
+            if( pdata_types.at(l)==HELIOS_TYPE_FLOAT ) {
+                outfile << "\t<primitive_data_float " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<float> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i) << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_float>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_DOUBLE ) {
+                outfile << "\t<primitive_data_double " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<double> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i) << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_double>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_UINT ) {
+                outfile << "\t<primitive_data_uint " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<uint> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i) << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_uint>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_INT ) {
+                outfile << "\t<primitive_data_int " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<int> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i) << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_int>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_INT2 ) {
+                outfile << "\t<primitive_data_int2 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<int2> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i).x << " " << data.at(i).y << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_int2>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_INT3 ) {
+                outfile << "\t<primitive_data_int3 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<int3> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i).x << " " << data.at(i).y << " " << data.at(i).z << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_int3>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_INT4 ) {
+                outfile << "\t<primitive_data_int4 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<int4> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i).x << " " << data.at(i).y << " " << data.at(i).z << " " << data.at(i).w << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_int4>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_VEC2 ) {
+                outfile << "\t<primitive_data_vec2 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<vec2> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i).x << " " << data.at(i).y << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_vec2>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_VEC3 ) {
+                outfile << "\t<primitive_data_vec3 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<vec3> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i).x << " " << data.at(i).y << " " << data.at(i).z << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_vec3>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_VEC4 ) {
+                outfile << "\t<primitive_data_vec4 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<vec4> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i).x << " " << data.at(i).y << " " << data.at(i).z << " " << data.at(i).w << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_vec4>" << std::endl;
+            }else if( pdata_types.at(l)==HELIOS_TYPE_STRING ) {
+                outfile << "\t<primitive_data_string " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
+                    if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
+                        std::vector<std::string> data;
+                        getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
+                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        for (size_t i = 0; i < data.size(); i++) {
+                            outfile << data.at(i) << std::flush;
+                        }
+                        outfile << " </data>" << std::endl;
+                    }
+                }
+                outfile << "\t</primitive_data_string>" << std::endl;
+            }
+
+
+        }
+
+        //Tiles
+        if( obj->getObjectType()==OBJECT_TYPE_TILE ){
+
+            Tile* tile = getTileObjectPointer(o);
+
+            float transform[16];
+            tile->getTransformationMatrix(transform);
+
+            int2 subdiv = tile->getSubdivisionCount();
+            outfile << "\t<subdivisions>" << subdiv.x << " " << subdiv.y << "</subdivisions>" << std::endl;
+
+            outfile << "\t<transform> ";
+            for(float i : transform){
+                outfile << i << " ";
+            }
+            outfile << "</transform>" << std::endl;
+
+            outfile << "   </tile>" << std::endl;
+
+        //Spheres
+        }else if( obj->getObjectType()==OBJECT_TYPE_SPHERE ){
+
+            Sphere* sphere = getSphereObjectPointer(o);
+
+            float transform[16];
+            sphere->getTransformationMatrix(transform);
+
+            outfile << "\t<transform> ";
+            for(float i : transform){
+                outfile << i << " ";
+            }
+            outfile << "</transform>" << std::endl;
+
+            uint subdiv = sphere->getSubdivisionCount();
+            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
+
+            outfile << "   </sphere>" << std::endl;
+
+        //Tubes
+        }else if( obj->getObjectType()==OBJECT_TYPE_TUBE ) {
+
+            Tube *tube = getTubeObjectPointer(o);
+
+            float transform[16];
+            tube->getTransformationMatrix(transform);
+
+            outfile << "\t<transform> ";
+            for (float i: transform) {
+                outfile << i << " ";
+            }
+            outfile << "</transform>" << std::endl;
+
+            uint subdiv = tube->getSubdivisionCount();
+            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
+
+            std::vector<vec3> nodes = tube->getNodes();
+            std::vector<float> radius = tube->getNodeRadii();
+
+            assert(nodes.size() == radius.size());
+            outfile << "\t<nodes> " << std::endl;
+            for (int i = 0; i < nodes.size(); i++) {
+                outfile << "\t\t" << nodes.at(i).x << " " << nodes.at(i).y << " " << nodes.at(i).z << std::endl;
+            }
+            outfile << "\t</nodes> " << std::endl;
+            outfile << "\t<radius> " << std::endl;
+            for (int i = 0; i < radius.size(); i++) {
+                outfile << "\t\t" << radius.at(i) << std::endl;
+            }
+            outfile << "\t</radius> " << std::endl;
+
+            outfile << "   </tube>" << std::endl;
+
+        //Boxes
+        }else if( obj->getObjectType()==OBJECT_TYPE_BOX ) {
+
+            Box *box = getBoxObjectPointer(o);
+
+            float transform[16];
+            box->getTransformationMatrix(transform);
+
+            outfile << "\t<transform> ";
+            for (float i: transform) {
+                outfile << i << " ";
+            }
+            outfile << "</transform>" << std::endl;
+
+            int3 subdiv = box->getSubdivisionCount();
+            outfile << "\t<subdivisions> " << subdiv.x << " " << subdiv.y << " " << subdiv.z << " </subdivisions>" << std::endl;
+
+            outfile << "   </box>" << std::endl;
+
+        //Disks
+        }else if( obj->getObjectType()==OBJECT_TYPE_DISK ) {
+
+            Disk *disk = getDiskObjectPointer(o);
+
+            float transform[16];
+            disk->getTransformationMatrix(transform);
+
+            outfile << "\t<transform> ";
+            for (float i: transform) {
+                outfile << i << " ";
+            }
+            outfile << "</transform>" << std::endl;
+
+            uint subdiv = disk->getSubdivisionCount();
+            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
+
+            outfile << "   </disk>" << std::endl;
+
+        //Cones
+        }else if( obj->getObjectType()==OBJECT_TYPE_CONE ) {
+
+            Cone *cone = getConeObjectPointer(o);
+
+            float transform[16];
+            cone->getTransformationMatrix(transform);
+
+            outfile << "\t<transform> ";
+            for (float i: transform) {
+                outfile << i << " ";
+            }
+            outfile << "</transform>" << std::endl;
+
+            uint subdiv = cone->getSubdivisionCount();
+            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
+
+            std::vector<vec3> nodes = cone->getNodes();
+            std::vector<float> radius = cone->getNodeRadii();
+
+            assert(nodes.size() == radius.size());
+            outfile << "\t<nodes> " << std::endl;
+            for (int i = 0; i < nodes.size(); i++) {
+                outfile << "\t\t" << nodes.at(i).x << " " << nodes.at(i).y << " " << nodes.at(i).z << std::endl;
+            }
+            outfile << "\t</nodes> " << std::endl;
+            outfile << "\t<radius> " << std::endl;
+            for (int i = 0; i < radius.size(); i++) {
+                outfile << "\t\t" << radius.at(i) << std::endl;
+            }
+            outfile << "\t</radius> " << std::endl;
+
+            outfile << "   </cone>" << std::endl;
+
+        }
+
+    }
+
 
     // -- global data -- //
 
@@ -11418,7 +13175,7 @@ void Context::setPrimitiveParentObjectID(uint UUID, uint objID){
 
 void Context::setPrimitiveParentObjectID(const std::vector<uint> &UUIDs, uint objID) {
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->setParentObjectID(UUID);
+        getPrimitivePointer(UUID)->setParentObjectID(objID);
     }
 }
 

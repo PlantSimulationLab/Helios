@@ -39,7 +39,16 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
     \param[in] "height" Height of the graphics window in pixels
     \param[in] "window" Pointer to the window object
 */
-int write_JPEG_file ( const char* filename, const uint width, const uint height, void* _window );
+int write_JPEG_file (const char* filename, uint width, uint height, void* _window );
+
+
+//! Write a JPEG image file based on array of pixel data
+/** \param[in] "filename" Name of the JPEG image file
+    \param[in] "width" Width of the graphics window in pixels
+    \param[in] "height" Height of the graphics window in pixels
+    \param[in] "data" Vector of RGB pixel data
+*/
+int write_JPEG_file (const char* filename, uint width, uint height, const std::vector<helios::RGBcolor>& data );
 
 //! Function to create a texture map from a PNG image
 /** \param[in] "filename" Name of the PNG image file

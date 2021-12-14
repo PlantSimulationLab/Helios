@@ -48,6 +48,7 @@ SphericalCoord helios::nullrotation = make_SphericalCoord(0,0);
 
 RGBcolor helios::blend( RGBcolor color0, RGBcolor color1, float weight ){
   RGBcolor color;
+  weight = clamp(weight,0.f,1.f);
   color.r = weight*color1.r+(1.f-weight)*color0.r;
   color.g = weight*color1.g+(1.f-weight)*color0.g;
   color.b = weight*color1.b+(1.f-weight)*color0.b;
@@ -56,6 +57,7 @@ RGBcolor helios::blend( RGBcolor color0, RGBcolor color1, float weight ){
 
 RGBAcolor helios::blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight ){
   RGBAcolor color;
+  weight = clamp(weight,0.f,1.f);
   color.r = weight*color1.r+(1.f-weight)*color0.r;
   color.g = weight*color1.g+(1.f-weight)*color0.g;
   color.b = weight*color1.b+(1.f-weight)*color0.b;
@@ -1622,5 +1624,54 @@ float helios::fzero(float(*function)(float value, std::vector<float> &variables,
     }
 
     return T;
+
+}
+
+float helios::interp1( const std::vector<helios::vec2> &points, float x ) {
+
+    //Ensure that no 2 adjacent x values are equal, and that x values are monotonically increasing
+    const float EPSILON{1.0E-5};
+    for (std::size_t i = 1; i < points.size(); ++i) {
+        float deltaX{std::abs(points[i].x - points[i - 1].x)};
+        if (deltaX < EPSILON) {
+            if (deltaX > -EPSILON) {
+                throw (std::runtime_error("ERROR (interp1): Adjacent X points cannot be equal."));
+            } else {
+                throw (std::runtime_error("ERROR (interp1): X points must increase monotonically."));
+            }
+        }
+    }
+
+    //Define a lambda that returns true if the x value
+    //of a point pair is < the caller's x value
+    auto lessThan = [](const vec2 &point, float x) {
+        return point.x < x;
+    };
+
+    //Find the first table entry whose value is >= caller's x value
+    auto iter = std::lower_bound(points.cbegin(), points.cend(), x, lessThan);
+
+    //If the caller's X value is greater than the largest
+    //X value in the table, we can't interpolate.
+    if (iter == points.cend()) {
+        return (points.cend() - 1)->y;
+    }
+
+    //If the caller's X value is less than the smallest X value in the table,
+    //we can't interpolate.
+    if (iter == points.cbegin() and x <= points.cbegin()->x) {
+        return points.cbegin()->y;
+    }
+
+    //We can interpolate!
+    float upperX{iter->x};
+    float upperY{iter->y};
+    float lowerX{(iter - 1)->x};
+    float lowerY{(iter - 1)->y};
+
+    float deltaY{upperY - lowerY};
+    float deltaX{upperX - lowerX};
+
+    return lowerY + ((x - lowerX)/ deltaX) * deltaY;
 
 }

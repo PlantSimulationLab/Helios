@@ -3,7 +3,7 @@
 using namespace helios;
 using namespace std;
 
-std::vector<std::vector<uint> > strawberryCluster( const vec3 center, const StrawberryParameters params, Context* context ){
+std::vector<std::vector<uint> > strawberryCluster(const vec3 center, const StrawberryParameters &params, Context* context ){
 
 
   std::vector<std::vector<uint> > U;
@@ -58,7 +58,7 @@ std::vector<std::vector<uint> > strawberryCluster( const vec3 center, const Stra
 
 }
 
-std::vector<uint> leafPrototype( const StrawberryParameters params, Context* context ){
+std::vector<uint> leafPrototype(const StrawberryParameters &params, Context* context ){
 
   int Nx = params.leaf_subdivisions.x;
   int Ny = ceil( params.leaf_subdivisions.y*0.5 );
@@ -123,7 +123,13 @@ std::vector<uint> leafPrototype( const StrawberryParameters params, Context* con
 
 }
 
-void strawberryShoot( const StrawberryParameters params, const helios::vec3 base_position, const helios::vec3 base_direction, const float length, const float bend_angle, const std::vector<uint> leaf_prototype, Context* context ){
+void
+strawberryShoot(const StrawberryParameters &params, const helios::vec3 base_position, const helios::vec3 base_direction,
+                const float length, const float bend_angle, const std::vector<uint> &leaf_prototype,
+                std::vector<std::vector<uint> > &leaf_UUIDs,
+                std::vector<uint> &branch_UUIDs, std::vector<std::vector<std::vector<uint> > > &fruit_UUIDs, Context *context) {
+
+    std::vector<uint> U;
 
   std::vector<vec3> nodes;
   std::vector<float> radius;
@@ -157,16 +163,21 @@ void strawberryShoot( const StrawberryParameters params, const helios::vec3 base
 
   }
 
-  context->addTube( params.stem_subdivisions, nodes, radius, color );
+  U = context->addTube( params.stem_subdivisions, nodes, radius, color );
+  branch_UUIDs.insert( branch_UUIDs.end(), U.begin(), U.end() );
 
   //tip leaf
-  std::vector<uint> U = context->copyPrimitive( leaf_prototype );
 
-    context->scalePrimitive( U, make_vec3( params.leaf_length, 0.8*params.leaf_length, params.leaf_length ) );
-    context->rotatePrimitive( U, 0.75*(0.6*M_PI-theta), "y" );
+
+  U = context->copyPrimitive( leaf_prototype );
+
+  context->scalePrimitive( U, make_vec3( params.leaf_length, 0.8*params.leaf_length, params.leaf_length ) );
+  context->rotatePrimitive( U, 0.75*(0.6*M_PI-theta), "y" );
   context->rotatePrimitive( U, -base_angle.azimuth+0.5*M_PI, "z" );
 
   context->translatePrimitive( U, nodes.back() );
+
+  leaf_UUIDs.push_back(U);
 
   //lateral leaves
   U = context->copyPrimitive( leaf_prototype );
@@ -177,6 +188,8 @@ void strawberryShoot( const StrawberryParameters params, const helios::vec3 base
 
   context->translatePrimitive( U, nodes.back() );
 
+  leaf_UUIDs.push_back(U);
+
   U = context->copyPrimitive( leaf_prototype );
 
   context->scalePrimitive( U, 0.8*make_vec3( params.leaf_length, 0.8*params.leaf_length, params.leaf_length ) );
@@ -185,19 +198,25 @@ void strawberryShoot( const StrawberryParameters params, const helios::vec3 base
 
   context->translatePrimitive( U, nodes.back() );
 
+  leaf_UUIDs.push_back(U);
+
   //fruit
 
   if( context->randu()<params.clusters_per_stem ){
 
     vec3 cluster_position = interpolateTube( nodes, 0.35 )+ sphere2cart( make_SphericalCoord( 0.1+0.2*context->randu(), 0, 2*M_PI*context->randu() ) );
 
-    strawberryCluster( cluster_position, params, context );
+    fruit_UUIDs.push_back(strawberryCluster( cluster_position, params, context ) );
 
   }
     
 }
 
 void CanopyGenerator::strawberry(const StrawberryParameters &params, const vec3 &origin ){
+
+    std::vector<std::vector<uint> > leaf_UUIDs;
+    std::vector<uint> branch_UUIDs;
+    std::vector<std::vector<std::vector<uint> > > fruit_UUIDs;
 
   std::vector<uint> leaf_prototype = leafPrototype( params, context );
 
@@ -211,11 +230,15 @@ void CanopyGenerator::strawberry(const StrawberryParameters &params, const vec3 
 
     float length = (0.75+0.25*float(params.stems_per_plant-1-i)/float(params.stems_per_plant-1))*params.plant_height*(0.9+0.2*context->randu());
 
-    strawberryShoot( params, position, base_direction, length, tip_angle, leaf_prototype, context );
+      strawberryShoot(params, position, base_direction, length, tip_angle, leaf_prototype, leaf_UUIDs, branch_UUIDs, fruit_UUIDs, context);
 
   }
 
   context->deletePrimitive( leaf_prototype );
+
+  UUID_leaf.push_back( leaf_UUIDs );
+  UUID_branch.push_back( branch_UUIDs );
+  UUID_fruit.push_back( fruit_UUIDs );
   
 
 }

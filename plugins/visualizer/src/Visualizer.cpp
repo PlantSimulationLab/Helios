@@ -136,7 +136,7 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
     glfwSwapBuffers((GLFWwindow*)_window);
     glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
 
-    //depending on the active frame buffer, we may get all zero data and need to swap it again.
+    //depending on the ative frame buffer, we may get all zero data and need to swap it again.
     bool zeros = true;
     for( int i=0; i<bsize; i++ ){
         if( screen_shot_trans[i]!=0 ){
@@ -163,9 +163,73 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
     /* Now we can initialize the JPEG compression object. */
     jpeg_create_compress(&cinfo);
 
-    if ((outfile = fopen(filename, "wb")) == NULL) {
-        fprintf(stderr, "can't open %s\n", filename);
-        throw(1);
+    if ((outfile = fopen(filename, "wb")) == nullptr ) {
+        throw( std::runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename)));
+    }
+    jpeg_stdio_dest(&cinfo, outfile);
+
+    cinfo.image_width = width; 	/* image width and height, in pixels */
+    cinfo.image_height = height;
+    cinfo.input_components = 3;		/* # of color components per pixel */
+    cinfo.in_color_space = JCS_RGB; 	/* colorspace of input image */
+
+    jpeg_set_defaults(&cinfo);
+
+    jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
+
+    jpeg_start_compress(&cinfo, TRUE);
+
+    row_stride = width * 3;	/* JSAMPLEs per row in image_buffer */
+
+    while (cinfo.next_scanline < cinfo.image_height) {
+        row_pointer = (JSAMPROW) &screen_shot_trans[ (cinfo.image_height-cinfo.next_scanline-1) * row_stride ];
+        (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+    }
+
+    jpeg_finish_compress(&cinfo);
+    /* After finish_compress, we can close the output file. */
+    fclose(outfile);
+
+    jpeg_destroy_compress(&cinfo);
+
+    return 1;
+
+}
+
+int write_JPEG_file ( const char* filename, const uint width, const uint height, const std::vector<helios::RGBcolor>& data ){
+
+    if( data.size()!=width*height ){
+        throw( std::runtime_error("ERROR (write_JPEG_file): Pixel data does not have size of width*height.") );
+    }
+
+    std::cout << "writing JPEG image: " << filename << std::endl;
+
+    const uint bsize = 3 * width * height;
+    std::vector<GLubyte> screen_shot_trans;
+    screen_shot_trans.resize(bsize);
+
+    size_t ii = 0;
+    for( size_t i=0; i<width*height; i++ ){
+        screen_shot_trans.at(ii) = data.at(i).r*255;
+        screen_shot_trans.at(ii+1) = data.at(i).g*255;
+        screen_shot_trans.at(ii+2) = data.at(i).b*255;
+        ii+=3;
+    }
+
+    struct jpeg_compress_struct cinfo;
+
+    struct jpeg_error_mgr jerr;
+    /* More stuff */
+    FILE * outfile;		/* target file */
+    JSAMPROW row_pointer;	/* pointer to JSAMPLE row[s] */
+    int row_stride;
+
+    cinfo.err = jpeg_std_error(&jerr);
+    /* Now we can initialize the JPEG compression object. */
+    jpeg_create_compress(&cinfo);
+
+    if ((outfile = fopen(filename, "wb")) == nullptr ) {
+        throw( std::runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename)));
     }
     jpeg_stdio_dest(&cinfo, outfile);
 

@@ -64,7 +64,8 @@ std::vector<uint> lateralLeaves( const float bfrac, const TomatoParameters param
 
 }
 
-void tomatoShoot( const TomatoParameters params, const helios::vec3 base_position, const helios::vec3 base_direction, const float length, const float bend_angle, Context* context ){
+void tomatoShoot( const TomatoParameters params, const helios::vec3 base_position, const helios::vec3 base_direction, const float length, const float bend_angle, std::vector<std::vector<uint> > &leaf_UUIDs,
+                  std::vector<uint> &branch_UUIDs, std::vector<std::vector<std::vector<uint> > > &fruit_UUIDs, Context* context ){
 
   std::vector<vec3> nodes;
   std::vector<float> radius;
@@ -100,25 +101,28 @@ void tomatoShoot( const TomatoParameters params, const helios::vec3 base_positio
 
   }
 
-  context->addTube( params.shoot_subdivisions, nodes, radius, color );
+  std::vector<uint> U = context->addTube( params.shoot_subdivisions, nodes, radius, color );
+  branch_UUIDs.insert( branch_UUIDs.end(), U.begin(), U.end() );
 
   //tip leaf
-  std::vector<uint> U = context->addTile( make_vec3(0,0,0), make_vec2(params.leaf_length,params.leaf_length*0.5), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+  U = context->addTile( make_vec3(0,0,0), make_vec2(params.leaf_length,params.leaf_length*0.5), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
   context->rotatePrimitive( U, -theta, "y" );
   context->rotatePrimitive( U, -base_angle.azimuth+0.5*M_PI, "z" );
 
   context->translatePrimitive( U, nodes.back()+sphere2cart(make_SphericalCoord(0.45*params.leaf_length,theta,base_angle.azimuth)) );
 
+  leaf_UUIDs.push_back(U);
+
   //primary lateral leaves
 
-  lateralLeaves( 0.9, params, 0.3*params.leaf_length, nodes, params.leaf_texture_file, context );
-  
-  lateralLeaves( 0.8, params, 0.85*params.leaf_length, nodes, params.leaf_texture_file, context );
+  leaf_UUIDs.push_back( lateralLeaves( 0.9, params, 0.3*params.leaf_length, nodes, params.leaf_texture_file, context ) );
 
-  lateralLeaves( 0.6, params, 0.3*params.leaf_length, nodes, params.leaf_texture_file, context );
+  leaf_UUIDs.push_back( lateralLeaves( 0.8, params, 0.85*params.leaf_length, nodes, params.leaf_texture_file, context ) );
 
-  lateralLeaves( 0.45, params, 0.75*params.leaf_length, nodes, params.leaf_texture_file, context );
+  leaf_UUIDs.push_back( lateralLeaves( 0.6, params, 0.3*params.leaf_length, nodes, params.leaf_texture_file, context ) );
+
+  leaf_UUIDs.push_back( lateralLeaves( 0.45, params, 0.75*params.leaf_length, nodes, params.leaf_texture_file, context ) );
 
   //fruit
 
@@ -126,13 +130,17 @@ void tomatoShoot( const TomatoParameters params, const helios::vec3 base_positio
 
     vec3 cluster_position = interpolateTube( nodes, 0.25 ) - make_vec3(0,0,4*params.fruit_radius);
 
-    tomatoCluster( cluster_position, params, context );
+    fruit_UUIDs.push_back( tomatoCluster( cluster_position, params, context ) );
 
   }
     
 }
 
 void CanopyGenerator::tomato(const TomatoParameters &params, const vec3 &origin ){
+
+    std::vector<std::vector<uint> > leaf_UUIDs;
+    std::vector<uint> branch_UUIDs;
+    std::vector<std::vector<std::vector<uint> > > fruit_UUIDs;
 
   //main stem
 
@@ -162,7 +170,7 @@ void CanopyGenerator::tomato(const TomatoParameters &params, const vec3 &origin 
 
   }
 
-  context->addTube( params.shoot_subdivisions, nodes, radius, color );
+  branch_UUIDs = context->addTube( params.shoot_subdivisions, nodes, radius, color );
 
   std::vector<float> shoot_heights;
   shoot_heights.push_back( 0.4 );
@@ -189,9 +197,13 @@ void CanopyGenerator::tomato(const TomatoParameters &params, const vec3 &origin 
 
     float length = (0.3+0.5*float(i)/float(Nshoots-1))*params.plant_height;
 
-    tomatoShoot( params, position, base_direction, length, tip_angle, context );
+    tomatoShoot( params, position, base_direction, length, tip_angle, leaf_UUIDs, branch_UUIDs, fruit_UUIDs, context );
 
   }
+
+  UUID_leaf.push_back( leaf_UUIDs );
+  UUID_branch.push_back( branch_UUIDs );
+  UUID_fruit.push_back( fruit_UUIDs );
   
 
 }
