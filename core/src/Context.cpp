@@ -6119,13 +6119,15 @@ uint Context::copyObject(uint ObjID ){
         getPrimitivePointer(p)->setParentObjectID( currentObjectID );
     }
 
+    std::string texturefile = objects.at(ObjID)->getTextureFile();
+
     if( type==OBJECT_TYPE_TILE ){
 
         Tile* o = getTileObjectPointer( ObjID );
 
         int2 subdiv = o->getSubdivisionCount();
 
-        auto* tile_new = (new Tile(currentObjectID, UUIDs_copy, subdiv, nullptr, this));
+        auto* tile_new = (new Tile(currentObjectID, UUIDs_copy, subdiv, texturefile.c_str(), this));
 
         objects[currentObjectID] = tile_new;
 
@@ -6135,7 +6137,7 @@ uint Context::copyObject(uint ObjID ){
 
         uint subdiv = o->getSubdivisionCount();
 
-        auto* sphere_new = (new Sphere(currentObjectID, UUIDs_copy, subdiv, nullptr, this));
+        auto* sphere_new = (new Sphere(currentObjectID, UUIDs_copy, subdiv, texturefile.c_str(), this));
 
         objects[currentObjectID] = sphere_new;
 
@@ -6147,7 +6149,7 @@ uint Context::copyObject(uint ObjID ){
         std::vector<float> radius = o->getNodeRadii();
         uint subdiv = o->getSubdivisionCount();
 
-        auto* tube_new = (new Tube(currentObjectID, UUIDs_copy, nodes, radius, subdiv, nullptr, this));
+        auto* tube_new = (new Tube(currentObjectID, UUIDs_copy, nodes, radius, subdiv, texturefile.c_str(), this));
 
         objects[currentObjectID] = tube_new;
 
@@ -6158,7 +6160,7 @@ uint Context::copyObject(uint ObjID ){
         vec3 size = o->getSize();
         int3 subdiv = o->getSubdivisionCount();
 
-        auto* box_new = (new Box(currentObjectID, UUIDs_copy, subdiv, nullptr, this));
+        auto* box_new = (new Box(currentObjectID, UUIDs_copy, subdiv, texturefile.c_str(), this));
 
         objects[currentObjectID] = box_new;
 
@@ -6169,7 +6171,7 @@ uint Context::copyObject(uint ObjID ){
         vec2 size = o->getSize();
         uint subdiv = o->getSubdivisionCount();
 
-        auto* disk_new = (new Disk(currentObjectID, UUIDs_copy, subdiv, nullptr, this));
+        auto* disk_new = (new Disk(currentObjectID, UUIDs_copy, subdiv, texturefile.c_str(), this));
 
         objects[currentObjectID] = disk_new;
 
@@ -6177,7 +6179,7 @@ uint Context::copyObject(uint ObjID ){
 
         Polymesh* o = getPolymeshObjectPointer( ObjID );
 
-        auto* polymesh_new = (new Polymesh(currentObjectID, UUIDs_copy, nullptr, this));
+        auto* polymesh_new = (new Polymesh(currentObjectID, UUIDs_copy, texturefile.c_str(), this));
 
         objects[currentObjectID] = polymesh_new;
 
@@ -6190,7 +6192,7 @@ uint Context::copyObject(uint ObjID ){
         uint subdiv = o->getSubdivisionCount();
 
         auto* cone_new = (new Cone(currentObjectID, UUIDs_copy, nodes.at(0), nodes.at(1), radius.at(0), radius.at(1),
-                                   subdiv, nullptr, this));
+                                   subdiv, texturefile.c_str(), this));
 
         objects[currentObjectID] = cone_new;
 
@@ -13239,5 +13241,34 @@ void Context::setPrimitiveColor(uint UUID, const RGBAcolor &color) {
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBAcolor &color) {
     for( uint UUID : UUIDs){
         getPrimitivePointer(UUID)->setColor(color);
+    }
+}
+
+std::string Context::getPrimitiveTextureFile( uint UUID ) const{
+    return getPrimitivePointer(UUID)->getTextureFile();
+}
+
+helios::int2 Context::getPrimitiveTextureSize( uint UUID ) const{
+    std::string texturefile = getPrimitivePointer(UUID)->getTextureFile();
+    if( !texturefile.empty() && textures.find(texturefile)!=textures.end() ){
+        return textures.at(texturefile).getSize();
+    }
+    return make_int2(0,0);
+}
+
+bool Context::primitiveTextureHasTransparencyChannel( uint UUID ) const{
+    std::string texturefile = getPrimitivePointer(UUID)->getTextureFile();
+    if( !texturefile.empty() && textures.find(texturefile)!=textures.end() ){
+        return textures.at(texturefile).hasTransparencyChannel();
+    }
+    return false;
+}
+
+std::vector<std::vector<bool> > *Context::getPrimitiveTextureTransparencyData( uint UUID ){
+    if(primitiveTextureHasTransparencyChannel(UUID) ){
+        std::vector<std::vector<bool> > *data = textures.at(getPrimitivePointer(UUID)->getTextureFile()).getTransparencyData();
+        return data;
+    }else{
+        throw( std::runtime_error("ERROR (getPrimitiveTransparencyData): Texture transparency data does not exist for primitive " + std::to_string(UUID) + ".") );
     }
 }

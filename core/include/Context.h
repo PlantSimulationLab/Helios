@@ -2454,6 +2454,33 @@ namespace helios {
         */
         void setPrimitiveColor( const std::vector<uint> &UUIDs, const helios::RGBAcolor& color );
 
+        //! Get the path to texture map file for primitive. If primitive does not have a texture map, the result will be an empty string.
+        /**
+         * \param[in] UUID Unique universal identifier of primitive to be queried
+         * @return Path to texture map file.
+         */
+        std::string getPrimitiveTextureFile( uint UUID ) const;
+
+        //! Get the size (number of pixels) of primitive texture map image.
+        /**
+         * \param[in] UUID Unique universal identifier of primitive to be queried
+         * @return Texture image resolution (columns x rows).
+         */
+        helios::int2 getPrimitiveTextureSize( uint UUID ) const;
+
+        //! Check if primitive texture map has a transparency channel
+        /**
+         * \param[in] UUID Unique universal identifier of primitive to be queried
+         * @return True if transparency channel data exists, false otherwise
+         */
+        bool primitiveTextureHasTransparencyChannel(uint UUID ) const;
+
+        //! Get the transparency channel pixel data from primitive texture map. If transparency channel does not exist, an error will be thrown.
+        /**
+         * \param[in] UUID Unique universal identifier of primitive to be queried
+         * @return Transparency value (0 or 1) for each pixel in primitive texture map.
+         */
+        std::vector<std::vector<bool> > *getPrimitiveTextureTransparencyData(uint UUID);
 
         //-------- Compound Object Data Functions ---------- //
 

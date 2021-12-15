@@ -2654,7 +2654,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
     uint ID = prim->getParentObjectID();
     
-    if( context->getPrimitivePointer(p)->getType()==PRIMITIVE_TYPE_VOXEL || maskfile.size()==0 || !prim->getTexture()->hasTransparencyChannel() ){ //does not have texture transparency
+    if( context->getPrimitiveType(p)==PRIMITIVE_TYPE_VOXEL || maskfile.size()==0 || !context->primitiveTextureHasTransparencyChannel(p) ){ //does not have texture transparency
       
       maskID.at(u) = -1;
       uvID.at(u) = -1;
@@ -2672,7 +2672,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   	uint ID = maskdata.size();
   	maskID.at(u) = ID;
   	maskname[maskfile] = maskdata.size();
-	maskdata.push_back( *prim->getTexture()->getTransparencyData() );
+	maskdata.push_back( *context->getPrimitiveTextureTransparencyData(p) );
   	uint sy = maskdata.back().size();
   	uint sx = maskdata.back().front().size();
   	masksize.push_back( optix::make_int2(sx,sy) );
@@ -2910,11 +2910,9 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
 
   for( size_t u=0; u<Nprimitives; u++ ){
 
-    helios::Primitive* prim = context->getPrimitivePointer( context_UUIDs.at(u) );
+    uint UUID = context_UUIDs.at(u);
 
-    uint UUID = prim->getUUID();
-
-    helios::PrimitiveType type = prim->getType();
+    helios::PrimitiveType type = context->getPrimitiveType(UUID);
     
     isbandpropertyinitialized.at(band) = true;
     
@@ -2925,145 +2923,145 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
       // Absorption coefficient
 
       sprintf(prop,"attenuation_coefficient_%s",label);
-    
-      if( prim->doesPrimitiveDataExist(prop) ){
-	prim->getPrimitiveData(prop,rho[u]);
-      }else{
-	rho[u] = kappa_default;
-	prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&kappa_default);  
-      }
 
-      if( rho[u]<0 ){
-	rho[u] = 0.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): absorption coefficient cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
-	}
-      }else if( rho[u]>1.f ){
-	rho[u] = 1.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): absorption coefficient cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
-	}
-      }
+        if( context->doesPrimitiveDataExist(UUID,prop) ){
+            context->getPrimitiveData(UUID, prop,rho[u]);
+        }else{
+            rho[u] = kappa_default;
+            context->setPrimitiveData(UUID, prop,helios::HELIOS_TYPE_FLOAT,1,&kappa_default);
+        }
 
-      // Scattering coefficient
+        if( rho[u]<0 ){
+            rho[u] = 0.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): absorption coefficient cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
+            }
+        }else if( rho[u]>1.f ){
+            rho[u] = 1.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): absorption coefficient cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
+            }
+        }
 
-      sprintf(prop,"scattering_coefficient_%s",label);
+        // Scattering coefficient
 
-      if( prim->doesPrimitiveDataExist(prop) ){
-	prim->getPrimitiveData(prop,tau[u]);
-      }else{
-	tau[u] = sigmas_default;
-	prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&sigmas_default);
-      }
-      
-      if( tau[u]<0 ){
-	tau[u] = 0.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): scattering coefficient cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
-	}
-      }else if( tau[u]>1.f ){
-	tau[u] = 1.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): scattering coefficient cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
-	}
-      }
+        sprintf(prop,"scattering_coefficient_%s",label);
+
+        if( context->doesPrimitiveDataExist(UUID,prop) ){
+            context->getPrimitiveData(UUID,prop,tau[u]);
+        }else{
+            tau[u] = sigmas_default;
+            context->setPrimitiveData(UUID,prop,helios::HELIOS_TYPE_FLOAT,1,&sigmas_default);
+        }
+
+        if( tau[u]<0 ){
+            tau[u] = 0.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): scattering coefficient cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
+            }
+        }else if( tau[u]>1.f ){
+            tau[u] = 1.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): scattering coefficient cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
+            }
+        }
 
     }else{ //other than voxels
 
-      // Reflectivity 
+        // Reflectivity
 
-      sprintf(prop,"reflectivity_%s",label);
+        sprintf(prop,"reflectivity_%s",label);
 
-      if( prim->doesPrimitiveDataExist(prop) ){
-	prim->getPrimitiveData(prop,rho[u]);
-      }else{
-	rho[u] = rho_default;
-	//prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&rho_default);  
-      }
+        if( context->doesPrimitiveDataExist(UUID,prop) ){
+            context->getPrimitiveData(UUID,prop,rho[u]);
+        }else{
+            rho[u] = rho_default;
+            //prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&rho_default);
+        }
 
-      if( rho[u]<0 ){
-	rho[u] = 0.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): reflectivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
-	}
-      }else if( rho[u]>1.f ){
-	rho[u] = 1.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): reflectivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
-	}
-      }
-      
-      // Transmissivity
-      
-      sprintf(prop,"transmissivity_%s",label);
-      
-      if( prim->doesPrimitiveDataExist(prop) ){
-	prim->getPrimitiveData(prop,tau[u]);
-      }else{
-	tau[u] = tau_default;
-	//prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&tau_default);
-      }
+        if( rho[u]<0 ){
+            rho[u] = 0.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): reflectivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
+            }
+        }else if( rho[u]>1.f ){
+            rho[u] = 1.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): reflectivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
+            }
+        }
 
-      if( tau[u]<0 ){
-	tau[u] = 0.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): transmissivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
-	}
-      }else if( tau[u]>1.f ){
-	tau[u] = 1.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): transmissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
-	}
-      }
+        // Transmissivity
 
-      // Emissivity
-      
-      sprintf(prop,"emissivity_%s",label);
+        sprintf(prop,"transmissivity_%s",label);
 
-      if( prim->doesPrimitiveDataExist(prop) ){
-	prim->getPrimitiveData(prop,eps[u]);
-      }else{
-	eps[u] = eps_default;
-	//prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&eps_default);
-      }
-    
-      if( eps[u]<0 ){
-	eps[u] = 0.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): emissivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
-	}
-      }else if( eps[u]>1.f ){
-	eps[u] = 1.f;
-	if( message_flag ){
-	  std::cout << "WARNING (RadiationModel): emissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
-	}
-      }
-      
-      if( emission_flag.at(band) ){ //emission enabled
-	if( eps[u]!=1.f && rho[u]==0 && tau[u]==0 ){
-	  rho[u] = 1.f-eps[u];
-	}else if( eps[u]+tau[u]+rho[u]!=1.f && eps[u]>0.f ){
-	  std::cerr << "ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " << label << ", Primitive #" << prim->getUUID() << ": eps=" << eps[u] << ", tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
-	  exit(EXIT_FAILURE);
-	}else if( scatteringDepth.at(band)==0 && eps[u]!=1.f  ){
-	  //std::cout << "WARNING (RadiationModel): emissivity must be 1 if the number of scattering iterations is set to 0" << std::endl;
-	  eps[u] = 1.f;
-	  rho[u] = 0.f;
-	  tau[u] = 0.f;
-	}
-      }else if( tau[u]+rho[u]>1.f ){
-      	std::cerr << "ERROR (RadiationModel): transmissivity and reflectivity cannot sum to greater than 1 ensure energy conservation. Band " << label << ", Primitive #" << prim->getUUID() << ": tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
-	exit(EXIT_FAILURE);
-      }
- 
+        if( context->doesPrimitiveDataExist(UUID,prop) ){
+            context->getPrimitiveData(UUID,prop,tau[u]);
+        }else{
+            tau[u] = tau_default;
+            //prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&tau_default);
+        }
+
+        if( tau[u]<0 ){
+            tau[u] = 0.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): transmissivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
+            }
+        }else if( tau[u]>1.f ){
+            tau[u] = 1.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): transmissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
+            }
+        }
+
+        // Emissivity
+
+        sprintf(prop,"emissivity_%s",label);
+
+        if( context->doesPrimitiveDataExist(UUID,prop) ){
+            context->getPrimitiveData(UUID,prop,eps[u]);
+        }else{
+            eps[u] = eps_default;
+            //prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&eps_default);
+        }
+
+        if( eps[u]<0 ){
+            eps[u] = 0.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): emissivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
+            }
+        }else if( eps[u]>1.f ){
+            eps[u] = 1.f;
+            if( message_flag ){
+                std::cout << "WARNING (RadiationModel): emissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
+            }
+        }
+
+        if( emission_flag.at(band) ){ //emission enabled
+            if( eps[u]!=1.f && rho[u]==0 && tau[u]==0 ){
+                rho[u] = 1.f-eps[u];
+            }else if( eps[u]+tau[u]+rho[u]!=1.f && eps[u]>0.f ){
+                std::cerr << "ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " << label << ", Primitive #" << UUID << ": eps=" << eps[u] << ", tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
+                exit(EXIT_FAILURE);
+            }else if( scatteringDepth.at(band)==0 && eps[u]!=1.f  ){
+                //std::cout << "WARNING (RadiationModel): emissivity must be 1 if the number of scattering iterations is set to 0" << std::endl;
+                eps[u] = 1.f;
+                rho[u] = 0.f;
+                tau[u] = 0.f;
+            }
+        }else if( tau[u]+rho[u]>1.f ){
+            std::cerr << "ERROR (RadiationModel): transmissivity and reflectivity cannot sum to greater than 1 ensure energy conservation. Band " << label << ", Primitive #" << UUID << ": tau=" << tau[u] << ", rho=" << rho[u] << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
     }
-      
+
 
   }
 
-  initializeBuffer1Df( rho_RTbuffer, rho );
-  initializeBuffer1Df( tau_RTbuffer, tau );
-  initializeBuffer1Df( eps_RTbuffer, eps );
+    initializeBuffer1Df( rho_RTbuffer, rho );
+    initializeBuffer1Df( tau_RTbuffer, tau );
+    initializeBuffer1Df( eps_RTbuffer, eps );
 
 }
 

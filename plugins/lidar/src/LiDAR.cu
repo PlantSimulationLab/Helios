@@ -2997,8 +2997,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
   //figure out how many patches
   size_t Npatches = 0;
   for( int p=0; p<UUIDs_all.size(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
-    if( prim->getType() == helios::PRIMITIVE_TYPE_PATCH ){
+    if( context->getPrimitiveType(UUIDs_all.at(p)) == helios::PRIMITIVE_TYPE_PATCH ){
       Npatches++;
     }
   }
@@ -3011,45 +3010,45 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
 
   c=0;
   for( int p=0; p<UUIDs_all.size(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
-    if( prim->getType() == helios::PRIMITIVE_TYPE_PATCH ){
-      std::vector<helios::vec3> verts = prim->getVertices();
-      patch_vertex[4*c] = vec3tofloat3(verts.at(0));
-      patch_vertex[4*c+1] = vec3tofloat3(verts.at(1));
-      patch_vertex[4*c+2] = vec3tofloat3(verts.at(2));
-      patch_vertex[4*c+3] = vec3tofloat3(verts.at(3));
+      uint UUID = UUIDs_all.at(p);
+      if( context->getPrimitiveType(UUID) == helios::PRIMITIVE_TYPE_PATCH ){
+          std::vector<helios::vec3> verts = context->getPrimitiveVertices(UUID);
+          patch_vertex[4*c] = vec3tofloat3(verts.at(0));
+          patch_vertex[4*c+1] = vec3tofloat3(verts.at(1));
+          patch_vertex[4*c+2] = vec3tofloat3(verts.at(2));
+          patch_vertex[4*c+3] = vec3tofloat3(verts.at(3));
 
-      ID_mapping.at(c) = UUIDs_all.at(p);
+          ID_mapping.at(c) = UUIDs_all.at(p);
 
-      if( prim->hasTexture() && prim->getTexture()->hasTransparencyChannel() ){
-	std::string tex = prim->getTextureFile();
-	std::map<std::string,int>::iterator it = textures.find(tex);
-	if( it != textures.end() ){ //texture already exits
-	  patch_textureID[c] = textures.at(tex);
-	}else{ //new texture
-	  patch_textureID[c] = tID;
-	  textures[tex] = tID;
-	  helios::int2 tsize = prim->getTexture()->getSize();
-	  texture_size[tex] = make_int2(tsize.x,tsize.y);
-	  texture_data[tex] = *prim->getTexture()->getTransparencyData();
-	  tID++;
-	}
+          if( !context->getPrimitiveTextureFile(UUID).empty() && context->primitiveTextureHasTransparencyChannel(UUID) ){
+              std::string tex = context->getPrimitiveTextureFile(UUID);
+              std::map<std::string,int>::iterator it = textures.find(tex);
+              if( it != textures.end() ){ //texture already exits
+                  patch_textureID[c] = textures.at(tex);
+              }else{ //new texture
+                  patch_textureID[c] = tID;
+                  textures[tex] = tID;
+                  helios::int2 tsize = context->getPrimitiveTextureSize(UUID);
+                  texture_size[tex] = make_int2(tsize.x,tsize.y);
+                  texture_data[tex] = *context->getPrimitiveTextureTransparencyData(UUID);
+                  tID++;
+              }
 
-	std::vector<helios::vec2> uv = prim->getTextureUV();
-	if( uv.size()==4 ){//cusom uv coordinates
-	  patch_uv[2*c] = vec2tofloat2(uv.at(1));
-	  patch_uv[2*c+1] = vec2tofloat2(uv.at(3));
-	}else{//default uv coordinates
-	  patch_uv[2*c] = make_float2(0,0);
-	  patch_uv[2*c+1] = make_float2(1,1);
-	}
-	
-      }else{
-	patch_textureID[c]=-1;
+              std::vector<helios::vec2> uv = context->getPrimitivePointer(UUID)->getTextureUV();
+              if( uv.size()==4 ){//cusom uv coordinates
+                  patch_uv[2*c] = vec2tofloat2(uv.at(1));
+                  patch_uv[2*c+1] = vec2tofloat2(uv.at(3));
+              }else{//default uv coordinates
+                  patch_uv[2*c] = make_float2(0,0);
+                  patch_uv[2*c+1] = make_float2(1,1);
+              }
+
+          }else{
+              patch_textureID[c]=-1;
+          }
+
+          c++;
       }
-      
-      c++;
-    }
   }
   
   float3* d_patch_vertex;
@@ -3067,8 +3066,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
   //figure out how many triangles
   size_t Ntriangles = 0;
   for( int p=0; p<UUIDs_all.size(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
-    if( prim->getType() == helios::PRIMITIVE_TYPE_TRIANGLE ){
+    if( context->getPrimitiveType(UUIDs_all.at(p)) == helios::PRIMITIVE_TYPE_TRIANGLE ){
       Ntriangles++;
     }
   }
@@ -3081,41 +3079,41 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
 
   c=0;
   for( int p=0; p<UUIDs_all.size(); p++ ){
-    helios::Primitive* prim = context->getPrimitivePointer(UUIDs_all.at(p));
-    if( prim->getType() == helios::PRIMITIVE_TYPE_TRIANGLE ){
-      std::vector<helios::vec3> verts = prim->getVertices();
-      tri_vertex[3*c] = vec3tofloat3(verts.at(0));
-      tri_vertex[3*c+1] = vec3tofloat3(verts.at(1));
-      tri_vertex[3*c+2] = vec3tofloat3(verts.at(2));
+      uint UUID = UUIDs_all.at(p);
+      if( context->getPrimitiveType(UUID) == helios::PRIMITIVE_TYPE_TRIANGLE ){
+          std::vector<helios::vec3> verts = context->getPrimitiveVertices(UUID);
+          tri_vertex[3*c] = vec3tofloat3(verts.at(0));
+          tri_vertex[3*c+1] = vec3tofloat3(verts.at(1));
+          tri_vertex[3*c+2] = vec3tofloat3(verts.at(2));
 
-      ID_mapping.at(Npatches+c) = UUIDs_all.at(p);
+          ID_mapping.at(Npatches+c) = UUIDs_all.at(p);
 
-      if( prim->hasTexture() && prim->getTexture()->hasTransparencyChannel() ){
-	std::string tex = prim->getTextureFile();
-	std::map<std::string,int>::iterator it = textures.find(tex);
-	if( it != textures.end() ){ //texture already exits
-	  tri_textureID[c] = textures.at(tex);
-	}else{ //new texture
-	  tri_textureID[c] = tID;
-	  textures[tex] = tID;
-	  helios::int2 tsize = prim->getTexture()->getSize();
-	  texture_size[tex] = make_int2(tsize.x,tsize.y);
-	  texture_data[tex] = *prim->getTexture()->getTransparencyData();
-	  tID++;
-	}
+          if( !context->getPrimitiveTextureFile(UUID).empty() && context->primitiveTextureHasTransparencyChannel(UUID) ){
+              std::string tex = context->getPrimitiveTextureFile(UUID);
+              std::map<std::string,int>::iterator it = textures.find(tex);
+              if( it != textures.end() ){ //texture already exits
+                  tri_textureID[c] = textures.at(tex);
+              }else{ //new texture
+                  tri_textureID[c] = tID;
+                  textures[tex] = tID;
+                  helios::int2 tsize = context->getPrimitiveTextureSize(UUID);
+                  texture_size[tex] = make_int2(tsize.x,tsize.y);
+                  texture_data[tex] = *context->getPrimitiveTextureTransparencyData(UUID);
+                  tID++;
+              }
 
-	std::vector<helios::vec2> uv = prim->getTextureUV();
-	assert( uv.size()==3 );
-	tri_uv[3*c] = vec2tofloat2(uv.at(0));
-	tri_uv[3*c+1] = vec2tofloat2(uv.at(1));
-	tri_uv[3*c+2] = vec2tofloat2(uv.at(2));
-		
-      }else{
-	tri_textureID[c]=-1;
+              std::vector<helios::vec2> uv = context->getPrimitivePointer(UUID)->getTextureUV();
+              assert( uv.size()==3 );
+              tri_uv[3*c] = vec2tofloat2(uv.at(0));
+              tri_uv[3*c+1] = vec2tofloat2(uv.at(1));
+              tri_uv[3*c+2] = vec2tofloat2(uv.at(2));
+
+          }else{
+              tri_textureID[c]=-1;
+          }
+
+          c++;
       }
-      
-      c++;
-    }
   }
 
   float3* d_tri_vertex;
