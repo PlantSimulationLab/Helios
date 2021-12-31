@@ -11,7 +11,7 @@ var searchData=
   ['deletehitpoint_159',['deleteHitPoint',['../class_aerial_li_d_a_rcloud.html#a9d374100b86e8becf578b65b81f99b67',1,'AerialLiDARcloud::deleteHitPoint()'],['../class_li_d_a_rcloud.html#a088d0b0c2250c6f1d112d1cf80e183fe',1,'LiDARcloud::deleteHitPoint()']]],
   ['deleteobject_160',['deleteObject',['../classhelios_1_1_context.html#aaae58688c97d14257223911be4bb13e6',1,'helios::Context::deleteObject(uint ObjID)'],['../classhelios_1_1_context.html#a690553ff4b945d117782addb96c5add0',1,'helios::Context::deleteObject(const std::vector&lt; uint &gt; &amp;ObjIDs)']]],
   ['deleteprimitive_161',['deletePrimitive',['../classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e',1,'helios::Context::deletePrimitive(uint UUID)'],['../classhelios_1_1_context.html#a06b7dc6a572fcf33f499f249ea44db5a',1,'helios::Context::deletePrimitive(const std::vector&lt; uint &gt; &amp;UUIDs)']]],
-  ['dependent_20packages_162',['Dependent Packages',['../_dependencies.html',1,'']]],
+  ['dependent_20software_162',['Dependent Software',['../_dependencies.html',1,'']]],
   ['deprecated_163',['DEPRECATED',['../class_visualizer.html#a9662df39fa388e0445b4f44535377b4a',1,'Visualizer']]],
   ['direction2rc_164',['direction2rc',['../struct_scan_metadata.html#a0eb70c4b0c8aa41d0d25093b381edd49',1,'ScanMetadata']]],
   ['disablecolorbar_165',['disableColorbar',['../class_visualizer.html#a5c8d26d18bd0bea73272834e8ed1bbe2',1,'Visualizer']]],

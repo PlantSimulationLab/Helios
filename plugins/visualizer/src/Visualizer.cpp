@@ -566,7 +566,9 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
 
     // Default values
 
-    light_direction = make_vec3(1,1,-1);
+    light_direction = make_vec3(1,1,1);
+    light_direction.normalize();
+    primaryShader.setLightDirection(light_direction);
 
     primaryLightingModel.push_back( Visualizer::LIGHTING_NONE );
 

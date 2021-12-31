@@ -501,13 +501,49 @@ void wait( float seconds );
     //! Function to flatten a 3D string vector into a 1D vector
     std::vector<std::string> flatten( const std::vector<std::vector<std::vector<std::string> > > &vec );
 
-  //! Function to perform cubic Hermite spline interpolation
-  /* \param[in] "u" Interpolation point as a fraction of the distance between the start and end points (must be between 0 and 1).
-     \param[in] "x_start" (x,y,z) Cartesian coordinate of spline starting point.
-     \param[in] "tan_start" Vector tangent to spline at starting point.
-     \param[in] "x_end" (x,y,z) Cartesian coordinate of spline ending point.
-     \param[in] "tan_end" Vector tangent to spline at ending point.
-     \return Interpolated (x,y,z) Cartesian point.
+
+    //! Function to flatten a 4D int vector into a 1D vector
+    std::vector<int> flatten( const std::vector<std::vector<std::vector<std::vector<int> > > > &vec );
+
+    //! Function to flatten a 4D uint vector into a 1D vector
+    std::vector<uint> flatten( const std::vector<std::vector<std::vector<std::vector<uint> > > > &vec );
+
+    //! Function to flatten a 4D float vector into a 1D vector
+    std::vector<float> flatten( const std::vector<std::vector<std::vector<std::vector<float> > > > &vec );
+
+    //! Function to flatten a 4D double vector into a 1D vector
+    std::vector<double> flatten( const std::vector<std::vector<std::vector<std::vector<double> > > > &vec );
+
+    //! Function to flatten a 4D vec2 vector into a 1D vector
+    std::vector<helios::vec2> flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec2> > > > &vec );
+
+    //! Function to flatten a 4D vec3 vector into a 1D vector
+    std::vector<helios::vec3> flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec3> > > > &vec );
+
+    //! Function to flatten a 4D vec4 vector into a 1D vector
+    std::vector<helios::vec4> flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec4> > > > &vec );
+
+    //! Function to flatten a 4D int2 vector into a 1D vector
+    std::vector<helios::int2> flatten( const std::vector<std::vector<std::vector<std::vector<helios::int2> > > > &vec );
+
+    //! Function to flatten a 4D int3 vector into a 1D vector
+    std::vector<helios::int3> flatten( const std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &vec );
+
+    //! Function to flatten a 4D int4 vector into a 1D vector
+    std::vector<helios::int4> flatten( const std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &vec );
+
+    //! Function to flatten a 4D string vector into a 1D vector
+    std::vector<std::string> flatten( const std::vector<std::vector<std::vector<std::vector<std::string> > > > &vec );
+
+
+    //! Function to perform cubic Hermite spline interpolation
+  /**
+   * \param[in] "u" Interpolation point as a fraction of the distance between the start and end points (must be between 0 and 1).
+   * \param[in] "x_start" (x,y,z) Cartesian coordinate of spline starting point.
+   * \param[in] "tan_start" Vector tangent to spline at starting point.
+   * \param[in] "x_end" (x,y,z) Cartesian coordinate of spline ending point.
+   * \param[in] "tan_end" Vector tangent to spline at ending point.
+   * \return Interpolated (x,y,z) Cartesian point.
   */
   helios::vec3 spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end );
 
@@ -578,7 +614,8 @@ void wait( float seconds );
   helios::RGBAcolor XMLloadrgba( pugi::xml_node node, const char* field );
 
   //! Use Newton-Raphson method to find the zero of a function
-  /* \param[in] "function" Function to be evaluated. The function should take as its first argument the value at which the function should be evaluated, as second argument any function arguments.
+  /**
+   * \param[in] "function" Function to be evaluated. The function should take as its first argument the value at which the function should be evaluated, as second argument any function arguments.
    * \param[in] "initial_guess" Initial guess for the zero of the function.
    * \param[in] "err_tol" Maximum allowable relative error in solution.
    * \param[in] "max_iterations" Maximum number of iterations to allow before exiting solver.
@@ -586,7 +623,7 @@ void wait( float seconds );
   float fzero(float(*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100 );
 
   //! Function to perform linear interpolation based on a vector of discrete (x,y) values
-    /*
+    /**
      * \param[in] "points" Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
      * \param[in] "x" x value at which to interpolate. If x is less than the first x-value in points or greater than the last x-value in points, interp1 will respectively return the first or last y value.
      * \return Value of y interpolated at location x.

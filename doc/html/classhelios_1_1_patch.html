@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.25</span>
+   &#160;<span id="projectnumber">v1.2.26</span>
    </div>
   </td>
  </tr>
@@ -127,6 +127,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ae2a57c91a9a55d678614bea2c131ac8f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_patch.html#ae2a57c91a9a55d678614bea2c131ac8f">rotate</a> (float rot, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;axis) override</td></tr>
 <tr class="memdesc:ae2a57c91a9a55d678614bea2c131ac8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to rotate a <a class="el" href="classhelios_1_1_primitive.html" title="Primitive class.">Primitive</a> about an arbitrary axis.  <a href="classhelios_1_1_patch.html#ae2a57c91a9a55d678614bea2c131ac8f">More...</a><br /></td></tr>
 <tr class="separator:ae2a57c91a9a55d678614bea2c131ac8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab664fc6341d436052a37411d20f74eef"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_patch.html#ab664fc6341d436052a37411d20f74eef">getSolidFraction</a> () const</td></tr>
+<tr class="memdesc:ab664fc6341d436052a37411d20f74eef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the primitive solid fraction.  <a href="classhelios_1_1_patch.html#ab664fc6341d436052a37411d20f74eef">More...</a><br /></td></tr>
+<tr class="separator:ab664fc6341d436052a37411d20f74eef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classhelios_1_1_primitive"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classhelios_1_1_primitive')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhelios_1_1_primitive.html">helios::Primitive</a></td></tr>
 <tr class="memitem:a2782f7590e1786b1834f036e7efe8462 inherit pub_methods_classhelios_1_1_primitive"><td class="memItemLeft" align="right" valign="top"><a id="a2782f7590e1786b1834f036e7efe8462"></a>
 virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_primitive.html#a2782f7590e1786b1834f036e7efe8462">~Primitive</a> ()=default</td></tr>
@@ -355,7 +358,7 @@ Sample image of a Patch.</div></div>
 
 <p>Implements <a class="el" href="classhelios_1_1_primitive.html#a2e140af864e6dcb56d6ea5f85fef8f49">helios::Primitive</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01062">1062</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01159">1159</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -377,7 +380,7 @@ Sample image of a Patch.</div></div>
 <p>Get the (x,y,z) coordinates of the <a class="el" href="classhelios_1_1_patch.html" title="Rectangular geometric object.">Patch</a> center point. </p>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> describing (x,y,z) coordinate of <a class="el" href="classhelios_1_1_patch.html" title="Rectangular geometric object.">Patch</a> center. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03993">3993</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04094">4094</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -409,7 +412,7 @@ Sample image of a Patch.</div></div>
 
 <p>Implements <a class="el" href="classhelios_1_1_primitive.html#a0b57d12757d213978d5e0eec30c6eeb4">helios::Primitive</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01091">1091</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01188">1188</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -431,7 +434,29 @@ Sample image of a Patch.</div></div>
 <p>Get the size of the <a class="el" href="classhelios_1_1_patch.html" title="Rectangular geometric object.">Patch</a> in x- and y-directions. </p>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> describing the length and width of the <a class="el" href="classhelios_1_1_patch.html" title="Rectangular geometric object.">Patch</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03986">3986</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04087">4087</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab664fc6341d436052a37411d20f74eef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab664fc6341d436052a37411d20f74eef">&#9670;&nbsp;</a></span>getSolidFraction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Patch::getSolidFraction </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the primitive solid fraction. </p>
+<dl class="section return"><dt>Returns</dt><dd>solid fraction of the <a class="el" href="classhelios_1_1_patch.html" title="Rectangular geometric object.">Patch</a>. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01661">1661</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -463,7 +488,7 @@ Sample image of a Patch.</div></div>
 
 <p>Implements <a class="el" href="classhelios_1_1_primitive.html#a12b57475648525eaca7e0c225ea0122b">helios::Primitive</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01116">1116</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01213">1213</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -512,7 +537,7 @@ Sample image of a Patch.</div></div>
 
 <p>Implements <a class="el" href="classhelios_1_1_primitive.html#acf6651311abec476bdfd8c7f7d4d00aa">helios::Primitive</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01272">1272</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01369">1369</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -561,7 +586,7 @@ Sample image of a Patch.</div></div>
 
 <p>Implements <a class="el" href="classhelios_1_1_primitive.html#a628435884fbb035dc008ed264d7a36d4">helios::Primitive</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01297">1297</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01394">1394</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

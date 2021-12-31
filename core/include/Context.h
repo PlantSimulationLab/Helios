@@ -569,6 +569,13 @@ namespace helios {
         */
         void rotate( float rot, const helios::vec3& axis ) override;
 
+        //! Get the primitive solid fraction
+        /**
+         *
+         * \return solid fraction of the Patch.
+         */
+        float getSolidFraction() const;
+
     protected:
 
         //fraction of surface area that is solid material (i.e., non-transparent)
@@ -577,10 +584,10 @@ namespace helios {
     };
 
     //! Triangular geometric primitive object
-    /** A Triangle is specified by the positions of its three vertices. Triangles can only be added through the Context member function \ref Context::addTriangle().
-
-        \image html doc/images/Triangle.png "Sample image of a Triangle." width=3cm
-        \ingroup primitives
+    /**
+     * A Triangle is specified by the positions of its three vertices. Triangles can only be added through the Context member function \ref Context::addTriangle().
+     * \image html doc/images/Triangle.png "Sample image of a Triangle." width=3cm
+     * \ingroup primitives
     */
     class Triangle : public Primitive{
     public:
@@ -1161,8 +1168,7 @@ namespace helios {
     public:
 
         //! Default constructor
-        Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile,
-               helios::Context *a_context);
+        Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
 
         //! Sphere destructor
         ~Sphere() override = default;
@@ -3323,16 +3329,27 @@ namespace helios {
         //--------- Compound Objects Functions -------------//
 
         //! Get a pointer to a Compound Object
-        /** \param[in] "ObjID" Identifier for Compound Object.
+        /**
+         * \param[in] "ObjID" Identifier for Compound Object.
          */
         CompoundObject* getObjectPointer( uint ObjID ) const;
 
+        //! Get the total number of objects that have been created in the Context
+        /**
+         * \return Total number of objects that have been created in the Context
+         */
+         uint getObjectCount() const;
+
         //! Check whether Compound Object exists in the Context
-        /** \param[in] "ObjID" Identifier for Compound Object.
+        /**
+         * \param[in] "ObjID" Identifier for Compound Object.
          */
         bool doesObjectExist( uint ObjID ) const;
 
         //! Get the IDs for all Compound Objects in the Context
+        /**
+         * \return Vector of IDs for all objects.
+         */
         std::vector<uint> getAllObjectIDs() const;
 
         //! Delete a single Compound Object from the context
@@ -3358,9 +3375,36 @@ namespace helios {
         std::vector<uint> copyObject(const std::vector<uint> &ObjIDs );
 
         //! Get a pointer to a Tile Compound Object
-        /** \param[in] "ObjID" Identifier for Tile Compound Object.
+        /**
+         * \param[in] "ObjID" Identifier for Tile Compound Object.
          */
         Tile* getTileObjectPointer(uint ObjID ) const;
+
+        //! Get the area ratio of a tile object (total object area / sub-patch area)
+        /**
+         * \param[in] "ObjID" Identifier for Tile Compound Object.
+         */
+        float getTileObjectAreaRatio(const uint &ObjectID) const;
+
+        //! Get the area ratio of a multiplle tile objects (total object area / sub-patch area)
+        /**
+         * \param[in] "ObjID" Vector of dentifiers for Tile Compound Object.
+         */
+        std::vector<float> getTileObjectAreaRatio(const std::vector<uint> &ObjectID) const;
+
+        //! Change the subdivision count of a tile object
+        /**
+         * \param[in] "ObjectIDs" object IDs of the tile objects to change
+         * \param[in] "new_subdiv" the new subdivisions desired
+         */
+        void setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, int2 new_subdiv);
+
+        //! change the subdivisions of a tile object
+        /**
+         * \param[in] "ObjectIDs" object IDs of the tile objects to change
+         * \param[in] "area_ratio" the approximate ratio between individual tile object area and individual subpatch area desired
+         */
+        void setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, float area_ratio);
 
         //! Get a pointer to a Sphere Compound Object
         /**
@@ -3395,13 +3439,13 @@ namespace helios {
 
         //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
         /**
-            \param[in] "center" 3D coordinates of box center
-            \param[in] "size" Size of the box in the x- and y-directions
-            \param[in] "rotation" Spherical rotation of tiled surface
-            \param[in] "subdiv" Number of subdivisions in x- and y-directions
-            \return Vector of UUIDs for each sub-patch
-            \note Assumes default color of green
-            \ingroup compoundobjects
+         * \param[in] "center" 3D coordinates of box center
+         * \param[in] "size" Size of the box in the x- and y-directions
+         * \param[in] "rotation" Spherical rotation of tiled surface
+         * \param[in] "subdiv" Number of subdivisions in x- and y-directions
+         * \return Vector of UUIDs for each sub-patch
+         * \note Assumes default color of green
+         * \ingroup compoundobjects
         */
         uint addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv);
 
@@ -3491,13 +3535,13 @@ namespace helios {
 
         //! Add a rectangular prism tesselated with Patch primitives
         /**
-            \param[in] "center" 3D coordinates of box center
-            \param[in] "size" Size of the box in the x-, y-, and z-directions
-            \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-            \return Vector of UUIDs for each sub-patch
-            \note Assumes default color of green
-            \note This version of addBox assumes that all surface normal vectors point away from the box
-            \ingroup compoundobjects
+          * \param[in] "center" 3D coordinates of box center
+          * \param[in] "size" Size of the box in the x-, y-, and z-directions
+          * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+          * \return Vector of UUIDs for each sub-patch
+          * \note Assumes default color of green
+          * \note This version of addBox assumes that all surface normal vectors point away from the box
+          * \ingroup compoundobjects
         */
         uint addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv );
 
@@ -3552,13 +3596,13 @@ namespace helios {
 
         //! Add new Disk geometric primitive to the Context given its center, and size.
         /**
-            \param[in] "Ndiv" Number to triangles used to form disk
-            \param[in] "center" 3D coordinates of Disk center
-            \param[in] "size" length of Disk semi-major and semi-minor radii
-            \return Vector of UUIDs for each sub-triangle
-            \note Assumes that disk is horizontal.
-            \note Assumes a default color of black.
-            \ingroup compoundobjects
+          * \param[in] "Ndiv" Number to triangles used to form disk
+          * \param[in] "center" 3D coordinates of Disk center
+          * \param[in] "size" length of Disk semi-major and semi-minor radii
+          * \return Vector of UUIDs for each sub-triangle
+          * \note Assumes that disk is horizontal.
+          * \note Assumes a default color of black.
+          * \ingroup compoundobjects
         */
         uint addDiskObject(uint Ndivs, const helios::vec3& center, const helios::vec2& size );
 
@@ -4031,20 +4075,24 @@ namespace helios {
         void cropDomain(const vec2 &xbounds, const vec2 &ybounds, const vec2 &zbounds );
 
         //! Load inputs specified in an XML file.
-        /** \param[in] "filename" name of XML file.
-            \note This function is based on the pugi xml parser.  See <a href="www.pugixml.org">pugixml.org</a>
-            \ingroup context
+        /**
+         * \param[in] "filename" name of XML file.
+         * \param[in] "quiet" If set to true, command line output will be disabled. Optional argument - default value is false.
+         * \note This function is based on the pugi xml parser.  See <a href="www.pugixml.org">pugixml.org</a>
          */
-        std::vector<uint> loadXML( const char* filename );
+        std::vector<uint> loadXML( const char* filename, bool quiet = false );
 
         //! Get names of XML files that are currently loaded
+        /**
+         * \return Vector of XML files.
+         */
         std::vector<std::string> getLoadedXMLFiles();
 
         //! Write Context geometry and data to XML file
         /** \param[in] "filename" name of XML file.
             \ingroup context
          */
-        void writeXML( const char* filename ) const;
+        void writeXML( const char* filename, bool quiet = false ) const;
 
         //! Load geometry contained in a Stanford polygon file (.ply)
         /** \param[in] "filename" name of ply file.
@@ -4126,10 +4174,10 @@ namespace helios {
          */
         void setDate( int day, int month, int year );
 
-        //! Set simulation date by \ref Date vector
+        //! Set simulation date by Date vector
         /**
-             \param[in] "date" \ref Date vector
-             \sa \ref getDate()
+          * \param[in] "date" Date vector
+          * \sa getDate()
          */
         void setDate( helios::Date date );
 
@@ -4179,10 +4227,10 @@ namespace helios {
          */
         void setTime( int second, int minute, int hour );
 
-        //! Set simulation time using \ref Time vector
+        //! Set simulation time using Time vector
         /**
-             \param[in] "time" Time vector
-             \sa \ref getTime(), \ref setSunDirection()
+          * \param[in] "time" Time vector
+          * \sa getTime(), setSunDirection()
          */
         void setTime( helios::Time time );
 

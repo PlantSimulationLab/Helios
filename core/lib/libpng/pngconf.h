@@ -477,10 +477,14 @@
  * The checks below use constants from limits.h, as defined by the ISOC90
  * standard.
  */
-#if CHAR_BIT == 8 && UCHAR_MAX == 255
-   typedef unsigned char png_byte;
+#ifdef CHAR_BIT
+    #if CHAR_BIT == 8 && UCHAR_MAX == 255
+        typedef unsigned char png_byte;
+    #else
+    #  error "libpng requires 8-bit bytes"
+    #endif
 #else
-#  error "libpng requires 8-bit bytes"
+    typedef unsigned char png_byte;
 #endif
 
 #if INT_MIN == -32768 && INT_MAX == 32767

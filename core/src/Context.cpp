@@ -901,11 +901,11 @@ int Context::selfTest(){
     context_io.addTimeseriesData( "ts_io", T0_io, date_io, time0_io );
     context_io.addTimeseriesData( "ts_io", T1_io, date_io, time1_io );
 
-    context_io.writeXML( "xmltest_io.xml" );
+    context_io.writeXML( "xmltest_io.xml", true );
 
     Context context_oi;
 
-    context_oi.loadXML( "xmltest_io.xml" );
+    context_oi.loadXML( "xmltest_io.xml", true );
 
     float pdataf;
     int pdatai;
@@ -932,6 +932,103 @@ int Context::selfTest(){
     }
     if( failio ){
         std::cerr << "failed. Global data write/read do not match." << std::endl;
+        error_count ++;
+    }
+
+    //------- setTileObjectSubdivisionCount, getTileObjectAreaRatio, cropDomain & writeXML & loadXML for compound objects  --------//
+
+    Context context_to;
+
+    //non-textured tile object single subpatch
+    uint to1 = context_to.addTileObject(make_vec3(0,0,0), make_vec2(1,0.3), make_SphericalCoord(float(M_PI)*0.25, float(M_PI)*0.75), make_int2(1,1));
+    //non-textured tile object multiple subpatches
+    uint to2 = context_to.addTileObject(make_vec3(1,1,1), make_vec2(1,1), make_SphericalCoord(float(M_PI)*0.25, float(M_PI)*0.75), make_int2(5,3));
+    //textured tile object single subpatch disk
+    uint to3 = context_to.addTileObject(make_vec3(2,2,2), make_vec2(1,0.3), make_SphericalCoord(float(M_PI)*0.25, float(M_PI)*0.75), make_int2(1,1), "lib/images/disk_texture.png");
+    //textured tile object multiple subpatches disk
+    uint to4 = context_to.addTileObject(make_vec3(3,3,3), make_vec2(1,0.3), make_SphericalCoord(float(M_PI)*0.25, float(M_PI)*0.75), make_int2(5,3), "lib/images/disk_texture.png");
+    //textured tile object single subpatch diamond
+    uint to5 = context_to.addTileObject(make_vec3(-1,-1,-1), make_vec2(1,1), make_SphericalCoord(M_PI*0.25, M_PI*0.75), make_int2(1,1), "lib/images/diamond_texture.png");
+    //textured tile object multiple subpatches diamond
+    uint to6 = context_to.addTileObject(make_vec3(-2,-2,-2), make_vec2(1,1), make_SphericalCoord(M_PI*0.25, M_PI*0.75), make_int2(5,3), "lib/images/diamond_texture.png");
+
+    //throw in a sphere object just to check error checks
+//    uint so1 = context_to.addSphereObject(10, make_vec3(4,4,4), 0.3);
+//    uint n_UUIDs_so1 = context_to.getObjectPointer(so1)->getPrimitiveUUIDs().size();
+
+    context_to.writeXML("xmltest_to.xml", true );
+    uint context_to_PrimitiveCount = context_to.getPrimitiveCount();
+    uint context_to_ObjectCount = context_to.getObjectCount();
+
+    //////////////// getTileObjectAreaRatio
+
+    errtol = 1e-2;
+    double err_1 = fabs(context_to.getTileObjectAreaRatio(to1) - 1.0);
+    if(err_1 >= errtol){
+        std::cerr << "failed. tile object area ratio returned by getTileObjectAreaRatio is not correct for non-textured single subpatch tile." << std::endl;
+        error_count ++;
+    }
+    double err_2 = fabs(context_to.getTileObjectAreaRatio(to2) - 15.0);
+    if(err_2 >= errtol){
+        std::cerr << "failed. tile object area ratio returned by getTileObjectAreaRatio is not correct for non-textured multi-subpatch tile." << std::endl;
+        error_count ++;
+    }
+    double err_3 = fabs(context_to.getTileObjectAreaRatio(to5) - 1.0);
+    if(err_3 >= errtol){
+        std::cerr << "failed. tile object area ratio returned by getTileObjectAreaRatio is not correct for textured single subpatch tile." << std::endl;
+        error_count ++;
+    }
+    double err_4 = fabs(context_to.getTileObjectAreaRatio(to6) - 1.0*0.5/(1.0/15.0));
+    if(err_4 >= errtol){
+        std::cerr << "failed. tile object area ratio returned by getTileObjectAreaRatio is not correct for textured multi-subpatch tile." << std::endl;
+        error_count ++;
+    }
+
+    ////////////////// setTileObjectSubdivisionCount
+
+    std::vector<uint> allObjectIDs_to = context_to.getAllObjectIDs();
+    context_to.setTileObjectSubdivisionCount(allObjectIDs_to, make_int2(5,5));
+    std::vector<uint> allObjectIDs_to_after = context_to.getAllObjectIDs();
+    std::vector<uint> allUUIDs_to_after = context_to.getAllUUIDs();
+
+//    if( (allUUIDs_to_after.size() - n_UUIDs_so1) != uint(150)){
+//        std::cerr << "failed. setTileObjectSubdivisionCount (subiv version) not producing the correct number of primitives." << std::endl;
+//        error_count ++;
+//    }
+
+    if( allObjectIDs_to_after.size() != allObjectIDs_to.size()){
+        std::cerr << "failed. setTileObjectSubdivisionCount(subiv version) is  changing the number of objects in the context (it shouldn't)." << std::endl;
+        error_count ++;
+    }
+
+    context_to.setTileObjectSubdivisionCount(allObjectIDs_to, 49);
+    std::vector<uint> allObjectIDs_to_after2 = context_to.getAllObjectIDs();
+    std::vector<uint> allUUIDs_to_after2 = context_to.getAllUUIDs();
+
+    if( allObjectIDs_to_after2 != allObjectIDs_to){
+        std::cerr << "failed. setTileObjectSubdivisionCount  (area ratio version)  is changing the number of objects in the context (it shouldn't)." << std::endl;
+        error_count ++;
+    }
+
+    if( context_to.getTileObjectPointer(to1)->getPrimitiveUUIDs().size() == uint(49)){
+        std::cerr << "failed. setTileObjectSubdivisionCount  (area ratio version)  did not result in the correct number of subpatches" << std::endl;
+        error_count ++;
+    }
+
+    ////////////////// writeXML & loadXML for compound objects
+
+    Context context_to2;
+    context_to2.loadXML("xmltest_to.xml", true );
+    uint context_to2_PrimitiveCount = context_to2.getPrimitiveCount();
+    uint context_to2_ObjectCount = context_to2.getObjectCount();
+
+    if( context_to_PrimitiveCount != context_to2_PrimitiveCount){
+        std::cerr << "failed. number of primitives before writing and loading xml does not match number after" << std::endl;
+        error_count ++;
+    }
+
+    if( context_to_ObjectCount != context_to2_ObjectCount){
+        std::cerr << "failed. number of Objects before writing and loading xml does not match number after" << std::endl;
         error_count ++;
     }
 
@@ -1559,6 +1656,10 @@ void Triangle::makeTransformationMatrix( const helios::vec3& vert0, const helios
         }
     }
 
+}
+
+float Patch::getSolidFraction() const{
+    return solid_fraction;
 }
 
 float Triangle::getSolidFraction() const{
@@ -6052,6 +6153,10 @@ CompoundObject* Context::getObjectPointer( uint ObjID ) const{
     return objects.at(ObjID);
 }
 
+uint Context::getObjectCount() const{
+    return objects.size();
+}
+
 bool Context::doesObjectExist( const uint ObjID ) const{
     return objects.find(ObjID) != objects.end();
 }
@@ -6209,44 +6314,351 @@ uint Context::copyObject(uint ObjID ){
     return currentObjectID-1;
 }
 
-//void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, int2 new_subdiv)
-//{
-//
-//    for(uint i=0;i<ObjectIDs.size();i++){
-//
-//        CompoundObject* obj_ptr = getObjectPointer(ObjectIDs.at(i));
-//
-//        std::vector<uint> UUIDs_old = obj_ptr->getPrimitiveUUIDs();
-//
-//        vec3 position = obj_ptr->getObjectCenter();
-//
-//        vec2 size = getTileObjectPointer(ObjectIDs.at(i))->getSize();
-//
-//        SphericalCoord rotation = cart2sphere(getPrimitiveNormal(UUIDs_old.front()));
-//
-//        std::string texturefile = getPrimitivePointer(UUIDs_old.front())->getTextureFile();
-//
-//        std::vector<uint> UUIDs_new;
-//
-//        if( texturefile.empty() ){
-//            RGBcolor color = obj_ptr->getColorRGB();
-//            UUIDs_new = addTile(position, size, rotation, new_subdiv, color );
-//        }else {
-//            UUIDs_new = addTile(position, size, rotation, new_subdiv, texturefile.c_str() );
-//        }
-//
-//        for( uint UUID : UUIDs_new ) {
-//            getPrimitivePointer(UUID)->setParentObjectID(ObjectIDs.at(i));
-//        }
-//
-//        //propose to add this member function
-//        //obj_ptr->setPrimitiveUUIDs(UUIDs_new);
-//
-//        deletePrimitive(UUIDs_old);
-//
-//    }
-//
-//}
+float Context::getTileObjectAreaRatio(const uint &ObjectID) const{
+
+    if( getObjectPointer(ObjectID)->getObjectType() != OBJECT_TYPE_TILE )
+    {
+        std::cerr << "WARNING (getTileObjectAreaRatio): ObjectID " << ObjectID<< " is not a tile object. Skipping..." << std::endl;
+        return 0.0;
+    }else{
+        int2 subdiv = getTileObjectPointer(ObjectID)->getSubdivisionCount();
+        if(subdiv.x == int(1) && subdiv.y == int(1) )
+        {
+            return 1.0;
+        }else{
+            float area = getTileObjectPointer(ObjectID)->getArea();
+            vec2 size = getTileObjectPointer(ObjectID)->getSize();
+
+            float subpatch_area = (size.x/float(subdiv.x))*(size.y/float(subdiv.y));
+            return area/subpatch_area;
+        }
+
+    }
+}
+
+std::vector<float> Context::getTileObjectAreaRatio(const std::vector<uint> &ObjectIDs) const {
+
+    std::vector<float> AreaRatios(ObjectIDs.size());
+    for( uint i=0; i<ObjectIDs.size(); i++ ){
+        AreaRatios.at(i) = getTileObjectAreaRatio(ObjectIDs.at(i));
+    }
+
+    return AreaRatios;
+}
+
+void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, int2 new_subdiv)
+{
+
+    //check that all objects are Tile Objects, and get vector of texture files
+    std::vector<uint> tile_ObjectIDs;
+    std::vector<uint> textured_tile_ObjectIDs;
+
+
+    std::vector<std::string> tex;
+    // for(uint i=1;i<ObjectIDs.size();i++)
+    for(uint OBJID : ObjectIDs)
+    {
+
+        //check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
+        if( getObjectPointer(OBJID)->getObjectType() != OBJECT_TYPE_TILE )
+        {
+            std::cerr << "WARNING (setTileObjectSubdivisionCount): ObjectID " << OBJID << " is not a tile object. Skipping..." << std::endl;
+        }else{
+            //test if the tile is textured and push into two different vectors
+            Patch* p = getPatchPointer(getObjectPointer(OBJID)->getPrimitiveUUIDs().at(0));
+            if( !p->hasTexture() ){ //no texture
+                tile_ObjectIDs.push_back(OBJID);
+            }else{ //texture
+                textured_tile_ObjectIDs.push_back(OBJID);
+                tex.push_back(p->getTextureFile() );
+            }
+        }
+    }
+
+    //Here just call setSubdivisionCount directly for the non-textured tile objects
+    for(uint i=0;i<tile_ObjectIDs.size();i++)
+    {
+
+        Tile* current_object_pointer = getTileObjectPointer(tile_ObjectIDs.at(i));
+        std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
+
+        vec2 size = current_object_pointer->getSize();
+        vec3 center = current_object_pointer->getCenter();
+        vec3 normal = current_object_pointer->getNormal();
+        SphericalCoord rotation = cart2sphere(normal);
+        RGBcolor color = current_object_pointer->getColorRGB();
+
+        std::vector<uint> UUIDs_new = addTile(center, size, rotation, new_subdiv, color );
+
+        for( uint UUID : UUIDs_new ) {
+            getPrimitivePointer(UUID)->setParentObjectID(tile_ObjectIDs.at(i));
+        }
+
+        current_object_pointer->setPrimitiveUUIDs(UUIDs_new);
+        current_object_pointer->setSubdivisionCount(new_subdiv);
+        deletePrimitive(UUIDs_old);
+    }
+
+    // get a vector of unique texture files that are represented in the input tile objects
+    sort(tex.begin(), tex.end());
+    std::vector<std::string>::iterator it;
+    it = std::unique(tex.begin(),tex.end());
+    tex.resize( std::distance(tex.begin(),it) );
+
+    //create object templates for all the unique texture files
+    std::vector<uint> object_templates;
+    std::vector<std::vector<uint>> template_primitives;
+    for(uint j=0;j<tex.size();j++)
+    {
+        //create a template object for the current texture
+        uint object_template = addTileObject(make_vec3(0,0,0), make_vec2(1,1), nullrotation, new_subdiv, tex.at(j).c_str());
+        object_templates.push_back(object_template);
+        std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
+        template_primitives.push_back(object_primitives);
+    }
+
+    //keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
+    //for each textured tile object
+    for(uint i=0;i<textured_tile_ObjectIDs.size();i++)
+    {
+        //get info from current object
+        Tile* current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
+        std::string current_texture_file = current_object_pointer->getTextureFile();
+
+        std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
+
+        vec2 size = current_object_pointer->getSize();
+        vec3 center = current_object_pointer->getCenter();
+        vec3 normal = current_object_pointer->getNormal();
+        SphericalCoord rotation = cart2sphere(normal);
+
+        //for unique textures
+        for(uint j=0;j<tex.size();j++)
+        {
+            //if the current tile object has the same texture file as the current unique texture file
+            if(current_texture_file == tex.at(j))
+            {
+                //delete the original object primitives
+                deletePrimitive(UUIDs_old);
+
+                //copy the template primitives and create a new tile with them
+                std::vector<uint> new_primitives = copyPrimitive(template_primitives.at(j));
+
+                // change the objectID for the new primitives
+                setPrimitiveParentObjectID(new_primitives, textured_tile_ObjectIDs.at(i));
+                current_object_pointer->setPrimitiveUUIDs(new_primitives);
+                current_object_pointer->setSubdivisionCount(new_subdiv);
+
+                float IM[16];
+                makeIdentityMatrix(IM);
+                current_object_pointer->setTransformationMatrix(IM);
+
+                current_object_pointer->scale(make_vec3(size.x, size.y, 1));
+
+                //transform based on original object data
+                if( rotation.elevation!=0 ){
+                    current_object_pointer->rotate(-rotation.elevation , "x");
+                }
+                if( rotation.azimuth!=0 ){
+                    current_object_pointer->rotate(rotation.azimuth, "z");
+                }
+                current_object_pointer->translate(center);
+
+            }
+        }
+    }
+
+
+    //delete the template (objects and primitives)
+    deleteObject(object_templates);
+
+}
+
+void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, float area_ratio)
+{
+
+    //check that all objects are Tile Objects, and get vector of texture files
+    std::vector<uint> tile_ObjectIDs;
+    std::vector<uint> textured_tile_ObjectIDs;
+
+    std::vector<std::string> tex;
+    // for(uint i=1;i<ObjectIDs.size();i++)
+    for(uint OBJID : ObjectIDs)
+    {
+        //check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
+        if( getObjectPointer(OBJID)->getObjectType() != OBJECT_TYPE_TILE )
+        {
+            std::cerr << "WARNING (setTileObjectSubdivisionCount): ObjectID " << OBJID << " is not a tile object. Skipping..." << std::endl;
+        }else{
+            //test if the tile is textured and push into two different vectors
+            Patch* p = getPatchPointer(getObjectPointer(OBJID)->getPrimitiveUUIDs().at(0));
+            if( !p->hasTexture() ){ //no texture
+                tile_ObjectIDs.push_back(OBJID);
+            }else{ //texture
+                textured_tile_ObjectIDs.push_back(OBJID);
+                tex.push_back(p->getTextureFile() );
+            }
+        }
+    }
+
+    //Here just call setSubdivisionCount directly for the non-textured tile objects
+    for(uint i=0;i<tile_ObjectIDs.size();i++)
+    {
+        Tile* current_object_pointer = getTileObjectPointer(tile_ObjectIDs.at(i));
+        std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
+
+        vec2 size = current_object_pointer->getSize();
+        vec3 center = current_object_pointer->getCenter();
+        vec3 normal = current_object_pointer->getNormal();
+        SphericalCoord rotation = cart2sphere(normal);
+        RGBcolor color = current_object_pointer->getColorRGB();
+
+        float tile_area = current_object_pointer->getArea();
+
+        // subpatch dimensions needed to keep the correct ratio and have the solid fraction area = the input area
+        float subpatch_dimension = sqrtf( tile_area / area_ratio);
+        float subpatch_per_x = size.x / subpatch_dimension;
+        float subpatch_per_y = size.y / subpatch_dimension;
+
+        float option_1_AR = (tile_area / (size.x / ceil(subpatch_per_x) * size.y / floor(subpatch_per_y))) - area_ratio;
+        float option_2_AR = (tile_area / (size.x / floor(subpatch_per_x) * size.y / ceil(subpatch_per_y))) - area_ratio;
+
+        int2 new_subdiv;
+        if((int)area_ratio == 1){
+            new_subdiv = make_int2(1, 1);
+        }else if(option_1_AR >= option_2_AR){
+            new_subdiv = make_int2(ceil(subpatch_per_x), floor(subpatch_per_y));
+        }else{
+            new_subdiv = make_int2(floor(subpatch_per_x), ceil(subpatch_per_y));
+        }
+
+
+        std::vector<uint> UUIDs_new = addTile(center, size, rotation, new_subdiv, color );
+
+        for( uint UUID : UUIDs_new ) {
+            getPrimitivePointer(UUID)->setParentObjectID(tile_ObjectIDs.at(i));
+        }
+
+        current_object_pointer->setPrimitiveUUIDs(UUIDs_new);
+        current_object_pointer->setSubdivisionCount(new_subdiv);
+        deletePrimitive(UUIDs_old);
+    }
+
+    // get a vector of unique texture files that are represented in the input tile objects
+    sort(tex.begin(), tex.end());
+    std::vector<std::string>::iterator it;
+    it = std::unique(tex.begin(),tex.end());
+    tex.resize( std::distance(tex.begin(),it) );
+
+    //create object templates for all the unique texture files
+    // the assumption here is that all tile objects with the same texture have the same aspect ratio
+    //if this is not true then the copying method won't work well because a new template will need to be created for each texture/aspect ratio combination
+
+    std::vector<uint> object_templates;
+    std::vector<std::vector<uint>> template_primitives;
+    for(uint j=0;j<tex.size();j++)
+    {
+        //here we just want to get one tile object with the matching texture
+        uint ii;
+        for(uint i=0;i<textured_tile_ObjectIDs.size();i++)
+        {
+            //get info from current object
+            Tile* current_object_pointer_b = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
+            std::string current_texture_file_b = current_object_pointer_b->getTextureFile();
+            //if the current tile object has the same texture file as the current unique texture file
+            if(current_texture_file_b == tex.at(j))
+            {
+                ii=i;
+                break;
+            }
+        }
+
+        //get info from current object
+        Tile* current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(ii));
+        vec2 tile_size = current_object_pointer->getSize();
+        float tile_area = current_object_pointer->getArea();
+
+        // subpatch dimensions needed to keep the correct ratio and have the solid fraction area = the input area
+        float subpatch_dimension = sqrtf( tile_area / area_ratio);
+        float subpatch_per_x = tile_size.x / subpatch_dimension;
+        float subpatch_per_y = tile_size.y / subpatch_dimension;
+
+        float option_1_AR = (tile_area / (tile_size.x / ceil(subpatch_per_x) * tile_size.y / floor(subpatch_per_y))) - area_ratio;
+        float option_2_AR = (tile_area / (tile_size.x / floor(subpatch_per_x) * tile_size.y / ceil(subpatch_per_y))) - area_ratio;
+
+        int2 new_subdiv;
+        if((int)area_ratio == 1){
+            new_subdiv = make_int2(1, 1);
+        }else if(option_1_AR >= option_2_AR){
+            new_subdiv = make_int2(ceil(subpatch_per_x), floor(subpatch_per_y));
+        }else{
+            new_subdiv = make_int2(floor(subpatch_per_x), ceil(subpatch_per_y));
+        }
+
+        //create a template object for the current texture
+        uint object_template = addTileObject(make_vec3(0,0,0), make_vec2(1,1), nullrotation, new_subdiv, tex.at(j).c_str());
+        object_templates.push_back(object_template);
+        std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
+        template_primitives.push_back(object_primitives);
+    }
+
+    //keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
+    //for each textured tile object
+    for(uint i=0;i<textured_tile_ObjectIDs.size();i++)
+    {
+        //get info from current object
+        Tile* current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
+        // std::string current_texture_file = getPrimitivePointer(current_object_pointer->getPrimitiveUUIDs().at(0))->getTextureFile();
+        std::string current_texture_file = current_object_pointer->getTextureFile();
+        // std::cout << "current_texture_file for ObjID " << textured_tile_ObjectIDs.at(i) << " = " << current_texture_file << std::endl;
+        std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
+
+        vec2 size = current_object_pointer->getSize();
+        vec3 center = current_object_pointer->getCenter();
+        vec3 normal = current_object_pointer->getNormal();
+        SphericalCoord rotation = cart2sphere(normal);
+
+        //for unique textures
+        for(uint j=0;j<tex.size();j++)
+        {
+            //if the current tile object has the same texture file as the current unique texture file
+            if(current_texture_file == tex.at(j))
+            {
+                //delete the original object primitives
+                deletePrimitive(UUIDs_old);
+
+                //copy the template primitives and create a new tile with them
+                std::vector<uint> new_primitives = copyPrimitive(template_primitives.at(j));
+
+                // change the objectID for the new primitives
+                setPrimitiveParentObjectID(new_primitives, textured_tile_ObjectIDs.at(i));
+
+                int2 new_subdiv = getTileObjectPointer(object_templates.at(j))->getSubdivisionCount();
+                current_object_pointer->setPrimitiveUUIDs(new_primitives);
+                current_object_pointer->setSubdivisionCount(new_subdiv);
+
+                float IM[16];
+                makeIdentityMatrix(IM);
+                current_object_pointer->setTransformationMatrix(IM);
+
+                current_object_pointer->scale(make_vec3(size.x, size.y, 1));
+
+                if( rotation.elevation!=0 ){
+                    current_object_pointer->rotate(-rotation.elevation , "x");
+                }
+                if( rotation.azimuth!=0 ){
+                    current_object_pointer->rotate(rotation.azimuth, "z");
+                }
+                current_object_pointer->translate(center);
+
+            }
+        }
+    }
+
+    //delete the template (objects and primitives)
+    deleteObject(object_templates);
+
+}
 
 Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, const char *a_texturefile, helios::Context *a_context) {
 
@@ -10086,9 +10498,11 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
 }
 
-std::vector<uint> Context::loadXML( const char* filename ){
+std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
-    std::cout << "Loading XML file: " << filename << "..." << std::flush;
+    if( !quiet ) {
+        std::cout << "Loading XML file: " << filename << "..." << std::flush;
+    }
 
     XMLfiles.emplace_back( filename );
 
@@ -10109,7 +10523,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
     pugi::xml_node helios = xmldoc.child("helios");
 
     if( helios.empty() ){
-        std::cout << "failed." << std::endl;
+        if( !quiet ) {
+            std::cout << "failed." << std::endl;
+        }
         throw( std::runtime_error("ERROR (loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags."));
     }
 
@@ -10158,13 +10574,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char* transform_str = transform_node.child_value();
         if( strlen(transform_str)==0 ){
-            transform[0]=1.f;transform[1]=0.f;transform[2]=0.f;transform[3]=0.f;
-            transform[4]=0.f;transform[5]=1.f;transform[6]=0.f;transform[7]=0.f;
-            transform[8]=0.f;transform[9]=0.f;transform[10]=1.f;transform[11]=0.f;
-            transform[12]=0.f;transform[13]=0.f;transform[14]=0.f;transform[15]=1.f;
+            makeIdentityMatrix(transform);
         }else{
             std::istringstream stream(transform_str);
             float tmp;
@@ -10174,11 +10586,10 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 i++;
             }
             if( i!=16 ){
-                std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-                transform[0]=1.f;transform[1]=0.f;transform[2]=0.f;transform[3]=0.f;
-                transform[4]=0.f;transform[5]=1.f;transform[6]=0.f;transform[7]=0.f;
-                transform[8]=0.f;transform[9]=0.f;transform[10]=1.f;transform[11]=0.f;
-                transform[12]=0.f;transform[13]=0.f;transform[14]=0.f;transform[15]=1.f;
+                if( !quiet ) {
+                    std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
+                }
+                makeIdentityMatrix(transform);
             }
         }
 
@@ -10222,7 +10633,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
 
-        //note: pugi loads xml data as a character.  need to separate it into 2 floats
         const char* color_str = color_node.child_value();
         if( strlen(color_str)==0 ){
             color = make_RGBAcolor(0,0,0,1);//assume default color of black
@@ -10252,7 +10662,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         vec3 center;
         pugi::xml_node center_node = p.child("center");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char* center_str = center_node.child_value();
         if( strlen(center_str)!=0 ){
             center=string2vec3(center_str);
@@ -10263,7 +10672,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         vec2 size;
         pugi::xml_node size_node = p.child("size");
 
-        //note: pugi loads xml data as a character.  need to separate it into 2 floats
         const char* size_str = size_node.child_value();
         if( strlen(size_str)!=0 ){
             size=string2vec2(size_str);
@@ -10274,7 +10682,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         SphericalCoord rotation;
         pugi::xml_node rotation_node = p.child("rotation");
 
-        //note: pugi loads xml data as a character.  need to separate it into 2 floats
         const char* rotation_str = rotation_node.child_value();
         if( strlen(rotation_str)!=0 ){
             vec2 rot = string2vec2(rotation_str);
@@ -10299,13 +10706,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float transform[16];
         pugi::xml_node transform_node = tri.child("transform");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char* transform_str = transform_node.child_value();
         if( strlen(transform_str)==0 ){
-            transform[0]=1.f;transform[1]=0.f;transform[2]=0.f;transform[3]=0.f;
-            transform[4]=0.f;transform[5]=1.f;transform[6]=0.f;transform[7]=0.f;
-            transform[8]=0.f;transform[9]=0.f;transform[10]=1.f;transform[11]=0.f;
-            transform[12]=0.f;transform[13]=0.f;transform[14]=0.f;transform[15]=1.f;
+            makeIdentityMatrix(transform);
         }else{
             std::istringstream stream(transform_str);
             float tmp;
@@ -10315,11 +10718,10 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 i++;
             }
             if( i!=16 ){
-                std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-                transform[0]=1.f;transform[1]=0.f;transform[2]=0.f;transform[3]=0.f;
-                transform[4]=0.f;transform[5]=1.f;transform[6]=0.f;transform[7]=0.f;
-                transform[8]=0.f;transform[9]=0.f;transform[10]=1.f;transform[11]=0.f;
-                transform[12]=0.f;transform[13]=0.f;transform[14]=0.f;transform[15]=1.f;
+                if( !quiet ) {
+                    std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
+                }
+                makeIdentityMatrix(transform);
             }
         }
 
@@ -10363,7 +10765,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         RGBAcolor color;
         pugi::xml_node color_node = tri.child("color");
 
-        //note: pugi loads xml data as a character.  need to separate it into 2 floats
         const char* color_str = color_node.child_value();
         if( strlen(color_str)==0 ){
             color = make_RGBAcolor(0,0,0,1);//assume default color of black
@@ -10383,7 +10784,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
 
         for(int i=0;i<3;i++){
 
-            //note: pugi loads xml data as a character.  need to separate it into 3 floats
             const char* str = vertices.child_value();
             vert_pos.at(i)=string2vec3(str);
 
@@ -10391,10 +10791,14 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 if( i==0 ){
                     break;
                 }else if( i==1 ){
-                    std::cout << "failed." << std::endl;
+                    if( !quiet ) {
+                        std::cout << "failed." << std::endl;
+                    }
                     throw( std::runtime_error("ERROR (loadXML): Only 1 vertex was given for triangle (requires 3)."));
                 }else if( i==2) {
-                    std::cout << "failed." << std::endl;
+                    if( !quiet ) {
+                        std::cout << "failed." << std::endl;
+                    }
                     throw( std::runtime_error("ERROR (loadXML): Only 2 vertices were given for triangle (requires 3)."));
                 }
             }
@@ -10428,13 +10832,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char* transform_str = transform_node.child_value();
         if( strlen(transform_str)==0 ){
-            transform[0]=1.f;transform[1]=0.f;transform[2]=0.f;transform[3]=0.f;
-            transform[4]=0.f;transform[5]=1.f;transform[6]=0.f;transform[7]=0.f;
-            transform[8]=0.f;transform[9]=0.f;transform[10]=1.f;transform[11]=0.f;
-            transform[12]=0.f;transform[13]=0.f;transform[14]=0.f;transform[15]=1.f;
+            makeIdentityMatrix(transform);
         }else{
             std::istringstream stream(transform_str);
             float tmp;
@@ -10444,11 +10844,10 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 i++;
             }
             if( i!=16 ){
-                std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-                transform[0]=1.f;transform[1]=0.f;transform[2]=0.f;transform[3]=0.f;
-                transform[4]=0.f;transform[5]=1.f;transform[6]=0.f;transform[7]=0.f;
-                transform[8]=0.f;transform[9]=0.f;transform[10]=1.f;transform[11]=0.f;
-                transform[12]=0.f;transform[13]=0.f;transform[14]=0.f;transform[15]=1.f;
+                if( !quiet ) {
+                    std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
+                }
+                makeIdentityMatrix(transform);
             }
         }
 
@@ -10456,7 +10855,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
 
-        //note: pugi loads xml data as a character.  need to separate it into 2 floats
         const char* color_str = color_node.child_value();
         if( strlen(color_str)==0 ){
             color = make_RGBAcolor(0,0,0,1);//assume default color of black
@@ -10478,7 +10876,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         vec3 center;
         pugi::xml_node center_node = p.child("center");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char* center_str = center_node.child_value();
         if( strlen(center_str)!=0 ){
             center=string2vec3(center_str);
@@ -10489,7 +10886,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         vec3 size;
         pugi::xml_node size_node = p.child("size");
 
-        //note: pugi loads xml data as a character.  need to separate it into 2 floats
         const char* size_str = size_node.child_value();
         if( strlen(size_str)!=0 ){
             size=string2vec3(size_str);
@@ -10500,7 +10896,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float rotation;
         pugi::xml_node rotation_node = p.child("rotation");
 
-        //note: pugi loads xml data as a character.  need to separate it into 2 floats
         const char* rotation_str = rotation_node.child_value();
         if( strlen(rotation_str)!=0 ){
 //            rotation = std::stof(rotation_str);
@@ -10525,7 +10920,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10538,9 +10932,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 i++;
             }
             if (i != 16) {
-                std::cout
-                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
-                        << std::endl;
+                if( !quiet ) {
+                    std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
+                }
                 makeIdentityMatrix(transform);
             }
         }
@@ -10572,15 +10966,11 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 }
             }
             if (c != 0) {
-                std::cerr
-                        << "WARNING (loadXML): textureUV for tile does not contain an even number of elements. Skipping..."
-                        << std::endl;
+                std::cerr << "WARNING (loadXML): textureUV for tile does not contain an even number of elements. Skipping..." << std::endl;
                 uv.resize(0);
             }
             if (uv.size() != 4) {
-                std::cerr
-                        << "WARNING (loadXML): textureUV for tile does not contain four pairs of (u,v) coordinates. Skipping..."
-                        << std::endl;
+                std::cerr << "WARNING (loadXML): textureUV for tile does not contain four pairs of (u,v) coordinates. Skipping..." << std::endl;
                 uv.resize(0);
             }
         }
@@ -10589,7 +10979,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
 
-        //note: pugi loads xml data as a character.  need to separate it into 2 floats
         const char *color_str = color_node.child_value();
         if ( strlen(color_str) != 0) {
             color = string2RGBcolor(color_str);
@@ -10606,17 +10995,20 @@ std::vector<uint> Context::loadXML( const char* filename ){
             subdiv = string2int2(subdiv_str);
         }
 
+        //Create a dummy patch in order to get the center, size, and rotation based on transformation matrix
+        Patch patch( make_RGBAcolor(0,0,0,0), 0 );
+        patch.setTransformationMatrix(transform);
+
         // * Add the Tile * //
         if (strcmp(texture_file.c_str(), "none") == 0) {
             if( strlen(color_str) == 0 ){
-                ID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), subdiv );
+                ID = addTileObject(patch.getCenter(), patch.getSize(), cart2sphere(patch.getNormal()), subdiv );
             }else {
-                ID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), subdiv, make_RGBcolor(color.r, color.g, color.b));
+                ID = addTileObject(patch.getCenter(), patch.getSize(), cart2sphere(patch.getNormal()), subdiv, make_RGBcolor(color.r, color.g, color.b));
             }
         } else {
-            ID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), subdiv, texture_file.c_str());
+            ID = addTileObject(patch.getCenter(), patch.getSize(), cart2sphere(patch.getNormal()), subdiv, texture_file.c_str());
         }
-        getObjectPointer(ID)->setTransformationMatrix(transform);
 
         // * Tile Sub-Patch Data * //
 
@@ -10637,7 +11029,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10650,9 +11041,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 i++;
             }
             if (i != 16) {
-                std::cout
-                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
-                        << std::endl;
+                if( !quiet ) {
+                    std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
+                }
                 makeIdentityMatrix(transform);
             }
         }
@@ -10671,7 +11062,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char *color_str = color_node.child_value();
         if ( strlen(color_str) != 0) {
             color = string2RGBcolor(color_str);
@@ -10688,17 +11078,21 @@ std::vector<uint> Context::loadXML( const char* filename ){
             subdiv = std::stoi(subdiv_str);
         }
 
+        //Create a dummy sphere in order to get the center and radius based on transformation matrix
+        std::vector<uint> empty;
+        Sphere sphere( 0, empty, 3, "", this );
+        sphere.setTransformationMatrix(transform);
+
         // * Add the Sphere * //
         if (strcmp(texture_file.c_str(), "none") == 0) {
             if( strlen(color_str) == 0 ){
-                ID = addSphereObject( subdiv, make_vec3(0, 0, 0), 1 );
+                ID = addSphereObject( subdiv, sphere.getCenter(), sphere.getRadius() );
             }else {
-                ID = addSphereObject( subdiv, make_vec3(0, 0, 0), 1, make_RGBcolor(color.r, color.g, color.b) );
+                ID = addSphereObject( subdiv, sphere.getCenter(), sphere.getRadius(), make_RGBcolor(color.r, color.g, color.b) );
             }
         } else {
-            ID = addSphereObject( subdiv, make_vec3(0, 0, 0), 1, texture_file.c_str());
+            ID = addSphereObject( subdiv, sphere.getCenter(), sphere.getRadius(), texture_file.c_str());
         }
-        getObjectPointer(ID)->setTransformationMatrix(transform);
 
         // * Sphere Sub-Triangle Data * //
 
@@ -10717,7 +11111,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10730,9 +11123,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 i++;
             }
             if (i != 16) {
-                std::cout
-                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
-                        << std::endl;
+                if( !quiet ) {
+                    std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
+                }
                 makeIdentityMatrix(transform);
             }
         }
@@ -10815,7 +11208,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10828,9 +11220,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 i++;
             }
             if (i != 16) {
-                std::cout
-                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
-                        << std::endl;
+                if( !quiet ) {
+                    std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
+                }
                 makeIdentityMatrix(transform);
             }
         }
@@ -10865,17 +11257,21 @@ std::vector<uint> Context::loadXML( const char* filename ){
             subdiv = string2int3(subdiv_str);
         }
 
+        //Create a dummy box in order to get the center and size based on transformation matrix
+        std::vector<uint> empty;
+        Box box( 0, empty, make_int3(1,1,1), "", this );
+        box.setTransformationMatrix(transform);
+
         // * Add the box * //
         if (strcmp(texture_file.c_str(), "none") == 0) {
             if( strlen(color_str) == 0 ){
-                ID = addBoxObject( make_vec3(0, 0, 0), make_vec3(1,1,1), subdiv  );
+                ID = addBoxObject( box.getCenter(), box.getSize(), subdiv  );
             }else {
-                ID = addBoxObject( make_vec3(0, 0, 0), make_vec3(1,1,1), subdiv, make_RGBcolor(color.r, color.g, color.b) );
+                ID = addBoxObject( box.getCenter(), box.getSize(), subdiv, make_RGBcolor(color.r, color.g, color.b) );
             }
         } else {
-            ID = addBoxObject( make_vec3(0, 0, 0), make_vec3(1,1,1), subdiv, texture_file.c_str());
+            ID = addBoxObject( box.getCenter(), box.getSize(), subdiv, texture_file.c_str());
         }
-        getObjectPointer(ID)->setTransformationMatrix(transform);
 
         // * Box Sub-Patch Data * //
 
@@ -10894,7 +11290,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10907,9 +11302,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 i++;
             }
             if (i != 16) {
-                std::cout
-                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
-                        << std::endl;
+                if( !quiet ) {
+                    std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
+                }
                 makeIdentityMatrix(transform);
             }
         }
@@ -10944,17 +11339,21 @@ std::vector<uint> Context::loadXML( const char* filename ){
             subdiv = std::stoi(subdiv_str);
         }
 
+        //Create a dummy disk in order to get the center and size based on transformation matrix
+        std::vector<uint> empty;
+        Disk disk( 0, empty, 1, "", this );
+        disk.setTransformationMatrix(transform);
+
         // * Add the disk * //
         if (strcmp(texture_file.c_str(), "none") == 0) {
             if( strlen(color_str) == 0 ){
-                ID = addDiskObject( subdiv, make_vec3(0, 0, 0), make_vec2(1,1) );
+                ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize() );
             }else {
-                ID = addDiskObject( subdiv, make_vec3(0, 0, 0), make_vec2(1,1), nullrotation, make_RGBcolor(color.r, color.g, color.b) );
+                ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize(), nullrotation, make_RGBcolor(color.r, color.g, color.b) );
             }
         } else {
-            ID = addDiskObject( subdiv, make_vec3(0, 0, 0), make_vec2(1,1), nullrotation, texture_file.c_str());
+            ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize(), nullrotation, texture_file.c_str());
         }
-        getObjectPointer(ID)->setTransformationMatrix(transform);
 
         // * Disk Sub-Triangle Data * //
 
@@ -10973,7 +11372,6 @@ std::vector<uint> Context::loadXML( const char* filename ){
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
 
-        //note: pugi loads xml data as a character.  need to separate it into 3 floats
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10986,9 +11384,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
                 i++;
             }
             if (i != 16) {
-                std::cout
-                        << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix."
-                        << std::endl;
+                if( !quiet ) {
+                    std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
+                }
                 makeIdentityMatrix(transform);
             }
         }
@@ -11442,7 +11840,9 @@ std::vector<uint> Context::loadXML( const char* filename ){
 
     }
 
-    std::cout << "done." << std::endl;
+    if( !quiet ) {
+        std::cout << "done." << std::endl;
+    }
 
     return UUID;
 
@@ -11667,8 +12067,11 @@ void Context::writeDataToXMLstream( const char* data_group, const std::vector<st
 
 }
 
-void Context::writeXML( const char* filename ) const{
-    std::cout << "Writing XML file " << filename << "..." << std::flush;
+void Context::writeXML( const char* filename, bool quiet ) const{
+
+    if( !quiet ) {
+        std::cout << "Writing XML file " << filename << "..." << std::flush;
+    }
 
     std::ofstream outfile;
     outfile.open(filename);
@@ -12313,7 +12716,9 @@ void Context::writeXML( const char* filename ) const{
 
     outfile.close();
 
-    std::cout << "done." << std::endl;
+    if( !quiet ) {
+        std::cout << "done." << std::endl;
+    }
 }
 
 std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height ){
@@ -12662,7 +13067,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, flo
             getline(inputOBJ, line);
             //parse vertices into points
             vec3 verts(string2vec3(line.c_str()));
-            vertices.push_back(verts);
+            vertices.emplace_back(verts);
 
             if(verts.z < boxmin ){
                 boxmin = verts.z;
@@ -12676,7 +13081,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, flo
             getline(inputOBJ, line);
             //parse coordinates into uv
             vec2 uv(string2vec2(line.c_str()));
-            texture_uv.push_back(uv);
+            texture_uv.emplace_back(uv);
 
             // ------- MATERIALS --------- //
         }else if( strcmp("usemtl",line.c_str())==0 ){
@@ -12972,14 +13377,16 @@ void Context::writeOBJ( const char* filename ) const{
                 uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
                 uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 2, (int)uv_count + 3));
                 if (uv_v.empty()) {  //default (u,v)
-                    uv.push_back(make_vec2(0, 1));
-                    uv.push_back(make_vec2(1, 1));
-                    uv.push_back(make_vec2(1, 0));
-                    uv.push_back(make_vec2(0, 0));
+                    uv.resize(4);
+                    uv[0] = make_vec2(0, 1);
+                    uv[1] = make_vec2(1, 1);
+                    uv[2] = make_vec2(1, 0);
+                    uv[3] = make_vec2(0, 0);
                     uv_count += 4;
                 } else {  //custom (u,v)
+                    uv.resize(4);
                     for (int i = 0; i < 4; i++) {
-                        uv.push_back(uv_v.at(i));
+                        uv[i] = uv_v.at(i);
                         uv_count++;
                     }
                 }

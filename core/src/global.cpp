@@ -1137,9 +1137,20 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
 
 std::vector<int> helios::flatten( const std::vector<std::vector<int> > &vec ){
 
-    std::vector<int> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<int> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1147,9 +1158,20 @@ std::vector<int> helios::flatten( const std::vector<std::vector<int> > &vec ){
 
 std::vector<uint> helios::flatten( const std::vector<std::vector<uint> > &vec ){
 
-    std::vector<uint> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<uint> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1157,9 +1179,20 @@ std::vector<uint> helios::flatten( const std::vector<std::vector<uint> > &vec ){
 
 std::vector<float> helios::flatten( const std::vector<std::vector<float> > &vec ){
 
-    std::vector<float> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<float> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1167,9 +1200,20 @@ std::vector<float> helios::flatten( const std::vector<std::vector<float> > &vec 
 
 std::vector<double> helios::flatten( const std::vector<std::vector<double> > &vec ){
 
-    std::vector<double> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<double> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1177,9 +1221,20 @@ std::vector<double> helios::flatten( const std::vector<std::vector<double> > &ve
 
 std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<helios::vec2> > &vec ){
 
-    std::vector<helios::vec2> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<helios::vec2> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1187,9 +1242,20 @@ std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<helios:
 
 std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<helios::vec3> > &vec ){
 
-    std::vector<helios::vec3> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<helios::vec3> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1197,9 +1263,20 @@ std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<helios:
 
 std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<helios::vec4> > &vec ){
 
-    std::vector<helios::vec4> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<helios::vec4> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1207,9 +1284,20 @@ std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<helios:
 
 std::vector<helios::int2> helios::flatten( const std::vector<std::vector<helios::int2> > &vec ){
 
-    std::vector<helios::int2> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<helios::int2> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1217,9 +1305,20 @@ std::vector<helios::int2> helios::flatten( const std::vector<std::vector<helios:
 
 std::vector<helios::int3> helios::flatten( const std::vector<std::vector<helios::int3> > &vec ){
 
-    std::vector<helios::int3> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<helios::int3> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1227,9 +1326,20 @@ std::vector<helios::int3> helios::flatten( const std::vector<std::vector<helios:
 
 std::vector<helios::int4> helios::flatten( const std::vector<std::vector<helios::int4> > &vec ){
 
-    std::vector<helios::int4> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<helios::int4> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1237,9 +1347,20 @@ std::vector<helios::int4> helios::flatten( const std::vector<std::vector<helios:
 
 std::vector<std::string> helios::flatten( const std::vector<std::vector<std::string> > &vec ){
 
-    std::vector<std::string> flat;
-    for(const auto & i : vec){
-        flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            ind++;
+        }
+    }
+
+    std::vector<std::string> flat( ind );
+    ind = 0;
+    for( const auto &j : vec ) {
+        for( const auto& i : j ) {
+            flat[ind] = i;
+            ind++;
+        }
     }
     return flat;
 
@@ -1247,10 +1368,23 @@ std::vector<std::string> helios::flatten( const std::vector<std::vector<std::str
 
 std::vector<int> helios::flatten( const std::vector<std::vector<std::vector<int> > > &vec ){
 
-    std::vector<int> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<int> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1259,10 +1393,23 @@ std::vector<int> helios::flatten( const std::vector<std::vector<std::vector<int>
 
 std::vector<uint> helios::flatten( const std::vector<std::vector<std::vector<uint> > > &vec ){
 
-    std::vector<uint> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<uint> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1271,10 +1418,23 @@ std::vector<uint> helios::flatten( const std::vector<std::vector<std::vector<uin
 
 std::vector<float> helios::flatten( const std::vector<std::vector<std::vector<float> > > &vec ){
 
-    std::vector<float> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<float> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1283,10 +1443,23 @@ std::vector<float> helios::flatten( const std::vector<std::vector<std::vector<fl
 
 std::vector<double> helios::flatten( const std::vector<std::vector<std::vector<double> > > &vec ){
 
-    std::vector<double> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<double> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1295,10 +1468,23 @@ std::vector<double> helios::flatten( const std::vector<std::vector<std::vector<d
 
 std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<std::vector<helios::vec2> > > &vec ){
 
-    std::vector<helios::vec2> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<helios::vec2> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1307,10 +1493,23 @@ std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<std::ve
 
 std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<std::vector<helios::vec3> > > &vec ){
 
-    std::vector<helios::vec3> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<helios::vec3> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1319,10 +1518,23 @@ std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<std::ve
 
 std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<std::vector<helios::vec4> > > &vec ){
 
-    std::vector<helios::vec4> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<helios::vec4> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1331,10 +1543,23 @@ std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<std::ve
 
 std::vector<helios::int2> helios::flatten( const std::vector<std::vector<std::vector<helios::int2> > > &vec ){
 
-    std::vector<helios::int2> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<helios::int2> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1343,10 +1568,23 @@ std::vector<helios::int2> helios::flatten( const std::vector<std::vector<std::ve
 
 std::vector<helios::int3> helios::flatten( const std::vector<std::vector<std::vector<helios::int3> > > &vec ){
 
-    std::vector<helios::int3> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<helios::int3> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1355,10 +1593,23 @@ std::vector<helios::int3> helios::flatten( const std::vector<std::vector<std::ve
 
 std::vector<helios::int4> helios::flatten( const std::vector<std::vector<std::vector<helios::int4> > > &vec ){
 
-    std::vector<helios::int4> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<helios::int4> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
         }
     }
     return flat;
@@ -1367,10 +1618,342 @@ std::vector<helios::int4> helios::flatten( const std::vector<std::vector<std::ve
 
 std::vector<std::string> helios::flatten( const std::vector<std::vector<std::vector<std::string> > > &vec ){
 
-    std::vector<std::string> flat;
-    for( const auto & j : vec){
-        for( const auto & i : j ){
-            flat.insert( flat.end(), i.begin(), i.end() );
+    size_t ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                ind++;
+            }
+        }
+    }
+
+    std::vector<std::string> flat( ind );
+    ind = 0;
+    for( const auto &k : vec ) {
+        for( const auto &j : k ) {
+            for( const auto& i : j ) {
+                flat[ind] = i;
+                ind++;
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<int> helios::flatten( const std::vector<std::vector<std::vector<std::vector<int> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<int> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<uint> helios::flatten( const std::vector<std::vector<std::vector<std::vector<uint> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<uint> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<float> helios::flatten( const std::vector<std::vector<std::vector<std::vector<float> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<float> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<double> helios::flatten( const std::vector<std::vector<std::vector<std::vector<double> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<double> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec2> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<helios::vec2> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec3> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<helios::vec3> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec4> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<helios::vec4> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::int2> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::int2> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<helios::int2> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::int3> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<helios::int3> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<helios::int4> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<helios::int4> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
+        }
+    }
+    return flat;
+
+}
+
+std::vector<std::string> helios::flatten( const std::vector<std::vector<std::vector<std::vector<std::string> > > > &vec ){
+
+    size_t ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    ind++;
+                }
+            }
+        }
+    }
+
+    std::vector<std::string> flat( ind );
+    ind = 0;
+    for( const auto &w : vec ) {
+        for( const auto &k : w) {
+            for (const auto &j: k) {
+                for (const auto &i: j) {
+                    flat[ind] = i;
+                    ind++;
+                }
+            }
         }
     }
     return flat;

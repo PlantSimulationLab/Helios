@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.25</span>
+   &#160;<span id="projectnumber">v1.2.26</span>
    </div>
   </td>
  </tr>
@@ -817,12 +817,14 @@ std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a 
 <tr class="memitem:a3d9493949db2c5d8ddeef30afd2a9a0a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhelios_1_1_compound_object.html">CompoundObject</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a3d9493949db2c5d8ddeef30afd2a9a0a">getObjectPointer</a> (uint ObjID) const</td></tr>
 <tr class="memdesc:a3d9493949db2c5d8ddeef30afd2a9a0a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a pointer to a Compound Object.  <a href="classhelios_1_1_context.html#a3d9493949db2c5d8ddeef30afd2a9a0a">More...</a><br /></td></tr>
 <tr class="separator:a3d9493949db2c5d8ddeef30afd2a9a0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a54b9c5503ad33d1dcc8f6a5c74f7ea76"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a54b9c5503ad33d1dcc8f6a5c74f7ea76">getObjectCount</a> () const</td></tr>
+<tr class="memdesc:a54b9c5503ad33d1dcc8f6a5c74f7ea76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the total number of objects that have been created in the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a>.  <a href="classhelios_1_1_context.html#a54b9c5503ad33d1dcc8f6a5c74f7ea76">More...</a><br /></td></tr>
+<tr class="separator:a54b9c5503ad33d1dcc8f6a5c74f7ea76"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9b410e55075482b8cbc549f9bf571541"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a9b410e55075482b8cbc549f9bf571541">doesObjectExist</a> (uint ObjID) const</td></tr>
 <tr class="memdesc:a9b410e55075482b8cbc549f9bf571541"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check whether Compound Object exists in the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a>.  <a href="classhelios_1_1_context.html#a9b410e55075482b8cbc549f9bf571541">More...</a><br /></td></tr>
 <tr class="separator:a9b410e55075482b8cbc549f9bf571541"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ef355a3298b21313700acec64232e22"><td class="memItemLeft" align="right" valign="top"><a id="a2ef355a3298b21313700acec64232e22"></a>
-std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a2ef355a3298b21313700acec64232e22">getAllObjectIDs</a> () const</td></tr>
-<tr class="memdesc:a2ef355a3298b21313700acec64232e22"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the IDs for all Compound Objects in the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a>. <br /></td></tr>
+<tr class="memitem:a2ef355a3298b21313700acec64232e22"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a2ef355a3298b21313700acec64232e22">getAllObjectIDs</a> () const</td></tr>
+<tr class="memdesc:a2ef355a3298b21313700acec64232e22"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the IDs for all Compound Objects in the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a>.  <a href="classhelios_1_1_context.html#a2ef355a3298b21313700acec64232e22">More...</a><br /></td></tr>
 <tr class="separator:a2ef355a3298b21313700acec64232e22"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaae58688c97d14257223911be4bb13e6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#aaae58688c97d14257223911be4bb13e6">deleteObject</a> (uint ObjID)</td></tr>
 <tr class="memdesc:aaae58688c97d14257223911be4bb13e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete a single Compound Object from the context.  <a href="classhelios_1_1_context.html#aaae58688c97d14257223911be4bb13e6">More...</a><br /></td></tr>
@@ -839,6 +841,18 @@ std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a 
 <tr class="memitem:ad2b762dd7b31126150c6e6dc350a3914"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhelios_1_1_tile.html">Tile</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#ad2b762dd7b31126150c6e6dc350a3914">getTileObjectPointer</a> (uint ObjID) const</td></tr>
 <tr class="memdesc:ad2b762dd7b31126150c6e6dc350a3914"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a pointer to a <a class="el" href="classhelios_1_1_tile.html">Tile</a> Compound Object.  <a href="classhelios_1_1_context.html#ad2b762dd7b31126150c6e6dc350a3914">More...</a><br /></td></tr>
 <tr class="separator:ad2b762dd7b31126150c6e6dc350a3914"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac93267c6e6866909132b56ba22b968ec"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#ac93267c6e6866909132b56ba22b968ec">getTileObjectAreaRatio</a> (const uint &amp;ObjectID) const</td></tr>
+<tr class="memdesc:ac93267c6e6866909132b56ba22b968ec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the area ratio of a tile object (total object area / sub-patch area)  <a href="classhelios_1_1_context.html#ac93267c6e6866909132b56ba22b968ec">More...</a><br /></td></tr>
+<tr class="separator:ac93267c6e6866909132b56ba22b968ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afdebad3fd25bb8b9fa228020c3b11329"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#afdebad3fd25bb8b9fa228020c3b11329">getTileObjectAreaRatio</a> (const std::vector&lt; uint &gt; &amp;ObjectID) const</td></tr>
+<tr class="memdesc:afdebad3fd25bb8b9fa228020c3b11329"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the area ratio of a multiplle tile objects (total object area / sub-patch area)  <a href="classhelios_1_1_context.html#afdebad3fd25bb8b9fa228020c3b11329">More...</a><br /></td></tr>
+<tr class="separator:afdebad3fd25bb8b9fa228020c3b11329"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afb3787f762794ae4ad38687a760d972a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#afb3787f762794ae4ad38687a760d972a">setTileObjectSubdivisionCount</a> (const std::vector&lt; uint &gt; &amp;ObjectIDs, <a class="el" href="structhelios_1_1int2.html">int2</a> new_subdiv)</td></tr>
+<tr class="memdesc:afb3787f762794ae4ad38687a760d972a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Change the subdivision count of a tile object.  <a href="classhelios_1_1_context.html#afb3787f762794ae4ad38687a760d972a">More...</a><br /></td></tr>
+<tr class="separator:afb3787f762794ae4ad38687a760d972a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a14626fb1701c57a683418b9b9d442913"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a14626fb1701c57a683418b9b9d442913">setTileObjectSubdivisionCount</a> (const std::vector&lt; uint &gt; &amp;ObjectIDs, float area_ratio)</td></tr>
+<tr class="memdesc:a14626fb1701c57a683418b9b9d442913"><td class="mdescLeft">&#160;</td><td class="mdescRight">change the subdivisions of a tile object  <a href="classhelios_1_1_context.html#a14626fb1701c57a683418b9b9d442913">More...</a><br /></td></tr>
+<tr class="separator:a14626fb1701c57a683418b9b9d442913"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8ed7580efa323c0f5e53e97d00e16c85"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhelios_1_1_sphere.html">Sphere</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a8ed7580efa323c0f5e53e97d00e16c85">getSphereObjectPointer</a> (uint ObjID) const</td></tr>
 <tr class="memdesc:a8ed7580efa323c0f5e53e97d00e16c85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a pointer to a <a class="el" href="classhelios_1_1_sphere.html">Sphere</a> Compound Object.  <a href="classhelios_1_1_context.html#a8ed7580efa323c0f5e53e97d00e16c85">More...</a><br /></td></tr>
 <tr class="separator:a8ed7580efa323c0f5e53e97d00e16c85"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1040,16 +1054,15 @@ std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a 
 <tr class="memitem:a646610820710e8012084aeb0fe0ec0f1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a646610820710e8012084aeb0fe0ec0f1">cropDomain</a> (const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;xbounds, const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;ybounds, const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;zbounds)</td></tr>
 <tr class="memdesc:a646610820710e8012084aeb0fe0ec0f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Crop the domain such that all primitives lie within some specified axis-aligned box.  <a href="classhelios_1_1_context.html#a646610820710e8012084aeb0fe0ec0f1">More...</a><br /></td></tr>
 <tr class="separator:a646610820710e8012084aeb0fe0ec0f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a382594ed34f1e8e45d5c30b5912d2aa1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a382594ed34f1e8e45d5c30b5912d2aa1">loadXML</a> (const char *filename)</td></tr>
-<tr class="memdesc:a382594ed34f1e8e45d5c30b5912d2aa1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load inputs specified in an XML file.  <a href="classhelios_1_1_context.html#a382594ed34f1e8e45d5c30b5912d2aa1">More...</a><br /></td></tr>
-<tr class="separator:a382594ed34f1e8e45d5c30b5912d2aa1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a48a8a843b99c36ad357dba13ee6f1774"><td class="memItemLeft" align="right" valign="top"><a id="a48a8a843b99c36ad357dba13ee6f1774"></a>
-std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a48a8a843b99c36ad357dba13ee6f1774">getLoadedXMLFiles</a> ()</td></tr>
-<tr class="memdesc:a48a8a843b99c36ad357dba13ee6f1774"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get names of XML files that are currently loaded. <br /></td></tr>
+<tr class="memitem:a129516a8fce035705a541e7b877eba2f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f">loadXML</a> (const char *filename, bool quiet=false)</td></tr>
+<tr class="memdesc:a129516a8fce035705a541e7b877eba2f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load inputs specified in an XML file.  <a href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f">More...</a><br /></td></tr>
+<tr class="separator:a129516a8fce035705a541e7b877eba2f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a48a8a843b99c36ad357dba13ee6f1774"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a48a8a843b99c36ad357dba13ee6f1774">getLoadedXMLFiles</a> ()</td></tr>
+<tr class="memdesc:a48a8a843b99c36ad357dba13ee6f1774"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get names of XML files that are currently loaded.  <a href="classhelios_1_1_context.html#a48a8a843b99c36ad357dba13ee6f1774">More...</a><br /></td></tr>
 <tr class="separator:a48a8a843b99c36ad357dba13ee6f1774"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9e8c0878f34db3fb5d6cbd4e61d2f2a4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a9e8c0878f34db3fb5d6cbd4e61d2f2a4">writeXML</a> (const char *filename) const</td></tr>
-<tr class="memdesc:a9e8c0878f34db3fb5d6cbd4e61d2f2a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> geometry and data to XML file.  <a href="classhelios_1_1_context.html#a9e8c0878f34db3fb5d6cbd4e61d2f2a4">More...</a><br /></td></tr>
-<tr class="separator:a9e8c0878f34db3fb5d6cbd4e61d2f2a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfcac5a56c13e86298609ed3fccf354d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d">writeXML</a> (const char *filename, bool quiet=false) const</td></tr>
+<tr class="memdesc:abfcac5a56c13e86298609ed3fccf354d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> geometry and data to XML file.  <a href="classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d">More...</a><br /></td></tr>
+<tr class="separator:abfcac5a56c13e86298609ed3fccf354d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a80d8d41aecfef365ba40f650cdbac1ba"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a80d8d41aecfef365ba40f650cdbac1ba">loadPLY</a> (const char *filename, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;origin, float height)</td></tr>
 <tr class="memdesc:a80d8d41aecfef365ba40f650cdbac1ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load geometry contained in a Stanford polygon file (.ply)  <a href="classhelios_1_1_context.html#a80d8d41aecfef365ba40f650cdbac1ba">More...</a><br /></td></tr>
 <tr class="separator:a80d8d41aecfef365ba40f650cdbac1ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1078,7 +1091,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <tr class="memdesc:a5b9565e477a321ec7b7b9b62d43b2139"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set simulation date by day, month, year.  <a href="classhelios_1_1_context.html#a5b9565e477a321ec7b7b9b62d43b2139">More...</a><br /></td></tr>
 <tr class="separator:a5b9565e477a321ec7b7b9b62d43b2139"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3096839d9851043d201382255b608750"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a3096839d9851043d201382255b608750">setDate</a> (<a class="el" href="structhelios_1_1_date.html">helios::Date</a> date)</td></tr>
-<tr class="memdesc:a3096839d9851043d201382255b608750"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set simulation date by <a class="el" href="structhelios_1_1_date.html">Date</a> vector.  <a href="classhelios_1_1_context.html#a3096839d9851043d201382255b608750">More...</a><br /></td></tr>
+<tr class="memdesc:a3096839d9851043d201382255b608750"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set simulation date by <a class="el" href="structhelios_1_1_date.html" title="Date vector.">Date</a> vector.  <a href="classhelios_1_1_context.html#a3096839d9851043d201382255b608750">More...</a><br /></td></tr>
 <tr class="separator:a3096839d9851043d201382255b608750"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a810169fc94d22368ff83c357e13b0a61"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a810169fc94d22368ff83c357e13b0a61">setDate</a> (int Julian_day, int year)</td></tr>
 <tr class="memdesc:a810169fc94d22368ff83c357e13b0a61"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set simulation date by Julian day.  <a href="classhelios_1_1_context.html#a810169fc94d22368ff83c357e13b0a61">More...</a><br /></td></tr>
@@ -1099,7 +1112,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <tr class="memdesc:a940a77e10a3210bcf3b292e029cc3fda"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set simulation time.  <a href="classhelios_1_1_context.html#a940a77e10a3210bcf3b292e029cc3fda">More...</a><br /></td></tr>
 <tr class="separator:a940a77e10a3210bcf3b292e029cc3fda"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a98cf262539e8ebdd6ffb62e95bfc3fbd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a98cf262539e8ebdd6ffb62e95bfc3fbd">setTime</a> (<a class="el" href="structhelios_1_1_time.html">helios::Time</a> time)</td></tr>
-<tr class="memdesc:a98cf262539e8ebdd6ffb62e95bfc3fbd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set simulation time using <a class="el" href="structhelios_1_1_time.html">Time</a> vector.  <a href="classhelios_1_1_context.html#a98cf262539e8ebdd6ffb62e95bfc3fbd">More...</a><br /></td></tr>
+<tr class="memdesc:a98cf262539e8ebdd6ffb62e95bfc3fbd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set simulation time using <a class="el" href="structhelios_1_1_time.html" title="Time vector.">Time</a> vector.  <a href="classhelios_1_1_context.html#a98cf262539e8ebdd6ffb62e95bfc3fbd">More...</a><br /></td></tr>
 <tr class="separator:a98cf262539e8ebdd6ffb62e95bfc3fbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a847ecbb2297e60220a23b67c39b0f6e2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_time.html">helios::Time</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a847ecbb2297e60220a23b67c39b0f6e2">getTime</a> () const</td></tr>
 <tr class="memdesc:a847ecbb2297e60220a23b67c39b0f6e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the simulation time.  <a href="classhelios_1_1_context.html#a847ecbb2297e60220a23b67c39b0f6e2">More...</a><br /></td></tr>
@@ -1127,7 +1140,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <p>The <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> provides an interface to global information about the application environment. It allows access to application-level operations such as adding geometry, running models, and visualization. After creation, the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> must first be initialized via a call to initializeContext(), after which geometry and models can be added and simulated. <br  />
  </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l01384">1384</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l01390">1390</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a5118575675393453c5d927e66d59293e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5118575675393453c5d927e66d59293e">&#9670;&nbsp;</a></span>addPatch() <span class="overload">[1/2]</span></h2>
@@ -1179,7 +1192,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>UUID of <a class="el" href="classhelios_1_1_patch.html" title="Rectangular geometric object.">Patch</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04257">4257</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04358">4358</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1233,7 +1246,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>UUID of <a class="el" href="classhelios_1_1_patch.html" title="Rectangular geometric object.">Patch</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04253">4253</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04354">4354</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1287,7 +1300,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>UUID of <a class="el" href="classhelios_1_1_voxel.html" title="Parallelpiped geometric object filled with a participating medium.">Voxel</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04465">4465</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04566">4566</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1341,7 +1354,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>UUID of <a class="el" href="classhelios_1_1_voxel.html" title="Parallelpiped geometric object filled with a participating medium.">Voxel</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04461">4461</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04562">4562</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1380,7 +1393,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03325">3325</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03426">3426</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1419,7 +1432,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03318">3318</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03419">3419</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1458,7 +1471,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02784">2784</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02885">2885</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1497,7 +1510,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02777">2777</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02878">2878</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1526,7 +1539,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID for copied object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06094">6094</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06199">6199</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1555,7 +1568,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID for copied object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06107">6107</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06212">6212</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1584,7 +1597,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>UUIDs for copied primitives </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04548">4548</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04649">4649</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1613,7 +1626,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>UUID for copied primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04561">4561</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04662">4662</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1652,7 +1665,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04636">4636</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04737">4737</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1705,7 +1718,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05131">5131</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05232">5232</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1751,7 +1764,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05162">5162</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05263">5263</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1779,7 +1792,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05041">5041</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05142">5142</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1807,7 +1820,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05071">5071</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05172">5172</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1835,7 +1848,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05101">5101</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05202">5202</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1863,7 +1876,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06070">6070</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06175">6175</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1891,7 +1904,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06076">6076</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06181">6181</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1919,7 +1932,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04525">4525</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04626">4626</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1947,7 +1960,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04531">4531</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04632">4632</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1976,7 +1989,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True/false </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03935">3935</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04036">4036</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2016,7 +2029,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True/false </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03311">3311</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03412">3412</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2044,7 +2057,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06055">6055</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06160">6160</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2084,7 +2097,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True/false </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02770">2770</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02871">2871</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2112,7 +2125,29 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04701">4701</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04802">4802</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2ef355a3298b21313700acec64232e22"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2ef355a3298b21313700acec64232e22">&#9670;&nbsp;</a></span>getAllObjectIDs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; Context::getAllObjectIDs </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the IDs for all Compound Objects in the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd>Vector of IDs for all objects. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06164">6164</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2140,7 +2175,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06544">6544</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06956">6956</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2168,7 +2203,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06731">6731</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07143">7143</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2191,7 +2226,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="structhelios_1_1_date.html">Date</a> vector </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a5b9565e477a321ec7b7b9b62d43b2139">setDate()</a>, <a class="el" href="classhelios_1_1_context.html#a23f2611ed71eeefe8cf772cab98de4d4">getJulianDate()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04138">4138</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04239">4239</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2219,7 +2254,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06628">6628</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07040">7040</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2272,7 +2307,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04978">4978</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05079">5079</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2318,7 +2353,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04943">4943</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05044">5044</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2364,7 +2399,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05027">5027</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05128">5128</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2403,7 +2438,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05013">5013</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05114">5114</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2442,7 +2477,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03643">3643</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03744">3744</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2481,7 +2516,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03609">3609</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03710">3710</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2520,7 +2555,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03779">3779</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03880">3880</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2559,7 +2594,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03813">3813</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03914">3914</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2598,7 +2633,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03847">3847</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03948">3948</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2637,7 +2672,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03677">3677</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03778">3778</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2676,7 +2711,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03711">3711</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03812">3812</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2715,7 +2750,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03745">3745</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03846">3846</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2754,7 +2789,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03541">3541</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03642">3642</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2793,7 +2828,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03881">3881</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03982">3982</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2832,7 +2867,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03660">3660</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03761">3761</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2871,7 +2906,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03626">3626</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03727">3727</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2910,7 +2945,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03796">3796</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03897">3897</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2949,7 +2984,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03830">3830</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03931">3931</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2988,7 +3023,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03864">3864</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03965">3965</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3027,7 +3062,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03694">3694</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03795">3795</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3066,7 +3101,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03728">3728</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03829">3829</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3105,7 +3140,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03762">3762</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03863">3863</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3144,7 +3179,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03558">3558</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03659">3659</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3183,7 +3218,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03898">3898</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03999">3999</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3222,7 +3257,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03592">3592</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03693">3693</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3261,7 +3296,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03575">3575</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03676">3676</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3290,7 +3325,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Size/length of global data array </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03925">3925</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04026">4026</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3320,7 +3355,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="section return"><dt>Returns</dt><dd>Helios data type of global data </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>HeliosDataType </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03915">3915</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04016">4016</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3343,7 +3378,29 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year (1-366) </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a5b9565e477a321ec7b7b9b62d43b2139">setDate()</a>, <a class="el" href="classhelios_1_1_context.html#a95dd5bc221cd8bcb4efabd0122d59b4f">getDate()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04171">4171</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04272">4272</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a48a8a843b99c36ad357dba13ee6f1774"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a48a8a843b99c36ad357dba13ee6f1774">&#9670;&nbsp;</a></span>getLoadedXMLFiles()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::string &gt; Context::getLoadedXMLFiles </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get names of XML files that are currently loaded. </p>
+<dl class="section return"><dt>Returns</dt><dd>Vector of XML files. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11851">11851</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3366,7 +3423,29 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="section return"><dt>Returns</dt><dd>Month string (e.g., Jan, Feb, Mar, etc) </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a5b9565e477a321ec7b7b9b62d43b2139">setDate()</a>, <a class="el" href="classhelios_1_1_context.html#a23f2611ed71eeefe8cf772cab98de4d4">getJulianDate()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04142">4142</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04243">4243</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a54b9c5503ad33d1dcc8f6a5c74f7ea76"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a54b9c5503ad33d1dcc8f6a5c74f7ea76">&#9670;&nbsp;</a></span>getObjectCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint Context::getObjectCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the total number of objects that have been created in the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd>Total number of objects that have been created in the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06156">6156</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3412,7 +3491,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03185">3185</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03286">3286</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3458,7 +3537,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03171">3171</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03272">3272</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3504,7 +3583,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03143">3143</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03244">3244</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3550,7 +3629,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03241">3241</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03342">3342</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3596,7 +3675,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03255">3255</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03356">3356</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3642,7 +3721,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03269">3269</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03370">3370</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3688,7 +3767,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03283">3283</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03384">3384</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3734,7 +3813,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03192">3192</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03293">3293</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3780,7 +3859,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03178">3178</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03279">3279</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3826,7 +3905,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03150">3150</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03251">3251</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3872,7 +3951,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03248">3248</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03349">3349</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3918,7 +3997,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03262">3262</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03363">3363</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3964,7 +4043,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03276">3276</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03377">3377</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4010,7 +4089,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03290">3290</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03391">3391</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4056,7 +4135,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03164">3164</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03265">3265</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4102,7 +4181,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03206">3206</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03307">3307</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4148,7 +4227,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03220">3220</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03321">3321</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4194,7 +4273,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03234">3234</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03335">3335</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4240,7 +4319,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03157">3157</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03258">3258</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4286,7 +4365,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03199">3199</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03300">3300</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4332,7 +4411,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03213">3213</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03314">3314</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4378,7 +4457,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03227">3227</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03328">3328</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4418,7 +4497,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Size/length of primitive data array </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03304">3304</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03405">3405</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4459,7 +4538,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="section return"><dt>Returns</dt><dd>Helios data type of primitive data </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>HeliosDataType </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03297">3297</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03398">3398</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4487,7 +4566,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06048">6048</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06149">6149</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4515,7 +4594,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06708">6708</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07120">7120</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4543,7 +4622,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13188">13188</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13595">13595</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4571,7 +4650,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13215">13215</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13622">13622</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4599,7 +4678,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13219">13219</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13626">13626</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4627,7 +4706,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13223">13223</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13630">13630</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4673,7 +4752,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02644">2644</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02745">2745</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4719,7 +4798,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02630">2630</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02731">2731</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4765,7 +4844,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02602">2602</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02703">2703</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4811,7 +4890,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02700">2700</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02801">2801</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4857,7 +4936,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02714">2714</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02815">2815</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4903,7 +4982,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02728">2728</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02829">2829</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4949,7 +5028,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02742">2742</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02843">2843</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4995,7 +5074,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02651">2651</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02752">2752</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5041,7 +5120,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02637">2637</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02738">2738</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5087,7 +5166,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02609">2609</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02710">2710</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5133,7 +5212,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02707">2707</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02808">2808</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5179,7 +5258,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02721">2721</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02822">2822</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5225,7 +5304,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02735">2735</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02836">2836</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5271,7 +5350,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02749">2749</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02850">2850</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5317,7 +5396,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02623">2623</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02724">2724</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5363,7 +5442,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02665">2665</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02766">2766</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5409,7 +5488,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02679">2679</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02780">2780</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5455,7 +5534,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02693">2693</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02794">2794</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5501,7 +5580,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02616">2616</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02717">2717</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5547,7 +5626,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02658">2658</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02759">2759</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5593,7 +5672,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02672">2672</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02773">2773</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5639,7 +5718,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02686">2686</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02787">2787</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5679,7 +5758,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Size/length of primitive data array </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02763">2763</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02864">2864</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5720,7 +5799,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="section return"><dt>Returns</dt><dd>Helios data type of primitive data </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>HeliosDataType </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02756">2756</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02857">2857</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5748,7 +5827,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13192">13192</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13599">13599</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5776,7 +5855,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13184">13184</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13591">13591</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5805,7 +5884,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Path to texture map file. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13247">13247</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13654">13654</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5834,7 +5913,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="classhelios_1_1_texture.html">Texture</a> image resolution (columns x rows). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13251">13251</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13658">13658</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5863,7 +5942,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Transparency value (0 or 1) for each pixel in primitive texture map. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13267">13267</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13674">13674</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5902,7 +5981,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13196">13196</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13603">13603</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5930,7 +6009,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13170">13170</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13577">13577</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5958,7 +6037,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13210">13210</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13617">13617</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5986,7 +6065,63 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06384">6384</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06796">6796</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afdebad3fd25bb8b9fa228020c3b11329"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afdebad3fd25bb8b9fa228020c3b11329">&#9670;&nbsp;</a></span>getTileObjectAreaRatio() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; Context::getTileObjectAreaRatio </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ObjectID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the area ratio of a multiplle tile objects (total object area / sub-patch area) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjID</td><td>Vector of dentifiers for <a class="el" href="classhelios_1_1_tile.html">Tile</a> Compound Object. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06339">6339</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac93267c6e6866909132b56ba22b968ec"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac93267c6e6866909132b56ba22b968ec">&#9670;&nbsp;</a></span>getTileObjectAreaRatio() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Context::getTileObjectAreaRatio </td>
+          <td>(</td>
+          <td class="paramtype">const uint &amp;&#160;</td>
+          <td class="paramname"><em>ObjectID</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the area ratio of a tile object (total object area / sub-patch area) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjID</td><td>Identifier for <a class="el" href="classhelios_1_1_tile.html">Tile</a> Compound Object. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06317">6317</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6014,7 +6149,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06264">6264</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06676">6676</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6037,7 +6172,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="section return"><dt>Returns</dt><dd>\ref <a class="el" href="structhelios_1_1_time.html" title="Time vector.">Time</a> vector </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#ae3d9e19581787775556b8dd7dc1ac845">setTime()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04205">4205</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04306">4306</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6065,7 +6200,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06463">6463</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06875">6875</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6087,7 +6222,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <p>Query whether the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> geometry is ``dirty", meaning has the geometry been modified since last set as clean. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a368852580048c62c2b16ebec000b35ed">markGeometryClean()</a>, <a class="el" href="classhelios_1_1_context.html#aba4b1c6f469953791017770fd8c18fa1">markGeometryDirty()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01029">1029</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01126">1126</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6147,7 +6282,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12599">12599</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13004">13004</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6214,7 +6349,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12603">12603</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13008">13008</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6261,7 +6396,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of blue if no colors are specified in the .ply file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12319">12319</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12724">12724</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6314,7 +6449,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12327">12327</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12732">12732</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6368,7 +6503,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of blue if no colors are specified in the .ply file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12323">12323</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12728">12728</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6428,12 +6563,12 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12331">12331</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12736">12736</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a382594ed34f1e8e45d5c30b5912d2aa1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a382594ed34f1e8e45d5c30b5912d2aa1">&#9670;&nbsp;</a></span>loadXML()</h2>
+<a id="a129516a8fce035705a541e7b877eba2f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a129516a8fce035705a541e7b877eba2f">&#9670;&nbsp;</a></span>loadXML()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -6442,8 +6577,18 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
           <td class="memname">std::vector&lt; uint &gt; Context::loadXML </td>
           <td>(</td>
           <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>filename</em></td><td>)</td>
+          <td class="paramname"><em>filename</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>quiet</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -6452,12 +6597,13 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>name of XML file. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">quiet</td><td>If set to true, command line output will be disabled. Optional argument - default value is false. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function is based on the pugi xml parser. See <a href="www.pugixml.org">pugixml.org</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l10089">10089</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l10501">10501</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6479,7 +6625,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <p>Mark the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> geometry as ``clean", meaning that the geometry has not been modified since last set as clean. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#aba4b1c6f469953791017770fd8c18fa1">markGeometryDirty()</a>, <a class="el" href="classhelios_1_1_context.html#a64f402ff71dd246be8c1b06699c05e26">isGeometryDirty()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01021">1021</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01118">1118</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6501,7 +6647,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <p>Mark the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> geometry as ``dirty", meaning that the geometry has been modified since last set as clean. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a368852580048c62c2b16ebec000b35ed">markGeometryClean()</a>, <a class="el" href="classhelios_1_1_context.html#a64f402ff71dd246be8c1b06699c05e26">isGeometryDirty()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01025">1025</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01122">1122</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6530,7 +6676,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if transparency channel data exists, false otherwise </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13259">13259</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13666">13666</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6570,7 +6716,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If standard deviation is specified as negative, the absolute value is used. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04237">4237</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04338">4338</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6609,7 +6755,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04213">4213</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04314">4314</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6648,7 +6794,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04223">4223</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04324">4324</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6694,7 +6840,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04499">4499</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04600">4600</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6740,7 +6886,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04509">4509</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04610">4610</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6786,7 +6932,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04495">4495</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04596">4596</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6832,7 +6978,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04505">4505</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04606">4606</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6871,7 +7017,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04519">4519</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04620">4620</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6910,7 +7056,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04515">4515</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04616">4616</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6952,16 +7098,16 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
       </table>
 </div><div class="memdoc">
 
-<p>Set simulation date by <a class="el" href="structhelios_1_1_date.html">Date</a> vector. </p>
+<p>Set simulation date by <a class="el" href="structhelios_1_1_date.html" title="Date vector.">Date</a> vector. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">date</td><td><a class="el" href="structhelios_1_1_date.html">Date</a> vector </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">date</td><td><a class="el" href="structhelios_1_1_date.html" title="Date vector.">Date</a> vector </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a95dd5bc221cd8bcb4efabd0122d59b4f">getDate()</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a95dd5bc221cd8bcb4efabd0122d59b4f" title="Get simulation date.">getDate()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04112">4112</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04213">4213</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7008,7 +7154,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a95dd5bc221cd8bcb4efabd0122d59b4f">getDate()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04098">4098</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04199">4199</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7048,7 +7194,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a95dd5bc221cd8bcb4efabd0122d59b4f">getDate()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04126">4126</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04227">4227</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7087,7 +7233,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03355">3355</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03456">3456</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7126,7 +7272,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03348">3348</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03449">3449</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7165,7 +7311,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03383">3383</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03484">3484</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7204,7 +7350,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03390">3390</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03491">3491</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7243,7 +7389,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03397">3397</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03498">3498</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7282,7 +7428,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03362">3362</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03463">3463</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7321,7 +7467,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03369">3369</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03470">3470</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7360,7 +7506,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03376">3376</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03477">3477</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7399,7 +7545,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03334">3334</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03435">3435</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7438,7 +7584,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03404">3404</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03505">3505</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7477,7 +7623,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03341">3341</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03442">3442</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7529,7 +7675,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03411">3411</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03512">3512</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7574,7 +7720,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03063">3063</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03164">3164</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7620,7 +7766,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03053">3053</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03154">3154</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7666,7 +7812,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03103">3103</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03204">3204</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7712,7 +7858,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03113">3113</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03214">3214</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7758,7 +7904,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03123">3123</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03224">3224</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7804,7 +7950,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03073">3073</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03174">3174</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7850,7 +7996,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03083">3083</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03184">3184</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7896,7 +8042,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03093">3093</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03194">3194</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7942,7 +8088,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03033">3033</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03134">3134</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7988,7 +8134,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03133">3133</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03234">3234</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8034,7 +8180,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03043">3043</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03144">3144</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8079,7 +8225,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02969">2969</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03070">3070</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8125,7 +8271,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02961">2961</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03062">3062</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8171,7 +8317,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03001">3001</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03102">3102</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8217,7 +8363,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03009">3009</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03110">3110</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8263,7 +8409,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03017">3017</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03118">3118</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8309,7 +8455,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02977">2977</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03078">3078</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8355,7 +8501,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02985">2985</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03086">3086</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8401,7 +8547,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02993">2993</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03094">3094</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8447,7 +8593,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02945">2945</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03046">3046</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8493,7 +8639,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03025">3025</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03126">3126</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8539,7 +8685,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02953">2953</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03054">3054</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8584,7 +8730,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02897">2897</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02998">2998</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8630,7 +8776,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02891">2891</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02992">2992</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8676,7 +8822,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02921">2921</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03022">3022</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8722,7 +8868,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02927">2927</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03028">3028</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8768,7 +8914,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02933">2933</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03034">3034</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8814,7 +8960,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02903">2903</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03004">3004</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8860,7 +9006,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02909">2909</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03010">3010</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8906,7 +9052,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02915">2915</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03016">3016</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8952,7 +9098,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02879">2879</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02980">2980</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8998,7 +9144,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02939">2939</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03040">3040</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9044,7 +9190,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02885">2885</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02986">2986</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9089,7 +9235,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02816">2816</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02917">2917</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9135,7 +9281,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02809">2809</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02910">2910</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9181,7 +9327,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02844">2844</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02945">2945</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9227,7 +9373,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02851">2851</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02952">2952</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9273,7 +9419,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02858">2858</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02959">2959</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9319,7 +9465,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02823">2823</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02924">2924</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9365,7 +9511,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02830">2830</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02931">2931</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9411,7 +9557,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02837">2837</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02938">2938</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9457,7 +9603,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02795">2795</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02896">2896</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9503,7 +9649,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02865">2865</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02966">2966</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9549,7 +9695,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02802">2802</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02903">2903</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9609,7 +9755,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02872">2872</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02973">2973</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9648,7 +9794,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13241">13241</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13648">13648</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9687,7 +9833,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13231">13231</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13638">13638</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9726,7 +9872,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13237">13237</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13644">13644</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9765,7 +9911,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13227">13227</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13634">13634</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9810,7 +9956,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02522">2522</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02623">2623</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9856,7 +10002,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02512">2512</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02613">2613</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9902,7 +10048,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02562">2562</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02663">2663</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9948,7 +10094,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02572">2572</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02673">2673</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9994,7 +10140,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02582">2582</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02683">2683</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10040,7 +10186,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02532">2532</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02633">2633</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10086,7 +10232,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02542">2542</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02643">2643</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10132,7 +10278,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02552">2552</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02653">2653</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10178,7 +10324,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02494">2494</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02595">2595</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10224,7 +10370,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02592">2592</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02693">2693</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10270,7 +10416,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02502">2502</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02603">2603</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10315,7 +10461,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02430">2430</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02531">2531</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10361,7 +10507,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02422">2422</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02523">2523</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10407,7 +10553,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02462">2462</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02563">2563</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10453,7 +10599,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02470">2470</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02571">2571</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10499,7 +10645,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02478">2478</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02579">2579</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10545,7 +10691,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02438">2438</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02539">2539</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10591,7 +10737,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02446">2446</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02547">2547</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10637,7 +10783,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02454">2454</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02555">2555</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10683,7 +10829,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02406">2406</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02507">2507</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10729,7 +10875,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02486">2486</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02587">2587</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10775,7 +10921,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02414">2414</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02515">2515</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10820,7 +10966,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02358">2358</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02459">2459</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10866,7 +11012,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02352">2352</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02453">2453</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10912,7 +11058,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02382">2382</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02483">2483</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10958,7 +11104,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02388">2388</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02489">2489</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11004,7 +11150,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02394">2394</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02495">2495</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11050,7 +11196,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02364">2364</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02465">2465</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11096,7 +11242,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02370">2370</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02471">2471</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11142,7 +11288,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02376">2376</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02477">2477</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11188,7 +11334,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02340">2340</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02441">2441</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11234,7 +11380,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02400">2400</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02501">2501</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11280,7 +11426,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02346">2346</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02447">2447</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11325,7 +11471,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02277">2277</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02378">2378</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11371,7 +11517,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02270">2270</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02371">2371</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11417,7 +11563,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02305">2305</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02406">2406</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11463,7 +11609,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02312">2312</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02413">2413</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11509,7 +11655,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02319">2319</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02420">2420</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11555,7 +11701,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02284">2284</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02385">2385</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11601,7 +11747,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02291">2291</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02392">2392</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11647,7 +11793,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02298">2298</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02399">2399</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11693,7 +11839,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02256">2256</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02357">2357</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11739,7 +11885,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02326">2326</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02427">2427</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11785,7 +11931,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02263">2263</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02364">2364</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11845,7 +11991,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02333">2333</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02434">2434</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11884,7 +12030,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13178">13178</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13585">13585</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11923,7 +12069,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13174">13174</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13581">13581</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11962,7 +12108,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13204">13204</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13611">13611</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12001,7 +12147,85 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13200">13200</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13607">13607</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a14626fb1701c57a683418b9b9d442913"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a14626fb1701c57a683418b9b9d442913">&#9670;&nbsp;</a></span>setTileObjectSubdivisionCount() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setTileObjectSubdivisionCount </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ObjectIDs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>area_ratio</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>change the subdivisions of a tile object </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjectIDs</td><td>object IDs of the tile objects to change </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">area_ratio</td><td>the approximate ratio between individual tile object area and individual subpatch area desired </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06477">6477</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afb3787f762794ae4ad38687a760d972a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afb3787f762794ae4ad38687a760d972a">&#9670;&nbsp;</a></span>setTileObjectSubdivisionCount() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setTileObjectSubdivisionCount </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ObjectIDs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1int2.html">int2</a>&#160;</td>
+          <td class="paramname"><em>new_subdiv</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Change the subdivision count of a tile object. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjectIDs</td><td>object IDs of the tile objects to change </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">new_subdiv</td><td>the new subdivisions desired </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06349">6349</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12021,16 +12245,16 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
       </table>
 </div><div class="memdoc">
 
-<p>Set simulation time using <a class="el" href="structhelios_1_1_time.html">Time</a> vector. </p>
+<p>Set simulation time using <a class="el" href="structhelios_1_1_time.html" title="Time vector.">Time</a> vector. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">time</td><td><a class="el" href="structhelios_1_1_time.html" title="Time vector.">Time</a> vector </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a847ecbb2297e60220a23b67c39b0f6e2">getTime()</a>, setSunDirection() </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a847ecbb2297e60220a23b67c39b0f6e2" title="Get the simulation time.">getTime()</a>, setSunDirection() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04193">4193</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04294">4294</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12070,7 +12294,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a847ecbb2297e60220a23b67c39b0f6e2">getTime()</a>, setSunDirection() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04175">4175</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04276">4276</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12117,7 +12341,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classhelios_1_1_context.html#a847ecbb2297e60220a23b67c39b0f6e2">getTime()</a>, setSunDirection() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04179">4179</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04280">4280</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12156,7 +12380,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04489">4489</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04590">4590</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12195,7 +12419,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04485">4485</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04586">4586</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12223,7 +12447,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12896">12896</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l13301">13301</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12251,12 +12475,12 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12535">12535</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12940">12940</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a9e8c0878f34db3fb5d6cbd4e61d2f2a4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9e8c0878f34db3fb5d6cbd4e61d2f2a4">&#9670;&nbsp;</a></span>writeXML()</h2>
+<a id="abfcac5a56c13e86298609ed3fccf354d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abfcac5a56c13e86298609ed3fccf354d">&#9670;&nbsp;</a></span>writeXML()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -12265,8 +12489,18 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
           <td class="memname">void Context::writeXML </td>
           <td>(</td>
           <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>filename</em></td><td>)</td>
-          <td> const</td>
+          <td class="paramname"><em>filename</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>quiet</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -12279,7 +12513,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l11670">11670</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l12070">12070</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

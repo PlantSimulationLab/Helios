@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.9.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Dependent Packages</title>
+<title>.: Dependent Software</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.25</span>
+   &#160;<span id="projectnumber">v1.2.26</span>
    </div>
   </td>
  </tr>
@@ -68,7 +68,7 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#IDE">Using and Interactive Development Environment (IDE)</a></li>
+<ul><li class="level1"><a href="#IDE">Using an Interactive Development Environment (IDE)</a></li>
 <li class="level1"><a href="#SetupPC">Set-up on Windows PC</a><ul><li class="level2"><a href="#SetupPCMSVC">Install Microsoft Visual Studio C++ compiler tools</a></li>
 <li class="level2"><a href="#SetupPCCLion">Setting up basic build functionality</a></li>
 <li class="level2"><a href="#SetupPCCUDA">Setting up NVIDIA CUDA</a></li>
@@ -86,14 +86,14 @@ $(function() {
 </div>
 <div class="textblock"><p>This page will guide you through installation and set-up of dependent software needed to build and run Helios-based programs.</p>
 <h1><a class="anchor" id="IDE"></a>
-Using and Interactive Development Environment (IDE)</h1>
+Using an Interactive Development Environment (IDE)</h1>
 <p>Using an IDE for Helios programming can make development easier, particularly if you have minimal command-line experience. If using an IDE, we recommend <a href="https://www.jetbrains.com/clion/">CLion</a> by JetBrains. CLion is a rich-featured C++ IDE that integrates with the Helios documentation, GitHub, and allows you to do pretty much everything you need based on the graphical interface. CLion is also free to use for educational purposes. We especially recommend CLion if working on a PC, as it makes setup very easy. There is a separate documentation page showing how to set up Helios in CLion once you have it installed: <a class="el" href="_c_lion_i_d_e.html">Using the CLion IDE with Helios</a>.</p>
 <p>Other IDEs can also be used, such as Microsoft Visual Studio, but setup with Helios is not well documented or tested. On Linux and Mac, you can also use any text editor and the command line to run Helios, which is covered in the documentation.</p>
 <h1><a class="anchor" id="SetupPC"></a>
 Set-up on Windows PC</h1>
 <h2><a class="anchor" id="SetupPCMSVC"></a>
 Install Microsoft Visual Studio C++ compiler tools</h2>
-<p>Download and install Microsoft Visual Studio Community 2019. At the time of this writing, the latest version of Microsoft Visual Studio is 2022, but this version is not yet supported by CLion. In order to download older versions, follow this link <a href="https://visualstudio.microsoft.com/vs/older-downloads/">https://visualstudio.microsoft.com/vs/older-downloads/</a> and find the 2019 version. You will need to create a free "Dev Essentials" account in order to access this download.</p>
+<p>Download and install the latest version of Microsoft Visual Studio Community, which at the time of this writing is 2022.</p>
 <p>Once you have successfully downloaded the EXE install file, you can run it to perform the install. The important step is to be sure to install the optional packages for C++ Desktop Development. The figure below shows the check box to enable. When the installer finishes, there is no need to actually open Visual Studio, and you can move on to the next step.</p>
 <div class="image">
 <img src="MSVC_cpp_options.png" alt=""/>
@@ -102,8 +102,15 @@ Install Microsoft Visual Studio C++ compiler tools</h2>
 Setting up basic build functionality</h2>
 <p>It is recommended for PC that you download and install the CLion IDE, found here: <a href="https://www.jetbrains.com/clion/download/#section=windows">https://www.jetbrains.com/clion/download/#section=windows</a>. Refer to the documentation page <a class="el" href="_c_lion_i_d_e.html">Using the CLion IDE with Helios</a> for information on how to get a free education license.</p>
 <p>When you open CLion, it will prompt you to open a project. You can have it automatically pull the Helios code from GitHub by clicking on the icon labeled "from VCS". By default, it should bring up GitHub as the default version control system. You may need to install Git, which can be done by simply clicking the button to download and install. Then, type in the URL for the Helios GitHub repository "https://www.github.com/PlantSimulationLab/Helios.git" as shown below. This should give you a fresh copy of Helios within CLion with the README file displayed.</p>
-<p>The next step is to set up the Microsoft Visual Studio C++ compiler in CLion. Go to File-&gt;Settings to open up the settings window. In the left pane, expand the item "Build, Execution, Deployment" and click on "Toolchains". With any luck, it should automatically add and detect Microsoft Visual Studio 2019. If it doesn't, click the "+" icon and click on "Visual Studio". It should then automatically detect everything.</p>
+<p>The next step is to set up the Microsoft Visual Studio C++ compiler in CLion. It may automatically open up a new project wizard, but it is easier and good practice to do it yourself by going to File-&gt;Settings to open up the settings window. In the left pane, expand the item "Build, Execution, Deployment" and click on "Toolchains". With any luck, it should automatically add and detect Microsoft Visual Studio. If it doesn't, click the "+" icon and click on "Visual Studio". It should then automatically detect everything as shown below.</p>
 <p>We then want to change the "Architecture" to "x64" to build in 64-bit mode. Note that this will likely not be an option in the drop-down menu, but you can just type it in.</p>
+<div class="image">
+<img src="CLion_MSVC_setup.png" alt=""/>
+</div>
+<p>The last step is to verify the build settings by clicking on the next option down from "Toolchains" which is "CMake". Under "Toolchain" verify that it is using Visual Studio as shown below. Next, under the "Generator" tab choose "NMake Makefiles". Note that prior to CLion v2021.3 there is no Generator tab, but it should choose NMake Makefiles by default.</p>
+<div class="image">
+<img src="CLion_generator_setup.png" alt=""/>
+</div>
 <p>That should be all that is needed to build basic programs that do not require CUDA. You can test by building the context_selftest project in the "samples" directory. In the left Project pane, expand the "samples" folder, and the subdirectory called "context_selftest". Right-click on the CMakeLists.txt file in that directory and select "Load CMake Project". You should then be able to compile and run it by clicking the play icon in the upper right hand corner of the CLion window.</p>
 <h2><a class="anchor" id="SetupPCCUDA"></a>
 Setting up NVIDIA CUDA</h2>
