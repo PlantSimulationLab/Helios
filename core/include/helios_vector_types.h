@@ -75,6 +75,10 @@ public:
   //! Subtract two int2 vectors
   int2 operator-(const int2& a) const;
 
+  friend std::ostream &operator<<(std::ostream &os, helios::int2 const &vec) {
+    return os << "helios::int2<" << vec.x << ", " << vec.y << ">";
+  }
+
 };
 
 //! Make an int2 vector from two ints
@@ -155,6 +159,10 @@ public:
   int3 operator+(const int3& a) const;
   //! Subtract two int3 vectors
   int3 operator-(const int3& a) const;
+
+  friend std::ostream &operator<<(std::ostream &os, helios::int3 const &vec) {
+    return os << "helios::int3<" << vec.x << ", " << vec.y << ", " << vec.z << ">";
+  }
 
 };
 
@@ -237,6 +245,10 @@ public:
   int4 operator+(const int4& a) const;
   //! Subtract two int4 vectors
   int4 operator-(const int4& a) const;
+
+  friend std::ostream &operator<<(std::ostream &os, helios::int4 const &vec) {
+    return os << "helios::int4<" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ">";
+  }
 
 };
 
@@ -334,6 +346,10 @@ public:
   vec2 operator-( float a) const;
   //! check for equality of two vec2 vectors
   bool operator==(const vec2& a) const;
+
+  friend std::ostream &operator<<(std::ostream &os, helios::vec2 const &vec) {
+    return os << "helios::vec2<" << vec.x << ", " << vec.y << ">";
+  }
 
 };
 
@@ -480,6 +496,10 @@ public:
 
   //! check for equality of two vec3 vectors
   bool operator==(const vec3& a) const;
+
+  friend std::ostream &operator<<(std::ostream &os, helios::vec3 const &vec) { 
+    return os << "helios::vec3<" << vec.x << ", " << vec.y << ", " << vec.z << ">";
+  }
 
 };
 
@@ -645,6 +665,10 @@ public:
   //! check for equality of two vec4 vectors
   bool operator==(const vec4& a) const;
 
+  friend std::ostream &operator<<(std::ostream &os, helios::vec4 const &vec) {
+    return os << "helios::vec3<" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ">";
+  }
+
 };
 
 //! Multiply each element by scalar (scalar is multiplied on left: a*vec4)
@@ -795,6 +819,10 @@ public:
     b*=scl;
   }
 
+  friend std::ostream &operator<<(std::ostream &os, helios::RGBcolor const &c) {
+    return os << "helios::RGBcolor<" << c.r << ", " << c.g << ", " << c.b << ">";
+  }
+
 private:
   //! Clamp float to range of 0 to 1.
   /** \return Clamped value */
@@ -921,6 +949,10 @@ public:
     a*=scl;
   }
 
+  friend std::ostream &operator<<(std::ostream &os, helios::RGBAcolor const &c) {
+    return os << "helios::RGBAcolor<" << c.r << ", " << c.g << ", " << c.b << ", " << c.a << ">";
+  }
+
 private:
   //! Clamp float to range of 0 to 1.
   /** \return Clamped value */
@@ -1008,6 +1040,10 @@ public:
 
   //! Convert to Julian day
   int JulianDay() const;
+
+  friend std::ostream &operator<<(std::ostream &os, helios::Date const &d) {
+    return os << d.year << "-" << d.month << "-" << d.day;
+  }
 
 };
 
@@ -1175,6 +1211,10 @@ struct Time{
     
   }
 
+  friend std::ostream &operator<<(std::ostream &os, helios::Time const &t) {
+    return os << t.hour << ":" << t.minute << ":" << t.second;
+  }
+
 };
 
 //! Make a \ref Time vector
@@ -1244,6 +1284,10 @@ public:
     elevation=a_elevation;
     zenith=0.5f*float(M_PI)-elevation;
     azimuth=a_azimuth;
+  }
+
+  friend std::ostream &operator<<(std::ostream &os, helios::SphericalCoord const &coord) {
+    return os << "helios::SphericalCoord<" << coord.radius << ", " << coord.elevation << ", " << coord.azimuth << ">";
   }
 
 };
