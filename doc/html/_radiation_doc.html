@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.26</span>
+   &#160;<span id="projectnumber">v1.2.27</span>
    </div>
   </td>
  </tr>
@@ -180,7 +180,7 @@ Model Class Constructor</h2>
 <p>The radiation model class contains functions and data assoicated with the model. To begin, declare an instance of the <a class="el" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> class. The class constructor takes one argument - a pointer to the Helios context. It uses this pointer to access model geometry and data in the context.</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>RadiationModel radiationmodel(&amp;context); //declare the model class</code></pre></div><h2><a class="anchor" id="RadTwoSided"></a>
 Area Basis for Calculating Fluxes</h2>
-<p>The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the <a class="el" href="classhelios_1_1_primitive.html#a2e140af864e6dcb56d6ea5f85fef8f49">helios::Primitive::getArea()</a> function).</p>
+<p>The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the helios::Primitive::getArea() function).</p>
 <p>By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>context.setPrimitiveData( UUID, "twosided_flag", uint(1) );</code></pre></div><p>Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.</p>
 <p>A primitive with "twosided_flag" set to 0 will not absorb any radiation from the back face of the primitive, but it will attenuate radiation. So if a ray hits the back face, the ray trajectory will be terminated, but no energy will be deposited.</p>

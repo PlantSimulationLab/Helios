@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.26</span>
+   &#160;<span id="projectnumber">v1.2.27</span>
    </div>
   </td>
  </tr>
@@ -78,11 +78,11 @@ Overview</h1>
 <tr>
 <th>Primitive</th><th>Description </th></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_patch.html">Patch</a> </td><td>Rectangular polygon with coplanar vertices. A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions. The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).  </td></tr>
+<td>Patch </td><td>Rectangular polygon with coplanar vertices. A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions. The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).  </td></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_triangle.html">Triangle</a> </td><td>Triangular polygon specified by its three vertices.  </td></tr>
+<td>Triangle </td><td>Triangular polygon specified by its three vertices.  </td></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_voxel.html">Voxel</a> </td><td>Parallelpiped or rectangular prism. A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions. The default orientation of a voxel is axis-aligned.  </td></tr>
+<td>Voxel </td><td>Parallelpiped or rectangular prism. A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions. The default orientation of a voxel is axis-aligned.  </td></tr>
 </table>
 <p>There are functions to add each of these primitive types defined in the Context. For example, a Patch can be added via the Context::addPatch( vec3, vec2 ) function. Note that these functions to add primitives are usually <a href="http://www.cplusplus.com/doc/tutorial/functions2/">"overloaded"</a>, which means there are multiple definitions of the functions.</p>
 <h1><a class="anchor" id="AddPatch"></a>
@@ -137,37 +137,6 @@ Unique Universal Identifiers (UUIDs)</h1>
      uint UUID; //declare the UUID variable
 
      UUID = context.addPatch( position, size ); //this will assign the UUID for this patch to the UUID variable
-
-     <code></code>//Visualizer code
-     Visualizer vis(800); //our <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> window will be 800 pixels wide
-     vis.buildContextGeometry(&amp;context);
-     vis.plotInteractive();
-
-  }</code></pre></div><h1><a class="anchor" id="AddPatch_pointer"></a>
-Primitive Pointers</h1>
-<p>If we have the UUID for a primitive, we can retrieve the primitive from the Context at any time. This is accomplished by getting a <a href="http://www.cplusplus.com/doc/tutorial/pointers/">pointer</a> to the primitive using the function getPrimitivePointer( uint UUID ) function. This function returns a class called <a class="el" href="classhelios_1_1_primitive.html">Primitive</a>. This class has several useful functions for working with Primitives. Take a moment to browse some of the member functions of the Primitive class <a class="el" href="classhelios_1_1_primitive.html">here</a>. Some functions include <a class="el" href="classhelios_1_1_primitive.html#a123006f09b743e84be76774c38dc823c">Primitive::getColor()</a> to get the color of the primitive, and <a class="el" href="classhelios_1_1_primitive.html#aa48fd97435e3a3c9fe4d5c13a836783e">Primitive::translate()</a> to translate (move) the primitive.</p>
-<p>In the example below, we will get a pointer to the Patch we added to the Context, then use that pointer to translate the Patch using the function <a class="el" href="classhelios_1_1_primitive.html#aa48fd97435e3a3c9fe4d5c13a836783e">Primitive::translate()</a>. Note that member functions of a pointer to a class are accessed using the "-&gt;" operator NOT the "." operator.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
-  #include "Visualizer.h"
-
-  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
-
-  int main(void){
-
-     Context context;  //Declare the "Context" class
-
-     vec3 position(0,0,0); //(x,y,z) position of patch center
-     vec2 size(1,1); //length and width of patch
-
-     uint UUID; //declare the UUID variable
-
-     UUID = context.addPatch( position, size ); //this will assign the UUID for this patch to the UUID variable
-
-     Primitive* primitive = context.getPrimitivePointer( UUID ); //gets a pointer to the Patch and assigns it to the variable "primitive"
-
-     vec3 position_shift(1,0,0); //we are going to translate the patch 1 unit in the x-direction
-
-     primitive-&gt;translate( position_shift ); //apply the translation
 
      <code></code>//Visualizer code
      Visualizer vis(800); //our <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> window will be 800 pixels wide

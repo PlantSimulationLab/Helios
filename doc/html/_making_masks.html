@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.26</span>
+   &#160;<span id="projectnumber">v1.2.27</span>
    </div>
   </td>
  </tr>
@@ -86,7 +86,7 @@ JPEG image of an aspen leaf.</div></div>
 Screenshot of rotated leaf image, with region to be cropped selected.</div></div>
 <h1><a class="anchor" id="Three"></a>
 3. Removing the background</h1>
-<p>Now we want to remove the background. If the background is white, we'll first want to change it to black. This is because the .png image we produce will still have the white saved although it will be transparent, which can create some edge effects in our visualizations. Use the bucket fill tool in the Toolbox to fill the white areas black. In many cases, you may need to adjust the Threshold in the Toolbox "Tool Options" so that the fill will be tight to the edge of the leaf. For the apspen leaf, I set the threshold at about 50. It is usually best to error on the side of a larger threshold. Usually somewhere between 50-100 is a good choice. Just make sure that there it not too many white pixels along the edge of the object. If you see white specks around the edge of your object in the Helios visualizations, the threshold was probably too low.</p>
+<p>Now we want to remove the background. If the background is white, we'll first want to change it to black. This is because the .png image we produce will still have the white saved although it will be transparent, which can create some edge effects in our visualizations. Use the bucket fill tool in the Toolbox to fill the white areas black. In many cases, you may need to adjust the Threshold in the Toolbox "Tool Options" so that the fill will be tight to the edge of the leaf. For the aspen leaf, I set the threshold at about 50. It is usually best to error on the side of a larger threshold. Usually somewhere between 50-100 is a good choice. Just make sure that there it not too many white pixels along the edge of the object. If you see white specks around the edge of your object in the Helios visualizations, the threshold was probably too low.</p>
 <p>Next, add an alpha channel to the image by going to the menu "Layer-&gt;Transparency-&gt;Add Alpha Channel". Note that the image may already have an alpha channel. Now use the fuzzy select tool in the Toolbox to select the black background. There is an option to adjust the threshold again, but if things went well with the bucket fill, it shouldn't need adjustment here. Now, you can go to "Edit-&gt;Clear" to remove the background.</p>
 <div class="image">
 <img src="AspenLeaf_background.png" alt=""/>

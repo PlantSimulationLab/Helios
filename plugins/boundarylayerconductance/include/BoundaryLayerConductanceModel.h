@@ -53,13 +53,13 @@ public:
   /** \param[in] "UUIDs"  Unique universal identifiers (UUIDs) for primitives the conductance model should be used.
       \param[in] "gH_model" 
   */
-  void setBoundaryLayerModel( const std::vector<uint> UUIDs, const char* gH_model );
+  void setBoundaryLayerModel(const std::vector<uint> &UUIDs, const char* gH_model );
 
   //! Run boundary-layer conductance calculations for all primitives in the Context
   void run( void );
 
   //! Run boundary-layer conductance calculations for a subset of primitives in the Context based on a vector of UUIDs
-  void run( const std::vector<uint> UUIDs );
+  void run(const std::vector<uint> &UUIDs );
 
 private:
 

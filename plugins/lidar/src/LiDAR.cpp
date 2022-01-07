@@ -319,20 +319,20 @@ int LiDARcloud::selfTest(void){
 
     uint UUID = UUIDs.at(p);
 
-    if( context_4.getPrimitivePointer(UUID)->doesPrimitiveDataExist("gridCell") ){
+    if( context_4.doesPrimitiveDataExist(UUID,"gridCell") ){
 
       uint gridCell;
-      context_4.getPrimitivePointer(UUID)->getPrimitiveData("gridCell",gridCell);
+      context_4.getPrimitiveData(UUID, "gridCell",gridCell);
 
       if( gridCell>=0 && gridCell<Ncells ){
-  	total_area.at(gridCell) += context_4.getPrimitivePointer(UUID)->getArea();
+  	    total_area.at(gridCell) += context_4.getPrimitiveArea(UUID);
       }
 
       for( int s=0; s<synthetic_4.getScanCount(); s++ ){
 	vec3 origin = synthetic_4.getScanOrigin(s);
-	std::vector<vec3> vertices = context_4.getPrimitivePointer(p)->getVertices();
-	float area = context_4.getPrimitivePointer(p)->getArea();
-	vec3 normal = context_4.getPrimitivePointer(p)->getNormal();
+	std::vector<vec3> vertices = context_4.getPrimitiveVertices(p);
+	float area = context_4.getPrimitiveArea(p);
+	vec3 normal = context_4.getPrimitiveNormal(p);
 	vec3 raydir = vertices.front()-origin;
 	raydir.normalize();
 	float theta = fabs(acos_safe(raydir.z));
@@ -1869,7 +1869,7 @@ float LiDARcloud::getCellRotation( const uint index ) const{
 
 }
 
-std::vector<float> LiDARcloud::calculateSyntheticGtheta( const helios::Context* context ){
+std::vector<float> LiDARcloud::calculateSyntheticGtheta( helios::Context* context ){
 
   size_t Nprims = context->getPrimitiveCount();
 
@@ -1892,14 +1892,14 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( const helios::Context* 
 
     uint UUID = UUIDs.at(p);
 
-    if( context->getPrimitivePointer(UUID)->doesPrimitiveDataExist("gridCell") ){
+    if( context->doesPrimitiveDataExist(UUID,"gridCell") ){
 
       uint gridCell;
-      context->getPrimitivePointer(UUID)->getPrimitiveData("gridCell",gridCell);
+      context->getPrimitiveData(UUID,"gridCell",gridCell);
 
-      std::vector<vec3> vertices = context->getPrimitivePointer(UUID)->getVertices();
-      float area = context->getPrimitivePointer(UUID)->getArea();
-      vec3 normal = context->getPrimitivePointer(UUID)->getNormal();
+      std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);
+      float area = context->getPrimitiveArea(UUID);
+      vec3 normal = context->getPrimitiveNormal(UUID);
 
       for( int s=0; s<Nscans; s++ ){
 	vec3 origin = getScanOrigin(s);
@@ -1933,8 +1933,8 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( const helios::Context* 
 
   for( int v=0; v<Ncells; v++ ){
     output_Gtheta.at(v) = Gtheta.at(v);
-    if( context->getPrimitivePointer(UUIDs.at(v))->doesPrimitiveDataExist("gridCell") ){
-      context->getPrimitivePointer(UUIDs.at(v))->setPrimitiveData("synthetic_Gtheta",Gtheta.at(v));
+    if( context->doesPrimitiveDataExist(UUIDs.at(v),"gridCell") ){
+      context->setPrimitiveData(UUIDs.at(v),"synthetic_Gtheta",Gtheta.at(v));
     }
   }
 

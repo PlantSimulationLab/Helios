@@ -764,7 +764,7 @@ public:
   void setDashboardVisibility( const bool visible );
 
   //! Plot current geometry into an interactive graphics window
-  void plotInteractive(void);
+  std::vector<helios::vec3> plotInteractive(void);
 
   //! Plot the depth map (distance from camera to nearest object)
   void plotDepthMap(void);

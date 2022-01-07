@@ -757,7 +757,7 @@ int RadiationModel::selfTest( void ){
   float A = 0;
   for( uint p=0; p<UUIDs1.size(); p++ ){
 
-    float a = context_8.getPrimitivePointer( UUIDs1.at(p) )->getArea();
+    float a = context_8.getPrimitiveArea( UUIDs1.at(p) );
     A+=a;
 
     float R;
@@ -952,7 +952,7 @@ int RadiationModel::selfTest( void ){
   float intercepted_leaf_diffuse = 0.f;
   for( int i=0; i<UUIDs_inc.size(); i++ ){
 
-    float area = context_9.getPrimitivePointer( UUIDs_inc.at(i) )->getArea();
+    float area = context_9.getPrimitiveArea( UUIDs_inc.at(i) );
     
     float flux;
     
@@ -968,7 +968,7 @@ int RadiationModel::selfTest( void ){
   float intercepted_ground_diffuse = 0.f;
   for( int i=0; i<UUIDs_ground.size(); i++ ){
 
-    float area = context_9.getPrimitivePointer( UUIDs_ground.at(i) )->getArea();
+    float area = context_9.getPrimitiveArea( UUIDs_ground.at(i) );
     
     float flux_dir;
     context_9.getPrimitiveData( UUIDs_ground.at(i), "radiation_flux_direct", flux_dir );
@@ -976,7 +976,7 @@ int RadiationModel::selfTest( void ){
     float flux_diff;
     context_9.getPrimitiveData( UUIDs_ground.at(i), "radiation_flux_diffuse", flux_diff );
 
-    vec3 position = context_9.getPatchPointer( UUIDs_ground.at(i) )->getCenter();
+    vec3 position = context_9.getPatchCenter( UUIDs_ground.at(i) );
 
     if( fabs(position.x)<=0.5*D_inc_9 && fabs(position.y)<=0.5*D_inc_9 ){
       intercepted_ground_direct += flux_dir*area/D_inc_9/D_inc_9;
@@ -1090,7 +1090,7 @@ int RadiationModel::selfTest( void ){
   float A_wall = 0.f;
   for( int i=0; i<UUIDs_box.size(); i++ ){
 
-    float area = context_10.getPrimitivePointer( UUIDs_box.at(i) )->getArea();
+    float area = context_10.getPrimitiveArea( UUIDs_box.at(i) );
 
     float flux;
     context_10.getPrimitiveData( UUIDs_box.at(i), "radiation_flux_LW", flux );
@@ -1195,11 +1195,11 @@ int RadiationModel::selfTest( void ){
   float A_wall2 = 0.f;
   for( int i=0; i<UUIDs_1.size(); i++ ){
 
-    vec3 position = context_11.getPatchPointer( UUIDs_1.at(i) )->getCenter();
+    vec3 position = context_11.getPatchCenter( UUIDs_1.at(i) );
 
     if( fabs(position.x)<0.5*w_11 && fabs(position.y)<0.5*w_11 ){
 
-      float area = context_11.getPrimitivePointer( UUIDs_1.at(i) )->getArea();
+      float area = context_11.getPrimitiveArea( UUIDs_1.at(i) );
 
       float flux;
       context_11.getPrimitiveData( UUIDs_2.at(i), "radiation_flux_LW", flux );
@@ -1287,7 +1287,7 @@ int RadiationModel::selfTest( void ){
   float intercepted_leaf_diffuse_12 = 0.f;
   for( int i=0; i<UUIDs_leaf_12.size(); i++ ){
 
-    float area = context_12.getPrimitivePointer( UUIDs_leaf_12.at(i) )->getArea();
+    float area = context_12.getPrimitiveArea( UUIDs_leaf_12.at(i) );
     
     float flux;
     
@@ -1303,7 +1303,7 @@ int RadiationModel::selfTest( void ){
   float intercepted_ground_diffuse_12 = 0.f;
   for( int i=0; i<UUIDs_ground_12.size(); i++ ){
 
-    float area = context_12.getPrimitivePointer( UUIDs_ground_12.at(i) )->getArea();
+    float area = context_12.getPrimitiveArea( UUIDs_ground_12.at(i) );
     
     float flux_dir;
     context_12.getPrimitiveData( UUIDs_ground_12.at(i), "radiation_flux_direct", flux_dir );
@@ -1311,7 +1311,7 @@ int RadiationModel::selfTest( void ){
     float flux_diff;
     context_12.getPrimitiveData( UUIDs_ground_12.at(i), "radiation_flux_diffuse", flux_diff );
 
-    vec3 position = context_12.getPatchPointer( UUIDs_ground_12.at(i) )->getCenter();
+    vec3 position = context_12.getPatchCenter( UUIDs_ground_12.at(i) );
 
     intercepted_ground_direct_12 += flux_dir*area/D_12/D_12;
     intercepted_ground_diffuse_12 += flux_diff*area/D_12/D_12;
@@ -1375,7 +1375,7 @@ int RadiationModel::selfTest( void ){
 
   float A_leaf = 0;
   for( uint p=0; p<UUIDs_ptype.size(); p++ ){
-    A_leaf += context_13.getPrimitivePointer( UUIDs_ptype.at(p) )->getArea();
+    A_leaf += context_13.getPrimitiveArea( UUIDs_ptype.at(p) );
   }
 
   int Nleaves_13 = round(LAI_13*D_13*D_13/A_leaf);
@@ -1433,7 +1433,7 @@ int RadiationModel::selfTest( void ){
   float intercepted_leaf_diffuse_13 = 0.f;
   for( int i=0; i<UUIDs_leaf_13.size(); i++ ){
 
-    float area = context_13.getPrimitivePointer( UUIDs_leaf_13.at(i) )->getArea();
+    float area = context_13.getPrimitiveArea( UUIDs_leaf_13.at(i) );
     
     float flux;
     
@@ -1449,7 +1449,7 @@ int RadiationModel::selfTest( void ){
   float intercepted_ground_diffuse_13 = 0.f;
   for( int i=0; i<UUIDs_ground_13.size(); i++ ){
 
-    float area = context_13.getPrimitivePointer( UUIDs_ground_13.at(i) )->getArea();
+    float area = context_13.getPrimitiveArea( UUIDs_ground_13.at(i) );
     
     float flux_dir;
     context_13.getPrimitiveData( UUIDs_ground_13.at(i), "radiation_flux_direct", flux_dir );
@@ -1457,7 +1457,7 @@ int RadiationModel::selfTest( void ){
     float flux_diff;
     context_13.getPrimitiveData( UUIDs_ground_13.at(i), "radiation_flux_diffuse", flux_diff );
 
-    vec3 position = context_13.getPatchPointer( UUIDs_ground_13.at(i) )->getCenter();
+    vec3 position = context_13.getPatchCenter( UUIDs_ground_13.at(i) );
 
     intercepted_ground_direct_13 += flux_dir*area/D_13/D_13;
     intercepted_ground_diffuse_13 += flux_diff*area/D_13/D_13;
@@ -2469,7 +2469,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   objectID.resize(Nprimitives);
 
   //UUID correspoinding to first primitive in object - size Nobjects
-  std::vector<uint> primitiveID;
+//  std::vector<uint> primitiveID;
 
   std::size_t patch_count = 0;
   std::size_t triangle_count = 0;
@@ -2479,7 +2479,6 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
   area_global.resize(Nprimitives);
 
-  primitives.resize(0);
   primitiveID.resize(0);
 
   //Create a vector of primitive pointers 'primitives' (note: only add one pointer for compound objects)
@@ -2488,16 +2487,13 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   for( std::size_t u=0; u<Nprimitives; u++ ){
     
     uint p = context_UUIDs.at(u);
-    
-    helios::Primitive* prim = context->getPrimitivePointer(p);
 
     //primitve area
-    area_global.at(u) = prim->getArea();
+    area_global.at(u) = context->getPrimitiveArea(p);
     
-    uint parentID = prim->getParentObjectID();
+    uint parentID = context->getPrimitiveParentObjectID(p);
 
     if( ID!=parentID || parentID==0 || context->getObjectPointer(parentID)->getObjectType()!=helios::OBJECT_TYPE_TILE  ){//if this is a new object, or primitive does not belong to an object
-      primitives.push_back( prim );
       primitiveID.push_back( u );
       ID = parentID;
       objID++;
@@ -2512,7 +2508,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   }
 
   //Nobjects is the number of isolated primitives plus the number of compound objects (all primitives inside and object combined only counts as one element)
-  size_t Nobjects = primitives.size();
+  size_t Nobjects = primitiveID.size();
 
   m_global.resize(Nobjects);
   ptype_global.resize(Nobjects);
@@ -2524,23 +2520,21 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   //Populate attributes for each primitive in the pointer vector 'primitives'
   for( std::size_t u=0; u<Nobjects; u++ ){
 
-    Primitive* prim = primitives.at(u);
-
-    uint p = prim->getUUID();    
+    uint p = context_UUIDs.at(primitiveID.at(u));
 
     //transformation matrix
     float m[16];
 
     //primitive type
-    helios::PrimitiveType type = prim->getType();
+    helios::PrimitiveType type = context->getPrimitiveType(p);
     ptype_global.at(u) =  type;
 
     assert( ptype_global.at(u)>=0 && ptype_global.at(u)<=4 );
 
     //primitive twosided flag
-    if( prim->doesPrimitiveDataExist("twosided_flag") ){
+    if( context->doesPrimitiveDataExist(p,"twosided_flag") ){
       uint flag;
-      prim->getPrimitiveData("twosided_flag",flag);
+      context->getPrimitiveData(p,"twosided_flag",flag);
       if( flag ){
 	twosided_flag_global.at(u) = true;
       }else{
@@ -2548,7 +2542,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
       }
     }
 
-    uint ID = prim->getParentObjectID();
+    uint ID = context->getPrimitiveParentObjectID(p);
 
     if( ID>0 && context->getObjectPointer(ID)->getObjectType()==helios::OBJECT_TYPE_TILE ){//tile objects
 
@@ -2578,14 +2572,14 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
     
     }else if( type == helios::PRIMITIVE_TYPE_PATCH ){ //patches
 
-      prim->getTransformationMatrix(m);
+      context->getPrimitiveTransformationMatrix(p,m);
 
       m_global.at(u).resize(16);
       for( uint i=0; i<16; i++ ){
 	m_global.at(u).at(i) = m[i];
       }
 
-      std::vector<vec3> vertices = prim->getVertices();
+      std::vector<vec3> vertices = context->getPrimitiveVertices(p);
       std::vector<optix::float3> v;
       v.push_back( optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z) );
       v.push_back( optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z) );
@@ -2597,14 +2591,14 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
       patch_count ++;
     }else if( type == helios::PRIMITIVE_TYPE_TRIANGLE ){ //triangles
 
-      prim->getTransformationMatrix(m);
+      context->getPrimitiveTransformationMatrix(p,m);
 
       m_global.at(u).resize(16);
       for( uint i=0; i<16; i++ ){
 	m_global.at(u).at(i) = m[i];
       }
       
-      std::vector<vec3> vertices = prim->getVertices();
+      std::vector<vec3> vertices = context->getPrimitiveVertices(p);
       std::vector<optix::float3> v;
       v.push_back( optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z) );
       v.push_back( optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z) );
@@ -2615,15 +2609,15 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
       triangle_count ++;
     }else if( type == helios::PRIMITIVE_TYPE_VOXEL ){ //voxels
 
-      prim->getTransformationMatrix(m);
+      context->getPrimitiveTransformationMatrix(p,m);
 
       m_global.at(u).resize(16);
       for( uint i=0; i<16; i++ ){
 	m_global.at(u).at(i) = m[i];
       }
       
-      helios::vec3 center = context->getVoxelPointer(p)->getCenter();
-      helios::vec3 size = context->getVoxelPointer(p)->getSize(); 
+      helios::vec3 center = context->getVoxelCenter(p);
+      helios::vec3 size = context->getVoxelSize(p);
       std::vector<optix::float3> v;
       v.push_back( optix::make_float3(center.x-0.5*size.x, center.y-0.5*size.y, center.z-0.5*size.z ) );
       v.push_back( optix::make_float3(center.x+0.5*size.x, center.y+0.5*size.y, center.z+0.5*size.z ) );
@@ -2646,13 +2640,12 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   uvID.resize(Nobjects);
 
   for( size_t u=0; u<Nobjects; u++ ){
- 
-    Primitive* prim = primitives.at(u);
-    std::string maskfile = prim->getTextureFile();
 
-    uint p = prim->getUUID();
+      uint p = context_UUIDs.at(primitiveID.at(u));
 
-    uint ID = prim->getParentObjectID();
+    std::string maskfile = context->getPrimitiveTextureFile(p);
+
+    uint ID = context->getPrimitiveParentObjectID(p);
     
     if( context->getPrimitiveType(p)==PRIMITIVE_TYPE_VOXEL || maskfile.size()==0 || !context->primitiveTextureHasTransparencyChannel(p) ){ //does not have texture transparency
       
@@ -2682,7 +2675,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
       std::vector<vec2> uv;
 
       if( ID==0 || context->getObjectPointer(ID)->getObjectType()!=helios::OBJECT_TYPE_TILE ){ //primitives
-	uv = prim->getTextureUV();
+          uv = context->getPrimitiveTextureUV(p);
       }
       
       if( uv.size()!=0 ){ //has custom (u,v) coordinates
@@ -2901,7 +2894,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
   
   char prop[100];
 
-  size_t Nobjects = primitives.size();
+  size_t Nobjects = primitiveID.size();
   size_t Nprimitives = context_UUIDs.size();
 
   rho.resize(Nprimitives);
@@ -2976,7 +2969,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
             context->getPrimitiveData(UUID,prop,rho[u]);
         }else{
             rho[u] = rho_default;
-            //prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&rho_default);
+            //context->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&rho_default);
         }
 
         if( rho[u]<0 ){
@@ -2999,7 +2992,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
             context->getPrimitiveData(UUID,prop,tau[u]);
         }else{
             tau[u] = tau_default;
-            //prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&tau_default);
+            //context->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&tau_default);
         }
 
         if( tau[u]<0 ){
@@ -3022,7 +3015,7 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
             context->getPrimitiveData(UUID,prop,eps[u]);
         }else{
             eps[u] = eps_default;
-            //prim->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&eps_default);
+            //context->setPrimitiveData(prop,helios::HELIOS_TYPE_FLOAT,1,&eps_default);
         }
 
         if( eps[u]<0 ){
@@ -3106,7 +3099,7 @@ void RadiationModel::runBand( const char* label ){
   
   updateRadiativeProperties(label);
 
-  size_t Nobjects = primitives.size();
+  size_t Nobjects = primitiveID.size();
   size_t Nprimitives = context_UUIDs.size();
 
   bool to_be_scattered = false;
@@ -4706,12 +4699,10 @@ float RadiationModel::calculateGtheta( helios::Context* context, const helios::v
 
   float Gtheta = 0;
   float total_area = 0;
-  for( std::size_t u=0; u<primitives.size(); u++ ){
-    
-    helios::Primitive* prim = primitives.at(u);
+  for( std::size_t u=0; u<primitiveID.size(); u++ ){
 
-    vec3 normal = prim->getNormal();
-    float area = prim->getArea();
+    vec3 normal = context->getPrimitiveNormal(context_UUIDs.at(primitiveID.at(u)));
+    float area = context->getPrimitiveArea(context_UUIDs.at(primitiveID.at(u)));
 
     Gtheta += fabs(normal*dir)*area;
 

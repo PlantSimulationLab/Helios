@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.26</span>
+   &#160;<span id="projectnumber">v1.2.27</span>
    </div>
   </td>
  </tr>
@@ -83,8 +83,7 @@ What is an API?</h1>
 <p>The Helios API consists of many C++ <a href="https://en.wikipedia.org/wiki/C%2B%2B_classes">classes</a> and <a href="http://www.cplusplus.com/doc/tutorial/functions/">functions</a>, which are accessible within a C++ program by 1) including the appropriate header file in the program, and 2) linking to the appropriate library at build/compile time. Specific examples of how this is done are given in the <a class="el" href="_tutorials.html">Tutorials</a> and elsewhere in the documentation.</p>
 <h1><a class="anchor" id="Prereqs"></a>
 C++ Prerequisites</h1>
-<p>Users should familiarize themselves with the most basic Linux commands. Really only the commands "cd" and "ls" are needed to compile and run programs, in addition to "cmake" and "make" (usage detailed in this documentation).</p>
-<p>Users should have a basic understanding of how to write and run simple C++ programs. Becoming an expert C++ programmer is not necessary to use Helios. In addition to knowing how to write a basic program in C, there are only a relatively few number of C++ constructs that the user must be familiar with. A general list of these are given below, along with links to good tutorials on how to get started.</p>
+<p>Users need only a basic understanding of how to write and run simple C++ programs. Becoming an expert C++ programmer is not necessary to use Helios. In addition to knowing how to write a basic program in C, there are only a relatively few number of C++ constructs that the user must be familiar with. A general list of these are given below, along with links to good tutorials on how to get started.</p>
 <ul>
 <li>Programs/Namespaces: <a href="https://www.youtube.com/watch?v=SWZfFNyUsxc&amp;list=PLAE85DE8440AA6B83&amp;index=2">YouTube tutorial</a>, <a href="http://www.cplusplus.com/doc/tutorial/namespaces/">cplusplus.com</a></li>
 <li>Functions: <a href="https://www.youtube.com/watch?v=bsWWHo4KDHE">YouTube tutorial</a>, <a href="https://www.youtube.com/watch?v=3pAWJ40I1QE&amp;list=PL318A5EB91569E29A&amp;index=11">YouTube tutorial</a></li>
@@ -95,12 +94,12 @@ C++ Prerequisites</h1>
 </ul>
 <h1><a class="anchor" id="PrereqsHelios"></a>
 Helios Prerequisites</h1>
-<p>Before beginning, you will want to familiarize yourself with Helios vector types, which are commonly used in specifying function arguments. These are C++ structures that have two or more data members. For example, a vec3 type has three floating point members: x, y, z. A vec3 is commonly used to represent a point in space. More comprehensive information on available vector types is given in Section <a class="el" href="_a_p_i.html#VecTypes">Vector Types</a> and <a class="el" href="context_vectors.html">Tutorial 1: Helios Vector Types Tutorial</a>.</p>
+<p>Before beginning, you will want to familiarize yourself with Helios vector types, which are commonly used in specifying function arguments. These are C++ structures that have two or more data members. For example, a vec3 type has three floating point members: x, y, z. A vec3 is commonly used to represent a Cartesian point in space. More comprehensive information on available vector types is given in Section <a class="el" href="_a_p_i.html#VecTypes">Vector Types</a> and <a class="el" href="context_vectors.html">Tutorial 1: Helios Vector Types Tutorial</a>.</p>
 <p>It may be useful to familiarize yourself with <a href="https://en.wikipedia.org/wiki/Spherical_coordinate_system">spherical coordinate systems</a>, which is how rotation angles are typically specified. It may also be helpful to familiarize yourself with the <a href="https://en.wikipedia.org/wiki/RGB_color_space">RGB color model</a>, which is how custom colors are specified.</p>
 <h1><a class="anchor" id="ModelGeom"></a>
 Model Geometry and Data</h1>
-<p>Geometry to be modeled is represented through one or more simple geometric shapes called primitives. Available primitives are triangles, rectangles (patches), disks, alphamasks, and voxes (see <a class="el" href="_a_p_i.html#Geom">Geometry</a> for more details). Using this set of simple geometric elements, nearly any object can be represented by combining elements.</p>
-<p>The basic idea behind Helios is that each primitive element is associated with a set of data, and models are written that operate on this data. This geometry an associated data is what couples models. For example, if we are interested in modeling radiation, each primitive may have data associated with radiative properties such as emissivity, reflectivity, etc. The radiation model would then take that data, along with data that defines the primitive geometry (e.g., position, size), and use that to compute a radiative flux for the individual element.</p>
+<p>Geometry to be modeled is represented through one or more simple geometric shapes called primitives. Available primitives are triangles, rectangles (patches) and voxels (see <a class="el" href="_a_p_i.html#Geom">Geometry</a> for more details). Using this set of simple geometric elements, nearly any object can be represented by combining elements.</p>
+<p>The basic idea behind Helios is that each primitive element is associated with a set of data, and models are written that operate on this data. This geometry and associated data is what couples models. For example, if we are interested in modeling radiation, each primitive may have data associated with radiative properties such as emissivity, reflectivity, etc. The radiation model would then take that data, along with data that defines the primitive geometry (e.g., position, size), and use that to compute a radiative flux for the individual element.</p>
 <h1><a class="anchor" id="ContextOverview"></a>
 The Helios Context</h1>
 <p>The Context is the primary C++ <a href="https://en.wikipedia.org/wiki/C%2B%2B_classes">class</a> in Helios that is used by every program. It contains many <a href="https://www.tutorialspoint.com/cplusplus/cpp_functions.htm">functions</a> associated with model geometry and data.</p>

@@ -303,9 +303,8 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
 
   //copy grid data into the host buffer
   for( int c=0; c<Ncells; c++ ){
-    Voxel* voxel = context->getVoxelPointer( UUIDs_voxels.at(c) );
-    center[c] = vec3tofloat3( voxel->getCenter() );
-    size[c] = vec3tofloat3( voxel->getSize() );
+    center[c] = vec3tofloat3( context->getVoxelCenter(UUIDs_voxels.at(c)) );
+    size[c] = vec3tofloat3( context->getVoxelSize(UUIDs_voxels.at(c)) );
     //rotation[c] = voxel->getRotation();
     rotation[c] = 0.f;
     context->setPrimitiveData( UUIDs_voxels.at(c), "inside_UUIDs", HELIOS_TYPE_UINT, 0, NULL );

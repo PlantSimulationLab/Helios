@@ -727,7 +727,7 @@ void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_
                   tID++;
               }
 
-              std::vector<helios::vec2> uv = context->getPrimitivePointer(UUID)->getTextureUV();
+              std::vector<helios::vec2> uv = context->getPrimitiveTextureUV(UUID);
               if( uv.size()==4 ){//cusom uv coordinates
                   patch_uv[2*c] = vec2tofloat2(uv.at(1));
                   patch_uv[2*c+1] = vec2tofloat2(uv.at(3));
@@ -791,7 +791,7 @@ void AerialLiDARcloud::syntheticScan( helios::Context* context, const char* xml_
                   tID++;
               }
 
-              std::vector<helios::vec2> uv = context->getPrimitivePointer(UUID)->getTextureUV();
+              std::vector<helios::vec2> uv = context->getPrimitiveTextureUV(UUID);
               assert( uv.size()==3 );
               tri_uv[3*c] = vec2tofloat2(uv.at(0));
               tri_uv[3*c+1] = vec2tofloat2(uv.at(1));

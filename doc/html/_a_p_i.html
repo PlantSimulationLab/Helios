@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.26</span>
+   &#160;<span id="projectnumber">v1.2.27</span>
    </div>
   </td>
  </tr>
@@ -70,7 +70,7 @@ $(function() {
 <div class="toc"><h3>Table of Contents</h3>
 <ul><li class="level1"><a href="#BuildCompile">Building and Compiling Your Own Projects</a><ul><li class="level2"><a href="#DirStruct">Basic Directory Structure</a></li>
 <li class="level2"><a href="#BuildDir">Build Directory</a></li>
-<li class="level2"><a href="#Source">Main and auxillary .cpp files</a></li>
+<li class="level2"><a href="#Source">Main and auxiliary .cpp files</a></li>
 <li class="level2"><a href="#CMake">CMakeLists.txt File</a></li>
 <li class="level2"><a href="#DirScript">New Project Script</a></li>
 </ul>
@@ -88,7 +88,6 @@ $(function() {
 </li>
 <li class="level2"><a href="#PrimTransform">Primitive Transformations</a></li>
 <li class="level2"><a href="#PrimProps">Primitive Properties</a></li>
-<li class="level2"><a href="#Transforms">Primitive Transformations</a></li>
 <li class="level2"><a href="#Texture">Texture Mapping</a></li>
 <li class="level2"><a href="#TextureColor">Coloring Primitives by Texture Map</a></li>
 <li class="level2"><a href="#TextureMask">Masking Primitives by Image Transparency Channel</a></li>
@@ -116,7 +115,7 @@ Basic Directory Structure</h2>
 <li>
 'build' directory. </li>
 <li>
-.cpp file containing a main() routine, and other auxillary .cpp files. </li>
+.cpp file containing a main() routine, and other auxiliary .cpp files. </li>
 <li>
 CMakeLists.txt file, which is used to generate a makefile (see next section). </li>
 <li>
@@ -139,70 +138,71 @@ main.cpp  </li>
 Build Directory</h2>
 <p>It is generally convenient to have a separate directory in which the project is built. This makes it easy to start fresh with a new build, or create multiple builds on different systems. Usually, the build directory is a subdirectory within the project directory (see 'samples' directory for examples).</p>
 <h2><a class="anchor" id="Source"></a>
-Main and auxillary .cpp files</h2>
+Main and auxiliary .cpp files</h2>
 <p>Projects using the Helios API must have a file containing a main() program, and can have any number of complimentary routines and files. Generally, the file containing the main program will include the <a class="el" href="_context_8h.html">Context.h</a> header file, and declare the Context class (see Sect. <a class="el" href="_a_p_i.html#ContextSect">Context</a> below).</p>
 <h2><a class="anchor" id="CMake"></a>
 CMakeLists.txt File</h2>
 <p>Projects that use the Helios API are typically built using a CMakeLists.txt file. A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below. Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference). The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in).</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> # Helios standard CMakeLists.txt file version 1.4
- #-------- USER INPUTS ---------#
+  #-------- USER INPUTS ---------#
 
- #provide the path to Helios base directory, either as an absolut path or a path relative to the location of this file
- set( BASE_DIRECTORY "../.." )
+  #provide the path to Helios base directory, either as an absolut path or a path relative to the location of this file
+  set( BASE_DIRECTORY "../.." )
 
- #define the name of the executable to be created
- set( EXECUTABLE_NAME "executable" )
+  #define the name of the executable to be created
+  set( EXECUTABLE_NAME "executable" )
 
- #provide name of source file(s) (separate multiple file names with semicolon)
- set( SOURCE_FILES "main.cpp" )
+  #provide name of source file(s) (separate multiple file names with semicolon)
+  set( SOURCE_FILES "main.cpp" )
 
- #specify which plug-ins to use (separate plug-in names with semicolon)
- set( PLUGINS "visualizer" )
+  #specify which plug-ins to use (separate plug-in names with semicolon)
+  set( PLUGINS "visualizer" )
 
- #-------- MAIN CODE (Don't Modify) ---------#
+  #-------- MAIN CODE (Don't Modify) ---------#
 
- cmake_minimum_required(VERSION 2.4)
- project(helios)
- if ( WIN32 )
-     SET(CMAKE_C_COMPILER_ID "MSVC")
-     SET(CMAKE_CXX_COMPILER_ID "MSVC")
-     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
- else()
-     SET(CMAKE_C_COMPILER_ID "GNU")
-     SET(CMAKE_CXX_COMPILER_ID "GNU")
-     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-     if( CMAKE_BUILD_TYPE STREQUAL Debug )
-         SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )
-         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-     endif()
- endif()
- if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
-     set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
- endif()
- set( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib )
- add_executable( ${EXECUTABLE_NAME} ${SOURCE_FILES} )
- add_subdirectory( ${BASE_DIRECTORY}/core "lib" )
- target_link_libraries( ${EXECUTABLE_NAME} helios)
- LIST(LENGTH PLUGINS PLUGIN_COUNT)
- message("-- Loading ${PLUGIN_COUNT} plug-ins")
- foreach(PLUGIN ${PLUGINS})
-      message("-- loading plug-in ${PLUGIN}")
-      if( ${PLUGIN} STREQUAL ${EXECUTABLE_NAME} )
-       message( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )
-     endif()
-     add_subdirectory( ${BASE_DIRECTORY}/plugins/${PLUGIN} "plugins/${PLUGIN}" )
-     target_link_libraries( ${EXECUTABLE_NAME} ${PLUGIN} )
- endforeach(PLUGIN)
- include_directories( "${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIRECTORY}" )
- </code></pre></div><p>To run the CMakeLists.txt file, which creates a makefile, simply run the command 'cmake', followed by the path to the CMakeLists.txt file. If, as in the examples above, you are currently in the build directory and your CMakeLists.txt file is located one directory up, the CMake build is accomplished through:</p>
+  cmake_minimum_required(VERSION 2.4)
+  project(helios)
+  if ( WIN32 )
+      SET(CMAKE_C_COMPILER_ID "MSVC")
+      SET(CMAKE_CXX_COMPILER_ID "MSVC")
+      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
+  else()
+      SET(CMAKE_C_COMPILER_ID "GNU")
+      SET(CMAKE_CXX_COMPILER_ID "GNU")
+      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+      if( CMAKE_BUILD_TYPE STREQUAL Debug )
+          SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )
+          SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+      endif()
+  endif()
+  if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
+      set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
+  endif()
+  set( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib )
+  add_executable( ${EXECUTABLE_NAME} ${SOURCE_FILES} )
+  add_subdirectory( ${BASE_DIRECTORY}/core "lib" )
+  target_link_libraries( ${EXECUTABLE_NAME} helios)
+  LIST(LENGTH PLUGINS PLUGIN_COUNT)
+  message("-- Loading ${PLUGIN_COUNT} plug-ins")
+  foreach(PLUGIN ${PLUGINS})
+       message("-- loading plug-in ${PLUGIN}")
+       if( ${PLUGIN} STREQUAL ${EXECUTABLE_NAME} )
+        message( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )
+      endif()
+      add_subdirectory( ${BASE_DIRECTORY}/plugins/${PLUGIN} "plugins/${PLUGIN}" )
+      target_link_libraries( ${EXECUTABLE_NAME} ${PLUGIN} )
+  endforeach(PLUGIN)
+  include_directories( "${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIRECTORY}" )
+  </code></pre></div><p>The easiest way to compile the code is by using an IDE such as CLion, which is described in detail on the page <a class="el" href="_c_lion_i_d_e.html">Using the CLion IDE with Helios</a>.</p>
+<p>To build the code from the command line based on the CMakeLists.txt file, which creates a makefile, simply run the command 'cmake', followed by the path to the CMakeLists.txt file. If, as in the examples above, you are currently in the build directory and your CMakeLists.txt file is located one directory up, the CMake build is accomplished through:</p>
 <div style="padding:12px;background-color:#D0D0D0 ;line-height:1.4;"> <code> $ cmake .. </code> </div><p>The code can then be compiled by issuing the 'make' command from the build directory, which will produce an executable in the build directory.</p>
 <h2><a class="anchor" id="DirScript"></a>
 New Project Script</h2>
 <p>There is a script in the main Helios directory that can quickly set up a new project called "create_project.sh". First, create a new directory where the project will exist, for example:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>$ mkdir projects/myProject</code></pre></div><p>To set up the new project, run the create_project.sh script, with the input argument of the project directory:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>$ ./create_project.sh projects/myProjects</code></pre></div><p>This will create the CMakeLists.txt file, a main.cpp file template, and an empty build directory.</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>$ utilities/create_project.sh projects/myProjects</code></pre></div><p>This will create the CMakeLists.txt file, a main.cpp file template, and an empty build directory.</p>
 <p>You can also specify plug-ins as command-line arguments to the create_project.sh script, in which case the script will create a CMakeLists.txt and main.cpp file that are set up to load those plug-ins:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>$ ./create_project.sh projects/myProjects radiation visualizer</code></pre></div><h1><a class="anchor" id="ContextSect"></a>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>$ utilities/create_project.sh projects/myProjects radiation visualizer</code></pre></div><h1><a class="anchor" id="ContextSect"></a>
 Context</h1>
 <p>The Context is a C++ class that manages data and functions associated with the Helios framework. The functions of the Context are:</p>
 <ol>
@@ -211,17 +211,17 @@ Add and manage geometric objects </li>
 <li>
 Manage data associated with geometric objects and models in general </li>
 <li>
-Manage inputs and outpus </li>
+Manage inputs and outputs </li>
 </ol>
 <p>In simplest terms, the Context stores information associated with geometric objects (primitives) and their corresponding data.</p>
 <p>In order to use the Context, the following header must be included:</p>
 <div style="padding:2px;background-color:#D0D0D0; line-height: 1.2"> <pre><code> #include "Context.h" </code></pre> </div><p>The context is typically created within the main function:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height: 1.2;"> <pre><code> #include "Context.h" 
 
- void main(){
-    Context context;
- }
-</code></pre> </div><p>The Context is usually passed to plugins (see <a class="el" href="_plugins.html">Writing Plugins</a>), which gives them access to geometry and data.</p>
+  void main(){
+     Context context;
+  }
+ </code></pre> </div><p>The Context is usually passed to plugins (see <a class="el" href="_plugins.html">Writing Plugins</a>), which gives them access to geometry and data.</p>
 <h1><a class="anchor" id="VecTypes"></a>
 Vector Types</h1>
 <p>There are several vector types commonly used by the Context and other plugins (see <a class="el" href="_plugins.html">Writing Plugins</a>). These are C++ structures with at least two member variables. Helios vector types are defined by including the header file:</p>
@@ -318,16 +318,16 @@ Geometry</h1>
 <p>The Helios framework is centered around geometric objects called 'primitives'. Primitive elements build up the geometry of the domain, and typically store the data that couples models. For example, each primitive may have an associated surface temperature value that is updated or used by several different models.</p>
 <h2><a class="anchor" id="PrimitiveTypes"></a>
 Primitive Types</h2>
-<p>All primitives inherit the class '<a class="el" href="classhelios_1_1_primitive.html">Primitive</a>', which give them common properties and functions. The available geometric primitive types are detailed below. Each primitive type has an enumeration that can be used in the code to reference each primitive type.</p>
+<p>All primitives inherit the class 'Primitive', which give them common properties and functions. The available geometric primitive types are detailed below. Each primitive type has an enumeration that can be used in the code to reference each primitive type.</p>
 <table class="doxtable">
 <tr>
 <th>Primitive</th><th>Description</th><th>Enumeration </th></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_patch.html">Patch</a></td><td>Rectangular polygon with coplanar vertices. A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions. The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>PRIMITIVE_TYPE_PATCH </td></tr>
+<td>Patch</td><td>Rectangular polygon with coplanar vertices. A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions. The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>PRIMITIVE_TYPE_PATCH </td></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_triangle.html">Triangle</a></td><td>Triangular polygon specified by its three vertices.</td><td>PRIMITIVE_TYPE_TRIANGLE </td></tr>
+<td>Triangle</td><td>Triangular polygon specified by its three vertices.</td><td>PRIMITIVE_TYPE_TRIANGLE </td></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_voxel.html">Voxel</a></td><td>Parallelpiped or rectangular prism. A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions. The default orientation of a voxel is axis-aligned.</td><td>PRIMITIVE_TYPE_VOXEL </td></tr>
+<td>Voxel</td><td>Parallelpiped or rectangular prism. A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions. The default orientation of a voxel is axis-aligned.</td><td>PRIMITIVE_TYPE_VOXEL </td></tr>
 </table>
 <p><br  />
 </p>
@@ -339,7 +339,7 @@ Adding Primitives</h2>
 <tr>
 <th>Primitive</th><th>Adder function </th></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_patch.html">Patch</a></td><td><ul>
+<td>Patch</td><td><ul>
 <li>
 <a class="el" href="group__primitives.html#gafaae593d52d284c5aab98e29cee0cd76">addPatch( vec3 center, vec2 size )</a> </li>
 <li>
@@ -354,7 +354,7 @@ Adding Primitives</h2>
 <br  />
   </td></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_triangle.html">Triangle</a></td><td><ul>
+<td>Triangle</td><td><ul>
 <li>
 <a class="el" href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77">addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2 )</a> </li>
 <li>
@@ -364,7 +364,7 @@ Adding Primitives</h2>
 </ul>
 </td></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_voxel.html">Voxel</a></td><td><ul>
+<td>Voxel</td><td><ul>
 <li>
 <a class="el" href="group__primitives.html#ga5c3476d33e4c6125276bcae114b49b10">addVoxel( vec3 center, vec3 size )</a> </li>
 <li>
@@ -376,46 +376,46 @@ Adding Primitives</h2>
 Adding Patches</h3>
 <p>Patches are added by specifying the (x,y,z) coordinate of its center, the lengths of its sides in the x- and y-directions, and optionally its spherical rotation (see <a class="el" href="_a_p_i.html#Coord">Coordinate System</a>) and r-g-b color. The following is an example of using the 'addPatch' function to add a simple patch:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+  using namespace helios;
 
- int main( void ){
+  int main( void ){
 
-    Context context;
+     Context context;
 
-    vec3 center = make_vec3(0,0,1);
-    vec2 size = make_vec2(1,1);
+     vec3 center = make_vec3(0,0,1);
+     vec2 size = make_vec2(1,1);
 
-    uint UUID; //universal unique identifier
-    UUID = context.addPatch( center, size );
+     uint UUID; //universal unique identifier
+     UUID = context.addPatch( center, size );
 
- }</code></pre> </div><p>This will add the Patch shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the '<a class="el" href="class_visualizer.html">Visualizer</a>' plugin is needed to replicate this image, which is not shown in the example code.)</p>
+  }</code></pre> </div><p>This will add the Patch shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the '<a class="el" href="class_visualizer.html">Visualizer</a>' plugin is needed to replicate this image, which is not shown in the example code.)</p>
 <div class="image">
 <img src="Patch.png" alt=""/>
 <div class="caption">
 Patch geometric primitive.</div></div>
 <p>The patch can also be rotated by adding the optional SphericalCoord argument:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> vec3 center = make_vec3(0,0,1);
- vec2 size = make_vec2(1,1);
- SphericalCoord rotation = make_SphericalCoord(0.25*M_PI,0.5*M_PI);
- context.addPatch( center, size, rotation );</code></pre> </div><p>This will first rotate the patch by 0.25 <img class="formulaInl" alt="$\pi$" src="form_3.png" width="11" height="8"/> rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 <img class="formulaInl" alt="$\pi$" src="form_3.png" width="11" height="8"/> rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
+  vec2 size = make_vec2(1,1);
+  SphericalCoord rotation = make_SphericalCoord(0.25*M_PI,0.5*M_PI);
+  context.addPatch( center, size, rotation );</code></pre> </div><p>This will first rotate the patch by 0.25 <img class="formulaInl" alt="$\pi$" src="form_3.png" width="11" height="8"/> rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 <img class="formulaInl" alt="$\pi$" src="form_3.png" width="11" height="8"/> rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
 <h3><a class="anchor" id="AddingTriangle"></a>
 Adding Triangles</h3>
 <p>Triangles are added by specifying the (x,y,z) coordinates of the triangle's three vertices, and optionally its r-g-b color. The following is an example of using the 'addTriangle()' function to add a simple triangle:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+  using namespace helios;
 
- int main( void ){
+  int main( void ){
 
-    Context context;
+     Context context;
 
-    vec3 v0 = make_vec3(-0.5,-0.5,1);
-    vec3 v1 = make_vec3(0.5,-0.5,1);
-    vec3 v2 = make_vec3(0,0.5,1);
+     vec3 v0 = make_vec3(-0.5,-0.5,1);
+     vec3 v1 = make_vec3(0.5,-0.5,1);
+     vec3 v2 = make_vec3(0,0.5,1);
 
-    uint UUID; //universal unique identifier
-    UUID = context.addTriangle( v0, v1, v2, RGB::red );
+     uint UUID; //universal unique identifier
+     UUID = context.addTriangle( v0, v1, v2, RGB::red );
 
- }</code></pre> </div><p>This will add the Triangle shown below. (Note that the addition of the checkerboard ground and the '<a class="el" href="class_visualizer.html">Visualizer</a>' plugin is needed to replicate this image, which is not shown in the example code.)</p>
+  }</code></pre> </div><p>This will add the Triangle shown below. (Note that the addition of the checkerboard ground and the '<a class="el" href="class_visualizer.html">Visualizer</a>' plugin is needed to replicate this image, which is not shown in the example code.)</p>
 <div class="image">
 <img src="Triangle.png" alt=""/>
 <div class="caption">
@@ -428,214 +428,170 @@ Right-hand rule to determine triangle normal direction based on the three vertic
 <h3><a class="anchor" id="AddingVoxel"></a>
 Adding Voxels</h3>
 <p>Voxels are added by specifying the (x,y,z) coordinate of its center, the lengths of its sides in the x-, y-, and z-directions, and optionally its spherical rotation (see <a class="el" href="_a_p_i.html#Coord">Coordinate System</a>) and r-g-b color. The following is an example of using the 'addVoxel()' function to add a simple voxel:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
+  using namespace helios;
 
- int main( void ){
+  int main( void ){
 
-    Context context;
+     Context context;
 
-    vec3 center = make_vec3(0,0,1);
-    vec3 size = make_vec3(1,1,1);
+     vec3 center = make_vec3(0,0,1);
+     vec3 size = make_vec3(1,1,1);
 
-    uint UUID; //universal unique identifier
-    UUID = context.addVoxel( center, size, RGB::red );
+     uint UUID; //universal unique identifier
+     UUID = context.addVoxel( center, size, 0, RGB::red );
 
- }</code></pre> </div><p>This will add the Voxel shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the 'visualizer' plugin is needed to replicate this image, which is not shown in the example code.)</p>
+  }</code></pre> </div><p>This will add the Voxel shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the 'visualizer' plugin is needed to replicate this image, which is not shown in the example code.)</p>
 <div class="image">
 <img src="Voxel.png" alt=""/>
 <div class="caption">
 Voxel geometric primitive.</div></div>
 <p>The voxel can also be rotated by adding the optional SphericalCoord argument:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> vec3 center = make_vec3(0,0,1);
- vec3 size = make_vec3(1,1,1);
- rotation = 0.25*M_PI;
- context.addVoxel( center, size, rotation, RGB::red );</code></pre> </div><h2><a class="anchor" id="PrimTransform"></a>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  vec3 center = make_vec3(0,0,1);
+  vec3 size = make_vec3(1,1,1);
+  rotation = 0.25*M_PI;
+  context.addVoxel( center, size, rotation, RGB::red );</code></pre> </div><h2><a class="anchor" id="PrimTransform"></a>
 Primitive Transformations</h2>
 <p>After primitives have been added to the Context, their position, size, and orientation can be further modified through transformations.</p>
-<p>All primitives have member functions Primitive::scale(), Primitive::translate(), and Primitive::rotate() which modify the size, position, and orientation of the primitive, respectively. The Primitive::scale() function takes a vec3 that denotes a scaling factor to apply in each Cartesian direction (x,y,z). The Primitive::translate() function moves the primitive based on values provided by a vec3 that specifies the distance to translate in the x-, y-, and z-directions.</p>
-<p>The Primitive::rotate() function rotates the primitive about an axis through and angle specified in radians. To rotate about one of the x-, y-, or z-axes, the function can be supplied a string of 'x', 'y', or 'z', respectively. The primitive can also be rotated about an arbitrary axis described by a unit vector argument.</p>
-<p>It is important to note that the order that transformations are applied is important. Each transformation is applied based on the primitives current state. Rotating a primitive centered about the origin will cause the primitive to rotate about its own center. However, if a primitive is first translated then rotated, the primitive will be rotated about the origin, which does not necessarily coincide with the primitive's center if it has been translated.</p>
-<h2><a class="anchor" id="PrimProps"></a>
-Primitive Properties</h2>
-<p>All primitives have a common set of data that can be accessed by the same set of functions. These functions are accessed through a pointer to the primitive:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> uint UUID; //universal unique identifier
- UUID = context.addVoxel( center, size, RGB::red );
-
- Primitive* prim = context.getPrimitivePointer(UUID);
-
- float area = prim-&gt;getArea();</code></pre> </div><p>or a shorthand would be</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> uint UUID; //universal unique identifier
- float area = context.getPrimitivePointer(UUID)-&gt;getArea();</code></pre> </div><p>The table below gives a list of all availalbe primitive functions.</p>
-<table class="doxtable">
-<tr>
-<th>Property</th><th>Getter Function </th></tr>
-<tr>
-<td>UUID</td><td><a class="el" href="classhelios_1_1_primitive.html#a19ef6bf8ace2e8328c0c22f700b6a23d">getUUID()</a> </td></tr>
-<tr>
-<td>Primitive Type</td><td><a class="el" href="classhelios_1_1_primitive.html#a8c2b266129af6ed7bd20415506272501">getType()</a> </td></tr>
-<tr>
-<td>Surface Area</td><td><a class="el" href="classhelios_1_1_primitive.html#a2e140af864e6dcb56d6ea5f85fef8f49">getArea()</a> </td></tr>
-<tr>
-<td>Normal Vector</td><td><a class="el" href="classhelios_1_1_primitive.html#a0b57d12757d213978d5e0eec30c6eeb4">getNormal()</a> </td></tr>
-<tr>
-<td>Affine Transformation Matrix</td><td><a class="el" href="classhelios_1_1_primitive.html#ac2f1ded5ace6e33830a5dc2bdf4e554c">getTransformationMatrix()</a> </td></tr>
-<tr>
-<td>Vertex Coordinates (x,y,z)</td><td><a class="el" href="classhelios_1_1_primitive.html#a12b57475648525eaca7e0c225ea0122b">getVertices()</a> </td></tr>
-<tr>
-<td>Diffuse R-G-B color code</td><td><a class="el" href="classhelios_1_1_primitive.html#a123006f09b743e84be76774c38dc823c">getColor()</a> </td></tr>
-<tr>
-<td>Diffuse R-G-B-A color code</td><td><a class="el" href="classhelios_1_1_primitive.html#a9840f3bdafa5439387f358580e5bf779">getColorRGBA()</a> </td></tr>
-<tr>
-<td>Check whether the primitive has a texture map</td><td><a class="el" href="classhelios_1_1_primitive.html#a117f166ead4099f6fdca0c4b77bf2a6c">hasTexture()</a> </td></tr>
-<tr>
-<td>Get texture map data</td><td>getTexture() </td></tr>
-<tr>
-<td>Name of texture map file</td><td><a class="el" href="classhelios_1_1_primitive.html#a5e088b5721b2e47ba049f5d3ed551c4e">getTextureFile()</a> </td></tr>
-<tr>
-<td>Get the (u,v) coordinates of the texture mapping</td><td><a class="el" href="classhelios_1_1_primitive.html#a233531e06c5fcd60aa9bf1570b9e7ff5">getTextureUV()</a> </td></tr>
-</table>
-<p>Some primitives have special functions specific to that type of primitive. For example, one may want to query the volume of a Voxel. These special functions are tabulated below. In order to use the special functions, you must get a pointer to the primitive type (e.g., Patch, Triangle, etc.) not the primitive. This is done using the 'get[*]Pointer' functions (e.g., <a class="el" href="group__primitives.html#gac94ca5a68dec6379c427c551bf551254">getPatchPointer()</a>). The example below illustrates how to get a pointer to a Patch, which is then used to query its size.</p>
-<table class="doxtable">
-<tr>
-<th>Primitive Type</th><th>Pointer Getter Function</th><th>Special Function </th></tr>
-<tr>
-<td>Patch</td><td><a class="el" href="group__primitives.html#gac94ca5a68dec6379c427c551bf551254">getPatchPointer()</a></td><td><ul>
-<li>
-<a class="el" href="classhelios_1_1_patch.html#aa3cb7f673e4d06d7434e7c6b9791d0bb">getSize()</a> </li>
-<li>
-<a class="el" href="classhelios_1_1_patch.html#a96b19dc5697196e2431f7dbfd4739303">getCenter()</a> </li>
-</ul>
-</td></tr>
-<tr>
-<td>Triangle</td><td><a class="el" href="group__primitives.html#ga0333afa4e2eb64ff88fa0b63bdef0707">getTrianglePointer()</a></td><td><ul>
-<li>
-<a class="el" href="classhelios_1_1_triangle.html#adc18079107231d0e5840f289877f9ac1">getVertex( int number )</a> </li>
-<li>
-<a class="el" href="classhelios_1_1_triangle.html#a3377c8211592e7ac167c8a8f2d416185">getSolidFraction( )</a> </li>
-</ul>
-</td></tr>
-<tr>
-<td>Voxel</td><td><a class="el" href="group__primitives.html#ga5a69de049b1e95e628761977b2882d06">getVoxelPointer()</a></td><td><ul>
-<li>
-<a class="el" href="classhelios_1_1_voxel.html#ac47af697c6ceacecd71352dcd6928110">getSize()</a> </li>
-<li>
-<a class="el" href="classhelios_1_1_voxel.html#a43874b0b593bffa4d7f63250639412e7">getCenter()</a> </li>
-<li>
-<a class="el" href="classhelios_1_1_voxel.html#aefb000290902e18fa4407a6cd9a4d00e">getVolume()</a> </li>
-</ul>
-</td></tr>
-</table>
-<p><br  />
-</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
-
- int main( void ){
-
-    <code></code>// Initialize the Context
-    Context context;
-
-    <code></code>// Add 'Patch' primitive 
-    vec3 center = make_vec3(0,0,1);
-    vec2 size = make_vec2(1,1);
-    uint UUID = context.addPatch( center, size, RGB::red );
-
-    <code></code>// Get pointer to Patch
-    Patch* patch = context.getPatchPointer(UUID);
-
-    <code></code>// Get Patch size
-    vec2 SIZE = patch-&gt;getSize();  
-
- }</code></pre> </div><h2><a class="anchor" id="Transforms"></a>
-Primitive Transformations</h2>
-<p>Primitives can be transformed after they are added to the Context, which includes translation, rotation, and scaling. <b>The order in which the transformations are applied is important!</b> In general, you'll usually want to scale the primitive first, then rotate, then translate. If, for example, you rotate the primitive, then scale it, it will scale the rotated primitive in the (x,y,z) directions which is not the same as scaling the primitive pre-rotation.</p>
-<p>A transformation can either be applied by calling the function from the primitive's pointer, or directly from the Context if you have a single or vector of UUIDs. These functions are tabulated below.</p>
-<p>Calling from a pointer to a primitive:</p>
+<p>The scalePrimitive() function takes a vec3 that denotes a scaling factor to apply in each Cartesian direction (x,y,z). The translatePrimitive() function moves the primitive based on values provided by a vec3 that specifies the distance to translate in the x-, y-, and z-directions.</p>
+<p>The rotatePrimitive() function rotates the primitive about an axis through an angle specified in radians. To rotate about one of the x-, y-, or z-axes, the function can be supplied a string of 'x', 'y', or 'z', respectively. The primitive can also be rotated about an arbitrary axis described by a unit vector argument.</p>
+<p>It is important to note that the order that transformations are applied is important. Each transformation is applied based on the primitives current state. Rotating a primitive centered about the origin will cause the primitive to rotate about its own center. However, if a primitive is first translated then rotated, the primitive will be rotated about the origin (0,0,0), which does not necessarily coincide with the primitive's center if it has been translated.</p>
+<p>The table below gives a list of primitive transformation functions, each of which take either a single UUID or a vector of UUIDs to apply the same transformation to multiple primitives.</p>
 <table class="doxtable">
 <tr>
 <th>Transformation</th><th>Function </th></tr>
 <tr>
-<td>Translate in x, y, or z direction</td><td>translate( vec3 shift ) </td></tr>
+<td>Translation</td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_context.html#a1ae827c4e0c90a883430bd1db95993e1">helios::Context::translatePrimitive( uint, const helios::vec3&amp; )</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_context.html#a1e98dca73f3e6282b2d1c3a0458b14a4">helios::Context::translatePrimitive( const std::vector&lt;uint&gt;&amp;, const helios::vec3&amp; )</a> </li>
+</ul>
+</td></tr>
 <tr>
-<td>Rotate about x, y, or z axis</td><td><a class="el" href="classhelios_1_1_primitive.html#acf6651311abec476bdfd8c7f7d4d00aa">rotate( float rot, const char* axis )</a> </td></tr>
+<td>Rotation</td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_context.html#a5e5dd3ef9b56a0bf148ed9d315422fe7">helios::Context::rotatePrimitive( uint, float, const char* )</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_context.html#a236cf95ad565a77338bd45fe098e9b83">helios::Context::rotatePrimitive( const std::vector&lt;uint&gt;&amp;, float, const char* )</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_context.html#a55a61fb7f4a3829b04680dabb9a0276a">helios::Context::rotatePrimitive( uint, float, const helios::vec3&amp; )</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_context.html#aca6e120f1607b07c71c4da83ab449813">helios::Context::rotatePrimitive( const std::vector&lt;uint&gt; &amp;, float, const helios::vec3&amp; )</a> </li>
+</ul>
+</td></tr>
 <tr>
-<td>Rotate about arbitrary axis</td><td>rotate( float rot, vec3 axis ) </td></tr>
-<tr>
-<td>Scale in x, y, or z direction</td><td>scale( vec3 S ) </td></tr>
+<td>Scaling</td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_context.html#aaeafd65954d09be5773fbdaba35c694e">helios::Context::scalePrimitive( uint, const helios::vec3&amp; )</a> </li>
+<li>
+<a class="el" href="classhelios_1_1_context.html#a04cb06f3f2db846e6fbf725a0980259a">helios::Context::scalePrimitive( const std::vector&lt;uint&gt;&amp;, const helios::vec3&amp; )</a> </li>
+</ul>
+</td></tr>
 </table>
 <p>Below is a code example of applying a transformation using a pointer to the primitive:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+    using namespace helios;
 
- int main( void ){
+    int main( void ){
 
-    <code></code>// Initialize the Context
-    Context context;
+       <code></code>// Initialize the Context
+       Context context;
 
-    <code></code>// Add 'Patch' primitive 
-    vec3 center(0,0,1);
-    vec2 size = make_vec2(1,1);
-    uint UUID = context.addPatch( center, size );
+       <code></code>// Add 'Patch' primitive
+       vec3 center(0,0,1);
+       vec2 size = make_vec2(1,1);
+       uint UUID = context.addPatch( center, size );
 
-    <code></code>// Apply translation
-    vec3 translation(1,0,0);
-    context.getPrimitivePointer(UUID)-&gt;translate( translation );
+       <code></code>// Apply translation
+       vec3 translation(1,0,0);
+       context.translatePrimitive( UUID, translation );
 
- }</code></pre> </div><p>Calling directly from the Context using a single UUID:</p>
+    }</code></pre> </div><h2><a class="anchor" id="PrimProps"></a>
+Primitive Properties</h2>
+<p>All primitives have a common set of data that can be accessed by the same set of functions, such as the primitive surface area, the primitive vertices, etc.</p>
+<p>The table below gives a list of all available primitive property setter and getter functions. In some case, there is no setter function when it is an intrinsic property of the primitive that is not changeable.</p>
 <table class="doxtable">
 <tr>
-<th>Transformation</th><th>Function </th></tr>
+<th>Property</th><th>Setter Function</th><th>Getter Function </th></tr>
 <tr>
-<td>Translate in x, y, or z direction</td><td>translatePrimitive( uint UUID, vec3 shift ) </td></tr>
+<td>Primitive Type</td><td>N/A</td><td><a class="el" href="classhelios_1_1_context.html#a67bfd66f0a445f6485f1099f9eadc949">helios::Context::getPrimitiveType( uint ) const</a>  </td></tr>
 <tr>
-<td>Rotate about x, y, or z axis</td><td><a class="el" href="classhelios_1_1_context.html#a5e5dd3ef9b56a0bf148ed9d315422fe7">rotatePrimitive( uint UUID, float rot, const char* axis )</a> </td></tr>
+<td>Surface Area</td><td>N/A</td><td><a class="el" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">helios::Context::getPrimitiveArea( uint ) const</a> </td></tr>
 <tr>
-<td>Rotate about arbitrary axis</td><td>rotatePrimitive( uint UUID, float rot, vec3 axis ) </td></tr>
+<td>Normal Vector</td><td>N/A</td><td><a class="el" href="classhelios_1_1_context.html#abfeadf8e6a35eb97da1439abc21c434e">helios::Context::getPrimitiveNormal( uint ) const</a> </td></tr>
 <tr>
-<td>Scale in x, y, or z direction</td><td>scalePrimitive( uint UUID, vec3 S ) </td></tr>
+<td>Vertex Coordinates (x,y,z)</td><td>N/A</td><td><a class="el" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">helios::Context::getPrimitiveVertices( uint ) const</a> </td></tr>
+<tr>
+<td>Parent Object ID</td><td>N/A</td><td><a class="el" href="classhelios_1_1_context.html#a2d3e254d04f913e590a645b54886436e">helios::Context::getPrimitiveParentObjectID( uint ) const</a> </td></tr>
+<tr>
+<td>Diffuse R-G-B color code</td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_context.html#a029f95ee0056f027866f8bad2fe9e48e">helios::Context::setPrimitiveColor( uint, const helios::RGBcolor&amp; )</a></li>
+<li>
+<a class="el" href="classhelios_1_1_context.html#af445c8f33a279ce7374d1b2691ef1f1c">helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBcolor&amp; )</a></li>
+</ul>
+</td><td><a class="el" href="classhelios_1_1_context.html#a1223205f1080b0b7024b8f97950779b8">helios::Context::getPrimitiveColor( uint ) const</a> </td></tr>
+<tr>
+<td>Diffuse R-G-B-A color code</td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_context.html#a22dce781917215d2e80784ae5eb78d60">helios::Context::setPrimitiveColor( uint, const helios::RGBAcolor&amp; )</a></li>
+<li>
+<a class="el" href="classhelios_1_1_context.html#aa4e3d7f71aaa0823edd9341b3c2d786c">helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBAcolor&amp; )</a></li>
+</ul>
+</td><td><a class="el" href="classhelios_1_1_context.html#a4e29adcb908d55172efd239f294b49e5">helios::Context::getPrimitiveColorRGBA( uint ) const</a> </td></tr>
+<tr>
+<td>Affine Transformation Matrix</td><td><ul>
+<li>
+<a class="el" href="classhelios_1_1_context.html#af7d8333251195bcc4788792d9aa6f37c">helios::Context::setPrimitiveTransformationMatrix( uint, float (&amp;)[16] )</a></li>
+<li>
+<a class="el" href="classhelios_1_1_context.html#a9447c0c5ad7f1f19d606f227d164f679">helios::Context::setPrimitiveTransformationMatrix( const std::vector&lt;uint&gt;&amp;, float (&amp;)[16] )</a></li>
+</ul>
+</td><td><a class="el" href="classhelios_1_1_context.html#a046e855d15fa88088be01adea38a67fd">helios::Context::getPrimitiveTransformationMatrix( uint, float (&amp;)[16] ) const</a> </td></tr>
 </table>
-<p>Below is a code example of applying a transformation from the Context using a single primitive UUID:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
-
- int main( void ){
-
-    <code></code>// Initialize the Context
-    Context context;
-
-    <code></code>// Add 'Patch' primitive 
-    vec3 center(0,0,1);
-    vec2 size = make_vec2(1,1);
-    uint UUID = context.addPatch( center, size );
-
-    <code></code>// Apply translation
-    vec3 translation(1,0,0);
-    context.translatePrimitive( UUID, translation );
-
- }</code></pre> </div><p>This can also be accomplished by passing a vector of UUIDs to the transformation function to apply the transformations to many primitives at once using these functions:</p>
+<p>Some primitives have special functions specific to that type of primitive. For example, one may want to query the length and width of a Patch. These primitive-specific functions are tabulated below. If the type of the primitive corresponding to the UUID passed to the function does not match the primitive type for that function, and error will be thrown (for example passing a Triangle UUID to the function getPatchSize()).</p>
 <table class="doxtable">
 <tr>
-<th>Transformation</th><th>Function </th></tr>
+<th>Primitive Type/Property</th><th>Getter Function </th></tr>
 <tr>
-<td>Translate in x, y, or z direction</td><td>translatePrimitive( vector&lt;uint&gt; UUIDs, vec3 shift ) </td></tr>
+<td>Patch Center</td><td><a class="el" href="classhelios_1_1_context.html#a4165df43e5ab752e81bc2b7d7caf19d5">helios::Context::getPatchCenter( uint ) const</a> </td></tr>
 <tr>
-<td>Rotate about x, y, or z axis</td><td>rotatePrimitive( vector&lt;uint&gt; UUIDs, float rot, const char* axis ) </td></tr>
+<td>Patch Size</td><td><a class="el" href="classhelios_1_1_context.html#ab3f802aca8dd1930127d9f76358e71cf">helios::Context::getPatchSize( uint ) const</a> </td></tr>
 <tr>
-<td>Rotate about arbitrary axis</td><td>rotatePrimitive( vector&lt;uint&gt; UUIDs, float rot, vec3 axis ) </td></tr>
+<td>Triangle Vertex</td><td><a class="el" href="classhelios_1_1_context.html#a846f93175f8b45f44237e88155af8fde">helios::Context::getTriangleVertex( uint, uint ) const</a> </td></tr>
 <tr>
-<td>Scale in x, y, or z direction</td><td>scalePrimitive( vector&lt;uint&gt; UUIDs, vec3 S ) </td></tr>
+<td>Voxel Center</td><td><a class="el" href="classhelios_1_1_context.html#acadf5206cbfed7b8eaa2835702349cd9">helios::Context::getVoxelCenter( uint ) const</a> </td></tr>
+<tr>
+<td>Voxel Size</td><td><a class="el" href="classhelios_1_1_context.html#a6a3f85d4f29f8f7432b6ef605172a1cb">helios::Context::getVoxelSize( uint ) const</a> </td></tr>
 </table>
-<h2><a class="anchor" id="Texture"></a>
+<p><br  />
+</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
+  using namespace helios;
+
+  int main( void ){
+
+     <code></code>// Initialize the Context
+     Context context;
+
+     <code></code>// Add 'Patch' primitive 
+     vec3 center = make_vec3(0,0,1);
+     vec2 size = make_vec2(1,1);
+     uint UUID = context.addPatch( center, size, nullrotation, RGB::red );
+
+     <code></code>// Get Patch size
+     vec2 SIZE = getPatchSize( UUID );
+
+  }</code></pre> </div><h2><a class="anchor" id="Texture"></a>
 Texture Mapping</h2>
 <p>Images can be overlaid on patches and triangles through a process called <a href="https://en.wikipedia.org/wiki/Texture_mapping">texture mapping</a>. There are typically two reasons for doing this. One is simply for visualization purposes, as it easily allows for complex coloring of a surface by coloring a surface according to an image. The other is to create a more complex shape by removing a portion of the primitive surface according to the transparency channel of an image. Each of these cases are described in detail below.</p>
 <h2><a class="anchor" id="TextureColor"></a>
 Coloring Primitives by Texture Map</h2>
 <p>Patches: To color a Patch based on an image, simply pass the path to a PNG or JPEG image to the appropriate argument of the addPatch() command. Note that the path should either be absolute, or relative to the directory where the executable will be run (typically the &lsquo;build&rsquo; directory).</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> vec3 center = make_vec3(0,0,1);
- vec2 size = make_vec2(2.5,1);
- SphericalCoord rotation = make_SphericalCoord(0,0);
- context.addPatch( center, size, rotation, "PSL_logo_white.png");</code></pre> </div><p><br  />
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  vec3 center = make_vec3(0,0,1);
+  vec2 size = make_vec2(2.5,1);
+  SphericalCoord rotation = make_SphericalCoord(0,0);
+  context.addPatch( center, size, rotation, "PSL_logo_white.png");</code></pre> </div><p><br  />
  </p>
 <div class="image">
 <img src="Patch_textured.png" alt=""/>
@@ -655,53 +611,71 @@ Patch geometric primitive colored by texture map.</div></div>
 <h2><a class="anchor" id="TextureMask"></a>
 Masking Primitives by Image Transparency Channel</h2>
 <p>If the image provided for texture mapping has a transparency channel, the portion of the primitive that is transparent will automatically be removed, and the rest of the non-transparent portion of the primitive will be colored according to the image. Note that only PNG images are supported, since JPEG images do not have transparency. An example is given below.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
+  using namespace helios;
 
- int main( void ){
+  int main( void ){
 
-    <code></code>// Initialize the Context
-    Context context;
+     <code></code>// Initialize the Context
+     Context context;
 
-    <code></code>// Add 'Patch' primitive with transparency mask
-    vec3 center = make_vec3(0,0,1);
-    vec2 size = make_vec2(1,1);
+     <code></code>// Add 'Patch' primitive with transparency mask
+     vec3 center = make_vec3(0,0,1);
+     vec2 size = make_vec2(1,1);
 
-    uint UUID = context.addPatch( center, size, make_SphericalCoord(0,0), "GrapeLeaf.png" );
+     uint UUID = context.addPatch( center, size, make_SphericalCoord(0,0), "GrapeLeaf.png" );
 
- }</code></pre> </div><div class="image">
+  }</code></pre> </div><div class="image">
 <img src="AlphaMask_leaf.png" alt=""/>
 <div class="caption">
 Rectangular patch masked by an image with a transparency channel.</div></div>
-<div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> A very important performance note when using texture-masked primitives with transparency: When a texture-masked primitive with transparency is added to the Context, the solid surface area of the primitive is calculated by determining which fraction of pixels are non-transparent. This is a computationally expensive process when the image is high resolution (e.g., millions of pixels).</div><div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> If you are adding many identical primitives/objects with transparency, it is better to add it to the Context one time, then copy and translate it as many times as you need. An example of this is given in the code below. </div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+<div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> A very important performance note when using texture-masked primitives with transparency: When a texture-masked primitive with transparency is added to the Context, the solid surface area of the primitive is calculated by determining which fraction of pixels are non-transparent. This is a computationally expensive process when the image is high resolution (e.g., millions of pixels).</div><div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> If you are adding many identical primitives/objects with transparency, it is better to add it to the Context one time, then copy and translate it as many times as you need. An example of this is given in the code below. </div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
+  using namespace helios;
 
- int main( void ){
+  int main( void ){
 
-    <code></code>// Initialize the Context
-    Context context;
+     <code></code>// Initialize the Context
+     Context context;
 
-    <code></code>// Add 'Patch' primitive with transparency mask
-    <code></code>// We will add a patch at the origin and with unit size, and copy it multiple times
-    vec3 center = make_vec3(0,0,0);
-    vec2 size = make_vec2(1,1);
+     <code></code>// Add 'Patch' primitive with transparency mask
+     <code></code>// We will add a patch at the origin and with unit size, and copy it multiple times
+     vec3 center = make_vec3(0,0,0);
+     vec2 size = make_vec2(1,1);
 
-    uint UUID = context.addPatch( center, size, make_SphericalCoord(0,0), "GrapeLeaf.png" );
+     uint UUID = context.addPatch( center, size, make_SphericalCoord(0,0), "GrapeLeaf.png" );
 
-    for( int i=0; i&lt;10; i++ ){
+     for( int i=0; i&lt;10; i++ ){
 
           uint UUID_copy = context.copyPrimitive(UUID);
 
           vec3 position = make_vec3( i*3, 0, 0 );
 
-     context.translatePrimitive( position );
+          context.translatePrimitive( position );
 
-    }
+     }
 
-    <code></code>// Let's delete the original "template"
-    context.deletePrimitive(UUID);
+     <code></code>// Let's delete the original "template"
+     context.deletePrimitive(UUID);
 
- }</code></pre> </div><h2><a class="anchor" id="Compound"></a>
+  }</code></pre> </div><table class="doxtable">
+<tr>
+<th>Property</th><th>Getter Function </th></tr>
+<tr>
+<td>Texture File Name</td><td><a class="el" href="classhelios_1_1_context.html#a4fffad72d1ebb517d9c41837e448d4f5">helios::Context::getPrimitiveTextureFile( uint ) const</a> </td></tr>
+<tr>
+<td>Size/resolution of Texture</td><td><a class="el" href="classhelios_1_1_context.html#a7fec62cbf2c2d56603b2750cbb4a4d9f">helios::Context::getPrimitiveTextureSize( uint ) const</a> </td></tr>
+<tr>
+<td>U,V Texture Coordinates</td><td><a class="el" href="classhelios_1_1_context.html#a5702f94aaba15bf6757aeb4d72d7774d">helios::Context::getPrimitiveTextureUV( uint ) const</a> </td></tr>
+<tr>
+<td>Texture Transparency</td><td><a class="el" href="classhelios_1_1_context.html#a5e10a8afe134f4a55f65c81a9398c69c">helios::Context::primitiveTextureHasTransparencyChannel( uint ) const</a> </td></tr>
+<tr>
+<td>Texture Transparency Data</td><td><a class="el" href="classhelios_1_1_context.html#a98ad773979fff9efda47b44d71ac8e06">helios::Context::getPrimitiveTextureTransparencyData( uint ) const</a> </td></tr>
+<tr>
+<td>Texture Color Override</td><td><a class="el" href="classhelios_1_1_context.html#aaaa6de8a55765b258d6e65c52bf5df69">helios::Context::isPrimitiveTextureColorOverridden( uint ) const</a> </td></tr>
+<tr>
+<td>Solid Fraction</td><td><a class="el" href="classhelios_1_1_context.html#a6e8a5e2044331158d69d6f9bd88fc0f7">helios::Context::getPrimitiveSolidFraction( uint ) const</a> </td></tr>
+</table>
+<h2><a class="anchor" id="Compound"></a>
 Compound Geometry</h2>
 <p>The Context has functions to rapidly generate various shapes, which consist of many primitives. These functions simply add the primitives needed to make the specified geometry, and return a vector of UUIDs corresponding to each of the primitives. The important distinction between these functions and those to add "Objects" (described below) is that Objects retain information about the overall 3D object such as the radius of the sphere.</p>
 <p>Functions for adding compound geometry are listed below.</p>
@@ -711,55 +685,55 @@ Compound Geometry</h2>
 <tr>
 <td>Tile </td><td>Patch subdivided into uniform grid of sub-patches. </td><td><ul>
 <li>
-addTile( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv )  </li>
+<a class="el" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b">addTile( const vec3 &amp;center, const vec2 &amp;size, const SphericalCoord &amp;rotation, const int2 &amp;subdiv )</a>  </li>
 <li>
-addTile( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const RGBcolor color )  </li>
+<a class="el" href="group__compoundobjects.html#ga48feb2165a7adfbb11cb402c7db56d4b">addTile( const vec3 &amp;center, const vec2 &amp;size, const SphericalCoord &amp;rotation, const int2 &amp;subdiv, const RGBcolor &amp;color )</a>  </li>
 <li>
-addTile( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const char* texturefile )  </li>
+<a class="el" href="group__compoundobjects.html#ga8d8cdafde1ebfaebf8edd27aa36ae82b">addTile( const vec3 &amp;center, const vec2 &amp;size, const SphericalCoord &amp;rotation, const int2 &amp;subdiv, const char* &amp;texturefile )</a>  </li>
 </ul>
 </td><td><div class="image">
 <img src="Tile.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>Sphere </td><td>Spherical object tesselated with Triangle primitives. </td><td><ul>
+<td>Sphere </td><td>Spherical object tessellated with Triangle primitives. </td><td><ul>
 <li>
-addSphere( uint Ndivs, vec3 center, float radius )  </li>
+<a class="el" href="group__compoundobjects.html#gac5df0d862dd8d6783edc037804c452bf">addSphere( uint Ndivs, const vec3 &amp;center, float radius )</a>  </li>
 <li>
-addSphere( uint Ndivs, vec3 center, float radius, RGBcolor color )  </li>
+<a class="el" href="group__compoundobjects.html#ga645ee8b5e829c08e8e3549eceea815cc">addSphere( uint Ndivs, const vec3 &amp;center, float radius, const RGBcolor &amp;color )</a>  </li>
 <li>
-addSphere( uint Ndivs, vec3 center, float radius, const char* texturefille )  </li>
+<a class="el" href="group__compoundobjects.html#ga2b10346e874dd539c742102b385c9370">addSphere( uint Ndivs, const vec3 &amp;center, float radius, const char* texturefille )</a>  </li>
 </ul>
 </td><td><div class="image">
 <img src="Sphere.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>Tube </td><td>Cylindrical tube object tesselated with Triangle primitives. Follows a specified path and can change radius along its length. </td><td><ul>
+<td>Tube </td><td>Cylindrical tube object tessellated with Triangle primitives. Follows a specified path and can change radius along its length. </td><td><ul>
 <li>
-addTube( uint Ndivs, vector&lt;vec3&gt; nodes, vector&lt;float&gt; radius ) </li>
+<a class="el" href="group__compoundobjects.html#gad1d3bab869a03fe7c35d33cf8a03841a">addTube( uint Ndivs, const vector&lt;vec3&gt; &amp;nodes, const vector&lt;float&gt; &amp;radius )</a> </li>
 <li>
-addTube( uint Ndivs, vector&lt;vec3&gt; nodes, vector&lt;float&gt; radius, RGBcolor color ) </li>
+<a class="el" href="group__compoundobjects.html#gadab9004decd0686143fc96d88cfc4157">addTube( uint Ndivs, const vector&lt;vec3&gt; &amp;nodes, const vector&lt;float&gt; &amp;radius, const RGBcolor &amp;color )</a> </li>
 </ul>
 </td><td><div class="image">
 <img src="Tube.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>Box </td><td>Rectangular prism object tesselated with Patch primitives. </td><td><ul>
+<td>Box </td><td>Rectangular prism object tessellated with Patch primitives. </td><td><ul>
 <li>
-addBox( vec3 center, vec3 size, int3 subdiv )  </li>
+<a class="el" href="group__compoundobjects.html#gaad6b1c9613d3e1e70519e145166c8879">addBox( const vec3 &amp;center, const vec3 &amp;size, const int3 &amp;subdiv )</a>  </li>
 <li>
-addBox( vec3 center, vec3 size, int3 subdiv, RGBcolor color )  </li>
+<a class="el" href="group__compoundobjects.html#ga9a00c2f632e5625524dc8cd7587b771e">addBox( const vec3 &amp;center, const vec3 &amp;size, const int3 &amp;subdiv, const RGBcolor &amp;color )</a>  </li>
 <li>
-addBox( vec3 center, vec3 size, int3 subdiv, RGBcolor color, bool reverse_normals )  </li>
+<a class="el" href="group__compoundobjects.html#ga73e5eea0a4841336b41ed2848327c12a">addBox( const vec3 &amp;center, const vec3 &amp;size, const int3 &amp;subdiv, const RGBcolor &amp;color, bool reverse_normals )</a>  </li>
 </ul>
 </td><td><div class="image">
 <img src="Box.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>Disk </td><td>Ellipsoidal disk object tesselated with Triangle primitives. </td><td><ul>
+<td>Disk </td><td>Ellipsoidal disk object tessellated with Triangle primitives. </td><td><ul>
 <li>
 <a class="el" href="group__compoundobjects.html#gaad3d5c21579728fa839c6a95514991bb">addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size )</a>  </li>
 <li>
@@ -786,55 +760,55 @@ Objects</h2>
 <tr>
 <td>Tile </td><td>Patch subdivided into uniform grid of sub-patches. </td><td><ul>
 <li>
-addTileObject( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv )  </li>
+<a class="el" href="group__compoundobjects.html#gae5c1fa3bae1ff170c14a4378fb8abd95">addTileObject( const vec3 &amp;center, const vec2 &amp;size, const SphericalCoord &amp;rotation, const int2 &amp;subdiv )</a>  </li>
 <li>
-addTileObject( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const RGBcolor color )  </li>
+<a class="el" href="group__compoundobjects.html#gae846d22b6cba8b50582ace8509c16e12">addTileObject( const vec3 &amp;center, const vec2 &amp;size, const SphericalCoord &amp;rotation, const int2 &amp;subdiv, const RGBcolor &amp;color )</a>  </li>
 <li>
-addTileObject( const vec3 center, const vec2 size, const SphericalCoord rotation, const int2 subdiv, const char* texturefile )  </li>
+<a class="el" href="group__compoundobjects.html#gad5c5cd832ce014a4862d72ccf52e2100">addTileObject( const vec3 &amp;center, const vec2 &amp;size, const SphericalCoord &amp;rotation, const int2 &amp;subdiv, const char* texturefile )</a>  </li>
 </ul>
 </td><td><div class="image">
 <img src="Tile.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>Sphere </td><td>Spherical object tesselated with Triangle primitives. </td><td><ul>
+<td>Sphere </td><td>Spherical object tessellated with Triangle primitives. </td><td><ul>
 <li>
-addSphere( uint Ndivs, vec3 center, float radius )  </li>
+<a class="el" href="group__compoundobjects.html#gae7cb6682b28087b6d1d68c12d6814a23">addSphere( uint Ndivs, vec3 &amp;center, float radius )</a>  </li>
 <li>
-addSphereObject ( uint Ndivs, vec3 center, float radius, RGBcolor color )  </li>
+<a class="el" href="group__compoundobjects.html#gac0836f609016ffc2726788a252832003">addSphereObject ( uint Ndivs, const vec3 &amp;center, float radius, const RGBcolor &amp;color )</a>  </li>
 <li>
-addSphereObject ( uint Ndivs, vec3 center, float radius, const char* texturefile )  </li>
+<a class="el" href="group__compoundobjects.html#ga6c66a36c17dbf43376909fdc1f4df826">addSphereObject ( uint Ndivs, const vec3 &amp;center, float radius, const char* texturefile )</a>  </li>
 </ul>
 </td><td><div class="image">
 <img src="Sphere.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>Tube </td><td>Cylindrical tube object tesselated with Triangle primitives. Follows a specified path and can change radius along its length. </td><td><ul>
+<td>Tube </td><td>Cylindrical tube object tessellated with Triangle primitives. Follows a specified path and can change radius along its length. </td><td><ul>
 <li>
-addTubeObject( uint Ndivs, vector&lt;vec3&gt; nodes, vector&lt;float&gt; radius ) </li>
+<a class="el" href="group__compoundobjects.html#ga1a96035e4b7e62c86cd059f42a9439ed">addTubeObject( uint Ndivs, const vector&lt;vec3&gt; &amp;nodes, const vector&lt;float&gt; &amp;radius )</a> </li>
 <li>
-addTubeObject( uint Ndivs, vector&lt;vec3&gt; nodes, vector&lt;float&gt; radius, RGBcolor color ) </li>
+<a class="el" href="group__compoundobjects.html#ga9aac583fcb2b555888462db662747d57">addTubeObject( uint Ndivs, const vector&lt;vec3&gt; &amp;nodes, const vector&lt;float&gt; &amp;radius, const RGBcolor &amp;color )</a> </li>
 </ul>
 </td><td><div class="image">
 <img src="Tube.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>Box </td><td>Rectangular prism object tesselated with Patch primitives. </td><td><ul>
+<td>Box </td><td>Rectangular prism object tessellated with Patch primitives. </td><td><ul>
 <li>
-addBoxObject( vec3 center, vec3 size, int3 subdiv )  </li>
+<a class="el" href="group__compoundobjects.html#gab2549ca65442372287b30c874b0c2b1c">addBoxObject( const vec3 &amp;center, const vec3 &amp;size, const int3 &amp;subdiv )</a>  </li>
 <li>
-addBoxObject( vec3 center, vec3 size, int3 subdiv, RGBcolor color )  </li>
+<a class="el" href="group__compoundobjects.html#ga71aa11aa723683d18807fda36397f7e3">addBoxObject( const vec3 &amp;center, const vec3 &amp;size, const int3 &amp;subdiv, const RGBcolor &amp;color )</a>  </li>
 <li>
-addBoxObject( vec3 center, vec3 size, int3 subdiv, RGBcolor color, bool reverse_normals )  </li>
+<a class="el" href="group__compoundobjects.html#gac29332e0332233ea902a94e4822f739f">addBoxObject( const vec3 &amp;center, const vec3 &amp;size, const int3 &amp;subdiv, const RGBcolor &amp;color, bool reverse_normals )</a>  </li>
 </ul>
 </td><td><div class="image">
 <img src="Box.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>Disk </td><td>Ellipsoidal disk object tesselated with Triangle primitives. </td><td><ul>
+<td>Disk </td><td>Ellipsoidal disk object tessellated with Triangle primitives. </td><td><ul>
 <li>
 <a class="el" href="group__compoundobjects.html#ga064d0343ca8556d8a6a00c7cdce3bf0d">addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size )</a>  </li>
 <li>
@@ -851,13 +825,13 @@ addBoxObject( vec3 center, vec3 size, int3 subdiv, RGBcolor color, bool reverse_
 </div>
   </td></tr>
 <tr>
-<td>Cone </td><td>Tapered cylinder/cone object tesselated with triangles. </td><td><ul>
+<td>Cone </td><td>Tapered cylinder/cone object tessellated with triangles. </td><td><ul>
 <li>
-addConeObject( uint Ndivs, helios::vec3 node0, helios::vec3 node1, float radius0, float radius1 ) </li>
+<a class="el" href="group__compoundobjects.html#ga91e46b44e9d7ece5a7e75e739cac4610">addConeObject( uint Ndivs, const helios::vec3 &amp;node0, const helios::vec3 &amp;node1, float radius0, float radius1 )</a> </li>
 <li>
-addConeObject( uint Ndivs, helios::vec3 node0, helios::vec3 node1, float radius0, float radius1, RGBcolor color ) </li>
+<a class="el" href="group__compoundobjects.html#ga5dfcb74a1406d4a2ee15c251dedcd744">addConeObject( uint Ndivs, const helios::vec3 &amp;node0, const helios::vec3 &amp;node1, float radius0, float radius1, const RGBcolor &amp;color )</a> </li>
 <li>
-addConeObject( uint Ndivs, helios::vec3 node0, helios::vec3 node1, float radius0, float radius1, const char* texturefile ) </li>
+<a class="el" href="group__compoundobjects.html#gaff21895b974a64df8fd78b3604d7c404">addConeObject( uint Ndivs, const helios::vec3 &amp;node0, const helios::vec3 &amp;node1, float radius0, float radius1, const char* texturefile )</a> </li>
 </ul>
 </td><td><div class="image">
 <img src="Cone.png" alt=""/>
@@ -865,14 +839,14 @@ addConeObject( uint Ndivs, helios::vec3 node0, helios::vec3 node1, float radius0
   </td></tr>
 </table>
 <p>Similar to individual primitives, objects have functions to perform transformations on the entire object in unison. These functions are member functions of the <a class="el" href="classhelios_1_1_compound_object.html">helios::CompoundObject</a> class. As with primitives, you can use the identifier to an object to get its pointer, from which you can access member functions.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> uint objID; //unique identifier to object
- objID = context.addTileObject( center, size, rotation, make_int2(2,2) );
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  uint objID; //unique identifier to object
+  objID = context.addTileObject( center, size, rotation, make_int2(2,2) );
 
- CompoundObject* object = context.getObjectPointer(objID);
+  CompoundObject* object = context.getObjectPointer(objID);
 
- float area = object-&gt;getArea();</code></pre> </div><p>or a shorthand would be</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> uint objID; //object identifier
- float area = context.getObjectPointer(objID)-&gt;getArea();</code></pre> </div><p>The table below gives a list of availalbe Object functions.</p>
+  float area = object-&gt;getArea();</code></pre> </div><p>or a shorthand would be</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  uint objID; //object identifier
+  float area = context.getObjectPointer(objID)-&gt;getArea();</code></pre> </div><p>The table below gives a list of available Object functions.</p>
 <table class="doxtable">
 <tr>
 <th>Property</th><th>Getter Function </th></tr>
@@ -912,7 +886,7 @@ addConeObject( uint Ndivs, helios::vec3 node0, helios::vec3 node1, float radius0
 <tr>
 <td>Rotate about arbitrary axis</td><td>rotate( float rot, vec3 axis ) </td></tr>
 </table>
-<p>Some objects have special functions specific to that type of object, which are listed below. In order to access these functions, you need to get a pointer to that type of object using thhe appropriate get[*]ObjectPointer() function.</p>
+<p>Some objects have special functions specific to that type of object, which are listed below. In order to access these functions, you need to get a pointer to that type of object using the appropriate get[*]ObjectPointer() function.</p>
 <table class="doxtable">
 <tr>
 <th>Object Type</th><th>Pointer Getter Function</th><th>Special Function </th></tr>
@@ -1049,67 +1023,62 @@ Primitive Data</h2>
 Setting Primitive Data Values</h3>
 <p>Primitive data values can be scalar or a one-dimensional array of values.</p>
 <p>Primitive data is set for a given primitive via the Context using the <a class="el" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData()</a> function. Example use of this function for scalar data is given below.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
+  using namespace helios;
 
- int main( void ){
+  int main( void ){
 
-    Context context;
+     Context context;
 
-    uint UUID = context.addPatch( center, size, RGB::red );
+     uint UUID = context.addPatch( center, size, RGB::red );
 
-    float eps = 0.9;
-    context.setPrimitiveData(UUID,"emissivity",eps);
- }</code></pre> </div><p>Alternatively, primitive data can be set from a pointer to the primitive using <a class="el" href="classhelios_1_1_primitive.html#a9cf890cc9751acf7e50a97e311b9d786">setPrimitiveData()</a>:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> Primitive* prim = context-&gt;getPrimitivePointer(UUID);
+     float eps = 0.9;
+     context.setPrimitiveData(UUID,"emissivity",eps);
+  }</code></pre> </div><p>There are multiple ways of setting vector primitive data. One method uses STL vectors to pass the data to the <a class="el" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData()</a>, and another is accomplished using a pointer to a standard C vector. Both of these equivalent methods are illustrated below.</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
+  using namespace helios;
 
- float eps = 0.9;
- prim.setPrimitiveData("emissivity",eps);</code></pre> </div><p>Reference <a class="el" href="group__primitives.html#ga0a2a576098472e45b2b0a242d4d4dadf">getPrimitivePointer()</a> for further information on how to get a pointer to primitives.</p>
-<p>There are multiple ways of setting vector primitive data. One method uses STL vectors to pass the data to the <a class="el" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData()</a>, and another is accomplished using a pointer to a standard C vector. Both of these equivalent methods are illustrated below.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+  int main( void ){
 
- int main( void ){
+     Context context;
 
-    Context context;
+     vec3 center(0,0,0);
+     vec2 size(1,1);
 
-    vec3 center(0,0,0);
-    vec2 size(1,1);
+     uint UUID = context.addPatch( center, size );
 
-    uint UUID = context.addPatch( center, size );
+     std::vector&lt;float&gt; A;
+     A.push_back(2.3);
+     A.push_back(9.2);
+     context.setPrimitiveData(UUID,"somedataA",HELIOS_TYPE_FLOAT,A.size(),&amp;A[0]);
 
-    std::vector&lt;float&gt; A;
-    A.push_back(2.3);
-    A.push_back(9.2);
-    context.setPrimitiveData(UUID,"somedataA",HELIOS_TYPE_FLOAT,A.size(),&amp;A[0]);
+     float B[2];
+     B[0] = 2.3;
+     B[1] = 9.2;
+     context.setPrimitiveData(UUID,"somedataB",HELIOS_TYPE_FLOAT,2,&amp;B[0]);
 
-    float B[2];
-    B[0] = 2.3;
-    B[1] = 9.2;
-    context.setPrimitiveData(UUID,"somedataB",HELIOS_TYPE_FLOAT,2,&amp;B[0]);
-
- }</code></pre> </div><h3><a class="anchor" id="GetPrimData"></a>
+  }</code></pre> </div><h3><a class="anchor" id="GetPrimData"></a>
 Getting Primitive Data Values</h3>
 <p>If primitive data is a scalar value, it can be retrieved for a given primitive via the Context using the <a class="el" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a> function:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
+  using namespace helios;
 
- int main( void ){
+  int main( void ){
 
-    Context context;
+     Context context;
 
-    vec3 center(0,0,0);
-    vec2 size(1,1);
+     vec3 center(0,0,0);
+     vec2 size(1,1);
 
-    uint UUID = context.addPatch( center, size );
+     uint UUID = context.addPatch( center, size );
 
-    float eps = 0.9;
-    context.setPrimitiveData(UUID,"emissivity",eps);
+     float eps = 0.9;
+     context.setPrimitiveData(UUID,"emissivity",eps);
 
-    float emissivity;
-    context.getPrimitiveData(UUID,"emissivity",emissivity);
+     float emissivity;
+     context.getPrimitiveData(UUID,"emissivity",emissivity);
 
- }</code></pre> </div><p>In the above example, the value of 'emissivity' is 0.9.</p>
+  }</code></pre> </div><p>In the above example, the value of 'emissivity' is 0.9.</p>
 <p>For a vector of primitive data, use the getPrimitiveData_v function. Note that the 'getPrimitiveData_v' function can always be used regardless of whether the data is scalar or vector valued. If the data is scalar and 'getPrimitiveData_v' is used, the function will simply return a vector structure of length 1.</p>
 <h3><a class="anchor" id="PrimDataHelpers"></a>
 Primitive Data Query Functions</h3>
@@ -1118,11 +1087,11 @@ Primitive Data Query Functions</h3>
 <tr>
 <th>Function</th><th>Description </th></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_primitive.html#aa2241f7d999a12a9b47949116a3ff886">doesPrimitiveDataExist( const char* label )</a></td><td>Check whether primitive data named 'label' exists for the primitive. </td></tr>
+<td>doesPrimitiveDataExist( const char* label )</td><td>Check whether primitive data named 'label' exists for the primitive. </td></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_primitive.html#aa7a7907e183212cd1d1a4cfd631bb310">getPrimitiveDataType( const char* label )</a></td><td>Get the helios::HeliosDataType for the primitive. </td></tr>
+<td>getPrimitiveDataType( const char* label )</td><td>Get the helios::HeliosDataType for the primitive. </td></tr>
 <tr>
-<td><a class="el" href="classhelios_1_1_primitive.html#af5eabf3325bfd0e097b6326ed69cc781">getPrimitiveDataSize( const char* label )</a></td><td>Get the length/size of the primitive data named 'label'. </td></tr>
+<td>getPrimitiveDataSize( const char* label )</td><td>Get the length/size of the primitive data named 'label'. </td></tr>
 </table>
 <p><br  />
 </p>
@@ -1130,73 +1099,72 @@ Primitive Data Query Functions</h3>
  </p>
 <p><br  />
 </p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
+  using namespace helios;
 
- int main( void ){
+  int main( void ){
 
-    Context context;
+     Context context;
 
-    vec3 center(0,0,0);
-    vec2 size(1,1);
+     vec3 center(0,0,0);
+     vec2 size(1,1);
 
-    uint UUID = context.addPatch( center, size );
+     uint UUID = context.addPatch( center, size );
 
-    float eps = 0.9;
-    context.setPrimitiveData(UUID, "emissivity", eps);
+     float eps = 0.9;
+     context.setPrimitiveData(UUID, "emissivity", eps);
 
-    Primitive* prim context.getPrimitive(UUID);
-    if( prim-&gt;doesPrimitiveDataExist("emissivity") ){
-       HeliosDataType type = prim-&gt;getPrimitiveDataType("emissivity");
-       uint L = prim-&gt;getPrimitiveDataSize("emissivity");
-    }
+     if( context.doesPrimitiveDataExist(UUID, "emissivity") ){
+        HeliosDataType type = context.getPrimitiveDataType(UUID, "emissivity");
+        uint L = context.getPrimitiveDataSize(UUID, "emissivity");
+     }
 
- }</code></pre> </div><h2><a class="anchor" id="GlobalData"></a>
+  }</code></pre> </div><h2><a class="anchor" id="GlobalData"></a>
 Global Data</h2>
 <p>Global data is similar to primitive data, except that it does not correspond to any particular primitive, rather it is a single instance of a certain data structure. The functions used to create global data within the Context are essentially the same as those used to create primitive data, except they do not take a primitive UUID as an argument (because they do not correspond to primitives).</p>
 <h2><a class="anchor" id="DataTimeseries"></a>
 Data Timeseries</h2>
-<p>Timeseries - or data points corresponding to discrete points in time - can be managed by the Context. This typically corresponds to data that is measured by a sensor. Timeseries data points are added to the Context by giving the value of the data point, along with <a class="el" href="structhelios_1_1_date.html">Date</a> and <a class="el" href="structhelios_1_1_time.html">Time</a> vectors. An example is given below to manualy add 15-min timeseries data to the Context.</p>
+<p>Timeseries - or data points corresponding to discrete points in time - can be managed by the Context. This typically corresponds to data that is measured by a sensor. Timeseries data points are added to the Context by giving the value of the data point, along with <a class="el" href="structhelios_1_1_date.html">Date</a> and <a class="el" href="structhelios_1_1_time.html">Time</a> vectors. An example is given below to manually add 15-min timeseries data to the Context.</p>
 <p>Data in the timeseries can be accessed either via the queryTimeseriesData() function by giving the index of the data point, or by giving a date and time. To loop through all data in the timeseries, we can query the length of the timeseries and make a for-loop.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
- using namespace helios;
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
+  using namespace helios;
 
- int main( void ){
+  int main( void ){
 
-       <code></code>// Initialize the Context
-       Context context;
+        <code></code>// Initialize the Context
+        Context context;
 
-       <code></code>// Add data to timeseries
-       Date date;
-       Time time;
+        <code></code>// Add data to timeseries
+        Date date;
+        Time time;
 
-       date = make_Date( 2, 1, 2000 ); <code></code>// 2 Jan. 2000
+        date = make_Date( 2, 1, 2000 ); <code></code>// 2 Jan. 2000
 
-       time = make_Time( 13, 00, 00 ); <code></code>// 13:00:00
-       context.addTimeseriesData( "temperature", 301.23, date, time ); <code></code>// index #0
+        time = make_Time( 13, 00, 00 ); <code></code>// 13:00:00
+        context.addTimeseriesData( "temperature", 301.23, date, time ); <code></code>// index #0
 
-       time = make_Time( 13, 15, 00 ); <code></code>// 13:15:00
-       context.addTimeseriesData( "temperature", 301.92, date, time ); <code></code>// index #1
+        time = make_Time( 13, 15, 00 ); <code></code>// 13:15:00
+        context.addTimeseriesData( "temperature", 301.92, date, time ); <code></code>// index #1
 
-       time = make_Time( 13, 30, 00 ); <code></code>// 13:30:00
-       context.addTimeseriesData( "temperature", 302.56, date, time ); <code></code>// index #2
+        time = make_Time( 13, 30, 00 ); <code></code>// 13:30:00
+        context.addTimeseriesData( "temperature", 302.56, date, time ); <code></code>// index #2
 
-       time = make_Time( 13, 45, 00 ); <code></code>// 13:45:00
-       context.addTimeseriesData( "temperature", 303.05, date, time ); <code></code>// index #3
+        time = make_Time( 13, 45, 00 ); <code></code>// 13:45:00
+        context.addTimeseriesData( "temperature", 303.05, date, time ); <code></code>// index #3
 
-       float T;
-       T = context.queryTimeseriesData( "temperature", 1 ); <code></code>// Here, T = 301.92
+        float T;
+        T = context.queryTimeseriesData( "temperature", 1 ); <code></code>// Here, T = 301.92
 
-       time = make_Time( 13, 15, 00 );
-       T = context.queryTimeseriesData( "temperature", date, time ); <code></code>// Also here, T = 301.92
+        time = make_Time( 13, 15, 00 );
+        T = context.queryTimeseriesData( "temperature", date, time ); <code></code>// Also here, T = 301.92
 
-       for( uint i=0; i&lt;context.getTimeseriesLength("temperature"); i++ ){
-        T = context.queryTimeseriesData( "temperature", i );
-            time = context.getTimeseriesTime( "temperature", i );
-        printf("Temperature at time %02d:%02d:%02d is %f\n", time.hour, time.minute, time.second );                          
-    }
+        for( uint i=0; i&lt;context.getTimeseriesLength("temperature"); i++ ){
+         T = context.queryTimeseriesData( "temperature", i );
+             time = context.getTimeseriesTime( "temperature", i );
+         printf("Temperature at time %02d:%02d:%02d is %f\n", time.hour, time.minute, time.second );                             
+     }
 
- }</code></pre> </div><p>Typically, data is not entered manually, but rather through an XML file (see Reading XML Files for information).</p>
+  }</code></pre> </div><p>Typically, data is not entered manually, but rather through an XML file (see Reading XML Files for information).</p>
 <p>It is often necessary to get the number of data points in a given timeseries, which can be accomplished with the command:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> uint N = context.getTimeseriesLength( "temperature" );</code></pre> </div> </div></div><!-- contents -->
 </div><!-- PageDoc -->

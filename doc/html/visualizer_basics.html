@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.26</span>
+   &#160;<span id="projectnumber">v1.2.27</span>
    </div>
   </td>
  </tr>
@@ -121,7 +121,7 @@ Step 3. Modify Visualizer options</h1>
 <p>Additional options for the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> are set by calling the appropriate member functions in the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> class. Various options may be changing the lighting model, changing the default camera view configuration, changing data used to color primitives, etc. Consult the <a class="el" href="_visualizer_doc.html">Visualizer Plugin Documentation</a> for more details on available options. In this tutorial, we'll just use the default options (by not setting any options explicitly).</p>
 <h1><a class="anchor" id="vis_step4"></a>
 Step 4. Plot the result</h1>
-<p>Finally, we'll want to actually plot the result to the graphics window. There are two primary functions to do so. One is <a class="el" href="class_visualizer.html#a440ac7246f28448fdb248f537dd8cff5">Visualizer::plotInteractive()</a>, which generates an interactive plot in which the user can interactively modify the camera configuation via keystrokes. In this case, the graphics window will stay open until the user closes it, and the program will pause until the window is closed.</p>
+<p>Finally, we'll want to actually plot the result to the graphics window. There are two primary functions to do so. One is <a class="el" href="class_visualizer.html#ad927cedbc49aa632c0f24e5d444990ba">Visualizer::plotInteractive()</a>, which generates an interactive plot in which the user can interactively modify the camera configuation via keystrokes. In this case, the graphics window will stay open until the user closes it, and the program will pause until the window is closed.</p>
 <p>Another method is to simply update the graphics window and move on with the program using the function <a class="el" href="class_visualizer.html#ae056b735b1b9c154b981f07ba93d0a3a">Visualizer::plotUpdate()</a>. This is typically used when the graphics window is to be printed to file using the <a class="el" href="class_visualizer.html#ab42f12bed91baa9f2d8532cbe804be5b" title="Print the current graphics window to a JPEG image file. File will be given a default filename and sav...">Visualizer::printWindow()</a> function.</p>
 <p>In the example below, we'll first update the window, move on in the program where we'll print the graphics window to an image file, then we'll open an interactive plot window. Note that all file paths in Helios should either be absolute paths, or relative to the build directory where the executable file is being run. So in the example below, the image file will be located in the build directory.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"

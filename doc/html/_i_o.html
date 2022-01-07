@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.26</span>
+   &#160;<span id="projectnumber">v1.2.27</span>
    </div>
   </td>
  </tr>
@@ -67,7 +67,7 @@ $(function() {
 <div class="title">File Input/Output </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> A very important note with regard to File Input/Output is that all file paths need to be given with repsect to the current build directory or as absolute paths. </div><h1><a class="anchor" id="XMLstructure"></a>
+<div class="textblock"><div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> A very important note with regard to File Input/Output is that all file paths need to be given with respect to the current build directory or as absolute paths. </div><h1><a class="anchor" id="XMLstructure"></a>
 XML File Structure</h1>
 <p>File input and output is handled using .xml files. See the Wikipedia page for xml for more information on xml files: <a href="https://en.wikipedia.org/wiki/XML">en.wikipedia.org/wiki/XML</a>.</p>
 <p>Within Helios, xml files can be used to execute any Context commands that would be issued within a program, for example, adding geometry, adding timeseries, or adding primitive data.</p>
@@ -94,21 +94,21 @@ Adding Primitives</h2>
      &lt;vertex&gt;0 0 0&lt;/vertex&gt;
      &lt;vertex&gt;1 0 0&lt;/vertex&gt;
      &lt;vertex&gt;1 1 0&lt;/vertex&gt;
-     &lt;color&gt;1 0 0&lt;/color&gt; &lt;!-- OPTIONAL --&gt;
+     &lt;color&gt;1 0 0&lt;/color&gt;
   &lt;/triangle&gt;</code></pre> </div>  </td></tr>
 <tr>
 <td>Disk</td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> &lt;disk&gt;
      &lt;center&gt;0 0 0&lt;/center&gt;
      &lt;size&gt;1 1&lt;/size&gt;
-     &lt;rotation&gt;0 0&lt;/rotation&gt; &lt;!-- OPTIONAL --&gt;
-     &lt;color&gt;1 0 0&lt;/color&gt; &lt;!-- OPTIONAL --&gt;
-     &lt;texture&gt;"grass.jpg"&lt;/texture&gt; &lt;!-- OPTIONAL --&gt;
+     &lt;rotation&gt;0 0&lt;/rotation&gt;
+     &lt;color&gt;1 0 0&lt;/color&gt;
+     &lt;texture&gt;"grass.jpg"&lt;/texture&gt;
   &lt;/disk&gt;</code></pre> </div>  </td></tr>
 <tr>
 <td>Voxel</td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> &lt;voxel&gt;
      &lt;center&gt;0 0 0&lt;/center&gt;
      &lt;size&gt;1 1 1&lt;/size&gt;
-     &lt;color&gt;1 0 0&lt;/color&gt; &lt;!-- OPTIONAL --&gt;
+     &lt;color&gt;1 0 0&lt;/color&gt;
   &lt;/voxel&gt;</code></pre> </div>  </td></tr>
 </table>
 <h2><a class="anchor" id="TimeXML"></a>
@@ -191,7 +191,7 @@ Reading OBJ (Wavefront) Files</h2>
 <p>All aspects of material files are not supported. Helios simply searches for the "Kd" texture map, and uses that to color the primitives.</p>
 <h2><a class="anchor" id="PLYwrite"></a>
 Writing PLY (Stanford Polygon) Files</h2>
-<p>The Context has analagous files for writing PLY files based on the geometry currently loaded in the Context. This is accomplished via the writePLY() command, as illustrated below.</p>
+<p>The Context has analogous files for writing PLY files based on the geometry currently loaded in the Context. This is accomplished via the writePLY() command, as illustrated below.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
  using namespace helios;
 
@@ -246,7 +246,27 @@ Exporting Project to XML File Format</h1>
      <code>//</code> The context will now contain a default patch, with primitive data "somedata" equal to 10.2
      context.loadXML( "file.xml" );
 
- }</code></pre> </div> </div></div><!-- contents -->
+ }</code></pre> </div><h1><a class="anchor" id="ExportASCII"></a>
+Exporting Primitive Data to Text File</h1>
+<p>It is often useful to be able to write primitive data to an ASCII text file for analysis in 3rd party software. This can be accomplished using the <a class="el" href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844">helios::Context::writePrimitiveData()</a> function. Each row of the resulting file will correspond to each primitive, and each column corresponds to different primitive data values. The user must specify which primitive data fields to write to each column in the file. If requested primitive data does not exist for one or more primitives, a default value of 0 will be written and a warning will be issued.</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
+   using namespace helios;
+
+   int main( void ){
+
+       Context context;
+
+       uint UUID = context.addPatch();
+
+       context.setPrimitiveData( UUID, "somedata", 10.2f );
+       context.setPrimitiveData( UUID, "otherdata", 5 );
+
+       std::string columns{"somedata","otherdata"};
+
+       context.writePrimitiveData( "file.txt", columns );
+
+   }</code></pre> </div><p>By default, column header labels will not be written, but if the optional third argument is set as "true" the label of the primitive data for each column will be written to the first line of the file. </p>
+</div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

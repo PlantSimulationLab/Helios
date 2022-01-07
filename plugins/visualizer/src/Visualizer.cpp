@@ -23,7 +23,7 @@
 #include FT_FREETYPE_H
 
 //JPEG Libraries (reading and writing JPEG images)
-#include <stdio.h> //<-- note libjpeg requires this header be included before its headers.
+#include <cstdio> //<-- note libjpeg requires this header be included before its headers.
 #include <jpeglib.h>
 //#include <setjmp.h>
 
@@ -68,7 +68,7 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
     JSAMPARRAY buffer;		/*output row buffer */
     int row_stride;
 
-    if ((infile = fopen(filename, "rb")) == NULL) {
+    if ((infile = fopen(filename, "rb")) == nullptr ) {
         fprintf(stderr, "can't open %s\n", filename);
         return 0;
     }
@@ -2809,7 +2809,7 @@ void Visualizer::buildContextGeometry_private(){
 
         uint UUID = contextPrimitiveIDs.at(p);
 
-        std::string texture_file = context->getPrimitivePointer(UUID)->getTextureFile();
+        std::string texture_file = context->getPrimitiveTextureFile(UUID);
 
         UUID_texture[texture_file].push_back( UUID );
 
@@ -2859,7 +2859,7 @@ void Visualizer::buildContextGeometry_private(){
                     }
                 }else if( colorPrimitivesByObjectData.size()!=0 ){
                     if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
-                        uint ObjID = context->getPrimitivePointer(UUID)->getParentObjectID();
+                        uint ObjID = context->getPrimitiveParentObjectID(UUID);
                         if( ObjID==0 ){
                             colorValue = 0;
                         }else if( context->doesObjectDataExist( ObjID, colorPrimitivesByObjectData.c_str() ) ){
@@ -2925,12 +2925,10 @@ void Visualizer::buildContextGeometry_private(){
                 continue;
             }
 
-            helios::Primitive* prim = context->getPrimitivePointer(UUID);
+            helios::PrimitiveType ptype = context->getPrimitiveType(UUID);
 
-            helios::PrimitiveType ptype = prim->getType();
-
-            std::vector<vec3> verts = prim->getVertices();
-            std::string texture_file = prim->getTextureFile();
+            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
+            std::string texture_file = context->getPrimitiveTextureFile(UUID);
 
             RGBAcolor color;
             float colorValue;
@@ -2961,11 +2959,11 @@ void Visualizer::buildContextGeometry_private(){
                     }
                     color = make_RGBAcolor(colormap_current.query( colorValue ),1);
                 }else{
-                    color = prim->getColorRGBA();
+                    color = context->getPrimitiveColorRGBA(UUID);
                 }
             }else if( colorPrimitivesByObjectData.size()!=0 ){
                 if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
-                    uint ObjID = context->getPrimitivePointer(UUID)->getParentObjectID();
+                    uint ObjID = context->getPrimitiveParentObjectID(UUID);
                     if( ObjID==0 ){
                         colorValue = 0;
                     }else if( context->doesObjectDataExist( ObjID, colorPrimitivesByObjectData.c_str() ) ){
@@ -2992,10 +2990,10 @@ void Visualizer::buildContextGeometry_private(){
                     }
                     color = make_RGBAcolor(colormap_current.query( colorValue ),1);
                 }else{
-                    color = prim->getColorRGBA();
+                    color = context->getPrimitiveColorRGBA(UUID);
                 }
             }else{
-                color = prim->getColorRGBA();
+                color = context->getPrimitiveColorRGBA(UUID);
             }
 
             if( ptype == helios::PRIMITIVE_TYPE_PATCH  ){
@@ -3003,18 +3001,18 @@ void Visualizer::buildContextGeometry_private(){
                 if( texture_file.size()==0 ){//Patch does not have an associated texture or we are ignoring texture
                     addRectangleByVertices( verts, color, COORDINATES_CARTESIAN );
                 }else{ //Patch has a texture
-                    helios::Patch* patch = static_cast<helios::Patch*>(prim);
-                    std::vector<vec2> uvs = patch->getTextureUV();
+
+                    std::vector<vec2> uvs = context->getPrimitiveTextureUV(UUID);
 
                     if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0 ){//coloring primitive based on texture
                         if( uvs.size()==4 ){//custom (u,v) coordinates
-                            if( prim->isTextureColorOverridden() ){
+                            if( context->isPrimitiveTextureColorOverridden(UUID) ){
                                 addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
                             }else{
                                 addRectangleByVertices( verts, texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
                             }
                         }else{//default (u,v) coordinates
-                            if( prim->isTextureColorOverridden() ){
+                            if( context->isPrimitiveTextureColorOverridden(UUID) ){
                                 addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
                             }else{
                                 addRectangleByVertices( verts, texture_file.c_str(), COORDINATES_CARTESIAN );
@@ -3035,11 +3033,10 @@ void Visualizer::buildContextGeometry_private(){
                     addTriangle( verts.at(0), verts.at(1), verts.at(2), color, COORDINATES_CARTESIAN );
                 }else{ //Triangle has a texture
 
-                    helios::Triangle* triangle = static_cast<helios::Triangle*>(prim);
-                    std::vector<vec2> uvs = triangle->getTextureUV();
+                    std::vector<vec2> uvs = context->getPrimitiveTextureUV(UUID);
 
                     if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){//coloring primitive based on texture
-                        if( prim->isTextureColorOverridden() ){
+                        if( context->isPrimitiveTextureColorOverridden(UUID) ){
                             addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), make_RGBAcolor(color.r,color.g,color.b,1), COORDINATES_CARTESIAN );
                         }else{
                             addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), COORDINATES_CARTESIAN );
@@ -3052,9 +3049,7 @@ void Visualizer::buildContextGeometry_private(){
 
             }else if( ptype == helios::PRIMITIVE_TYPE_VOXEL ){
 
-                helios::Voxel* voxel = static_cast<helios::Voxel*>(prim);
-
-                std::vector<vec3> v_vertices = voxel->getVertices();
+                std::vector<vec3> v_vertices = context->getPrimitiveVertices(UUID);
 
                 std::vector<vec3> bottom_vertices, top_vertices, mx_vertices, px_vertices, my_vertices, py_vertices;
                 bottom_vertices.resize(4);
@@ -3112,7 +3107,7 @@ void Visualizer::buildContextGeometry_private(){
                 }else{ //Voxel has a texture
 
                     if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){//coloring primitive based on texture
-                        if( prim->isTextureColorOverridden() ){
+                        if( context->isPrimitiveTextureColorOverridden(UUID) ){
                             addRectangleByVertices( bottom_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
                             addRectangleByVertices( top_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
                             addRectangleByVertices( mx_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
@@ -3194,7 +3189,7 @@ void Visualizer::colorContextPrimitivesByObjectData( const char* data_name, cons
     }
 }
 
-void Visualizer::plotInteractive(){
+std::vector<helios::vec3> Visualizer::plotInteractive(){
 
     if( message_flag ){
         std::cout << "Generating interactive plot..." << std::endl;
@@ -3278,6 +3273,8 @@ void Visualizer::plotInteractive(){
 
     assert( checkerrors() );
 
+    std::vector<vec3> camera_output;
+
     do{
 
         // Render to the screen
@@ -3338,9 +3335,14 @@ void Visualizer::plotInteractive(){
 
     assert( checkerrors() );
 
+    camera_output.push_back(eye);
+    camera_output.push_back(center);
+
+    return camera_output;
+
 }
 
-void Visualizer::setupPlot( void ){
+void Visualizer::setupPlot(){
 
     glEnableVertexAttribArray(0); //position
     glEnableVertexAttribArray(1); //color
@@ -3352,11 +3354,7 @@ void Visualizer::setupPlot( void ){
     std::vector<float> position_data, color_data, normal_data, uv_data;
     std::vector<int> coordinate_data, texture_data, textureID_data;
 
-    std::vector<std::string> keys;
-    keys.push_back( "triangle" );
-    keys.push_back( "line" );
-    keys.push_back( "point" );
-    keys.push_back( "sky" );
+    std::vector<std::string> keys{"triangle", "line", "point", "sky" };
 
     for( int i=0; i<keys.size(); i++ ){
         position_data.insert( position_data.end(), positionData[keys.at(i)].begin(), positionData[keys.at(i)].end() );
@@ -4275,7 +4273,7 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
     }
 
     if (glfwGetKey( _window, GLFW_KEY_P  ) == GLFW_PRESS){
-        std::cout << "View is: (R,theta,phi)=(" << radius << "," << theta << "," << phi << ") at height " << center.z << std::endl;
+        std::cout << "View is angle: (R,theta,phi)=(" << radius << "," << theta << "," << phi << ") at from position (" << eye.x << "," << eye.y << "," << eye.z << ") looking at (" << center.x << "," << center.y << "," << center.z << ")" << std::endl;
     }
 
 

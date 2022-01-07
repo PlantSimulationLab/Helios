@@ -48,17 +48,17 @@ namespace helios {
         HELIOS_TYPE_FLOAT = 2,
         //! double data type
         HELIOS_TYPE_DOUBLE = 3,
-        //! \ref helios::vec2 data type
+        //! helios::vec2 data type
         HELIOS_TYPE_VEC2 = 4,
-        //! \ref helios::vec3 data type
+        //! helios::vec3 data type
         HELIOS_TYPE_VEC3 = 5,
-        //! \ref helios::vec4 data type
+        //! helios::vec4 data type
         HELIOS_TYPE_VEC4 = 6,
-        //! \ref helios::int2 data type
+        //! helios::int2 data type
         HELIOS_TYPE_INT2 = 7,
-        //! \ref helios::int3 data type
+        //! helios::int3 data type
         HELIOS_TYPE_INT3 = 8,
-        //! \ref helios::int4 data type
+        //! helios::int4 data type
         HELIOS_TYPE_INT4 = 9,
         //! string data type
         HELIOS_TYPE_STRING = 10,
@@ -84,7 +84,7 @@ namespace helios {
         bool hasTransparencyChannel() const;
 
         //! Get the data in the texture transparency channel (if it exists)
-        std::vector<std::vector<bool> >* getTransparencyData();
+        const std::vector<std::vector<bool> >* getTransparencyData() const;
 
         //! Get the solid fraction of the texture transparency channel (if it exists)
         float getSolidFraction() const;
@@ -117,592 +117,8 @@ namespace helios {
 
     };
 
-    //! Primitive class
-    /** All primitive objects inherit this class, and it provides functionality universal to all primitives.  There may be additional functionality associated with specific primitive elements.
-        \ingroup primitives
-    */
-    class Primitive{
-    public:
-
-        //! Virtual destructor
-        virtual ~Primitive()= default;
-
-        //! Function to get the Primitive universal unique identifier (UUID)
-        /** \return UUID of primitive */
-        uint getUUID() const;
-
-        //! Function to get the Primitive type
-        /** \sa \ref PrimitiveType */
-        PrimitiveType getType() const;
-
-        //! Function to set the ID of the parent object the primitive belongs to (default is object 0)
-        /** \param[in] "objID" Identifier of primitive's parent object.
-        */
-        void setParentObjectID( uint objID );
-
-        //! Function to return the ID of the parent object the primitive belongs to (default is object 0)
-        uint getParentObjectID()const;
-
-        //! Function to return the surface area of a Primitive
-        virtual float getArea() const = 0;
-
-        //! Function to return the normal vector of a Primitive
-        virtual helios::vec3 getNormal() const = 0;
-
-        //! Function to return the Affine transformation matrix of a Primitive
-        /** \param[out] "T" 1D vector corresponding to Primitive transformation matrix */
-        void getTransformationMatrix( float (&T)[16] ) const;
-
-        //! Function to set the Affine transformation matrix of a Primitive
-        /** \param[in] "T" 1D vector corresponding to Primitive transformation matrix */
-        void setTransformationMatrix( float (&T)[16] );
-
-        //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
-        virtual std::vector<helios::vec3> getVertices( ) const = 0;
-
-        //! Function to return the diffuse color of a Primitive
-        helios::RGBcolor getColor() const;
-
-        //! Function to return the diffuse color of a Primitive
-        helios::RGBcolor getColorRGB() const;
-
-        //! Function to return the diffuse color of a Primitive with transparency
-        helios::RGBAcolor getColorRGBA() const;
-
-        //! Function to set the diffuse color of a Primitive
-        /** /param[in] "color" New color of primitive
-         */
-        void setColor( const helios::RGBcolor& color );
-
-        //! Function to set the diffuse color of a Primitive with transparency
-        /** /param[in] "color" New color of primitive
-         */
-        void setColor( const helios::RGBAcolor& color );
-
-        //! Function to check whether this primitive has texture data
-        bool hasTexture( ) const;
-
-        //! Function to return the texture map file of a Primitive
-        std::string getTextureFile( ) const;
-
-        //! Get u-v texture coordinates at primitive vertices
-        /**
-        \return 2D vector of u-v texture coordinates
-        */
-        std::vector<vec2> getTextureUV( );
-
-        //! Override the color in the texture map, in which case the primitive will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
-        void overrideTextureColor( );
-
-        //! Use the texture map to color the primitive rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
-        void useTextureColor( );
-
-        //! Check if color of texture map is overridden by the diffuse R-G-B color of the primitive
-        bool isTextureColorOverridden( ) const;
-
-        //! Function to translate/shift a Primitive
-        /** \param[in] "shift" Distance to translate in (x,y,z) directions.
-        */
-        void translate( const helios::vec3& shift );
-
-        //! Function to rotate a Primitive about the x-, y-, or z-axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
-        */
-        virtual void rotate( float rot, const char* axis ) = 0;
-
-        //! Function to rotate a Primitive about an arbitrary axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Vector describing axis about which to rotate.
-        */
-        virtual void rotate( float rot, const helios::vec3& axis ) = 0;
-
-        //! Function to scale the dimensions of a Primitive
-        /** \param[in] "S" Scaling factor
-        */
-        void scale( const helios::vec3& S );
-
-        //-------- Primitive Data Functions ---------- //
-
-        //! Add data value (int) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const int& data );
-
-        //! Add data value (uint) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const uint& data );
-
-        //! Add data value (float) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const float& data );
-
-        //! Add data value (double) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const double& data );
-
-        //! Add data value (vec2) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const helios::vec2& data );
-
-        //! Add data value (vec3) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const helios::vec3& data );
-
-        //! Add data value (vec4) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const helios::vec4& data );
-
-        //! Add data value (int2) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const helios::int2& data );
-
-        //! Add data value (int3) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const helios::int3& data );
-
-        //! Add data value (int4) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const helios::int4& data );
-
-        //! Add data value (string) associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Primitive data value (scalar)
-        */
-        void setPrimitiveData( const char* label, const std::string& data );
-        //! Add (array) data associated with a primitive element
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "type" Helios data type of primitive data (see \ref HeliosDataType)
-        \param[in] "size" Number of data elements
-        \param[in] "data" Pointer to primitive data
-        \note While this function still works for scalar data, it is typically prefereable to use the scalar versions of this function.
-        */
-        void setPrimitiveData( const char* label, HeliosDataType type, uint size, void* data );
-        //! Get data associated with a primitive element (integer scalar)
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, int& data ) const;
-        //! Get data associated with a primitive element (vector of integers)
-        /**
-        \param[in] "label" Name/label associated with data
-        \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<int>& data ) const;
-        //! Get data associated with a primitive element (unsigned integer scalar)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, uint& data ) const;
-        //! Get data associated with a primitive element (vector of unsigned integers)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<uint>& data ) const;
-        //! Get data associated with a primitive element (float scalar)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, float& data ) const;
-        //! Get data associated with a primitive element (vector of floats)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<float>& data ) const;
-        //! Get data associated with a primitive element (double scalar)
-        /**
-          *  \param[in] "label" Name/label associated with data
-          *  \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, double& data ) const;
-        //! Get data associated with a primitive element (vector of doubles)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<double>& data ) const;
-        //! Get data associated with a primitive element (vec2 scalar)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, vec2& data ) const;
-        //! Get data associated with a primitive element (vector of vec2's)
-        /**
-           * \param[in] "label" Name/label associated with data
-           * \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<vec2>& data ) const;
-        //! Get data associated with a primitive element (vec3 scalar)
-        /**
-          *  \param[in] "label" Name/label associated with data
-          *  \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, vec3& data ) const;
-        //! Get data associated with a primitive element (vector of vec3's)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<vec3>& data ) const;
-        //! Get data associated with a primitive element (vec4 scalar)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, vec4& data ) const;
-        //! Get data associated with a primitive element (vector of vec4's)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<vec4>& data ) const;
-        //! Get data associated with a primitive element (int2 scalar)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, int2& data ) const;
-        //! Get data associated with a primitive element (vector of int2's)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<int2>& data ) const;
-        //! Get data associated with a primitive element (int3 scalar)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, int3& data ) const;
-        //! Get data associated with a primitive element (vector of int3's)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<int3>& data ) const;
-        //! Get data associated with a primitive element (int4 scalar)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, int4& data ) const;
-        //! Get data associated with a primitive element (vector of int4's)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<int4>& data ) const;
-        //! Get data associated with a primitive element (string scalar)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::string& data ) const;
-        //! Get data associated with a primitive element (vector of strings)
-        /**
-            \param[in] "label" Name/label associated with data
-            \param[out] "data" Primitive data structure
-        */
-        void getPrimitiveData( const char* label, std::vector<std::string>& data ) const;
-
-        //! Get the Helios data type of primitive data
-        /**
-        \param[in] "label" Name/label associated with data
-        \return Helios data type of primitive data
-        \sa HeliosDataType
-        */
-        HeliosDataType getPrimitiveDataType( const char* label ) const;
-
-        //! Get the size/length of primitive data
-        /**
-        \param[in] "label" Name/label associated with data
-        \return Size/length of primitive data array
-        */
-        uint getPrimitiveDataSize( const char* label ) const;
-
-        //! Check if primitive data 'label' exists
-        /**
-        \param[in] "label" Name/label associated with data
-          \return True/false
-        */
-        bool doesPrimitiveDataExist( const char* label ) const;
-
-        //! Clear the primitive data for this primitive
-        /**
-        \param[in] "label" Name/label associated with data
-        */
-        void clearPrimitiveData( const char* label );
-
-        //! Return labels for all primitive data for this particular primitive
-        std::vector<std::string> listPrimitiveData() const;
-
-    protected:
-
-        //! Unique universal identifier
-        uint UUID;
-
-        //! Type of primitive element (e.g., patch, triangle, etc.)
-        PrimitiveType prim_type;
-
-        //! Identifier of parent object (default is object 0)
-        uint parent_object_ID;
-
-        //! Diffuse RGB color
-        helios::RGBAcolor color;
-
-        //! Texture data (pointer)
-//        Texture* texture;
-        std::string texturefile;
-        //! Affine transformation matrix
-        float transform[16];
-
-        //! (u,v) texture coordinates
-        std::vector<vec2> uv;
-
-        std::map<std::string,HeliosDataType > primitive_data_types;
-        std::map<std::string, std::vector<int> > primitive_data_int;
-        std::map<std::string, std::vector<uint> > primitive_data_uint;
-        std::map<std::string, std::vector<float> > primitive_data_float;
-        std::map<std::string, std::vector<double> > primitive_data_double;
-        std::map<std::string, std::vector<vec2> > primitive_data_vec2;
-        std::map<std::string, std::vector<vec3> > primitive_data_vec3;
-        std::map<std::string, std::vector<vec4> > primitive_data_vec4;
-        std::map<std::string, std::vector<int2> > primitive_data_int2;
-        std::map<std::string, std::vector<int3> > primitive_data_int3;
-        std::map<std::string, std::vector<int4> > primitive_data_int4;
-        std::map<std::string, std::vector<std::string> > primitive_data_string;
-        std::map<std::string, std::vector<bool> > primitive_data_bool;
-
-        bool texturecoloroverridden;
-
-    };
-
     //--------------------- GEOMETRIC PRIMITIVES -----------------------------------//
 
-    //! Rectangular geometric object
-    /** Position is given with respect to its center. Patches can only be added through the Context member function \ref Context::addPatch().
-
-        \image html doc/images/Patch.png "Sample image of a Patch." width=3cm
-        \ingroup primitives
-    */
-    class Patch : public Primitive{
-    public:
-
-        //! Patch constructor - colored by RGBcolor
-        Patch( const helios::RGBAcolor& color, uint UUID );
-
-        //! Patch constructor - colored by texture map
-        Patch( const char* texturefile, float solid_fraction, uint UUID );
-
-        //! Patch constructor - colored by texture map with custom (u,v) coordinates
-        Patch( const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint UUID );
-
-        //! Patch destructor
-        ~Patch() override= default;
-
-        //! Get the primitive surface area
-        /** \return Surface area of the Patch. */
-        float getArea() const override;
-
-        //! Get a unit vector normal to the primitive surface
-        /** \return Unit vector normal to the surface of the Patch. */
-        helios::vec3 getNormal() const override;
-
-        //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
-        /** \return Vector containing four sets of the (x,y,z) coordinates of each vertex.*/
-        std::vector<helios::vec3> getVertices() const override;
-
-        //! Get the size of the Patch in x- and y-directions
-        /** \return vec2 describing the length and width of the Patch.*/
-        helios::vec2 getSize() const;
-
-        //! Get the (x,y,z) coordinates of the Patch center point
-        /** \return vec3 describing (x,y,z) coordinate of Patch center.*/
-        helios::vec3 getCenter() const;
-
-        //! Function to rotate a Primitive about the x-, y-, or z-axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
-        */
-        void rotate( float rot, const char* axis ) override;
-
-        //! Function to rotate a Primitive about an arbitrary axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Vector describing axis about which to rotate.
-        */
-        void rotate( float rot, const helios::vec3& axis ) override;
-
-        //! Get the primitive solid fraction
-        /**
-         *
-         * \return solid fraction of the Patch.
-         */
-        float getSolidFraction() const;
-
-    protected:
-
-        //fraction of surface area that is solid material (i.e., non-transparent)
-        float solid_fraction;
-
-    };
-
-    //! Triangular geometric primitive object
-    /**
-     * A Triangle is specified by the positions of its three vertices. Triangles can only be added through the Context member function \ref Context::addTriangle().
-     * \image html doc/images/Triangle.png "Sample image of a Triangle." width=3cm
-     * \ingroup primitives
-    */
-    class Triangle : public Primitive{
-    public:
-
-        //! Triangle constructor
-        Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const helios::RGBAcolor& color, uint UUID );
-
-        //! Triangle constructor
-        Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint UUID );
-
-        //! Triangle destructor
-        ~Triangle() override= default;
-
-        //! Get the primitive surface area
-        /** \return Surface area of the Triangle. */
-        float getArea() const override;
-
-        //! Get the primitive solid fraction
-        /** \return solid fraction of the Triangle. */
-        float getSolidFraction() const;
-
-        //! Get a unit vector normal to the primitive surface
-        /** \return Unit vector normal to the surface of the Triangle. */
-        helios::vec3 getNormal() const override;
-
-        //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
-        /** \return Vector containing three sets of the (x,y,z) coordinates of each vertex.*/
-        std::vector<helios::vec3> getVertices() const override;
-
-        //! Function to return the (x,y,z) coordinates of a given Triangle vertex
-        /**
-           \param[in] "number" Triangle vertex (0, 1, or 2)
-           \return (x,y,z) coordinates of triangle vertex
-        */
-        helios::vec3 getVertex( int number );
-
-        //! Function to rotate a Primitive about the x-, y-, or z-axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
-        */
-        void rotate( float rot, const char* axis ) override;
-
-        //! Function to rotate a Primitive about an arbitrary axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Vector describing axis about which to rotate.
-        */
-        void rotate( float rot, const helios::vec3& axis ) override;
-
-    private:
-
-        //!(x,y,z) coordinates of triangle vertex #0
-        helios::vec3 vertex0;
-
-        //!(x,y,z) coordinates of triangle vertex #1
-        helios::vec3 vertex1;
-
-        //!(x,y,z) coordinates of triangle vertex #2
-        helios::vec3 vertex2;
-
-        //fraction of surface area that is solid material (i.e., non-transparent)
-        float solid_fraction;
-
-        void makeTransformationMatrix( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2 );
-
-    };
-
-    //! Parallelpiped geometric object filled with a participating medium
-    /** Position is given with respect to its center. Voxels can only be added through the Context member function \ref Context::addVoxel().
-        \ingroup primitives
-    */
-    class Voxel : public Primitive{
-    public:
-
-        //! Voxel constructors
-        Voxel( const helios::RGBAcolor& color, uint UUID );
-
-        //! Voxel destructor
-        ~Voxel() override= default;
-
-        //! Get the primitive surface area
-        /** \return Surface area of the Voxel. */
-        float getArea() const override;
-
-        //! This function is not used for a Voxel
-        helios::vec3 getNormal() const override;
-
-        //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
-        /** \return Vector containing eight sets of the (x,y,z) coordinates of each vertex.*/
-        std::vector<helios::vec3> getVertices() const override;
-
-        //! Function to return the Volume of a Voxel
-        /** \return Volume of the Voxel. */
-        float getVolume();
-
-        //! Get the (x,y,z) coordinates of the Voxel center point
-        /** \return vec3 describing (x,y,z) coordinate of Patch center.*/
-        helios::vec3 getCenter();
-
-        //! Get the size of the Voxel in x-, y-, and z-directions
-        /** \return vec3 describing the length, width and depth of the Voxel.*/
-        helios::vec3 getSize();
-
-        //! Function to rotate a Primitive about the x-, y-, or z-axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
-        */
-        void rotate( float rot, const char* axis ) override;
-
-        //! Function to rotate a Primitive about an arbitrary axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Vector describing axis about which to rotate.
-        */
-        void rotate( float rot, const helios::vec3& axis ) override;
-
-    };
 
     //---------- COMPOUND OBJECTS ----------------//
 
@@ -824,8 +240,8 @@ namespace helios {
 
         //! Add data value (int) associated with a object element
         /**
-        \param[in] "label" Name/label associated with data
-        \param[in] "data" Object data value (scalar)
+         * \param[in] "label" Name/label associated with data
+         * \param[in] "data" Object data value (scalar)
         */
         void setObjectData( const char* label, const int& data );
 
@@ -1384,6 +800,617 @@ namespace helios {
     };
 
 
+    //! Primitive class
+    /**
+     * All primitive objects inherit this class, and it provides functionality universal to all primitives.  There may be additional functionality associated with specific primitive elements.
+     * @private
+    */
+    class Primitive{
+    public:
+
+        //! Virtual destructor
+        virtual ~Primitive()= default;
+
+        //! Function to get the Primitive universal unique identifier (UUID)
+        /**
+         * \return UUID of primitive
+         */
+        uint getUUID() const;
+
+        //! Function to get the Primitive type
+        /**
+         * \sa PrimitiveType
+         */
+        PrimitiveType getType() const;
+
+        //! Function to set the ID of the parent object the primitive belongs to (default is object 0)
+        /**
+         * \param[in] "objID" Identifier of primitive's parent object.
+        */
+        void setParentObjectID( uint objID );
+
+        //! Function to return the ID of the parent object the primitive belongs to (default is object 0)
+        uint getParentObjectID()const;
+
+        //! Function to return the surface area of a Primitive
+        virtual float getArea() const = 0;
+
+        //! Function to return the normal vector of a Primitive
+        virtual helios::vec3 getNormal() const = 0;
+
+        //! Function to return the Affine transformation matrix of a Primitive
+        /**
+         * \param[out] "T" 1D vector corresponding to Primitive transformation matrix
+         */
+        void getTransformationMatrix( float (&T)[16] ) const;
+
+        //! Function to set the Affine transformation matrix of a Primitive
+        /**
+         * \param[in] "T" 1D vector corresponding to Primitive transformation matrix
+         */
+        void setTransformationMatrix( float (&T)[16] );
+
+        //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
+        virtual std::vector<helios::vec3> getVertices( ) const = 0;
+
+        //! Function to return the diffuse color of a Primitive
+        helios::RGBcolor getColor() const;
+
+        //! Function to return the diffuse color of a Primitive
+        helios::RGBcolor getColorRGB() const;
+
+        //! Function to return the diffuse color of a Primitive with transparency
+        helios::RGBAcolor getColorRGBA() const;
+
+        //! Function to set the diffuse color of a Primitive
+        /**
+         * /param[in] "color" New color of primitive
+         */
+        void setColor( const helios::RGBcolor& color );
+
+        //! Function to set the diffuse color of a Primitive with transparency
+        /**
+         * /param[in] "color" New color of primitive
+         */
+        void setColor( const helios::RGBAcolor& color );
+
+        //! Function to check whether this primitive has texture data
+        bool hasTexture( ) const;
+
+        //! Function to return the texture map file of a Primitive
+        std::string getTextureFile( ) const;
+
+        //! Get u-v texture coordinates at primitive vertices
+        /**
+           *\return 2D vector of u-v texture coordinates
+        */
+        std::vector<vec2> getTextureUV( );
+
+        //! Override the color in the texture map, in which case the primitive will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
+        void overrideTextureColor( );
+
+        //! Use the texture map to color the primitive rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
+        void useTextureColor( );
+
+        //! Check if color of texture map is overridden by the diffuse R-G-B color of the primitive
+        bool isTextureColorOverridden( ) const;
+
+        //! Get fraction of primitive surface area that is non-transparent
+        /**
+         * \param[in] "UUID" Universal unique identifier of primitive.
+         * \return Fraction of non-transparent area (=1 if primitive does not have a transparent texture).
+         */
+        float getSolidFraction() const;
+
+        //! Function to translate/shift a Primitive
+        /**
+         * \param[in] "shift" Distance to translate in (x,y,z) directions.
+        */
+        void translate( const helios::vec3& shift );
+
+        //! Function to rotate a Primitive about the x-, y-, or z-axis
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
+        */
+        virtual void rotate( float rot, const char* axis ) = 0;
+
+        //! Function to rotate a Primitive about an arbitrary axis
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "axis" Vector describing axis about which to rotate.
+        */
+        virtual void rotate( float rot, const helios::vec3& axis ) = 0;
+
+        //! Function to scale the dimensions of a Primitive
+        /**
+         * \param[in] "S" Scaling factor
+        */
+        void scale( const helios::vec3& S );
+
+        //-------- Primitive Data Functions ---------- //
+
+        //! Add data value (int) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const int& data );
+
+        //! Add data value (uint) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const uint& data );
+
+        //! Add data value (float) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const float& data );
+
+        //! Add data value (double) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const double& data );
+
+        //! Add data value (vec2) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const helios::vec2& data );
+
+        //! Add data value (vec3) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const helios::vec3& data );
+
+        //! Add data value (vec4) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const helios::vec4& data );
+
+        //! Add data value (int2) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const helios::int2& data );
+
+        //! Add data value (int3) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const helios::int3& data );
+
+        //! Add data value (int4) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const helios::int4& data );
+
+        //! Add data value (string) associated with a primitive element
+        /**
+          * \param[in] "label" Name/label associated with data
+          * \param[in] "data" Primitive data value (scalar)
+        */
+        void setPrimitiveData( const char* label, const std::string& data );
+        //! Add (array) data associated with a primitive element
+        /**
+        \param[in] "label" Name/label associated with data
+        \param[in] "type" Helios data type of primitive data (see \ref HeliosDataType)
+        \param[in] "size" Number of data elements
+        \param[in] "data" Pointer to primitive data
+        \note While this function still works for scalar data, it is typically prefereable to use the scalar versions of this function.
+        */
+        void setPrimitiveData( const char* label, HeliosDataType type, uint size, void* data );
+        //! Get data associated with a primitive element (integer scalar)
+        /**
+        \param[in] "label" Name/label associated with data
+        \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, int& data ) const;
+        //! Get data associated with a primitive element (vector of integers)
+        /**
+        \param[in] "label" Name/label associated with data
+        \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<int>& data ) const;
+        //! Get data associated with a primitive element (unsigned integer scalar)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, uint& data ) const;
+        //! Get data associated with a primitive element (vector of unsigned integers)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<uint>& data ) const;
+        //! Get data associated with a primitive element (float scalar)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, float& data ) const;
+        //! Get data associated with a primitive element (vector of floats)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<float>& data ) const;
+        //! Get data associated with a primitive element (double scalar)
+        /**
+          *  \param[in] "label" Name/label associated with data
+          *  \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, double& data ) const;
+        //! Get data associated with a primitive element (vector of doubles)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<double>& data ) const;
+        //! Get data associated with a primitive element (vec2 scalar)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, vec2& data ) const;
+        //! Get data associated with a primitive element (vector of vec2's)
+        /**
+           * \param[in] "label" Name/label associated with data
+           * \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<vec2>& data ) const;
+        //! Get data associated with a primitive element (vec3 scalar)
+        /**
+          *  \param[in] "label" Name/label associated with data
+          *  \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, vec3& data ) const;
+        //! Get data associated with a primitive element (vector of vec3's)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<vec3>& data ) const;
+        //! Get data associated with a primitive element (vec4 scalar)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, vec4& data ) const;
+        //! Get data associated with a primitive element (vector of vec4's)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<vec4>& data ) const;
+        //! Get data associated with a primitive element (int2 scalar)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, int2& data ) const;
+        //! Get data associated with a primitive element (vector of int2's)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<int2>& data ) const;
+        //! Get data associated with a primitive element (int3 scalar)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, int3& data ) const;
+        //! Get data associated with a primitive element (vector of int3's)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<int3>& data ) const;
+        //! Get data associated with a primitive element (int4 scalar)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, int4& data ) const;
+        //! Get data associated with a primitive element (vector of int4's)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<int4>& data ) const;
+        //! Get data associated with a primitive element (string scalar)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::string& data ) const;
+        //! Get data associated with a primitive element (vector of strings)
+        /**
+            \param[in] "label" Name/label associated with data
+            \param[out] "data" Primitive data structure
+        */
+        void getPrimitiveData( const char* label, std::vector<std::string>& data ) const;
+
+        //! Get the Helios data type of primitive data
+        /**
+        \param[in] "label" Name/label associated with data
+        \return Helios data type of primitive data
+        \sa HeliosDataType
+        */
+        HeliosDataType getPrimitiveDataType( const char* label ) const;
+
+        //! Get the size/length of primitive data
+        /**
+        \param[in] "label" Name/label associated with data
+        \return Size/length of primitive data array
+        */
+        uint getPrimitiveDataSize( const char* label ) const;
+
+        //! Check if primitive data 'label' exists
+        /**
+        \param[in] "label" Name/label associated with data
+          \return True/false
+        */
+        bool doesPrimitiveDataExist( const char* label ) const;
+
+        //! Clear the primitive data for this primitive
+        /**
+        \param[in] "label" Name/label associated with data
+        */
+        void clearPrimitiveData( const char* label );
+
+        //! Return labels for all primitive data for this particular primitive
+        std::vector<std::string> listPrimitiveData() const;
+
+    protected:
+
+        //! Unique universal identifier
+        uint UUID;
+
+        //! Type of primitive element (e.g., patch, triangle, etc.)
+        PrimitiveType prim_type;
+
+        //! Identifier of parent object (default is object 0)
+        uint parent_object_ID;
+
+        //! Diffuse RGB color
+        helios::RGBAcolor color;
+
+        //! Path to texture image
+        std::string texturefile;
+        //! Affine transformation matrix
+        float transform[16];
+
+        //! (u,v) texture coordinates
+        std::vector<vec2> uv;
+
+        //! fraction of surface area that is solid material (i.e., non-transparent)
+        float solid_fraction;
+
+        std::map<std::string,HeliosDataType > primitive_data_types;
+        std::map<std::string, std::vector<int> > primitive_data_int;
+        std::map<std::string, std::vector<uint> > primitive_data_uint;
+        std::map<std::string, std::vector<float> > primitive_data_float;
+        std::map<std::string, std::vector<double> > primitive_data_double;
+        std::map<std::string, std::vector<vec2> > primitive_data_vec2;
+        std::map<std::string, std::vector<vec3> > primitive_data_vec3;
+        std::map<std::string, std::vector<vec4> > primitive_data_vec4;
+        std::map<std::string, std::vector<int2> > primitive_data_int2;
+        std::map<std::string, std::vector<int3> > primitive_data_int3;
+        std::map<std::string, std::vector<int4> > primitive_data_int4;
+        std::map<std::string, std::vector<std::string> > primitive_data_string;
+        std::map<std::string, std::vector<bool> > primitive_data_bool;
+
+        bool texturecoloroverridden;
+
+    };
+
+
+    //! Rectangular geometric object
+    /**
+     * Position is given with respect to its center. Patches can only be added through the Context member function \ref Context::addPatch().
+     * \image html doc/images/Patch.png "Sample image of a Patch." width=3cm
+     * @private
+    */
+    class Patch : public Primitive{
+    public:
+
+        //! Patch constructor - colored by RGBcolor
+        Patch( const helios::RGBAcolor& color, uint UUID );
+
+        //! Patch constructor - colored by texture map
+        Patch( const char* texturefile, float solid_fraction, uint UUID );
+
+        //! Patch constructor - colored by texture map with custom (u,v) coordinates
+        Patch( const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint UUID );
+
+        //! Patch destructor
+        ~Patch() override= default;
+
+        //! Get the primitive surface area
+        /** \return Surface area of the Patch. */
+        float getArea() const override;
+
+        //! Get a unit vector normal to the primitive surface
+        /** \return Unit vector normal to the surface of the Patch. */
+        helios::vec3 getNormal() const override;
+
+        //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
+        /** \return Vector containing four sets of the (x,y,z) coordinates of each vertex.*/
+        std::vector<helios::vec3> getVertices() const override;
+
+        //! Get the size of the Patch in x- and y-directions
+        /** \return vec2 describing the length and width of the Patch.*/
+        helios::vec2 getSize() const;
+
+        //! Get the (x,y,z) coordinates of the Patch center point
+        /** \return vec3 describing (x,y,z) coordinate of Patch center.*/
+        helios::vec3 getCenter() const;
+
+        //! Function to rotate a Primitive about the x-, y-, or z-axis
+        /** \param[in] "rot" Rotation angle in radians.
+        \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
+        */
+        void rotate( float rot, const char* axis ) override;
+
+        //! Function to rotate a Primitive about an arbitrary axis
+        /** \param[in] "rot" Rotation angle in radians.
+        \param[in] "axis" Vector describing axis about which to rotate.
+        */
+        void rotate( float rot, const helios::vec3& axis ) override;
+
+
+    protected:
+
+
+    };
+
+    //! Triangular geometric primitive object
+    /**
+     * A Triangle is specified by the positions of its three vertices. Triangles can only be added through the Context member function \ref Context::addTriangle().
+     * \image html doc/images/Triangle.png "Sample image of a Triangle." width=3cm
+     * @private
+    */
+    class Triangle : public Primitive{
+    public:
+
+        //! Triangle constructor
+        Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const helios::RGBAcolor& color, uint UUID );
+
+        //! Triangle constructor
+        Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint UUID );
+
+        //! Triangle destructor
+        ~Triangle() override= default;
+
+        //! Get the primitive surface area
+        /** \return Surface area of the Triangle. */
+        float getArea() const override;
+
+        //! Get a unit vector normal to the primitive surface
+        /** \return Unit vector normal to the surface of the Triangle. */
+        helios::vec3 getNormal() const override;
+
+        //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
+        /** \return Vector containing three sets of the (x,y,z) coordinates of each vertex.*/
+        std::vector<helios::vec3> getVertices() const override;
+
+        //! Function to return the (x,y,z) coordinates of a given Triangle vertex
+        /**
+           \param[in] "number" Triangle vertex (0, 1, or 2)
+           \return (x,y,z) coordinates of triangle vertex
+        */
+        helios::vec3 getVertex( int number );
+
+        //! Function to rotate a Primitive about the x-, y-, or z-axis
+        /** \param[in] "rot" Rotation angle in radians.
+        \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
+        */
+        void rotate( float rot, const char* axis ) override;
+
+        //! Function to rotate a Primitive about an arbitrary axis
+        /** \param[in] "rot" Rotation angle in radians.
+        \param[in] "axis" Vector describing axis about which to rotate.
+        */
+        void rotate( float rot, const helios::vec3& axis ) override;
+
+    private:
+
+        //!(x,y,z) coordinates of triangle vertex #0
+        helios::vec3 vertex0;
+
+        //!(x,y,z) coordinates of triangle vertex #1
+        helios::vec3 vertex1;
+
+        //!(x,y,z) coordinates of triangle vertex #2
+        helios::vec3 vertex2;
+
+        //fraction of surface area that is solid material (i.e., non-transparent)
+        float solid_fraction;
+
+        void makeTransformationMatrix( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2 );
+
+    };
+
+    //! Parallelpiped geometric object filled with a participating medium
+    /** Position is given with respect to its center. Voxels can only be added through the Context member function \ref Context::addVoxel().
+        @private
+    */
+    class Voxel : public Primitive{
+    public:
+
+        //! Voxel constructors
+        Voxel( const helios::RGBAcolor& color, uint UUID );
+
+        //! Voxel destructor
+        ~Voxel() override= default;
+
+        //! Get the primitive surface area
+        /**
+         * \return Surface area of the Voxel.
+         */
+        float getArea() const override;
+
+        //! This function is not used for a Voxel
+        helios::vec3 getNormal() const override;
+
+        //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
+        /**
+         * \return Vector containing eight sets of the (x,y,z) coordinates of each vertex.
+         */
+        std::vector<helios::vec3> getVertices() const override;
+
+        //! Function to return the Volume of a Voxel
+        /**
+         * \return Volume of the Voxel.
+         */
+        float getVolume();
+
+        //! Get the (x,y,z) coordinates of the Voxel center point
+        /**
+         * \return vec3 describing (x,y,z) coordinate of Patch center.
+         */
+        helios::vec3 getCenter();
+
+        //! Get the size of the Voxel in x-, y-, and z-directions
+        /**
+         * \return vec3 describing the length, width and depth of the Voxel.
+        */
+        helios::vec3 getSize();
+
+        //! Function to rotate a Primitive about the x-, y-, or z-axis
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
+        */
+        void rotate( float rot, const char* axis ) override;
+
+        //! Function to rotate a Primitive about an arbitrary axis
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "axis" Vector describing axis about which to rotate.
+        */
+        void rotate( float rot, const helios::vec3& axis ) override;
+
+    };
+
 //! Stores the state associated with simulation
 /** The Context provides an interface to global information about the application environment.   It allows access to application-level operations such as adding geometry, running models, and visualization. After creation, the Context must first be initialized via a call to initializeContext(), after which geometry and models can be added and simulated.  
  */
@@ -1391,6 +1418,36 @@ namespace helios {
     private:
 
         //---------- PRIMITIVE/OBJECT HELIOS::VECTORS ----------------//
+
+        //!Get a pointer to a Primitive element from the Context
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of primitive element
+         * @private
+        */
+        Primitive* getPrimitivePointer_private( uint UUID ) const;
+
+        //!Get a pointer to a Patch from the Context
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of Patch
+         * @private
+        */
+        Patch* getPatchPointer_private( uint UUID ) const;
+
+
+        //!Get a pointer to a Triangle from the Context
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of Triangle
+         * @private
+        */
+        Triangle* getTrianglePointer_private( uint UUID ) const;
+
+
+        //!Get a pointer to a Voxel from the Context
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of Voxel
+         * @private
+        */
+        Voxel* getVoxelPointer_private( uint UUID ) const;
 
         //! Map containing a pointer to each primitive
         /** \note A Primitive's index in this map is its \ref UUID */
@@ -1419,15 +1476,15 @@ namespace helios {
         //---------- CONTEXT PRIVATE MEMBER VARIABLES ---------//
         //NOTE: variables are initialized and documented in initializeContext() member function
 
-        //! Simulation date (\ref Date vector)
+        //! Simulation date (Date vector)
         /**
-            \sa \ref setDate(), \ref getDate()
+          * sa setDate(), getDate()
         */
         helios::Date sim_date;
 
-        //! Simutation time (\ref Time vector)
+        //! Simutation time (Time vector)
         /**
-            \sa \ref setTime(), \ref getTime()
+            \sa setTime(), getTime()
         */
         helios::Time sim_time;
 
@@ -1497,6 +1554,36 @@ namespace helios {
         //! Query whether the Context geometry is ``dirty", meaning has the geometry been modified since last set as clean
         /** \sa \ref markGeometryClean(), \ref markGeometryDirty() */
         bool isGeometryDirty() const;
+
+        //!Get a pointer to a Primitive element from the Context
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of primitive element
+         * @private
+        */
+        DEPRECATED( Primitive* getPrimitivePointer( uint UUID ) const );
+
+        //!Get a pointer to a Patch from the Context
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of Patch
+         * @private
+        */
+        DEPRECATED( Patch* getPatchPointer( uint UUID ) const );
+
+
+        //!Get a pointer to a Triangle from the Context
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of Triangle
+         * @private
+        */
+        DEPRECATED( Triangle* getTrianglePointer( uint UUID ) const) ;
+
+
+        //!Get a pointer to a Voxel from the Context
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of Voxel
+         * @private
+        */
+        DEPRECATED( Voxel* getVoxelPointer( uint UUID ) const );
 
         //! Add new default Patch geometric primitive, which is centered at the origin (0,0,0), has unit length and width, horizontal orientation, and black color
         /** Function to add a new default Patch to the Context
@@ -1695,7 +1782,7 @@ namespace helios {
             \param[in] "rot" Rotation angle in radians
             \param[in] "axis" Vector describing axis about which to rotate
          */
-        void rotatePrimitive( const std::vector<uint>& UUIDs, float rot, helios::vec3& axis );
+        void rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const vec3 &axis );
 
         //! Scale a primitive using its UUID
         /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be scaled
@@ -1738,34 +1825,52 @@ namespace helios {
          */
         void copyPrimitiveData( uint UUID, uint currentUUID);
 
-        //!Get a pointer to a Primitive element from the Context
-        /** \param[in] "UUID" Unique universal identifier (UUID) of primitive element
-            \ingroup primitives
-        */
-        Primitive* getPrimitivePointer( uint UUID ) const;
-
         //! Check if primitive exists for a given UUID
         /** \param[in] "UUID" Unique universal identifier of primitive element
          */
         bool doesPrimitiveExist( uint UUID ) const;
 
-        //!Get a pointer to a Patch from the Context
-        /** \param[in] "UUID" Unique universal identifier (UUID) of Patch
-            \ingroup primitives
-        */
-        Patch* getPatchPointer( uint UUID ) const;
+        //! Get the size of a patch element
+        /**
+         * \param[in] "UUID" Unique universal identifier for patch.
+         * \return Length x width of Patch element.
+         * \note If the UUID passed to this function does not correspond to a Patch, an error will be thrown.
+         */
+         helios::vec2 getPatchSize( uint UUID ) const;
 
-        //!Get a pointer to a Triangle from the Context
-        /** \param[in] "UUID" Unique universal identifier (UUID) of Triangle
-            \ingroup primitives
-        */
-        Triangle* getTrianglePointer( uint UUID ) const;
 
-        //!Get a pointer to a Voxel from the Context
-        /** \param[in] "UUID" Unique universal identifier (UUID) of Voxel
-            \ingroup primitives
-        */
-        Voxel* getVoxelPointer( uint UUID ) const;
+        //! Get the Cartesian (x,y,z) center position of a patch element
+        /**
+         * \param[in] "UUID" Unique universal identifier for patch.
+         * \return Center position of Patch element.
+         * \note If the UUID passed to this function does not correspond to a Patch, an error will be thrown.
+         */
+        helios::vec3 getPatchCenter( uint UUID ) const;
+
+        //! Get a single vertex of a Triangle based on an index
+        /**
+         * \param[in] "UUID" Universal unique identifier of Triangle element.
+         * \param[in] "number" Index of vertex (0, 1, or 2)
+         * \return Cartesian (x,y,z) coordinate of triangle vertices indexed at "vertex"
+         * \note If the UUID passed to this function does not correspond to a Triangle, an error will be thrown.
+         */
+         helios::vec3 getTriangleVertex( uint UUID, uint number ) const;
+
+        //! Get the Cartesian (x,y,z) center position of a voxel element
+        /**
+         * \param[in] "UUID" Unique universal identifier for voxel.
+         * \return Center position of voxel element.
+         * \note If the UUID passed to this function does not correspond to a voxel, an error will be thrown.
+         */
+        helios::vec3 getVoxelCenter( uint UUID ) const;
+
+        //! Get the size of a voxel element
+        /**
+         * \param[in] "UUID" Unique universal identifier for voxel.
+         * \return Length x width x height of voxel element.
+         * \note If the UUID passed to this function does not correspond to a voxel, an error will be thrown.
+         */
+        helios::vec3 getVoxelSize( uint UUID ) const;
 
         //!Get the total number of Primitives in the Context
         /**
@@ -2383,6 +2488,14 @@ namespace helios {
          */
         float getPrimitiveArea( uint UUID ) const;
 
+
+        //! Get fraction of primitive surface area that is non-transparent
+        /**
+         * \param[in] "UUID" Universal unique identifier for primitive.
+         * \return Fraction of non-transparent area (=1 if primitive does not have a semi-transparent texture).
+         */
+        float getPrimitiveSolidFraction( uint UUID ) const;
+
         //! Function to return the normal vector of a Primitive
         /** \param[in] "UUID" Universal unique identifier of primitive.
          */
@@ -2474,6 +2587,12 @@ namespace helios {
          */
         helios::int2 getPrimitiveTextureSize( uint UUID ) const;
 
+        //! Get u-v texture coordinates at primitive vertices
+        /**
+         * \param[in] UUID Unique universal identifier of primitive to be queried
+         */
+        std::vector<vec2> getPrimitiveTextureUV( uint UUID ) const;
+
         //! Check if primitive texture map has a transparency channel
         /**
          * \param[in] UUID Unique universal identifier of primitive to be queried
@@ -2486,7 +2605,20 @@ namespace helios {
          * \param[in] UUID Unique universal identifier of primitive to be queried
          * @return Transparency value (0 or 1) for each pixel in primitive texture map.
          */
-        std::vector<std::vector<bool> > *getPrimitiveTextureTransparencyData(uint UUID);
+        const std::vector<std::vector<bool>> * getPrimitiveTextureTransparencyData(uint UUID) const;
+
+        //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
+        void overridePrimitiveTextureColor( uint UUID );
+
+
+        //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
+        void usePrimitiveTextureColor( uint UUID );
+
+        //! Check if color of texture map is overridden by the diffuse R-G-B color of the primitive
+        /**
+         * \param[in] UUID Unique universal identifier of primitive to be queried
+         */
+        bool isPrimitiveTextureColorOverridden( uint UUID ) const;
 
         //-------- Compound Object Data Functions ---------- //
 
@@ -3784,7 +3916,7 @@ namespace helios {
             \note Ndivs must be greater than 2.
             \ingroup compoundobjects
         */
-        std::vector<uint> addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, std::vector<RGBcolor> &color );
+        std::vector<uint> addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color );
 
         //! Add a 3D tube compound object to the Context that is texture-mapped
         /** A `tube' or `snake' compound object comprised of Triangle primitives
@@ -4093,6 +4225,23 @@ namespace helios {
             \ingroup context
          */
         void writeXML( const char* filename, bool quiet = false ) const;
+
+        //! Write primitive data to an ASCII text file for all primitives in the Context
+        /**
+         * \param[in] "filename" Path to file that will be written.
+         * \param[in] "column_format" Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data doesn not exist, an error will be thrown.
+         * \param[in] "print_header" Flag specifying whether to print the name of the primitive data in the column header.
+         */
+        void writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, bool print_header = false ) const;
+
+        //! Write primitive data to an ASCII text file for selected primitives in the Context
+        /**
+         * \param[in] "filename" Path to file that will be written.
+         * \param[in] "column_format" Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data doesn not exist, an error will be thrown.
+         * \param[in] "UUIDs" Unique universal identifiers for primitives to include when writing data to file.
+         * \param[in] "print_header" Flag specifying whether to print the name of the primitive data in the column header.
+         */
+        void writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header = false ) const;
 
         //! Load geometry contained in a Stanford polygon file (.ply)
         /** \param[in] "filename" name of ply file.

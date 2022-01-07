@@ -33,11 +33,11 @@ int main(int argc, char* argv[])
   	  if( (j*size.x+i)%2==0 ){
   	    UUID = context.addPatch( make_vec3(-0.5*D+(i*subsize.x+ii)*dx.x,-0.5*D+(j*subsize.y+jj)*dx.y,0), dx, make_SphericalCoord(0.f,rot), RGB::silver );
   	    rho = 0.f;
-  	    context.getPrimitivePointer(UUID)->setPrimitiveData("reflectivity_SW",HELIOS_TYPE_FLOAT,1,&rho);
+  	    context.setPrimitiveData( UUID, "reflectivity_SW",HELIOS_TYPE_FLOAT,1,&rho);
   	  }else{
   	    UUID = context.addPatch( make_vec3(-0.5*D+(i*subsize.x+ii)*dx.x,-0.5*D+(j*subsize.y+jj)*dx.y,0), dx, make_SphericalCoord(0.f,rot), RGB::white );
   	    rho = 0.6f;
-  	    context.getPrimitivePointer(UUID)->setPrimitiveData("reflectivity_SW",HELIOS_TYPE_FLOAT,1,&rho);
+  	    context.setPrimitiveData( UUID, "reflectivity_SW",HELIOS_TYPE_FLOAT,1,&rho);
   	  }
 
   	}
@@ -80,15 +80,13 @@ int main(int argc, char* argv[])
   
   energybalancemodel.run();
 
-  //radiationmodel.runBand("LW");
-  
-  //energybalancemodel.run(radiation_bands);
-
   //---- SET UP RADIATION MODEL ----- //
 
   Visualizer vis( 1200 );
 
   vis.setLightingModel( Visualizer::LIGHTING_NONE );
+
+  vis.setCameraPosition(make_SphericalCoord(15,0.35,0.4*M_PI), make_vec3(0,0,2) );
 
   vis.buildContextGeometry(&context);
 

@@ -829,7 +829,7 @@ d the last cell's index is Ncells-1. */
   //! Calculate the G(theta) of all primitives in the context
   /** \param[in] "context" Pointer to the Helios context 
   */
-  std::vector<float> calculateSyntheticGtheta( const helios::Context* context );
+  std::vector<float> calculateSyntheticGtheta( helios::Context* context );
 
   // -------- LEAF AREA -------- //
 

@@ -3034,7 +3034,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
                   tID++;
               }
 
-              std::vector<helios::vec2> uv = context->getPrimitivePointer(UUID)->getTextureUV();
+              std::vector<helios::vec2> uv = context->getPrimitiveTextureUV(UUID);
               if( uv.size()==4 ){//cusom uv coordinates
                   patch_uv[2*c] = vec2tofloat2(uv.at(1));
                   patch_uv[2*c+1] = vec2tofloat2(uv.at(3));
@@ -3102,7 +3102,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
                   tID++;
               }
 
-              std::vector<helios::vec2> uv = context->getPrimitivePointer(UUID)->getTextureUV();
+              std::vector<helios::vec2> uv = context->getPrimitiveTextureUV(UUID);
               assert( uv.size()==3 );
               tri_uv[3*c] = vec2tofloat2(uv.at(0));
               tri_uv[3*c+1] = vec2tofloat2(uv.at(1));
@@ -3410,7 +3410,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
 	
 	if( UUID>=0 && context->doesPrimitiveExist(uint(UUID)) ){
 	  
-	  color = context->getPrimitivePointer(uint(UUID))->getColor();
+	  color = context->getPrimitiveColor(UUID);
 	  
 	  if( context->doesPrimitiveDataExist(uint(UUID),"object_label") && context->getPrimitiveDataType(uint(UUID),"object_label")==helios::HELIOS_TYPE_INT ){
 	    int label;
@@ -3481,7 +3481,7 @@ std::vector<float> LiDARcloud::calculateSyntheticLeafArea( helios::Context* cont
 
   //copy scan data into the host buffer
   for( std::size_t p=0; p<N; p++ ){
-    std::vector<helios::vec3> verts = context->getPrimitivePointer(UUIDs_all.at(p))->getVertices();
+    std::vector<helios::vec3> verts = context->getPrimitiveVertices(UUIDs_all.at(p));
     prim_xyz[p] = vec3tofloat3( verts.at(0) );
   }
 
@@ -3555,7 +3555,7 @@ std::vector<float> LiDARcloud::calculateSyntheticLeafArea( helios::Context* cont
   for( std::size_t p=0; p<N; p++ ){
     if( prim_vol[p]>=0 ){
       uint gridcell = prim_vol[p];
-      total_area.at(gridcell) += context->getPrimitivePointer(UUIDs_all.at(p))->getArea();
+      total_area.at(gridcell) += context->getPrimitiveArea(UUIDs_all.at(p));
       context->setPrimitiveData(UUIDs_all.at(p),"gridCell",helios::HELIOS_TYPE_UINT,1,&gridcell);
     }
   }
@@ -3565,7 +3565,7 @@ std::vector<float> LiDARcloud::calculateSyntheticLeafArea( helios::Context* cont
 
   for( int v=0; v<Ncells; v++ ){
     output_LeafArea.at(v) =  total_area.at(v);
-    if( context->getPrimitivePointer(UUIDs_all.at(v))->doesPrimitiveDataExist("gridCell") ){
+    if( context->doesPrimitiveDataExist(UUIDs_all.at(v), "gridCell") ){
       context->setPrimitiveData(UUIDs_all.at(v),"synthetic_leaf_area",total_area.at(v));
     }
   }

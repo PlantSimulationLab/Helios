@@ -102,7 +102,7 @@ void BLConductanceModel::setBoundaryLayerModel( const uint UUID, const char* gH_
   setBoundaryLayerModel(UUIDs,gH_model);
 }
 
-void BLConductanceModel::setBoundaryLayerModel( const std::vector<uint> UUIDs, const char* gH_model ){
+void BLConductanceModel::setBoundaryLayerModel(const std::vector<uint> &UUIDs, const char* gH_model ){
 
   uint model = 0;
   
@@ -123,59 +123,57 @@ void BLConductanceModel::setBoundaryLayerModel( const std::vector<uint> UUIDs, c
     boundarylayer_model[UUIDs.at(p)] = model;
   }
 
-  return;
-
 }
 
-void BLConductanceModel::run( void ){
+void BLConductanceModel::run(){
 
   run( context->getAllUUIDs() );
   
 }
 
-void BLConductanceModel::run( const std::vector<uint> UUIDs ){
+void BLConductanceModel::run(const std::vector<uint> &UUIDs ){
 
   for( uint p=0; p<UUIDs.size(); p++ ){
 
-    Primitive* prim = context->getPrimitivePointer( UUIDs.at(p) );
+      uint UUID = UUIDs.at(p);
 
     float U;
-    if( prim->doesPrimitiveDataExist( "wind_speed" ) ){
-      prim->getPrimitiveData( "wind_speed", U );
+    if( context->doesPrimitiveDataExist( UUID, "wind_speed" ) ){
+      context->getPrimitiveData( UUID, "wind_speed", U );
     }else{
       U = wind_speed_default;
     }
 
     float Ta;
-    if( prim->doesPrimitiveDataExist( "air_temperature" ) ){
-      prim->getPrimitiveData( "air_temperature", Ta );
+    if( context->doesPrimitiveDataExist( UUID, "air_temperature" ) ){
+      context->getPrimitiveData( UUID, "air_temperature", Ta );
     }else{
       Ta = air_temperature_default;
     }
 
     float T;
-    if( prim->doesPrimitiveDataExist( "temperature" ) ){
-      prim->getPrimitiveData( "temperature", T );
+    if( context->doesPrimitiveDataExist( UUID, "temperature" ) ){
+      context->getPrimitiveData( UUID, "temperature", T );
     }else{
       T = surface_temperature_default;
     }
 
     float L;
-    if( prim->doesPrimitiveDataExist("object_length") ){
-      prim->getPrimitiveData("object_length",L);
+    if( context->doesPrimitiveDataExist( UUID, "object_length") ){
+      context->getPrimitiveData( UUID, "object_length",L);
       if( L==0 ){
-	L = sqrt(prim->getArea());
+	L = sqrt(context->getPrimitiveArea(UUID));
       }
     }else{
-      L = sqrt(prim->getArea());
+      L = sqrt(context->getPrimitiveArea(UUID));
     }
 
-    vec3 norm = prim->getNormal();
+    vec3 norm = context->getPrimitiveNormal(UUID);
     float inclination = cart2sphere( norm ).zenith;
 
     float gH = calculateBoundaryLayerConductance( boundarylayer_model[UUIDs.at(p)], U, L, inclination, T, Ta );
 
-    prim->setPrimitiveData( "boundarylayer_conductance", gH );
+    context->setPrimitiveData( UUID, "boundarylayer_conductance", gH );
 
   }
 

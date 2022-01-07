@@ -215,7 +215,10 @@ protected:
   helios::Context* context;
 
   //! Pointers to current primitive geometry
-  std::vector<helios::Primitive*> primitives;
+  //std::vector<helios::Primitive*> primitives;
+
+  //! UUID corresponding to first primitive in object - size Nobjects
+  std::vector<uint> primitiveID;
 
   //! UUIDs currently added from the Context
   std::vector<uint> context_UUIDs;

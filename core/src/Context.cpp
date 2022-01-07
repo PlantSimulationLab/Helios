@@ -45,1004 +45,6 @@ Context::Context(){
 
 }
 
-int Context::selfTest(){
-
-    std::cout << "Running Context self-test..." << std::flush;
-
-    Context context_test;
-
-    uint error_count=0;
-
-    double errtol = 1e-7;
-
-    std::string answer;
-
-    //------- Add Patch --------//
-
-    vec3 center,center_r;
-    vec2 size, size_r;
-    std::vector<vec3> vertices, vertices_r;
-    SphericalCoord rotation, rotation_r;
-    vec3 normal, normal_r;
-    RGBcolor color, color_r;
-    uint UUID;
-    std::vector<uint> UUIDs;
-    PrimitiveType type;
-    float area_r;
-    Primitive* prim;
-    uint objID;
-
-    //uint addPatch( const vec3& center, const vec2& size );
-    center = make_vec3(1,2,3);
-    size = make_vec2(1,2);
-    vertices.resize(4);
-    vertices.at(0) = center + make_vec3( -0.5f*size.x, -0.5f*size.y, 0.f);
-    vertices.at(1) = center + make_vec3( 0.5f*size.x, -0.5f*size.y, 0.f);
-    vertices.at(2) = center + make_vec3( 0.5f*size.x, 0.5f*size.y, 0.f);
-    vertices.at(3) = center + make_vec3( -0.5f*size.x, 0.5f*size.y, 0.f);
-    UUID = context_test.addPatch(center,size);
-    prim = context_test.getPrimitivePointer(UUID);
-    type = prim->getType();
-    center_r = context_test.getPatchPointer(UUID)->getCenter();
-    size_r = context_test.getPatchPointer(UUID)->getSize();
-    normal_r = prim->getNormal();
-    vertices_r = prim->getVertices();
-    area_r = prim->getArea();
-    color_r = prim->getColor();
-
-    if( type!=PRIMITIVE_TYPE_PATCH ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getType did not return `PRIMITIVE_TYPE_PATCH'." << std::endl;
-    }
-    if( center_r.x!=center.x || center_r.y!=center.y || center_r.z!=center.z ){
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getCenter returned incorrect value." << std::endl;
-    }
-    if( size_r.x!=size.x || size_r.y!=size.y ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getSize returned incorrect value." << std::endl;
-    }
-    if( normal_r.x!=0.f || normal_r.y!=0.f || normal_r.z!=1.f ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getNormal did not return correct value." << std::endl;
-    }
-    if( vertices.at(0).x!=vertices_r.at(0).x || vertices.at(0).y!=vertices_r.at(0).y || vertices.at(0).z!=vertices_r.at(0).z ||
-        vertices.at(1).x!=vertices_r.at(1).x || vertices.at(1).y!=vertices_r.at(1).y || vertices.at(1).z!=vertices_r.at(1).z ||
-        vertices.at(2).x!=vertices_r.at(2).x || vertices.at(2).y!=vertices_r.at(2).y || vertices.at(2).z!=vertices_r.at(2).z ||
-        vertices.at(3).x!=vertices_r.at(3).x || vertices.at(3).y!=vertices_r.at(3).y || vertices.at(3).z!=vertices_r.at(3).z  ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getVertices did not return correct value." << std::endl;
-    }
-    if( fabsf( area_r - size.x*size.y )>1e-5 ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getArea did not return correct value." << std::endl;
-    }
-    if( color_r.r!=0.f || color_r.g!=0.f || color_r.b!=0.f ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getColor did not return default color of black." << std::endl;
-    }
-
-    if( prim->hasTexture() ){
-        error_count++;
-        std::cerr << "failed: Patch without texture mapping returned true for texture map test." << std::endl;
-    }
-
-    //------- Copy Patch --------//
-
-    std::vector<float> cpdata{5.2f,2.5f,3.1f};
-
-    context_test.setPrimitiveData( UUID, "somedata", HELIOS_TYPE_FLOAT, cpdata.size(), &cpdata[0] );
-
-    uint UUID_cpy = context_test.copyPrimitive(UUID);
-
-    vec3 center_cpy = context_test.getPatchPointer(UUID_cpy)->getCenter();
-    vec2 size_cpy = context_test.getPatchPointer(UUID_cpy)->getSize();
-
-    if( UUID_cpy != 1 ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch does not have the correct UUID." << std::endl;
-    }
-    if( center_cpy.x!=center.x || center_cpy.y!=center.y || center_cpy.z!=center.z  ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch did not return correct center coordinates." << std::endl;
-    }
-    if( size_cpy.x!=size.x || size_cpy.y!=size.y ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch did not return correct size." << std::endl;
-    }
-
-    std::vector<float> cpdata_copy;
-    context_test.getPrimitiveData( UUID_cpy, "somedata", cpdata_copy );
-
-    if( cpdata.size() != cpdata_copy.size() ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch primitive data does not have correct size." << std::endl;
-    }
-    for( uint i=0; i<cpdata.size(); i++ ){
-        if( cpdata.at(i) != cpdata_copy.at(i) ){
-            error_count++;
-            std::cerr << "failed: copyPrimitive. Copied patch primitive data does not match." << std::endl;
-        }
-        break;
-    }
-
-    //translate the copied patch
-    vec3 shift = make_vec3(5.f,4.f,3.f);
-    context_test.getPrimitivePointer(UUID_cpy)->translate(shift);
-    center_cpy = context_test.getPatchPointer(UUID_cpy)->getCenter();
-    center_r = context_test.getPatchPointer(UUID)->getCenter();
-
-    if( fabsf(center_cpy.x-center.x-shift.x)>errtol || fabsf(center_cpy.y-center.y-shift.y)>errtol || fabsf(center_cpy.z-center.z-shift.z)>errtol || center_r.x!=center.x || center_r.y!=center.y || center_r.z!=center.z ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch could not be properly translated." << std::endl;
-    }
-
-    //------- Delete Patch --------//
-
-    context_test.deletePrimitive(UUID);
-
-    if(context_test.getPrimitiveCount() != 1 ){
-        error_count++;
-        std::cerr << "failed: deletePrimitive. Patch not properly deleted based on primitive count." << std::endl;
-    }
-    if( context_test.doesPrimitiveExist(UUID) ){
-        error_count++;
-        std::cerr << "failed: deletePrimitive. Patch not properly deleted." << std::endl;
-    }
-
-    UUID = UUID_cpy;
-
-    //------- Add a Rotated Patch --------//
-
-    center = make_vec3(1,2,3);
-    size = make_vec2(1,2);
-    rotation.elevation = 0.15f*M_PI;
-    rotation.azimuth = 0.5f*M_PI;;
-    UUID = context_test.addPatch(center,size,rotation);
-    prim = context_test.getPrimitivePointer(UUID);
-    normal_r = prim->getNormal();
-
-    rotation_r = make_SphericalCoord( 0.5f*float(M_PI)-asinf( normal_r.z ), atan2f(normal_r.x,normal_r.y) );
-
-    context_test.deletePrimitive(UUID);
-
-    if( fabsf(rotation_r.elevation-rotation.elevation)>errtol || fabsf(rotation_r.azimuth-rotation.azimuth)>errtol ){
-        error_count++;
-        std::cerr << "failed: Rotated patch did not return correct normal vector." << std::endl;
-    }
-
-    //------- Add Triangle --------//
-
-    vec3 v0,v0_r;
-    vec3 v1,v1_r;
-    vec3 v2,v2_r;
-
-    //uint addTriangle( const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color );
-    v0 = make_vec3(1,2,3);
-    v1 = make_vec3(2,4,6);
-    v2 = make_vec3(3,6,5);
-    vertices.at(0) = v0;
-    vertices.at(1) = v1;
-    vertices.at(2) = v2;
-    color = RGB::red;
-    UUID = context_test.addTriangle(v0,v1,v2,color);
-
-    prim = context_test.getPrimitivePointer(UUID);
-    type = prim->getType();
-    normal_r = prim->getNormal();
-    vertices_r = prim->getVertices();
-    area_r = prim->getArea();
-    color_r = prim->getColor();
-
-    if( type!=PRIMITIVE_TYPE_TRIANGLE ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getType did not return `PRIMITIVE_TYPE_TRIANGLE'." << std::endl;
-    }
-    normal = cross( v1-v0, v2-v1 );
-    normal.normalize();
-    if( normal_r.x!=normal.x || normal_r.y!=normal.y || normal_r.z!=normal.z ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getNormal did not return correct value." << std::endl;
-    }
-    if( vertices.at(0).x!=vertices_r.at(0).x || vertices.at(0).y!=vertices_r.at(0).y || vertices.at(0).z!=vertices_r.at(0).z ||
-        vertices.at(1).x!=vertices_r.at(1).x || vertices.at(1).y!=vertices_r.at(1).y || vertices.at(1).z!=vertices_r.at(1).z ||
-        vertices.at(2).x!=vertices_r.at(2).x || vertices.at(2).y!=vertices_r.at(2).y || vertices.at(2).z!=vertices_r.at(2).z ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getVertices did not return correct value." << std::endl;
-    }
-    vec3 A(v1-v0);
-    vec3 B(v2-v0);
-    vec3 C(v2-v1);
-    float a = A.magnitude();
-    float b = B.magnitude();
-    float c = C.magnitude();
-    float s = 0.5f*( a+b+c );
-    if( area_r!=sqrtf(s*(s-a)*(s-b)*(s-c)) ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getArea did not return correct value." << std::endl;
-    }
-    if( color_r.r!=color.r || color_r.g!=color.g || color_r.b!=color.b ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getColor did not return correct color." << std::endl;
-    }
-
-    if( prim->hasTexture() ){
-        error_count++;
-        std::cerr << "failed: Triangle without texture mapping returned true for texture map test." << std::endl;
-    }
-
-    //------- Copy Triangle --------//
-
-    UUID_cpy = context_test.copyPrimitive(UUID);
-
-    std::vector<vec3> vertices_cpy = context_test.getPrimitivePointer(UUID_cpy)->getVertices();
-
-    if( vertices.at(0).x!=vertices_cpy.at(0).x || vertices.at(0).y!=vertices_cpy.at(0).y || vertices.at(0).z!=vertices_cpy.at(0).z ||
-        vertices.at(1).x!=vertices_cpy.at(1).x || vertices.at(1).y!=vertices_cpy.at(1).y || vertices.at(1).z!=vertices_cpy.at(1).z ||
-        vertices.at(2).x!=vertices_cpy.at(2).x || vertices.at(2).y!=vertices_cpy.at(2).y || vertices.at(2).z!=vertices_cpy.at(2).z ){
-        error_count++;
-        std::cerr << "failed: copied triangle did not return correct vertices." << std::endl;
-    }
-
-    //translate the copied patch
-    shift = make_vec3(5,4,3);
-    context_test.getPrimitivePointer(UUID_cpy)->translate(shift);
-
-    vertices_cpy = context_test.getPrimitivePointer(UUID_cpy)->getVertices();
-
-    if( vertices.at(0).x!=(vertices_cpy.at(0).x-shift.x) || vertices.at(0).y!=(vertices_cpy.at(0).y-shift.y) || vertices.at(0).z!=(vertices_cpy.at(0).z-shift.z) ||
-        vertices.at(1).x!=(vertices_cpy.at(1).x-shift.x) || vertices.at(1).y!=(vertices_cpy.at(1).y-shift.y) || vertices.at(1).z!=(vertices_cpy.at(1).z-shift.z) ||
-        vertices.at(2).x!=(vertices_cpy.at(2).x-shift.x) || vertices.at(2).y!=(vertices_cpy.at(2).y-shift.y) || vertices.at(2).z!=(vertices_cpy.at(2).z-shift.z) ){
-        error_count++;
-        std::cerr << "failed: translated triangle did not return correct vertices." << std::endl;
-    }
-
-    //------- Delete Patch --------//
-
-    context_test.deletePrimitive(UUID);
-
-    if( context_test.doesPrimitiveExist(UUID) ){
-        error_count++;
-        std::cerr << "failed: deletePrimitive. Triangle not properly deleted." << std::endl;
-    }
-
-    UUID = UUID_cpy;
-
-    //------- Add a Box --------//
-
-    //vector<uint> addBox( const vec3& center, const vec2& size, const int3& subdiv );
-    center = make_vec3(1,2,3);
-    vec3 size3(3,2,1);
-    int3 subdiv(1,1,1);
-    objID = context_test.addBoxObject( center, size3, subdiv );
-    UUIDs = context_test.getObjectPointer(objID)->getPrimitiveUUIDs();
-
-    normal_r = context_test.getPrimitivePointer(UUIDs.at(0))->getNormal();
-    rotation_r = make_SphericalCoord( 0.5f*float(M_PI)-asinf( normal_r.z ), atan2f(normal_r.x,normal_r.y) );
-
-    if( fabsf(rotation_r.zenith-0.f)>errtol || fabsf(rotation_r.azimuth-0.f)>errtol ){
-        error_count++;
-        std::cerr << "failed: addBox(). Face normals incorrect." << std::endl;
-    }
-
-    normal_r = context_test.getPrimitivePointer(UUIDs.at(2))->getNormal();
-    rotation_r = make_SphericalCoord( 0.5f*float(M_PI)-asinf( normal_r.z ), atan2f(normal_r.x,normal_r.y) );
-
-    if( fabsf(rotation_r.zenith-0.f)>errtol || fabsf(rotation_r.azimuth-0.5f*float(M_PI))>errtol ){
-        error_count++;
-        std::cerr << "failed: addBox(). Face normals incorrect." << std::endl;
-    }
-
-    size_r = context_test.getPatchPointer(UUIDs.at(0))->getSize();
-
-    if( fabsf(size_r.x-size3.x)>errtol || fabsf(size_r.y-size3.z)>errtol ){
-        error_count++;
-        std::cerr << "failed: addBox(). Face sizes incorrect." << std::endl;
-    }
-
-    size_r = context_test.getPatchPointer(UUIDs.at(2))->getSize();
-
-    if( fabsf(size_r.x-size3.y)>errtol || fabsf(size_r.y-size3.z)>errtol ){
-        error_count++;
-        std::cerr << "failed: addBox(). Face sizes incorrect." << std::endl;
-    }
-
-    //------- Add a Rotated Tile --------//
-
-    center = make_vec3(1,2,3);
-    size = make_vec2(3,2);
-    int2 subdiv2(3,3);
-    rotation = make_SphericalCoord( 0.25f*M_PI, 1.4f*M_PI );
-    objID = context_test.addTileObject(center, size, rotation, subdiv2);
-    UUIDs = context_test.getObjectPointer(objID)->getPrimitiveUUIDs();
-
-    for( uint UUIDp : UUIDs){
-
-        normal_r = context_test.getPrimitivePointer(UUIDp)->getNormal();
-
-        rotation_r = cart2sphere(normal_r);
-
-        if( fabsf(rotation_r.zenith-rotation.zenith)>errtol || fabsf(rotation_r.azimuth-rotation.azimuth)>errtol ){
-            error_count++;
-            std::cerr << "failed: addTile(). Sub-patch normals incorrect." << std::endl;
-            break;
-        }
-
-    }
-
-    //------- Add a Textured Tile with Transparency (disk) --------//
-
-    center = make_vec3(1,2,3);
-    size = make_vec2(3,2);
-    subdiv2 = make_int2(5,5);
-    rotation = make_SphericalCoord( 0.1*M_PI, 2.4*M_PI );
-    objID = context_test.addTileObject( center, size, rotation, subdiv2, "lib/images/disk_texture.png" );
-    UUIDs = context_test.getObjectPointer(objID)->getPrimitiveUUIDs();
-
-    float At = 0;
-    for( uint UUIDp : UUIDs){
-
-        float area = context_test.getPrimitivePointer(UUIDp)->getArea();
-
-        At+=area;
-
-    }
-
-    float area_exact = 0.25f*float(M_PI)*size.x*size.y;
-
-    if( fabsf(At-area_exact)>0.005 ){
-        error_count++;
-        std::cerr << "failed: addTile(). Texture masked area is incorrect." << std::endl;
-        std::cout << At << " " << area_exact << std::endl;
-    }
-
-    //------- Primitive Transformations --------//
-
-    vec2 sz_0(0.5,3.f);
-    float A_0 = sz_0.x*sz_0.y;
-
-    float scale = 2.6f;
-
-    UUID = context_test.addPatch( make_vec3(0,0,0), sz_0 );
-    context_test.getPrimitivePointer(UUID)->scale( make_vec3(scale,scale,scale) );
-
-    float A_1 = context_test.getPrimitivePointer(UUID)->getArea();
-
-    if( fabsf( A_1 - scale*scale*A_0 )>1e-5 ){
-        error_count ++;
-        std::cerr << "failed: Patch scaling - scaled area not correct." << std::endl;
-    }
-
-    //------- Primitive Data --------//
-
-    float data = 5;
-    context_test.getPrimitivePointer(UUID)->setPrimitiveData("some_data",HELIOS_TYPE_FLOAT,1,&data);
-
-    if( !context_test.getPrimitivePointer(UUID)->doesPrimitiveDataExist("some_data") ){
-        error_count ++;
-        std::cerr << "failed: setPrimitiveData - data was added but was not actually created." << std::endl;
-    }
-
-    float data_return;
-    context_test.getPrimitivePointer(UUID)->getPrimitiveData("some_data", data_return);
-    if( data_return!=data ){
-        error_count ++;
-        std::cerr << "failed: set/getPrimitiveData (setting/getting through primitive). Get data did not match set data." << std::endl;
-        std::cout << data_return << std::endl;
-    }
-
-    context_test.setPrimitiveData(UUID,"some_data",HELIOS_TYPE_FLOAT,1,&data);
-    context_test.getPrimitiveData(UUID,"some_data",data_return);
-    if( data_return!=data ){
-        error_count ++;
-        std::cerr << "failed: set/getPrimitiveData (setting/getting through Context). Get data did not match set data." << std::endl;
-        std::cout << data_return << std::endl;
-    }
-
-    std::vector<float> data_v{0,1,2,3,4};
-
-    context_test.getPrimitivePointer(UUID)->setPrimitiveData("some_data",HELIOS_TYPE_FLOAT,5,&data_v[0] );
-
-    std::vector<float> data_return_v;
-    context_test.getPrimitivePointer(UUID)->getPrimitiveData("some_data", data_return_v);
-    for( uint i=0; i<5; i++ ){
-        if( data_return_v.at(i)!=data_v.at(i) ){
-            error_count ++;
-            std::cerr << "failed: set/getPrimitiveData (setting/getting through primitive). Get data did not match set data." << std::endl;
-            std::cout << data_return << std::endl;
-            break;
-        }
-    }
-
-    data = 10;
-    context_test.getPrimitivePointer(UUID)->setPrimitiveData("some_data_2",data);
-
-    if( !context_test.getPrimitivePointer(UUID)->doesPrimitiveDataExist("some_data_2") ){
-        error_count ++;
-        std::cerr << "failed: setPrimitiveData - data was added but was not actually created." << std::endl;
-    }
-
-    context_test.getPrimitivePointer(UUID)->getPrimitiveData("some_data_2", data_return);
-    if( data_return!=data ){
-        error_count ++;
-        std::cerr << "failed: set/getPrimitiveData (setting/getting scalar data). Get data did not match set data." << std::endl;
-        std::cout << data_return << std::endl;
-    }
-
-    //------- Textures --------- //
-
-    vec2 sizep = make_vec2(2,3);
-
-    const char* texture = "lib/images/disk_texture.png";
-
-    vec2 uv0(0,0);
-    vec2 uv1(1,0);
-    vec2 uv2(1,1);
-    vec2 uv3(0,1);
-
-    uint UUIDp = context_test.addPatch( make_vec3(2,3,4), sizep, make_SphericalCoord(0,0), texture, 0.5*(uv0+uv2), uv2-uv0 );
-
-    if( !context_test.getPrimitivePointer(UUIDp)->hasTexture() ){
-        error_count ++;
-        std::cerr << "failed: Texture-mapped patch was found not to have texture." << std::endl;
-    }
-
-    std::string texture2 = context_test.getPrimitivePointer(UUIDp)->getTextureFile();
-
-    if( texture2!=texture ){
-        error_count ++;
-        std::cerr << "failed: textures - queried texture file does not match that provided when adding primitive." << std::endl;
-    }
-
-    float Ap = context_test.getPrimitivePointer(UUIDp)->getArea();
-
-    if( fabsf(Ap-0.25f*float(M_PI)*sizep.x*sizep.y)/(0.25f*float(M_PI)*sizep.x*sizep.y)>0.01f ){
-        error_count ++;
-        std::cerr << "failed: Texture-masked patch does not have correct area." << std::endl;
-    }
-
-    std::vector<vec2> uv;
-    uv = context_test.getPrimitivePointer(UUIDp)->getTextureUV();
-
-    if( uv.size()!=4 ){
-        error_count ++;
-        std::cerr << "failed: Texture (u,v) coordinates for patch should have length of 4." << std::endl;
-    }
-    if( uv.at(0).x!=uv0.x || uv.at(0).y!=uv0.y || uv.at(1).x!=uv1.x || uv.at(1).y!=uv1.y || uv.at(2).x!=uv2.x || uv.at(2).y!=uv2.y || uv.at(3).x!=uv3.x || uv.at(3).y!=uv3.y ){
-        error_count ++;
-        std::cerr << "failed: Queried texture (u,v) coordinates do not match that provided when adding primitive." << std::endl;
-    }
-
-    uv0 = make_vec2( 0.25, 0.25 );
-    uv1 = make_vec2( 0.75, 0.25 );
-    uv2 = make_vec2( 0.75, 0.75 );
-    uv3 = make_vec2( 0.25, 0.75 );
-
-    uint UUIDp2 = context_test.addPatch( make_vec3(2,3,4), sizep, make_SphericalCoord(0,0), texture, 0.5*(uv2+uv0), uv2-uv0 );
-
-    float area = context_test.getPrimitivePointer(UUIDp2)->getArea();
-
-    if( fabsf(area-sizep.x*sizep.y)>0.001f ){
-        error_count ++;
-        std::cerr << "failed: Patch masked with (u,v) coordinates did not return correct area." << std::endl;
-    }
-
-    uv0 = make_vec2( 0, 0 );
-    uv1 = make_vec2( 1, 1 );
-    uv2 = make_vec2( 0, 1 );
-
-    uint UUIDp3 = context_test.addTriangle( make_vec3(2,3,4), make_vec3(2,3+sizep.y,4), make_vec3(2+sizep.x,3+sizep.y,4), texture, uv0, uv1, uv2 );
-
-    area = context_test.getPrimitivePointer(UUIDp3)->getArea();
-
-    if( fabsf(area-0.5f*0.25f*float(M_PI)*sizep.x*sizep.y)>0.01f ){
-        error_count ++;
-        std::cerr << "failed: Triangle masked with (u,v) coordinates did not return correct area." << std::endl;
-    }
-
-    //------- Global Data --------//
-
-    float gdata = 5;
-    context_test.setGlobalData("some_data",HELIOS_TYPE_FLOAT,1,&gdata);
-
-    if( !context_test.doesGlobalDataExist("some_data") ){
-        error_count ++;
-        std::cerr << "failed: setGlobalData - data was added but was not actually created." << std::endl;
-    }
-
-    float gdata_return;
-    context_test.getGlobalData("some_data", gdata_return);
-    if( gdata_return!=gdata ){
-        error_count ++;
-        std::cerr << "failed: set/getGlobalData (setting/getting through primitive). Get data did not match set data." << std::endl;
-    }
-
-    std::vector<float> gdata_v{0,1,2,3,4};
-
-    context_test.setGlobalData("some_data",HELIOS_TYPE_FLOAT,5,&gdata_v[0] );
-
-    std::vector<float> gdata_return_v;
-    context_test.getGlobalData("some_data", gdata_return_v);
-    for( uint i=0; i<5; i++ ){
-        if( gdata_return_v.at(i)!=gdata_v.at(i) ){
-            error_count ++;
-            std::cerr << "failed: set/getGlobalData (setting/getting vector data). Get data did not match set data." << std::endl;
-            break;
-        }
-    }
-
-    gdata = 10;
-    context_test.setGlobalData("some_data_2",gdata);
-
-    if( !context_test.doesGlobalDataExist("some_data_2") ){
-        error_count ++;
-        std::cerr << "failed: setGlobalData - data was added but was not actually created." << std::endl;
-    }
-
-    context_test.getGlobalData("some_data_2", gdata_return);
-    if( gdata_return!=gdata ){
-        error_count ++;
-        std::cerr << "failed: set/getGlobalData (setting/getting scalar data). Get data did not match set data." << std::endl;
-    }
-
-    //------- Compound Object Data --------//
-
-    uint IDtile = context_test.addTileObject(make_vec3(0, 0, 0), make_vec2(3, 1),
-                                             make_SphericalCoord(0, 0), make_int2(3, 3));
-
-    float objdata = 5;
-    context_test.setObjectData( IDtile, "some_data", objdata);
-
-    if( !context_test.doesObjectDataExist( IDtile, "some_data") ){
-        error_count ++;
-        std::cerr << "failed: setObjectData - data was added but was not actually created." << std::endl;
-    }
-
-    float objdata_return;
-    context_test.getObjectPointer(IDtile)->getObjectData("some_data", objdata_return);
-    if( objdata_return!=objdata ){
-        error_count ++;
-        std::cerr << "failed: set/getObjectData (getting through object pointer). Get data did not match set data." << std::endl;
-    }
-
-    std::vector<float> objdata_v{0,1,2,3,4};
-
-    context_test.setObjectData(IDtile, "some_data",HELIOS_TYPE_FLOAT,5,&objdata_v[0] );
-
-    std::vector<float> objdata_return_v;
-    context_test.getObjectData(IDtile,"some_data", objdata_return_v);
-    for( uint i=0; i<5; i++ ){
-        if( objdata_return_v.at(i)!=objdata_v.at(i) ){
-            error_count ++;
-            std::cerr << "failed: set/getObjectData. Get data did not match set data." << std::endl;
-            break;
-        }
-    }
-
-    objdata = 10;
-    context_test.setObjectData(IDtile,"some_data_2",objdata);
-
-    if( !context_test.doesObjectDataExist(IDtile,"some_data_2") ){
-        error_count ++;
-        std::cerr << "failed: setObjectData - data was added but was not actually created." << std::endl;
-    }
-
-    context_test.getObjectData(IDtile, "some_data_2", objdata_return);
-    if( objdata_return!=objdata ){
-        error_count ++;
-        std::cerr << "failed: set/getObjectData (setting/getting scalar data). Get data did not match set data." << std::endl;
-    }
-
-    //------- Cone Object Transformations --------//
-
-    float cone_radius_0 = 0.5f;
-    float cone_radius_1 = 1.0f;
-    float cone_length = 2.0f;
-
-    helios::vec3 node0 = make_vec3(0,0,0);
-    helios::vec3 node1 = make_vec3(0,0,cone_length);
-
-    //create cone object
-    uint cone_1 = context_test.addConeObject( 50, node0, node1, cone_radius_0, cone_radius_1);
-
-    //translate to (1,1,1)
-    context_test.getConeObjectPointer(cone_1)->translate(make_vec3(1, 1, 1));
-
-    // get the updated node position
-    std::vector<helios::vec3> nodes_T = context_test.getConeObjectPointer(cone_1)->getNodes();
-
-    if(nodes_T.at(0).x - 1.0f > errtol || nodes_T.at(0).y - 1.0f > errtol || nodes_T.at(0).z - 1.0f > errtol ||
-       nodes_T.at(1).x - 1.0f > errtol || nodes_T.at(1).y - 1.0f > errtol || nodes_T.at(1).z - 3.0f > errtol ){
-
-        error_count ++;
-        std::cerr << "failed: translate cone object. Node coordinates after translation not correct." << std::endl;
-    }
-
-    //rotate so that the cone is parallel with x axis
-    // define the desired tube axis
-    helios::vec3 x_axis = helios::make_vec3(1,0,0);
-    helios::vec3 z_axis = make_vec3(0,0,1);
-    //get the axis about which to rotate
-    vec3 ra = cross( z_axis, x_axis);
-    //get the angle to rotate
-    float dot = x_axis.x*z_axis.x + x_axis.y*z_axis.y + x_axis.z*z_axis.z;
-    float angle = acos_safe(dot);
-
-    // translate back to origin
-    context_test.getConeObjectPointer(cone_1)->translate(-1.f*nodes_T.at(0));
-    //rotate
-    context_test.getConeObjectPointer(cone_1)->rotate( angle, ra);
-    // translate back
-    context_test.getConeObjectPointer(cone_1)->translate(nodes_T.at(0));
-    //get the updated node positions
-    nodes_T = context_test.getConeObjectPointer(cone_1)->getNodes();
-
-    if(nodes_T.at(0).x - 1.0f > errtol || nodes_T.at(0).y - 1.0f > errtol || nodes_T.at(0).z - 1.0f > errtol ||
-       nodes_T.at(1).x - 3.0f > errtol || nodes_T.at(1).y - 1.0f > errtol || nodes_T.at(1).z - 1.0f > errtol ){
-        error_count ++;
-        std::cerr << "failed: rotate cone object. Node coordinates after rotation not correct." << std::endl;
-    }
-
-
-    //scale the length of the cone to twice its original length
-    context_test.getConeObjectPointer(cone_1)->scaleLength(2.0);
-    //get the updated node positions
-    nodes_T = context_test.getConeObjectPointer(cone_1)->getNodes();
-
-    if(nodes_T.at(0).x - 1.0 > errtol || nodes_T.at(0).y - 1.0 > errtol || nodes_T.at(0).z - 1.0 > errtol ||
-       nodes_T.at(1).x - 6.0 > errtol || nodes_T.at(1).y - 1.0 > errtol || nodes_T.at(1).z - 1.0 > errtol ){
-
-        error_count ++;
-        std::cerr << "failed: scaleLength cone object. Node coordinates after length scaling not correct." << std::endl;
-    }
-
-    //scale the girth of the cone to twice its original radii
-    context_test.getConeObjectPointer(cone_1)->scaleGirth(2.0);
-    //get the updated node positions
-    std::vector<float> radii_T = context_test.getConeObjectPointer(cone_1)->getNodeRadii();
-
-    if(radii_T.at(0) - cone_radius_0*2.0 > pow(10,-6) || radii_T.at(1) - cone_radius_1*2.0 > pow(10, -6) ){
-        error_count ++;
-        std::cerr << "failed: scaleGirth cone object. Node radii after girth scaling not correct." << std::endl;
-    }
-
-    //------- Cartesian/Spherical Coordinate Conversion --------//
-
-    SphericalCoord sph1 = make_SphericalCoord(1.f,0.25*M_PI,1.5*M_PI);
-    vec3 cart = sphere2cart(sph1);
-    SphericalCoord sph2 = cart2sphere(cart);
-
-    if( fabsf(sph1.radius-sph2.radius)>errtol || fabsf(sph1.elevation-sph2.elevation)>errtol || fabsf(sph1.zenith-sph2.zenith)>errtol || fabsf(sph1.azimuth-sph2.azimuth)>errtol ){
-        std::cerr << "failed: cart2sphere and sphere2cart are not inverses." << std::endl;
-        error_count++;
-    }
-
-    //------- Julian Day Conversion ---------//
-
-    int JulianDay = 10;
-    int year = 2000; //leap year
-
-    Date date = Julian2Calendar(JulianDay,year);
-    if( date.year!=year || date.month!=1 || date.day!=JulianDay ){
-        std::cerr << "failed: Julian2Calendar conversion #1 incorrect." << std::endl;
-        error_count++;
-    }
-
-    JulianDay = 230;
-    date = Julian2Calendar(JulianDay,year);
-    if( date.year!=year || date.month!=8 || date.day!=17 ){
-        std::cerr << "failed: Julian2Calendar conversion #2 incorrect." << std::endl;
-        error_count++;
-    }
-
-    year = 2001; //non-leap year
-    date = Julian2Calendar(JulianDay,year);
-    if( date.year!=year || date.month!=8 || date.day!=18 ){
-        std::cerr << "failed: Julian2Calendar conversion #3 incorrect." << std::endl;
-        error_count++;
-    }
-
-    //-------- Spline Interpolation -----------//
-
-    vec3 p_start(0,0,0);
-    vec3 t_start(3,0,0);
-
-    vec3 p_end(1,1.5,0.4);
-    vec3 t_end(0,1,0);
-
-    float u = 0.6;
-
-    vec3 xi = spline_interp3( u, p_start, t_start, p_end, t_end );
-
-    vec3 xi_ref( 0.9360, 0.8280, 0.2592 );
-
-    if( fabsf(xi.x-xi_ref.x)>errtol || fabsf(xi.y-xi_ref.y)>errtol || fabsf(xi.z-xi_ref.z)>errtol ){
-        std::cerr << "failed: cubic spline interpolation incorrect." << std::endl;
-        error_count++;
-    }
-
-    //-------- Timeseries -----------//
-
-    Context context_ts;
-
-    Date date_ts( 12, 3, 2010 );
-    context_ts.setDate( date_ts );
-
-    Time time_ts( 13, 15, 39 );
-    context_ts.setTime( time_ts );
-
-    float T0 = 302.3;
-    float T1 = 305.3;
-    Time time0_ts = time_ts;
-    Time time1_ts = make_Time( time_ts.hour, 49, 14 );
-
-    context_ts.addTimeseriesData( "timeseries", T0, date_ts, time0_ts );
-    context_ts.addTimeseriesData( "timeseries", T1, date_ts, time1_ts );
-
-    context_ts.setCurrentTimeseriesPoint( "timeseries", 0 );
-
-    if( context_ts.getTimeseriesLength( "timeseries" )!=2 ){
-        std::cerr << "failed. getTimeseriesLength() did not give correct length." << std::endl;
-        error_count++;
-    }
-
-    Date d = context_ts.queryTimeseriesDate( "timeseries", 0 );
-
-    if( d.year!=date_ts.year || d.month!=date_ts.month || d.day!=date_ts.day ){
-        std::cerr << "failed. Set/query timeseries date do not match." << std::endl;
-        error_count++;
-    }
-
-    d = context_ts.queryTimeseriesDate( "timeseries", 1 );
-
-    if( d.year!=date_ts.year || d.month!=date_ts.month || d.day!=date_ts.day ){
-        std::cerr << "failed. Set/query timeseries date do not match." << std::endl;
-        error_count++;
-    }
-
-    Time t = context_ts.queryTimeseriesTime( "timeseries", 0 );
-
-    if( t.hour!=time0_ts.hour || t.minute!=time0_ts.minute || t.second!=time0_ts.second ){
-        std::cerr << "failed. Set/query timeseries time do not match." << std::endl;
-        error_count++;
-    }
-
-    t = context_ts.queryTimeseriesTime( "timeseries", 1 );
-
-    if( t.hour!=time1_ts.hour || t.minute!=time1_ts.minute || t.second!=time1_ts.second ){
-        std::cerr << "failed. Set/query timeseries time do not match." << std::endl;
-        error_count++;
-    }
-
-    float T_ts = context_ts.queryTimeseriesData( "timeseries", 0 );
-
-    if( T_ts!=T0 ){
-        std::cerr << "failed: Timeseries set/query data #0 do not match." << std::endl;
-        error_count++;
-    }
-
-    T_ts = context_ts.queryTimeseriesData( "timeseries", 1 );
-
-    if( T_ts!=T1 ){
-        std::cerr << "failed: Timeseries set/query data #1 do not match." << std::endl;
-        error_count++;
-    }
-
-    T_ts = context_ts.queryTimeseriesData( "timeseries", date_ts, time0_ts );
-
-    if( T_ts!=T0 ){
-        std::cerr << "failed: Timeseries set/query data #0 do not match." << std::endl;
-        error_count++;
-    }
-
-    T_ts = context_ts.queryTimeseriesData( "timeseries", date_ts, time1_ts );
-
-    if( T_ts!=T1 ){
-        std::cerr << "failed: Timeseries set/query data #1 do not match." << std::endl;
-        error_count++;
-    }
-
-    //context_ts.queryTimeseriesData( "timeseries", date_ts, make_Time(0,0,0) ); //this is to test that querying outside of dataset does not throw a segmentation fault.
-
-    context_ts.queryTimeseriesData( "timeseries", date_ts, make_Time(time0_ts.hour,time0_ts.minute,time0_ts.second+10) );
-
-    //------- XML I/O --------//
-
-    Context context_io;
-
-    RGBcolor color_io = RGB::red;
-
-    //date/time
-
-    Date date_io( 12, 3, 2010 );
-    context_io.setDate( date_io );
-
-    Time time_io( 13, 15, 0 );
-    context_io.setTime( time_io );
-
-    //patch
-
-    vec3 p_io(2,3,5);
-    vec2 size_io(3,2);
-    SphericalCoord rot_io(1,0.3*M_PI,0.4*M_PI);
-
-    uint UUIDp_io = context_io.addPatch( p_io, size_io, rot_io, color_io );
-
-    int pdatai_p = 4;
-    float pdataf_p = 7.2;
-    context_io.setPrimitiveData( UUIDp_io, "pdatai", pdatai_p );
-    context_io.setPrimitiveData( UUIDp_io, "pdataf", pdataf_p );
-
-    //triangle
-
-    vec3 v0_io(2,3,5);
-    vec3 v1_io(5,1,2);
-    vec3 v2_io(8,4,6);
-
-    uint UUIDt_io = context_io.addTriangle( v0_io, v1_io, v2_io, color_io );
-
-    int pdatai_t = 9;
-    float pdataf_t = 2.7;
-    context_io.setPrimitiveData( UUIDt_io, "pdatai", pdatai_t );
-    context_io.setPrimitiveData( UUIDt_io, "pdataf", pdataf_t );
-
-    //global data
-
-    std::vector<double> gdatad_io{9.432, 2939.9292 };
-
-    context_io.setGlobalData( "gdatad", HELIOS_TYPE_DOUBLE, gdatad_io.size(), &gdatad_io[0] );
-
-    //timeseries
-
-    float T0_io = 302.3;
-    float T1_io = 305.3;
-    Time time0_io = time_io;
-    Time time1_io = make_Time( time_io.hour, 30, 0 );
-
-    context_io.addTimeseriesData( "ts_io", T0_io, date_io, time0_io );
-    context_io.addTimeseriesData( "ts_io", T1_io, date_io, time1_io );
-
-    context_io.writeXML( "xmltest_io.xml", true );
-
-    Context context_oi;
-
-    context_oi.loadXML( "xmltest_io.xml", true );
-
-    float pdataf;
-    int pdatai;
-
-    context_oi.getPrimitiveData(0,"pdataf",pdataf);
-    context_oi.getPrimitiveData(0,"pdatai",pdatai);
-
-    if( pdataf!=pdataf_p || pdatai!=pdatai_p ){
-        std::cerr << "failed. Patch primitive data write/read do not match." << std::endl;
-        error_count ++;
-    }
-
-    std::vector<double> gdatad;
-    context_oi.getGlobalData("gdatad",gdatad);
-
-    bool failio = false;
-    if( gdatad_io.size() != gdatad.size() ){
-        failio = true;
-    }
-    for( int i=0; i<gdatad_io.size(); i++ ){
-        if( fabs(gdatad.at(i)-gdatad_io.at(i))>1e-3 ){
-            failio = true;
-        }
-    }
-    if( failio ){
-        std::cerr << "failed. Global data write/read do not match." << std::endl;
-        error_count ++;
-    }
-
-    //------- setTileObjectSubdivisionCount, getTileObjectAreaRatio, cropDomain & writeXML & loadXML for compound objects  --------//
-
-    Context context_to;
-
-    //non-textured tile object single subpatch
-    uint to1 = context_to.addTileObject(make_vec3(0,0,0), make_vec2(1,0.3), make_SphericalCoord(float(M_PI)*0.25, float(M_PI)*0.75), make_int2(1,1));
-    //non-textured tile object multiple subpatches
-    uint to2 = context_to.addTileObject(make_vec3(1,1,1), make_vec2(1,1), make_SphericalCoord(float(M_PI)*0.25, float(M_PI)*0.75), make_int2(5,3));
-    //textured tile object single subpatch disk
-    uint to3 = context_to.addTileObject(make_vec3(2,2,2), make_vec2(1,0.3), make_SphericalCoord(float(M_PI)*0.25, float(M_PI)*0.75), make_int2(1,1), "lib/images/disk_texture.png");
-    //textured tile object multiple subpatches disk
-    uint to4 = context_to.addTileObject(make_vec3(3,3,3), make_vec2(1,0.3), make_SphericalCoord(float(M_PI)*0.25, float(M_PI)*0.75), make_int2(5,3), "lib/images/disk_texture.png");
-    //textured tile object single subpatch diamond
-    uint to5 = context_to.addTileObject(make_vec3(-1,-1,-1), make_vec2(1,1), make_SphericalCoord(M_PI*0.25, M_PI*0.75), make_int2(1,1), "lib/images/diamond_texture.png");
-    //textured tile object multiple subpatches diamond
-    uint to6 = context_to.addTileObject(make_vec3(-2,-2,-2), make_vec2(1,1), make_SphericalCoord(M_PI*0.25, M_PI*0.75), make_int2(5,3), "lib/images/diamond_texture.png");
-
-    //throw in a sphere object just to check error checks
-//    uint so1 = context_to.addSphereObject(10, make_vec3(4,4,4), 0.3);
-//    uint n_UUIDs_so1 = context_to.getObjectPointer(so1)->getPrimitiveUUIDs().size();
-
-    context_to.writeXML("xmltest_to.xml", true );
-    uint context_to_PrimitiveCount = context_to.getPrimitiveCount();
-    uint context_to_ObjectCount = context_to.getObjectCount();
-
-    //////////////// getTileObjectAreaRatio
-
-    errtol = 1e-2;
-    double err_1 = fabs(context_to.getTileObjectAreaRatio(to1) - 1.0);
-    if(err_1 >= errtol){
-        std::cerr << "failed. tile object area ratio returned by getTileObjectAreaRatio is not correct for non-textured single subpatch tile." << std::endl;
-        error_count ++;
-    }
-    double err_2 = fabs(context_to.getTileObjectAreaRatio(to2) - 15.0);
-    if(err_2 >= errtol){
-        std::cerr << "failed. tile object area ratio returned by getTileObjectAreaRatio is not correct for non-textured multi-subpatch tile." << std::endl;
-        error_count ++;
-    }
-    double err_3 = fabs(context_to.getTileObjectAreaRatio(to5) - 1.0);
-    if(err_3 >= errtol){
-        std::cerr << "failed. tile object area ratio returned by getTileObjectAreaRatio is not correct for textured single subpatch tile." << std::endl;
-        error_count ++;
-    }
-    double err_4 = fabs(context_to.getTileObjectAreaRatio(to6) - 1.0*0.5/(1.0/15.0));
-    if(err_4 >= errtol){
-        std::cerr << "failed. tile object area ratio returned by getTileObjectAreaRatio is not correct for textured multi-subpatch tile." << std::endl;
-        error_count ++;
-    }
-
-    ////////////////// setTileObjectSubdivisionCount
-
-    std::vector<uint> allObjectIDs_to = context_to.getAllObjectIDs();
-    context_to.setTileObjectSubdivisionCount(allObjectIDs_to, make_int2(5,5));
-    std::vector<uint> allObjectIDs_to_after = context_to.getAllObjectIDs();
-    std::vector<uint> allUUIDs_to_after = context_to.getAllUUIDs();
-
-//    if( (allUUIDs_to_after.size() - n_UUIDs_so1) != uint(150)){
-//        std::cerr << "failed. setTileObjectSubdivisionCount (subiv version) not producing the correct number of primitives." << std::endl;
-//        error_count ++;
-//    }
-
-    if( allObjectIDs_to_after.size() != allObjectIDs_to.size()){
-        std::cerr << "failed. setTileObjectSubdivisionCount(subiv version) is  changing the number of objects in the context (it shouldn't)." << std::endl;
-        error_count ++;
-    }
-
-    context_to.setTileObjectSubdivisionCount(allObjectIDs_to, 49);
-    std::vector<uint> allObjectIDs_to_after2 = context_to.getAllObjectIDs();
-    std::vector<uint> allUUIDs_to_after2 = context_to.getAllUUIDs();
-
-    if( allObjectIDs_to_after2 != allObjectIDs_to){
-        std::cerr << "failed. setTileObjectSubdivisionCount  (area ratio version)  is changing the number of objects in the context (it shouldn't)." << std::endl;
-        error_count ++;
-    }
-
-    if( context_to.getTileObjectPointer(to1)->getPrimitiveUUIDs().size() == uint(49)){
-        std::cerr << "failed. setTileObjectSubdivisionCount  (area ratio version)  did not result in the correct number of subpatches" << std::endl;
-        error_count ++;
-    }
-
-    ////////////////// writeXML & loadXML for compound objects
-
-    Context context_to2;
-    context_to2.loadXML("xmltest_to.xml", true );
-    uint context_to2_PrimitiveCount = context_to2.getPrimitiveCount();
-    uint context_to2_ObjectCount = context_to2.getObjectCount();
-
-    if( context_to_PrimitiveCount != context_to2_PrimitiveCount){
-        std::cerr << "failed. number of primitives before writing and loading xml does not match number after" << std::endl;
-        error_count ++;
-    }
-
-    if( context_to_ObjectCount != context_to2_ObjectCount){
-        std::cerr << "failed. number of Objects before writing and loading xml does not match number after" << std::endl;
-        error_count ++;
-    }
-
-    //-------------------------------------------//
-
-    if( error_count==0 ){
-        std::cout << "passed." << std::endl;
-        return 0;
-    }else{
-        return 1;
-    }
-
-}
-
 void Context::addTexture( const char* texture_file ){
     if( textures.find(texture_file)==textures.end() ){//texture has not already been added
         Texture text( texture_file );
@@ -1107,7 +109,7 @@ bool Texture::hasTransparencyChannel() const{
     return hastransparencychannel;
 }
 
-std::vector<std::vector<bool> >* Texture::getTransparencyData(){
+const std::vector<std::vector<bool> >* Texture::getTransparencyData() const{
     return &transparencydata;
 }
 
@@ -1340,6 +342,10 @@ void Primitive::useTextureColor(){
 
 bool Primitive::isTextureColorOverridden() const{
     return texturecoloroverridden;
+}
+
+float Primitive::getSolidFraction() const{
+    return solid_fraction;
 }
 
 void Primitive::scale( const vec3& S ){
@@ -1656,14 +662,6 @@ void Triangle::makeTransformationMatrix( const helios::vec3& vert0, const helios
         }
     }
 
-}
-
-float Patch::getSolidFraction() const{
-    return solid_fraction;
-}
-
-float Triangle::getSolidFraction() const{
-    return solid_fraction;
 }
 
 void Primitive::setPrimitiveData( const char* label, const int& data ){
@@ -2068,7 +1066,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec3>& data ) c
 void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2085,7 +1083,7 @@ void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2102,7 +1100,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) c
 void Primitive::getPrimitiveData( const char* label, int2& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2119,7 +1117,7 @@ void Primitive::getPrimitiveData( const char* label, int2& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2136,7 +1134,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) c
 void Primitive::getPrimitiveData( const char* label, int3& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2153,7 +1151,7 @@ void Primitive::getPrimitiveData( const char* label, int3& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2170,7 +1168,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) c
 void Primitive::getPrimitiveData( const char* label, int4& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2187,7 +1185,7 @@ void Primitive::getPrimitiveData( const char* label, int4& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2204,7 +1202,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) c
 void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2221,7 +1219,7 @@ void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& data ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -2238,7 +1236,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& d
 HeliosDataType Primitive::getPrimitiveDataType( const char* label ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     return primitive_data_types.at(label);
@@ -2248,7 +1246,7 @@ HeliosDataType Primitive::getPrimitiveDataType( const char* label ) const{
 uint Primitive::getPrimitiveDataSize( const char* label ) const{
 
     if( !doesPrimitiveDataExist( label ) ){
-        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive" + std::to_string(UUID) ) );
+        throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
     }
 
     HeliosDataType type = primitive_data_types.at(label);
@@ -4148,6 +3146,7 @@ Voxel::Voxel( const RGBAcolor& a_color, uint a_UUID ){
 
     color = a_color;
     assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
+    solid_fraction = 1.f;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_VOXEL;
     texturefile = "";
@@ -4429,7 +3428,7 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
     float solid_fraction;
     if( textures.at(texture_file).hasTransparencyChannel() ){
-        std::vector<std::vector<bool> >* alpha = textures.at(texture_file).getTransparencyData();
+        const std::vector<std::vector<bool> >* alpha = textures.at(texture_file).getTransparencyData();
         int A = 0;
         int At = 0;
         int2 sz = textures.at(texture_file).getSize();
@@ -4508,7 +3507,7 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
 
     float solid_fraction;
     if( textures.at(texture_file).hasTransparencyChannel() ){
-        std::vector<std::vector<bool> >* alpha = textures.at(texture_file).getTransparencyData();
+        const std::vector<std::vector<bool> >* alpha = textures.at(texture_file).getTransparencyData();
         int2 sz = textures.at(texture_file).getSize();
         int2 uv_min( (int)lroundf(fmin(fmin(uv0.x,uv1.x),uv2.x)*float(sz.x)), (int)lroundf(fmin(fmin(uv0.y,uv1.y),uv2.y)*float(sz.y)) );
         int2 uv_max( (int)lroundf(fmax(fmax(uv0.x,uv1.x),uv2.x)*float(sz.x)), (int)lroundf(fmax(fmax(uv0.y,uv1.y),uv2.y)*float(sz.y)) );
@@ -4584,42 +3583,42 @@ uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotat
 }
 
 void Context::translatePrimitive(uint UUID, const vec3& shift ){
-    getPrimitivePointer(UUID)->translate(shift);
+    getPrimitivePointer_private(UUID)->translate(shift);
 }
 
 void Context::translatePrimitive( const std::vector<uint>& UUIDs, const vec3& shift ){
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->translate(shift);
+        getPrimitivePointer_private(UUID)->translate(shift);
     }
 }
 
 void Context::rotatePrimitive(uint UUID, float rot, const char* axis ){
-    getPrimitivePointer(UUID)->rotate(rot,axis);
+    getPrimitivePointer_private(UUID)->rotate(rot,axis);
 }
 
 void Context::rotatePrimitive( const std::vector<uint>& UUIDs, float rot, const char* axis ){
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->rotate(rot,axis);
+        getPrimitivePointer_private(UUID)->rotate(rot,axis);
     }
 }
 
 void Context::rotatePrimitive(uint UUID, float rot, const helios::vec3& axis ){
-    getPrimitivePointer(UUID)->rotate(rot,axis);
+    getPrimitivePointer_private(UUID)->rotate(rot,axis);
 }
 
-void Context::rotatePrimitive( const std::vector<uint>& UUIDs, float rot, helios::vec3& axis ){
+void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const vec3 &axis ){
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->rotate(rot,axis);
+        getPrimitivePointer_private(UUID)->rotate(rot,axis);
     }
 }
 
 void Context::scalePrimitive(uint UUID, const helios::vec3& S ){
-    getPrimitivePointer(UUID)->scale(S);
+    getPrimitivePointer_private(UUID)->scale(S);
 }
 
 void Context::scalePrimitive( const std::vector<uint>& UUIDs, const helios::vec3& S ){
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->scale(S);
+        getPrimitivePointer_private(UUID)->scale(S);
     }
 }
 
@@ -4670,7 +3669,7 @@ uint Context::copyPrimitive( uint UUID ){
     bool textureoverride = primitives.at(UUID)->isTextureColorOverridden();
 
     if( type==PRIMITIVE_TYPE_PATCH ){
-        Patch* p = getPatchPointer(UUID);
+        Patch* p = getPatchPointer_private(UUID);
         std::vector<vec2> uv = p->getTextureUV();
         vec2 size = p->getSize();
         float solid_fraction = p->getArea()/(size.x*size.y);
@@ -4691,7 +3690,7 @@ uint Context::copyPrimitive( uint UUID ){
         patch_new->setParentObjectID(parentID);
         primitives[currentUUID] = patch_new;
     }else if( type==PRIMITIVE_TYPE_TRIANGLE ){
-        Triangle* p = getTrianglePointer(UUID);
+        Triangle* p = getTrianglePointer_private(UUID);
         std::vector<vec3> vertices = p->getVertices();
         std::vector<vec2> uv = p->getTextureUV();
         Triangle* tri_new;
@@ -4708,7 +3707,7 @@ uint Context::copyPrimitive( uint UUID ){
         tri_new->setParentObjectID(parentID);
         primitives[currentUUID] = tri_new;
     }else if( type==PRIMITIVE_TYPE_VOXEL ){
-        Voxel* p = getVoxelPointer(UUID);
+        Voxel* p = getVoxelPointer_private(UUID);
         Voxel* voxel_new;
         //if( !p->hasTexture() ){
         voxel_new = (new Voxel( p->getColorRGBA(), currentUUID ));
@@ -4726,7 +3725,7 @@ uint Context::copyPrimitive( uint UUID ){
     copyPrimitiveData( UUID, currentUUID );
 
     if( textureoverride ){
-        getPrimitivePointer(currentUUID)->overrideTextureColor();
+        getPrimitivePointer_private(currentUUID)->overrideTextureColor();
     }
 
     markGeometryDirty();
@@ -4736,7 +3735,7 @@ uint Context::copyPrimitive( uint UUID ){
 
 void Context::copyPrimitiveData( uint UUID, uint oldUUID){
     //copy the primitive data
-    std::vector<std::string> plabel = getPrimitivePointer(UUID)->listPrimitiveData();
+    std::vector<std::string> plabel = getPrimitivePointer_private(UUID)->listPrimitiveData();
     for(auto & p : plabel){
 
         HeliosDataType type = getPrimitiveDataType( UUID, p.c_str() );
@@ -4799,6 +3798,13 @@ Primitive* Context::getPrimitivePointer( uint UUID ) const{
     return primitives.at(UUID);
 }
 
+Primitive* Context::getPrimitivePointer_private( uint UUID ) const{
+    if( primitives.find(UUID) == primitives.end() ){
+        throw( std::runtime_error("ERROR (getPrimitivePointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
+    }
+    return primitives.at(UUID);
+}
+
 bool Context::doesPrimitiveExist(uint UUID ) const{
     return primitives.find(UUID) != primitives.end();
 }
@@ -4811,6 +3817,34 @@ Patch* Context::getPatchPointer(uint UUID ) const{
     }
     return dynamic_cast<Patch*>(primitives.at(UUID));
 }
+
+Patch* Context::getPatchPointer_private(uint UUID ) const{
+    if( primitives.find(UUID) == primitives.end() ){
+        throw( std::runtime_error("ERROR (getPatchPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
+    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
+        throw( std::runtime_error("ERROR (getPatchPointer): UUID of " + std::to_string(UUID) + " is not a patch.") );
+    }
+    return dynamic_cast<Patch*>(primitives.at(UUID));
+}
+
+helios::vec2 Context::getPatchSize( uint UUID ) const{
+    if( primitives.find(UUID) == primitives.end() ){
+        throw( std::runtime_error("ERROR (getPatchSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
+    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
+        throw( std::runtime_error("ERROR (getPatchSize): UUID of " + std::to_string(UUID) + " is not a patch.") );
+    }
+    return dynamic_cast<Patch*>(primitives.at(UUID))->getSize();
+}
+
+helios::vec3 Context::getPatchCenter( uint UUID ) const{
+    if( primitives.find(UUID) == primitives.end() ){
+        throw( std::runtime_error("ERROR (getPatchCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
+    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
+        throw( std::runtime_error("ERROR (getPatchCenter): UUID of " + std::to_string(UUID) + " is not a patch.") );
+    }
+    return dynamic_cast<Patch*>(primitives.at(UUID))->getCenter();
+}
+
 Triangle* Context::getTrianglePointer(uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
         throw( std::runtime_error("ERROR (getTrianglePointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
@@ -4820,6 +3854,26 @@ Triangle* Context::getTrianglePointer(uint UUID ) const{
     return dynamic_cast<Triangle*>(primitives.at(UUID));
 }
 
+Triangle* Context::getTrianglePointer_private(uint UUID ) const{
+    if( primitives.find(UUID) == primitives.end() ){
+        throw( std::runtime_error("ERROR (getTrianglePointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
+    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_TRIANGLE ){
+        throw( std::runtime_error("ERROR (getTrianglePointer): UUID of " + std::to_string(UUID) + " is not a triangle.") );
+    }
+    return dynamic_cast<Triangle*>(primitives.at(UUID));
+}
+
+helios::vec3 Context::getTriangleVertex( uint UUID, uint number ) const{
+    if( primitives.find(UUID) == primitives.end() ){
+        throw( std::runtime_error("ERROR (getTriangleVertex): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
+    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_TRIANGLE ){
+        throw( std::runtime_error("ERROR (getTriangleVertex): UUID of " + std::to_string(UUID) + " is not a triangle.") );
+    }else if( number>2 ){
+        throw( std::runtime_error("ERROR (getTriangleVertex): Vertex index must be one of 0, 1, or 2.") );
+    }
+    return dynamic_cast<Triangle*>(primitives.at(UUID))->getVertex( number );
+}
+
 Voxel* Context::getVoxelPointer(uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
         throw( std::runtime_error("ERROR (getVoxelPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
@@ -4827,6 +3881,33 @@ Voxel* Context::getVoxelPointer(uint UUID ) const{
         throw( std::runtime_error("ERROR (getVoxelPointer): UUID of " + std::to_string(UUID) + " is not a voxel.") );
     }
     return dynamic_cast<Voxel*>(primitives.at(UUID));
+}
+
+Voxel* Context::getVoxelPointer_private(uint UUID ) const{
+    if( primitives.find(UUID) == primitives.end() ){
+        throw( std::runtime_error("ERROR (getVoxelPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
+    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
+        throw( std::runtime_error("ERROR (getVoxelPointer): UUID of " + std::to_string(UUID) + " is not a voxel.") );
+    }
+    return dynamic_cast<Voxel*>(primitives.at(UUID));
+}
+
+helios::vec3 Context::getVoxelSize( uint UUID ) const{
+    if( primitives.find(UUID) == primitives.end() ){
+        throw( std::runtime_error("ERROR (getVoxelSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
+    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
+        throw( std::runtime_error("ERROR (getVoxelSize): UUID of " + std::to_string(UUID) + " is not a patch.") );
+    }
+    return dynamic_cast<Voxel*>(primitives.at(UUID))->getSize();
+}
+
+helios::vec3 Context::getVoxelCenter( uint UUID ) const{
+    if( primitives.find(UUID) == primitives.end() ){
+        throw( std::runtime_error("ERROR (getVoxelCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.") );
+    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
+        throw( std::runtime_error("ERROR (getVoxelCenter): UUID of " + std::to_string(UUID) + " is not a patch.") );
+    }
+    return dynamic_cast<Voxel*>(primitives.at(UUID))->getCenter();
 }
 
 uint Context::getPrimitiveCount() const{
@@ -5052,7 +4133,7 @@ void Context::getDomainBoundingBox( vec2& xbounds, vec2& ybounds, vec2& zbounds 
 
     for( auto primitive : primitives){
 
-        std::vector<vec3> verts = getPrimitivePointer(primitive.first)->getVertices();
+        std::vector<vec3> verts = getPrimitivePointer_private(primitive.first)->getVertices();
 
         for( auto & vert : verts){
             if( vert.x<xbounds.x ){
@@ -5087,7 +4168,7 @@ void Context::getDomainBoundingBox( const std::vector<uint>& UUIDs, vec2& xbound
 
     for( uint UUID : UUIDs){
 
-        std::vector<vec3> verts = getPrimitivePointer( UUID )->getVertices();
+        std::vector<vec3> verts = getPrimitivePointer_private( UUID )->getVertices();
 
         for( auto & vert : verts){
             if( vert.x<xbounds.x ){
@@ -5147,11 +4228,11 @@ void Context::cropDomainX(const vec2 &xbounds ){
 
     for( uint p : UUIDs_all){
 
-        vertices = getPrimitivePointer(p)->getVertices();
+        vertices = getPrimitivePointer_private(p)->getVertices();
 
         for(auto & vertex : vertices){
             if( vertex.x<xbounds.x || vertex.x>xbounds.y ){
-                uint parent_object_ID = getPrimitivePointer(p)->getParentObjectID();
+                uint parent_object_ID = getPrimitivePointer_private(p)->getParentObjectID();
                 if(parent_object_ID == 0) {
                     deletePrimitive(p);
                     break;
@@ -5177,11 +4258,11 @@ void Context::cropDomainY(const vec2 &ybounds ){
 
     for( uint p : UUIDs_all){
 
-        vertices = getPrimitivePointer(p)->getVertices();
+        vertices = getPrimitivePointer_private(p)->getVertices();
 
         for(auto & vertex : vertices){
             if( vertex.y<ybounds.x || vertex.y>ybounds.y ){
-                uint parent_object_ID = getPrimitivePointer(p)->getParentObjectID();
+                uint parent_object_ID = getPrimitivePointer_private(p)->getParentObjectID();
                 if(parent_object_ID == 0) {
                     deletePrimitive(p);
                     break;
@@ -5207,11 +4288,11 @@ void Context::cropDomainZ(const vec2 &zbounds ){
 
     for( uint p : UUIDs_all){
 
-        vertices = getPrimitivePointer(p)->getVertices();
+        vertices = getPrimitivePointer_private(p)->getVertices();
 
         for(auto & vertex : vertices){
             if( vertex.z<zbounds.x || vertex.z>zbounds.y ){
-                uint parent_object_ID = getPrimitivePointer(p)->getParentObjectID();
+                uint parent_object_ID = getPrimitivePointer_private(p)->getParentObjectID();
                 if(parent_object_ID == 0) {
                     deletePrimitive(p);
                     break;
@@ -5236,11 +4317,11 @@ void Context::cropDomain(const std::vector<uint> &UUIDs, const vec2 &xbounds, co
     size_t delete_count = 0;
     for( uint UUID : UUIDs){
 
-        vertices = getPrimitivePointer(UUID)->getVertices();
+        vertices = getPrimitivePointer_private(UUID)->getVertices();
 
         for(auto & vertex : vertices){
             if( vertex.x<xbounds.x || vertex.x>xbounds.y || vertex.y<ybounds.x || vertex.y>ybounds.y || vertex.z<zbounds.x || vertex.z>zbounds.y ){
-                uint parent_object_ID = getPrimitivePointer(UUID)->getParentObjectID();
+                uint parent_object_ID = getPrimitivePointer_private(UUID)->getParentObjectID();
                 if(parent_object_ID == 0) {
                     deletePrimitive(UUID);
                     delete_count++;
@@ -5323,7 +4404,7 @@ float CompoundObject::getArea() const{
     for( uint UUID : UUIDs){
 
         if( context->doesPrimitiveExist( UUID ) ){
-            area += context->getPrimitivePointer( UUID )->getArea();
+            area += context->getPrimitiveArea(UUID);
         }
 
     }
@@ -5336,7 +4417,7 @@ void CompoundObject::setColor( const helios::RGBcolor& a_color ){
     for( uint UUID : UUIDs){
 
         if( context->doesPrimitiveExist( UUID ) ){
-            context->getPrimitivePointer( UUID )->setColor( a_color );
+            context->setPrimitiveColor( UUID, a_color );
         }
 
     }
@@ -5349,7 +4430,7 @@ void CompoundObject::setColor( const helios::RGBAcolor& a_color ){
     for( uint UUID : UUIDs){
 
         if( context->doesPrimitiveExist( UUID ) ){
-            context->getPrimitivePointer( UUID )->setColor( a_color );
+            context->setPrimitiveColor( UUID, a_color );
         }
 
     }
@@ -5374,7 +4455,7 @@ void CompoundObject::overrideTextureColor(){
     for( uint UUID : UUIDs){
 
         if( context->doesPrimitiveExist( UUID ) ){
-            context->getPrimitivePointer( UUID )->overrideTextureColor();
+            context->overridePrimitiveTextureColor( UUID );
         }
 
     }
@@ -5384,7 +4465,7 @@ void CompoundObject::useTextureColor(){
     for( uint UUID : UUIDs){
 
         if( context->doesPrimitiveExist( UUID ) ){
-            context->getPrimitivePointer( UUID )->useTextureColor();
+            context->usePrimitiveTextureColor( UUID );
         }
 
     }
@@ -5413,9 +4494,9 @@ void CompoundObject::translate( const helios::vec3& shift ){
 
         if( context->doesPrimitiveExist( UUID ) ){
 
-            context->getPrimitivePointer( UUID )->getTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitivePointer( UUID )->setTransformationMatrix(T_prim);
+            context->setPrimitiveTransformationMatrix( UUID,T_prim);
         }
 
     }
@@ -5431,9 +4512,9 @@ void CompoundObject::rotate( float rot, const char* axis ){
 
         for( uint UUID : UUIDs){
             if( context->doesPrimitiveExist( UUID ) ){
-                context->getPrimitivePointer( UUID )->getTransformationMatrix(Rz_prim);
+                context->getPrimitiveTransformationMatrix( UUID,Rz_prim);
                 matmult(Rz,Rz_prim,Rz_prim);
-                context->getPrimitivePointer( UUID )->setTransformationMatrix(Rz_prim);
+                context->setPrimitiveTransformationMatrix( UUID,Rz_prim);
             }
         }
     }else if( strcmp(axis,"y")==0 ){
@@ -5442,9 +4523,9 @@ void CompoundObject::rotate( float rot, const char* axis ){
         matmult(Ry,transform,transform);
         for( uint UUID : UUIDs){
             if( context->doesPrimitiveExist( UUID ) ){
-                context->getPrimitivePointer( UUID )->getTransformationMatrix(Ry_prim);
+                context->getPrimitiveTransformationMatrix( UUID,Ry_prim);
                 matmult(Ry,Ry_prim,Ry_prim);
-                context->getPrimitivePointer( UUID )->setTransformationMatrix(Ry_prim);
+                context->setPrimitiveTransformationMatrix( UUID,Ry_prim);
             }
         }
     }else if( strcmp(axis,"x")==0 ){
@@ -5453,9 +4534,9 @@ void CompoundObject::rotate( float rot, const char* axis ){
         matmult(Rx,transform,transform);
         for( uint UUID : UUIDs){
             if( context->doesPrimitiveExist( UUID ) ){
-                context->getPrimitivePointer( UUID )->getTransformationMatrix(Rx_prim);
+                context->getPrimitiveTransformationMatrix( UUID,Rx_prim);
                 matmult(Rx,Rx_prim,Rx_prim);
-                context->getPrimitivePointer( UUID )->setTransformationMatrix(Rx_prim);
+                context->setPrimitiveTransformationMatrix( UUID,Rx_prim);
             }
         }
     }else{
@@ -5474,9 +4555,9 @@ void CompoundObject::rotate( float rot, const helios::vec3& axis ){
 
         if( context->doesPrimitiveExist( UUID ) ){
 
-            context->getPrimitivePointer( UUID )->getTransformationMatrix(R_prim);
+            context->getPrimitiveTransformationMatrix( UUID,R_prim);
             matmult(R,R_prim,R_prim);
-            context->getPrimitivePointer( UUID )->setTransformationMatrix(R_prim);
+            context->setPrimitiveTransformationMatrix( UUID,R_prim);
 
         }
 
@@ -6221,7 +5302,7 @@ uint Context::copyObject(uint ObjID ){
 
     std::vector<uint> UUIDs_copy = copyPrimitive( UUIDs );
     for( uint p : UUIDs_copy){
-        getPrimitivePointer(p)->setParentObjectID( currentObjectID );
+        getPrimitivePointer_private(p)->setParentObjectID( currentObjectID );
     }
 
     std::string texturefile = objects.at(ObjID)->getTextureFile();
@@ -6365,7 +5446,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
             std::cerr << "WARNING (setTileObjectSubdivisionCount): ObjectID " << OBJID << " is not a tile object. Skipping..." << std::endl;
         }else{
             //test if the tile is textured and push into two different vectors
-            Patch* p = getPatchPointer(getObjectPointer(OBJID)->getPrimitiveUUIDs().at(0));
+            Patch* p = getPatchPointer_private(getObjectPointer(OBJID)->getPrimitiveUUIDs().at(0));
             if( !p->hasTexture() ){ //no texture
                 tile_ObjectIDs.push_back(OBJID);
             }else{ //texture
@@ -6376,10 +5457,9 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
     }
 
     //Here just call setSubdivisionCount directly for the non-textured tile objects
-    for(uint i=0;i<tile_ObjectIDs.size();i++)
-    {
+    for(unsigned int tile_ObjectID : tile_ObjectIDs){
 
-        Tile* current_object_pointer = getTileObjectPointer(tile_ObjectIDs.at(i));
+        Tile* current_object_pointer = getTileObjectPointer(tile_ObjectID);
         std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
 
         vec2 size = current_object_pointer->getSize();
@@ -6391,7 +5471,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
         std::vector<uint> UUIDs_new = addTile(center, size, rotation, new_subdiv, color );
 
         for( uint UUID : UUIDs_new ) {
-            getPrimitivePointer(UUID)->setParentObjectID(tile_ObjectIDs.at(i));
+            getPrimitivePointer_private(UUID)->setParentObjectID(tile_ObjectID);
         }
 
         current_object_pointer->setPrimitiveUUIDs(UUIDs_new);
@@ -6491,7 +5571,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
             std::cerr << "WARNING (setTileObjectSubdivisionCount): ObjectID " << OBJID << " is not a tile object. Skipping..." << std::endl;
         }else{
             //test if the tile is textured and push into two different vectors
-            Patch* p = getPatchPointer(getObjectPointer(OBJID)->getPrimitiveUUIDs().at(0));
+            Patch* p = getPatchPointer_private(getObjectPointer(OBJID)->getPrimitiveUUIDs().at(0));
             if( !p->hasTexture() ){ //no texture
                 tile_ObjectIDs.push_back(OBJID);
             }else{ //texture
@@ -6536,7 +5616,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
         std::vector<uint> UUIDs_new = addTile(center, size, rotation, new_subdiv, color );
 
         for( uint UUID : UUIDs_new ) {
-            getPrimitivePointer(UUID)->setParentObjectID(tile_ObjectIDs.at(i));
+            getPrimitivePointer_private(UUID)->setParentObjectID(tile_ObjectIDs.at(i));
         }
 
         current_object_pointer->setPrimitiveUUIDs(UUIDs_new);
@@ -6608,7 +5688,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
     {
         //get info from current object
         Tile* current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
-        // std::string current_texture_file = getPrimitivePointer(current_object_pointer->getPrimitiveUUIDs().at(0))->getTextureFile();
+        // std::string current_texture_file = getPrimitivePointer_private(current_object_pointer->getPrimitiveUUIDs().at(0))->getTextureFile();
         std::string current_texture_file = current_object_pointer->getTextureFile();
         // std::cout << "current_texture_file for ObjID " << textured_tile_ObjectIDs.at(i) << " = " << current_texture_file << std::endl;
         std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
@@ -6723,13 +5803,13 @@ std::vector<helios::vec3> Tile::getVertices() const{
     //Y[2] = make_vec3( 0.5f, 0.5f, 0.f);
     //Y[3] = make_vec3( -0.5f, 0.5f, 0.f);
 
-    vertices.at(0) = context->getPrimitivePointer( UUIDs.front() )->getVertices().at(0);
+    vertices.at(0) = context->getPrimitiveVertices( UUIDs.front() ).at(0);
 
-    vertices.at(1) = context->getPrimitivePointer( UUIDs.at( subdiv.x-1 ) )->getVertices().at(1);
+    vertices.at(1) = context->getPrimitiveVertices( UUIDs.at( subdiv.x-1 ) ).at(1);
 
-    vertices.at(2) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-1 ) )->getVertices().at(2);
+    vertices.at(2) = context->getPrimitiveVertices( UUIDs.at( subdiv.x*subdiv.y-1 ) ).at(2);
 
-    vertices.at(3) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-subdiv.x ) )->getVertices().at(3);
+    vertices.at(3) = context->getPrimitiveVertices( UUIDs.at( subdiv.x*subdiv.y-subdiv.x ) ).at(3);
 
     return vertices;
 
@@ -6737,22 +5817,11 @@ std::vector<helios::vec3> Tile::getVertices() const{
 
 vec3 Tile::getNormal() const{
 
-    return context->getPatchPointer( UUIDs.front() )->getNormal();
+    return context->getPrimitiveNormal( UUIDs.front() );
 
 }
 
 std::vector<helios::vec2> Tile::getTextureUV() const{
-
-//    std::vector<helios::vec2> uv;
-//    uv.resize(4);
-//
-//    uv.at(0) = context->getPrimitivePointer( UUIDs.at( subdiv.x-1 ) )->getTextureUV().at(0);
-//
-//    uv.at(1) = context->getPrimitivePointer( UUIDs.at( 0) )->getTextureUV().at(1);
-//
-//    uv.at(2) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-subdiv.y ) )->getTextureUV().at(2);
-//
-//    uv.at(3) = context->getPrimitivePointer( UUIDs.at( subdiv.x*subdiv.y-1 ) )->getTextureUV().at(3);
 
     std::vector<helios::vec2> uv{ make_vec2(0,0), make_vec2(1,0), make_vec2(1,1), make_vec2(0,1) };
 
@@ -6770,9 +5839,9 @@ void Tile::scale(const vec3 &S ){
 
         if( context->doesPrimitiveExist( UUID ) ){
 
-            context->getPrimitivePointer( UUID )->getTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitivePointer( UUID )->setTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
 
         }
 
@@ -6846,9 +5915,9 @@ void Sphere::scale( float S ){
 
         if( context->doesPrimitiveExist( UUID ) ){
 
-            context->getPrimitivePointer( UUID )->getTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitivePointer( UUID )->setTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
 
         }
 
@@ -6929,9 +5998,9 @@ void Tube::scale( float S ){
 
         if( context->doesPrimitiveExist( UUID ) ){
 
-            context->getPrimitivePointer( UUID )->getTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitivePointer( UUID )->setTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
 
         }
 
@@ -7013,9 +6082,9 @@ void Box::scale(const vec3 &S ){
 
         if( context->doesPrimitiveExist( UUID ) ){
 
-            context->getPrimitivePointer( UUID )->getTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitivePointer( UUID )->setTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
 
         }
 
@@ -7094,9 +6163,9 @@ void Disk::scale(const vec3 &S ){
 
         if( context->doesPrimitiveExist( UUID ) ){
 
-            context->getPrimitivePointer( UUID )->getTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitivePointer( UUID )->setTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
 
         }
 
@@ -7282,9 +6351,9 @@ void Cone::scaleLength( float S ){
     matmult(T,transform,transform);
     for( uint UUID : UUIDs){
         if( context->doesPrimitiveExist( UUID ) ){
-            context->getPrimitivePointer( UUID )->getTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitivePointer( UUID )->setTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
         }
     }
 
@@ -7330,9 +6399,9 @@ void Cone::scaleGirth( float S ){
     matmult(T,transform,transform);
     for( uint UUID : UUIDs){
         if( context->doesPrimitiveExist( UUID ) ){
-            context->getPrimitivePointer( UUID )->getTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitivePointer( UUID )->setTransformationMatrix(T_prim);
+            context->getPrimitiveTransformationMatrix( UUID,T_prim);
         }
     }
 
@@ -7419,7 +6488,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     sphere_new->setColor( color );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = sphere_new;
@@ -7541,7 +6610,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     sphere_new->setTransformationMatrix( transform );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = sphere_new;
@@ -7583,12 +6652,12 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
             UUID.push_back( addPatch( subcenter, subsize, make_SphericalCoord(0,0), color ) );
 
             if( rotation.elevation!=0.f ){
-                getPrimitivePointer( UUID.back() )->rotate( -rotation.elevation, "x" );
+                getPrimitivePointer_private( UUID.back() )->rotate( -rotation.elevation, "x" );
             }
             if( rotation.azimuth!=0.f ){
-                getPrimitivePointer( UUID.back() )->rotate( -rotation.azimuth, "z" );
+                getPrimitivePointer_private( UUID.back() )->rotate( -rotation.azimuth, "z" );
             }
-            getPrimitivePointer( UUID.back() )->translate( center );
+            getPrimitivePointer_private( UUID.back() )->translate( center );
 
         }
     }
@@ -7616,7 +6685,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
     tile_new->setColor( color );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = tile_new;
@@ -7649,7 +6718,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
     uv_sub.y = 1.f/float(subdiv.y);
 
     addTexture( texturefile );
-    std::vector<std::vector<bool> >* alpha;
+    const std::vector<std::vector<bool> >* alpha;
     int2 sz;
     if( textures.at(texturefile).hasTransparencyChannel() ){
         alpha = textures.at(texturefile).getTransparencyData();
@@ -7741,7 +6810,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
     tile_new->setTransformationMatrix( transform );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = tile_new;
@@ -7869,7 +6938,7 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
     tube_new->getTransformationMatrix( transform );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = tube_new;
@@ -7993,7 +7062,7 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
     tube_new->getTransformationMatrix( transform );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = tube_new;
@@ -8131,7 +7200,7 @@ uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &sub
     box_new->setColor( color );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = box_new;
@@ -8245,7 +7314,7 @@ uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, co
     box_new->setTransformationMatrix( transform );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = box_new;
@@ -8277,9 +7346,9 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
         float dtheta = 2.f*float(M_PI)/float(Ndivs);
 
         UUID.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), color );
-        getPrimitivePointer(UUID.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer(UUID.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer(UUID.at(i))->translate( center );
+        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.elevation, "y" );
+        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.azimuth, "z" );
+        getPrimitivePointer_private(UUID.at(i))->translate( center );
 
     }
 
@@ -8299,7 +7368,7 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
     disk_new->setColor( color );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = disk_new;
@@ -8318,9 +7387,9 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
         float dtheta = 2.f*float(M_PI)/float(Ndivs);
 
         UUID.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(dtheta*float(i))),0.5f*(1.f+sinf(dtheta*float(i)))), make_vec2(0.5f*(1.f+cosf(dtheta*float(i+1))),0.5f*(1.f+sinf(dtheta*float(i+1))))  );
-        getPrimitivePointer(UUID.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer(UUID.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer(UUID.at(i))->translate( center );
+        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.elevation, "y" );
+        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.azimuth, "z" );
+        getPrimitivePointer_private(UUID.at(i))->translate( center );
 
     }
 
@@ -8338,7 +7407,7 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
     disk_new->setTransformationMatrix( transform );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = disk_new;
@@ -8351,18 +7420,18 @@ uint Context::addPolymeshObject(const std::vector<uint> &UUIDs ){
 
     auto* polymesh_new = (new Polymesh(currentObjectID, UUIDs, "", this));
 
-    polymesh_new->setColor( getPrimitivePointer( UUIDs.front())->getColor() );
+    polymesh_new->setColor( getPrimitivePointer_private( UUIDs.front())->getColor() );
 
     float T[16], transform[16];
     polymesh_new->getTransformationMatrix( transform );
 
-    makeTranslationMatrix( getPrimitivePointer( UUIDs.front())->getVertices().front(),T);
+    makeTranslationMatrix( getPrimitivePointer_private( UUIDs.front())->getVertices().front(),T);
     matmult(T,transform,transform);
 
     polymesh_new->setTransformationMatrix( transform );
 
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(UUID)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = polymesh_new;
@@ -8470,7 +7539,7 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
     cone_new->setTransformationMatrix( transform );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = cone_new;
@@ -8590,7 +7659,7 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
     cone_new->setTransformationMatrix( transform );
 
     for( uint p : UUID){
-        getPrimitivePointer(p)->setParentObjectID(currentObjectID);
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = cone_new;
@@ -8784,12 +7853,12 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
             UUID[t] = addPatch( subcenter, subsize, make_SphericalCoord(0,0), color );
 
             if( rotation.elevation!=0.f ){
-                getPrimitivePointer( UUID[t] )->rotate( -rotation.elevation, "x" );
+                getPrimitivePointer_private( UUID[t] )->rotate( -rotation.elevation, "x" );
             }
             if( rotation.azimuth!=0.f ){
-                getPrimitivePointer( UUID[t] )->rotate( -rotation.azimuth, "z" );
+                getPrimitivePointer_private( UUID[t] )->rotate( -rotation.azimuth, "z" );
             }
-            getPrimitivePointer( UUID[t] )->translate( center );
+            getPrimitivePointer_private( UUID[t] )->translate( center );
 
             t++;
 
@@ -8911,7 +7980,7 @@ std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, c
 
 }
 
-std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, std::vector<RGBcolor> &color ){
+std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color ){
 
     const uint node_count = nodes.size();
 
@@ -9351,9 +8420,9 @@ std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &s
         float dtheta = 2.f*float(M_PI)/float(Ndivs);
 
         UUIDs.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), color );
-        getPrimitivePointer(UUIDs.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer(UUIDs.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer(UUIDs.at(i))->translate( center );
+        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.elevation, "y" );
+        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.azimuth, "z" );
+        getPrimitivePointer_private(UUIDs.at(i))->translate( center );
 
     }
 
@@ -9371,9 +8440,9 @@ std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &s
         float dtheta = 2.f*float(M_PI)/float(Ndivs);
 
         UUIDs.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(dtheta*float(i))),0.5f*(1.f+sinf(dtheta*float(i)))), make_vec2(0.5f*(1.f+cosf(dtheta*float(i+1))),0.5f*(1.f+sinf(dtheta*float(i+1))))  );
-        getPrimitivePointer(UUIDs.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer(UUIDs.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer(UUIDs.at(i))->translate( center );
+        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.elevation, "y" );
+        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.azimuth, "z" );
+        getPrimitivePointer_private(UUIDs.at(i))->translate( center );
 
     }
 
@@ -10152,12 +9221,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
     int u;
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_int"); prim_data; prim_data = prim_data.next_sibling("primitive_data_int")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<int> datav;
@@ -10180,12 +9254,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_uint"); prim_data; prim_data = prim_data.next_sibling("primitive_data_uint")) {
 
         const char *label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<uint> datav;
@@ -10208,12 +9287,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_float"); prim_data; prim_data = prim_data.next_sibling("primitive_data_float")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<float> datav;
@@ -10236,12 +9320,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_double"); prim_data; prim_data = prim_data.next_sibling("primitive_data_double")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<double> datav;
@@ -10264,12 +9353,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_vec2"); prim_data; prim_data = prim_data.next_sibling("primitive_data_vec2")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<vec2> datav;
@@ -10298,12 +9392,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_vec3"); prim_data; prim_data = prim_data.next_sibling("primitive_data_vec3")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<vec3> datav;
@@ -10332,12 +9431,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_vec4"); prim_data; prim_data = prim_data.next_sibling("primitive_data_vec4")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<vec4> datav;
@@ -10366,12 +9470,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_int2"); prim_data; prim_data = prim_data.next_sibling("primitive_data_int2")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<int2> datav;
@@ -10400,12 +9509,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_int3"); prim_data; prim_data = prim_data.next_sibling("primitive_data_int3")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<int3> datav;
@@ -10434,12 +9548,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_int4"); prim_data; prim_data = prim_data.next_sibling("primitive_data_int4")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<int4> datav;
@@ -10468,12 +9587,17 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         }
     }
 
-    u = 0;
     for (pugi::xml_node prim_data = p.child("primitive_data_string"); prim_data; prim_data = prim_data.next_sibling("primitive_data_string")){
 
         const char* label = prim_data.attribute("label").value();
 
+        u=0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
+
+            if( u>=prim_UUIDs.size() ){
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                break;
+            }
 
             const char *data_str = data.child_value();
             std::vector<std::string> datav;
@@ -10650,7 +9774,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), texture_file.c_str(), 0.5*(uv.at(2)+uv.at(0)), uv.at(2)-uv.at(0) );
             }
         }
-        getPrimitivePointer(ID)->setTransformationMatrix(transform);
+        getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
 
         UUID.push_back(ID);
 
@@ -10665,7 +9789,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         const char* center_str = center_node.child_value();
         if( strlen(center_str)!=0 ){
             center=string2vec3(center_str);
-            getPatchPointer(ID)->translate(center);
+            getPatchPointer_private(ID)->translate(center);
         }
 
         // * Patch Sizes * //
@@ -10675,7 +9799,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         const char* size_str = size_node.child_value();
         if( strlen(size_str)!=0 ){
             size=string2vec2(size_str);
-            getPatchPointer(ID)->scale(make_vec3(size.x,size.y,1));
+            getPatchPointer_private(ID)->scale(make_vec3(size.x,size.y,1));
         }
 
         // * Patch Rotations * //
@@ -10685,8 +9809,8 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         const char* rotation_str = rotation_node.child_value();
         if( strlen(rotation_str)!=0 ){
             vec2 rot = string2vec2(rotation_str);
-            getPatchPointer(ID)->rotate(rot.x,"y");
-            getPatchPointer(ID)->rotate(rot.y,"z");
+            getPatchPointer_private(ID)->rotate(rot.x,"y");
+            getPatchPointer_private(ID)->rotate(rot.y,"z");
         }
 
         //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
@@ -10815,7 +9939,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         }else{
             ID = addTriangle( vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2) );
         }
-        getPrimitivePointer(ID)->setTransformationMatrix(transform);
+        getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
 
         UUID.push_back(ID);
 
@@ -10864,7 +9988,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
         // * Add the Voxel * //
         ID = addVoxel( make_vec3(0,0,0), make_vec3(0,0,0), 0, color );
-        getPrimitivePointer(ID)->setTransformationMatrix(transform);
+        getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
 
         UUID.push_back(ID);
 
@@ -10879,7 +10003,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         const char* center_str = center_node.child_value();
         if( strlen(center_str)!=0 ){
             center=string2vec3(center_str);
-            getVoxelPointer(ID)->translate(center);
+            getVoxelPointer_private(ID)->translate(center);
         }
 
         // * Voxel Sizes * //
@@ -10889,7 +10013,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         const char* size_str = size_node.child_value();
         if( strlen(size_str)!=0 ){
             size=string2vec3(size_str);
-            getVoxelPointer(ID)->translate(size);
+            getVoxelPointer_private(ID)->translate(size);
         }
 
         // * Voxel Rotation * //
@@ -10900,7 +10024,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( strlen(rotation_str)!=0 ){
 //            rotation = std::stof(rotation_str);
             rotation = atof(rotation_str);
-            getVoxelPointer(ID)->rotate(rotation,"z");
+            getVoxelPointer_private(ID)->rotate(rotation,"z");
         }
 
         //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
@@ -12108,7 +11232,7 @@ void Context::writeXML( const char* filename, bool quiet ) const{
 
         uint p = primitive.first;
 
-        Primitive* prim = getPrimitivePointer(p);
+        Primitive* prim = getPrimitivePointer_private(p);
 
         //skip primitives that belong to objects
         if( prim->getParentObjectID()!=0 ){
@@ -12142,7 +11266,7 @@ void Context::writeXML( const char* filename, bool quiet ) const{
         //Patches
         if( prim->getType()==PRIMITIVE_TYPE_PATCH ){
 
-            Patch* patch = getPatchPointer(p);
+            Patch* patch = getPatchPointer_private(p);
             float transform[16];
             prim->getTransformationMatrix(transform);
 
@@ -12176,7 +11300,7 @@ void Context::writeXML( const char* filename, bool quiet ) const{
             }
             outfile << "</transform>" << std::endl;
 
-            std::vector<vec2> uv = getTrianglePointer(p)->getTextureUV();
+            std::vector<vec2> uv = getTrianglePointer_private(p)->getTextureUV();
             if( !uv.empty() ){
                 outfile << "\t<textureUV>" << std::flush;
                 for( int i=0; i<uv.size(); i++ ){
@@ -12251,7 +11375,7 @@ void Context::writeXML( const char* filename, bool quiet ) const{
         std::vector<HeliosDataType> pdata_types;
         std::vector<uint> primitiveUUIDs = obj->getPrimitiveUUIDs();
         for( uint UUID : primitiveUUIDs ){
-            std::vector<std::string> labels = getPrimitivePointer(UUID)->listPrimitiveData();
+            std::vector<std::string> labels = getPrimitivePointer_private(UUID)->listPrimitiveData();
             for( int i=0; i<labels.size(); i++ ){
                 if( find(pdata_labels.begin(),pdata_labels.end(),labels.at(i)) == pdata_labels.end() ){
                     pdata_labels.push_back(labels.at(i));
@@ -12954,9 +12078,9 @@ void Context::writePLY( const char* filename ) const{
 
         uint p = primitive.first;
 
-        std::vector<vec3> vertices = getPrimitivePointer(p)->getVertices();
-        PrimitiveType type = getPrimitivePointer(p)->getType();
-        RGBcolor C = getPrimitivePointer(p)->getColor();
+        std::vector<vec3> vertices = getPrimitivePointer_private(p)->getVertices();
+        PrimitiveType type = getPrimitivePointer_private(p)->getType();
+        RGBcolor C = getPrimitivePointer_private(p)->getColor();
         C.scale(255.f);
 
         if( type==PRIMITIVE_TYPE_TRIANGLE ){
@@ -13178,7 +12302,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, flo
 
                         ID = addTriangle( origin+v0*scl, origin+v1*scl, origin+v2*scl, texture.c_str(), texture_uv.at(iuv0), texture_uv.at(iuv1), texture_uv.at(iuv2) );
 
-                        vec3 normal = getPrimitivePointer(ID)->getNormal();
+                        vec3 normal = getPrimitivePointer_private(ID)->getNormal();
 
                     }
                 }else{
@@ -13328,9 +12452,9 @@ void Context::writeOBJ( const char* filename ) const{
 
         uint p = primitive.first;
 
-        std::vector < vec3 > vertices = getPrimitivePointer(p)->getVertices();
-        PrimitiveType type = getPrimitivePointer(p)->getType();
-        RGBcolor C = getPrimitivePointer(p)->getColor();
+        std::vector < vec3 > vertices = getPrimitivePointer_private(p)->getVertices();
+        PrimitiveType type = getPrimitivePointer_private(p)->getType();
+        RGBcolor C = getPrimitivePointer_private(p)->getColor();
 
         if (type == PRIMITIVE_TYPE_TRIANGLE) {
 
@@ -13342,10 +12466,10 @@ void Context::writeOBJ( const char* filename ) const{
                 vertex_count++;
             }
 
-            std::vector < vec2 > uv_v = getTrianglePointer(p)->getTextureUV();
-            if (getTrianglePointer(p)->hasTexture()) {
+            std::vector < vec2 > uv_v = getTrianglePointer_private(p)->getTextureUV();
+            if (getTrianglePointer_private(p)->hasTexture()) {
                 uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
-                texture_list.push_back(getTrianglePointer(p)->getTextureFile());
+                texture_list.push_back(getTrianglePointer_private(p)->getTextureFile());
                 for (int i = 0; i < 3; i++) {
                     uv.push_back( make_vec2(1-uv_v.at(i).x,uv_v.at(i).y));
                     uv_count++;
@@ -13368,10 +12492,10 @@ void Context::writeOBJ( const char* filename ) const{
             }
             std::vector < vec2 > uv_v;
             std::string texturefile;
-            uv_v = getPatchPointer(p)->getTextureUV();
-            texturefile = getPatchPointer(p)->getTextureFile();
+            uv_v = getPatchPointer_private(p)->getTextureUV();
+            texturefile = getPatchPointer_private(p)->getTextureFile();
 
-            if (getPatchPointer(p)->hasTexture()) {
+            if (getPatchPointer_private(p)->hasTexture()) {
                 texture_list.push_back(texturefile);
                 texture_list.push_back(texturefile);
                 uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
@@ -13558,12 +12682,87 @@ void Context::writeOBJ( const char* filename ) const{
     std::cout << "done." << std::endl;
 }
 
+void Context::writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, bool print_header ) const{
+    writePrimitiveData(filename,column_format,getAllUUIDs(),print_header);
+}
+
+void Context::writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header ) const{
+
+    std::ofstream file(filename);
+
+    if( print_header ){
+        for( const auto &label : column_format ) {
+            file << label << " ";
+        }
+        file.seekp(-1, std::ios_base::end);
+        file << "\n";
+    }
+
+    bool uuidexistswarning = false;
+    bool dataexistswarning = false;
+    bool datatypewarning = false;
+
+    for( uint UUID : UUIDs ){
+        if( !doesPrimitiveExist(UUID) ){
+            uuidexistswarning=true;
+            continue;
+        }
+        for( const auto &label : column_format ) {
+            if( !doesPrimitiveDataExist(UUID,label.c_str()) ){
+                dataexistswarning=true;
+                file << 0 << " ";
+                continue;
+            }
+            HeliosDataType type = getPrimitiveDataType( UUID, label.c_str() );
+            if( type == HELIOS_TYPE_INT ){
+                int data;
+                getPrimitiveData( UUID, label.c_str(), data );
+                file << data << " ";
+            }else if( type == HELIOS_TYPE_UINT ) {
+                uint data;
+                getPrimitiveData(UUID, label.c_str(), data);
+                file << data << " ";
+            }else if( type == HELIOS_TYPE_FLOAT ) {
+                float data;
+                getPrimitiveData(UUID, label.c_str(), data);
+                file << data << " ";
+            }else if( type == HELIOS_TYPE_DOUBLE ) {
+                double data;
+                getPrimitiveData(UUID, label.c_str(), data);
+                file << data << " ";
+            }else if( type == HELIOS_TYPE_STRING ) {
+                std::string data;
+                getPrimitiveData(UUID, label.c_str(), data);
+                file << data << " ";
+            }else{
+                datatypewarning=true;
+                file << 0 << " ";
+            }
+        }
+        file.seekp(-1, std::ios_base::end);
+        file << "\n";
+    }
+
+    if( uuidexistswarning ){
+        std::cerr << "WARNING (Context::writePrimitiveData): Vector of UUIDs passed to writePrimitiveData() function contained UUIDs that do not exist, which were skipped." << std::endl;
+    }
+    if( dataexistswarning ){
+        std::cerr << "WARNING (Context::writePrimitiveData): Primitive data requested did not exist for one or more primitives. A default value of 0 was written in these cases." << std::endl;
+    }
+    if( datatypewarning ){
+        std::cerr << "WARNING (Context::writePrimitiveData): Only scalar primitive data types (uint, int, float, and double) are supported for this function. A column of 0's was written in these cases." << std::endl;
+    }
+
+    file.close();
+
+}
+
 
 
 Context::~Context(){
 
     for(auto & primitive : primitives){
-        Primitive* prim = getPrimitivePointer(primitive.first);
+        Primitive* prim = getPrimitivePointer_private(primitive.first);
         delete prim;
     }
 
@@ -13575,107 +12774,127 @@ Context::~Context(){
 }
 
 PrimitiveType Context::getPrimitiveType(uint UUID) const {
-    return getPrimitivePointer(UUID)->getType();
+    return getPrimitivePointer_private(UUID)->getType();
 }
 
 void Context::setPrimitiveParentObjectID(uint UUID, uint objID){
-    getPrimitivePointer(UUID)->setParentObjectID(objID);
+    getPrimitivePointer_private(UUID)->setParentObjectID(objID);
 }
 
 void Context::setPrimitiveParentObjectID(const std::vector<uint> &UUIDs, uint objID) {
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->setParentObjectID(objID);
+        getPrimitivePointer_private(UUID)->setParentObjectID(objID);
     }
 }
 
 uint Context::getPrimitiveParentObjectID(uint UUID) const {
-    return getPrimitivePointer(UUID)->getParentObjectID();
+    return getPrimitivePointer_private(UUID)->getParentObjectID();
 }
 
 float Context::getPrimitiveArea(uint UUID) const {
-    return getPrimitivePointer(UUID)->getArea();
+    return getPrimitivePointer_private(UUID)->getArea();
 }
 
 helios::vec3 Context::getPrimitiveNormal(uint UUID) const {
-    return getPrimitivePointer(UUID)->getNormal();
+    return getPrimitivePointer_private(UUID)->getNormal();
 }
 
 void Context::getPrimitiveTransformationMatrix(uint UUID, float (&T)[16] ) const {
-    getPrimitivePointer(UUID)->getTransformationMatrix( T );
+    getPrimitivePointer_private(UUID)->getTransformationMatrix( T );
 }
 
 void Context::setPrimitiveTransformationMatrix(uint UUID, float (&T)[16] ) {
-    getPrimitivePointer(UUID)->setTransformationMatrix(T);
+    getPrimitivePointer_private(UUID)->setTransformationMatrix(T);
 }
 
 void Context::setPrimitiveTransformationMatrix(const std::vector<uint> &UUIDs, float (&T)[16] ) {
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->setTransformationMatrix(T);
+        getPrimitivePointer_private(UUID)->setTransformationMatrix(T);
     }
 }
 
 std::vector<helios::vec3> Context::getPrimitiveVertices(uint UUID) const {
-    return getPrimitivePointer(UUID)->getVertices();
+    return getPrimitivePointer_private(UUID)->getVertices();
 }
 
 
 helios::RGBcolor Context::getPrimitiveColor(uint UUID) const {
-    return getPrimitivePointer(UUID)->getColor();
+    return getPrimitivePointer_private(UUID)->getColor();
 }
 
 helios::RGBcolor Context::getPrimitiveColorRGB(uint UUID) const {
-    return getPrimitivePointer(UUID)->getColorRGB();
+    return getPrimitivePointer_private(UUID)->getColorRGB();
 }
 
 helios::RGBAcolor Context::getPrimitiveColorRGBA(uint UUID) const {
-    return getPrimitivePointer(UUID)->getColorRGBA();
+    return getPrimitivePointer_private(UUID)->getColorRGBA();
 }
 
 void Context::setPrimitiveColor(uint UUID, const RGBcolor &color) {
-    getPrimitivePointer(UUID)->setColor( color );
+    getPrimitivePointer_private(UUID)->setColor( color );
 }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBcolor &color) {
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->setColor(color);
+        getPrimitivePointer_private(UUID)->setColor(color);
     }
 }
 
 void Context::setPrimitiveColor(uint UUID, const RGBAcolor &color) {
-    getPrimitivePointer(UUID)->setColor( color );
+    getPrimitivePointer_private(UUID)->setColor( color );
 }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBAcolor &color) {
     for( uint UUID : UUIDs){
-        getPrimitivePointer(UUID)->setColor(color);
+        getPrimitivePointer_private(UUID)->setColor(color);
     }
 }
 
 std::string Context::getPrimitiveTextureFile( uint UUID ) const{
-    return getPrimitivePointer(UUID)->getTextureFile();
+    return getPrimitivePointer_private(UUID)->getTextureFile();
 }
 
 helios::int2 Context::getPrimitiveTextureSize( uint UUID ) const{
-    std::string texturefile = getPrimitivePointer(UUID)->getTextureFile();
+    std::string texturefile = getPrimitivePointer_private(UUID)->getTextureFile();
     if( !texturefile.empty() && textures.find(texturefile)!=textures.end() ){
         return textures.at(texturefile).getSize();
     }
     return make_int2(0,0);
 }
 
+std::vector<helios::vec2> Context::getPrimitiveTextureUV( uint UUID ) const{
+    return getPrimitivePointer_private(UUID)->getTextureUV();
+}
+
 bool Context::primitiveTextureHasTransparencyChannel( uint UUID ) const{
-    std::string texturefile = getPrimitivePointer(UUID)->getTextureFile();
+    std::string texturefile = getPrimitivePointer_private(UUID)->getTextureFile();
     if( !texturefile.empty() && textures.find(texturefile)!=textures.end() ){
         return textures.at(texturefile).hasTransparencyChannel();
     }
     return false;
 }
 
-std::vector<std::vector<bool> > *Context::getPrimitiveTextureTransparencyData( uint UUID ){
+const std::vector<std::vector<bool>> * Context::getPrimitiveTextureTransparencyData(uint UUID ) const{
     if(primitiveTextureHasTransparencyChannel(UUID) ){
-        std::vector<std::vector<bool> > *data = textures.at(getPrimitivePointer(UUID)->getTextureFile()).getTransparencyData();
+        const std::vector<std::vector<bool> > *data = textures.at(getPrimitivePointer_private(UUID)->getTextureFile()).getTransparencyData();
         return data;
     }else{
         throw( std::runtime_error("ERROR (getPrimitiveTransparencyData): Texture transparency data does not exist for primitive " + std::to_string(UUID) + ".") );
     }
+}
+
+void Context::overridePrimitiveTextureColor( uint UUID ){
+    getPrimitivePointer_private(UUID)->overrideTextureColor();
+};
+
+void Context::usePrimitiveTextureColor( uint UUID ){
+    getPrimitivePointer_private(UUID)->useTextureColor();
+};
+
+bool Context::isPrimitiveTextureColorOverridden( uint UUID ) const{
+    return getPrimitivePointer_private(UUID)->isTextureColorOverridden();
+}
+
+float Context::getPrimitiveSolidFraction( uint UUID ) const{
+    return getPrimitivePointer_private(UUID)->getSolidFraction();
 }
