@@ -334,7 +334,41 @@
  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(4,2)</td></tr>
  <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
- </table>	
+ </table>
+
+   \subsection CGenSorghum Sorghum Canopy
+
+  A canopy of sorghum plants.
+
+  \image html SorghumCanopy.png
+
+  <table>
+  <tr><th>Parameters Structure</th><td>\ref SorghumCanopyParameters</td></tr>
+  <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::sorghum()</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( SorghumCanopyParameters parameters )</td></tr>
+  </table>
+
+  <table>
+  <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr>
+  <tr><td>stem_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Length of the plant.</td><td>40</td></tr>
+  <tr><td>stem_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the plant.</td><td>0.15</td></tr>
+  <tr><td>stem_curvature</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Curve of the stem from the mid section.</td><td>3</td></tr>
+  <tr><td>fruit_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Height of the fruit.</td><td>9</td></tr>
+  <tr><td>fruit_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Breadth of the fruit.</td><td>1.5</td></tr>
+  <tr><td>seed_texture_file</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Texture map for sorghum fruit.</td><td>"plugins/canopygenerator/textures/Sorghum_seed.png"</td></tr>
+  <tr><td>leaf_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Length of the leaves.</td><td>16</td></tr>
+  <tr><td>leaf_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Width of the leaves.</td><td>2.5</td></tr>
+  <tr><td>leaf_amplitude</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>The curve of the leaves.</td><td>5</td></tr>
+  <tr><td>number_of_leaves</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Number of leaves along the stem.</td><td>14</td></tr>
+  <tr><td>leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Texture map for the sorghum leaf.</td><td>"plugins/canopygenerator/textures/Sorghum_leaf3.png"</td></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+  <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants along the row direction.</td><td>4</td></tr>
+  <tr><td>row_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between plant rows.</td><td>10</td></tr>
+  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Number of crowns/plants in the x- and y-directions.</td><td>(7 ,7)</td></tr>
+  <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0.</td><td>(0,0,0)</td></tr>
+
+  </table>
 
  \section CGenBuildGround Building the Ground
 
