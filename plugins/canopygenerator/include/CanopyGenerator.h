@@ -649,7 +649,6 @@ struct WalnutCanopyParameters{
   //! Spacing between plant rows.
   float row_spacing;
 
-
   //! Radius of walnuts
   float fruit_radius;
 
@@ -670,7 +669,58 @@ struct WalnutCanopyParameters{
   
 };
 
+//! Parameters defining Sorghum plant canopy
+struct SorghumCanopyParameters{
 
+//! Default constructor
+    SorghumCanopyParameters(void);
+
+    //! Length of the plant.
+    int stem_length;
+
+    //! Radius of the plant.
+    float stem_radius;
+
+    //! Curve of the stem from the mid section.
+    float stem_curvature;
+
+    //! Height of the fruit.
+    int fruit_height;
+
+    //! Breadth of the fruit.
+    float fruit_width;
+
+    //! Texture map for sorghum fruit.
+    std::string seed_texture_file;
+
+    //! Length of the leaves.
+    float leaf_length;
+
+    //! Width of the leaves.
+    float leaf_width;
+
+    //! The curve of the leaves.
+    float leaf_amplitude;
+
+    //! Number of leaves along the stem.
+    int number_of_leaves;
+
+    //! Texture map for the sorghum leaf.
+    std::string leaf_texture_file;
+
+   //! Spacing between adjacent plants along the row direction.
+    float plant_spacing;
+
+    //! Spacing between plant rows.
+    float row_spacing;
+
+    //! Number of crowns/plants in the x- and y-directions.
+    helios::int2 plant_count;
+
+    //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0.
+    helios::vec3 canopy_origin;
+
+};
 
 class CanopyGenerator{
  public:
@@ -736,6 +786,11 @@ class CanopyGenerator{
   /** \param[in] "params" Structure containing parameters for walnut tree canopy.
    */
   void buildCanopy( const WalnutCanopyParameters params );
+
+  //! Build canopy of sorghum plants
+
+  void buildCanopy( const SorghumCanopyParameters params );
+
 
   //! Build a ground consisting of texture sub-tiles and sub-patches, which can be different sizes
   /** \param[in] "ground_origin" x-, y-, and z-position of the ground center point.
@@ -869,6 +924,10 @@ void grapevineGoblet( const GobletGrapevineParameters params, const helios::vec3
      \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
   */ 
   void walnut( const WalnutCanopyParameters params, const helios::vec3 origin );
+
+  // function to add an individual sorghum plant
+
+  void sorghum( const SorghumCanopyParameters params, const helios::vec3 origin);
 
  private:
 
