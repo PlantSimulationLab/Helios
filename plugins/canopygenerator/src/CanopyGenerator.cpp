@@ -385,6 +385,7 @@ StrawberryParameters::StrawberryParameters(void){
   
 }
 
+
 WalnutCanopyParameters::WalnutCanopyParameters(void){
 
   leaf_length = 0.15;
@@ -421,6 +422,40 @@ WalnutCanopyParameters::WalnutCanopyParameters(void){
   
 }
 
+SorghumCanopyParameters::SorghumCanopyParameters(void){
+
+    stem_length = 40;
+
+    stem_radius = 0.15;
+
+    stem_curvature = 3;
+
+    fruit_height =  9;
+
+    fruit_width =  1.5;
+
+    seed_texture_file = "plugins/canopygenerator/textures/Sorghum_seed.png";
+
+    leaf_length = 16;
+
+    leaf_width = 2.5;
+
+    leaf_amplitude = 5;
+
+    number_of_leaves = 14;
+
+    leaf_texture_file = "plugins/canopygenerator/textures/Sorghum_leaf.png";
+
+    plant_spacing = 4;
+
+    row_spacing = 10;
+
+    plant_count = make_int2(1 ,1);
+
+    canopy_origin = make_vec3(0,0,0);
+
+}
+
 CanopyGenerator::CanopyGenerator( helios::Context* __context ){
 
   context = __context;
@@ -445,7 +480,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_0.disableMessages();
   HomogeneousCanopyParameters params_0;
   canopygenerator_0.buildCanopy(params_0);
-  context.deletePrimitive(context.getAllUUIDs());
+  context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;
 
@@ -455,7 +490,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_1.disableMessages();
   SphericalCrownsCanopyParameters params_1;
   canopygenerator_1.buildCanopy(params_1);
-  context.deletePrimitive(context.getAllUUIDs());
+  context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;
 
@@ -465,7 +500,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_2.disableMessages();
   VSPGrapevineParameters params_2;
   canopygenerator_2.buildCanopy(params_2);
-  context.deletePrimitive(context.getAllUUIDs());
+  context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;
 
@@ -475,7 +510,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_3.disableMessages();
   SplitGrapevineParameters params_3;
   canopygenerator_3.buildCanopy(params_3);
-  context.deletePrimitive(context.getAllUUIDs());
+  context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;
 
@@ -485,7 +520,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_4.disableMessages();
   UnilateralGrapevineParameters params_4;
   canopygenerator_4.buildCanopy(params_4);
-  context.deletePrimitive(context.getAllUUIDs());
+  context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;
 
@@ -495,7 +530,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_5.disableMessages();
   GobletGrapevineParameters params_5;
   canopygenerator_5.buildCanopy(params_5);
-  context.deletePrimitive(context.getAllUUIDs());
+  context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;
 
@@ -505,7 +540,7 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_7.disableMessages();
   StrawberryParameters params_7;
   canopygenerator_7.buildCanopy(params_7);
-  context.deletePrimitive(context.getAllUUIDs());
+  context.deletePrimitive( context.getAllUUIDs() );
   
   std::cout << "done." << std::endl;
 
@@ -515,8 +550,18 @@ int CanopyGenerator::selfTest( void ){
   canopygenerator_8.disableMessages();
   WalnutCanopyParameters params_8;
   canopygenerator_8.buildCanopy(params_8);
-  context.deletePrimitive(context.getAllUUIDs());
+  context.deletePrimitive( context.getAllUUIDs() );
   
+  std::cout << "done." << std::endl;
+
+  std::cout << "Generating default sorghum plant canopy..." << std::flush;
+
+  CanopyGenerator canopygenerator_9(&context);
+  canopygenerator_9.disableMessages();
+  SorghumCanopyParameters params_9;
+  canopygenerator_9.buildCanopy(params_9);
+  context.deletePrimitive( context.getAllUUIDs() );
+
   std::cout << "done." << std::endl;
 
   std::cout << "Generating homogeneous canopy with randomly deleted primitives..." << std::flush;
@@ -551,7 +596,7 @@ int CanopyGenerator::selfTest( void ){
     }
   }
   
-  context.deletePrimitive(context.getAllUUIDs());
+  context.deletePrimitive( context.getAllUUIDs() );
 
   std::cout << "done." << std::endl;
   
@@ -1353,6 +1398,90 @@ void CanopyGenerator::loadXML( const char* filename ){
 
         }
 
+        //SorghumCanopyParameters Canopy
+        for (pugi::xml_node s = cgen.child("SorghumCanopyParameters"); s; s = s.next_sibling("SorghumCanopyParameters")) {
+
+            SorghumCanopyParameters sorghumcanopyparameters;
+
+            int stem_length = XMLloadint(s, "stem_length");
+            if (stem_length != nullvalue_i) {
+                sorghumcanopyparameters.stem_length = stem_length;
+            }
+
+            float stem_radius = XMLloadfloat(s, "stem_radius");
+            if (stem_radius != nullvalue_f) {
+                sorghumcanopyparameters.stem_radius = stem_radius;
+            }
+
+            float stem_curvature = XMLloadfloat(s, "stem_curvature");
+            if (stem_curvature != nullvalue_f) {
+                sorghumcanopyparameters.stem_curvature = stem_curvature;
+            }
+
+            int fruit_height = XMLloadint(s, "fruit_height");
+            if (fruit_height != nullvalue_i) {
+                sorghumcanopyparameters.fruit_height = fruit_height;
+            }
+
+            float fruit_width = XMLloadfloat(s, "fruit_width");
+            if (fruit_width != nullvalue_f) {
+                sorghumcanopyparameters.fruit_width = fruit_width;
+            }
+
+            std::string seed_texture_file = XMLloadstring(s, "seed_texture_file");
+            if (seed_texture_file.compare(nullvalue_s) != 0) {
+                sorghumcanopyparameters.seed_texture_file = seed_texture_file;
+            }
+
+            float leaf_length = XMLloadfloat(s, "leaf_length");
+            if (leaf_length != nullvalue_f) {
+                sorghumcanopyparameters.leaf_length = leaf_length;
+            }
+
+            float leaf_width = XMLloadfloat(s, "leaf_width");
+            if (leaf_width != nullvalue_f) {
+                sorghumcanopyparameters.leaf_width = leaf_width;
+            }
+
+            float leaf_amplitude = XMLloadfloat(s, "leaf_amplitude");
+            if (leaf_amplitude != nullvalue_f) {
+                sorghumcanopyparameters.leaf_amplitude = leaf_amplitude;
+            }
+
+            int number_of_leaves = XMLloadint(s, "number_of_leaves");
+            if (number_of_leaves != nullvalue_i) {
+                sorghumcanopyparameters.number_of_leaves = number_of_leaves;
+            }
+
+            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
+            if (leaf_texture_file.compare(nullvalue_s) != 0) {
+                sorghumcanopyparameters.leaf_texture_file = leaf_texture_file;
+            }
+
+            float plant_spacing = XMLloadfloat(s, "plant_spacing");
+            if (plant_spacing != nullvalue_f) {
+                sorghumcanopyparameters.plant_spacing = plant_spacing;
+            }
+
+            float row_spacing = XMLloadfloat(s, "row_spacing");
+            if (row_spacing != nullvalue_f) {
+                sorghumcanopyparameters.row_spacing = row_spacing;
+            }
+
+            int2 plant_count = XMLloadint2(s, "plant_count");
+            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
+                sorghumcanopyparameters.plant_count = plant_count;
+            }
+
+            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
+            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
+                sorghumcanopyparameters.canopy_origin = canopy_origin;
+            }
+
+            buildCanopy(sorghumcanopyparameters);
+
+        }
+
         //Ground
         for (pugi::xml_node s = cgen.child("Ground"); s; s = s.next_sibling("Ground")) {
 
@@ -1893,6 +2022,7 @@ void CanopyGenerator::buildCanopy( const StrawberryParameters params ){
 
 }
 
+
 void CanopyGenerator::buildCanopy( const WalnutCanopyParameters params ){
 
   if( printmessages ){
@@ -1924,6 +2054,40 @@ void CanopyGenerator::buildCanopy( const WalnutCanopyParameters params ){
     std::cout << "done." << std::endl;
     //std::cout << "Canopy consists of " << UUID_leaf.size()*UUID_leaf.front().size() << " leaves and " << prim_count << " total primitives." << std::endl;
   }
+
+}
+
+void CanopyGenerator::buildCanopy( const SorghumCanopyParameters params ){
+
+    if( printmessages ){
+        std::cout << "Building canopy of sorghum plants..." << std::flush;
+    }
+
+    std::uniform_real_distribution<float> unif_distribution;
+
+    vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
+
+    uint plant_ID = 0;
+    uint prim_count = 0;
+    for( int j=0; j<params.plant_count.y; j++ ){
+        for( int i=0; i<params.plant_count.x; i++ ){
+
+            vec3 center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+(i+0.5)*params.plant_spacing, -0.5*canopy_extent.y+(j+0.5)*params.row_spacing, 0 );
+
+            sorghum( params, center );
+
+            std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
+            prim_count += UUIDs_all.size();
+
+            plant_ID++;
+
+        }
+    }
+
+    if( printmessages ){
+        std::cout << "done." << std::endl;
+        //std::cout << "Canopy consists of " << UUID_leaf.size()*UUID_leaf.front().size() << " leaves and " << prim_count << " total primitives." << std::endl;
+    }
 
 }
 
