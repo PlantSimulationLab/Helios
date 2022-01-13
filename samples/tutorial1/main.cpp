@@ -2,7 +2,7 @@
 
 using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
 
-int main(void){
+int main(){
 
   //------- vec3 ------- //
   

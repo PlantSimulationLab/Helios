@@ -1,10 +1,8 @@
-#include "Context.h"
 #include "Visualizer.h" //include this header to use Visualizer
 
 using namespace helios;
 
-int main(int argc, char* argv[])
-{
+int main(){
   
   //Declare and initialize the Helios context
   //note that since we have used the `helios' namespace above, we do not need to declare the context as: helios::Context

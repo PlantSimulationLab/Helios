@@ -47,8 +47,9 @@
  <tr><th>Variable (units)</th><th>Description</th></tr>
  <tr><td>\f$R\f$ (W/m<sup>2</sup>)</td><td>Absorbed all-wave radiation flux (shortwave+longwave).</td></tr>
  <tr><td>\f$T_s\f$ (K)</td><td>Primitive surface temperature.
- <tr><td>\f$g_H\f$ (mol air/m<sup>2</sup>-s)</td><td>Conductance to heat from primitive surface to outside of boundary-layer.</td></tr>
  <tr><td>\f$T_a\f$ (K)</td><td>Air temperature just outside primitive boundary-layer.</td></tr>
+ <tr><td>\f$g_H\f$ (mol air/m<sup>2</sup>-s)</td><td>Conductance to heat from primitive surface to outside of boundary-layer.</td></tr>
+ <tr><td>\f$g_S\f$ (mol air/m<sup>2</sup>-s)</td><td>Conductance to moisture between sub-surface air spaces to surface (e.g., for leaves this is stomatal conductance).</td></tr>
  <tr><td>\f$g_M\f$ (mol air/m<sup>2</sup>-s)</td><td>Conductance to moisture from primitive surface to outside of boundary-layer.</td></tr>
  <tr><td>\f$e_s(T)\f$ (Pa)</td><td>Saturation vapor pressure at temperature T. Calculated from Tetens equation (see <a href="https://en.wikipedia.org/wiki/Tetens_equation">en.wikipedia.org/wiki/Tetens_equation</a>)</td></tr>
  <tr><td>\f$f_s\f$</td><td>Relative humidity of air at primitive surface.</td></tr>
@@ -86,7 +87,7 @@
   <tr><td>object_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
  <tr><td>boundarylayer_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
  <tr><td>air_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>300 K
- <tr><td>moisture_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to moisture. <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0
+ <tr><td>moisture_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Conductance to moisture between sub-surface air spaces and surface (e.g., for leaves this is stomatal conductance). <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0
  <tr><td>surface_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Relative humidity of air immediately above surface evaporating site. <td>N/A <td>1.0 (saturated)
  <tr><td>air_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air relative humidity outside of surface boundary layer. <td>N/A <td>0.5
  <tr><td>air_pressure <td>Pascals <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Atmospheric pressure. <td>N/A <td>101,000 Pa
@@ -140,6 +141,24 @@
  \f$g_H = 0.135\sqrt{\frac{U}{L}}\f$,
 
  where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive.
+
+ \subsection EBgm Moisture Conductance
+
+  For surfaces that are not completely dry or completely saturated with water, availability of water at the surface determines the rate of moisture transfer from the surface. This is represented by the surface moisture conductance \f$g_S\f$, and corresponds to the conductance between the sub-surface air spaces and the surface.
+
+  For a dry surface, \f$g_S=0\f$ and thus there is no moisture transfer at the surface. For a surface that is saturated with water (e.g., a lake, puddle), \f$g_S\rightarrow\infty\f$ as the supply of water at the surface is theoretically infinite.
+
+  For surfaces such as leaves and the soil in which surface moisture is present but limited, \f$g_S\f$ will have some intermediate value typically on the order of 0.1 mol air/m<sup>2</sup>-s.
+
+  For leaves, \f$g_S\f$ corresponds to the conductance to water vapor between the intercellular (sub-stomatal) air spaces and the surface of the leaf, which we call the stomatal conductance. When stomata are closed, \f$g_S\rightarrow 0\f$, as water transfer is restricted by the stomata.
+
+  For the soil surface, the physical interpretation of \f$g_S\f$ is slightly less intuitive, and corresponds to the rate at which water vapor can diffuse from just below the soil to the surface. This is impacted by the soil texture, and the "tortuosity" of the path water vapor must take through the soil, among other factors.
+
+  Once the water vapor has diffused to the surface, the rate of transfer is then determined by the surface boundary-layer conductance. The sub-surface conductance and boundary-layer conductance act in serial, and can be combined to yield an overall moisture conductance between the sub-surface air spaces and the outside of the boundary layer according to
+
+  \f$g_M = \dfrac{0.97g_H g_S}{0.97g_H+g_S}\f$,
+
+  where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$0.97g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity of water vapor and heat.
 
  \subsection EBRun Running the Steady-State Model
 

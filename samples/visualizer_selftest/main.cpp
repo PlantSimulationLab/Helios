@@ -2,7 +2,7 @@
 
 using namespace helios;
 
-int main(void){
+int main(){
 
   Visualizer visualizer(100);
   

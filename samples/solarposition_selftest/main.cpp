@@ -1,10 +1,8 @@
-#include "Context.h"
 #include "SolarPosition.h"
 
 using namespace helios;
 
-int main(int argc, char* argv[])
-{
+int main(){
   
   Context context;
 

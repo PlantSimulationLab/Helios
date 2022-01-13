@@ -3,7 +3,7 @@
 
 using namespace helios;
 
-int main( void ){
+int main(){
 
   AerialLiDARcloud aeriallidar;
 

@@ -1,10 +1,8 @@
-#include "Context.h"
 #include "BoundaryLayerConductanceModel.h"
 
 using namespace helios;
 
-int main(int argc, char* argv[])
-{
+int main(){
   
   Context context;
 

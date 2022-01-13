@@ -1,9 +1,8 @@
-#include "Context.h"
 #include "Visualizer.h"
 
 using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
      
-int main(void){
+int main(){
 
   Context context;  //Declare the "Context" class
   
@@ -18,9 +17,7 @@ int main(void){
 
   vis.plotUpdate(); //update the graphics window and move on
   vis.printWindow( "patch.jpeg" ); //print window to JPEG file
-     
-  //vis.plotInteractive(); //open an interactive graphics window
 
-  return 1;
+  return 0;
 
 }

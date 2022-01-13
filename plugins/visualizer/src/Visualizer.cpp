@@ -693,6 +693,7 @@ Visualizer::~Visualizer(){
         }
     }
 
+    glfwDestroyWindow((GLFWwindow*)window);
     glfwTerminate();
 }
 
@@ -879,10 +880,10 @@ void Visualizer::setBackgroundColor( helios::RGBcolor color ){
 void Visualizer::printWindow( void ){
 
     char outfile[100];
-    if( context!=NULL ){//context has been given to visualizer via buildContextGeometry()
+    if( context!=nullptr ){//context has been given to visualizer via buildContextGeometry()
         Date date = context->getDate();
         Time time = context->getTime();
-        sprintf(outfile,"%02d-%02d-%4d_%02d:%02d:%02d_frame%d.jpg",date.day,date.month,date.year,time.hour,time.minute,time.second,frame_counter);
+        sprintf(outfile,"%02d-%02d-%4d_%02d-%02d-%02d_frame%d.jpg",date.day,date.month,date.year,time.hour,time.minute,time.second,frame_counter);
     }else{
         sprintf(outfile,"frame%d.jpg",frame_counter);
     }
@@ -3330,7 +3331,6 @@ std::vector<helios::vec3> Visualizer::plotInteractive(){
 
     }while( glfwGetKey((GLFWwindow*)window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose((GLFWwindow*)window) == 0 );
 
-    glfwDestroyWindow((GLFWwindow*)window);
     glfwPollEvents();
 
     assert( checkerrors() );
