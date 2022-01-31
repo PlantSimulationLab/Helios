@@ -126,7 +126,7 @@ void tomatoShoot( const TomatoParameters params, const helios::vec3 base_positio
 
   //fruit
 
-  if( context->randu()<0.66 ){
+  if( params.fruit_radius>0 && context->randu()<0.66 ){
 
     vec3 cluster_position = interpolateTube( nodes, 0.25 ) - make_vec3(0,0,4*params.fruit_radius);
 

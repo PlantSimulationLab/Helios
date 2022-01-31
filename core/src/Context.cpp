@@ -3362,6 +3362,10 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
     auto* patch_new = (new Patch( color, currentUUID ));
 
+//    if( patch_new->getArea()==0 ){
+//        throw( std::runtime_error("ERROR (Context::addPatch): Patch has area of zero.") );
+//    }
+
     patch_new->setParentObjectID(0);
 
     patch_new->scale( make_vec3(size.x,size.y,1) );
@@ -3386,6 +3390,10 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
     addTexture( texture_file );
 
     auto* patch_new = (new Patch( texture_file, textures.at(texture_file).getSolidFraction(), currentUUID ));
+
+//    if( patch_new->getArea()==0 ){
+//        throw( std::runtime_error("ERROR (Context::addPatch): Patch has area of zero.") );
+//    }
 
     patch_new->setParentObjectID(0);
 
@@ -3452,6 +3460,10 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
     }
     auto* patch_new = (new Patch( texture_file, uv, solid_fraction, currentUUID ));
 
+//    if( patch_new->getArea()==0 ){
+//        throw( std::runtime_error("ERROR (Context::addPatch): Patch has area of zero.") );
+//    }
+
     patch_new->setParentObjectID(0);
 
     assert( size.x>0.f && size.y>0.f );
@@ -3487,6 +3499,10 @@ bool edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::ve
 uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3& vertex2, const RGBAcolor& color ){
 
     auto* tri_new = (new Triangle( vertex0, vertex1, vertex2, color, currentUUID ));
+
+//    if( tri_new->getArea()==0 ){
+//        throw( std::runtime_error("ERROR (Context::addTriangle): Triangle has area of zero.") );
+//    }
 
     tri_new->setParentObjectID(0);
     primitives[currentUUID] = tri_new;
@@ -3543,6 +3559,10 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
 
     auto* tri_new = (new Triangle( vertex0, vertex1, vertex2, texture_file, uv, solid_fraction, currentUUID ));
 
+//    if( tri_new->getArea()==0 ){
+//        throw( std::runtime_error("ERROR (Context::addTriangle): Triangle has area of zero.") );
+//    }
+
     tri_new->setParentObjectID(0);
     primitives[currentUUID] = tri_new;
     markGeometryDirty();
@@ -3565,6 +3585,10 @@ uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotat
 uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotation, const RGBAcolor& color ){
 
     auto* voxel_new = (new Voxel( color, currentUUID ));
+
+    if( size.x*size.y*size.z==0 ){
+        throw( std::runtime_error("ERROR (Context::addVoxel): Voxel has size of zero.") );
+    }
 
     voxel_new->setParentObjectID(0);
 
@@ -5835,13 +5859,13 @@ void Tile::scale(const vec3 &S ){
     makeScaleMatrix( S, T);
     matmult(T,transform,transform);
 
-    for( uint UUID : UUIDs){
+    for( uint UUID : UUIDs) {
 
-        if( context->doesPrimitiveExist( UUID ) ){
+        if (context->doesPrimitiveExist(UUID)) {
 
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
-            matmult(T,T_prim,T_prim);
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
+            context->getPrimitiveTransformationMatrix(UUID, T_prim);
+            matmult(T, T_prim, T_prim);
+            context->setPrimitiveTransformationMatrix(UUID, T_prim);
 
         }
 
@@ -5917,7 +5941,7 @@ void Sphere::scale( float S ){
 
             context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
+            context->setPrimitiveTransformationMatrix( UUID,T_prim);
 
         }
 
@@ -6000,7 +6024,7 @@ void Tube::scale( float S ){
 
             context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
+            context->setPrimitiveTransformationMatrix( UUID,T_prim);
 
         }
 
@@ -6084,7 +6108,7 @@ void Box::scale(const vec3 &S ){
 
             context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
+            context->setPrimitiveTransformationMatrix( UUID,T_prim);
 
         }
 
@@ -6165,7 +6189,7 @@ void Disk::scale(const vec3 &S ){
 
             context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
+            context->setPrimitiveTransformationMatrix( UUID,T_prim);
 
         }
 
@@ -6353,7 +6377,7 @@ void Cone::scaleLength( float S ){
         if( context->doesPrimitiveExist( UUID ) ){
             context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
+            context->setPrimitiveTransformationMatrix( UUID,T_prim);
         }
     }
 
@@ -6401,7 +6425,7 @@ void Cone::scaleGirth( float S ){
         if( context->doesPrimitiveExist( UUID ) ){
             context->getPrimitiveTransformationMatrix( UUID,T_prim);
             matmult(T,T_prim,T_prim);
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
+            context->setPrimitiveTransformationMatrix( UUID,T_prim);
         }
     }
 
@@ -7688,8 +7712,8 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
     for( int j=0; j<Ndivs; j++ ){
 
         vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI), 0 ) );
-        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+dtheta, float(j+1)*dphi ) );
-        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+dtheta, float(j)*dphi ) );
+        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+dtheta, float(j)*dphi ) );
+        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+dtheta, float(j+1)*dphi ) );
 
         UUID.push_back( addTriangle(v0,v1,v2,color) );
 
@@ -7699,8 +7723,8 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
     for( int j=0; j<Ndivs; j++ ){
 
         vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI), 0 ) );
-        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI)-dtheta, float(j+1)*dphi ) );
-        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI)-dtheta, float(j)*dphi ) );
+        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI)-dtheta, float(j)*dphi ) );
+        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI)-dtheta, float(j+1)*dphi ) );
 
         UUID.push_back( addTriangle(v2,v1,v0,color) );
 
@@ -9896,42 +9920,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             color=string2RGBcolor(color_str);
         }
 
-        //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv//
-        //This is for backward compatability (<v0.5.3)//
-        //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv//
-
-        // * Triangle Vertices //
         std::vector<vec3> vert_pos;
         vert_pos.resize(3);
-
-        pugi::xml_node vertices = tri.child("vertex");
-
-        for(int i=0;i<3;i++){
-
-            const char* str = vertices.child_value();
-            vert_pos.at(i)=string2vec3(str);
-
-            if( strlen(str)==0 ){
-                if( i==0 ){
-                    break;
-                }else if( i==1 ){
-                    if( !quiet ) {
-                        std::cout << "failed." << std::endl;
-                    }
-                    throw( std::runtime_error("ERROR (loadXML): Only 1 vertex was given for triangle (requires 3)."));
-                }else if( i==2) {
-                    if( !quiet ) {
-                        std::cout << "failed." << std::endl;
-                    }
-                    throw( std::runtime_error("ERROR (loadXML): Only 2 vertices were given for triangle (requires 3)."));
-                }
-            }
-
-            vertices = vertices.next_sibling("vertex");
-
-        }
-
-        //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
+        vert_pos.at(0) = make_vec3( 0.f, 0.f, 0.f);
+        vert_pos.at(1) = make_vec3( 0.f, 1.f, 0.f);
+        vert_pos.at(2) = make_vec3( 1.f, 1.f, 0.f);
 
         // * Add the Triangle * //
         if( strcmp(texture_file.c_str(),"none")==0 || uv.empty() ){

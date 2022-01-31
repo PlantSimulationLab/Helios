@@ -133,104 +133,108 @@ void branchRecursion( const std::vector<vec3> position_parent, const std::vector
 
     int Nleaves = 6;
 
-    for( int i=0; i<Nleaves; i++ ){
+    for( int i=0; i<Nleaves; i++ ) {
 
-      float u = 0.3+0.7*float(i)/float(Nleaves-1);
+        float u = 0.3 + 0.7 * float(i) / float(Nleaves - 1);
 
-      float downangle = 0.15*M_PI + getVariation( 0.1*M_PI, generator );
-  
-      vec3 r0 = interpolateTube( position_parent, u );
-      vec3 r1 = interpolateTube( position_parent, 0.98*u);
-      vec3 dr = r1-r0;
+        float downangle = 0.15 * M_PI + getVariation(0.1 * M_PI, generator);
 
-      //float elevation = cart2sphere(dr).elevation;
-      float azimuth = cart2sphere(dr).azimuth + getVariation( 0.2*M_PI, generator );
+        vec3 r0 = interpolateTube(position_parent, u);
+        vec3 r1 = interpolateTube(position_parent, 0.98 * u);
+        vec3 dr = r1 - r0;
 
-      float elevation = 0.25*M_PI+getVariation( 0.1*M_PI, generator );
+        //float elevation = cart2sphere(dr).elevation;
+        float azimuth = cart2sphere(dr).azimuth + getVariation(0.2 * M_PI, generator);
 
-      std::vector<uint> UUIDs = context->copyPrimitive( leaf_prototype );
-      UUID_leaf_plant.push_back(UUIDs);
+        float elevation = 0.25 * M_PI + getVariation(0.1 * M_PI, generator);
 
-      context->scalePrimitive( UUIDs, make_vec3( params.leaf_length, 0.5*params.leaf_length, 0.5*params.leaf_length ) );
+        std::vector<uint> UUIDs = context->copyPrimitive(leaf_prototype);
+        UUID_leaf_plant.push_back(UUIDs);
 
-      context->rotatePrimitive( UUIDs, elevation, "x" );
-      context->rotatePrimitive( UUIDs, downangle, "y" );
-      context->rotatePrimitive( UUIDs, -azimuth, "z" );
+        context->scalePrimitive(UUIDs, make_vec3(params.leaf_length, 0.5 * params.leaf_length, 0.5 * params.leaf_length));
 
-      context->translatePrimitive( UUIDs, r0 + 0.1*params.leaf_length*make_vec3( cosf(-azimuth), sinf(-azimuth), -0.5*sinf(downangle)) );
+        context->rotatePrimitive(UUIDs, elevation, "x");
+        context->rotatePrimitive(UUIDs, downangle, "y");
+        context->rotatePrimitive(UUIDs, -azimuth, "z");
 
-      UUIDs = context->copyPrimitive( leaf_prototype );
-      UUID_leaf_plant.push_back(UUIDs);
+        context->translatePrimitive(UUIDs, r0 + 0.1 * params.leaf_length * make_vec3(cosf(-azimuth), sinf(-azimuth), -0.5 * sinf(downangle)));
 
-      context->scalePrimitive( UUIDs, make_vec3( params.leaf_length, 0.5*params.leaf_length, 0.5*params.leaf_length ) );
+        UUIDs = context->copyPrimitive(leaf_prototype);
+        UUID_leaf_plant.push_back(UUIDs);
 
-      context->rotatePrimitive( UUIDs, elevation, "x" );
-      context->rotatePrimitive( UUIDs, downangle, "y" );
-      context->rotatePrimitive( UUIDs, -azimuth+M_PI, "z" );
+        context->scalePrimitive(UUIDs, make_vec3(params.leaf_length, 0.5 * params.leaf_length, 0.5 * params.leaf_length));
 
-      context->translatePrimitive( UUIDs, r0 - 0.1*params.leaf_length*make_vec3( cosf(-azimuth), sinf(-azimuth), -0.5*sinf(downangle)) );
+        context->rotatePrimitive(UUIDs, elevation, "x");
+        context->rotatePrimitive(UUIDs, downangle, "y");
+        context->rotatePrimitive(UUIDs, -azimuth + M_PI, "z");
 
-      if( i==Nleaves-1 ){ //tip leaf
+        context->translatePrimitive(UUIDs, r0 - 0.1 * params.leaf_length * make_vec3(cosf(-azimuth), sinf(-azimuth), -0.5 * sinf(downangle)));
 
-	UUIDs = context->copyPrimitive( leaf_prototype );
-	UUID_leaf_plant.push_back(UUIDs);
+        if (i == Nleaves - 1) { //tip leaf
 
-	context->scalePrimitive( UUIDs, make_vec3( params.leaf_length, 0.5*params.leaf_length, 0.5*params.leaf_length ) );
+            UUIDs = context->copyPrimitive(leaf_prototype);
+            UUID_leaf_plant.push_back(UUIDs);
 
-	elevation = 0.25*M_PI+getVariation( 0.1*M_PI, generator );
-	
-	context->rotatePrimitive( UUIDs, elevation, "y" );
-	context->rotatePrimitive( UUIDs, 0, "x" );
-	context->rotatePrimitive( UUIDs, -azimuth+0.5*M_PI, "z" );
-	
-	context->translatePrimitive( UUIDs, r0 - 0.*params.leaf_length*make_vec3( sinf(-azimuth), cosf(-azimuth), 0) );
+            context->scalePrimitive(UUIDs, make_vec3(params.leaf_length, 0.5 * params.leaf_length, 0.5 * params.leaf_length));
 
-      }
+            elevation = 0.25 * M_PI + getVariation(0.1 * M_PI, generator);
 
-      //nut
+            context->rotatePrimitive(UUIDs, elevation, "y");
+            context->rotatePrimitive(UUIDs, 0, "x");
+            context->rotatePrimitive(UUIDs, -azimuth + 0.5 * M_PI, "z");
 
-      float Rnut = unif_distribution(generator);
+            context->translatePrimitive(UUIDs, r0 - 0. * params.leaf_length * make_vec3(sinf(-azimuth), cosf(-azimuth), 0));
 
-      if( Rnut<0.005 ){// triplet
+        }
 
-	//uint objID = context->copyObject( nut_prototype );
-	//UUID_fruit_plant.push_back( context->getObjectPointer(objID)->getPrimitiveUUIDs() );
+        //nut
 
-	//context->getSphereObjectPointer(objID)->scale( params.fruit_radius );
+        if (params.fruit_radius > 0) {
 
-	//context->getObjectPointer(objID)->translate( r0 - params.fruit_radius*make_vec3( sinf(-azimuth), cosf(-azimuth), -0.65) );
+            float Rnut = unif_distribution(generator);
 
-	std::vector<uint> nut_UUIDs = context->copyPrimitive( nut_prototype );
-	UUID_fruit_plant.push_back( nut_UUIDs );
+            if (Rnut < 0.005) {// triplet
 
-	context->scalePrimitive( nut_UUIDs, make_vec3(params.fruit_radius,params.fruit_radius,params.fruit_radius) );
+                //uint objID = context->copyObject( nut_prototype );
+                //UUID_fruit_plant.push_back( context->getObjectPointer(objID)->getPrimitiveUUIDs() );
 
-	context->translatePrimitive( nut_UUIDs, r0 - params.fruit_radius*make_vec3( sinf(-azimuth), cosf(-azimuth), -0.65) );
+                //context->getSphereObjectPointer(objID)->scale( params.fruit_radius );
 
-      }
-      if( Rnut<0.01 ){ //double
+                //context->getObjectPointer(objID)->translate( r0 - params.fruit_radius*make_vec3( sinf(-azimuth), cosf(-azimuth), -0.65) );
 
-	std::vector<uint> nut_UUIDs = context->copyPrimitive( nut_prototype );
-	UUID_fruit_plant.push_back( nut_UUIDs );
+                std::vector<uint> nut_UUIDs = context->copyPrimitive(nut_prototype);
+                UUID_fruit_plant.push_back(nut_UUIDs);
 
-	context->scalePrimitive( nut_UUIDs, make_vec3(params.fruit_radius,params.fruit_radius,params.fruit_radius) );
+                context->scalePrimitive(nut_UUIDs, make_vec3(params.fruit_radius, params.fruit_radius, params.fruit_radius));
 
-	context->translatePrimitive( nut_UUIDs, r0 - params.fruit_radius*make_vec3( 2.f*sinf(-azimuth), 2.f*cosf(-azimuth), -0.85) );
+                context->translatePrimitive(nut_UUIDs, r0 - params.fruit_radius * make_vec3(sinf(-azimuth), cosf(-azimuth), -0.65));
 
-      }
-      if( Rnut<0.05 ){ //single
+            }
+            if (Rnut < 0.01) { //double
 
-	std::vector<uint> nut_UUIDs = context->copyPrimitive( nut_prototype );
-	UUID_fruit_plant.push_back( nut_UUIDs );
+                std::vector<uint> nut_UUIDs = context->copyPrimitive(nut_prototype);
+                UUID_fruit_plant.push_back(nut_UUIDs);
 
-	context->scalePrimitive( nut_UUIDs, make_vec3(params.fruit_radius,params.fruit_radius,params.fruit_radius) );
+                context->scalePrimitive(nut_UUIDs, make_vec3(params.fruit_radius, params.fruit_radius, params.fruit_radius));
 
-	context->translatePrimitive( nut_UUIDs, r0 - params.fruit_radius*make_vec3( sinf(-azimuth), cosf(-azimuth), -0.75) );
+                context->translatePrimitive(nut_UUIDs, r0 - params.fruit_radius * make_vec3(2.f * sinf(-azimuth), 2.f * cosf(-azimuth), -0.85));
+
+            }
+            if (Rnut < 0.05) { //single
+
+                std::vector<uint> nut_UUIDs = context->copyPrimitive(nut_prototype);
+                UUID_fruit_plant.push_back(nut_UUIDs);
+
+                context->scalePrimitive(nut_UUIDs, make_vec3(params.fruit_radius, params.fruit_radius, params.fruit_radius));
+
+                context->translatePrimitive(nut_UUIDs, r0 - params.fruit_radius * make_vec3(sinf(-azimuth), cosf(-azimuth), -0.75));
 
 
-      }
+            }
 
-      
+
+        }
+
     }
 
     

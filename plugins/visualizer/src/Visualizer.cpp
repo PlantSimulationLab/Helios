@@ -364,6 +364,57 @@ Visualizer::Visualizer( uint __Wdisplay, uint __Hdisplay, int aliasing_samples, 
     initialize(__Wdisplay,__Hdisplay,aliasing_samples,window_decorations);
 }
 
+void Visualizer::openWindow(){
+
+    // Open a window and create its OpenGL context
+    GLFWwindow* _window;
+    _window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", nullptr, nullptr);
+    if( _window == nullptr ){
+        fprintf( stderr, "Failed to initialize graphics.\n" );
+        fprintf( stderr, "Common causes for this error:\n");
+        fprintf( stderr, "-- OSX\n  - Is XQuartz installed (xquartz.org) and configured as the default X11 window handler?  When running the visualizer, XQuartz should automatically open and appear in the dock, indicating it is working.\n" );
+        fprintf( stderr, "-- Linux\n  - Are you running this program remotely via SSH? Remote X11 graphics along with OpenGL are not natively supported.  Installing and using VirtualGL is a good solution for this (virtualgl.org).\n" );
+        throw(1);
+    }
+    glfwMakeContextCurrent(_window);
+
+    // Ensure we can capture the escape key being pressed below
+    glfwSetInputMode(_window, GLFW_STICKY_KEYS, GL_TRUE);
+
+    window = (void*) _window;
+
+    int window_width, window_height;
+    glfwGetWindowSize(_window, &window_width, &window_height);
+
+    int framebuffer_width, framebuffer_height;
+    glfwGetFramebufferSize(_window, &framebuffer_width, &framebuffer_height);
+
+    Wframebuffer = uint(framebuffer_width);
+    Hframebuffer = uint(framebuffer_height);
+
+    if( window_width<Wdisplay || window_height<Hdisplay ){
+        printf("WARNING: requested size of window is larger than the screen area.\n");
+        //printf("Changing width from %d to %d and height from %d to %d\n",Wdisplay,window_width,Hdisplay,window_height);
+        Wdisplay = uint(window_width);
+        Hdisplay = uint(window_height);
+    }
+
+    glfwSetWindowSize( _window, window_width, window_height );
+
+    glfwSetWindowAspectRatio( _window, Wdisplay, Hdisplay );
+
+    // Initialize GLEW
+    glewExperimental=GL_TRUE; // Needed in core profile
+    if (glewInit() != GLEW_OK) {
+        fprintf(stderr, "Failed to initialize GLEW\n");
+        throw(1);
+    }
+
+    //NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
+    glGetError();
+
+}
+
 void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samples, bool window_decorations ){
 
     Wdisplay = __Wdisplay;
@@ -375,7 +426,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
 
     camera_FOV = 45;
 
-    context = NULL;
+    context = nullptr;
     contextGeomNeedsUpdate = false;
     primitiveColorsNeedUpdate = false;
 
@@ -418,22 +469,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
         glfwWindowHint( GLFW_DECORATED, GLFW_FALSE );
     }
 
-    // Open a window and create its OpenGL context
-    GLFWwindow* _window;
-    _window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", NULL, NULL);
-    if( _window == NULL ){
-        fprintf( stderr, "Failed to initialize graphics.\n" );
-        fprintf( stderr, "Common causes for this error:\n");
-        fprintf( stderr, "-- OSX\n  - Is XQuartz installed (xquartz.org) and configured as the default X11 window handler?  When running the visualizer, XQuartz should automatically open and appear in the dock, indicating it is working.\n" );
-        fprintf( stderr, "-- Linux\n  - Are you running this program remotely via SSH? Remote X11 graphics along with OpenGL are not natively supported.  Installing and using VirtualGL is a good solution for this (virtualgl.org).\n" );
-        throw(1);
-    }
-    glfwMakeContextCurrent(_window);
-
-    // Ensure we can capture the escape key being pressed below
-    glfwSetInputMode(_window, GLFW_STICKY_KEYS, GL_TRUE);
-
-    window = (void*) _window;
+    openWindow();
 
     // Initialize GLEW
     glewExperimental=GL_TRUE; // Needed in core profile
@@ -477,26 +513,6 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
     glDisable(GL_CULL_FACE);
 
     assert( checkerrors() );
-
-    int window_width, window_height;
-    glfwGetWindowSize(_window, &window_width, &window_height);
-
-    int framebuffer_width, framebuffer_height;
-    glfwGetFramebufferSize(_window, &framebuffer_width, &framebuffer_height);
-
-    Wframebuffer = uint(framebuffer_width);
-    Hframebuffer = uint(framebuffer_height);
-
-    if( window_width<Wdisplay || window_height<Hdisplay ){
-        printf("WARNING: requested size of window is larger than the screen area.\n");
-        //printf("Changing width from %d to %d and height from %d to %d\n",Wdisplay,window_width,Hdisplay,window_height);
-        Wdisplay = uint(window_width);
-        Hdisplay = uint(window_height);
-    }
-
-    glfwSetWindowSize( _window, window_width, window_height );
-
-    glfwSetWindowAspectRatio( _window, Wdisplay, Hdisplay );
 
     //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
 
@@ -697,7 +713,7 @@ Visualizer::~Visualizer(){
     glfwTerminate();
 }
 
-int Visualizer::selfTest( void ){
+int Visualizer::selfTest(){
 
     std::cout << "Running visualizer self-test..." << std::flush;
 
@@ -3197,6 +3213,8 @@ std::vector<helios::vec3> Visualizer::plotInteractive(){
     }
 
     glfwShowWindow( (GLFWwindow*) window);
+
+//    openWindow();
 
     //Update the Context geometry (if needed)
     if( contextGeomNeedsUpdate ){

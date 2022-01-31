@@ -202,7 +202,7 @@ strawberryShoot(const StrawberryParameters &params, const helios::vec3 base_posi
 
   //fruit
 
-  if( context->randu()<params.clusters_per_stem ){
+  if( params.fruit_radius>0 && context->randu()<params.clusters_per_stem ){
 
     vec3 cluster_position = interpolateTube( nodes, 0.35 )+ sphere2cart( make_SphericalCoord( 0.1+0.2*context->randu(), 0, 2*M_PI*context->randu() ) );
 

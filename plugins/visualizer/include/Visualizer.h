@@ -112,8 +112,9 @@ public:
   void useShader(void);
   
   //! Initialize the shader
-  /** \param[in] "vertex_shader_file" Name of vertex shader file to be used by OpenGL in rendering graphics
-      \param[in] "fragment_shader_file" Name of fragment shader file to be used by OpenGL in rendering graphics
+  /**
+   * \param[in] "vertex_shader_file" Name of vertex shader file to be used by OpenGL in rendering graphics
+   * \param[in] "fragment_shader_file" Name of fragment shader file to be used by OpenGL in rendering graphics
   */
   void initialize( const char* vertex_shader_file, const char* fragment_shader_file );
 
@@ -812,18 +813,20 @@ public:
   void getFramebufferSize( uint &width, uint &height );
 
   //! Clear all geometry previously added to the visualizer
-  void clearGeometry( void );
+  void clearGeometry();
 
   //! Close the graphics window
-  void closeWindow( void );
+  void closeWindow();
 
 private:
+
+    void openWindow();
 
   void initialize( uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations );
 
   void render( bool shadow );
 
-  void setupPlot( void );
+  void setupPlot();
   
   //~~~~~~~~~~~~~~~~ Primitives ~~~~~~~~~~~~~~~~~~~~//
 
