@@ -1,7 +1,7 @@
 /** \file "Context.cpp" Context declarations. 
     \author Brian Bailey
 
-    Copyright (C) 2016-2021  Brian Bailey
+    Copyright (C) 2016-2022  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -3660,7 +3660,22 @@ void Context::deletePrimitive(uint UUID ){
 
     Primitive* prim = primitives.at(UUID);
 
-    std::vector<std::string> pdata = prim->listPrimitiveData();
+//    if( prim->getParentObjectID()!=0 ){//primitive belongs to an object
+//
+//        uint ObjID = prim->getParentObjectID();
+//        if( doesObjectExist(ObjID) ) {
+//
+//            CompoundObject *obj = objects.at(ObjID);
+//
+//            setPrimitiveParentObjectID(obj->getPrimitiveUUIDs(),0);
+//
+//            delete obj;
+//            objects.erase(ObjID);
+//
+//            std::cout << "Dismantling compound object with ID = " << ObjID << " because one of its child primitives was deleted." << std::endl;
+//
+//        }
+//    }
 
     delete prim;
     primitives.erase(UUID);
@@ -4384,17 +4399,7 @@ uint CompoundObject::getPrimitiveCount() const{
 
 std::vector<uint> CompoundObject::getPrimitiveUUIDs() const{
 
-    std::vector<uint> U = UUIDs;
-
-    for( uint UUID : U){
-
-        /* \todo More efficient implementation possible using swap-and-pop */
-        if( !context->doesPrimitiveExist( UUID ) ){
-            U.erase( U.begin()+UUID);
-        }
-    }
-
-    return U;
+    return UUIDs;
 
 }
 
@@ -5357,9 +5362,10 @@ uint Context::copyObject(uint ObjID ){
 
         std::vector<vec3> nodes = o->getNodes();
         std::vector<float> radius = o->getNodeRadii();
+        std::vector<RGBcolor> colors = o->getNodeColors();
         uint subdiv = o->getSubdivisionCount();
 
-        auto* tube_new = (new Tube(currentObjectID, UUIDs_copy, nodes, radius, subdiv, texturefile.c_str(), this));
+        auto* tube_new = (new Tube(currentObjectID, UUIDs_copy, nodes, radius, colors, subdiv, texturefile.c_str(), this));
 
         objects[currentObjectID] = tube_new;
 
@@ -5417,6 +5423,114 @@ uint Context::copyObject(uint ObjID ){
     markGeometryDirty();
     currentObjectID++;
     return currentObjectID-1;
+}
+
+std::vector<uint> Context::filterObjectsByData( const std::vector<uint> &IDs, const char* object_data, float threshold, const char* comparator) const{
+
+    std::vector<uint> output_object_IDs;
+    output_object_IDs.resize(IDs.size());
+    uint passed_count=0;
+
+    for(uint i=0;i<IDs.size();i++)
+    {
+
+        if( doesObjectDataExist(IDs.at(i), object_data) ){
+
+            HeliosDataType type = getObjectDataType(IDs.at(i), object_data);
+            if( type==HELIOS_TYPE_UINT ){
+                uint R;
+                getObjectData(IDs.at(i), object_data, R);
+                if( strcmp(comparator,"<")==0 ){
+                    if( R<threshold ){
+                        output_object_IDs.at(passed_count) = IDs.at(i);
+                        passed_count++;
+                    }
+                }else if( strcmp(comparator,">")==0 ){
+                    if( R>threshold ){
+                        output_object_IDs.at(passed_count) = IDs.at(i);
+                        passed_count++;
+                    }
+                }else if( strcmp(comparator,"=")==0 ){
+                    if( R==threshold ){
+                        output_object_IDs.at(passed_count) = IDs.at(i);
+                        passed_count++;
+                    }
+                }
+
+            }else if(type==HELIOS_TYPE_FLOAT){
+                float R;
+                getObjectData(IDs.at(i), object_data, R);
+
+                if( strcmp(comparator,"<")==0 ){
+                    if( R<threshold ){
+                        output_object_IDs.at(passed_count) = IDs.at(i);
+                        passed_count++;
+                    }
+                }else if( strcmp(comparator,">")==0 ){
+                    if( R>threshold ){
+                        output_object_IDs.at(passed_count) = IDs.at(i);
+                        passed_count++;
+                    }
+                }else if( strcmp(comparator,"=")==0 ){
+                    if( R==threshold ){
+                        output_object_IDs.at(passed_count) = IDs.at(i);
+                        passed_count++;
+                    }
+                }
+
+            }else if(type==HELIOS_TYPE_INT){
+                int R;
+                getObjectData(IDs.at(i), object_data, R);
+
+                if( strcmp(comparator,"<")==0 ){
+                    if( R<threshold ){
+                        output_object_IDs.at(passed_count) = IDs.at(i);
+                        passed_count++;
+                    }
+                }else if( strcmp(comparator,">")==0 ){
+                    if( R>threshold ){
+                        output_object_IDs.at(passed_count) = IDs.at(i);
+                        passed_count++;
+                    }
+                }else if( strcmp(comparator,"=")==0 ){
+                    if( R==threshold ){
+                        output_object_IDs.at(passed_count) = IDs.at(i);
+                        passed_count++;
+                    }
+                }
+            }else{
+                std::cout << "WARNING: Object data not of type UINT, INT, or FLOAT. Filtering for other types not yet supported." << std::endl;
+            }
+
+
+        }
+    }
+
+    output_object_IDs.resize(passed_count);
+
+    return output_object_IDs;
+
+}
+
+std::vector<uint> Context::getObjectPrimitiveUUIDs( const std::vector<uint> &IDs ) const{
+
+    std::vector<uint> output_UUIDs;
+
+    for(uint i=0;i<IDs.size();i++)
+    {
+        CompoundObject* pointer = getObjectPointer(IDs.at(i));
+        std::vector<uint> current_UUIDs = pointer->getPrimitiveUUIDs();
+        output_UUIDs.insert( output_UUIDs.end(), current_UUIDs.begin(), current_UUIDs.end() );
+    }
+    return output_UUIDs;
+}
+
+std::vector<uint> Context::getObjectPrimitiveUUIDs( uint ID ) const{
+
+    std::vector<uint> IDs;
+    IDs.push_back(ID);
+    std::vector<uint> output_UUIDs = getObjectPrimitiveUUIDs(IDs);
+    return output_UUIDs;
 }
 
 float Context::getTileObjectAreaRatio(const uint &ObjectID) const{
@@ -5949,8 +6063,7 @@ void Sphere::scale( float S ){
 
 }
 
-Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes,
-           const std::vector<float> &a_radius, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
+Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
 
@@ -5959,6 +6072,7 @@ Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3>
     UUIDs = a_UUIDs;
     nodes = a_nodes;
     radius = a_radius;
+    colors = a_colors;
     subdiv = a_subdiv;
     texturefile = a_texturefile;
     context = a_context;
@@ -6002,6 +6116,10 @@ std::vector<float> Tube::getNodeRadii() const{
 
     }
     return radius_T;
+}
+
+std::vector<helios::RGBcolor> Tube::getNodeColors() const{
+    return colors;
 }
 
 uint Tube::getSubdivisionCount() const{
@@ -6956,7 +7074,7 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
         }
     }
 
-    auto* tube_new = (new Tube(currentObjectID, UUID, nodes, radius, Ndivs, "", this));
+    auto* tube_new = (new Tube(currentObjectID, UUID, nodes, radius, color, Ndivs, "", this));
 
     float T[16],  transform[16];
     tube_new->getTransformationMatrix( transform );
@@ -7080,7 +7198,9 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
         }
     }
 
-    auto* tube_new = (new Tube(currentObjectID, UUID, nodes, radius, Ndivs, texturefile, this));
+    std::vector<RGBcolor> colors;
+
+    auto* tube_new = (new Tube(currentObjectID, UUID, nodes, radius, colors, Ndivs, texturefile, this));
 
     float T[16],  transform[16];
     tube_new->getTransformationMatrix( transform );
@@ -7565,6 +7685,8 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
     for( uint p : UUID){
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
+
+    cone_new->setColor( color );
 
     objects[currentObjectID] = cone_new;
     currentObjectID++;
@@ -10303,8 +10425,32 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             }
         }
 
+        // * Tube Color * //
+
+        pugi::xml_node color_node = p.child("color");
+        const char* color_str = color_node.child_value();
+
+        std::vector<RGBcolor> colors;
+        if (strlen(color_str) > 0) {
+            std::istringstream data_stream(color_str);
+            std::vector<float> tmp;
+            tmp.resize(3);
+            int c = 0;
+            while( data_stream >> tmp.at(c) ){
+                c++;
+                if( c==3 ){
+                    colors.push_back(make_RGBcolor(tmp.at(0),tmp.at(1),tmp.at(2)));
+                    c=0;
+                }
+            }
+        }
+
         // * Add the Tube * //
-        ID = addTubeObject( subdiv, nodes, radii, texture_file.c_str());
+        if( texture_file == "none" ) {
+            ID = addTubeObject(subdiv, nodes, radii, colors);
+        }else{
+            ID = addTubeObject(subdiv, nodes, radii, texture_file.c_str());
+        }
 
         getObjectPointer(ID)->setTransformationMatrix(transform);
 
@@ -10585,7 +10731,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         }
 
         // * Add the Cone * //
-        if( texture_file.empty() ){
+        if( texture_file == "none" ){
             ID = addConeObject( subdiv, nodes.at(0), nodes.at(1), radii.at(0), radii.at(1), make_RGBcolor(color.r,color.g,color.b));
         }else {
             ID = addConeObject(subdiv, nodes.at(0), nodes.at(1), radii.at(0), radii.at(1), texture_file.c_str());
@@ -11355,7 +11501,9 @@ void Context::writeXML( const char* filename, bool quiet ) const{
         }
 
         outfile << "\t<objID>" << o << "</objID>" << std::endl;
-        outfile << "\t<color>" << color.r << " " << color.g << " " << color.b << " " << color.a << "</color>" << std::endl;
+        if( !(obj->getObjectType()==OBJECT_TYPE_TUBE) ){
+            outfile << "\t<color>" << color.r << " " << color.g << " " << color.b << " " << color.a << "</color>" << std::endl;
+        }
         if( obj->hasTexture() ){
             outfile << "\t<texture>" << texture_file << "</texture>" << std::endl;
         }
@@ -11605,6 +11753,17 @@ void Context::writeXML( const char* filename, bool quiet ) const{
                 outfile << "\t\t" << radius.at(i) << std::endl;
             }
             outfile << "\t</radius> " << std::endl;
+
+            if( texture_file.empty() ) {
+                std::vector<RGBcolor> colors = tube->getNodeColors();
+
+                outfile << "\t<color> " << std::endl;
+                for (int i = 0; i < colors.size(); i++) {
+                    outfile << "\t\t" << colors.at(i).r << " " << colors.at(i).g << " " << colors.at(i).b << std::endl;
+                }
+                outfile << "\t</color> " << std::endl;
+
+            }
 
             outfile << "   </tube>" << std::endl;
 

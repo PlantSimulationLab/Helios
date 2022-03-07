@@ -1,7 +1,7 @@
 /** \file "EnergyBalanceModel.h" Primary header file for energy balance model.
     \author Brian Bailey
 
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2018-2022  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
 
 */
 
-#ifndef __ENERGYBALANCEMODEL__
-#define __ENERGYBALANCEMODEL__
+#ifndef ENERGYBALANCEMODEL
+#define ENERGYBALANCEMODEL
 
 #include "Context.h"
 
@@ -25,35 +25,37 @@ class EnergyBalanceModel{
 public:
 
   //! Constructor
-  /** \param[in] "context" Pointer to the Helios context */
+  /**
+   * \param[in] "context" Pointer to the Helios context
+  */
   EnergyBalanceModel( helios::Context* context );
 
   //! Self-test
   /** \return 0 if test was successful, 1 if test failed. */
-  int selfTest( void );
+  int selfTest();
 
   //! Enable standard output from this plug-in (default)
-  void enableMessages( void );
+  void enableMessages();
 
   //! Disable standard output from this plug-in
-  void disableMessages( void );
+  void disableMessages();
 
   //! Function to run the energy balance model for all primitives in the Context
-  void run(void) ;
+  void run() ;
 
   //! Function to run the dynamic /non steady state energy balance model for one timestep of length "dt" seconds
    /** \param[in] "dt" Time step in seconds. */
-  void run( const float dt ) ;
+  void run( float dt ) ;
 
   //! Function to run the energy balance model for a select set of primitives
   /** \param[in] "UUIDs" Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.*/
-  void run( std::vector<uint> UUIDs );
+  void run( const std::vector<uint> &UUIDs );
 
   //! Function to run the energy balance model for a select set of primitives for one timestep of length "dt" seconds
   /** \param[in] "UUIDs"  Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
      \param[in] "dt" Time step in seconds. 
   */
-  void run( std::vector<uint> UUIDs, const float dt );
+  void run( const std::vector<uint> &UUIDs, float dt );
 
   //! Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of the absorbed all-wave radiation flux
   /** \param[in] "band" Name of radiation band (e.g., PAR, NIR, LW, etc.)

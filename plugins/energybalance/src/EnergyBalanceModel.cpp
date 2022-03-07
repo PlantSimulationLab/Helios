@@ -1,7 +1,7 @@
 /** \file "EnergyBalanceModel.cpp" Energy balance model plugin declarations. 
     \author Brian Bailey
 
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2018-2022  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ EnergyBalanceModel::EnergyBalanceModel( helios::Context* __context ){
 
 }
 
-int EnergyBalanceModel::selfTest( void ){
+int EnergyBalanceModel::selfTest(){
 
   std::cout << "Running energy balance model self-test..." << std::flush;
 
@@ -332,11 +332,11 @@ int EnergyBalanceModel::selfTest( void ){
 
 }
 
-void EnergyBalanceModel::enableMessages(void){
+void EnergyBalanceModel::enableMessages(){
   message_flag = true;
 }
 
-void EnergyBalanceModel::disableMessages(void){
+void EnergyBalanceModel::disableMessages(){
   message_flag = false;
 }
 

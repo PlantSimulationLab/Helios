@@ -3212,7 +3212,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive(){
         std::cout << "Generating interactive plot..." << std::endl;
     }
 
-    glfwShowWindow( (GLFWwindow*) window);
+//    glfwShowWindow( (GLFWwindow*) window);
 
 //    openWindow();
 
@@ -3293,6 +3293,8 @@ std::vector<helios::vec3> Visualizer::plotInteractive(){
     assert( checkerrors() );
 
     std::vector<vec3> camera_output;
+
+    glfwShowWindow( (GLFWwindow*) window);
 
     do{
 

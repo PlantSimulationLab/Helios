@@ -1,7 +1,7 @@
 /** \file "EnergyBalanceModel.cu" Energy balance model plugin declarations (CUDA kernels). 
     \author Brian Bailey
 
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2018-2022  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -49,7 +49,6 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
     float QL = gM*lambda*(es-ea)/pressure;
 
     //Storage heat flux
-
     float storage = 0.f;
     if (dt>0){
         storage=heatcapacity*(T-Tprev)/dt;
@@ -117,20 +116,20 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
 
 }
 
-void EnergyBalanceModel::run( void ){
+void EnergyBalanceModel::run(){
     run( context->getAllUUIDs() );
 }
 
-void EnergyBalanceModel::run( const float dt ){
+void EnergyBalanceModel::run( float dt ){
     run( context->getAllUUIDs(), dt );
 }
 
-void EnergyBalanceModel::run( std::vector<uint> UUIDs ){
+void EnergyBalanceModel::run( const std::vector<uint> &UUIDs ){
     run( UUIDs, 0.f);
 }
 
 
-void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
+void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
 
     if( message_flag ){
         std::cout << "Running energy balance model..." << std::flush;
@@ -169,16 +168,17 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
 
             char str[50];
             sprintf(str,"radiation_flux_%s",radiation_bands.at(b).c_str());
-            if( !context->doesPrimitiveDataExist(p,str) ){
-                std::cerr << "ERROR (EnergyBalanceModel): No radiation was found in the context for band " << radiation_bands.at(b) << ". Did you run the radiation model for this band?" << std::endl;
-                exit(EXIT_FAILURE);
+            if( !context->doesPrimitiveDataExist(p,str) ) {
+                throw( std::runtime_error("ERROR (EnergyBalanceModel::run): No radiation was found in the context for band " + std::string(radiation_bands.at(b)) + ". Did you run the radiation model for this band?"));
+            }else if( context->getPrimitiveDataType(p,str)!=HELIOS_TYPE_FLOAT ){
+                throw( std::runtime_error("ERROR (EnergyBalanceModel::run): Radiation primitive data for band " + std::string(radiation_bands.at(b)) + " does not have the correct type of ''float'"));
             }
             float R;
             context->getPrimitiveData(p,str,R);
             Rn.at(u) += R;
 
             sprintf(str,"emissivity_%s",radiation_bands.at(b).c_str());
-            if( context->doesPrimitiveDataExist(p,str) ){
+            if( context->doesPrimitiveDataExist(p,str) && context->getPrimitiveDataType(p,str)==HELIOS_TYPE_FLOAT ){
                 context->getPrimitiveData(p,str,emissivity.at(u));
             }
 
@@ -237,7 +237,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
         size_t p = UUIDs.at(u);
 
         //Initial guess for surface temperature
-        if( context->doesPrimitiveDataExist(p,"temperature") ){
+        if( context->doesPrimitiveDataExist(p,"temperature") && context->getPrimitiveDataType(p,"temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"temperature",To[u]);
         }else{
             To[u] = temperature_default;
@@ -253,7 +253,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
         eps[u] = emissivity.at(u);
 
         //Air temperature
-        if( context->doesPrimitiveDataExist(p,"air_temperature") ){
+        if( context->doesPrimitiveDataExist(p,"air_temperature") && context->getPrimitiveDataType(p,"air_temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_temperature",Ta[u]);
         }else{
             Ta[u] = air_temperature_default;
@@ -261,7 +261,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
 
         //Air relative humidity
         float hr;
-        if( context->doesPrimitiveDataExist(p,"air_humidity") ){
+        if( context->doesPrimitiveDataExist(p,"air_humidity") && context->getPrimitiveDataType(p,"air_humidity")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_humidity",hr);
         }else{
             hr = air_humidity_default;
@@ -272,20 +272,20 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
         ea[u] = hr*esat; // Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)
 
         //Air pressure
-        if( context->doesPrimitiveDataExist(p,"air_pressure") ){
+        if( context->doesPrimitiveDataExist(p,"air_pressure") && context->getPrimitiveDataType(p,"air_pressure")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_pressure",pressure[u]);
         }else{
             pressure[u] = pressure_default;
         }
 
         //Boundary-layer conductance to heat
-        if( context->doesPrimitiveDataExist(p,"boundarylayer_conductance") ){
+        if( context->doesPrimitiveDataExist(p,"boundarylayer_conductance") && context->getPrimitiveDataType(p,"boundarylayer_conductance")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"boundarylayer_conductance",gH[u]);
         }else{
 
             //Wind speed
             float U;
-            if( context->doesPrimitiveDataExist(p,"wind_speed") ){
+            if( context->doesPrimitiveDataExist(p,"wind_speed") && context->getPrimitiveDataType(p,"wind_speed")==HELIOS_TYPE_FLOAT ){
                 context->getPrimitiveData(p,"wind_speed",U);
             }else{
                 U = wind_speed_default;
@@ -293,7 +293,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
 
             //Characteristic size of primitive
             float L;
-            if( context->doesPrimitiveDataExist(p,"object_length") ){
+            if( context->doesPrimitiveDataExist(p,"object_length") && context->getPrimitiveDataType(p,"object_length")==HELIOS_TYPE_FLOAT ){
                 context->getPrimitiveData(p,"object_length",L);
                 if( L==0 ){
                     L = sqrt(context->getPrimitiveArea(p));
@@ -306,14 +306,14 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
         }
 
         //Moisture conductance
-        if( context->doesPrimitiveDataExist(p,"moisture_conductance") ){
+        if( context->doesPrimitiveDataExist(p,"moisture_conductance") && context->getPrimitiveDataType(p,"moisture_conductance")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"moisture_conductance",gS[u]);
         }else{
             gS[u] = gS_default;
         }
 
         //Other fluxes
-        if( context->doesPrimitiveDataExist(p,"other_surface_flux") ){
+        if( context->doesPrimitiveDataExist(p,"other_surface_flux") && context->getPrimitiveDataType(p,"other_surface_flux")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"other_surface_flux",Qother[u]);
         }else{
             Qother[u] = Qother_default;
@@ -321,7 +321,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
 
         //Number of sides emitting radiation
         Nsides[u] = 2; //default is 2
-        if( context->doesPrimitiveDataExist(p,"twosided_flag") ){
+        if( context->doesPrimitiveDataExist(p,"twosided_flag") && context->getPrimitiveDataType(p,"twosided_flag")==HELIOS_TYPE_UINT ){
             uint flag;
             context->getPrimitiveData(p,"twosided_flag",flag);
             if( flag==0 ){
@@ -330,7 +330,7 @@ void EnergyBalanceModel::run( std::vector<uint> UUIDs, const float dt ){
         }
 
         //Object heat capacity
-        if( context->doesPrimitiveDataExist(p,"heat_capacity") ){
+        if( context->doesPrimitiveDataExist(p,"heat_capacity") && context->getPrimitiveDataType(p,"heat_capacity")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"heat_capacity",heatcapacity[u]);
         }else{
             heatcapacity[u] = heatcapacity_default;

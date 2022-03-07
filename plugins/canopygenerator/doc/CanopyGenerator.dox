@@ -377,8 +377,7 @@
  Maximum flexibility in creating a canopy of plants is achieved by manually adding each individual plant. An example is given below to add a single grapevine plant on VSP trellis at the point (0,0,0).
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  #include "CanopyGenerator.h"
+ <pre><code>  #include "CanopyGenerator.h"
 
   int main( void ){
 
@@ -404,8 +403,7 @@
  Functions are available for each plant type to quickly generate a canopy of many plants using the associated "buildCanopy()" function. The example below shows how to build a vineyard on VSP trellis.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  #include "CanopyGenerator.h"
+ <pre><code>  #include "CanopyGenerator.h"
 
   int main( void ){
 
@@ -415,9 +413,6 @@
 
      \c//Declare the parameter set for VSP grapevine
      %VSPGrapevineParameters parameters;
-
-     \c//Variable defining the location of the plant
-     vec3 origin(0,0,0);
 
      \c//Add the grapevine geometry to the Context
      canopygenerator.buildCanopy( parameters );
@@ -469,8 +464,7 @@
  The random number sequence can be manually seeded using the \ref CanopyGenerator::seedRandomGenerator( uint seed ), which takes as its argument an unsigned integer. Regardless of its value, if this function is called with the same seed value at the beginning of the code, it will produce the exact same "random" number sequence. An example is given below.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  #include "CanopyGenerator.h"
+ <pre><code>  #include "CanopyGenerator.h"
 
   int main( void ){
 
@@ -483,9 +477,6 @@
 
      \c//Seeding the random number generator here will result in the same random geometries below for each time the code is run
      canopygenerator.seedRandomGenerator( 10 );
-
-     \c//Variable defining the location of the plant
-     vec3 origin(0,0,0);
 
      \c//Add the grapevine geometry to the Context
      canopygenerator.buildCanopy( parameters );

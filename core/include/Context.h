@@ -1,7 +1,7 @@
 /** \file "Context.h" Context header file. 
     \author Brian Bailey
 
-    Copyright (C) 2016-2021  Brian Bailey
+    Copyright (C) 2016-2022  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -620,7 +620,7 @@ namespace helios {
     public:
 
         //! Default constructor
-        Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
+        Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
 
         //! Tube destructor
         ~Tube() override = default;
@@ -630,6 +630,9 @@ namespace helios {
 
         //! Get the radius at each of the tube object nodes
         std::vector<float> getNodeRadii() const;
+
+        //! Get the colors at each of the tube object nodes
+        std::vector<helios::RGBcolor> getNodeColors() const;
 
         //! Get the number of sub-triangle divisions of the tube object
         uint getSubdivisionCount() const;
@@ -651,6 +654,8 @@ namespace helios {
         std::vector<helios::vec3> nodes;
 
         std::vector<float> radius;
+
+        std::vector<helios::RGBcolor> colors;
 
         uint subdiv;
 
@@ -3194,6 +3199,8 @@ namespace helios {
         */
         void clearObjectData( const std::vector<uint>& objIDs, const char* label );
 
+
+
         //-------- Global Data Functions ---------- //
 
         //! Add global data value (int)
@@ -3505,6 +3512,27 @@ namespace helios {
             \return ID for copied object.
         */
         std::vector<uint> copyObject(const std::vector<uint> &ObjIDs );
+
+        //! Get a vector of object IDs that meet filtering criteria based on object data
+        /**
+         * \param[in] "objIDs" Vector of object IDs to filter
+         * \param[in] "object_data" object data field to use when filtering
+         * \param[in] "threshold" Value for filter threshold
+         * \param[in] "comparator" Points will be filtered if "object_data (comparator) threshold", where (comparator) is one of ">", "<", or "="
+         */
+        std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const char* object_data, float threshold, const char* comparator) const;
+
+    //! Get primitive UUIDs associated with compound objects
+    /**
+        * \param[in] "objIDs" vector of object IDs to retrieve primitive UUIDs for
+    */
+    std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<uint> &objIDs) const;
+
+    //! Get primitive UUIDs associated with compound object
+    /**
+     * \param[in] "objID" object ID to retrieve primitive UUIDs for
+    */
+    std::vector<uint> getObjectPrimitiveUUIDs( uint objID ) const;
 
         //! Get a pointer to a Tile Compound Object
         /**

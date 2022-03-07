@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.29</span>
+   &#160;<span id="projectnumber">v1.2.30</span>
    </div>
   </td>
  </tr>
@@ -273,15 +273,15 @@ Moisture Conductance</h2>
 <p>where <img class="formulaInl" alt="$g_H$" src="form_8.png" width="20" height="11"/> is the boundary-layer conductance to heat, and <img class="formulaInl" alt="$0.97g_H$" src="form_57.png" width="47" height="14"/> gives the boundary-layer conductance to moisture considering the differences in diffusivity of water vapor and heat.</p>
 <h2><a class="anchor" id="EBRun"></a>
 Running the Steady-State Model</h2>
-<p>The model is run assuming steady-state conditions (heat storage term is zero) using the <a class="el" href="class_energy_balance_model.html#a63363c02792f13aa0056c1a30276c6ba">EnergyBalanceModel::run()</a> function, which will run the model for all primitives in the Context if no argument is given, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.</p>
+<p>The model is run assuming steady-state conditions (heat storage term is zero) using the <a class="el" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a">EnergyBalanceModel::run()</a> function, which will run the model for all primitives in the Context if no argument is given, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.</p>
 <table class="doxtable">
 <caption>Functions to run the steady-state energy balance model.</caption>
 <tr>
 <th>Model Run Function </th><th>Description </th></tr>
 <tr>
-<td><a class="el" href="class_energy_balance_model.html#a63363c02792f13aa0056c1a30276c6ba">EnergyBalanceModel::run( void )</a> </td><td>Run the model for all primitives in the Context. </td></tr>
+<td><a class="el" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a">EnergyBalanceModel::run( void )</a> </td><td>Run the model for all primitives in the Context. </td></tr>
 <tr>
-<td><a class="el" href="class_energy_balance_model.html#ab66fb2acc3ff3781dbea127070adc64b">EnergyBalanceModel::run( std::vector&lt;uint&gt; UUIDs )</a> </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs. </td></tr>
+<td>EnergyBalanceModel::run( std::vector&lt;uint&gt; UUIDs ) </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs. </td></tr>
 </table>
 <p><br  />
 <br  />
@@ -318,9 +318,9 @@ Unsteady model with heat storage</h3>
 <tr>
 <th>Model Run Function </th><th>Description </th></tr>
 <tr>
-<td><a class="el" href="class_energy_balance_model.html#a3c7ab6adae9c4a8e0a822a132a9ca3ec">EnergyBalanceModel::run( float dt )</a> </td><td>Run the model for all primitives in the Context and advance in time by dt seconds. </td></tr>
+<td><a class="el" href="class_energy_balance_model.html#a5048dec148d795d76d10d331bdb35156">EnergyBalanceModel::run( float dt )</a> </td><td>Run the model for all primitives in the Context and advance in time by dt seconds. </td></tr>
 <tr>
-<td><a class="el" href="class_energy_balance_model.html#aa98de2c324005391e1d462b1a140e11b">EnergyBalanceModel::run( std::vector&lt;uint&gt; UUIDs, float dt )</a> </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt seconds. </td></tr>
+<td>EnergyBalanceModel::run( std::vector&lt;uint&gt; UUIDs, float dt ) </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt seconds. </td></tr>
 </table>
 <p>Note that you can run the steady-state model for some primitives but run the unsteady model for others simply by changing the value of the heat capacity primitive data. This is illustrated in the code example below.</p>
 <p><br  />

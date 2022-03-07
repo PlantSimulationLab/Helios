@@ -160,7 +160,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs ){
     for( uint UUID : lUUIDs){
 
         float i_PAR;
-        if( context->doesPrimitiveDataExist(UUID,"radiation_flux_PAR") ){
+        if( context->doesPrimitiveDataExist(UUID,"radiation_flux_PAR") && context->getPrimitiveDataType(UUID,"radiation_flux_PAR")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"radiation_flux_PAR",i_PAR);
             i_PAR = i_PAR*4.57f; //umol/m^2-s (ref https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf)
             if( i_PAR<0 ){
@@ -172,7 +172,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs ){
         }
 
         float TL;
-        if( context->doesPrimitiveDataExist(UUID,"temperature") ){
+        if( context->doesPrimitiveDataExist(UUID,"temperature") && context->getPrimitiveDataType(UUID,"temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"temperature",TL);
             if( TL<0 ){
                 TL = 0;
@@ -183,7 +183,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs ){
         }
 
         float CO2;
-        if( context->doesPrimitiveDataExist(UUID,"air_CO2") ){
+        if( context->doesPrimitiveDataExist(UUID,"air_CO2") && context->getPrimitiveDataType(UUID,"air_CO2")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_CO2",CO2);
             if( CO2<0 ){
                 CO2 = 0;
@@ -194,7 +194,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs ){
         }
 
         float gM;
-        if( context->doesPrimitiveDataExist(UUID,"moisture_conductance") ){
+        if( context->doesPrimitiveDataExist(UUID,"moisture_conductance") && context->getPrimitiveDataType(UUID,"moisture_conductance")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"moisture_conductance",gM);
             if( gM<0 ){
                 gM = 0;

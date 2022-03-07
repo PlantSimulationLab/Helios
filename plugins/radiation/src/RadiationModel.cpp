@@ -3115,7 +3115,7 @@ void RadiationModel::runBand( const char* label ){
   TBS_top.resize(Nprimitives,0.f);
   TBS_bottom = TBS_top;
 
-  size_t maxRays = 50e9; //maximum number of total rays in a launch
+  size_t maxRays = 1024*1024*1024; //maximum number of total rays in a launch
 
   // -- Direct launch --//
 
@@ -3150,7 +3150,7 @@ void RadiationModel::runBand( const char* label ){
       // Compute direct launch dimension
       size_t n = ceil(sqrt(double(directRayCount[band])));
 
-      size_t maxPrims = maxRays/float(n*n);
+      size_t maxPrims = floor( maxRays/float(n*n) );
       
       int Nlaunches = ceil( n*n*Nobjects/float(maxRays) );
 
@@ -3167,7 +3167,7 @@ void RadiationModel::runBand( const char* label ){
 
 	RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, launch*prims_per_launch ) );
 
-	launch_dim_dir = optix::make_int3( round(n), round(n), prims_this_launch );
+	launch_dim_dir = optix::make_int3( n, n, prims_this_launch );
 
 	if( message_flag ){
 	  std::cout << "Performing primary direct radiation ray trace for band " << label << " (batch " << launch+1 << " of " << Nlaunches << ")..." << std::flush;
@@ -3258,7 +3258,7 @@ void RadiationModel::runBand( const char* label ){
       // Compute diffuse launch dimension
       size_t n = ceil(sqrt(double(diffuseRayCount[band])));
 
-      size_t maxPrims = maxRays/float(n*n);
+      size_t maxPrims = floor( maxRays/float(n*n) );
       
       int Nlaunches = ceil( n*n*Nobjects/float(maxRays) );
 
@@ -3268,14 +3268,14 @@ void RadiationModel::runBand( const char* label ){
 
 	size_t prims_this_launch;
 	if( (launch+1)*prims_per_launch > Nobjects ){
-	  prims_this_launch = Nprimitives-launch*prims_per_launch;
+	  prims_this_launch = Nobjects-launch*prims_per_launch;
 	}else{
 	  prims_this_launch = prims_per_launch;
 	}
 
 	RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, launch*prims_per_launch ) );
 
-	optix::int3 launch_dim_diff = optix::make_int3( round(n), round(n), prims_this_launch );
+	optix::int3 launch_dim_diff = optix::make_int3( n, n, prims_this_launch );
 	assert( launch_dim_diff.x>0 && launch_dim_diff.y>0 );
       
 	if( message_flag ){
@@ -3294,7 +3294,7 @@ void RadiationModel::runBand( const char* label ){
 
       size_t n = ceil(sqrt(double(diffuseRayCount[band])));
 
-      size_t maxPrims = maxRays/float(n*n);
+      size_t maxPrims = floor( maxRays/float(n*n) );
       
       int Nlaunches = ceil( n*n*Nobjects/float(maxRays) );
 
@@ -3332,7 +3332,7 @@ void RadiationModel::runBand( const char* label ){
 	  }else{
 	    prims_this_launch = prims_per_launch;
 	  }
-	  optix::int3 launch_dim_diff = optix::make_int3( round(n), round(n), prims_this_launch );
+	  optix::int3 launch_dim_diff = optix::make_int3( n, n, prims_this_launch );
 
 	  RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, launch*prims_per_launch ) );
 	
@@ -3455,7 +3455,7 @@ void RadiationModel::runBand_MCRT( const char* label ){
       
       // Compute direct launch dimension
       size_t n = ceil(sqrt(double(directRayCount[band])));
-      optix::int2 launch_dim_dir = optix::make_int2( round(n), round(n) );
+      optix::int2 launch_dim_dir = optix::make_int2( n, n );
       
       assert( launch_dim_dir.x>0 && launch_dim_dir.y>0 );
       
@@ -3484,7 +3484,7 @@ void RadiationModel::runBand_MCRT( const char* label ){
     
     // Compute diffuse launch dimension
     size_t n = ceil(sqrt(double(diffuseRayCount[band])));
-    optix::int2 launch_dim_diff = optix::make_int2( round(n), round(n) );
+    optix::int2 launch_dim_diff = optix::make_int2( n, n );
     assert( launch_dim_diff.x>0 && launch_dim_diff.y>0 );
       
     if( message_flag ){
@@ -3543,7 +3543,7 @@ void RadiationModel::runBand_MCRT( const char* label ){
     // Compute emission launch dimension
 //    size_t n = ceil(sqrt(double(directRayCount[band])));//TODO: fix this - should not be based on 'directRayCount'
       size_t n = ceil(sqrt(double(diffuseRayCount[band])));
-    optix::int3 launch_dim_emiss = optix::make_int3( round(n), round(n), Nprimitives );
+    optix::int3 launch_dim_emiss = optix::make_int3( n, n, Nprimitives );
     assert( launch_dim_emiss.x>0 && launch_dim_emiss.y>0 );
       
     if( message_flag ){

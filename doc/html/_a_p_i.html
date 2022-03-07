@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.29</span>
+   &#160;<span id="projectnumber">v1.2.30</span>
    </div>
   </td>
  </tr>
@@ -553,23 +553,24 @@ Primitive Transformations</h2>
 </table>
 <p>Below is a code example of applying a transformation using a pointer to the primitive:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
-<div class="line">   <span class="keyword">using namespace </span>helios;</div>
+<div class="line">  <span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
-<div class="line">   <span class="keywordtype">int</span> main( <span class="keywordtype">void</span> ){</div>
+<div class="line">  <span class="keywordtype">int</span> main( <span class="keywordtype">void</span> ){</div>
 <div class="line"> </div>
-<div class="line">      \c<span class="comment">// Initialize the Context</span></div>
-<div class="line">      Context context;</div>
 <div class="line"> </div>
-<div class="line">      \c<span class="comment">// Add &#39;Patch&#39; primitive</span></div>
-<div class="line">      vec3 center(0,0,1);</div>
-<div class="line">      vec2 size = <a class="code" href="group__vectors.html#ga34e381a53377fbe8682d89d8a9c24cc5">make_vec2</a>(1,1);</div>
-<div class="line">      uint UUID = context.addPatch( center, size );</div>
+<div class="line">     \c<span class="comment">// Initialize the Context</span></div>
+<div class="line">     Context context;</div>
 <div class="line"> </div>
-<div class="line">      \c<span class="comment">// Apply translation</span></div>
-<div class="line">      vec3 translation(1,0,0);</div>
-<div class="line">      context.translatePrimitive( UUID, translation );</div>
+<div class="line">     \c<span class="comment">// Add &#39;Patch&#39; primitive</span></div>
+<div class="line">     vec3 center(0,0,1);</div>
+<div class="line">     vec2 size = <a class="code" href="group__vectors.html#ga34e381a53377fbe8682d89d8a9c24cc5">make_vec2</a>(1,1);</div>
+<div class="line">     uint UUID = context.addPatch( center, size );</div>
 <div class="line"> </div>
-<div class="line">   }</div>
+<div class="line">     \c<span class="comment">// Apply translation</span></div>
+<div class="line">     vec3 translation(1,0,0);</div>
+<div class="line">     context.translatePrimitive( UUID, translation );</div>
+<div class="line"> </div>
+<div class="line">  }</div>
 </div><!-- fragment --></pre> </div><h2><a class="anchor" id="PrimProps"></a>
 Primitive Properties</h2>
 <p>All primitives have a common set of data that can be accessed by the same set of functions, such as the primitive surface area, the primitive vertices, etc.</p>

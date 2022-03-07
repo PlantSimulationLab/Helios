@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.29</span>
+   &#160;<span id="projectnumber">v1.2.30</span>
    </div>
   </td>
  </tr>
@@ -218,7 +218,7 @@ $(function() {
 <div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;    <span class="keywordflow">for</span>( uint UUID : lUUIDs){</div>
 <div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160; </div>
 <div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;        <span class="keywordtype">float</span> i_PAR;</div>
-<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>) ){</div>
+<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(UUID,<span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
 <div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;            context-&gt;getPrimitiveData(UUID,<span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>,i_PAR);</div>
 <div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;            i_PAR = i_PAR*4.57f; <span class="comment">//umol/m^2-s (ref https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf)</span></div>
 <div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;            <span class="keywordflow">if</span>( i_PAR&lt;0 ){</div>
@@ -230,7 +230,7 @@ $(function() {
 <div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;        }</div>
 <div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160; </div>
 <div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;        <span class="keywordtype">float</span> TL;</div>
-<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;temperature&quot;</span>) ){</div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;temperature&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(UUID,<span class="stringliteral">&quot;temperature&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
 <div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;            context-&gt;getPrimitiveData(UUID,<span class="stringliteral">&quot;temperature&quot;</span>,TL);</div>
 <div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;            <span class="keywordflow">if</span>( TL&lt;0 ){</div>
 <div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;                TL = 0;</div>
@@ -241,7 +241,7 @@ $(function() {
 <div class="line"><a name="l00183"></a><span class="lineno">  183</span>&#160;        }</div>
 <div class="line"><a name="l00184"></a><span class="lineno">  184</span>&#160; </div>
 <div class="line"><a name="l00185"></a><span class="lineno">  185</span>&#160;        <span class="keywordtype">float</span> CO2;</div>
-<div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;air_CO2&quot;</span>) ){</div>
+<div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;air_CO2&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(UUID,<span class="stringliteral">&quot;air_CO2&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
 <div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;            context-&gt;getPrimitiveData(UUID,<span class="stringliteral">&quot;air_CO2&quot;</span>,CO2);</div>
 <div class="line"><a name="l00188"></a><span class="lineno">  188</span>&#160;            <span class="keywordflow">if</span>( CO2&lt;0 ){</div>
 <div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160;                CO2 = 0;</div>
@@ -252,7 +252,7 @@ $(function() {
 <div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160;        }</div>
 <div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160; </div>
 <div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160;        <span class="keywordtype">float</span> gM;</div>
-<div class="line"><a name="l00197"></a><span class="lineno">  197</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;moisture_conductance&quot;</span>) ){</div>
+<div class="line"><a name="l00197"></a><span class="lineno">  197</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;moisture_conductance&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(UUID,<span class="stringliteral">&quot;moisture_conductance&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
 <div class="line"><a name="l00198"></a><span class="lineno">  198</span>&#160;            context-&gt;getPrimitiveData(UUID,<span class="stringliteral">&quot;moisture_conductance&quot;</span>,gM);</div>
 <div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;            <span class="keywordflow">if</span>( gM&lt;0 ){</div>
 <div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;                gM = 0;</div>
@@ -464,7 +464,7 @@ $(function() {
 <div class="ttc" id="aclass_photosynthesis_model_html_abb06ce82388d1147e720c3591f9d17b6"><div class="ttname"><a href="class_photosynthesis_model.html#abb06ce82388d1147e720c3591f9d17b6">PhotosynthesisModel::run</a></div><div class="ttdeci">void run()</div><div class="ttdoc">Run the model for all UUIDs in the Context.</div><div class="ttdef"><b>Definition:</b> <a href="_photosynthesis_model_8cpp_source.html#l00154">PhotosynthesisModel.cpp:154</a></div></div>
 <div class="ttc" id="aclass_photosynthesis_model_html_ae4f1ad6808c1b8ccc28912a4a7dd9363"><div class="ttname"><a href="class_photosynthesis_model.html#ae4f1ad6808c1b8ccc28912a4a7dd9363">PhotosynthesisModel::setModelType_Empirical</a></div><div class="ttdeci">void setModelType_Empirical()</div><div class="ttdoc">Sets photosynthesis to be calculated according to the empirical model.</div><div class="ttdef"><b>Definition:</b> <a href="_photosynthesis_model_8cpp_source.html#l00138">PhotosynthesisModel.cpp:138</a></div></div>
 <div class="ttc" id="aclass_photosynthesis_model_html_afbdcbdcfe85ec692466361a9c4447dbe"><div class="ttname"><a href="class_photosynthesis_model.html#afbdcbdcfe85ec692466361a9c4447dbe">PhotosynthesisModel::getEmpiricalModelCoefficients</a></div><div class="ttdeci">EmpiricalModelCoefficients getEmpiricalModelCoefficients()</div><div class="ttdoc">Get the current model coefficients for the empirical model.</div><div class="ttdef"><b>Definition:</b> <a href="_photosynthesis_model_8cpp_source.html#l00381">PhotosynthesisModel.cpp:381</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01417">Context.h:1417</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01422">Context.h:1422</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_context_html_a2144eea981e4030c973287ce2c38315e"><div class="ttname"><a href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">helios::Context::getPrimitiveData</a></div><div class="ttdeci">void getPrimitiveData(uint UUID, const char *label, int &amp;data) const</div><div class="ttdoc">Get data associated with a primitive element.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01701">Context.cpp:1701</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_context_html_ac7677094a3bbcb62506ce461d982af1d"><div class="ttname"><a href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">helios::Context::setPrimitiveData</a></div><div class="ttdeci">void setPrimitiveData(const uint &amp;UUID, const char *label, const int &amp;data)</div><div class="ttdoc">Add data value (int) associated with a primitive element.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01355">Context.cpp:1355</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a464923f1888b6ba4dc1a3b6881fa9e80"><div class="ttname"><a href="global_8h.html#a464923f1888b6ba4dc1a3b6881fa9e80">helios::fzero</a></div><div class="ttdeci">float fzero(float(*function)(float value, std::vector&lt; float &gt; &amp;variables, const void *parameters), std::vector&lt; float &gt; &amp;variables, const void *parameters, float init_guess, float err_tol=0.0001f, int max_iterations=100)</div><div class="ttdoc">Use Newton-Raphson method to find the zero of a function.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l02168">global.cpp:2168</a></div></div>

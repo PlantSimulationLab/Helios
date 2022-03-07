@@ -1,7 +1,7 @@
 /** \file "StomatalConductanceModel.cpp" Primary source file for stomatalconductance plug-in.
     \author Brian Bailey
 
-    Copyright (C) 2016-2021  Brian Bailey
+    Copyright (C) 2016-2022  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ void StomatalConductanceModel::setModelCoefficients(const BMFcoefficients &coeff
 
 void StomatalConductanceModel::setModelCoefficients(const BMFcoefficients &coeffs, const vector<uint> &UUIDs ){
     for( uint UUID : UUIDs){
-        BMFmodel_coefficients.at(UUID) = coeffs;
+        BMFmodel_coefficients[UUID] = coeffs;
     }
     model = "BMF";
 }
@@ -63,7 +63,7 @@ void StomatalConductanceModel::setModelCoefficients(const BBcoefficients &coeffs
 
 void StomatalConductanceModel::setModelCoefficients(const BBcoefficients &coeffs, const vector<uint> &UUIDs ){
     for( uint UUID : UUIDs){
-        BBmodel_coefficients.at(UUID) = coeffs;
+        BBmodel_coefficients[UUID] = coeffs;
     }
     model = "BB";
 }
@@ -90,7 +90,7 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
         //PAR radiation flux
         float i = i_default;
-        if( context->doesPrimitiveDataExist(UUID,"radiation_flux_PAR") ){
+        if( context->doesPrimitiveDataExist(UUID,"radiation_flux_PAR") && context->getPrimitiveDataType(UUID,"radiation_flux_PAR")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"radiation_flux_PAR",i); //W/m^2
             i = i*4.57f; //umol/m^2-s (ref https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf)
         }else{
@@ -99,7 +99,7 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
         //surface temperature
         float TL = TL_default;
-        if( context->doesPrimitiveDataExist(UUID,"temperature") ){
+        if( context->doesPrimitiveDataExist(UUID,"temperature") && context->getPrimitiveDataType(UUID,"temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"temperature",TL); //Kelvin
         }else{
             assumed_default_TL++;
@@ -107,7 +107,7 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
         //air pressure
         float press = pressure_default;
-        if( context->doesPrimitiveDataExist(UUID,"air_pressure") ){
+        if( context->doesPrimitiveDataExist(UUID,"air_pressure") && context->getPrimitiveDataType(UUID,"air_pressure")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_pressure",press); //Pa
         }else{
             assumed_default_p++;
@@ -115,7 +115,7 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
         //air temperature
         float Ta = air_temperature_default;
-        if( context->doesPrimitiveDataExist(UUID,"air_temperature") ){
+        if( context->doesPrimitiveDataExist(UUID,"air_temperature") && context->getPrimitiveDataType(UUID,"air_temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_temperature",Ta); //Kelvin
         }else{
             assumed_default_Ta++;
@@ -123,7 +123,7 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
         //air humidity
         float rh = air_humidity_default;
-        if( context->doesPrimitiveDataExist(UUID,"air_humidity") ){
+        if( context->doesPrimitiveDataExist(UUID,"air_humidity") && context->getPrimitiveDataType(UUID,"air_humidity")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_humidity",rh);
         }else{
             assumed_default_rh++;
@@ -137,7 +137,7 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
         //xylem moisture potential
         float Psix = xylem_potential_default;
-        if( context->doesPrimitiveDataExist(UUID,"xylem_water_potential") ){
+        if( context->doesPrimitiveDataExist(UUID,"xylem_water_potential") && context->getPrimitiveDataType(UUID,"xylem_water_potential")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"xylem_water_potential",Psix);
         }else{
             assumed_default_Psix++;
