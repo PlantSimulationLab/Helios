@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['helios_20documentation_20v1_2e2_2e30_1602',['Helios Documentation v1.2.30',['../index.html',1,'']]]
+  ['making_20texture_20mask_20files_20with_20transparency_20using_20gimp',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]]
 ];

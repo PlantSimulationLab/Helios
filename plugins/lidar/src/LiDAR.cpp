@@ -1151,7 +1151,7 @@ std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context, 
 	context->translatePrimitive( UUIDs_leaf, reconstructed_alphamasks_center.at(g) );
       }
       context->setPrimitiveData( UUIDs_leaf, "gridCell", zone );
-      uint flag = uint(reconstructed_alphamasks_direct_flag.at(g));
+      uint flag = reconstructed_alphamasks_direct_flag.at(g);
       context->setPrimitiveData( UUIDs_leaf, "directFlag", flag);
       UUIDs.insert( UUIDs.end(), UUIDs_leaf.begin(), UUIDs_leaf.end() );
     }
@@ -2236,7 +2236,7 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
     helios::vec3 normal = cross( reconstructed_triangles.at(group).at(gind).vertex1-reconstructed_triangles.at(group).at(gind).vertex0, reconstructed_triangles.at(group).at(gind).vertex2-reconstructed_triangles.at(group).at(gind).vertex0 );
     reconstructed_alphamasks_rotation.push_back( make_SphericalCoord(cart2sphere(normal).zenith,cart2sphere(normal).azimuth)  );
     reconstructed_alphamasks_gridcell.push_back( reconstructed_triangles.at(group).front().gridcell );
-    reconstructed_alphamasks_direct_flag.push_back( true );
+    reconstructed_alphamasks_direct_flag.push_back( 1 );
   }
 
   if( printmessages ){
@@ -2344,7 +2344,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	reconstructed_alphamasks_size.push_back( reconstructed_alphamasks_size.front() );
 	reconstructed_alphamasks_rotation.push_back( tri_rots.at(randi) );
 	reconstructed_alphamasks_gridcell.push_back( v );
-	reconstructed_alphamasks_direct_flag.push_back( false );
+	reconstructed_alphamasks_direct_flag.push_back( 0 );
 
 	leaf_area_current.at(v) += reconstructed_alphamasks_size.back().x*reconstructed_alphamasks_size.back().y*solidfraction;
 
@@ -2395,7 +2395,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	reconstructed_alphamasks_size.push_back( reconstructed_alphamasks_size.at(group_index) );
 	reconstructed_alphamasks_rotation.push_back( reconstructed_alphamasks_rotation.at(group_index) );
 	reconstructed_alphamasks_gridcell.push_back( v );
-	reconstructed_alphamasks_direct_flag.push_back( false );
+	reconstructed_alphamasks_direct_flag.push_back( 0 );
 
 	leaf_area_current.at(v) += reconstructed_alphamasks_size.at(group_index).x*reconstructed_alphamasks_size.at(group_index).y*solidfraction;
 

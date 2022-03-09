@@ -802,7 +802,7 @@ void Visualizer::setCameraPosition( vec3 cameraPosition, vec3 lookAt ){
 
 void Visualizer::setCameraPosition( SphericalCoord cameraAngle, vec3 lookAt ){
     center = lookAt;
-    eye = center + sphere2cart(cameraAngle);
+    eye = center + sphere2cart(cameraAngle);vec3 camvec = eye-center;
 }
 
 void Visualizer::setCameraFieldOfView( const float angle_FOV ){

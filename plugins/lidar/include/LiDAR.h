@@ -1,7 +1,7 @@
 /** \file "LiDAR.h" Primary header file for LiDAR plug-in.
     \author Brian Bailey, Eric Kent
 
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2016-2022  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
 
 */
 
-#ifndef __LIDAR__
-#define __LIDAR__
+#ifndef LIDARPLUGIN
+#define LIDARPLUGIN
 
 #include "Context.h"
 #include "Visualizer.h"
@@ -294,7 +294,7 @@ class LiDARcloud{
   std::vector<helios::SphericalCoord> reconstructed_alphamasks_rotation;
   std::vector<uint> reconstructed_alphamasks_gridcell;
   std::string reconstructed_alphamasks_maskfile;
-  std::vector<bool> reconstructed_alphamasks_direct_flag;
+  std::vector<uint> reconstructed_alphamasks_direct_flag;
   
   void leafReconstructionFloodfill( void );
 

@@ -48,7 +48,7 @@
  <tr><td>boundarylayer_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive boundary-layer conductance calculated by this plug-in.
  </table>
 
- \section BLUse Using the Energy Balance Model Plug-in
+ \section BLUse Using the Boundary Layer Conductance Model Plug-in
 
  \subsection BLPrimData Input Variables
 
