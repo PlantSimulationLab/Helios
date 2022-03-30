@@ -6,5 +6,6 @@ var searchData=
   ['int4',['int4',['../structhelios_1_1int4.html',1,'helios::int4'],['../structhelios_1_1int4.html#a495ca613c03f0b6748dc484e1d5bc6a6',1,'helios::int4::int4()'],['../structhelios_1_1int4.html#a5a4c9f5ba511aa1f8c97c5d551ae5a12',1,'helios::int4::int4(std::vector&lt; int &gt; v)'],['../structhelios_1_1int4.html#ad4011b8fcdb338dd35b97eab6a90e978',1,'helios::int4::int4(const int v[3])'],['../structhelios_1_1int4.html#a56c4775603496c334254104c76608e1f',1,'helios::int4::int4(int v0, int v1, int v2, int v3)']]],
   ['interp1',['interp1',['../global_8h.html#a4d45cb06725a89f41266c8c89974c73e',1,'helios']]],
   ['isgeometrydirty',['isGeometryDirty',['../classhelios_1_1_context.html#a64f402ff71dd246be8c1b06699c05e26',1,'helios::Context']]],
-  ['isprimitivetexturecoloroverridden',['isPrimitiveTextureColorOverridden',['../classhelios_1_1_context.html#aaaa6de8a55765b258d6e65c52bf5df69',1,'helios::Context']]]
+  ['isprimitivetexturecoloroverridden',['isPrimitiveTextureColorOverridden',['../classhelios_1_1_context.html#aaaa6de8a55765b258d6e65c52bf5df69',1,'helios::Context']]],
+  ['increasing_20graphics_20driver_20timeout',['Increasing graphics driver timeout',['../_p_c_g_p_u_timeout.html',1,'']]]
 ];

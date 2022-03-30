@@ -1,7 +1,7 @@
 /** \file "VoxelIntersection.cpp" Primary source file for Primitive-Voxel Intersection plug-in.
     \author Brian Bailey
 
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2018-2022  Brian Bailey, Eric Kent
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -492,35 +492,35 @@ helios::vec3 VoxelIntersection::linesIntersection(helios::vec3 line1_point, heli
 
 std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helios::vec3> voxel_face_vertices)
 {
-    
-   if(voxel_face_vertices.size() < 3)
+
+    if(voxel_face_vertices.size() < 3)
     {
         std::cerr << "ERROR (slicePrimitive): voxel_face_verticies must contain at least three points" << std::endl;
-        throw(1); 
+        throw(1);
     }
-    
+
     helios::vec3 face_normal = cross(voxel_face_vertices.at(1) - voxel_face_vertices.at(0), voxel_face_vertices.at(2) - voxel_face_vertices.at(1));
     face_normal.normalize();
-    
+
     std::vector<helios::vec3> patch_vertices = context->getPrimitiveVertices(UUID);
     helios::vec3 patch_normal = context->getPrimitiveNormal(UUID);
     patch_normal.normalize();
 
     //BNB
     helios::RGBAcolor patch_color = context->getPrimitiveColorRGBA(UUID);
-    
+
     std::string texa;
     const char * tex;
     texa =  context->getPrimitiveTextureFile(UUID);
     tex = texa.c_str();
     bool patchHasTexture = !texa.empty();
-    
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     // find the equation of the line where the planes of the patch and voxel face intersect
-    
+
     // direction of the plane intersection line
-    helios::vec3 direction_vector = cross(face_normal, patch_normal); 
-    
+    helios::vec3 direction_vector = cross(face_normal, patch_normal);
+
     // find a point on the plane intersection line
     // based on https://vicrucann.github.io/tutorials/3d-geometry-algorithms/
     helios::vec3 a = helios::make_vec3(fabs(direction_vector.x),  fabs(direction_vector.y), fabs(direction_vector.z));
@@ -540,17 +540,17 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             maxc = 3;
         }
     }
-    
+
     helios::vec3 d1a = helios::make_vec3(-1*face_normal.x*voxel_face_vertices.at(0).x, -1*face_normal.y*voxel_face_vertices.at(0).y, -1*face_normal.z*voxel_face_vertices.at(0).z);
     helios::vec3 d2a = helios::make_vec3(-1*patch_normal.x*patch_vertices.at(1).x, -1*patch_normal.y*patch_vertices.at(1).y, -1*patch_normal.z*patch_vertices.at(1).z);
-    
+
     float d1 = d1a.x + d1a.y + d1a.z;
     float d2 = d2a.x + d2a.y + d2a.z;
-    
+
     float xi;
     float yi;
     float zi;
-    
+
     if(maxc == 1)
     {
         xi = 0;
@@ -565,32 +565,30 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         yi = (d1*patch_normal.x - d2*face_normal.x) /  direction_vector.z;
         zi = 0 ;
     }
-    
+
     helios::vec3  ipoint = make_vec3(xi, yi, zi);
-    
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     // get points of intersection between each edge of the patch and the patch-voxel intersection line
-    
+
     // vector for points of intersection between edge line and intersection line
-    std::vector<helios::vec3> possible_points;    
+    std::vector<helios::vec3> possible_points;
     // vector for points that actually touch the patch
     std::vector<helios::vec3> actual_points;
     std::vector<uint> actual_points_edge_ID;
-    
+
     helios::vec3 vi0;
     helios::vec3 vi1;
-    
+
     // go through the different edges of the patch and calculate intersection points with line along edge of patch and intersection line
     if(patch_vertices.size() == 4)
     {
         possible_points.resize(4);
-        helios::vec3 l1d = patch_vertices.at(1) - patch_vertices.at(0);
-        
         possible_points.at(0) = linesIntersection(patch_vertices.at(1), patch_vertices.at(1) - patch_vertices.at(0), ipoint, direction_vector);
         possible_points.at(1) = linesIntersection(patch_vertices.at(2), patch_vertices.at(2) - patch_vertices.at(1), ipoint, direction_vector);
         possible_points.at(2) = linesIntersection(patch_vertices.at(3), patch_vertices.at(3) - patch_vertices.at(2), ipoint, direction_vector);
         possible_points.at(3) = linesIntersection(patch_vertices.at(0), patch_vertices.at(0) - patch_vertices.at(3), ipoint, direction_vector);
-        
+
         for(uint i=0;i<4;i++)
         {
             if(i == 0)
@@ -607,24 +605,24 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 vi1 = patch_vertices.at(0);
                 vi0 = patch_vertices.at(3);
             }
-            
-            bool test_x = ( (possible_points.at(i).x >= vi1.x && possible_points.at(i).x <= vi0.x) || (possible_points.at(i).x >= vi0.x && possible_points.at(i).x <= vi1.x) ); 
-            bool test_y = ( (possible_points.at(i).y >= vi1.y && possible_points.at(i).y <= vi0.y) || (possible_points.at(i).y >= vi0.y && possible_points.at(i).y <= vi1.y) ); 
-            bool test_z = ( (possible_points.at(i).z >= vi1.z && possible_points.at(i).z <= vi0.z) || (possible_points.at(i).z >= vi0.z && possible_points.at(i).z <= vi1.z) ); 
-            
+
+            bool test_x = ( (possible_points.at(i).x >= vi1.x && possible_points.at(i).x <= vi0.x) || (possible_points.at(i).x >= vi0.x && possible_points.at(i).x <= vi1.x) );
+            bool test_y = ( (possible_points.at(i).y >= vi1.y && possible_points.at(i).y <= vi0.y) || (possible_points.at(i).y >= vi0.y && possible_points.at(i).y <= vi1.y) );
+            bool test_z = ( (possible_points.at(i).z >= vi1.z && possible_points.at(i).z <= vi0.z) || (possible_points.at(i).z >= vi0.z && possible_points.at(i).z <= vi1.z) );
+
             if( test_x && test_y && test_z){
-                actual_points.push_back(possible_points.at(i)); 
-                actual_points_edge_ID.push_back(i); 
+                actual_points.push_back(possible_points.at(i));
+                actual_points_edge_ID.push_back(i);
             }
-        }  
-        
+        }
+
     }else if(patch_vertices.size() == 3){
-        
+
         possible_points.resize(3);
         possible_points.at(0) = linesIntersection(patch_vertices.at(1), patch_vertices.at(1) - patch_vertices.at(0), ipoint, direction_vector);
         possible_points.at(1) = linesIntersection(patch_vertices.at(2), patch_vertices.at(2) - patch_vertices.at(1), ipoint, direction_vector);
         possible_points.at(2) = linesIntersection(patch_vertices.at(0), patch_vertices.at(0) - patch_vertices.at(2), ipoint, direction_vector);
-        
+
         for(uint i=0;i<3;i++)
         {
             if(i == 0)
@@ -634,33 +632,33 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             }else if(i == 1){
                 vi1 = patch_vertices.at(2);
                 vi0 = patch_vertices.at(1);
-                
+
             }else if(i == 2){
                 vi1 = patch_vertices.at(0);
                 vi0 = patch_vertices.at(2);
             }
-            
-            bool test_x = ( (possible_points.at(i).x >= vi1.x && possible_points.at(i).x <= vi0.x) || (possible_points.at(i).x >= vi0.x && possible_points.at(i).x <= vi1.x) ); 
-            bool test_y = ( (possible_points.at(i).y >= vi1.y && possible_points.at(i).y <= vi0.y) || (possible_points.at(i).y >= vi0.y && possible_points.at(i).y <= vi1.y) ); 
-            bool test_z = ( (possible_points.at(i).z >= vi1.z && possible_points.at(i).z <= vi0.z) || (possible_points.at(i).z >= vi0.z && possible_points.at(i).z <= vi1.z) ); 
-            
+
+            bool test_x = ( (possible_points.at(i).x >= vi1.x && possible_points.at(i).x <= vi0.x) || (possible_points.at(i).x >= vi0.x && possible_points.at(i).x <= vi1.x) );
+            bool test_y = ( (possible_points.at(i).y >= vi1.y && possible_points.at(i).y <= vi0.y) || (possible_points.at(i).y >= vi0.y && possible_points.at(i).y <= vi1.y) );
+            bool test_z = ( (possible_points.at(i).z >= vi1.z && possible_points.at(i).z <= vi0.z) || (possible_points.at(i).z >= vi0.z && possible_points.at(i).z <= vi1.z) );
+
             if( test_x && test_y && test_z){
-                actual_points.push_back(possible_points.at(i)); 
-                actual_points_edge_ID.push_back(i); 
+                actual_points.push_back(possible_points.at(i));
+                actual_points_edge_ID.push_back(i);
             }
         }
-        
+
     }
-    
+
     //vector UUIDs that will be output
     std::vector<uint> resulting_UUIDs;
-    
+
     // the primitive did not intersect with the voxel face
     if(actual_points.size() == 0){
         resulting_UUIDs.push_back(UUID);
         return resulting_UUIDs;
     }
-    
+
     // the primitive intersected with the face at a single point (a corner) - no slicing needed
     if(actual_points.size() == 1){
         resulting_UUIDs.push_back(UUID);
@@ -669,7 +667,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         }
         return resulting_UUIDs;
     }
-    
+
     // the primitive intersected with the face along an edge - no need to slice
     if(actual_points_edge_ID.at(0) == actual_points_edge_ID.at(1)){
         resulting_UUIDs.push_back(UUID);
@@ -678,10 +676,10 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         }
         return resulting_UUIDs;
     }
-    
+
     float absTol = pow(10, -6);
     float relTol = pow(10, -20);
-    
+
     if(patch_vertices.size() == 4)
     {
         if((approxSame(actual_points.at(0), patch_vertices.at(0), absTol) && approxSame(actual_points.at(1), patch_vertices.at(1), absTol))  ||
@@ -699,34 +697,81 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             resulting_UUIDs.push_back(UUID);
             return resulting_UUIDs;
         }
-        
+
     }else if(patch_vertices.size() == 3){
-        
+
         if((approxSame(actual_points.at(0), patch_vertices.at(0), absTol) || approxSame(actual_points.at(0), patch_vertices.at(1), absTol) ||
-           approxSame(actual_points.at(0), patch_vertices.at(2), absTol)) && 
+            approxSame(actual_points.at(0), patch_vertices.at(2), absTol)) &&
            (approxSame(actual_points.at(1), patch_vertices.at(0), absTol) || approxSame(actual_points.at(1), patch_vertices.at(1), absTol) ||
-           approxSame(actual_points.at(1), patch_vertices.at(2), absTol))){
+            approxSame(actual_points.at(1), patch_vertices.at(2), absTol))){
             resulting_UUIDs.push_back(UUID);
             if(printmessages){
                 std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
             }
             return resulting_UUIDs;
-        } 
+        }
     }
-    
-    
-    
-    
-    
-    
-    
-    
+
+    // if the number of 'actual intersection points' is greater than 2, choose the points that are farthest apart from each other
+    if(actual_points.size() == 3)
+    {
+
+        std::cout << "WARNING: 3 intersection points between primitive edge and voxel face for UUID " << UUID << ". Using points farthest apart." << std::endl;
+
+        float d01 = point_distance(actual_points.at(0), actual_points.at(1));
+        float d02 = point_distance(actual_points.at(0), actual_points.at(2));
+        float d12 = point_distance(actual_points.at(1), actual_points.at(2));
+
+        std::vector<vec3> temp_points;
+        std::vector<uint> temp_edges;
+
+        if(d01 > d02)
+        {
+            if(d01 > d12)
+            {
+                temp_points.push_back(actual_points.at(0));
+                temp_points.push_back(actual_points.at(1));
+                temp_edges.push_back(actual_points_edge_ID.at(0));
+                temp_edges.push_back(actual_points_edge_ID.at(1));
+            }else{
+                temp_points.push_back(actual_points.at(1));
+                temp_points.push_back(actual_points.at(2));
+                temp_edges.push_back(actual_points_edge_ID.at(1));
+                temp_edges.push_back(actual_points_edge_ID.at(2));
+            }
+        }else{
+            if(d02 > d12)
+            {
+                temp_points.push_back(actual_points.at(0));
+                temp_points.push_back(actual_points.at(2));
+                temp_edges.push_back(actual_points_edge_ID.at(0));
+                temp_edges.push_back(actual_points_edge_ID.at(2));
+            }else{
+                temp_points.push_back(actual_points.at(1));
+                temp_points.push_back(actual_points.at(2));
+                temp_edges.push_back(actual_points_edge_ID.at(1));
+                temp_edges.push_back(actual_points_edge_ID.at(2));
+            }
+        }
+
+        actual_points = temp_points;
+        actual_points_edge_ID = temp_edges;
+
+
+    }else if(actual_points.size() > 3){
+        std::cout << "####################################################################" << std::endl;
+        std::cout << "ERROR: actual_points.size() > 3" << std::endl;
+        // haven't come across this case yet, didn't implement a fix
+    }
+
+
     //determine which side of the plane vertex 0 is on and use that to determine the sign of the buffer to add to the face coordinate
     // the buffer ensures that the vertices will be categorized into grid cells correctly
     // note that some of these checks are based on the assumption of a axis aligned grid - would need to be re-worked if implementing rotated grid
-    
+
     helios::vec3 face_coordinate = make_vec3(fabs(face_normal.x)*voxel_face_vertices.at(0).x,fabs(face_normal.y)*voxel_face_vertices.at(0).y, fabs(face_normal.z)*voxel_face_vertices.at(0).z) ;
-    float buffer_value = powf(float(10), float(-6));
+    // float buffer_value = powf(float(10), float(-6));
+    float buffer_value = powf(float(10), float(-5));
     helios::vec3 buffer = make_vec3(0,0,0);
     if(fabs(face_normal.x) > 0.5)
     {
@@ -740,7 +785,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 std::cout << "vertex 0 exactly at face" << std::endl;
             }
         }
-        
+
     }else if(fabs(face_normal.y) > 0.5){
         if(patch_vertices.at(0).y < face_coordinate.y )
         {
@@ -752,7 +797,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 std::cout << "vertex 0 exactly at face" << std::endl;
             }
         }
-        
+
     }else if(fabs(face_normal.z) > 0.5){
         if(patch_vertices.at(0).z < face_coordinate.z )
         {
@@ -765,26 +810,26 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             }
         }
     }
-    
+
     // UUIDs for triangles to be created below
     uint t0;
     uint t1;
     uint t2;
     uint t3;
-    
+
     //if a resulting triangle area is below this value, delete it
     float minArea = pow(10, -13);
-    
+
     /////////////////////////////////////////////////////////////////////////////////////////////
     // if the primitive isn't texture masked
     if(patchHasTexture == false){
-        
+
         if(patch_vertices.size() == 4)
         {
             //cases where intersection points are on opposite sides
             if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 2))
             {
-	      t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
+                t0 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
                 t1 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
                 t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(3) + buffer, patch_color);
                 t3 = context->addTriangle(actual_points.at(0) - buffer, patch_vertices.at(1) - buffer, patch_vertices.at(2) - buffer, patch_color);
@@ -845,36 +890,36 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, patch_color);
                 t3 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(2) + buffer, patch_color);
             }
-            
+
             //delete triangles with area of zero, otherwise add to resulting_UUIDs vector
             if(context->getPrimitiveArea(t0) < minArea)
             {
-                context->deletePrimitive(t0); 
+                context->deletePrimitive(t0);
             }else{
                 resulting_UUIDs.push_back(t0);
             }
             if(context->getPrimitiveArea(t1) < minArea)
             {
-                context->deletePrimitive(t1); 
+                context->deletePrimitive(t1);
             }else{
                 resulting_UUIDs.push_back(t1);
             }
             if(context->getPrimitiveArea(t2) < minArea)
             {
-                context->deletePrimitive(t2); 
+                context->deletePrimitive(t2);
             }else{
                 resulting_UUIDs.push_back(t2);
             }
             if(context->getPrimitiveArea(t3) < minArea)
             {
-                context->deletePrimitive(t3); 
+                context->deletePrimitive(t3);
             }else{
                 resulting_UUIDs.push_back(t3);
             }
-            
-            
+
+
         }else if( patch_vertices.size() == 3){
-            
+
             if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 1))
             {
                 t0 = context->addTriangle(actual_points.at(0) - buffer, actual_points.at(1) - buffer, patch_vertices.at(1) - buffer, patch_color);
@@ -901,67 +946,77 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);//
                 t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(0) + buffer, patch_color);
             }
-            
-            
+
+
             //delete triangles with area of zero, otherwise add to resulting_UUIDs vector
             if(context->getPrimitiveArea(t0) < minArea)
             {
-                context->deletePrimitive(t0); 
+                context->deletePrimitive(t0);
             }else{
                 resulting_UUIDs.push_back(t0);
             }
             if(context->getPrimitiveArea(t1) < minArea)
             {
-                context->deletePrimitive(t1); 
+                context->deletePrimitive(t1);
             }else{
                 resulting_UUIDs.push_back(t1);
             }
             if(context->getPrimitiveArea(t2) < minArea)
             {
-                context->deletePrimitive(t2); 
+                context->deletePrimitive(t2);
             }else{
                 resulting_UUIDs.push_back(t2);
             }
-            
+
         }
-        
-        
+
+
     }else if(patchHasTexture){
-        
+
         //////////////////////////////////////////////////////////////////////////////////////////////
-        // rotate patch vertices and intersection points into the x-y plane for purposes of calculating uv coordinates 
+        // rotate patch vertices and intersection points into the x-y plane for purposes of calculating uv coordinates
         helios::vec3 xy = make_vec3(0,0,1);
         helios::vec3 line_direction = cross(patch_normal, xy);
         std::vector<helios::vec3> rotated_actual_points_t = actual_points;
         std::vector<helios::vec3> rotated_patch_vertices_t= patch_vertices;
-        
+
         if(line_direction == make_vec3(0,0,0))
-        {
+        { // they are already in the xy plane
         }else{
-            
+            //rotate them
             float theta = acos_safe((patch_normal.z*xy.z)/(patch_normal.magnitude())*xy.magnitude());
             for(uint i=0;i<actual_points.size();i++)
             {
                 rotated_actual_points_t.at(i) = rotatePointAboutLine(actual_points.at(i), patch_vertices.at(0), line_direction, theta );
             }
-            
+
             for(uint i=0;i<patch_vertices.size();i++)
             {
                 rotated_patch_vertices_t.at(i) = rotatePointAboutLine(patch_vertices.at(i), patch_vertices.at(0), line_direction, theta );
-            }  
-            
+            }
+
         }
-        
+
         //get uv coordinates of the vertices
         std::vector<helios::vec2> v_uv = context->getPrimitiveTextureUV(UUID);
         std::vector<helios::vec3> v_v = context->getPrimitiveVertices(UUID);
-        
+
         //get uv coordinates of the intersection points
         std::vector<helios::vec2> ip_uv;
         ip_uv.resize(2);
-        
+
         if(patch_vertices.size() == 4)
         {
+
+            // it seems patches that are not explicitly set up with texture UV coordinates just don't have them
+            // so set the default here
+            if(v_uv.size() == 0)
+            {
+                std::vector<helios::vec2> uv{ make_vec2(0,0), make_vec2(1,0), make_vec2(1,1), make_vec2(0,1) };
+                v_uv = uv;
+            }
+
+            // for each intersection point, choose the patch vertices on the corresponding edge
             for(uint i=0;i<rotated_actual_points_t.size();i++)
             {
                 helios::vec3 point_0;
@@ -969,9 +1024,9 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 helios::vec2 point_uv;
                 helios::vec2 point_0uv;
                 helios::vec2 point_1uv;
-                
+
                 if(actual_points_edge_ID.at(i) == 0)
-                { 
+                {
                     point_0 = rotated_patch_vertices_t.at(0);
                     point_1 = rotated_patch_vertices_t.at(1);
                     point_0uv = v_uv.at(0);
@@ -983,50 +1038,57 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                     point_1uv = v_uv.at(2);
                 }else if(actual_points_edge_ID.at(i) == 2){
                     point_0 = rotated_patch_vertices_t.at(2);
-                    point_1 = rotated_patch_vertices_t.at(3); 
+                    point_1 = rotated_patch_vertices_t.at(3);
                     point_0uv = v_uv.at(2);
                     point_1uv = v_uv.at(3);
                 }else if(actual_points_edge_ID.at(i) == 3){
                     point_0 = rotated_patch_vertices_t.at(3);
-                    point_1 = rotated_patch_vertices_t.at(0); 
+                    point_1 = rotated_patch_vertices_t.at(0);
                     point_0uv = v_uv.at(3);
                     point_1uv = v_uv.at(0);
                 }
-                
-                float absTol = pow(10, -9);
+
+                // check if the patch vertices for this edge are equal in x or y coordinate to prevent division by 0
+                float absTol = pow(10, -4);
                 float relTol = pow(10, -20);
-                
                 if(approxSame(point_1.x, point_0.x, absTol, relTol))
                 {
                     point_uv.x =  point_0uv.x;
                 }else{
                     point_uv.x =  point_0uv.x + (rotated_actual_points_t.at(i).x - point_0.x)/(point_1.x - point_0.x)*(point_1uv.x-point_0uv.x);
                 }
-                
+
                 if(approxSame(point_1.y, point_0.y, absTol, relTol))
                 {
                     point_uv.y =  point_0uv.y;
                 }else{
                     point_uv.y =   point_0uv.y + (rotated_actual_points_t.at(i).y - point_0.y)/(point_1.y - point_0.y)*(point_1uv.y-point_0uv.y);
                 }
-                
+
                 ip_uv.at(i) = point_uv;
+
+                if(ip_uv.at(i).x < 0 || ip_uv.at(i).x > 1 || ip_uv.at(i).y < 0 || ip_uv.at(i).y > 1)
+                {
+                    std::cout << "ERROR: texture uv for UUID " << UUID << " < 0 or > 1" << std::endl;
+                }
+
             }
-            
+
         }else if(patch_vertices.size() == 3){
-            
+
+
             for(uint i=0;i<rotated_actual_points_t.size();i++)
             {
                 //vectors to hold point coordinates and uv coordinates for the points on the current point's edge
                 helios::vec3 point_0;
                 helios::vec3 point_1;
-                
+
                 helios::vec2 point_0uv;
                 helios::vec2 point_1uv;
                 helios::vec2 point_uv;
-                
+
                 if(actual_points_edge_ID.at(i) == 0)
-                { 
+                {
                     point_0 = rotated_patch_vertices_t.at(0);
                     point_1 = rotated_patch_vertices_t.at(1);
                     point_0uv = v_uv.at(0);
@@ -1038,32 +1100,38 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                     point_1uv = v_uv.at(2);
                 }else if(actual_points_edge_ID.at(i) == 2){
                     point_0 = rotated_patch_vertices_t.at(2);
-                    point_1 = rotated_patch_vertices_t.at(0); 
+                    point_1 = rotated_patch_vertices_t.at(0);
                     point_0uv = v_uv.at(2);
                     point_1uv = v_uv.at(0);
                 }
-                
-                float absTol = pow(10, -9);
+
+                float absTol = pow(10, -4);
                 float relTol = pow(10, -20);
-                
+
                 if(approxSame(point_1.x, point_0.x, absTol, relTol))
                 {
                     point_uv.x =  point_0uv.x;
                 }else{
                     point_uv.x =  point_0uv.x + (rotated_actual_points_t.at(i).x - point_0.x)/(point_1.x - point_0.x)*(point_1uv.x-point_0uv.x);
                 }
-                
+
                 if(approxSame(point_1.y, point_0.y, absTol, relTol))
                 {
                     point_uv.y =  point_0uv.y;
                 }else{
                     point_uv.y =   point_0uv.y + (rotated_actual_points_t.at(i).y - point_0.y)/(point_1.y - point_0.y)*(point_1uv.y-point_0uv.y);
                 }
-                
+
                 ip_uv.at(i) = point_uv;
+
+                if(ip_uv.at(i).x < 0 || ip_uv.at(i).x > 1 || ip_uv.at(i).y < 0 || ip_uv.at(i).y > 1)
+                {
+                    std::cout << "ERROR: texture uv for UUID " << UUID << " < 0 or > 1" << std::endl;
+                }
+
             }
         }
-        
+
         if(patch_vertices.size() == 4)
         {
             //cases where intersection points are on opposite sides
@@ -1129,36 +1197,36 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
                 t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, patch_vertices.at(1) + buffer, tex, ip_uv.at(1), v_uv.at(0) ,v_uv.at(1));
                 t3 = context->addTriangle(actual_points.at(0) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(2) + buffer, tex, ip_uv.at(0), v_uv.at(1) ,v_uv.at(2));
-            } 
-            
+            }
+
             //delete triangles with area of zero, otherwise add to resulting_UUIDs vector
             if(context->getPrimitiveArea(t0) < minArea)
             {
-                context->deletePrimitive(t0); 
+                context->deletePrimitive(t0);
             }else{
                 resulting_UUIDs.push_back(t0);
             }
             if(context->getPrimitiveArea(t1) < minArea)
             {
-                context->deletePrimitive(t1); 
+                context->deletePrimitive(t1);
             }else{
                 resulting_UUIDs.push_back(t1);
             }
             if(context->getPrimitiveArea(t2) < minArea)
             {
-                context->deletePrimitive(t2); 
+                context->deletePrimitive(t2);
             }else{
                 resulting_UUIDs.push_back(t2);
             }
             if(context->getPrimitiveArea(t3) < minArea)
             {
-                context->deletePrimitive(t3); 
+                context->deletePrimitive(t3);
             }else{
                 resulting_UUIDs.push_back(t3);
             }
-            
+
         }else if(patch_vertices.size() == 3){
-            
+
             //cases where intersection points are on opposite sides
             if((actual_points_edge_ID.at(0) == 0 && actual_points_edge_ID.at(1) == 1))
             {
@@ -1186,58 +1254,57 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 t1 = context->addTriangle(actual_points.at(0) + buffer, actual_points.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
                 t2 = context->addTriangle(actual_points.at(1) + buffer, patch_vertices.at(1) + buffer, patch_vertices.at(0) + buffer, tex, ip_uv.at(1), v_uv.at(1) ,v_uv.at(0));
             }
-            
+
             //delete triangles with area of zero, otherwise add to resulting_UUIDs vector
             if(context->getPrimitiveArea(t0) < minArea)
             {
-                context->deletePrimitive(t0); 
+                context->deletePrimitive(t0);
             }else{
                 resulting_UUIDs.push_back(t0);
             }
             if(context->getPrimitiveArea(t1) < minArea)
             {
-                context->deletePrimitive(t1); 
+                context->deletePrimitive(t1);
             }else{
                 resulting_UUIDs.push_back(t1);
             }
             if(context->getPrimitiveArea(t2) < minArea)
             {
-                context->deletePrimitive(t2); 
+                context->deletePrimitive(t2);
             }else{
                 resulting_UUIDs.push_back(t2);
             }
         }
     }
-    
+
     // copy over primitive data to the new triangles
     for(uint i=0;i<resulting_UUIDs.size();i++){
         context->copyPrimitiveData(UUID, resulting_UUIDs.at(i));
-	//BNB
-	uint parentID = context->getPrimitiveParentObjectID(UUID);
-	context->setPrimitiveParentObjectID(resulting_UUIDs.at(i),parentID);
-	if( context->isPrimitiveTextureColorOverridden(UUID) ){
-	  context->overridePrimitiveTextureColor(resulting_UUIDs.at(i));
-	}
+        //BNB
+        uint parentID = context->getPrimitiveParentObjectID(UUID);
+        context->setPrimitiveParentObjectID(resulting_UUIDs.at(i),parentID);
+        if( context->isPrimitiveTextureColorOverridden(UUID) ){
+            context->overridePrimitiveTextureColor(resulting_UUIDs.at(i));
+        }
     }
-    
+
     // delete the original primitive
-    assert(resulting_UUIDs.size() > 0);
+    // assert(resulting_UUIDs.size() > 0);
 
     context->deletePrimitive(UUID);
-    
+
     return resulting_UUIDs;
 }
 
-//ERK
 std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> UUIDs, helios::vec3 grid_center, helios::vec3 grid_size, helios::int3 grid_divisions)
 {
-    
+
     //set up the grid
     std::vector<std::vector<helios::vec3>> grid_face_vertices;
     helios::vec3 grid_min = make_vec3(grid_center.x - grid_size.x*0.5, grid_center.y - grid_size.y*0.5, grid_center.z - grid_size.z*0.5);
     helios::vec3 grid_max = make_vec3(grid_center.x + grid_size.x*0.5, grid_center.y + grid_size.y*0.5, grid_center.z + grid_size.z*0.5);
     helios::vec3 grid_spacing = make_vec3(grid_size.x/grid_divisions.x, grid_size.y/grid_divisions.y, grid_size.z/grid_divisions.z);
-    
+
     //faces in the y-z plane (change x)
     for(uint k=0;k< (grid_divisions.x + 1); k++)
     {
@@ -1248,7 +1315,7 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         this_face_vertices.push_back(make_vec3(grid_min.x + k*grid_spacing.x, grid_max.y, grid_max.z));
         grid_face_vertices.push_back(this_face_vertices);
     }
-    
+
     //faces in the x-z plane (change y)
     for(uint k=0;k< (grid_divisions.y + 1); k++)
     {
@@ -1257,9 +1324,9 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         this_face_vertices.push_back(make_vec3(grid_min.x, grid_min.y + k*grid_spacing.y, grid_max.z));
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_min.y + k*grid_spacing.y, grid_min.z));
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_min.y + k*grid_spacing.y, grid_max.z));
-        grid_face_vertices.push_back(this_face_vertices); 
+        grid_face_vertices.push_back(this_face_vertices);
     }
-    
+
     //faces in the x-z plane (change y)
     for(uint k=0;k< (grid_divisions.z + 1); k++)
     {
@@ -1268,28 +1335,28 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         this_face_vertices.push_back(make_vec3(grid_min.x, grid_max.y, grid_min.z + k*grid_spacing.z));
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_min.y, grid_min.z + k*grid_spacing.z));
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_max.y, grid_min.z + k*grid_spacing.z));
-        grid_face_vertices.push_back(this_face_vertices); 
+        grid_face_vertices.push_back(this_face_vertices);
     }
-    
+
     if( printmessages ){
         std::cout << UUIDs.size() << " input primitives" << std::endl;
         std::cout << grid_face_vertices.size() << " grid faces used for slicing" << std::endl;
         std::cout << grid_divisions.x*grid_divisions.y*grid_divisions.z << " total grid cells" << std::endl;
     }
-    
-    
+
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     // do an initial classification of primitives into grid cells based on if all their vertices fall into a given voxel
-    
+
     cell_primitives.resize(grid_divisions.x*grid_divisions.y*grid_divisions.z + 1);
-    
+
     //initially set all UUIDs as outside any voxel
     context->setPrimitiveData(UUIDs, "cell_ID", int(-1));
-    
+
     //vectors for UUIDs that do and do not need to be sliced
     std::vector<uint> UUIDs_to_slice;
     std::vector<uint> UUIDs_no_slice;
-    
+
     auto start = std::chrono::high_resolution_clock::now();
     for(uint p=0;p<UUIDs.size();p++)
     {
@@ -1304,28 +1371,28 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
                     helios::vec3 cell_min = make_vec3(grid_min.x + float(i)*grid_spacing.x, grid_min.y + float(j)*grid_spacing.y, grid_min.z + float(k)*grid_spacing.z);
                     helios::vec3 cell_max = make_vec3(grid_min.x + float(i)*grid_spacing.x + grid_spacing.x, grid_min.y + float(j)*grid_spacing.y + grid_spacing.y, grid_min.z + float(k)*grid_spacing.z + grid_spacing.z);
                     std::vector<helios::vec3> verts = context->getPrimitiveVertices(UUIDs.at(p));
-                    
+
                     uint v_in = 0;
                     for(uint v=0;v<verts.size();v++)
                     {
-                        
+
                         bool test2_x = (verts.at(v).x >= cell_min.x) && (verts.at(v).x <= cell_max.x );
                         bool test2_y = (verts.at(v).y >= cell_min.y ) && (verts.at(v).y <= cell_max.y );
                         bool test2_z =  (verts.at(v).z >= cell_min.z ) && (verts.at(v).z <= cell_max.z ) ;
-                        
+
                         if( test2_x && test2_y && test2_z)
                         {
                             v_in ++;
                         }
                     }
-                    
+
                     if(v_in == verts.size())
                     {
-                        //the UUID doesn't need to be sliced
+                        //the UUID doesn't need to be sliced since its vertices all are within a cell
                         context->setPrimitiveData(UUIDs.at(p), "cell_ID", cell_ID);
                         cell_primitives.at(cell_ID).push_back(UUIDs.at(p));
                         UUIDs_no_slice.push_back(UUIDs.at(p));
-                        cell_ID ++;    
+                        cell_ID ++;
                         flag = true;
                         break;
                     }else if(v_in != 0){
@@ -1340,31 +1407,31 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
             }
             if(flag == true){break;}
         }
-        
+
         // if all vertices fell outside of all grid cells, add it to be sliced just in case (corner cases)
         if(flag == false){
-            UUIDs_to_slice.push_back(UUIDs.at(p));;
+            UUIDs_to_slice.push_back(UUIDs.at(p));
         }
-        
+
     }
-    
+
     if( printmessages ){
-        
-      auto stop = std::chrono::high_resolution_clock::now();
-      auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
         std::cout << duration.count() << " seconds to do initial grid cell classification" << std::endl;
         std::cout << UUIDs_no_slice.size() << " input primitives (" << float(UUIDs_no_slice.size())/float(UUIDs.size())*100 << "%) not sliced" << std::endl;
         std::cout << UUIDs_to_slice.size() << " input primitives (" << float(UUIDs_to_slice.size())/float(UUIDs.size())*100 << "%) being sliced" << std::endl;
     }
-    
-    
+
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     // do the slicing
-    
+
     std::vector<uint> primitives_to_remove;
     std::vector<uint> primitives_to_add;
     uint s1;
-    
+
     auto start2 = std::chrono::high_resolution_clock::now();
     //loop through each voxel face
     for(uint i=0;i<grid_face_vertices.size();i++)
@@ -1374,7 +1441,7 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
             //slice
             std::vector<uint> resulting_UUIDs;
             resulting_UUIDs = slicePrimitive(UUIDs_to_slice.at(j), grid_face_vertices.at(i));
-            
+
             //update the UUIDs_to_slice vector so it doesn't include deleted primitives (the originals that were split)
             bool exists = context->doesPrimitiveExist(UUIDs_to_slice.at(j));
             if(!exists)
@@ -1383,69 +1450,69 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
                 primitives_to_add.insert(primitives_to_add.end(), resulting_UUIDs.begin(), resulting_UUIDs.end());
             }
         }
-        
+
         for(int k=primitives_to_remove.size()-1; k>=0; k--)
         {
             UUIDs_to_slice.erase(UUIDs_to_slice.begin() + primitives_to_remove.at(k));
         }
         primitives_to_remove.clear();
-        
+
         UUIDs_to_slice.insert( UUIDs_to_slice.end(), primitives_to_add.begin(), primitives_to_add.end() );
         primitives_to_add.clear();
     }
-    
+
     if( printmessages ){
-        
-      auto stop2 = std::chrono::high_resolution_clock::now();
+
+        auto stop2 = std::chrono::high_resolution_clock::now();
         auto duration2 = std::chrono::duration_cast<std::chrono::seconds>(stop2 - start2);
         std::cout << duration2.count() << " seconds to do slicing" << std::endl;
-        
+
     }
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     // now classify the sliced primitives into grid cells
     // save the cell_ID as primitive data for the triangle
-    // save the primitive UUID to a vector of UUIDs that are in a given cell and save that 
-    
+    // save the primitive UUID to a vector of UUIDs that are in a given cell and save that
+
     auto start3 = std::chrono::high_resolution_clock::now();
-    
+
     for(uint p=0;p<UUIDs_to_slice.size();p++)
     {
         int cell_ID = 0;
         bool flag = false;
-        
+
         for(uint k=0;k< (grid_divisions.z); k++)
         {
             for(uint j=0;j< (grid_divisions.y); j++)
             {
                 for(uint i=0;i< (grid_divisions.x); i++)
                 {
-                    
+
                     helios::vec3 cell_min = make_vec3(grid_min.x + i*grid_spacing.x, grid_min.y + j*grid_spacing.y, grid_min.z + k*grid_spacing.z);
                     helios::vec3 cell_max = make_vec3(grid_min.x + i*grid_spacing.x + grid_spacing.x, grid_min.y + j*grid_spacing.y + grid_spacing.y, grid_min.z + k*grid_spacing.z + grid_spacing.z);
-                    
+
                     std::vector<helios::vec3> verts = context->getPrimitiveVertices(UUIDs_to_slice.at(p));
                     uint v_in = 0;
                     for(uint v=0;v<verts.size();v++)
                     {
-                        
+
                         float absTol = pow(10, -6);
                         float relTol = pow(10, -20);
                         bool test2_x = (verts.at(v).x > cell_min.x || approxSame(verts.at(v).x, cell_min.x, absTol, relTol)) && (verts.at(v).x < cell_max.x || approxSame(verts.at(v).x, cell_max.x, absTol, relTol));
                         bool test2_y = (verts.at(v).y > cell_min.y || approxSame(verts.at(v).y, cell_min.y, absTol, relTol)) && (verts.at(v).y < cell_max.y || approxSame(verts.at(v).y, cell_max.y, absTol, relTol));
                         bool test2_z =  (verts.at(v).z > cell_min.z || approxSame(verts.at(v).z, cell_min.z, absTol, relTol)) && (verts.at(v).z < cell_max.z || approxSame(verts.at(v).z, cell_max.z, absTol, relTol)) ;
-                        
+
                         if( test2_x && test2_y && test2_z)
                         {
                             v_in ++;
                         }
                     }
-                    
+
                     if(v_in == verts.size())
                     {
                         context->setPrimitiveData(UUIDs_to_slice.at(p), "cell_ID", cell_ID);
                         cell_primitives.at(cell_ID).push_back(UUIDs_to_slice.at(p));
-                        cell_ID ++;    
+                        cell_ID ++;
                         flag = true;
                         break;
                     }
@@ -1455,15 +1522,15 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
             }
             if(flag == true){break;}
         }
-        
+
         if(flag == false){
             cell_primitives.at(cell_primitives.size()-1).push_back(UUIDs_to_slice.at(p));
         }
-        
+
     }
-    
+
     if( printmessages ){
-      auto stop3 = std::chrono::high_resolution_clock::now();
+        auto stop3 = std::chrono::high_resolution_clock::now();
         auto duration3 = std::chrono::duration_cast<std::chrono::seconds>(stop3 - start3);
         std::cout << duration3.count() << " seconds to do second classification" << std::endl;
     }
@@ -1471,15 +1538,16 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
     //Join the unsliced and sliced primitive UUIDs back into a single vector
     std::vector<uint>  UUIDs_out = UUIDs_no_slice;
     UUIDs_out.insert(UUIDs_out.end(), UUIDs_to_slice.begin(), UUIDs_to_slice.end());
-    
+
     if( printmessages ){
         std::cout << UUIDs_to_slice.size() << " primitives created from slicing" << std::endl;
         std::cout << UUIDs_out.size() << " total output primitives" << std::endl;
     }
-    
+
     return UUIDs_out;
-  
+
 }
+
 
 std::vector<std::vector<uint>> VoxelIntersection::getCellPrimitives(void){
          

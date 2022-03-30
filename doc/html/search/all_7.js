@@ -20,5 +20,5 @@ var searchData=
   ['hittable',['HitTable',['../class_hit_table.html',1,'']]],
   ['homogeneouscanopyparameters',['HomogeneousCanopyParameters',['../struct_homogeneous_canopy_parameters.html',1,'HomogeneousCanopyParameters'],['../struct_homogeneous_canopy_parameters.html#ad5f583b7f483df9fdaf86bbdaf0e5a92',1,'HomogeneousCanopyParameters::HomogeneousCanopyParameters()']]],
   ['hour',['hour',['../structhelios_1_1_time.html#a6ec639cf61cf283c5e999d152d27839f',1,'helios::Time']]],
-  ['helios_20documentation_20v1_2e2_2e31',['Helios Documentation v1.2.31',['../index.html',1,'']]]
+  ['helios_20documentation_20v1_2e2_2e32',['Helios Documentation v1.2.32',['../index.html',1,'']]]
 ];

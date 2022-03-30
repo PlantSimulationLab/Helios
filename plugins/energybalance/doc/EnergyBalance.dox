@@ -7,7 +7,7 @@
  <p> <br><br> </p>
 
  <table>
- <tr><th>Dependencies <td>NVIDIA CUDA 9.0+ <br>gcc/g++ 5.5+
+ <tr><th>Dependencies <td>NVIDIA CUDA 9.0+
  <tr><th>CMakeLists.txt <td>set( PLUGINS "energybalance" )
  <tr><th>Header File <td>#include "EnergyBalanceModel.h"
  <tr><th>Class <td>\ref EnergyBalanceModel
@@ -15,21 +15,29 @@
 
  \section EBDepends Dependencies
 
-  <table>
-  <caption>Installing dependent packages</caption>
-  <tr>
-	<th>Package</th><td>\image html apple-logo.jpg</td>
-	<td>\image html unix-logo.png</td>
-	<td>\image html windows-logo.jpg</td>
-  </tr>
-  <tr>
-	<td>NVIDIA CUDA 5.0+</td>
-	<td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
-	<td>Debian/Ubuntu:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cuda</code></div></td><td>Unknown</td>
-  </tr>
-  </table>
+<table>
+ <tr>
+  <th>Package</th>
+  <td>\image html apple-logo.jpg</td>
+  <td>\image html unix-logo.png</td>
+  <td>\image html windows-logo.jpg</td>
+ </tr>
+ <tr>
+  <td>NVIDIA CUDA 9.0+</td>
+  <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+  <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
+  <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
+ </tr>
+</table>
 
- \section EBissues Known Issues
+For help choosing the correct CUDA toolkit version for your system, consult this page: \ref ChoosingCUDA
+
+Useful OS-specific information for installing CUDA can be found here: \ref DependentSoftware
+
+If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
+
+
+\section EBissues Known Issues
 
  None.
 

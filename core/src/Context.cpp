@@ -409,6 +409,18 @@ void Patch::rotate( float rot, const helios::vec3& axis ){
     matmult(R,transform,transform);
 }
 
+void Patch::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
+
+    if( parent_object_ID!=0 ){
+        std::cout << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+
+    float R[16];
+    makeRotationMatrix(rot,origin,axis,R);
+    matmult(R,transform,transform);
+}
+
 void Triangle::rotate( float rot, const char* axis ){
 
     if( parent_object_ID!=0 ){
@@ -446,6 +458,18 @@ void Triangle::rotate( float rot, const helios::vec3& axis ){
     matmult(R,transform,transform);
 }
 
+void Triangle::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
+
+    if( parent_object_ID!=0 ){
+        std::cout << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+
+    float R[16];
+    makeRotationMatrix(rot,origin,axis,R);
+    matmult(R,transform,transform);
+}
+
 void Voxel::rotate( float rot, const char* axis ){
 
     if( parent_object_ID!=0 ){
@@ -460,6 +484,10 @@ void Voxel::rotate( float rot, const char* axis ){
 }
 
 void Voxel::rotate( float rot, const helios::vec3& axis ){
+    std::cout << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
+}
+
+void Voxel::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
     std::cout << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
 }
 
@@ -3140,6 +3168,23 @@ vec3 Triangle::getVertex( int number ){
 
 }
 
+vec3 Triangle::getCenter() const{
+
+//    Y[0] = make_vec3( 0.f, 0.f, 0.f);
+//    Y[1] = make_vec3( 0.f, 1.f, 0.f);
+//    Y[2] = make_vec3( 1.f/3.f, 1.f, 0.f);
+
+    vec3 center0 = make_vec3(1.f/3.f,2.f/3.f,0.f);
+    vec3 center;
+
+    center.x = transform[0] * center0.x + transform[1] * center0.y + transform[2] * center0.z + transform[3];
+    center.y = transform[4] * center0.x + transform[5] * center0.y + transform[6] * center0.z + transform[7];
+    center.z = transform[8] * center0.x + transform[9] * center0.y + transform[10] * center0.z + transform[11];
+
+    return center;
+
+}
+
 Voxel::Voxel( const RGBAcolor& a_color, uint a_UUID ){
 
     makeIdentityMatrix(transform);
@@ -3161,7 +3206,7 @@ float Voxel::getVolume(){
     return size.x*size.y*size.z;
 }
 
-vec3 Voxel::getCenter(){
+vec3 Voxel::getCenter() const{
 
     vec3 center;
     vec3 Y;
@@ -3633,6 +3678,16 @@ void Context::rotatePrimitive(uint UUID, float rot, const helios::vec3& axis ){
 void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const vec3 &axis ){
     for( uint UUID : UUIDs){
         getPrimitivePointer_private(UUID)->rotate(rot,axis);
+    }
+}
+
+void Context::rotatePrimitive( uint UUID, float rot, const helios::vec3& origin, const helios::vec3& axis ){
+    getPrimitivePointer_private(UUID)->rotate(rot,origin,axis);
+}
+
+void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const helios::vec3& origin, const vec3 &axis ){
+    for( uint UUID : UUIDs){
+        getPrimitivePointer_private(UUID)->rotate(rot,origin,axis);
     }
 }
 
@@ -4594,6 +4649,26 @@ void CompoundObject::rotate( float rot, const helios::vec3& axis ){
 
 }
 
+void CompoundObject::rotate( float rot, const helios::vec3&  origin, const helios::vec3& axis ){
+
+    float R[16], R_prim[16];
+    makeRotationMatrix(rot,origin,axis,R);
+    matmult(R,transform,transform);
+
+    for( uint UUID : UUIDs){
+
+        if( context->doesPrimitiveExist( UUID ) ){
+
+            context->getPrimitiveTransformationMatrix( UUID,R_prim);
+            matmult(R,R_prim,R_prim);
+            context->setPrimitiveTransformationMatrix( UUID,R_prim);
+
+        }
+
+    }
+
+}
+
 void CompoundObject::getTransformationMatrix( float (&T)[16] ) const{
     for( int i=0; i<16; i++ ){
         T[i]=transform[i];
@@ -5512,25 +5587,68 @@ std::vector<uint> Context::filterObjectsByData( const std::vector<uint> &IDs, co
 
 }
 
-std::vector<uint> Context::getObjectPrimitiveUUIDs( const std::vector<uint> &IDs ) const{
+void Context::translateObject(uint ObjID, const vec3& shift ){
+    getObjectPointer(ObjID)->translate(shift);
+}
+
+void Context::translateObject( const std::vector<uint>& ObjIDs, const vec3& shift ){
+    for( uint ID : ObjIDs){
+        getObjectPointer(ID)->translate(shift);
+    }
+}
+
+void Context::rotateObject(uint ObjID, float rot, const char* axis ){
+    getObjectPointer(ObjID)->rotate(rot,axis);
+}
+
+void Context::rotateObject( const std::vector<uint>& ObjIDs, float rot, const char* axis ){
+    for( uint ID : ObjIDs){
+        getObjectPointer(ID)->rotate(rot,axis);
+    }
+}
+
+void Context::rotateObject(uint ObjID, float rot, const vec3& axis ){
+    getObjectPointer(ObjID)->rotate(rot,axis);
+}
+
+void Context::rotateObject( const std::vector<uint>& ObjIDs, float rot, const vec3& axis ){
+    for( uint ID : ObjIDs){
+        getObjectPointer(ID)->rotate(rot,axis);
+    }
+}
+
+void Context::rotateObject(uint ObjID, float rot, const vec3& origin, const vec3& axis ){
+    getObjectPointer(ObjID)->rotate(rot,origin,axis);
+}
+
+void Context::rotateObject( const std::vector<uint>& ObjIDs, float rot, const vec3& origin, const vec3& axis ){
+    for( uint ID : ObjIDs){
+        getObjectPointer(ID)->rotate(rot,origin,axis);
+    }
+}
+
+std::vector<uint> Context::getObjectPrimitiveUUIDs( const std::vector<uint> &ObjIDs ) const{
 
     std::vector<uint> output_UUIDs;
 
-    for(uint i=0;i<IDs.size();i++)
+    for(uint i=0;i<ObjIDs.size();i++)
     {
-        CompoundObject* pointer = getObjectPointer(IDs.at(i));
+        CompoundObject* pointer = getObjectPointer(ObjIDs.at(i));
         std::vector<uint> current_UUIDs = pointer->getPrimitiveUUIDs();
         output_UUIDs.insert( output_UUIDs.end(), current_UUIDs.begin(), current_UUIDs.end() );
     }
     return output_UUIDs;
 }
 
-std::vector<uint> Context::getObjectPrimitiveUUIDs( uint ID ) const{
+std::vector<uint> Context::getObjectPrimitiveUUIDs( uint ObjID ) const{
 
-    std::vector<uint> IDs;
-    IDs.push_back(ID);
+    std::vector<uint> IDs{ObjID};
     std::vector<uint> output_UUIDs = getObjectPrimitiveUUIDs(IDs);
     return output_UUIDs;
+}
+
+helios::ObjectType Context::getObjectType( uint ObjID ) const{
+    return getObjectPointer(ObjID)->getObjectType();
 }
 
 float Context::getTileObjectAreaRatio(const uint &ObjectID) const{
@@ -13049,4 +13167,255 @@ bool Context::isPrimitiveTextureColorOverridden( uint UUID ) const{
 
 float Context::getPrimitiveSolidFraction( uint UUID ) const{
     return getPrimitivePointer_private(UUID)->getSolidFraction();
+}
+
+void Context::printPrimitiveInfo(uint UUID) const{
+
+    std::cout << "-------------------------------------------" << std::endl;
+    std::cout << "Info for UUID " << UUID << std::endl;
+    std::cout << "-------------------------------------------" << std::endl;
+
+    PrimitiveType type = getPrimitiveType(UUID);
+    std::string stype;
+    if( type == 0){
+        stype =  "PRIMITIVE_TYPE_PATCH";
+    }else if(type == 1){
+        stype =  "PRIMITIVE_TYPE_TRIANGLE";
+    }else if(type == 2){
+        stype =  "PRIMITIVE_TYPE_VOXEL";
+    }
+
+    std::cout << "Type: " << stype << std::endl;
+    std::cout << "Surface Area: " << getPrimitiveArea(UUID) << std::endl;
+    std::cout << "Normal Vector: " << getPrimitiveNormal(UUID) << std::endl;
+
+    if(type == PRIMITIVE_TYPE_PATCH)
+    {
+        std::cout << "Patch Center: " << getPatchCenter(UUID) << std::endl;
+        std::cout << "Patch Size: " << getPatchSize(UUID) << std::endl;
+
+    }else if(type == PRIMITIVE_TYPE_VOXEL){
+
+        std::cout << "Voxel Center: " << getVoxelCenter(UUID) << std::endl;
+        std::cout << "Voxel Size: " << getVoxelSize(UUID) << std::endl;
+    }
+
+    std::vector<vec3> primitive_vertices = getPrimitiveVertices(UUID);
+    std::cout << "Vertices: " << std::endl;
+    for(uint i=0; i<primitive_vertices.size();i++)
+    {
+        std::cout << "   " << primitive_vertices.at(i) << std::endl;
+    }
+
+    float T[16];
+    getPrimitiveTransformationMatrix(UUID, T);
+    std::cout << "Transform: " << std::endl;
+    std::cout << "   " << T[0] << "      " << T[1] << "      " << T[2] << "      " << T[3] << std::endl;
+    std::cout << "   " << T[4] << "      " << T[5] << "      " << T[6] << "      " << T[7] << std::endl;
+    std::cout << "   " << T[8] << "      " << T[9] << "      " << T[10] << "      " << T[11] << std::endl;
+    std::cout << "   " << T[12] << "      " << T[13] << "      " << T[14] << "      " << T[15] << std::endl;
+
+    std::cout << "Color: " << getPrimitiveColor(UUID) << std::endl;
+    std::cout << "Texture File: " << getPrimitiveTextureFile(UUID) << std::endl;
+    std::cout << "Texture Size: " << getPrimitiveTextureSize(UUID) << std::endl;
+    std::cout << "Texture UV: " << std::endl;
+    std::vector<vec2> uv = getPrimitiveTextureUV(UUID);
+    for(uint i=0; i<uv.size();i++)
+    {
+        std::cout << "   " << uv.at(i) << std::endl;
+    }
+
+    std::cout << "Texture Transparency: " << primitiveTextureHasTransparencyChannel(UUID) << std::endl;
+    std::cout << "Color Overridden: " << isPrimitiveTextureColorOverridden(UUID) << std::endl;
+    std::cout << "Solid Fraction: " << getPrimitiveSolidFraction(UUID) << std::endl;
+
+
+    std::cout << "Primitive Data: " << std::endl;
+    Primitive* pointer = getPrimitivePointer_private(UUID);
+    std::vector<std::string> pd = pointer->listPrimitiveData();
+    for(uint i=0; i<pd.size();i++)
+    {
+        uint dsize = getPrimitiveDataSize(UUID, pd.at(i).c_str());
+        HeliosDataType dtype = getPrimitiveDataType(UUID, pd.at(i).c_str());
+        std::string dstype;
+
+        if( dtype==HELIOS_TYPE_INT ){
+            dstype = "HELIOS_TYPE_INT";
+        }else if( dtype==HELIOS_TYPE_UINT ){
+            dstype = "HELIOS_TYPE_UINT";
+        }else if( dtype==HELIOS_TYPE_FLOAT ){
+            dstype = "HELIOS_TYPE_FLOAT";
+        }else if( dtype==HELIOS_TYPE_DOUBLE ){
+            dstype = "HELIOS_TYPE_DOUBLE";
+        }else if( dtype==HELIOS_TYPE_VEC2 ){
+            dstype = "HELIOS_TYPE_VEC2";
+        }else if( dtype==HELIOS_TYPE_VEC3 ){
+            dstype = "HELIOS_TYPE_VEC3";
+        }else if( dtype==HELIOS_TYPE_VEC4 ){
+            dstype = "HELIOS_TYPE_VEC4";
+        }else if( dtype==HELIOS_TYPE_INT2 ){
+            dstype = "HELIOS_TYPE_INT2";
+        }else if( dtype==HELIOS_TYPE_INT3 ){
+            dstype = "HELIOS_TYPE_INT3";
+        }else if( dtype==HELIOS_TYPE_INT4 ){
+            dstype = "HELIOS_TYPE_INT4";
+        }else if( dtype==HELIOS_TYPE_STRING ){
+            dstype = "HELIOS_TYPE_STRING";
+        }else{
+            assert(false);
+        }
+
+
+        std::cout << "   " << "[name: " << pd.at(i) << ", type: " << dstype << ", size: " << dsize << "]:" << std::endl;
+
+
+        if( dtype==HELIOS_TYPE_INT ){
+            std::vector<int> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_UINT ){
+            std::vector<uint> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_FLOAT ){
+            std::vector<float> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_DOUBLE ){
+            std::vector<double> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_VEC2 ){
+            std::vector<vec2> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_VEC3 ){
+            std::vector<vec3> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_VEC4 ){
+            std::vector<vec4> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_INT2 ){
+            std::vector<int2> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_INT3 ){
+            std::vector<int3> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_INT4 ){
+            std::vector<int4> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else if( dtype==HELIOS_TYPE_STRING ){
+            std::vector<std::string> pdata;
+            getPrimitiveData( UUID, pd.at(i).c_str(), pdata );
+            for(uint j=0; j<dsize;j++)
+            {
+                if(j < 10){
+                    std::cout << "      " << pdata.at(j) << std::endl;
+                }else{
+                    std::cout << "      ..." << std::endl;
+                    break;
+                }
+
+            }
+        }else{
+            assert(false);
+        }
+
+    }
+    std::cout << "-------------------------------------------" << std::endl;
 }

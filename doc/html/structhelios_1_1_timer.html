@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.31</span>
+   &#160;<span id="projectnumber">v1.2.32</span>
    </div>
   </td>
  </tr>
@@ -71,7 +71,7 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 
-<p>MATLAB-style timer. Call <a class="el" href="structhelios_1_1_timer.html#a47d04d3a8054ad2b6bbb9623c000090c" title="Start timer. ">tic()</a> to start timer, call <a class="el" href="structhelios_1_1_timer.html#a9d3f79551cc1089cb6dd81d3bb68f537">toc()</a> to stop timer and print duration.  
+<p>MATLAB-style timer. Call <a class="el" href="structhelios_1_1_timer.html#a47d04d3a8054ad2b6bbb9623c000090c" title="Start timer. ">tic()</a> to start timer, call <a class="el" href="structhelios_1_1_timer.html#a9d3f79551cc1089cb6dd81d3bb68f537" title="Stop timer and print elapsed time. ">toc()</a> to stop timer and print duration.  
  <a href="structhelios_1_1_timer.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="global_8h_source.html">global.h</a>&gt;</code></p>
@@ -86,16 +86,47 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_timer.html#a9d3f79551cc1089cb6dd81d3bb68f537">toc</a> () const</td></tr>
 <tr class="memdesc:a9d3f79551cc1089cb6dd81d3bb68f537"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop timer and print elapsed time. <br /></td></tr>
 <tr class="separator:a9d3f79551cc1089cb6dd81d3bb68f537"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0449918d3129616aa908b5580069c7b6"><td class="memItemLeft" align="right" valign="top"><a id="a0449918d3129616aa908b5580069c7b6"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_timer.html#a0449918d3129616aa908b5580069c7b6">toc</a> (const char *message) const</td></tr>
-<tr class="memdesc:a0449918d3129616aa908b5580069c7b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop timer and print elapsed time and a user-defined message. <br /></td></tr>
+<tr class="memitem:a0449918d3129616aa908b5580069c7b6"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_timer.html#a0449918d3129616aa908b5580069c7b6">toc</a> (const char *message) const</td></tr>
+<tr class="memdesc:a0449918d3129616aa908b5580069c7b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop timer and print elapsed time and a user-defined message.  <a href="#a0449918d3129616aa908b5580069c7b6">More...</a><br /></td></tr>
 <tr class="separator:a0449918d3129616aa908b5580069c7b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>MATLAB-style timer. Call <a class="el" href="structhelios_1_1_timer.html#a47d04d3a8054ad2b6bbb9623c000090c" title="Start timer. ">tic()</a> to start timer, call <a class="el" href="structhelios_1_1_timer.html#a9d3f79551cc1089cb6dd81d3bb68f537">toc()</a> to stop timer and print duration. </p>
+<div class="textblock"><p>MATLAB-style timer. Call <a class="el" href="structhelios_1_1_timer.html#a47d04d3a8054ad2b6bbb9623c000090c" title="Start timer. ">tic()</a> to start timer, call <a class="el" href="structhelios_1_1_timer.html#a9d3f79551cc1089cb6dd81d3bb68f537" title="Stop timer and print elapsed time. ">toc()</a> to stop timer and print duration. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00379">379</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
-</div><hr/>The documentation for this struct was generated from the following file:<ul>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00389">389</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+</div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a0449918d3129616aa908b5580069c7b6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0449918d3129616aa908b5580069c7b6">&#9670;&nbsp;</a></span>toc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double helios::Timer::toc </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>message</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Stop timer and print elapsed time and a user-defined message. </p>
+<dl class="section note"><dt>Note</dt><dd>the timer print message can be turned off by passing the message argument "mute" </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00411">411</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
 <li>core/include/<a class="el" href="global_8h_source.html">global.h</a></li>
 </ul>
 </div><!-- contents -->

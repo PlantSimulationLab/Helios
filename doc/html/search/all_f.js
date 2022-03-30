@@ -17,6 +17,7 @@ var searchData=
   ['plotupdate',['plotUpdate',['../class_visualizer.html#ae056b735b1b9c154b981f07ba93d0a3a',1,'Visualizer::plotUpdate(void)'],['../class_visualizer.html#ae0e0842c47a897070da7a53da8eed34b',1,'Visualizer::plotUpdate(const bool hide_window)']]],
   ['plug_2dins',['Plug-ins',['../_plug_ins.html',1,'']]],
   ['pnghasalpha',['PNGHasAlpha',['../global_8h.html#a07b0dda8b9aee4100e9f6332dbfe7f64',1,'helios']]],
+  ['point_5fdistance',['point_distance',['../global_8h.html#a4d55bb8abc86cb7dabab1d4e6201a754',1,'helios']]],
   ['pointinpolygon',['pointInPolygon',['../global_8h.html#aaa7da223bd02271d4f037b9e5305c023',1,'helios']]],
   ['polymesh',['Polymesh',['../classhelios_1_1_polymesh.html',1,'helios::Polymesh'],['../classhelios_1_1_polymesh.html#a4a3c02f97dac295f584090ccd622cb94',1,'helios::Polymesh::Polymesh()']]],
   ['primitive_5ftype_5fpatch',['PRIMITIVE_TYPE_PATCH',['../_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601a6fcd29f0c812849b3eb5bedec52cd744',1,'helios']]],
@@ -25,5 +26,6 @@ var searchData=
   ['primitiveintersection_2ecu',['primitiveIntersection.cu',['../primitive_intersection_8cu.html',1,'']]],
   ['primitivetexturehastransparencychannel',['primitiveTextureHasTransparencyChannel',['../classhelios_1_1_context.html#a5e10a8afe134f4a55f65c81a9398c69c',1,'helios::Context']]],
   ['primitivetype',['PrimitiveType',['../_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601',1,'helios']]],
+  ['printprimitiveinfo',['printPrimitiveInfo',['../classhelios_1_1_context.html#a355617da1f3faa4d01ca4d95425e9c0b',1,'helios::Context']]],
   ['printwindow',['printWindow',['../class_visualizer.html#ab42f12bed91baa9f2d8532cbe804be5b',1,'Visualizer::printWindow(void)'],['../class_visualizer.html#a1840b4285caa645e6b8b28144478cfe1',1,'Visualizer::printWindow(const char *outfile)']]]
 ];

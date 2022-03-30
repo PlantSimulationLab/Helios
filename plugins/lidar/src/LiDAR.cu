@@ -3294,7 +3294,11 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
     float exit_diameter = getScanBeamExitDiameter(s);
     float beam_divergence = getScanBeamDivergence(s);
 
-    dimBlock = make_uint3( 128, 8, 1 );
+      if( Npulse>1 ){
+          dimBlock = make_uint3( 128, 4, 1 );
+      }else{
+          dimBlock = make_uint3( 512, 1, 1 );
+      }
     dimGrid = make_uint3( ceil(float(N)/float(dimBlock.x)), ceil(float(Npulse)/float(dimBlock.y)), 1 );
 
     //---- patch kernel ----//

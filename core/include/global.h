@@ -81,14 +81,24 @@ namespace helios{
 */
 void makeRotationMatrix( float rotation, const char* axis, float (&transform)[16] );
 
-//! Construct a rotation matrix to perform rotation about an arbitrary axis.
+//! Construct a rotation matrix to perform rotation about an arbitrary axis passing through the origin.
 /** 4x4 Affine rotation matrix 
     \param[in] "rotation" Rotation angle about axis in radians.
     \param[in] "axis" Vector describing axis about which to perform rotation.
     \param[out] "transform" Transformation matrix in a 1D array
     \ingroup functions
 */
-void makeRotationMatrix( float rotation, const helios::vec3& , float (&transform)[16] );
+void makeRotationMatrix( float rotation, const helios::vec3& axis, float (&transform)[16] );
+
+//! Construct a rotation matrix to perform rotation about an arbitrary line (not necessarily passing through the origin).
+/** 4x4 Affine rotation matrix
+ * \param[in] "rotation" Rotation angle about axis in radians.
+ * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
+ * \param[in] "axis" Vector describing axis about which to perform rotation.
+ * \param[out] "transform" Transformation matrix in a 1D array
+ * \ingroup functions
+*/
+void makeRotationMatrix( float rotation, const helios::vec3& origin, const helios::vec3& axis, float (&transform)[16] );
 
 //! Construct translation matrix
 /** 4x4 Affine translation matrix 
@@ -278,7 +288,7 @@ template <typename anytype>
 void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, int Nx, int Ny, int Nz, int Nw );
 
 //! Blend two RGB colors together
-/*
+/**
  * \param[in] "color0" First color to blend
  * \param[in] "color1" Second color to blend
  * \param[in] "weight" Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.
@@ -286,7 +296,7 @@ void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > >
 RGBcolor blend( RGBcolor color0, RGBcolor color1, float weight );
 
 //! Blend two RGBA colors together
-/*
+/**
  * \param[in] "color0" First color to blend
  * \param[in] "color1" Second color to blend
  * \param[in] "weight" Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.
@@ -375,7 +385,7 @@ bool lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, const vec2
 //!Determine whether point lines within a polygon
 bool pointInPolygon(const vec2 &point, const std::vector<vec2> &polygon_verts );
 
-//! MATLAB-style timer.  Call tic() to start timer, call \ref toc() to stop timer and print duration
+//! MATLAB-style timer.  Call tic() to start timer, call toc() to stop timer and print duration
 struct Timer{
 public:
 
@@ -395,7 +405,9 @@ public:
   }
   
   //! Stop timer and print elapsed time and a user-defined message
-  /* \note the timer print message can be turned off by passing the message argument  "mute" */
+  /**
+   * \note the timer print message can be turned off by passing the message argument  "mute"
+  */
   double toc( const char* message ) const {
       if (!running) {
           std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..."
@@ -630,6 +642,13 @@ void wait( float seconds );
      */
     float interp1( const std::vector<helios::vec2> &points, float x );
 
+    //! Function to calculate the distance between two points
+    /**
+     * \param[in] "p1" first point (vec3)
+     * \param[in] "p2" second point (vec3)
+     * \return distance between p1 and p2 in three dimensions
+     */
+    float point_distance( const helios::vec3 &p1 , const helios::vec3 &p2);
 
     extern SphericalCoord nullrotation;
 

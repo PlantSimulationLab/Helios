@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.31</span>
+   &#160;<span id="projectnumber">v1.2.32</span>
    </div>
   </td>
  </tr>
@@ -69,7 +69,8 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#VisIssues">Known Issues</a></li>
+<ul><li class="level1"><a href="#VisDepends">Dependencies</a></li>
+<li class="level1"><a href="#VisIssues">Known Issues</a></li>
 <li class="level1"><a href="#VisIntro">Introduction</a></li>
 <li class="level1"><a href="#VisClass">Class Constructor(s)</a></li>
 <li class="level1"><a href="#UseVis">Using the Visualizer Plug-in</a><ul><li class="level2"><a href="#coord">Coordinate Systems</a></li>
@@ -101,7 +102,7 @@ $(function() {
 </div>
 <table class="doxtable">
 <tr>
-<th>Dependencies </th><td>X11/xorg  </td></tr>
+<th>Dependencies </th><td>X11/xorg (Mac/Linux)  </td></tr>
 <tr>
 <th>CMakeLists.txt </th><td>set( PLUGINS "visualizer" )  </td></tr>
 <tr>
@@ -109,6 +110,8 @@ $(function() {
 <tr>
 <th>Class </th><td><a class="el" href="class_visualizer.html">Visualizer</a>  </td></tr>
 </table>
+<h1><a class="anchor" id="VisDepends"></a>
+Dependencies</h1>
 <a class="anchor" id=""></a>
 <table class="doxtable">
 <caption>Installing dependent packages</caption>
@@ -125,13 +128,12 @@ $(function() {
   </td></tr>
 <tr>
 <td>X11/xorg </td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/xquartz</code></div> </td><td>Debian/Ubuntu:<br />
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev</code></div> </td><td>Unknown  </td></tr>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev</code></div> </td><td>None (if using Visual Studio)  </td></tr>
 </table>
 <h1><a class="anchor" id="VisIssues"></a>
 Known Issues</h1>
 <ul>
 <li>The visualizer does not work well for visualizing very large point clouds, as it will be very slow to respond.</li>
-<li>The ``pointsize" argument to addPoint() functions is not implemented.</li>
 </ul>
 <h1><a class="anchor" id="VisIntro"></a>
 Introduction</h1>
@@ -179,7 +181,7 @@ Visualization Window</h2>
       vis.closeWindow();
     }</code></pre> </div><h2><a class="anchor" id="Background"></a>
 Window background</h2>
-<p>The window background can be set to a constant color via the command setBackgroundColor( RGBcolor color ). Alternatively, a three-dimensional `sky' background can be set using the <a class="el" href="class_visualizer.html#a846f08321715ae2a35652bd6f6bf4aa2">addSkyDomeByCenter</a> command. This adds a hemispherical dome with a sky texture image mapped to its surface. The default sky texture is `SkyDome_clouds.jpg' located in the plugins/visualizer/textures directory. The following example shows how to add a sky dome:</p>
+<p>The window background can be set to a constant color via the command setBackgroundColor( RGBcolor color ). Alternatively, a three-dimensional `sky' background can be set using the <a class="el" href="class_visualizer.html#abc14ae2206a8b46c9724cc6aac06b44b">addSkyDomeByCenter</a> command. This adds a hemispherical dome with a sky texture image mapped to its surface. The default sky texture is `SkyDome_clouds.jpg' located in the plugins/visualizer/textures directory. The following example shows how to add a sky dome:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"> <pre><code> #include "Visualizer.h"</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><pre><code>   int main( void ){
       Visualizer vis( 1200 );
       vis.addSkyDomeByCenter( 100, make_vec3(0,0,0), 20, "plugins/visualizer/textures/SkyDome_clouds.jpg", 0 );
@@ -193,70 +195,74 @@ Adding Geometry</h2>
 <tr>
 <td>Rectangle </td><td>Rectangular polygon with coplanar vertices. </td><td><ul>
 <li>
-Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBcolor color, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#acd331a705d12dcec86131612cf433e88">Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBAcolor color, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a48e6d180f3751da810b8ff1ec02a4cfe">Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const char* texture_file, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#af86d3df98bbfa845e9c6bb4d8945429d">Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const char* texture_file, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a8ca1611eccfefb20cdfb2a686a78bd00">Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;color, const char* texture_file, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByVertices( const std::vector&lt;vec3&gt;&amp; vertices, const RGBcolor color, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#ac778d07346ddf94b7341181ed4640e28">Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByVertices( const std::vector&lt;vec3&gt;&amp; vertices, const RGBAcolor color, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a342a0315efa1aaf7844f704fed0244bd">Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByVertices( const std::vector&lt;vec3&gt;&amp; vertices, const char* texture_file, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a28ed082b9f1dea0e81e28535a23b1521">Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const char* texture_file, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByVertices( const std::vector&lt;vec3&gt;&amp; vertices, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag )   </li>
+<a class="el" href="class_visualizer.html#a546e454af8cdfee4db207ddbc3abcd7e">Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const helios::RGBcolor &amp;color, const char* texture_file, CoordinateSystem coordFlag )</a>   </li>
 </ul>
 </td></tr>
 <tr>
 <td>Triangle </td><td>Triangular polygon specified by its three vertices. </td><td><ul>
 <li>
-Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBcolor color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a30fa7fb8430e7e8e93e283710ea26a37">Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolor color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a7c57ae2c58acb076e43848d650912733">Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
+<li>
+<a class="el" href="class_visualizer.html#a0b45fc611a368a72d7f62e27aa4d4bfa">Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const char* texture_file, const helios::vec2 &amp;uv0, const helios::vec2 &amp;uv1, const helios::vec2 &amp;uv2, CoordinateSystem coordFlag )</a> </li>
+<li>
+<a class="el" href="class_visualizer.html#acc411df8e5d30efd31e69c46b4ce9875">Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const char* texture_file, const helios::vec2 &amp;uv0, const helios::vec2 &amp;uv1, const helios::vec2 &amp;uv2, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 </ul>
 </td></tr>
 <tr>
 <td>Disk </td><td>Ellipsoidal disk. </td><td><ul>
 <li>
-Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, RGBcolor color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#acd7256a79fdfe2b37f270bec45bb3568">Visualizer::addDiskByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, uint Ndivisions, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, RGBAcolor color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a1f4ef2ddcab0f1ed6bc1b4378b25e2df">Visualizer::addDiskByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, uint Ndivisions, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a2886b6f91cd376bd83a945bc1b551f01">Visualizer::addDiskByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag )</a> </li>
 </ul>
 </td></tr>
 <tr>
 <td>Voxel </td><td>Parallelpiped or rectangular prism. </td><td><ul>
 <li>
-Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const SphericalCoord rotation, const RGBcolor color, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a4b814571e4dccc0e550d3f184a48fab8">Visualizer::addVoxelByCenter( const helios::vec3 &amp;center, const helios::vec3 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const SphericalCoord rotation, const RGBAcolor color, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a2c289bcb13fa935f78f2d032fa852b90">Visualizer::addVoxelByCenter( const helios::vec3 &amp;center, const helios::vec3 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag )</a> </li>
 </ul>
 </td></tr>
 <tr>
 <td>Sphere </td><td>Tesselated sphere composed of triangles. </td><td><ul>
 <li>
-Visualizer::addSphereByCenter( const float radius, const vec3 center, const uint Ndivisions, const RGBcolor color, const CoordinateSystem coordFlag ) </li>
+Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag ) </li>
 <li>
-Visualizer::addSphereByCenter( const float radius, const vec3 center, const uint Ndivisions, const RGBAcolor color, const CoordinateSystem coordFlag ) </li>
+Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag ) </li>
 </ul>
 </td></tr>
 <tr>
 <td>Line </td><td>Linear segment between two points. </td><td><ul>
 <li>
-Visualizer::addLine( const vec3 start, const vec3 end, const RGBcolor color, const uint linewidth, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a48a8390c82a8ee31172827b9aa378eb3">Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBcolor &amp;olor, uint linewidth, CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addLine( const vec3 start, const vec3 end, const RGBAcolor color, const uint linewidth, const CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#ae287d6fdfab2cac58d0c1be890eff057">Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBAcolor &amp;color, uint linewidth, CoordinateSystem coordFlag )</a> </li>
 </ul>
 <p class="endtd"></p>
 </td></tr>
 <tr>
 <td>Textbox </td><td>Box of text. </td><td><ul>
 <li>
-Visualizer::addTextboxByCenter( const char* textstring, const vec3 center, SphericalCoord rotation, const RGBcolor fontcolor, const uint fontsize, const char* fontname, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a2e139e1e6446b90f29d9e280fe3111db">Visualizer::addTextboxByCenter( const char* textstring, const helios::vec3 &amp;center, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;fontcolor, uint fontsize, const char* fontname, CoordinateSystem coordFlag )</a> </li>
 </ul>
 </td></tr>
 </table>
@@ -276,7 +282,7 @@ Automatically importing Context geometry</h3>
 <tr>
 <td><a class="el" href="class_visualizer.html#a32f4b1bcbbac176591bd7c1892668d7a">buildContextGeometry( Context* context )</a> </td><td>Add all primitives in the Context to the Visualizer.  </td></tr>
 <tr>
-<td>buildContextGeometry( Context* context, std::vector&lt;uint&gt; UUIDs ) </td><td>Add a subset of primitives in the Context to the Visualizer.  </td></tr>
+<td><a class="el" href="class_visualizer.html#ad62c53e12eb49f2cf788241995178688">buildContextGeometry( Context* context, std::vector&lt;uint&gt; UUIDs )</a> </td><td>Add a subset of primitives in the Context to the Visualizer.  </td></tr>
 </table>
 <p>The example below shows how to add all Context geometry to the visualizer.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.1"> <pre><code> #include "Context.h"

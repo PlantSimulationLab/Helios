@@ -1010,11 +1010,11 @@ void Visualizer::updateCustomTransformation( const glm::mat4 matrix ){
     customTransformationMatrix = matrix;
 }
 
-void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBcolor color, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByCenter( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color, CoordinateSystem coordFlag ){
     addRectangleByCenter( center, size, rotation, make_RGBAcolor(color.r,color.g,color.b,1), coordFlag );
 }
 
-void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBAcolor color, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByCenter( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color, CoordinateSystem coordFlag ){
 
     std::vector<vec3> vertices;
     vertices.resize(4);
@@ -1043,7 +1043,7 @@ void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const
 
 }
 
-void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const char* texture_file, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByCenter( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file, CoordinateSystem coordFlag ){
 
     std::vector<vec3> vertices;
     vertices.resize(4);
@@ -1072,7 +1072,7 @@ void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const
 
 }
 
-void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByCenter( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag ){
 
     std::vector<vec3> vertices;
     vertices.resize(4);
@@ -1101,7 +1101,7 @@ void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const
 
 }
 
-void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const SphericalCoord rotation, const RGBcolor color, Glyph* glyph, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByCenter( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color, const Glyph* glyph, CoordinateSystem coordFlag ){
 
     std::vector<vec3> vertices;
     vertices.resize(4);
@@ -1130,11 +1130,11 @@ void Visualizer::addRectangleByCenter( const vec3 center, const vec2 size, const
 
 }
 
-void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor color, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor &color, CoordinateSystem coordFlag ){
     addRectangleByVertices( vertices, make_RGBAcolor(color.r,color.g,color.b,1),  coordFlag );
 }
 
-void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBAcolor color, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBAcolor &color, CoordinateSystem coordFlag ){
 
     std::vector<vec3> v = vertices; //make a copy so we can modify
 
@@ -1229,7 +1229,7 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
 
 }
 
-void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const char* texture_file, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const char* texture_file, CoordinateSystem coordFlag ){
     std::vector<vec2> uvs;
     uvs.resize(4);
     if( coordFlag==COORDINATES_CARTESIAN ){
@@ -1246,7 +1246,7 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     addRectangleByVertices(vertices,texture_file,uvs,coordFlag);
 }
 
-void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const char* texture_file, const std::vector<vec2> &uvs, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const char* texture_file, const std::vector<vec2> &uvs, CoordinateSystem coordFlag ){
 
     std::vector<vec3> v = vertices; //make a copy so we can modify
 
@@ -1360,7 +1360,7 @@ void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const
 
 }
 
-void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor color, const char* texture_file, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag ){
     std::vector<vec2> uvs;
     uvs.resize(4);
     if( coordFlag==COORDINATES_CARTESIAN ){
@@ -1378,7 +1378,7 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
 
 }
 
-void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const helios::RGBcolor color, const char* texture_file, const std::vector<vec2> uvs, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, const std::vector<vec2> &uvs, CoordinateSystem coordFlag ){
 
     std::vector<vec3> v = vertices; //make a copy so we can modify
 
@@ -1497,11 +1497,11 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
 
 }
 
-void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, RGBcolor color, const Glyph* glyph, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor &color, const Glyph* glyph, CoordinateSystem coordFlag ){
     addRectangleByVertices( vertices, make_RGBAcolor(color,1), glyph,  coordFlag );
 }
 
-void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, RGBAcolor color, const Glyph* glyph, const CoordinateSystem coordFlag ){
+void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBAcolor &color, const Glyph* glyph, CoordinateSystem coordFlag ){
 
     std::vector<vec3> v = vertices; //make a copy so we can modify
 
@@ -1614,11 +1614,11 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, RGBA
 
 }
 
-void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBcolor color, CoordinateSystem coordFlag ){
+void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const RGBcolor &color, CoordinateSystem coordFlag ){
     addTriangle( vertex0, vertex1,vertex2, make_RGBAcolor(color.r,color.g,color.b,1), coordFlag);
 }
 
-void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolor color, CoordinateSystem coordFlag ){
+void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const RGBAcolor &color, CoordinateSystem coordFlag ){
 
     std::vector<vec3> v{vertex0, vertex1, vertex2};
 
@@ -1709,7 +1709,7 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBAcolo
 
 }
 
-void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const char* texture_file, helios::vec2 uv0, helios::vec2 uv1, helios::vec2 uv2, CoordinateSystem coordFlag){
+void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, CoordinateSystem coordFlag){
 
     std::vector<vec3> v{vertex0, vertex1, vertex2};
 
@@ -1802,7 +1802,7 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
 
 }
 
-void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const char* texture_file, helios::vec2 uv0, helios::vec2 uv1, helios::vec2 uv2, RGBAcolor color, CoordinateSystem coordFlag){
+void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, const RGBAcolor &color, CoordinateSystem coordFlag){
 
     std::vector<vec3> v{vertex0, vertex1, vertex2};
 
@@ -1901,11 +1901,11 @@ void Visualizer::addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const ch
 
 }
 
-void Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const SphericalCoord rotation, const RGBcolor color, const CoordinateSystem coordFlag ){
+void Visualizer::addVoxelByCenter( const vec3 &center, const vec3 &size, const SphericalCoord &rotation, const RGBcolor &color, CoordinateSystem coordFlag ){
     addVoxelByCenter( center, size, rotation, make_RGBAcolor(color.r,color.g,color.b,1), coordFlag );
 }
 
-void Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const SphericalCoord rotation, const RGBAcolor color, const CoordinateSystem coordFlag ){
+void Visualizer::addVoxelByCenter( const vec3 &center, const vec3 &size, const SphericalCoord &rotation, const RGBAcolor &color, CoordinateSystem coordFlag ){
 
     float eps = 1e-4;  //Avoid z-fighting
 
@@ -1931,19 +1931,22 @@ void Visualizer::addVoxelByCenter( const vec3 center, const vec3 size, const Sph
 
 }
 
-void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, RGBcolor color, CoordinateSystem coordFlag ){
+void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, uint Ndivisions, const RGBcolor &color, CoordinateSystem coordFlag ){
     addDiskByCenter( center, size, rotation, Ndivisions, make_RGBAcolor(color.r,color.g,color.b,1), coordFlag );
 }
 
-void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, RGBAcolor color, CoordinateSystem coordFlag ){
+void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, uint Ndivisions, const RGBAcolor &color, CoordinateSystem coordFlag ){
+
+    vec3 disk_center = center;
+    vec2 disk_size = size;
 
     if( coordFlag == 0 ){ //No vertex transformation (i.e., identity matrix)
 
         //NOTE for vertex positions: OpenGL window coordinates range from -1 to 1, but our disk coordinates are from 0 to 1 ---- need to convert
-        center.x = 2.f*center.x - 1.f;
-        center.y = 2.f*center.y - 1.f;
-        size.x = 2.f*size.x;
-        size.y = 2.f*size.y;
+        disk_center.x = 2.f*disk_center.x - 1.f;
+        disk_center.y = 2.f*disk_center.y - 1.f;
+        disk_size.x = 2.f*disk_size.x;
+        disk_size.y = 2.f*disk_size.y;
 
     }
 
@@ -1954,9 +1957,9 @@ void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotatio
     for( int i=0; i<Ndivisions-1; i++ ){
 
         //Center
-        position_data.push_back( center.x );
-        position_data.push_back( center.y );
-        position_data.push_back( center.z );
+        position_data.push_back( disk_center.x );
+        position_data.push_back( disk_center.y );
+        position_data.push_back( disk_center.z );
         color_data.push_back( color.r );
         color_data.push_back( color.g );
         color_data.push_back( color.b );
@@ -1966,12 +1969,12 @@ void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotatio
         normal_data.push_back( normal.z);
 
         float theta1 = 2.f*M_PI*float(i)/float(Ndivisions-1);
-        vec3 v1 = make_vec3( size.x*cos(theta1), size.y*sin(theta1), 0 );
+        vec3 v1 = make_vec3( disk_size.x*cos(theta1), disk_size.y*sin(theta1), 0 );
         v1 = rotatePoint(v1,rotation);
 
-        position_data.push_back( center.x + v1.x );
-        position_data.push_back( center.y + v1.y );
-        position_data.push_back( center.z + v1.z );
+        position_data.push_back( disk_center.x + v1.x );
+        position_data.push_back( disk_center.y + v1.y );
+        position_data.push_back( disk_center.z + v1.z );
         color_data.push_back( color.r );
         color_data.push_back( color.g );
         color_data.push_back( color.b );
@@ -1982,11 +1985,11 @@ void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotatio
 
         float theta2 = 2.f*M_PI*float(i)/float(Ndivisions-1);
 
-        vec3 v2 = make_vec3( size.x*cos(theta2), size.y*sin(theta2), 0 );
+        vec3 v2 = make_vec3( disk_size.x*cos(theta2), disk_size.y*sin(theta2), 0 );
         v2 = rotatePoint(v2,rotation);
-        position_data.push_back( center.x + v2.x );
-        position_data.push_back( center.y + v2.y );
-        position_data.push_back( center.z + v2.z );
+        position_data.push_back( disk_center.x + v2.x );
+        position_data.push_back( disk_center.y + v2.y );
+        position_data.push_back( disk_center.z + v2.z );
         color_data.push_back( color.r );
         color_data.push_back( color.g );
         color_data.push_back( color.b );
@@ -2012,15 +2015,18 @@ void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotatio
 
 }
 
-void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag ){
+void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag ){
+
+    vec3 disk_center = center;
+    vec2 disk_size = size;
 
     if( coordFlag == 0 ){ //No vertex transformation (i.e., identity matrix)
 
         //NOTE for vertex positions: OpenGL window coordinates range from -1 to 1, but our rectangle coordinates are from 0 to 1 ---- need to convert
-        center.x = 2.f*center.x - 1.f;
-        center.y = 2.f*center.y - 1.f;
-        size.x = 2.f*size.x;
-        size.y = 2.f*size.y;
+        disk_center.x = 2.f*disk_center.x - 1.f;
+        disk_center.y = 2.f*disk_center.y - 1.f;
+        disk_size.x = 2.f*disk_size.x;
+        disk_size.y = 2.f*disk_size.y;
 
     }
 
@@ -2035,9 +2041,9 @@ void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotatio
     for( int i=0; i<Ndivisions-1; i++ ){
 
         //Center
-        position_data.push_back( center.x );
-        position_data.push_back( center.y );
-        position_data.push_back( center.z );
+        position_data.push_back( disk_center.x );
+        position_data.push_back( disk_center.y );
+        position_data.push_back( disk_center.z );
         normal_data.push_back( normal.x );
         normal_data.push_back( normal.y);
         normal_data.push_back( normal.z);
@@ -2045,12 +2051,12 @@ void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotatio
         uv_data.push_back( 0.5*(texture_size.y-1) );
 
         float theta1 = 2.f*M_PI*float(i)/float(Ndivisions-1);
-        vec3 v1 = make_vec3( size.x*cos(theta1), size.y*sin(theta1), 0 );
+        vec3 v1 = make_vec3( disk_size.x*cos(theta1), disk_size.y*sin(theta1), 0 );
         v1 = rotatePoint(v1,rotation);
 
-        position_data.push_back( center.x + v1.x );
-        position_data.push_back( center.y + v1.y );
-        position_data.push_back( center.z + v1.z );
+        position_data.push_back( disk_center.x + v1.x );
+        position_data.push_back( disk_center.y + v1.y );
+        position_data.push_back( disk_center.z + v1.z );
         normal_data.push_back( normal.x );
         normal_data.push_back( normal.y );
         normal_data.push_back( normal.z );
@@ -2059,11 +2065,11 @@ void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotatio
 
         float theta2 = 2.f*M_PI*float(i)/float(Ndivisions-1);
 
-        vec3 v2 = make_vec3( size.x*cos(theta2), size.y*sin(theta2), 0 );
+        vec3 v2 = make_vec3( disk_size.x*cos(theta2), disk_size.y*sin(theta2), 0 );
         v2 = rotatePoint(v2,rotation);
-        position_data.push_back( center.x + v2.x );
-        position_data.push_back( center.y + v2.y );
-        position_data.push_back( center.z + v2.z );
+        position_data.push_back( disk_center.x + v2.x );
+        position_data.push_back( disk_center.y + v2.y );
+        position_data.push_back( disk_center.z + v2.z );
         normal_data.push_back( normal.x );
         normal_data.push_back( normal.y );
         normal_data.push_back( normal.z );
@@ -2090,11 +2096,11 @@ void Visualizer::addDiskByCenter( vec3 center, vec2 size, SphericalCoord rotatio
 
 }
 
-void Visualizer::addLine( const vec3 start, const vec3 end, const RGBcolor color, const uint linewidth, const CoordinateSystem coordFlag ){
+void Visualizer::addLine( const vec3 &start, const vec3 &end, const RGBcolor &color, uint linewidth, CoordinateSystem coordFlag ){
     addLine( start, end, make_RGBAcolor(color,1), linewidth, coordFlag );
 }
 
-void Visualizer::addLine( const vec3 start, const vec3 end, const RGBAcolor color, const uint linewidth, const CoordinateSystem coordFlag ){
+void Visualizer::addLine( const vec3 &start, const vec3 &end, const RGBAcolor &color, uint linewidth, CoordinateSystem coordFlag ){
 
     line_width = linewidth;
 
@@ -2149,11 +2155,11 @@ void Visualizer::addLine( const vec3 start, const vec3 end, const RGBAcolor colo
 
 }
 
-void Visualizer::addPoint( const vec3 position, const RGBcolor color, const uint pointsize,  const CoordinateSystem coordFlag ){
+void Visualizer::addPoint( const vec3 &position, const RGBcolor &color, uint pointsize,  CoordinateSystem coordFlag ){
     addPoint( position, make_RGBAcolor(color,1), pointsize,  coordFlag );
 }
 
-void Visualizer::addPoint( const vec3 position, const RGBAcolor color, const uint pointsize,  const CoordinateSystem coordFlag ){
+void Visualizer::addPoint( const vec3 &position, const RGBAcolor &color, uint pointsize,  CoordinateSystem coordFlag ){
 
     point_width = pointsize;
 
@@ -2196,11 +2202,11 @@ void Visualizer::addPoint( const vec3 position, const RGBAcolor color, const uin
 
 }
 
-void Visualizer::addSphereByCenter( const float radius, const vec3 center, const uint Ndivisions, const RGBcolor color, const CoordinateSystem coordFlag ){
+void Visualizer::addSphereByCenter( float radius, const vec3 &center, uint Ndivisions, const RGBcolor &color, CoordinateSystem coordFlag ){
     addSphereByCenter( radius, center, Ndivisions, make_RGBAcolor(color.r,color.g,color.b,1), coordFlag );
 }
 
-void Visualizer::addSphereByCenter( const float radius, const vec3 center, const uint Ndivisions, const RGBAcolor color, const CoordinateSystem coordFlag ){
+void Visualizer::addSphereByCenter( float radius, const vec3 &center, uint Ndivisions, const RGBAcolor &color, CoordinateSystem coordFlag ){
 
     float theta;
     float dtheta=M_PI/float(Ndivisions);
@@ -2245,11 +2251,11 @@ void Visualizer::addSphereByCenter( const float radius, const vec3 center, const
 
 }
 
-void Visualizer::addSkyDomeByCenter( const float radius, const vec3 center, const uint Ndivisions, const char* texture_file, int layer ){
+void Visualizer::addSkyDomeByCenter( float radius, const vec3 &center, uint Ndivisions, const char* texture_file, int layer ){
     addSkyDomeByCenter( radius, center, Ndivisions, texture_file );
 }
 
-void Visualizer::addSkyDomeByCenter( const float radius, const vec3 center, const uint Ndivisions, const char* texture_file ){
+void Visualizer::addSkyDomeByCenter( float radius, const vec3 &center, uint Ndivisions, const char* texture_file ){
 
 
     int Ntheta=Ndivisions;
@@ -2340,7 +2346,7 @@ void Visualizer::addSkyDomeByCenter( const float radius, const vec3 center, cons
 
 }
 
-void Visualizer::addTextboxByCenter( const char* textstring, const vec3 center, SphericalCoord rotation, const RGBcolor fontcolor, const uint fontsize, const char* fontname, CoordinateSystem coordFlag ){
+void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center, const SphericalCoord &rotation, const RGBcolor &fontcolor, uint fontsize, const char* fontname, CoordinateSystem coordFlag ){
 
     FT_Library ft; //FreeType objects
     FT_Face face;
@@ -2559,7 +2565,7 @@ void Visualizer::addCoordinateAxes(){
     addCoordinateAxes(helios::make_vec3(0,0,0), helios::make_vec3(1,1,1), "positive");
 }
 
-void Visualizer::addCoordinateAxes(const helios::vec3 origin, const helios::vec3 length, const std::string sign){
+void Visualizer::addCoordinateAxes(const helios::vec3 &origin, const helios::vec3 &length, const std::string &sign){
 
 
     float mult;
@@ -2904,6 +2910,10 @@ void Visualizer::buildContextGeometry_private(){
                     }
                 }
 
+                if( colorValue!=colorValue || colorValue==INFINITY ) {//check for NaN or infinity
+                    colorValue = 0;
+                }
+
                 if( colorValue!=-9999 ){
                     if( colorValue<colorbar_min ){
                         colorbar_min = colorValue;;
@@ -2921,7 +2931,7 @@ void Visualizer::buildContextGeometry_private(){
         }
     }
 
-    if( colorPrimitivesByData.size()!=0 ) {
+    if( !colorPrimitivesByData.empty() ) {
         assert(colorbar_min <= colorbar_max);
     }
 
@@ -2974,6 +2984,11 @@ void Visualizer::buildContextGeometry_private(){
                     }else{
                         colorValue = 0;
                     }
+
+                    if( colorValue!=colorValue || colorValue==INFINITY ) {//check for NaN or infinity
+                        colorValue = 0;
+                    }
+
                     color = make_RGBAcolor(colormap_current.query( colorValue ),1);
                 }else{
                     color = context->getPrimitiveColorRGBA(UUID);
@@ -3005,6 +3020,11 @@ void Visualizer::buildContextGeometry_private(){
                     }else{
                         colorValue = 0;
                     }
+
+                    if( colorValue!=colorValue || colorValue==INFINITY ) {//check for NaN or infinity
+                        colorValue = 0;
+                    }
+
                     color = make_RGBAcolor(colormap_current.query( colorValue ),1);
                 }else{
                     color = context->getPrimitiveColorRGBA(UUID);

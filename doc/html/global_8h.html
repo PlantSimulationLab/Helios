@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.31</span>
+   &#160;<span id="projectnumber">v1.2.32</span>
    </div>
   </td>
  </tr>
@@ -100,7 +100,7 @@ $(function() {
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Data Structures</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_timer.html">helios::Timer</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">MATLAB-style timer. Call <a class="el" href="structhelios_1_1_timer.html#a47d04d3a8054ad2b6bbb9623c000090c" title="Start timer. ">tic()</a> to start timer, call <a class="el" href="structhelios_1_1_timer.html#a9d3f79551cc1089cb6dd81d3bb68f537">toc()</a> to stop timer and print duration.  <a href="structhelios_1_1_timer.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">MATLAB-style timer. Call <a class="el" href="structhelios_1_1_timer.html#a47d04d3a8054ad2b6bbb9623c000090c" title="Start timer. ">tic()</a> to start timer, call <a class="el" href="structhelios_1_1_timer.html#a9d3f79551cc1089cb6dd81d3bb68f537" title="Stop timer and print elapsed time. ">toc()</a> to stop timer and print duration.  <a href="structhelios_1_1_timer.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
@@ -123,9 +123,12 @@ Functions</h2></td></tr>
 <tr class="memitem:ga42c109f6c1a5b59ffcefc262ee78d291"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga42c109f6c1a5b59ffcefc262ee78d291">helios::makeRotationMatrix</a> (float rotation, const char *axis, float(&amp;transform)[16])</td></tr>
 <tr class="memdesc:ga42c109f6c1a5b59ffcefc262ee78d291"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a rotation matrix to perform rotation about the x-, y-, or z-axis.  <a href="group__functions.html#ga42c109f6c1a5b59ffcefc262ee78d291">More...</a><br /></td></tr>
 <tr class="separator:ga42c109f6c1a5b59ffcefc262ee78d291"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga30cdb73f38a4fe4b29b08d53814bca07"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga30cdb73f38a4fe4b29b08d53814bca07">helios::makeRotationMatrix</a> (float rotation, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;, float(&amp;transform)[16])</td></tr>
-<tr class="memdesc:ga30cdb73f38a4fe4b29b08d53814bca07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a rotation matrix to perform rotation about an arbitrary axis.  <a href="group__functions.html#ga30cdb73f38a4fe4b29b08d53814bca07">More...</a><br /></td></tr>
-<tr class="separator:ga30cdb73f38a4fe4b29b08d53814bca07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaae1a72fb7a970c9bf65e10b26ab6fb51"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaae1a72fb7a970c9bf65e10b26ab6fb51">helios::makeRotationMatrix</a> (float rotation, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;axis, float(&amp;transform)[16])</td></tr>
+<tr class="memdesc:gaae1a72fb7a970c9bf65e10b26ab6fb51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a rotation matrix to perform rotation about an arbitrary axis passing through the origin.  <a href="group__functions.html#gaae1a72fb7a970c9bf65e10b26ab6fb51">More...</a><br /></td></tr>
+<tr class="separator:gaae1a72fb7a970c9bf65e10b26ab6fb51"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga55a4cd9377af44ec86d945ffd72e1dc5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga55a4cd9377af44ec86d945ffd72e1dc5">helios::makeRotationMatrix</a> (float rotation, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;origin, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;axis, float(&amp;transform)[16])</td></tr>
+<tr class="memdesc:ga55a4cd9377af44ec86d945ffd72e1dc5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a rotation matrix to perform rotation about an arbitrary line (not necessarily passing through the origin).  <a href="group__functions.html#ga55a4cd9377af44ec86d945ffd72e1dc5">More...</a><br /></td></tr>
+<tr class="separator:ga55a4cd9377af44ec86d945ffd72e1dc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga6c071a3206c9d7a7d8694275b46b8d42">helios::makeTranslationMatrix</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;translation, float(&amp;transform)[16])</td></tr>
 <tr class="memdesc:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct translation matrix.  <a href="group__functions.html#ga6c071a3206c9d7a7d8694275b46b8d42">More...</a><br /></td></tr>
 <tr class="separator:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -462,6 +465,9 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 <tr class="memitem:a4d45cb06725a89f41266c8c89974c73e"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a4d45cb06725a89f41266c8c89974c73e">helios::interp1</a> (const std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &amp;points, float x)</td></tr>
 <tr class="memdesc:a4d45cb06725a89f41266c8c89974c73e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to perform linear interpolation based on a vector of discrete (x,y) values.  <a href="global_8h.html#a4d45cb06725a89f41266c8c89974c73e">More...</a><br /></td></tr>
 <tr class="separator:a4d45cb06725a89f41266c8c89974c73e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d55bb8abc86cb7dabab1d4e6201a754"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a4d55bb8abc86cb7dabab1d4e6201a754">helios::point_distance</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;p1, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;p2)</td></tr>
+<tr class="memdesc:a4d55bb8abc86cb7dabab1d4e6201a754"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to calculate the distance between two points.  <a href="global_8h.html#a4d55bb8abc86cb7dabab1d4e6201a754">More...</a><br /></td></tr>
+<tr class="separator:a4d55bb8abc86cb7dabab1d4e6201a754"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
@@ -512,6 +518,9 @@ Variables</h2></td></tr>
 <p>Blend two RGB colors together. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to blend </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to blend </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">weight</td><td>Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.</td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to be blended. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to be bleded. </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">weight</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
@@ -558,6 +567,9 @@ Variables</h2></td></tr>
 <p>Blend two RGBA colors together. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to blend </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to blend </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">weight</td><td>Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.</td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to be blended. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to be bleded. </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">weight</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
@@ -605,7 +617,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>int3, with int3::x = day, int3::y = month, int3::z = year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a7a889dd38f803c031f3e2ce6936b1cdc">JulianDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00874">874</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00919">919</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -635,7 +647,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>SphericalCoord vector. </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a97e12cf9fda6bf8b65b3ccc17e788c12">sphere2cart()</a>, SphericalCoord </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00504">504</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00549">549</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -700,7 +712,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02168">2168</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02213">2213</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -740,7 +752,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of y interpolated at location x. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02213">2213</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02258">2258</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -788,7 +800,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a35cf3fa6f900627c962472dd550e3d39">CalendarDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00917">917</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00962">962</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -816,7 +828,47 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01001">1001</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01046">1046</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="file_a4d55bb8abc86cb7dabab1d4e6201a754"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#file_a4d55bb8abc86cb7dabab1d4e6201a754">&#9670;&nbsp;</a></span>point_distance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float helios::point_distance </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;&#160;</td>
+          <td class="paramname"><em>p1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;&#160;</td>
+          <td class="paramname"><em>p2</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to calculate the distance between two points. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">p1</td><td>first point (vec3) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">p2</td><td>second point (vec3) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>distance between p1 and p2 in three dimensions </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02307">2307</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -845,7 +897,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>2D mask, where false denotes no material </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01048">1048</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01093">1093</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -928,7 +980,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>vec3 vector of Cartesian coordinates </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a32a34b00e0a28f4b35e501b8b34cfccd">cart2sphere()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00520">520</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00565">565</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -989,7 +1041,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Interpolated (x,y,z) Cartesian point. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01963">1963</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02008">2008</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1028,7 +1080,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02003">2003</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02048">2048</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1067,7 +1119,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02018">2018</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02063">2063</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1106,7 +1158,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02093">2093</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02138">2138</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1145,7 +1197,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02108">2108</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02153">2153</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1184,7 +1236,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02123">2123</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02168">2168</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1223,7 +1275,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02138">2138</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02183">2183</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1262,7 +1314,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02153">2153</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02198">2198</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1301,7 +1353,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02033">2033</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02078">2078</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1340,7 +1392,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02048">2048</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02093">2093</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1379,7 +1431,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02063">2063</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02108">2108</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1418,7 +1470,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02078">2078</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02123">2123</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

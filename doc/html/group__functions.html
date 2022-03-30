@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.31</span>
+   &#160;<span id="projectnumber">v1.2.32</span>
    </div>
   </td>
  </tr>
@@ -75,9 +75,12 @@ Functions</h2></td></tr>
 <tr class="memitem:ga42c109f6c1a5b59ffcefc262ee78d291"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga42c109f6c1a5b59ffcefc262ee78d291">helios::makeRotationMatrix</a> (float rotation, const char *axis, float(&amp;transform)[16])</td></tr>
 <tr class="memdesc:ga42c109f6c1a5b59ffcefc262ee78d291"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a rotation matrix to perform rotation about the x-, y-, or z-axis.  <a href="group__functions.html#ga42c109f6c1a5b59ffcefc262ee78d291">More...</a><br /></td></tr>
 <tr class="separator:ga42c109f6c1a5b59ffcefc262ee78d291"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga30cdb73f38a4fe4b29b08d53814bca07"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga30cdb73f38a4fe4b29b08d53814bca07">helios::makeRotationMatrix</a> (float rotation, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;, float(&amp;transform)[16])</td></tr>
-<tr class="memdesc:ga30cdb73f38a4fe4b29b08d53814bca07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a rotation matrix to perform rotation about an arbitrary axis.  <a href="group__functions.html#ga30cdb73f38a4fe4b29b08d53814bca07">More...</a><br /></td></tr>
-<tr class="separator:ga30cdb73f38a4fe4b29b08d53814bca07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaae1a72fb7a970c9bf65e10b26ab6fb51"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaae1a72fb7a970c9bf65e10b26ab6fb51">helios::makeRotationMatrix</a> (float rotation, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;axis, float(&amp;transform)[16])</td></tr>
+<tr class="memdesc:gaae1a72fb7a970c9bf65e10b26ab6fb51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a rotation matrix to perform rotation about an arbitrary axis passing through the origin.  <a href="group__functions.html#gaae1a72fb7a970c9bf65e10b26ab6fb51">More...</a><br /></td></tr>
+<tr class="separator:gaae1a72fb7a970c9bf65e10b26ab6fb51"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga55a4cd9377af44ec86d945ffd72e1dc5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga55a4cd9377af44ec86d945ffd72e1dc5">helios::makeRotationMatrix</a> (float rotation, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;origin, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;axis, float(&amp;transform)[16])</td></tr>
+<tr class="memdesc:ga55a4cd9377af44ec86d945ffd72e1dc5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a rotation matrix to perform rotation about an arbitrary line (not necessarily passing through the origin).  <a href="group__functions.html#ga55a4cd9377af44ec86d945ffd72e1dc5">More...</a><br /></td></tr>
+<tr class="separator:ga55a4cd9377af44ec86d945ffd72e1dc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga6c071a3206c9d7a7d8694275b46b8d42">helios::makeTranslationMatrix</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;translation, float(&amp;transform)[16])</td></tr>
 <tr class="memdesc:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct translation matrix.  <a href="group__functions.html#ga6c071a3206c9d7a7d8694275b46b8d42">More...</a><br /></td></tr>
 <tr class="separator:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -214,7 +217,7 @@ Functions</h2></td></tr>
 <p>Four quadrant arc tangent between 0 and 2*pi. </p>
 <dl class="section note"><dt>Note</dt><dd>atan2_2pi(0,1) = 0, atan2_2pi(1,0) = pi/2, etc. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00478">478</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00523">523</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -309,7 +312,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00678">678</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00723">723</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -331,7 +334,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Remove whitespace from character array. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00659">659</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00704">704</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -361,7 +364,7 @@ template&lt;typename anytype &gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>angle in radians </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__functions.html#ga66681ffeb5bd130ce5fb14c93c801120" title="Convert radians to degrees. ">rad2deg()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00470">470</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00515">515</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -391,12 +394,12 @@ template&lt;typename anytype &gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a35cf3fa6f900627c962472dd550e3d39">CalendarDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00923">923</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00968">968</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ga42c109f6c1a5b59ffcefc262ee78d291"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga42c109f6c1a5b59ffcefc262ee78d291">&#9670;&nbsp;</a></span>makeRotationMatrix() <span class="overload">[1/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ga42c109f6c1a5b59ffcefc262ee78d291">&#9670;&nbsp;</a></span>makeRotationMatrix() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -441,8 +444,8 @@ template&lt;typename anytype &gt; </div>
 
 </div>
 </div>
-<a id="ga30cdb73f38a4fe4b29b08d53814bca07"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga30cdb73f38a4fe4b29b08d53814bca07">&#9670;&nbsp;</a></span>makeRotationMatrix() <span class="overload">[2/2]</span></h2>
+<a id="gaae1a72fb7a970c9bf65e10b26ab6fb51"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaae1a72fb7a970c9bf65e10b26ab6fb51">&#9670;&nbsp;</a></span>makeRotationMatrix() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -473,7 +476,7 @@ template&lt;typename anytype &gt; </div>
       </table>
 </div><div class="memdoc">
 
-<p>Construct a rotation matrix to perform rotation about an arbitrary axis. </p>
+<p>Construct a rotation matrix to perform rotation about an arbitrary axis passing through the origin. </p>
 <p>4x4 Affine rotation matrix </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>Rotation angle about axis in radians. </td></tr>
@@ -484,6 +487,59 @@ template&lt;typename anytype &gt; </div>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00325">325</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga55a4cd9377af44ec86d945ffd72e1dc5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga55a4cd9377af44ec86d945ffd72e1dc5">&#9670;&nbsp;</a></span>makeRotationMatrix() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void helios::makeRotationMatrix </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>rotation</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;&#160;</td>
+          <td class="paramname"><em>origin</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;&#160;</td>
+          <td class="paramname"><em>axis</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float(&amp;)&#160;</td>
+          <td class="paramname"><em>transform</em>[16]&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a rotation matrix to perform rotation about an arbitrary line (not necessarily passing through the origin). </p>
+<p>4x4 Affine rotation matrix </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>Rotation angle about axis in radians. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">origin</td><td>Cartesian coordinate of the base/origin of rotation axis. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">axis</td><td>Vector describing axis about which to perform rotation. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">transform</td><td>Transformation matrix in a 1D array </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00351">351</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -522,7 +578,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00372">372</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00417">417</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -561,7 +617,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00351">351</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00396">396</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -589,7 +645,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00749">749</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00794">794</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -617,7 +673,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00759">759</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00804">804</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -645,7 +701,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00769">769</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00814">814</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -673,7 +729,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00687">687</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00732">732</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -701,7 +757,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00817">817</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00862">862</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -729,7 +785,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00703">703</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00748">748</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -757,7 +813,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00713">713</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00758">758</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -785,7 +841,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00723">723</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00768">768</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -815,7 +871,7 @@ template&lt;typename anytype &gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>angle in degrees </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__functions.html#ga6f0e7f437a6316c12190a5fbaf9bfa9c" title="Convert degrees to radians. ">deg2rad()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00474">474</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00519">519</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -916,7 +972,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00842">842</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00887">887</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -971,7 +1027,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00850">850</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00895">895</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1033,7 +1089,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00861">861</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00906">906</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1146,7 +1202,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00795">795</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00840">840</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1168,7 +1224,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into an <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;. ">int2</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00586">586</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00631">631</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1190,7 +1246,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into an <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;. ">int3</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00604">604</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00649">649</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1212,7 +1268,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into an <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;. ">int4</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00622">622</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00667">667</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1234,7 +1290,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into an <a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector. ">RGBcolor</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00640">640</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00685">685</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1256,7 +1312,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into a <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;. ">vec2</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00532">532</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00577">577</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1278,7 +1334,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into a <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;. ">vec3</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00550">550</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00595">595</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1300,7 +1356,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into a <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;. ">vec4</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00568">568</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00613">613</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.31</span>
+   &#160;<span id="projectnumber">v1.2.32</span>
    </div>
   </td>
  </tr>
@@ -110,17 +110,17 @@ Input Primitive Data</h2>
 <tr>
 <th>Primitive Data Label </th><th>Symbol </th><th>Units </th><th>Data Type </th><th>Description </th><th>Available Plug-ins </th><th>Default Value  </th></tr>
 <tr>
-<td>radiation_flux_PAR </td><td><img class="formulaInl" alt="$i$" src="form_70.png"/> </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>PAR photon flux density </td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in. </td><td>0  </td></tr>
+<td>radiation_flux_PAR </td><td><img class="formulaInl" alt="$i$" src="form_69.png"/> </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>PAR photon flux density </td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in. </td><td>0  </td></tr>
 <tr>
-<td>temperature </td><td><img class="formulaInl" alt="$T_s$" src="form_41.png"/> </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Primitive surface temperature. </td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in. </td><td>300 K  </td></tr>
+<td>temperature </td><td><img class="formulaInl" alt="$T_s$" src="form_40.png"/> </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Primitive surface temperature. </td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in. </td><td>300 K  </td></tr>
 <tr>
-<td>air_pressure </td><td><img class="formulaInl" alt="$p_{atm}$" src="form_47.png"/> </td><td>Pascals </td><td> <font face="courier" color="green">float</font> </td><td>Atmospheric pressure. </td><td>N/A </td><td>101,000 Pa  </td></tr>
+<td>air_pressure </td><td><img class="formulaInl" alt="$p_{atm}$" src="form_46.png"/> </td><td>Pascals </td><td> <font face="courier" color="green">float</font> </td><td>Atmospheric pressure. </td><td>N/A </td><td>101,000 Pa  </td></tr>
 <tr>
-<td>air_temperature </td><td><img class="formulaInl" alt="$T_a$" src="form_22.png"/> </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Temperature of air outside of primitive boundary-layer. </td><td>N/A </td><td>300 K  </td></tr>
+<td>air_temperature </td><td><img class="formulaInl" alt="$T_a$" src="form_21.png"/> </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Temperature of air outside of primitive boundary-layer. </td><td>N/A </td><td>300 K  </td></tr>
 <tr>
-<td>air_humidity </td><td><img class="formulaInl" alt="$h$" src="form_46.png"/> </td><td>Unitless </td><td> <font face="courier" color="green">float</font> </td><td>Relative humidity of air outside of primitive boundary-layer. </td><td>N/A </td><td>0.5  </td></tr>
+<td>air_humidity </td><td><img class="formulaInl" alt="$h$" src="form_45.png"/> </td><td>Unitless </td><td> <font face="courier" color="green">float</font> </td><td>Relative humidity of air outside of primitive boundary-layer. </td><td>N/A </td><td>0.5  </td></tr>
 <tr>
-<td>boundarylayer_conductance </td><td><img class="formulaInl" alt="$g_H$" src="form_8.png"/> </td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Boundary-layer conductance to heat. </td><td>N/A </td><td>0.1 mol/m<sup>2</sup>-s  </td></tr>
+<td>boundarylayer_conductance </td><td><img class="formulaInl" alt="$g_H$" src="form_7.png"/> </td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Boundary-layer conductance to heat. </td><td>N/A </td><td>0.1 mol/m<sup>2</sup>-s  </td></tr>
 </table>
 <h2><a class="anchor" id="StomatalOutputData"></a>
 Output Primitive Data</h2>
@@ -128,7 +128,7 @@ Output Primitive Data</h2>
 <tr>
 <th>Primitive Data Label </th><th>Symbol </th><th>Units </th><th>Data Type </th><th>Description  </th></tr>
 <tr>
-<td>moisture_conductance </td><td><img class="formulaInl" alt="$g_s$" src="form_93.png"/> </td><td>mol air/m<sup>2</sup>-sec </td><td> <font face="courier" color="green">float</font> </td><td>Conductance of water vapor through stomata.  </td></tr>
+<td>moisture_conductance </td><td><img class="formulaInl" alt="$g_s$" src="form_92.png"/> </td><td>mol air/m<sup>2</sup>-sec </td><td> <font face="courier" color="green">float</font> </td><td>Conductance of water vapor through stomata.  </td></tr>
 </table>
 <h1><a class="anchor" id="StomatalIntro"></a>
 Introduction</h1>
@@ -137,42 +137,42 @@ Introduction</h1>
 Model Equations</h1>
 <p>Stomatal conductance is calculated using the following equation</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[g_s = \frac{E_m(i+i_0)}{k+bi+(i+i_0)D}\]" src="form_180.png"/>
+<img class="formulaDsp" alt="\[g_s = \frac{E_m(i+i_0)}{k+bi+(i+i_0)D}\]" src="form_179.png"/>
 </p>
 <p>Variables in this equation are listed in this table:</p>
 <table class="doxtable">
 <tr>
 <th>Variable </th><th>Units </th><th>Description  </th></tr>
 <tr>
-<td><img class="formulaInl" alt="$g_s$" src="form_93.png"/> </td><td>mol air/m<sup>2</sup>-s </td><td>Conductance of water vapor between substomatal cavity and just outside of stoma.  </td></tr>
+<td><img class="formulaInl" alt="$g_s$" src="form_92.png"/> </td><td>mol air/m<sup>2</sup>-s </td><td>Conductance of water vapor between substomatal cavity and just outside of stoma.  </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$i$" src="form_70.png"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_72.png"/>mol photons/m<sup>2</sup>-s </td><td>Photon flux density in photosynthetically active band.  </td></tr>
+<td><img class="formulaInl" alt="$i$" src="form_69.png"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_71.png"/>mol photons/m<sup>2</sup>-s </td><td>Photon flux density in photosynthetically active band.  </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$D$" src="form_36.png"/> </td><td>mmol water/mol air </td><td>Molar concentration of water vapor at leaf surface.  </td></tr>
+<td><img class="formulaInl" alt="$D$" src="form_35.png"/> </td><td>mmol water/mol air </td><td>Molar concentration of water vapor at leaf surface.  </td></tr>
 </table>
-<p>There are four additional empirical parameters: <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_181.png"/> and <img class="formulaInl" alt="$b$" src="form_182.png"/>, which are further described below.</p>
+<p>There are four additional empirical parameters: <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_180.png"/> and <img class="formulaInl" alt="$b$" src="form_181.png"/>, which are further described below.</p>
 <p>The vapor pressure deficit is calculated based on the temperature of the leaf and air, the relative humidity of the air, and the atmospheric pressure</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[D = \frac{e_s(T_s)-e_s(T_a)h}{p_{atm}},\]" src="form_183.png"/>
+<img class="formulaDsp" alt="\[D = \frac{e_s(T_s)-e_s(T_a)h}{p_{atm}},\]" src="form_182.png"/>
 </p>
-<p>with <img class="formulaInl" alt="$e_s(T)$" src="form_44.png"/> calculated according to the <a href="https://en.wikipedia.org/wiki/Tetens_equation">Tetens equation</a>.</p>
+<p>with <img class="formulaInl" alt="$e_s(T)$" src="form_43.png"/> calculated according to the <a href="https://en.wikipedia.org/wiki/Tetens_equation">Tetens equation</a>.</p>
 <h1><a class="anchor" id="StomatalUse"></a>
 Using the Stomatal Conductance Model</h1>
 <h2><a class="anchor" id="StomatalCoeffs"></a>
 Setting the Model Coefficients</h2>
-<p>The model coefficients <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_181.png"/> and <img class="formulaInl" alt="$b$" src="form_182.png"/> are set using the structure <a class="el" href="struct_b_m_fcoefficients.html">BMFcoefficients</a>. This structure has four member elements of type float (Em, i0, k, and b), each corresponding to the respective model coefficents ( <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_181.png"/> and <img class="formulaInl" alt="$b$" src="form_182.png"/>). Default values are listed in the table below.</p>
+<p>The model coefficients <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_180.png"/> and <img class="formulaInl" alt="$b$" src="form_181.png"/> are set using the structure <a class="el" href="struct_b_m_fcoefficients.html">BMFcoefficients</a>. This structure has four member elements of type float (Em, i0, k, and b), each corresponding to the respective model coefficents ( <img class="formulaInl" alt="$E_m,\,i_0,\,k,$" src="form_180.png"/> and <img class="formulaInl" alt="$b$" src="form_181.png"/>). Default values are listed in the table below.</p>
 <p>In order to modify model coefficients from the default values, one should 1) declare and instance of the <a class="el" href="struct_b_m_fcoefficients.html">BMFcoefficients</a> structure, 2) modify the appropriate data elements of the data structure, and 3) pass the data structure to the <a class="el" href="class_stomatal_conductance_model.html#a97e78eaec6ca94159c55499a40bc7807">StomatalConductanceModel::setModelCoefficients()</a> function. Example code is given below</p>
 <table class="doxtable">
 <tr>
 <th>Parameter </th><th>Units </th><th>Default Value  </th></tr>
 <tr>
-<td><img class="formulaInl" alt="$E_m$" src="form_184.png"/> </td><td>mmol/m<sup>2</sup>-s </td><td>7.0  </td></tr>
+<td><img class="formulaInl" alt="$E_m$" src="form_183.png"/> </td><td>mmol/m<sup>2</sup>-s </td><td>7.0  </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$i_0$" src="form_185.png"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_72.png"/>mol/m<sup>2</sup>-s </td><td>6.6  </td></tr>
+<td><img class="formulaInl" alt="$i_0$" src="form_184.png"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_71.png"/>mol/m<sup>2</sup>-s </td><td>6.6  </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$k$" src="form_186.png"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_72.png"/>mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup> </td><td>496  </td></tr>
+<td><img class="formulaInl" alt="$k$" src="form_185.png"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_71.png"/>mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup> </td><td>496  </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$b$" src="form_182.png"/> </td><td>mmol/mol </td><td>6.1  </td></tr>
+<td><img class="formulaInl" alt="$b$" src="form_181.png"/> </td><td>mmol/mol </td><td>6.1  </td></tr>
 </table>
 <p><br />
  </p>

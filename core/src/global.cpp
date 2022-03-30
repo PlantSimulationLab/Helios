@@ -348,6 +348,51 @@ void helios::makeRotationMatrix( float rotation, const helios::vec3& axis, float
 
 }
 
+void helios::makeRotationMatrix( float rotation, const helios::vec3& origin, const helios::vec3& axis, float (&T)[16] ){
+
+    //Construct inverse translation matrix to translate back to the origin
+    float Ttrans[16];
+    makeIdentityMatrix(Ttrans);
+
+    Ttrans[3] = -origin.x; //(0,3)
+    Ttrans[7] = -origin.y; //(1,3)
+    Ttrans[11] = -origin.z;//(2,3)
+
+    //Construct rotation matrix
+    vec3 u = axis;
+    u.normalize();
+
+    float sx = sin(rotation);
+    float cx = cos(rotation);
+
+    float Trot[16];
+    makeIdentityMatrix(Trot);
+
+    Trot[0] = cx+u.x*u.x*(1.f-cx); //(0,0)
+    Trot[1] = u.x*u.y*(1.f-cx)-u.z*sx; //(0,1)
+    Trot[2] = u.x*u.z*(1.f-cx)+u.y*sx; //(0,2)
+    Trot[3] = 0.f; //(0,3)
+    Trot[4] = u.y*u.x*(1.f-cx)+u.z*sx; //(1,0)
+    Trot[5] = cx+u.y*u.y*(1.f-cx);  //(1,1)
+    Trot[6] = u.y*u.z*(1.f-cx)-u.x*sx; //(1,2)
+    Trot[7] = 0.f; //(1,3)
+    Trot[8] = u.z*u.x*(1.f-cx)-u.y*sx; //(2,0)
+    Trot[9] = u.z*u.y*(1.f-cx)+u.x*sx;  //(2,1)
+    Trot[10] = cx+u.z*u.z*(1.f-cx); //(2,2)
+    Trot[11] = 0.f;//(2,3)
+
+    //Multiply first two matrices and store in 'T'
+    matmult(Trot,Ttrans,T);
+
+    //Construct transformation matrix to translate back to 'origin'
+    Ttrans[3] = origin.x; //(0,3)
+    Ttrans[7] = origin.y; //(1,3)
+    Ttrans[11] = origin.z;//(2,3)
+
+    matmult(Ttrans,T,T);
+
+}
+
 void helios::makeTranslationMatrix( const helios::vec3& translation, float (&T)[16] ){
 
   T[0] = 1.f; //(0,0)
@@ -392,19 +437,19 @@ void helios::makeScaleMatrix( const helios::vec3& scale, float (&T)[16] ){
 
 void helios::matmult( const float ML[16], const float MR[16], float (&T)[16] ){
 
-  float M[16]={0.f};
+    float M[16]={0.f};
 
-  for( int i=0;i<4;i++){
-    for(int j=0;j<4;j++){
-      for(int k=0;k<4;k++){
-	M[4*i+j]=M[4*i+j]+ML[4*i+k]*MR[4*k+j];
-      }
+    for( int i=0;i<4;i++){
+        for(int j=0;j<4;j++){
+            for(int k=0;k<4;k++){
+                M[4*i+j]=M[4*i+j]+ML[4*i+k]*MR[4*k+j];
+            }
+        }
     }
-  }
 
-  for( int i=0;i<16;i++){
-    T[i]=M[i];
-  }
+    for( int i=0;i<16;i++){
+        T[i]=M[i];
+    }
 
 }
 
@@ -2257,4 +2302,8 @@ float helios::interp1( const std::vector<helios::vec2> &points, float x ) {
 
     return lowerY + ((x - lowerX)/ deltaX) * deltaY;
 
+}
+
+float helios::point_distance( const helios::vec3 &p1 , const helios::vec3 &p2){
+    return (p1-p2).magnitude();
 }

@@ -300,9 +300,11 @@ public:
   }
 
   //! Compute the vector magnitude 
-  /**  \return magnitude of vector: \f$\sqrt{x^2+y^2}\f$ */
+  /**
+   * \return magnitude of vector
+  */
   float magnitude() const{
-    return sqrt( x*x + y*y );
+    return sqrtf( x*x + y*y );
   }
 
   //! Default constructor 
@@ -447,9 +449,11 @@ public:
   }
 
   //! Compute the vector magnitude 
-  //*   \return magnitude of vector: \f$\sqrt{x^2+y^2+z^2}\f$ */
+  /**
+   * \return magnitude of vector
+   */
   float magnitude() const{
-    return sqrt( x*x + y*y + z*z );
+    return sqrtf( x*x + y*y + z*z );
   }
 
   //! Default constructor 

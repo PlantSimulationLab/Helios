@@ -9,8 +9,7 @@
  <table>
    <tr>	
       <th>Dependencies</th>
-      <td>NVIDIA CUDA 9.0+ <br>
-          gcc/g++ 5.5+</td>
+      <td>NVIDIA CUDA 9.0+</td>
    </tr>
    <tr>	
      <th>CMakeLists.txt</th>
@@ -26,23 +25,28 @@
    </tr>
  </table>
 
- <table>
-   <caption>Installing dependent packages</caption>
-   <tr>	
-     <th>Package</th>
-     <td>\image html apple-logo.jpg</td>
-     <td>\image html unix-logo.png</td>
-   </tr>
-   <tr>	
-     <td>NVIDIA CUDA 9.0+</td>
-     <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
-     <td>Debian/Ubuntu:**<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install nvidia-cuda-toolkit</code></div></td>
-   </tr>
- </table>
+\section RadDepends Dependencies
 
- \*\* Potential issues:
- - In Debian, this requires you to enable 'non-free' packages.  Follow <a href="http://ask.xmodulo.com/install-nonfree-packages-debian.html">this link</a> for instructions on how to allow non-free packages.
- - It is possible that your installed compiler is too new for the latest CUDA version.  If this is the case, you will get an error while compiling, and you will have to revert to an earlier compiler version.  You will have to add a symbolic link from the lower compiler version to /usr/bin/cc, /usr/bin/gcc, /usr/bin/c++, and /usr/bin/g++.
+<table>
+    <tr>
+        <th>Package</th>
+        <td>\image html apple-logo.jpg</td>
+        <td>\image html unix-logo.png</td>
+        <td>\image html windows-logo.jpg</td>
+    </tr>
+    <tr>
+        <td>NVIDIA CUDA 9.0+</td>
+        <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+        <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
+        <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
+    </tr>
+</table>
+
+For help choosing the correct CUDA toolkit version and accompanying OptiX version for your system, consult this page: \ref ChoosingCUDA
+
+Useful OS-specific information for installing CUDA can be found here: \ref DependentSoftware
+
+If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
 
  \section Introduction
 

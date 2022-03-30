@@ -211,12 +211,21 @@ namespace helios {
         */
         void rotate( float rot, const char* axis );
 
-        //! Function to rotate a Compound Object about an arbitrary axis
+        //! Function to rotate a Compound Object about an arbitrary axis passing through the origin
         /**
          * \param[in] "rot" Rotation angle in radians.
          * \param[in] "axis" Vector describing axis about which to rotate.
         */
         void rotate( float rot, const helios::vec3& axis );
+
+
+        //! Function to rotate a Compound Object about an arbitrary line (not necessarily passing through the origin)
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
+         * \param[in] "axis" Vector describing axis about which to rotate.
+        */
+        void rotate( float rot, const helios::vec3& origin, const helios::vec3& axis );
 
         //! Function to return the Affine transformation matrix of a Compound Object
         /**
@@ -858,6 +867,9 @@ namespace helios {
         //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
         virtual std::vector<helios::vec3> getVertices( ) const = 0;
 
+        //! Function to return the (x,y,z) coordinates of the Primitive centroid
+        virtual helios::vec3 getCenter() const = 0;
+
         //! Function to return the diffuse color of a Primitive
         helios::RGBcolor getColor() const;
 
@@ -920,12 +932,20 @@ namespace helios {
         */
         virtual void rotate( float rot, const char* axis ) = 0;
 
-        //! Function to rotate a Primitive about an arbitrary axis
+        //! Function to rotate a Primitive about an arbitrary axis passing through the origin.
         /**
          * \param[in] "rot" Rotation angle in radians.
          * \param[in] "axis" Vector describing axis about which to rotate.
         */
         virtual void rotate( float rot, const helios::vec3& axis ) = 0;
+
+        //! Function to rotate a Primitive about an arbitrary line (not necessarily passing through the origin)
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
+         * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
+        */
+        virtual void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) = 0;
 
         //! Function to scale the dimensions of a Primitive
         /**
@@ -1266,8 +1286,10 @@ namespace helios {
         helios::vec2 getSize() const;
 
         //! Get the (x,y,z) coordinates of the Patch center point
-        /** \return vec3 describing (x,y,z) coordinate of Patch center.*/
-        helios::vec3 getCenter() const;
+        /**
+         * \return vec3 describing (x,y,z) coordinate of Patch center.
+         */
+        helios::vec3 getCenter() const override;
 
         //! Function to rotate a Primitive about the x-, y-, or z-axis
         /** \param[in] "rot" Rotation angle in radians.
@@ -1275,11 +1297,20 @@ namespace helios {
         */
         void rotate( float rot, const char* axis ) override;
 
-        //! Function to rotate a Primitive about an arbitrary axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Vector describing axis about which to rotate.
+        //! Function to rotate a Primitive about an arbitrary axis passing through the origin
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "axis" Vector describing axis about which to rotate.
         */
         void rotate( float rot, const helios::vec3& axis ) override;
+
+        //! Function to rotate a Primitive about an arbitrary line (not necessarily passing through the origin)
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
+         * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
+        */
+        void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) override;
 
 
     protected:
@@ -1306,35 +1337,57 @@ namespace helios {
         ~Triangle() override= default;
 
         //! Get the primitive surface area
-        /** \return Surface area of the Triangle. */
+        /**
+         * \return Surface area of the Triangle.
+         */
         float getArea() const override;
 
         //! Get a unit vector normal to the primitive surface
-        /** \return Unit vector normal to the surface of the Triangle. */
+        /**
+         * \return Unit vector normal to the surface of the Triangle.
+         */
         helios::vec3 getNormal() const override;
 
         //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
-        /** \return Vector containing three sets of the (x,y,z) coordinates of each vertex.*/
+        /**
+         * \return Vector containing three sets of the (x,y,z) coordinates of each vertex.
+         */
         std::vector<helios::vec3> getVertices() const override;
 
         //! Function to return the (x,y,z) coordinates of a given Triangle vertex
         /**
-           \param[in] "number" Triangle vertex (0, 1, or 2)
-           \return (x,y,z) coordinates of triangle vertex
+         * \param[in] "number" Triangle vertex (0, 1, or 2)
+         * \return (x,y,z) coordinates of triangle vertex
         */
         helios::vec3 getVertex( int number );
 
+        //! Function to return the (x,y,z) coordinates of a given Triangle's center (centroid)
+        /**
+         * \return (x,y,z) coordinates of triangle centroid
+        */
+        helios::vec3 getCenter() const override;
+
         //! Function to rotate a Primitive about the x-, y-, or z-axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
         */
         void rotate( float rot, const char* axis ) override;
 
-        //! Function to rotate a Primitive about an arbitrary axis
-        /** \param[in] "rot" Rotation angle in radians.
-        \param[in] "axis" Vector describing axis about which to rotate.
+        //! Function to rotate a Primitive about an arbitrary axis passing through the origin
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "axis" Vector describing axis about which to rotate.
         */
         void rotate( float rot, const helios::vec3& axis ) override;
+
+        //! Function to rotate a Primitive about an arbitrary line (not necessarily passing through the origin)
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
+         * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
+        */
+        void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) override;
 
     private:
 
@@ -1390,9 +1443,9 @@ namespace helios {
 
         //! Get the (x,y,z) coordinates of the Voxel center point
         /**
-         * \return vec3 describing (x,y,z) coordinate of Patch center.
+         * \return vec3 describing (x,y,z) coordinate of Voxel center.
          */
-        helios::vec3 getCenter();
+        helios::vec3 getCenter() const override;
 
         //! Get the size of the Voxel in x-, y-, and z-directions
         /**
@@ -1407,12 +1460,21 @@ namespace helios {
         */
         void rotate( float rot, const char* axis ) override;
 
-        //! Function to rotate a Primitive about an arbitrary axis
+        //! Function to rotate a Primitive about an arbitrary axis passing through the origin
         /**
          * \param[in] "rot" Rotation angle in radians.
          * \param[in] "axis" Vector describing axis about which to rotate.
         */
         void rotate( float rot, const helios::vec3& axis ) override;
+
+
+        //! Function to rotate a Primitive about an arbitrary line (not necessarily passing through the origin)
+        /**
+         * \param[in] "rot" Rotation angle in radians.
+         * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
+         * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
+        */
+        void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) override;
 
     };
 
@@ -1775,19 +1837,37 @@ namespace helios {
          */
         void rotatePrimitive( const std::vector<uint>& UUIDs, float rot, const char* axis );
 
-        //! Rotate a primitive about an arbitrary axis using its UUID
+        //! Rotate a primitive about an arbitrary axis passing through the origin using its UUID
         /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be translated
             \param[in] "rot" Rotation angle in radians
             \param[in] "axis" Vector describing axis about which to rotate
          */
         void rotatePrimitive( uint UUID, float rot, const helios::vec3& axis );
 
-        //! Rotate a group of primitives about an arbitrary axis using a vector of UUIDs
+        //! Rotate a group of primitives about an arbitrary axis passing through the origin using a vector of UUIDs
         /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be translated
             \param[in] "rot" Rotation angle in radians
             \param[in] "axis" Vector describing axis about which to rotate
          */
         void rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const vec3 &axis );
+
+        //! Rotate a primitive about an arbitrary line (not necessarily passing through the origin) using its UUID
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of primitive to be translated
+         * \param[in] "rot" Rotation angle in radians
+         * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis
+         * \param[in] "axis" Vector describing axis about which to rotate
+        */
+        void rotatePrimitive( uint UUID, float rot, const helios::vec3& origin, const helios::vec3& axis );
+
+        //! Rotate a group of primitives about an arbitrary line (not necessarily passing through the origin) using a vector of UUIDs
+        /**
+         * \param[in] "UUID" Unique universal identifier (UUID) of primitive to be translated
+         * \param[in] "rot" Rotation angle in radians
+         * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis
+         * \param[in] "axis" Vector describing axis about which to (rotate)
+        */
+        void rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const helios::vec3& origin, const vec3 &axis );
 
         //! Scale a primitive using its UUID
         /** \param[in] "UUID" Unique universal identifier (UUID) of primitive to be scaled
@@ -2613,10 +2693,16 @@ namespace helios {
         const std::vector<std::vector<bool>> * getPrimitiveTextureTransparencyData(uint UUID) const;
 
         //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
+        /**
+         * \param[in] "UUID" Universal unique identifier of primitive.
+         */
         void overridePrimitiveTextureColor( uint UUID );
 
 
         //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
+        /**
+         * \param[in] "UUID" Universal unique identifier of primitive.
+         */
         void usePrimitiveTextureColor( uint UUID );
 
         //! Check if color of texture map is overridden by the diffuse R-G-B color of the primitive
@@ -2624,6 +2710,12 @@ namespace helios {
          * \param[in] UUID Unique universal identifier of primitive to be queried
          */
         bool isPrimitiveTextureColorOverridden( uint UUID ) const;
+
+        //! Prints primitive properties to console (useful for debugging purposes)
+        /**
+         * \param[in] "UUID" Universal unique identifier of primitive.
+         */
+        void printPrimitiveInfo(uint UUID) const;
 
         //-------- Compound Object Data Functions ---------- //
 
@@ -3515,24 +3607,94 @@ namespace helios {
 
         //! Get a vector of object IDs that meet filtering criteria based on object data
         /**
-         * \param[in] "objIDs" Vector of object IDs to filter
+         * \param[in] "ObjIDs" Vector of object IDs to filter
          * \param[in] "object_data" object data field to use when filtering
          * \param[in] "threshold" Value for filter threshold
          * \param[in] "comparator" Points will be filtered if "object_data (comparator) threshold", where (comparator) is one of ">", "<", or "="
          */
-        std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const char* object_data, float threshold, const char* comparator) const;
+        std::vector<uint> filterObjectsByData( const std::vector<uint> &ObjIDs, const char* object_data, float threshold, const char* comparator) const;
+
+        //! Translate a single compound object
+        /**
+         * \param[in] "ObjID" Object ID to translate
+         * \param[in] "shift" Distance to translate in the (x,y,z) directions
+         */
+        void translateObject(uint ObjID, const vec3& shift );
+
+        //! Translate multiple compound objects based on a vector of UUIDs
+        /**
+         * \param[in] "ObjIDs" Vector of object IDs to translate
+         * \param[in] "shift" Distance to translate in the (x,y,z) directions
+         */
+        void translateObject(const std::vector<uint>& ObjIDs, const vec3& shift );
+
+        //! Rotate a single compound object about the x, y, or z axis
+        /**
+         * \param[in] "ObjID" Object ID to rotate
+         * \param[in] "rot" Rotation angle in radians
+         * \param[in] "axis" Axis about which to rotate (must be one of x, y, z)
+         */
+        void rotateObject(uint ObjID, float rot, const char* axis );
+
+        //! Rotate multiple compound objects about the x, y, or z axis based on a vector of UUIDs
+        /**
+         * \param[in] "ObjIDs" Vector of object IDs to translate
+         * \param[in] "rot" Rotation angle in radians
+         * \param[in] "axis" Axis about which to rotate (must be one of x, y, z)
+         */
+        void rotateObject(const std::vector<uint>& ObjIDs, float rot, const char* axis );
+
+        //! Rotate a single compound object about an arbitrary axis passing through the origin
+        /**
+         * \param[in] "ObjID" Object ID to rotate
+         * \param[in] "rot" Rotation angle in radians
+         * \param[in] "axis" Vector describing axis about which to rotate
+         */
+        void rotateObject(uint ObjID, float rot, const vec3& axis );
+
+        //! Rotate multiple compound objects about an arbitrary axis passing through the origin based on a vector of UUIDs
+        /**
+         * \param[in] "ObjIDs" Vector of object IDs to translate
+         * \param[in] "rot" Rotation angle in radians
+         * \param[in] "axis" Vector describing axis about which to rotate
+         */
+        void rotateObject(const std::vector<uint>& ObjIDs, float rot, const vec3& axis );
+
+        //! Rotate a single compound object about an arbitrary line (not necessarily passing through the origin)
+        /**
+         * \param[in] "ObjID" Object ID to rotate
+         * \param[in] "rot" Rotation angle in radians
+         * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis
+         * \param[in] "axis" Vector describing axis about which to rotate
+         */
+        void rotateObject( uint ObjID, float rot, const vec3& origin, const vec3& axis );
+
+        //! Rotate multiple compound objects about an arbitrary line (not necessarily passing through the origin) based on a vector of UUIDs
+        /**
+         * \param[in] "ObjIDs" Vector of object IDs to translate
+         * \param[in] "rot" Rotation angle in radians
+         * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis
+         * \param[in] "axis" Vector describing axis about which to rotate
+         */
+        void rotateObject( const std::vector<uint>& ObjIDs, float rot, const vec3& origin, const vec3& axis );
 
     //! Get primitive UUIDs associated with compound objects
     /**
-        * \param[in] "objIDs" vector of object IDs to retrieve primitive UUIDs for
+        * \param[in] "ObjIDs" vector of object IDs to retrieve primitive UUIDs for
     */
-    std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<uint> &objIDs) const;
+    std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<uint> &ObjIDs) const;
 
     //! Get primitive UUIDs associated with compound object
     /**
-     * \param[in] "objID" object ID to retrieve primitive UUIDs for
+     * \param[in] "ObjID" object ID to retrieve primitive UUIDs for
     */
-    std::vector<uint> getObjectPrimitiveUUIDs( uint objID ) const;
+    std::vector<uint> getObjectPrimitiveUUIDs( uint ObjID ) const;
+
+        //! Get an enumeration specifying the type of the object
+        /**
+         * \param[in] "ObjID" Object ID for which object type will be retrieved
+         */
+        helios::ObjectType getObjectType( uint ObjID ) const;
 
         //! Get a pointer to a Tile Compound Object
         /**

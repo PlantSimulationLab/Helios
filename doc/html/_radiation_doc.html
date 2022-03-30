@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.31</span>
+   &#160;<span id="projectnumber">v1.2.32</span>
    </div>
   </td>
  </tr>
@@ -69,7 +69,8 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#RadConstructor">RadiationModel Class Constructor</a></li>
+<ul><li class="level1"><a href="#RadDepends">Dependencies</a></li>
+<li class="level1"><a href="#RadConstructor">RadiationModel Class Constructor</a></li>
 <li class="level1"><a href="#RadVarsAndProps">Input/Output Primitive Data</a><ul><li class="level2"><a href="#RadInputData">Input Primitive Data</a></li>
 <li class="level2"><a href="#RadOutputData">Output Primitive Data</a></li>
 </ul>
@@ -102,8 +103,7 @@ $(function() {
  </p>
 <table class="doxtable">
 <tr>
-<th>Dependencies </th><td>NVIDIA CUDA 9.0+ <br />
- gcc/g++ 5.5+  </td></tr>
+<th>Dependencies </th><td>NVIDIA CUDA 9.0+  </td></tr>
 <tr>
 <th>CMakeLists.txt </th><td>set( PLUGINS "radiation" )  </td></tr>
 <tr>
@@ -111,9 +111,9 @@ $(function() {
 <tr>
 <th>Class </th><td><a class="el" href="class_radiation_model.html">RadiationModel</a>  </td></tr>
 </table>
-<a class="anchor" id=""></a>
+<h1><a class="anchor" id="RadDepends"></a>
+Dependencies</h1>
 <table class="doxtable">
-<caption>Installing dependent packages</caption>
 <tr>
 <th>Package </th><td><div class="image">
 <img src="apple-logo.jpg" alt="apple-logo.jpg"/>
@@ -121,16 +121,17 @@ $(function() {
  </td><td><div class="image">
 <img src="unix-logo.png" alt="unix-logo.png"/>
 </div>
+ </td><td><div class="image">
+<img src="windows-logo.jpg" alt="windows-logo.jpg"/>
+</div>
   </td></tr>
 <tr>
 <td>NVIDIA CUDA 9.0+ </td><td>Mac OSX:<br />
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div> </td><td>Debian/Ubuntu:**<br />
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install nvidia-cuda-toolkit</code></div>  </td></tr>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a>  </td></tr>
 </table>
-<p>** Potential issues:</p><ul>
-<li>In Debian, this requires you to enable 'non-free' packages. Follow <a href="http://ask.xmodulo.com/install-nonfree-packages-debian.html">this link</a> for instructions on how to allow non-free packages.</li>
-<li>It is possible that your installed compiler is too new for the latest CUDA version. If this is the case, you will get an error while compiling, and you will have to revert to an earlier compiler version. You will have to add a symbolic link from the lower compiler version to /usr/bin/cc, /usr/bin/gcc, /usr/bin/c++, and /usr/bin/g++.</li>
-</ul>
+<p>For help choosing the correct CUDA toolkit version and accompanying OptiX version for your system, consult this page: <a class="el" href="_choosing_c_u_d_a.html">Choosing the right CUDA and OptiX version</a></p>
+<p>Useful OS-specific information for installing CUDA can be found here: <a class="el" href="_dependent_software.html">Dependent Software</a></p>
+<p>If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: <a class="el" href="_p_c_g_p_u_timeout.html">Increasing graphics driver timeout</a></p>
 <h1><a class="anchor" id="Introduction"></a>
 Introduction</h1>
 <p>This model simulates the transport of radiative energy for arbitrary wavelength bands using a GPU-accelerated ray-tracing model. The model details are described in <a href="http://dx.doi.org/10.1016/j.ecolmodel.2017.11.022">Bailey (2018)</a>. Briefly, the model uses a reverse ray-tracing approach to simulate emission from primitive elements, collimated radiation sources, and point radiation sources.</p>
@@ -193,15 +194,15 @@ Radiative Properties</h2>
   vec2 size = make_vec2(1,1);
   uint UUID = context.addPatch( center, size );</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  float rho = 0.1; //reflectivity value
   context.setPrimitiveData( UUID, "reflectivity_PAR", rho);</code></pre></div><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"><pre><code>  float tau = 0.1; //transmissivity value
-  context.setPrimitiveData( UUID, "transmissivity_PAR", tau);</code></pre></div><p>Note that absorptivity is not directly set, rather it is calculated as <img class="formulaInl" alt="$1-\rho-\tau$" src="form_113.png"/>. If <img class="formulaInl" alt="$1-\rho-\tau$" src="form_113.png"/> is calculated to be negative, an error is thrown.</p>
+  context.setPrimitiveData( UUID, "transmissivity_PAR", tau);</code></pre></div><p>Note that absorptivity is not directly set, rather it is calculated as <img class="formulaInl" alt="$1-\rho-\tau$" src="form_112.png"/>. If <img class="formulaInl" alt="$1-\rho-\tau$" src="form_112.png"/> is calculated to be negative, an error is thrown.</p>
 <p>If radiative properties are changed from default vaules, the number of scattering iterations needs to be increased from the default value of 0 (see <a class="el" href="_radiation_doc.html#RadScatter">Scattering Iterations</a>). If radiative properties are changed, but the number of scattering iterations is set to the default value of 0, the modified radiative property values are overridden and set back to their default values (black surface).</p>
 <h2><a class="anchor" id="RadEmission"></a>
 Radiative Emission</h2>
-<p>By default, radiation emission calculations are performed for each band. Each primitive emits radiation with a flux of <img class="formulaInl" alt="$\varepsilon \sigma T^4$" src="form_114.png"/>, where <img class="formulaInl" alt="$\varepsilon$" src="form_115.png"/> is the primitive's emissivity, <img class="formulaInl" alt="$\sigma=5.67\times 10^{-8}\,W/m^2/K^4$" src="form_116.png"/> is the Steffan Boltzmann constant, and <img class="formulaInl" alt="$T$" src="form_117.png"/> is the primitive's surface temperature in Kelvin. By default, it is assumed that <img class="formulaInl" alt="$\varepsilon=1$" src="form_118.png"/>, unless primitive data exists that defines the emissivity. By default, it is also assumed that <img class="formulaInl" alt="$T=300K$" src="form_119.png"/>, unless the primitive data 'temperature' exists in the Context whose value defines the temperature.</p>
-<p>Emission can be disabled for the band by caling the <a class="el" href="class_radiation_model.html#a45774805001673a42a94e5cd1e45be4c">disableEmission()</a> function. For example, for the photosynthetically active (PAR) band, terrestrial objects do not emit radiation (i.e., <img class="formulaInl" alt="$\varepsilon\approx 0$" src="form_120.png"/>) and thus rather than setting a zero emissivity for this band for all primitives, it is desirable to simply disable radiation emission for this band:</p>
+<p>By default, radiation emission calculations are performed for each band. Each primitive emits radiation with a flux of <img class="formulaInl" alt="$\varepsilon \sigma T^4$" src="form_113.png"/>, where <img class="formulaInl" alt="$\varepsilon$" src="form_114.png"/> is the primitive's emissivity, <img class="formulaInl" alt="$\sigma=5.67\times 10^{-8}\,W/m^2/K^4$" src="form_115.png"/> is the Steffan Boltzmann constant, and <img class="formulaInl" alt="$T$" src="form_116.png"/> is the primitive's surface temperature in Kelvin. By default, it is assumed that <img class="formulaInl" alt="$\varepsilon=1$" src="form_117.png"/>, unless primitive data exists that defines the emissivity. By default, it is also assumed that <img class="formulaInl" alt="$T=300K$" src="form_118.png"/>, unless the primitive data 'temperature' exists in the Context whose value defines the temperature.</p>
+<p>Emission can be disabled for the band by caling the <a class="el" href="class_radiation_model.html#a45774805001673a42a94e5cd1e45be4c">disableEmission()</a> function. For example, for the photosynthetically active (PAR) band, terrestrial objects do not emit radiation (i.e., <img class="formulaInl" alt="$\varepsilon\approx 0$" src="form_119.png"/>) and thus rather than setting a zero emissivity for this band for all primitives, it is desirable to simply disable radiation emission for this band:</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> radiationmodel.disableEmission( "PAR" ); //Disable emission for the 'PAR' band</code></pre></div><p>The surface emissivity can be changed similarly as was shown above for the reflectivity and transmissivity:</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> float eps = 0.9; //emissivity value
- context.setPrimitiveData( UUID, "emissivity_LW", eps);</code></pre></div><p>Note that you can also set the reflectivity and transmissivity for a band with emission. It is required that <img class="formulaInl" alt="$\rho+\tau+\varepsilon=0$" src="form_121.png"/> in order to satisfy conservation of energy. If only the emissivity is set and reflectivity and transmissivity are left at their default values of 0, it is automatically assumed that <img class="formulaInl" alt="$\rho=1-\varepsilon$" src="form_122.png"/> and <img class="formulaInl" alt="$\tau=0$" src="form_123.png"/>.</p>
+ context.setPrimitiveData( UUID, "emissivity_LW", eps);</code></pre></div><p>Note that you can also set the reflectivity and transmissivity for a band with emission. It is required that <img class="formulaInl" alt="$\rho+\tau+\varepsilon=0$" src="form_120.png"/> in order to satisfy conservation of energy. If only the emissivity is set and reflectivity and transmissivity are left at their default values of 0, it is automatically assumed that <img class="formulaInl" alt="$\rho=1-\varepsilon$" src="form_121.png"/> and <img class="formulaInl" alt="$\tau=0$" src="form_122.png"/>.</p>
 <h2><a class="anchor" id="RadSources"></a>
 External Radiation Sources</h2>
 <p>There are three types of external sources of radiation that can be simulated: 1) a collimated radiation source (beams of radiation are approximately parallel), 2) ambient diffuse radiation, and 3) a point source.</p>
@@ -233,17 +234,17 @@ Adding Diffuse/Ambient Sources</h3>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>radiationmodel.setDiffuseRadiationFlux("PAR",200.f); //set the flux</code></pre></div><p>The default is to use 100 diffuse rays per primitive, which can be set to a user-defined value using the following command:</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>radiationmodel.setDiffuseRayCount("PAR",200); //set the number of rays</code></pre></div><p>By default, the diffuse radiation distribution is isotropic. An anisotropic diffuse radiation distribution can be utilized using the function <a class="el" href="class_radiation_model.html#a2e2ddc281a577c48b71010c49c7cf536">setDiffuseRadiationExtinctionCoeff()</a>. This function applies an anisotropic diffuse distribution in which intensity declines exponentially away from the peak direction (usually the solar direction). The relative diffuse intensity is given by <a href="https://doi.org/10.1016/0038-092X(88)90072-2">(Harrison and Coombes, 1988)</a></p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[ f_d(\theta,\phi) = f_0\Psi^{-K},\]" src="form_124.png"/>
+<img class="formulaDsp" alt="\[ f_d(\theta,\phi) = f_0\Psi^{-K},\]" src="form_123.png"/>
 </p>
 <p>where</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \Psi = acos\left( cos\,\theta\,cos\,\theta_s + sin\,\theta\,sin\,\theta_s\,cos\,(\phi-\phi_s) \right), \]" src="form_125.png"/>
+<img class="formulaDsp" alt="\[ \Psi = acos\left( cos\,\theta\,cos\,\theta_s + sin\,\theta\,sin\,\theta_s\,cos\,(\phi-\phi_s) \right), \]" src="form_124.png"/>
 </p>
-<p>and <img class="formulaInl" alt="$\theta_s$" src="form_126.png"/> and <img class="formulaInl" alt="$\phi_s$" src="form_127.png"/> are the zenith and azimuth angles of the peak direction. If <img class="formulaInl" alt="$\Psi&lt;1^\circ$" src="form_128.png"/>, <img class="formulaInl" alt="$\Psi$" src="form_129.png"/> is clamped to a value of 1 degree. The <img class="formulaInl" alt="$f_0$" src="form_130.png"/> is a normalization factor that is computed such that the integral of <img class="formulaInl" alt="$f_d$" src="form_131.png"/> for a one-sided horizontal element is equal to 1, i.e.,</p>
+<p>and <img class="formulaInl" alt="$\theta_s$" src="form_125.png"/> and <img class="formulaInl" alt="$\phi_s$" src="form_126.png"/> are the zenith and azimuth angles of the peak direction. If <img class="formulaInl" alt="$\Psi&lt;1^\circ$" src="form_127.png"/>, <img class="formulaInl" alt="$\Psi$" src="form_128.png"/> is clamped to a value of 1 degree. The <img class="formulaInl" alt="$f_0$" src="form_129.png"/> is a normalization factor that is computed such that the integral of <img class="formulaInl" alt="$f_d$" src="form_130.png"/> for a one-sided horizontal element is equal to 1, i.e.,</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \frac{1}{\pi}\int\limits_0^{2\pi}\int\limits_0^{\pi/2}\,f_d\,\mathrm{cos}\,\theta\,\mathrm{sin}\,\theta\,d\theta d\phi = 1. \]" src="form_132.png"/>
+<img class="formulaDsp" alt="\[ \frac{1}{\pi}\int\limits_0^{2\pi}\int\limits_0^{\pi/2}\,f_d\,\mathrm{cos}\,\theta\,\mathrm{sin}\,\theta\,d\theta d\phi = 1. \]" src="form_131.png"/>
 </p>
-<p>The figure below shows the diffuse distribution for different values of <img class="formulaInl" alt="$K$" src="form_133.png"/> for a solar zenith of 45 degrees. Note that a value of <img class="formulaInl" alt="$K=0$" src="form_134.png"/> yields an anisotropic distribution, and as <img class="formulaInl" alt="$K$" src="form_133.png"/> gets large the distribution becomes increasingly anisotropic.</p>
+<p>The figure below shows the diffuse distribution for different values of <img class="formulaInl" alt="$K$" src="form_132.png"/> for a solar zenith of 45 degrees. Note that a value of <img class="formulaInl" alt="$K=0$" src="form_133.png"/> yields an anisotropic distribution, and as <img class="formulaInl" alt="$K$" src="form_132.png"/> gets large the distribution becomes increasingly anisotropic.</p>
 <div class="image">
 <img src="diffuse_distribution.png" alt="diffuse_distribution.png"/>
 </div>

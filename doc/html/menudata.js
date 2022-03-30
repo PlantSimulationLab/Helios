@@ -2,7 +2,7 @@ var menudata={children:[
 {text:"Main Page",url:"index.html"},
 {text:"User's Guide",url:"usergroup0.html",children:[
 {text:"Overview",url:"_overview.html"},
-{text:"Dependent Packages",url:"_dependencies.html"},
+{text:"Dependent Packages",url:"_dummy.html#Dependencies"},
 {text:"Tutorials",url:"_tutorials.html"},
 {text:"Using the Helios API",url:"_a_p_i.html"},
 {text:"File I/O",url:"_i_o.html"},
