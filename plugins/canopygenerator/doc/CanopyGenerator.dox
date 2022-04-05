@@ -326,7 +326,8 @@
  <tr><td>trunk_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.15</td></tr>
  <tr><td>trunk_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average height of the trunk.</td><td>4.0</td></tr>
  <tr><td>branch_length</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Average length of branches in each recursive branch level. For example, the first (.x) value is the length of branches emanating from the trunk, the second (.y) is the the length of branches emanating from the first branching level.</td><td>(4.0,0.75,0.75)</td></tr>
- <tr><td>fruit_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for nut texture overlay.</td><td>"plugins/canopygenerator/textures/WalnutTexture.jpg"</td></tr> 
+ <tr><td>fruit_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum horizontal radius of individual walnuts. NOTE: Setting fruit_radius=0 will not create any nuts.</td><td>0.04</td></tr>
+ <tr><td>fruit_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for nut texture overlay.</td><td>"plugins/canopygenerator/textures/WalnutTexture.jpg"</td></tr>
  <tr><td>fruit_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of nut triangular subdivisions in the azimuthal direction.</td><td>16</td></tr>
  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
  <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>6.0</td></tr>
@@ -334,7 +335,101 @@
  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(4,2)</td></tr>
  <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
- </table>	
+ </table>
+
+  \subsection CGenSorghum sorghum Canopy
+
+  A canopy of Sorghum plants.
+
+  \image html SorghumCanopy.png
+
+  <table>
+  <tr><th>Parameters Structure</th><td>\ref SorghumCanopyParameters</td></tr>
+  <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::sorghum()</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( SorghumCanopyParameters parameters )</td></tr>
+  </table>
+
+  <table>
+  <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Sorghum stage </font>\endhtmlonly</td></tr>
+  <tr><td>Sorghum_stage </td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Sorghum categorized into 5 stages; 1 - Three leaf stage, 2 - Five leaf stage, 3 - Panicle initiation and flag leaf emergency, 4 - Booting, and flowering, 5 - Maturity;  Input of a value greater than 1-5 will output stage 5.</td><td>1</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="green">Sorghum stage 1</font>\endhtmlonly</td></tr>
+  <tr><td>s1_stem_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Length of the sorghum stem for stage 1.</td><td>0.04</td></tr>
+  <tr><td>s1_stem_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the sorghum stem for stage 1.</td><td>0.003</td></tr>
+  <tr><td>s1_stem_subdivisions</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Number of stem radial subdivisions for stage 1.</td><td>50</td></tr>
+  <tr><td>s1_leaf_size1</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf1 in x- (length) and y- (width) directions (prior to rotation) for stage 1.</td><td>(0.14,0.012)</td></tr>
+  <tr><td>s1_leaf_size2</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf2 in x- (length) and y- (width) directions (prior to rotation) for stage 1.</td><td>(0.12,0.012)</td></tr>
+  <tr><td>s1_leaf_size3</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf3 in x- (length) and y- (width) directions (prior to rotation) for stage 1.</td><td>(0.06,0.008)</td></tr>
+  <tr><td>s1_leaf1_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Leaf1 vertical angle of rotation for stage 1.</td><td>50</td></tr>
+  <tr><td>s1_leaf2_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Leaf2 vertical angle of rotation for stage 1.</td><td>50</td></tr>
+  <tr><td>s1_leaf3_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Leaf3 vertical angle of rotation for stage 1.</td><td>50</td></tr>
+  <tr><td>s1_leaf_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of subdivisions in the x- (length) direction for stage 1. Subdivisions in the y- (width) are fixed to 2.</td><td>10</td></tr>
+  <tr><td>s1_leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Texture map for sorghum leaf for stage 1.</td><td>"plugins/canopygenerator/textures/s1_Sorghum_leaf.png"</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="green">Sorghum stage 2</font>\endhtmlonly</td></tr>
+  <tr><td>s2_stem_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Length of the sorghum stem for stage 2.</td><td>0.2</td></tr>
+  <tr><td>s2_stem_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the sorghum stem for stage 2.</td><td>0.003</td></tr>
+  <tr><td>s2_stem_subdivisions</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Number of stem radial subdivisions for stage 2.</td><td>50</td></tr>
+  <tr><td>s2_leaf_size1</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf1 in x- (length) and y- (width) directions (prior to rotation) for stage 2.</td><td>(0.25,0.02)</td></tr>
+  <tr><td>s2_leaf_size2</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf2 in x- (length) and y- (width) directions (prior to rotation) for stage 2.</td><td>(0.14,0.02)</td></tr>
+  <tr><td>s2_leaf_size3</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf3 in x- (length) and y- (width) directions (prior to rotation) for stage 2.</td><td>(0.2,0.015)</td></tr>
+  <tr><td>s2_leaf_size4</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf4 in x- (length) and y- (width) directions (prior to rotation) for stage 2.</td><td>(0.12,0.012)</td></tr>
+  <tr><td>s2_leaf_size5</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf5 in x- (length) and y- (width) directions (prior to rotation) for stage 2.</td><td>(0.08,0.01)</td></tr>
+  <tr><td>s2_leaf1_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Leaf1 vertical angle of rotation for stage 2.</td><td>25</td></tr>
+  <tr><td>s2_leaf2_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Leaf2 vertical angle of rotation for stage 2.</td><td>50</td></tr>
+  <tr><td>s2_leaf3_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Leaf3 vertical angle of rotation for stage 2.</td><td>15</td></tr>
+  <tr><td>s2_leaf4_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Leaf2 vertical angle of rotation for stage 2.</td><td>25</td></tr>
+  <tr><td>s2_leaf5_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Leaf3 vertical angle of rotation for stage 2.</td><td>10</td></tr>
+  <tr><td>s2_leaf_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of subdivisions in the x- (length) direction for stage 2. Subdivisions in the y- (width) are fixed to 2.</td><td>10</td></tr>
+  <tr><td>s2_leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Texture map for sorghum leaf for stage 2.</td><td>"plugins/canopygenerator/textures/s2_Sorghum_leaf.png"</td></tr>
+
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="green">Sorghum stage 3</font>\endhtmlonly</td></tr>
+  <tr><td>s3_stem_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Length of the sorghum stem for stage 3.</td><td>1.2</td></tr>
+  <tr><td>s3_stem_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the sorghum stem for stage 3.</td><td>0.01</td></tr>
+  <tr><td>s3_stem_subdivisions</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Number of stem radial subdivisions for stage 3.</td><td>50</td></tr>
+  <tr><td>s3_leaf_size1</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf1 in x- (length) and y- (width) directions (prior to rotation) for stage 3.</td><td>(0.8,0.08)</td></tr>
+  <tr><td>s3_leaf_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of subdivisions in the x- (length) direction for stage 3. Subdivisions in the y- (width) are fixed to 2.</td><td>30</td></tr>
+  <tr><td>s3_number_of_leaves</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of leaves along the stem for stage 3.</td><td>15</td></tr>
+  <tr><td>s3_mean_leaf_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Mean vertical angle of rotation of leaf for stage 3 in degrees; Standard deviation for the leaves is 5 degrees.</td><td>45</td></tr>
+  <tr><td>s3_leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Texture map for sorghum leaf for stage 3.</td><td>"plugins/canopygenerator/textures/s3_Sorghum_leaf.png"</td></tr>
+
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="green">Sorghum stage 4</font>\endhtmlonly</td></tr>
+  <tr><td>s4_stem_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Length of the sorghum stem for stage 4.</td><td>1.6</td></tr>
+  <tr><td>s4_stem_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the sorghum stem for stage 4.</td><td>0.01</td></tr>
+  <tr><td>s4_stem_subdivisions</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Number of stem radial subdivisions for stage 4.</td><td>50</td></tr>
+  <tr><td>s4_fruit_size</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Size of leaf in x- and y- directions for stage 4.</td><td>(0.2,0.06)</td></tr>
+  <tr><td>s4_fruit_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of fruit subdivisions for each sub-fruit, stage 4.</td><td>50</td></tr>
+  <tr><td>s4_leaf_size</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf in x- (length) and y- (width) directions (prior to rotation) for stage 4.</td><td>(0.8,0.08)</td></tr>
+  <tr><td>s4_leaf_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of subdivisions in the x- (length) direction for stage 4. Subdivisions in the y- (width) are fixed to 2.</td><td>30</td></tr>
+  <tr><td>s4_number_of_leaves</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of leaves along the stem for stage 4.</td><td>14</td></tr>
+  <tr><td>s4_mean_leaf_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Mean vertical angle of rotation of leaf for stage 4 in degrees; Standard deviation for the angle is 5 degrees.</td><td>45</td></tr>
+  <tr><td>s4_leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Texture map for sorghum leaf for stage 4.</td><td>"plugins/canopygenerator/textures/s4_Sorghum_leaf.png"</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="green">Sorghum stage 5</font>\endhtmlonly</td></tr>
+  <tr><td>s5_stem_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Length of the sorghum stem for stage 5.</td><td>2.5</td></tr>
+  <tr><td>s5_stem_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the sorghum stem for stage 5.</td><td>0.01</td></tr>
+  <tr><td>s5_bend</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Bend of the stem from mid-section for stage 5. The distance from the mid-section of the stem to the imaginary perpendicular along the origin. i.e stem bend = 0 outputs a straight stem.</td><td>0.15</td></tr>
+  <tr><td>s5_stem_subdivisions</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Number of stem radial subdivisions for stage 5.</td><td>50</td></tr>
+  <tr><td>s5_fruit_size</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Size of leaf in x- and y- directions for stage 5.</td><td>(0.3,0.08)</td></tr>
+  <tr><td>s5_fruit_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of fruit subdivisions for each sub-fruit, stage 5.</td><td>50</td></tr>
+  <tr><td>s5_leaf_size</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length of leaf in x- (length) and y- (width) directions (prior to rotation) for stage 5.</td><td>(0.9,0.125)</td></tr>
+  <tr><td>s5_leaf_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of subdivisions in the x- (length) direction for stage 5. Subdivisions in the y- (width) are fixed to 2.</td><td>40</td></tr>
+  <tr><td>s5_number_of_leaves</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of leaves along the stem for stage 5.</td><td>24</td></tr>
+  <tr><td>s5_mean_leaf_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Mean vertical angle of rotation of leaf for stage 5 in degrees; Standard deviation for the angle is 5 degrees.</td><td>20</td></tr>
+  <tr><td>s5_leaf_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Texture map for sorghum leaf for stage 5.</td><td>"plugins/canopygenerator/textures/s5_Sorghum_leaf.png"</td></tr>
+   <tr><td>seed_texture_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Texture map for sorghum leaf for stage 5.</td><td>"plugins/canopygenerator/textures/Sorghum_seed.jpg"</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+  <tr><td>plant_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>6.0</td></tr>
+  <tr><td>row_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>8.0</td></tr>
+  <tr><td>plant_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(4,2)</td></tr>
+  <tr><td>canopy_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+  <tr><td>canopy_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
+  </table>
 
  \section CGenBuildGround Building the Ground
 
@@ -376,8 +471,7 @@
  Maximum flexibility in creating a canopy of plants is achieved by manually adding each individual plant. An example is given below to add a single grapevine plant on VSP trellis at the point (0,0,0).
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  #include "CanopyGenerator.h"
+ <pre><code>  #include "CanopyGenerator.h"
 
   int main( void ){
 
@@ -403,8 +497,7 @@
  Functions are available for each plant type to quickly generate a canopy of many plants using the associated "buildCanopy()" function. The example below shows how to build a vineyard on VSP trellis.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  #include "CanopyGenerator.h"
+ <pre><code>  #include "CanopyGenerator.h"
 
   int main( void ){
 
@@ -414,9 +507,6 @@
 
      \c//Declare the parameter set for VSP grapevine
      %VSPGrapevineParameters parameters;
-
-     \c//Variable defining the location of the plant
-     vec3 origin(0,0,0);
 
      \c//Add the grapevine geometry to the Context
      canopygenerator.buildCanopy( parameters );
@@ -468,8 +558,7 @@
  The random number sequence can be manually seeded using the \ref CanopyGenerator::seedRandomGenerator( uint seed ), which takes as its argument an unsigned integer. Regardless of its value, if this function is called with the same seed value at the beginning of the code, it will produce the exact same "random" number sequence. An example is given below.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  #include "CanopyGenerator.h"
+ <pre><code>  #include "CanopyGenerator.h"
 
   int main( void ){
 
@@ -482,9 +571,6 @@
 
      \c//Seeding the random number generator here will result in the same random geometries below for each time the code is run
      canopygenerator.seedRandomGenerator( 10 );
-
-     \c//Variable defining the location of the plant
-     vec3 origin(0,0,0);
 
      \c//Add the grapevine geometry to the Context
      canopygenerator.buildCanopy( parameters );
