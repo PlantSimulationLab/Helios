@@ -2468,7 +2468,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   std::vector<uint> objectID;
   objectID.resize(Nprimitives);
 
-  //UUID correspoinding to first primitive in object - size Nobjects
+  //UUID corresponding to first primitive in object - size Nobjects
 //  std::vector<uint> primitiveID;
 
   std::size_t patch_count = 0;
@@ -2493,7 +2493,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
     
     uint parentID = context->getPrimitiveParentObjectID(p);
 
-    if( ID!=parentID || parentID==0 || context->getObjectPointer(parentID)->getObjectType()!=helios::OBJECT_TYPE_TILE  ){//if this is a new object, or primitive does not belong to an object
+    if( ID!=parentID || parentID==0 || context->getObjectPointer(parentID)->getObjectType()!=helios::OBJECT_TYPE_TILE || ( context->getObjectPointer(parentID)->getObjectType()==helios::OBJECT_TYPE_TILE && !context->areObjectPrimitivesComplete(parentID) )  ){//if this is a new object, or primitive does not belong to an object
       primitiveID.push_back( u );
       ID = parentID;
       objID++;
@@ -2544,7 +2544,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
     uint ID = context->getPrimitiveParentObjectID(p);
 
-    if( ID>0 && context->getObjectPointer(ID)->getObjectType()==helios::OBJECT_TYPE_TILE ){//tile objects
+    if( ID>0 && context->getObjectPointer(ID)->getObjectType()==helios::OBJECT_TYPE_TILE && context->areObjectPrimitivesComplete(ID) ){//tile objects
 
       ptype_global.at(u) = 3;
 
@@ -2552,7 +2552,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
       m_global.at(u).resize(16);
       for( uint i=0; i<16; i++ ){
-	m_global.at(u).at(i) = m[i];
+	    m_global.at(u).at(i) = m[i];
       }
 
       std::vector<vec3> vertices = context->getTileObjectPointer(ID)->getVertices();
@@ -2576,7 +2576,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
       m_global.at(u).resize(16);
       for( uint i=0; i<16; i++ ){
-	m_global.at(u).at(i) = m[i];
+	    m_global.at(u).at(i) = m[i];
       }
 
       std::vector<vec3> vertices = context->getPrimitiveVertices(p);
@@ -2595,7 +2595,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
       m_global.at(u).resize(16);
       for( uint i=0; i<16; i++ ){
-	m_global.at(u).at(i) = m[i];
+	    m_global.at(u).at(i) = m[i];
       }
       
       std::vector<vec3> vertices = context->getPrimitiveVertices(p);
@@ -2613,7 +2613,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
 
       m_global.at(u).resize(16);
       for( uint i=0; i<16; i++ ){
-	m_global.at(u).at(i) = m[i];
+	    m_global.at(u).at(i) = m[i];
       }
       
       helios::vec3 center = context->getVoxelCenter(p);
@@ -2674,7 +2674,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
       // uv coordinates //
       std::vector<vec2> uv;
 
-      if( ID==0 || context->getObjectPointer(ID)->getObjectType()!=helios::OBJECT_TYPE_TILE ){ //primitives
+      if( ID==0 || context->getObjectPointer(ID)->getObjectType()!=helios::OBJECT_TYPE_TILE || (context->getObjectPointer(ID)->getObjectType()!=helios::OBJECT_TYPE_TILE && !context->areObjectPrimitivesComplete(ID) ) ){ //primitives
           uv = context->getPrimitiveTextureUV(p);
       }
       

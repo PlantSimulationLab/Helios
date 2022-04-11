@@ -245,6 +245,24 @@ namespace helios {
          */
         void setPrimitiveUUIDs( const std::vector<uint> &UUIDs );
 
+        //! Delete a single child member of the object
+        /**
+         * \param[in] "UUID" Universally unique identifier of primitive member
+         */
+        void deleteChildPrimitive( uint UUID );
+
+        //! Delete multiple child member of the object based on a vector of UUIDs
+        /**
+         * \param[in] "UUIDs" Vector of universally unique identifiers for primitive members
+         */
+        void deleteChildPrimitive( const std::vector<uint> &UUIDs );
+
+        //! Function to query whether all object primitives are in tact
+        /**
+         * \return False if any primitives have been deleted from the object since creation; True otherwise.
+         */
+         bool arePrimitivesComplete() const;
+
         //-------- Object Data Functions ---------- //
 
         //! Add data value (int) associated with a object element
@@ -528,6 +546,9 @@ namespace helios {
         //! Affine transformation matrix
         float transform[16];
 
+        //! Flag to indicate whether all object primitives are in tact. If any primitives have been deleted, this flag will be set to false.
+        bool primitivesarecomplete = true;
+
         std::map<std::string,HeliosDataType > object_data_types;
         std::map<std::string, std::vector<int> > object_data_int;
         std::map<std::string, std::vector<uint> > object_data_uint;
@@ -565,6 +586,7 @@ namespace helios {
         //! Set the number of tile sub-patch divisions
         /**
          * \param[in] "subdiv" Number of subdivisions in x- and y-directions.
+         * \note This will delete all prior child primitives and add new UUIDs
          */
         void setSubdivisionCount( const helios::int2 &subdiv );
 
@@ -3291,7 +3313,12 @@ namespace helios {
         */
         void clearObjectData( const std::vector<uint>& objIDs, const char* label );
 
-
+        //! Function to query whether all object primitives are in tact
+        /**
+         * \param[in] "objID" Object ID for object to be queried.
+         * \return False if any primitives have been deleted from the object since creation; True otherwise.
+         */
+        bool areObjectPrimitivesComplete( uint objID ) const;
 
         //-------- Global Data Functions ---------- //
 

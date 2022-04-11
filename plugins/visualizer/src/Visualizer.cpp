@@ -2832,9 +2832,13 @@ void Visualizer::buildContextGeometry_private(){
 
         uint UUID = contextPrimitiveIDs.at(p);
 
-        std::string texture_file = context->getPrimitiveTextureFile(UUID);
+        if( context->doesPrimitiveExist(UUID) ) {
 
-        UUID_texture[texture_file].push_back( UUID );
+            std::string texture_file = context->getPrimitiveTextureFile(UUID);
+
+            UUID_texture[texture_file].push_back(UUID);
+
+        }
 
     }
 

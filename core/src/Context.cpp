@@ -3715,22 +3715,13 @@ void Context::deletePrimitive(uint UUID ){
 
     Primitive* prim = primitives.at(UUID);
 
-//    if( prim->getParentObjectID()!=0 ){//primitive belongs to an object
-//
-//        uint ObjID = prim->getParentObjectID();
-//        if( doesObjectExist(ObjID) ) {
-//
-//            CompoundObject *obj = objects.at(ObjID);
-//
-//            setPrimitiveParentObjectID(obj->getPrimitiveUUIDs(),0);
-//
-//            delete obj;
-//            objects.erase(ObjID);
-//
-//            std::cout << "Dismantling compound object with ID = " << ObjID << " because one of its child primitives was deleted." << std::endl;
-//
-//        }
-//    }
+    if( prim->getParentObjectID()!=0 ){//primitive belongs to an object
+
+        uint ObjID = prim->getParentObjectID();
+        if( doesObjectExist(ObjID) ) {
+            objects.at(ObjID)->deleteChildPrimitive(UUID);
+        }
+    }
 
     delete prim;
     primitives.erase(UUID);
@@ -4687,6 +4678,25 @@ void CompoundObject::setPrimitiveUUIDs( const std::vector<uint> &a_UUIDs ){
     UUIDs = a_UUIDs;
 }
 
+void CompoundObject::deleteChildPrimitive( uint UUID ){
+    auto it = find( UUIDs.begin(), UUIDs.end(), UUID );
+    if( it!=UUIDs.end() ){
+        std::iter_swap(it,UUIDs.end()-1);
+        UUIDs.pop_back();
+        primitivesarecomplete=false;
+    }
+}
+
+void CompoundObject::deleteChildPrimitive( const std::vector<uint> &a_UUIDs ){
+    for( uint UUID : a_UUIDs ){
+        deleteChildPrimitive(UUID);
+    }
+}
+
+bool CompoundObject::arePrimitivesComplete() const{
+    return primitivesarecomplete;
+}
+
 void CompoundObject::setObjectData( const char* label, const int& data ){
     std::vector<int> vec{data};
     object_data_int[label] = vec;
@@ -5315,6 +5325,10 @@ bool CompoundObject::doesObjectDataExist( const char* label ) const{
         return true;
     }
 
+}
+
+bool Context::areObjectPrimitivesComplete( uint objID ) const{
+   return getObjectPointer(objID)->arePrimitivesComplete();
 }
 
 std::vector<std::string> CompoundObject::listObjectData() const{
@@ -9917,6 +9931,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         throw( std::runtime_error("ERROR (loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags."));
     }
 
+    //if primitives are added that belong to an object, store there UUIDs here so that we can make sure their UUIDs are consistent
+    std::map<uint,std::vector<uint> > object_prim_UUIDs;
+
     //-------------- TIME/DATE ---------------//
 
     for (pugi::xml_node p = helios.child("date"); p; p = p.next_sibling("date")){
@@ -9957,6 +9974,14 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     //-------------- PATCHES ---------------//
     for (pugi::xml_node p = helios.child("patch"); p; p = p.next_sibling("patch")){
+
+        // * Patch Object ID * //
+        uint objID = 0;
+        pugi::xml_node objID_node = p.child("objID");
+        std::string oid = deblank(objID_node.child_value());
+        if( !oid.empty() ){
+            objID = std::stoi( oid );
+        }
 
         // * Patch Transformation Matrix * //
         float transform[16];
@@ -10040,44 +10065,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         }
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
 
+        if( objID>0 ) {
+            object_prim_UUIDs[objID].push_back(ID);
+        }
+
         UUID.push_back(ID);
-
-        //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv//
-        //This is for backward compatability (<v0.5.3)//
-        //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv//
-
-        // * Patch Centers * //
-        vec3 center;
-        pugi::xml_node center_node = p.child("center");
-
-        const char* center_str = center_node.child_value();
-        if( strlen(center_str)!=0 ){
-            center=string2vec3(center_str);
-            getPatchPointer_private(ID)->translate(center);
-        }
-
-        // * Patch Sizes * //
-        vec2 size;
-        pugi::xml_node size_node = p.child("size");
-
-        const char* size_str = size_node.child_value();
-        if( strlen(size_str)!=0 ){
-            size=string2vec2(size_str);
-            getPatchPointer_private(ID)->scale(make_vec3(size.x,size.y,1));
-        }
-
-        // * Patch Rotations * //
-        SphericalCoord rotation;
-        pugi::xml_node rotation_node = p.child("rotation");
-
-        const char* rotation_str = rotation_node.child_value();
-        if( strlen(rotation_str)!=0 ){
-            vec2 rot = string2vec2(rotation_str);
-            getPatchPointer_private(ID)->rotate(rot.x,"y");
-            getPatchPointer_private(ID)->rotate(rot.y,"z");
-        }
-
-        //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
 
         // * Primitive Data * //
 
@@ -10089,6 +10081,14 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     //looping over any triangles specified in XML file
     for (pugi::xml_node tri = helios.child("triangle"); tri; tri = tri.next_sibling("triangle")){
+
+        // * Triangle Object ID * //
+        uint objID = 0;
+        pugi::xml_node objID_node = tri.child("objID");
+        std::string oid = deblank(objID_node.child_value());
+        if( !oid.empty() ){
+            objID = std::stoi( oid );
+        }
 
         // * Triangle Transformation Matrix * //
         float transform[16];
@@ -10174,6 +10174,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         }
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
 
+        if( objID>0 ) {
+            object_prim_UUIDs[objID].push_back(ID);
+        }
+
         UUID.push_back(ID);
 
         // * Primitive Data * //
@@ -10184,6 +10188,14 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     //-------------- VOXELS ---------------//
     for (pugi::xml_node p = helios.child("voxel"); p; p = p.next_sibling("voxel")){
+
+        // * Voxel Object ID * //
+        uint objID = 0;
+        pugi::xml_node objID_node = p.child("objID");
+        std::string oid = deblank(objID_node.child_value());
+        if( !oid.empty() ){
+            objID = std::stoi( oid );
+        }
 
         // * Voxel Transformation Matrix * //
         float transform[16];
@@ -10223,44 +10235,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         ID = addVoxel( make_vec3(0,0,0), make_vec3(0,0,0), 0, color );
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
 
+        if( objID>0 ) {
+            object_prim_UUIDs[objID].push_back(ID);
+        }
+
         UUID.push_back(ID);
-
-        //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv//
-        //This is for backward compatability (<v0.5.3)//
-        //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv//
-
-        // * Voxel Centers * //
-        vec3 center;
-        pugi::xml_node center_node = p.child("center");
-
-        const char* center_str = center_node.child_value();
-        if( strlen(center_str)!=0 ){
-            center=string2vec3(center_str);
-            getVoxelPointer_private(ID)->translate(center);
-        }
-
-        // * Voxel Sizes * //
-        vec3 size;
-        pugi::xml_node size_node = p.child("size");
-
-        const char* size_str = size_node.child_value();
-        if( strlen(size_str)!=0 ){
-            size=string2vec3(size_str);
-            getVoxelPointer_private(ID)->translate(size);
-        }
-
-        // * Voxel Rotation * //
-        float rotation;
-        pugi::xml_node rotation_node = p.child("rotation");
-
-        const char* rotation_str = rotation_node.child_value();
-        if( strlen(rotation_str)!=0 ){
-//            rotation = std::stof(rotation_str);
-            rotation = atof(rotation_str);
-            getVoxelPointer_private(ID)->rotate(rotation,"z");
-        }
-
-        //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
 
         // * Primitive Data * //
 
@@ -10272,6 +10251,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     //-------------- TILES ---------------//
     for (pugi::xml_node p = helios.child("tile"); p; p = p.next_sibling("tile")) {
+
+        // * Tile Object ID * //
+        pugi::xml_node objID_node = p.child("objID");
+        std::string oid = deblank(objID_node.child_value());
+        uint objID = std::stoi( oid );
 
         // * Tile Transformation Matrix * //
         float transform[16];
@@ -10367,6 +10351,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             ID = addTileObject(patch.getCenter(), patch.getSize(), cart2sphere(patch.getNormal()), subdiv, texture_file.c_str());
         }
 
+        deletePrimitive(getObjectPrimitiveUUIDs(ID)); // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives.
+        assert(object_prim_UUIDs.find(objID) != object_prim_UUIDs.end());
+        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+
         // * Tile Sub-Patch Data * //
 
         loadOsubPData(p,ID);
@@ -10381,6 +10369,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     //-------------- SPHERES ---------------//
     for (pugi::xml_node p = helios.child("sphere"); p; p = p.next_sibling("sphere")) {
+
+        // * Sphere Object ID * //
+        pugi::xml_node objID_node = p.child("objID");
+        std::string oid = deblank(objID_node.child_value());
+        uint objID = std::stoi( oid );
 
         // * Sphere Transformation Matrix * //
         float transform[16];
@@ -10451,6 +10444,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             ID = addSphereObject( subdiv, sphere.getCenter(), sphere.getRadius(), texture_file.c_str());
         }
 
+        deletePrimitive(getObjectPrimitiveUUIDs(ID));
+        assert(object_prim_UUIDs.find(objID) != object_prim_UUIDs.end());
+        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+
         // * Sphere Sub-Triangle Data * //
 
         loadOsubPData(p,ID);
@@ -10463,6 +10460,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     //-------------- TUBES ---------------//
     for (pugi::xml_node p = helios.child("tube"); p; p = p.next_sibling("tube")) {
+
+        // * Tube Object ID * //
+        pugi::xml_node objID_node = p.child("objID");
+        std::string oid = deblank(objID_node.child_value());
+        uint objID = std::stoi( oid );
 
         // * Tube Transformation Matrix * //
         float transform[16];
@@ -10572,6 +10574,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
         getObjectPointer(ID)->setTransformationMatrix(transform);
 
+        deletePrimitive(getObjectPrimitiveUUIDs(ID));
+        assert(object_prim_UUIDs.find(objID) != object_prim_UUIDs.end());
+        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+
         // * Tube Sub-Triangle Data * //
 
         loadOsubPData(p,ID);
@@ -10584,6 +10590,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     //-------------- BOXES ---------------//
     for (pugi::xml_node p = helios.child("box"); p; p = p.next_sibling("box")) {
+
+        // * Box Object ID * //
+        pugi::xml_node objID_node = p.child("objID");
+        std::string oid = deblank(objID_node.child_value());
+        uint objID = std::stoi( oid );
 
         // * Box Transformation Matrix * //
         float transform[16];
@@ -10654,6 +10665,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             ID = addBoxObject( box.getCenter(), box.getSize(), subdiv, texture_file.c_str());
         }
 
+        deletePrimitive(getObjectPrimitiveUUIDs(ID));
+        assert(object_prim_UUIDs.find(objID)!=object_prim_UUIDs.end());
+        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+
         // * Box Sub-Patch Data * //
 
         loadOsubPData(p,ID);
@@ -10666,6 +10681,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     //-------------- DISKS ---------------//
     for (pugi::xml_node p = helios.child("disk"); p; p = p.next_sibling("disk")) {
+
+        // * Disk Object ID * //
+        pugi::xml_node objID_node = p.child("objID");
+        std::string oid = deblank(objID_node.child_value());
+        uint objID = std::stoi( oid );
 
         // * Disk Transformation Matrix * //
         float transform[16];
@@ -10736,6 +10756,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize(), nullrotation, texture_file.c_str());
         }
 
+        deletePrimitive(getObjectPrimitiveUUIDs(ID));
+        assert(object_prim_UUIDs.find(objID)!=object_prim_UUIDs.end());
+        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+
         // * Disk Sub-Triangle Data * //
 
         loadOsubPData(p,ID);
@@ -10748,6 +10772,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     //-------------- CONES ---------------//
     for (pugi::xml_node p = helios.child("cone"); p; p = p.next_sibling("cone")) {
+
+        // * Cone Object ID * //
+        pugi::xml_node objID_node = p.child("objID");
+        std::string oid = deblank(objID_node.child_value());
+        uint objID = std::stoi( oid );
 
         // * Cone Transformation Matrix * //
         float transform[16];
@@ -10856,6 +10885,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         }
 
         getObjectPointer(ID)->setTransformationMatrix(transform);
+
+        deletePrimitive(getObjectPrimitiveUUIDs(ID));
+        assert(object_prim_UUIDs.find(objID)!=object_prim_UUIDs.end());
+        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
 
         // * Tube Sub-Triangle Data * //
 
@@ -11491,10 +11524,7 @@ void Context::writeXML( const char* filename, bool quiet ) const{
 
         Primitive* prim = getPrimitivePointer_private(p);
 
-        //skip primitives that belong to objects
-        if( prim->getParentObjectID()!=0 ){
-            continue;
-        }
+        uint parent_objID = prim->getParentObjectID();
 
         RGBAcolor color = prim->getColorRGBA();
 
@@ -11511,6 +11541,11 @@ void Context::writeXML( const char* filename, bool quiet ) const{
         }
 
         outfile << "\t<UUID>" << p << "</UUID>" << std::endl;
+
+        if( parent_objID>0 ){
+            outfile << "\t<objID>" << parent_objID << "</objID>" << std::endl;
+        }
+
         outfile << "\t<color>" << color.r << " " << color.g << " " << color.b << " " << color.a << "</color>" << std::endl;
         if( prim->hasTexture() ){
             outfile << "\t<texture>" << texture_file << "</texture>" << std::endl;
@@ -11602,6 +11637,8 @@ void Context::writeXML( const char* filename, bool quiet ) const{
 
         std::vector<std::string> odata = obj->listObjectData();
 
+//        std::vector<uint> prim_UUIDs = obj->getPrimitiveUUIDs();
+
         if( obj->getObjectType()==OBJECT_TYPE_TILE ){
             outfile << "   <tile>" << std::endl;
         }else if( obj->getObjectType()==OBJECT_TYPE_BOX ){
@@ -11625,6 +11662,12 @@ void Context::writeXML( const char* filename, bool quiet ) const{
         if( obj->hasTexture() ){
             outfile << "\t<texture>" << texture_file << "</texture>" << std::endl;
         }
+
+//        outfile << "\t<UUIDs>" << std::endl;
+//        for( uint UUID : prim_UUIDs ){
+//            outfile << "\t\t" << UUID << std::endl;
+//        }
+//        outfile << "\t</UUIDs>" << std::endl;
 
         if( !odata.empty() ){
             writeDataToXMLstream( "object", odata, obj, outfile );
@@ -12728,8 +12771,7 @@ void Context::writeOBJ( const char* filename ) const{
 
         if (type == PRIMITIVE_TYPE_TRIANGLE) {
 
-            faces.push_back(
-                    make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
+            faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
             colors.push_back(C);
             for (int i = 0; i < 3; i++) {
                 verts.push_back(vertices.at(i));
@@ -12741,7 +12783,7 @@ void Context::writeOBJ( const char* filename ) const{
                 uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
                 texture_list.push_back(getTrianglePointer_private(p)->getTextureFile());
                 for (int i = 0; i < 3; i++) {
-                    uv.push_back( make_vec2(1-uv_v.at(i).x,uv_v.at(i).y));
+                    uv.push_back( uv_v.at(i) );
                     uv_count++;
                 }
             } else {
@@ -12750,10 +12792,8 @@ void Context::writeOBJ( const char* filename ) const{
             }
 
         } else if (type == PRIMITIVE_TYPE_PATCH) {
-            faces.push_back(
-                    make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
-            faces.push_back(
-                    make_int3( (int)vertex_count, (int)vertex_count + 2, (int)vertex_count + 3));
+            faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
+            faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 2, (int)vertex_count + 3));
             colors.push_back(C);
             colors.push_back(C);
             for (int i = 0; i < 4; i++) {
@@ -12771,16 +12811,14 @@ void Context::writeOBJ( const char* filename ) const{
                 uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
                 uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 2, (int)uv_count + 3));
                 if (uv_v.empty()) {  //default (u,v)
-                    uv.resize(4);
-                    uv[0] = make_vec2(0, 1);
-                    uv[1] = make_vec2(1, 1);
-                    uv[2] = make_vec2(1, 0);
-                    uv[3] = make_vec2(0, 0);
+                    uv.push_back( make_vec2(0, 1) );
+                    uv.push_back( make_vec2(1, 1) );
+                    uv.push_back( make_vec2(1, 0) );
+                    uv.push_back( make_vec2(0, 0) );
                     uv_count += 4;
                 } else {  //custom (u,v)
-                    uv.resize(4);
                     for (int i = 0; i < 4; i++) {
-                        uv[i] = uv_v.at(i);
+                        uv.push_back( uv_v.at(i) );
                         uv_count++;
                     }
                 }
@@ -12798,8 +12836,7 @@ void Context::writeOBJ( const char* filename ) const{
     assert(colors.size() == faces.size());
 
     for (auto & vert : verts) {
-        file << "v " << vert.x << " " << vert.y << " "
-             << vert.z << std::endl;
+        file << "v " << vert.x << " " << vert.y << " " << vert.z << std::endl;
     }
 
     for (auto & v : uv) {

@@ -58,6 +58,8 @@ var searchData=
   ['alpha',['alpha',['../struct_soil_properties.html#a414e4c3e1a35b7b203d5993b43c2c511',1,'SoilProperties']]],
   ['approxsame',['approxSame',['../class_voxel_intersection.html#a7b67a822c84c1086e3d0a8e05114c4bc',1,'VoxelIntersection::approxSame(float a, float b, float absTol, float relTol)'],['../class_voxel_intersection.html#af78fea330c0c2e38e3a02db732ed7dd7',1,'VoxelIntersection::approxSame(helios::vec3 a, helios::vec3 b, float absTol)']]],
   ['area',['area',['../struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407',1,'PerRayData']]],
+  ['areobjectprimitivescomplete',['areObjectPrimitivesComplete',['../classhelios_1_1_context.html#ad1ad7d600c2d436ae48d218c1aa19668',1,'helios::Context']]],
+  ['areprimitivescomplete',['arePrimitivesComplete',['../classhelios_1_1_compound_object.html#a74e4a36175853a8e14153678c035accb',1,'helios::CompoundObject']]],
   ['asin_5fsafe',['asin_safe',['../global_8h.html#ac400d6d37ff2494ec592a9f0a17ee9ab',1,'helios']]],
   ['atan2_5f2pi',['atan2_2pi',['../group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54',1,'helios']]],
   ['azimuth',['azimuth',['../structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59',1,'helios::SphericalCoord']]]

@@ -50,6 +50,8 @@ var searchData=
   ['aeriallidarcloud',['AerialLiDARcloud',['../class_aerial_li_d_a_rcloud.html#acbcca37e844dc4e5e72c703c619d8962',1,'AerialLiDARcloud']]],
   ['aerialscanmetadata',['AerialScanMetadata',['../struct_aerial_scan_metadata.html#a7335ab6e76b88c50520e3fd205d4c575',1,'AerialScanMetadata']]],
   ['approxsame',['approxSame',['../class_voxel_intersection.html#a7b67a822c84c1086e3d0a8e05114c4bc',1,'VoxelIntersection::approxSame(float a, float b, float absTol, float relTol)'],['../class_voxel_intersection.html#af78fea330c0c2e38e3a02db732ed7dd7',1,'VoxelIntersection::approxSame(helios::vec3 a, helios::vec3 b, float absTol)']]],
+  ['areobjectprimitivescomplete',['areObjectPrimitivesComplete',['../classhelios_1_1_context.html#ad1ad7d600c2d436ae48d218c1aa19668',1,'helios::Context']]],
+  ['areprimitivescomplete',['arePrimitivesComplete',['../classhelios_1_1_compound_object.html#a74e4a36175853a8e14153678c035accb',1,'helios::CompoundObject']]],
   ['asin_5fsafe',['asin_safe',['../global_8h.html#ac400d6d37ff2494ec592a9f0a17ee9ab',1,'helios']]],
   ['atan2_5f2pi',['atan2_2pi',['../group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54',1,'helios']]]
 ];
