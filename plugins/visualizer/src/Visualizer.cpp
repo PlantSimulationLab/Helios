@@ -3230,6 +3230,42 @@ void Visualizer::colorContextPrimitivesByObjectData( const char* data_name, cons
     }
 }
 
+void Visualizer::colorContextPrimitivesRandomly(const std::vector<uint>& UUIDs ){
+    
+    for( uint UUID : UUIDs ){
+        float rc = randu();
+        context->setPrimitiveData(UUID, "random_color", rc);
+    }
+    
+    colorPrimitivesByData = "random_color";
+    colorPrimitivesByObjectData = "";
+    for( uint UUID : UUIDs ){
+        colorPrimitives_UUIDs[UUID] = UUID;
+    }
+    if( !colorPrimitives_objIDs.empty() ){
+        colorPrimitives_objIDs.clear();
+    }
+}
+
+void Visualizer::colorContextPrimitivesRandomly(){
+    
+    std::vector<uint> all_UUIDs = context->getAllUUIDs(); 
+    for( uint UUID : all_UUIDs ){
+        float rc = randu();
+        context->setPrimitiveData(UUID, "random_color", rc);
+    }
+    
+    colorPrimitivesByData = "random_color";
+    colorPrimitivesByObjectData = "";
+    if( !colorPrimitives_UUIDs.empty() ){
+        colorPrimitives_UUIDs.clear();
+    }
+    if( !colorPrimitives_objIDs.empty() ){
+        colorPrimitives_objIDs.clear();
+    }
+    
+}
+
 std::vector<helios::vec3> Visualizer::plotInteractive(){
 
     if( message_flag ){
