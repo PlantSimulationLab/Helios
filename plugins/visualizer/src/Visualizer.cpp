@@ -3232,6 +3232,10 @@ void Visualizer::colorContextPrimitivesByObjectData( const char* data_name, cons
 
 void Visualizer::colorContextPrimitivesRandomly(const std::vector<uint>& UUIDs ){
     
+    disableColorbar();
+    if( !colorPrimitives_UUIDs.empty() ){
+        colorPrimitives_UUIDs.clear();
+    }
     for( uint UUID : UUIDs ){
         float rc = randu();
         context->setPrimitiveData(UUID, "random_color", rc);
@@ -3249,6 +3253,8 @@ void Visualizer::colorContextPrimitivesRandomly(const std::vector<uint>& UUIDs )
 
 void Visualizer::colorContextPrimitivesRandomly(){
     
+    disableColorbar();
+    
     std::vector<uint> all_UUIDs = context->getAllUUIDs(); 
     for( uint UUID : all_UUIDs ){
         float rc = randu();
@@ -3264,7 +3270,7 @@ void Visualizer::colorContextPrimitivesRandomly(){
         colorPrimitives_objIDs.clear();
     }
     
-}
+} 
 
 std::vector<helios::vec3> Visualizer::plotInteractive(){
 
