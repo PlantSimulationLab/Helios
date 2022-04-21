@@ -3732,12 +3732,14 @@ namespace helios {
         //! Get the area ratio of a tile object (total object area / sub-patch area)
         /**
          * \param[in] "ObjID" Identifier for Tile Compound Object.
+         * \note If object primitives are incomplete, area ratio is calculated as the area of non-missing subpatches divided by the area of an individual subpatch 
          */
         float getTileObjectAreaRatio(const uint &ObjectID) const;
-
-        //! Get the area ratio of a multiplle tile objects (total object area / sub-patch area)
+        
+        //! Get the area ratio of multiple tile objects (total object area / sub-patch area)
         /**
-         * \param[in] "ObjID" Vector of dentifiers for Tile Compound Object.
+         * \param[in] "ObjID" Vector of identifiers for Tile Compound Object.
+         * \note If object primitives are incomplete, area ratio is calculated as the area of non-missing subpatches divided by the area of an individual subpatch 
          */
         std::vector<float> getTileObjectAreaRatio(const std::vector<uint> &ObjectID) const;
 
