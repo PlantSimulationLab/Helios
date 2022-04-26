@@ -753,6 +753,17 @@ public:
   */
   void colorContextPrimitivesByObjectData( const char* data_name, const std::vector<uint>& ObjIDs );
 
+  //! Color primitives from Context with a random color
+  /** \param[in] "UUIDs" Primitive UUIDs to color randomly  
+   \note Useful for visualizing individual primitives that are part of compound objects
+   */
+  void colorContextPrimitivesRandomly(const std::vector<uint>& UUIDs );
+  
+  //! Color primitives from Context with a random color
+  /** \note Useful for visualizing individual primitives that are part of compound objects
+   */
+  void colorContextPrimitivesRandomly();
+  
   //! Make Helios logo watermark invisible
   void hideWatermark( void );
 
