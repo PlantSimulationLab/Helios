@@ -2651,7 +2651,22 @@ public:
     /** \param[in] "UUID" Universal unique identifier of primitive.
      */
     float getPrimitiveArea( uint UUID ) const;
-    
+
+    //! Get the axis-aligned bounding box for a single primitive
+    /**
+     * \param[in] "UUID" Universal unique identifier of primitive
+     * \param[out] "min_corner" (x,y,z) coordinate of the bounding box corner in the -x, -y and -z direction.
+     * \param[out] "max_corner" (x,y,z) coordinate of the bounding box corner in the +x, +y and +z direction.
+     */
+    void getPrimitiveBoundingBox( uint UUID, vec3 &min_corner, vec3 &max_corner ) const;
+
+    //! Get the axis-aligned bounding box for a group of primitives
+    /**
+     * \param[in] "UUIDs" Vector of universal unique identifiers of primitives
+     * \param[out] "min_corner" (x,y,z) coordinate of the bounding box corner in the -x, -y and -z direction.
+     * \param[out] "max_corner" (x,y,z) coordinate of the bounding box corner in the +x, +y and +z direction.
+     */
+    void getPrimitiveBoundingBox( const std::vector<uint> &UUID, vec3 &min_corner, vec3 &max_corner ) const;
     
     //! Function to return the one-sided surface area of an object
     /** \param[in] "ObjID" Identifier of the object.
@@ -2759,6 +2774,22 @@ public:
      * \param[in] "ObjID" Identifier of the object.
      */
     void useObjectTextureColor( uint ObjID );
+
+    //! Get the axis-aligned bounding box for a single object
+    /**
+     * \param[in] "ObjID" Identifier of the object.
+     * \param[out] "min_corner" (x,y,z) coordinate of the bounding box corner in the -x, -y and -z direction.
+     * \param[out] "max_corner" (x,y,z) coordinate of the bounding box corner in the +x, +y and +z direction.
+     */
+    void getObjectBoundingBox( uint ObjID, vec3 &min_corner, vec3 &max_corner ) const;
+
+    //! Get the axis-aligned bounding box for a group of objects
+    /**
+     * \param[in] "ObjIDs" Vector of object identifiers.
+     * \param[out] "min_corner" (x,y,z) coordinate of the bounding box corner in the -x, -y and -z direction.
+     * \param[out] "max_corner" (x,y,z) coordinate of the bounding box corner in the +x, +y and +z direction.
+     */
+    void getObjectBoundingBox( const std::vector<uint> &ObjID, vec3 &min_corner, vec3 &max_corner ) const;
     
     //! Prints object properties to console (useful for debugging purposes)
     /**

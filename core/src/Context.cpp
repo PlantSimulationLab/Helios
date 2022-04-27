@@ -13123,6 +13123,54 @@ float Context::getPrimitiveArea(uint UUID) const {
     return getPrimitivePointer_private(UUID)->getArea();
 }
 
+void Context::getPrimitiveBoundingBox( uint UUID, vec3 &min_corner, vec3 &max_corner ) const{
+    std::vector<uint> UUIDs{UUID};
+    getPrimitiveBoundingBox( UUIDs, min_corner, max_corner );
+}
+
+void Context::getPrimitiveBoundingBox( const std::vector<uint> &UUIDs, vec3 &min_corner, vec3 &max_corner ) const{
+
+    uint p=0;
+    for( uint UUID : UUIDs ){
+
+        if ( !doesPrimitiveExist(UUID) ){
+            throw( std::runtime_error("ERROR (getPrimitiveBoundingBox): Primitive with UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+        }
+
+        const std::vector<vec3> &vertices = getPrimitiveVertices(UUID);
+
+        if( p==0 ){
+            min_corner = vertices.front();
+            max_corner = min_corner;
+            p++;
+            continue;
+        }
+
+        for ( const vec3 &vert : vertices ){
+            if ( vert.x<min_corner.x ){
+                min_corner.x = vert.x;
+            }
+            if ( vert.y<min_corner.y ){
+                min_corner.y = vert.y;
+            }
+            if ( vert.z<min_corner.z ){
+                min_corner.z = vert.z;
+            }
+            if ( vert.x>max_corner.x ){
+                max_corner.x = vert.x;
+            }
+            if ( vert.y>max_corner.y ){
+                max_corner.y = vert.y;
+            }
+            if ( vert.z>max_corner.z ){
+                max_corner.z = vert.z;
+            }
+        }
+
+        p++;
+    }
+}
+
 helios::vec3 Context::getPrimitiveNormal(uint UUID) const {
     return getPrimitivePointer_private(UUID)->getNormal();
 }
@@ -13891,7 +13939,7 @@ void Context::printObjectInfo(uint ObjID) const{
                 
             }
         }else{
-            assert(false);
+                assert(false);
         }
         
     }
@@ -13979,6 +14027,61 @@ void Context::overrideObjectTextureColor(uint ObjID) {
 
 void Context::useObjectTextureColor(uint ObjID) {
     getObjectPointer_private(ObjID)->useTextureColor();
+}
+
+void Context::getObjectBoundingBox( uint ObjID, vec3 &min_corner, vec3 &max_corner ) const {
+    std::vector<uint> ObjIDs{ObjID};
+    getObjectBoundingBox(ObjIDs,min_corner,max_corner);
+}
+
+void Context::getObjectBoundingBox( const std::vector<uint> &ObjIDs, vec3 &min_corner, vec3 &max_corner ) const{
+
+    uint o=0;
+    for( uint ObjID : ObjIDs ) {
+
+        if ( objects.find(ObjID) == objects.end()){
+            throw( std::runtime_error("ERROR (getObjectBoundingBox): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context."));
+        }
+
+        const std::vector<uint> &UUIDs = objects.at(ObjID)->getPrimitiveUUIDs();
+
+        uint p=0;
+        for (uint UUID: UUIDs) {
+
+            const std::vector<vec3> &vertices = getPrimitiveVertices(UUID);
+
+            if( p==0 && o==0 ){
+                min_corner = vertices.front();
+                max_corner = min_corner;
+                p++;
+                continue;
+            }
+
+            for (const vec3 &vert: vertices) {
+                if (vert.x < min_corner.x) {
+                    min_corner.x = vert.x;
+                }
+                if (vert.y < min_corner.y) {
+                    min_corner.y = vert.y;
+                }
+                if (vert.z < min_corner.z) {
+                    min_corner.z = vert.z;
+                }
+                if (vert.x > max_corner.x) {
+                    max_corner.x = vert.x;
+                }
+                if (vert.y > max_corner.y) {
+                    max_corner.y = vert.y;
+                }
+                if (vert.z > max_corner.z) {
+                    max_corner.z = vert.z;
+                }
+            }
+        }
+
+        o++;
+    }
+
 }
 
 std::vector<std::string> Context::listObjectData(uint ObjID) const{

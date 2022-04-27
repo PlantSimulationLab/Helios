@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['overview',['Overview',['../_overview.html',1,'']]]
+  ['making_20texture_20mask_20files_20with_20transparency_20using_20gimp_1703',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]]
 ];

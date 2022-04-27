@@ -365,6 +365,21 @@ int Context::selfTest(){
         std::cout << At << " " << area_exact << std::endl;
     }
 
+    //------- Primitive Bounding Box --------//
+
+    std::vector<uint> UUID_bbox;
+
+    UUID_bbox.push_back( context_test.addPatch( make_vec3(-1,0,0), make_vec2(0.5,0.5) ));
+    UUID_bbox.push_back( context_test.addPatch( make_vec3(1,0,0), make_vec2(0.5,0.5) ));
+
+    vec3 bboxmin_patch, bboxmax_patch;
+    context_test.getPrimitiveBoundingBox( UUID_bbox, bboxmin_patch, bboxmax_patch );
+
+    if( bboxmin_patch.x!=-1.25f || bboxmax_patch.x!=1.25 || bboxmin_patch.y!=-0.25f || bboxmax_patch.y!=0.25f || bboxmin_patch.z!=0.f || bboxmax_patch.z!=0.f ){
+        error_count++;
+        std::cerr << "failed: getPrimitiveBoundingBox(). Bounding box is incorrect." << std::endl;
+    }
+
     //------- Primitive Transformations --------//
 
     vec2 sz_0(0.5,3.f);
