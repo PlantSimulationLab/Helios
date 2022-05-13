@@ -1045,6 +1045,11 @@ int helios::JulianDay( const Date& date ){
 
 bool helios::PNGHasAlpha( const char* filename ){
 
+    std::string fn = filename;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ) {
+        throw( std::runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.") );
+    }
+
   uint Nchannels;
   
   png_structp png_ptr;
@@ -1055,7 +1060,7 @@ bool helios::PNGHasAlpha( const char* filename ){
   /* open file and test for it being a png */
   FILE *fp = fopen(filename, "rb");
   if (!fp){
-      throw(std::runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading. The file either does not exist or you do not have permission to read it."));
+      throw(std::runtime_error("ERROR (PNGHasAlpha): File " + std::string(filename) + " could not be opened for reading. The file either does not exist or you do not have permission to read it."));
   }
   fread(header, 1, 8, fp);
   
@@ -1092,6 +1097,11 @@ bool helios::PNGHasAlpha( const char* filename ){
 
 std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
 
+    std::string fn = filename;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ) {
+        throw( std::runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.") );
+    }
+
   int y;
   uint height, width;
 
@@ -1118,16 +1128,16 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
   if (!png_ptr){
-      throw(std::runtime_error("ERROR (read_png_alpha): png_create_read_struct failed."));
+      throw(std::runtime_error("ERROR (readPNGAlpha): png_create_read_struct failed."));
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr){
-      throw(std::runtime_error("ERROR (read_png_alpha): png_create_info_struct failed."));
+      throw(std::runtime_error("ERROR (readPNGAlpha): png_create_info_struct failed."));
   }
   
   if (setjmp(png_jmpbuf(png_ptr))){
-      throw(std::runtime_error("ERROR (read_png_alpha): init_io failed."));
+      throw(std::runtime_error("ERROR (readPNGAlpha): init_io failed."));
   }  
 
   png_init_io(png_ptr, fp);

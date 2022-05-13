@@ -42,7 +42,7 @@ rtBuffer<int, 1> uvID;
 rtBuffer<float, 2>  transform_matrix;
 rtBuffer<unsigned int, 1> primitive_type;
 rtBuffer<float, 1> primitive_area;
-rtBuffer<bool, 1> twosided_flag;
+rtBuffer<char, 1> twosided_flag;
 rtBuffer<float, 1>   radiation_out_top;
 rtBuffer<float, 1>   radiation_out_bottom;
 
@@ -618,7 +618,7 @@ RT_PROGRAM void diffuse_raygen(){
                 rtTrace( top_object, ray, prd);
 
                 // ---- "bottom" surface launch -------
-                if( twosided_flag[objID] ){
+                if( twosided_flag[objID]==1 ){
                     //ray_origin = d_transformPoint(m,sp);
                     ray_direction = -ray_direction;
                     ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
@@ -1099,7 +1099,7 @@ RT_PROGRAM void emission_raygen_MCRT(){
     rtTrace( top_object, ray, prd);
 
     // ---- "bottom" surface launch -------
-    if( twosided_flag[UUID] ){
+    if( twosided_flag[UUID]==1 ){
         ray_origin = d_transformPoint(m,sp);
         ray = optix::make_Ray(ray_origin, -ray_direction, emission_ray_type_MCRT, 1e-4, RT_DEFAULT_MAX);
 

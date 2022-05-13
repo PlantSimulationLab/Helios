@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['boundary_2dlayer_20conductance_20model_20plugin_20documentation_1693',['Boundary-Layer Conductance Model Plugin Documentation',['../_b_l_conductance_doc.html',1,'PlugIns']]]
+  ['canopy_20generator_20plugin_20documentation',['Canopy Generator Plugin Documentation',['../_canopy_generator_doc.html',1,'PlugIns']]],
+  ['choosing_20the_20right_20cuda_20and_20optix_20version',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
+  ['converting_20polygon_20file_20formats_20to_20_2eply_20using_20blender',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]]
 ];

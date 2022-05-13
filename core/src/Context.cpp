@@ -3432,6 +3432,12 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file ){
 
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addPatch): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
+
     addTexture( texture_file );
 
     auto* patch_new = (new Patch( texture_file, textures.at(texture_file).getSolidFraction(), currentUUID ));
@@ -3461,6 +3467,12 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 }
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file, const helios::vec2& uv_center, const helios::vec2& uv_size ){
+
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addPatch): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
 
     if( size.x==0 || size.y==0 ){
         throw( std::runtime_error("ERROR (addPatch): Size of patch must be greater than 0.") );
@@ -3557,6 +3569,12 @@ uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3&
 }
 
 uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texture_file, const helios::vec2& uv0, const helios::vec2& uv1, const helios::vec2& uv2 ){
+
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addTriangle): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
 
     addTexture( texture_file );
 
@@ -4317,12 +4335,7 @@ void Context::cropDomainX(const vec2 &xbounds ){
 
         for(auto & vertex : vertices){
             if( vertex.x<xbounds.x || vertex.x>xbounds.y ){
-                uint parent_object_ID = getPrimitivePointer_private(p)->getParentObjectID();
-                if(parent_object_ID == 0) {
-                    deletePrimitive(p);
-                    break;
-                }
-                deleteObject(parent_object_ID);
+                deletePrimitive(p);
                 break;
             }
         }
@@ -4347,12 +4360,7 @@ void Context::cropDomainY(const vec2 &ybounds ){
 
         for(auto & vertex : vertices){
             if( vertex.y<ybounds.x || vertex.y>ybounds.y ){
-                uint parent_object_ID = getPrimitivePointer_private(p)->getParentObjectID();
-                if(parent_object_ID == 0) {
-                    deletePrimitive(p);
-                    break;
-                }
-                deleteObject(parent_object_ID);
+                deletePrimitive(p);
                 break;
             }
         }
@@ -4377,12 +4385,7 @@ void Context::cropDomainZ(const vec2 &zbounds ){
 
         for(auto & vertex : vertices){
             if( vertex.z<zbounds.x || vertex.z>zbounds.y ){
-                uint parent_object_ID = getPrimitivePointer_private(p)->getParentObjectID();
-                if(parent_object_ID == 0) {
-                    deletePrimitive(p);
-                    break;
-                }
-                deleteObject(parent_object_ID);
+                deletePrimitive(p);
                 break;
             }
         }
@@ -4406,14 +4409,8 @@ void Context::cropDomain(const std::vector<uint> &UUIDs, const vec2 &xbounds, co
 
         for(auto & vertex : vertices){
             if( vertex.x<xbounds.x || vertex.x>xbounds.y || vertex.y<ybounds.x || vertex.y>ybounds.y || vertex.z<zbounds.x || vertex.z>zbounds.y ){
-                uint parent_object_ID = getPrimitivePointer_private(UUID)->getParentObjectID();
-                if(parent_object_ID == 0) {
-                    deletePrimitive(UUID);
-                    delete_count++;
-                    break;
-                }
-                deleteObject(parent_object_ID);
-                delete_count ++;
+                deletePrimitive(UUID);
+                delete_count++;
                 break;
             }
         }
@@ -6991,6 +6988,12 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 
 uint Context::addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ){
 
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addTileObject): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
+
     if( size.x==0 || size.y==0 ){
         throw( std::runtime_error("ERROR (addTileObject): Size of tile must be greater than 0."));
     }
@@ -7243,6 +7246,12 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
 }
 
 uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile ){
+
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addTubeObject): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
 
     const uint node_count = nodes.size();
 
@@ -7508,6 +7517,12 @@ uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &sub
 
 uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, const char* texturefile, bool reverse_normals ){
 
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addBoxObject): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
+
     std::vector<uint> UUID;
 
     vec3 subsize;
@@ -7675,6 +7690,12 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
 }
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
+
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addDiskObject): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
 
     std::vector<uint> UUID;
     UUID.resize(Ndivs);
@@ -7848,6 +7869,12 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
 }
 
 uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const char* texturefile ){
+
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addConeObject): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
 
     std::vector<helios::vec3> nodes{node0, node1};
     std::vector<float> radii{radius0, radius1};
@@ -8027,6 +8054,12 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
 
 std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radius, const char* texturefile ){
 
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addSphere): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
+
     std::vector<uint> UUID;
 
     float theta;
@@ -8169,6 +8202,12 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 }
 
 std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ){
+
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addTile): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
 
     std::vector<uint> UUID;
 
@@ -8382,6 +8421,12 @@ std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, c
 }
 
 std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile ){
+
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addTube): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
 
     const uint node_count = nodes.size();
 
@@ -8605,6 +8650,12 @@ std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const in
 
 std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const char* texturefile, bool reverse_normals ){
 
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addBox): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
+
     std::vector<uint> UUID;
 
     vec3 subsize;
@@ -8731,6 +8782,12 @@ std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &s
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
 
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addDisk): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
+
     std::vector<uint> UUIDs;
     UUIDs.resize(Ndivs);
 
@@ -8847,6 +8904,12 @@ std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &no
 }
 
 std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const char* texturefile ){
+
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+        throw( std::runtime_error("ERROR (addCone): Texture file " + fn + " is not PNG or JPEG format.") );
+    }
 
     std::vector<helios::vec3> nodes{node0, node1};
     std::vector<float> radii{radius0, radius1};
@@ -9927,6 +9990,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         std::cout << "Loading XML file: " << filename << "..." << std::flush;
     }
 
+    std::string fn = filename;
+    if(fn.substr(fn.find_last_of(".") + 1) != "xml") {
+        throw( std::runtime_error("failed.\n File " + fn + " is not XML format.") );
+    }
+
     XMLfiles.emplace_back( filename );
 
     uint ID;
@@ -10276,7 +10344,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Tile Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
-        uint objID = std::stoi( oid );
+        uint objID = 0;
+        if( !oid.empty() ){
+            objID = std::stoi( oid );
+        }
 
         // * Tile Transformation Matrix * //
         float transform[16];
@@ -10372,9 +10443,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             ID = addTileObject(patch.getCenter(), patch.getSize(), cart2sphere(patch.getNormal()), subdiv, texture_file.c_str());
         }
 
-        deletePrimitive(getObjectPrimitiveUUIDs(ID)); // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives.
-        assert(object_prim_UUIDs.find(objID) != object_prim_UUIDs.end());
-        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
+            deletePrimitive(getObjectPrimitiveUUIDs(ID)); // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives.
+            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        }
 
         // * Tile Sub-Patch Data * //
 
@@ -10394,7 +10467,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Sphere Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
-        uint objID = std::stoi( oid );
+        uint objID = 0;
+        if( !oid.empty() ){
+            objID = std::stoi( oid );
+        }
 
         // * Sphere Transformation Matrix * //
         float transform[16];
@@ -10465,9 +10541,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             ID = addSphereObject( subdiv, sphere.getCenter(), sphere.getRadius(), texture_file.c_str());
         }
 
-        deletePrimitive(getObjectPrimitiveUUIDs(ID));
-        assert(object_prim_UUIDs.find(objID) != object_prim_UUIDs.end());
-        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
+            deletePrimitive(getObjectPrimitiveUUIDs(ID));
+            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        }
 
         // * Sphere Sub-Triangle Data * //
 
@@ -10485,7 +10563,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Tube Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
-        uint objID = std::stoi( oid );
+        uint objID = 0;
+        if( !oid.empty() ){
+            objID = std::stoi( oid );
+        }
 
         // * Tube Transformation Matrix * //
         float transform[16];
@@ -10595,9 +10676,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
         getObjectPointer(ID)->setTransformationMatrix(transform);
 
-        deletePrimitive(getObjectPrimitiveUUIDs(ID));
-        assert(object_prim_UUIDs.find(objID) != object_prim_UUIDs.end());
-        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
+            deletePrimitive(getObjectPrimitiveUUIDs(ID));
+            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        }
 
         // * Tube Sub-Triangle Data * //
 
@@ -10615,7 +10698,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Box Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
-        uint objID = std::stoi( oid );
+        uint objID = 0;
+        if( !oid.empty() ){
+            objID = std::stoi( oid );
+        }
 
         // * Box Transformation Matrix * //
         float transform[16];
@@ -10686,9 +10772,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             ID = addBoxObject( box.getCenter(), box.getSize(), subdiv, texture_file.c_str());
         }
 
-        deletePrimitive(getObjectPrimitiveUUIDs(ID));
-        assert(object_prim_UUIDs.find(objID)!=object_prim_UUIDs.end());
-        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
+            deletePrimitive(getObjectPrimitiveUUIDs(ID));
+            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        }
 
         // * Box Sub-Patch Data * //
 
@@ -10706,7 +10794,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Disk Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
-        uint objID = std::stoi( oid );
+        uint objID = 0;
+        if( !oid.empty() ){
+            objID = std::stoi( oid );
+        }
 
         // * Disk Transformation Matrix * //
         float transform[16];
@@ -10777,9 +10868,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize(), nullrotation, texture_file.c_str());
         }
 
-        deletePrimitive(getObjectPrimitiveUUIDs(ID));
-        assert(object_prim_UUIDs.find(objID)!=object_prim_UUIDs.end());
-        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
+            deletePrimitive(getObjectPrimitiveUUIDs(ID));
+            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        }
 
         // * Disk Sub-Triangle Data * //
 
@@ -10797,7 +10890,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Cone Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
-        uint objID = std::stoi( oid );
+        uint objID = 0;
+        if( !oid.empty() ){
+            objID = std::stoi( oid );
+        }
 
         // * Cone Transformation Matrix * //
         float transform[16];
@@ -10907,15 +11003,17 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
         getObjectPointer(ID)->setTransformationMatrix(transform);
 
-        deletePrimitive(getObjectPrimitiveUUIDs(ID));
-        assert(object_prim_UUIDs.find(objID)!=object_prim_UUIDs.end());
-        getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
+            deletePrimitive(getObjectPrimitiveUUIDs(ID));
+            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+        }
 
-        // * Tube Sub-Triangle Data * //
+        // * Cone Sub-Triangle Data * //
 
         loadOsubPData(p,ID);
 
-        // * tube Object Data * //
+        // * Cone Object Data * //
 
         loadOData(p,ID);
 
@@ -12195,6 +12293,11 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
 
     std::cout << "Reading PLY file " << filename << "..." << std::flush;
 
+    std::string fn = filename;
+    if( fn.substr(fn.find_last_of(".") + 1) != "ply" ) {
+        throw( std::runtime_error("ERROR (loadPLY): File " + fn + " is not PLY format.") );
+    }
+
     std::string line, prop;
 
     uint vertexCount=0, faceCount=0;
@@ -12466,6 +12569,11 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, flo
 std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis ){
 
     std::cout << "Reading OBJ file " << filename << "..." << std::flush;
+
+    std::string fn = filename;
+    if( fn.substr(fn.find_last_of(".") + 1) != "obj" ) {
+        throw( std::runtime_error("ERROR (loadOBJ): File " + fn + " is not OBJ format.") );
+    }
 
     if( strcmp(upaxis,"XUP") != 0 && strcmp(upaxis,"YUP") != 0 && strcmp(upaxis,"ZUP") != 0 ){
         throw(std::runtime_error("ERROR (loadOBJ): Up axis of " + std::string(upaxis) + " is not valid.  Should be one of 'XUP', 'YUP', or 'ZUP'."));

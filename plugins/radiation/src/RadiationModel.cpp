@@ -1557,7 +1557,59 @@ int RadiationModel::selfTest( void ){
   }else{
     std::cout << "passed." << std::endl;
   }
-  
+
+    // -------- Test #15: "sensor" primitives ---------- //
+
+    std::cout << "Test #15: ""sensor"" primitives..." << std::flush;
+
+    bool failure_15 = false;
+
+    uint Ndiffuse_15 = 10000;
+
+    Context context_15;
+
+    uint UUID_15_sensor = context_15.addPatch( make_vec3(0,0,0.2), make_vec2(1,1) );
+    uint UUID_15_lower = context_15.addPatch( make_vec3(0,0,0), make_vec2(1,1) );
+
+    context_15.setPrimitiveData( UUID_15_lower, "twosided_flag", uint(0) );
+    context_15.setPrimitiveData( UUID_15_sensor, "twosided_flag", uint(2) );
+
+    RadiationModel radiation_15(&context_15);
+    radiation_15.disableMessages();
+
+    radiation_15.addRadiationBand( "diffuse" );
+    radiation_15.disableEmission( "diffuse" );
+    radiation_15.setDiffuseRayCount( "diffuse", Ndiffuse_15 );
+    radiation_15.setDiffuseRadiationFlux( "diffuse", 1.f );
+
+    radiation_15.addRadiationBand( "direct" );
+    uint SunSource_15 = radiation_15.addCollimatedRadiationSource( make_vec3(0,0,1) );
+    radiation_15.disableEmission( "direct" );
+    radiation_15.setDiffuseRayCount( "direct", Ndiffuse_15 );
+    radiation_15.setSourceFlux( SunSource_15, "direct", 1.f );
+
+    radiation_15.updateGeometry();
+
+    radiation_15.runBand( "direct" );
+    radiation_15.runBand( "diffuse" );
+
+    float Rdiff_lower, Rdiff_sensor, Rdir_lower, Rdir_sensor;
+    context_15.getPrimitiveData( UUID_15_lower, "radiation_flux_diffuse", Rdiff_lower );
+    context_15.getPrimitiveData( UUID_15_sensor, "radiation_flux_diffuse", Rdiff_sensor );
+    context_15.getPrimitiveData( UUID_15_lower, "radiation_flux_direct", Rdir_lower );
+    context_15.getPrimitiveData( UUID_15_sensor, "radiation_flux_direct", Rdir_sensor );
+
+    if( fabsf(Rdiff_lower-1.f)>error_threshold || fabsf(Rdir_lower-1.f)>error_threshold || fabsf(Rdiff_sensor-1.f)>error_threshold || fabsf(Rdir_sensor-1.f)>error_threshold ){
+        failure_15 = true;
+    }
+
+    if( failure_15 ){
+        std::cout << "failed." << std::endl;
+        failure=true;
+    }else{
+        std::cout << "passed." << std::endl;
+    }
+
 
   // ------------- //
   
@@ -2450,7 +2502,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   std::vector<uint> voxel_UUID;
 
   //twosided flag buffer - size=Nobjects
-  std::vector<bool> twosided_flag_global;
+  std::vector<char> twosided_flag_global;
   
   //primitive geometry specification buffers
   std::vector<std::vector<optix::float3> > patch_vertices;
@@ -2514,7 +2566,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   ptype_global.resize(Nobjects);
   twosided_flag_global.resize(Nobjects);//initialize to be two-sided
   for( size_t i=0; i<Nobjects; i++ ){
-    twosided_flag_global.at(i) = true;
+    twosided_flag_global.at(i) = 1;
   }
   
   //Populate attributes for each primitive in the pointer vector 'primitives'
@@ -2535,11 +2587,12 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
     if( context->doesPrimitiveDataExist(p,"twosided_flag") ){
       uint flag;
       context->getPrimitiveData(p,"twosided_flag",flag);
-      if( flag ){
-	twosided_flag_global.at(u) = true;
-      }else{
-	twosided_flag_global.at(u) = false;
-      }
+//      if( flag ){
+//	twosided_flag_global.at(u) = true;
+//      }else{
+//	twosided_flag_global.at(u) = false;
+//      }
+        twosided_flag_global.at(u) = char(flag);
     }
 
     uint ID = context->getPrimitiveParentObjectID(p);
@@ -2796,7 +2849,7 @@ void RadiationModel::updateGeometry( const std::vector<uint> UUIDs ){
   initializeBuffer2Df( transform_matrix_RTbuffer, m_global );
   initializeBuffer1Dui( primitive_type_RTbuffer, ptype_global );
   initializeBuffer1Df( primitive_area_RTbuffer, area_global );
-  initializeBuffer1Dbool( twosided_flag_RTbuffer, twosided_flag_global );
+  initializeBuffer1Dchar( twosided_flag_RTbuffer, twosided_flag_global );
   initializeBuffer2Dfloat3( patch_vertices_RTbuffer, patch_vertices );
   initializeBuffer2Dfloat3( triangle_vertices_RTbuffer, triangle_vertices );
   initializeBuffer2Dfloat3( tile_vertices_RTbuffer, tile_vertices );
@@ -2908,8 +2961,19 @@ void RadiationModel::updateRadiativeProperties( const char* label ){
     helios::PrimitiveType type = context->getPrimitiveType(UUID);
     
     isbandpropertyinitialized.at(band) = true;
-    
-    if( type==helios::PRIMITIVE_TYPE_VOXEL ){
+
+      uint flag = 1;
+      if( context->doesPrimitiveDataExist(UUID,"twosided_flag") ) { //non-interacting "sensor" primitives
+          context->getPrimitiveData(UUID, "twosided_flag", flag);
+      }
+
+      if (flag == 2) { //"sensor" primitive
+
+          eps[u] = 1;
+          rho[u] = 0;
+          tau[u] = 0;
+
+      }else if( type==helios::PRIMITIVE_TYPE_VOXEL ){
 
       // NOTE: This is a little confusing - for volumes of participating media, we're going to use the "rho" variable to store the absorption coefficient and use the "tau" variable to store the scattering coefficient.  This is to save on memory so we don't have to define separate arrays.
 
@@ -3215,42 +3279,45 @@ void RadiationModel::runBand( const char* label ){
   	zeroBuffer1D( scatter_buff_top_RTbuffer, Nprimitives );
   	zeroBuffer1D( scatter_buff_bottom_RTbuffer, Nprimitives );
       }
-      
-      if( emission_flag[band] ){
-  	// Update primitive outgoing emission
-  	float eps, temperature;
-  	char prop[100];
-  	sprintf(prop,"emissivity_%s",label);
-  	for( size_t u=0; u<Nprimitives; u++ ){
-	  uint p = context_UUIDs.at(u);
-	  if( context->doesPrimitiveDataExist(p,prop) ){
-	    context->getPrimitiveData(p,prop,eps);
-	  }else{
-	    eps = eps_default;
-	  }
-	  if( scatteringDepth.at(band)==0 && eps!=1.f ){
-	    eps = 1.f;
-	  }
-	  if( context->doesPrimitiveDataExist(p,"temperature") ){
-	    context->getPrimitiveData(p,"temperature",temperature);
-	    if( temperature<=0 ){
-	      temperature = temperature_default;
-	    }
-	  }else{
-	    temperature = temperature_default;
-	  }
-  	  flux_top.at(u) += 5.67e-8*eps*pow(temperature,4);
-  	  if( !context->doesPrimitiveDataExist(p,"twosided_flag") ){
-	    flux_bottom.at(u) += flux_top.at(u);
-	  }else{
-  	    uint flag;
-  	    context->getPrimitiveData(p,"twosided_flag",flag);	    
-  	    if( flag ){
-  	      flux_bottom.at(u) += flux_top.at(u);
-  	    }
-  	  }
-  	}
-      }
+
+        if( emission_flag[band] ){
+            // Update primitive outgoing emission
+            float eps, temperature;
+            char prop[100];
+            sprintf(prop,"emissivity_%s",label);
+            for( size_t u=0; u<Nprimitives; u++ ){
+                uint p = context_UUIDs.at(u);
+                if( context->doesPrimitiveDataExist(p,prop) ){
+                    context->getPrimitiveData(p,prop,eps);
+                }else{
+                    eps = eps_default;
+                }
+                if( scatteringDepth.at(band)==0 && eps!=1.f ){
+                    eps = 1.f;
+                }
+                if( context->doesPrimitiveDataExist(p,"temperature") ){
+                    context->getPrimitiveData(p,"temperature",temperature);
+                    if( temperature<=0 ){
+                        temperature = temperature_default;
+                    }
+                }else{
+                    temperature = temperature_default;
+                }
+                flux_top.at(u) += 5.67e-8*eps*pow(temperature,4);
+                if( !context->doesPrimitiveDataExist(p,"twosided_flag") ){
+                    flux_bottom.at(u) += flux_top.at(u);
+                }else{
+                    uint flag;
+                    context->getPrimitiveData(p,"twosided_flag",flag);
+                    if( flag==1 ){
+                        flux_bottom.at(u) += flux_top.at(u);
+                    }else if( flag==2 ){ //"sensor" primitive
+                        flux_top.at(u) = 0;
+                        flux_bottom.at(u) = 0;
+                    }
+                }
+            }
+        }
       
       initializeBuffer1Df( radiation_out_top_RTbuffer, flux_top );
       initializeBuffer1Df( radiation_out_bottom_RTbuffer, flux_bottom );
@@ -3477,7 +3544,7 @@ void RadiationModel::runBand_MCRT( const char* label ){
     /* Set Diffuse Flux Variable */
     RT_CHECK_ERROR( rtVariableSet1f( diffuseFlux_RTvariable, diffuseFlux.at(band) ));
 
-    /* Set Diffuse Angluar Distribution Variables */
+    /* Set Diffuse Angular Distribution Variables */
     RT_CHECK_ERROR( rtVariableSet1f( diffuse_extinction_RTvariable, diffuseExtinction.at(band) ));
       RT_CHECK_ERROR( rtVariableSet3f( diffuse_peak_dir_RTvariable, diffusePeakDir.at(band).x, diffusePeakDir.at(band).y, diffusePeakDir.at(band).z  ));
       RT_CHECK_ERROR( rtVariableSet1f( diffuse_dist_norm_RTvariable, diffuseDistNorm.at(band) ));
@@ -3508,34 +3575,37 @@ void RadiationModel::runBand_MCRT( const char* label ){
     flux_bottom.resize(Nprimitives,0.f);
     
     // Update primitive outgoing emission
-    float eps, temperature;
-    char prop[100];
-    sprintf(prop,"emissivity_%s",label);
-    for( size_t u=0; u<Nprimitives; u++ ){
-      uint p = context_UUIDs.at(u);
-      context->getPrimitiveData(p,prop,eps);
-      if( scatteringDepth.at(band)==0 && eps!=1.f ){
-	eps = 1.f;
+      float eps, temperature;
+      char prop[100];
+      sprintf(prop,"emissivity_%s",label);
+      for( size_t u=0; u<Nprimitives; u++ ){
+          uint p = context_UUIDs.at(u);
+          context->getPrimitiveData(p,prop,eps);
+          if( scatteringDepth.at(band)==0 && eps!=1.f ){
+              eps = 1.f;
+          }
+          if( context->doesPrimitiveDataExist(p,"temperature") ){
+              context->getPrimitiveData(p,"temperature",temperature);
+              if( temperature<=0 ){
+                  temperature = temperature_default;
+              }
+          }else{
+              temperature = temperature_default;
+          }
+          flux_top.at(u) += 5.67e-8*eps*pow(temperature,4);
+          if( !context->doesPrimitiveDataExist(p,"twosided_flag") ){
+              flux_bottom.at(u) += flux_top.at(u);
+          }else{
+              uint flag;
+              context->getPrimitiveData(p,"twosided_flag",flag);
+              if( flag==1 ){
+                  flux_bottom.at(u) += flux_top.at(u);
+              }else if( flag==2 ){ //"sensor" primitive
+                  flux_top.at(u) = 0;
+                  flux_bottom.at(u) = 0;
+              }
+          }
       }
-      if( context->doesPrimitiveDataExist(p,"temperature") ){
-	context->getPrimitiveData(p,"temperature",temperature);
-	if( temperature<=0 ){
-	  temperature = temperature_default;
-	}
-      }else{
-	temperature = temperature_default;
-      }
-      flux_top.at(u) += 5.67e-8*eps*pow(temperature,4);
-      if( !context->doesPrimitiveDataExist(p,"twosided_flag") ){
-	flux_bottom.at(u) += flux_top.at(u);
-      }else{
-	uint flag;
-	context->getPrimitiveData(p,"twosided_flag",flag);
-	if( flag ){
-	  flux_bottom.at(u) += flux_top.at(u);
-	}
-      }
-    }
 
     initializeBuffer1Df( radiation_out_top_RTbuffer, flux_top );
     initializeBuffer1Df( radiation_out_bottom_RTbuffer, flux_bottom );
@@ -3765,13 +3835,13 @@ void RadiationModel::zeroBuffer1D( RTbuffer &buffer, const size_t bsize ){
 
   }else if( format==RT_FORMAT_BYTE ){
   
-    std::vector<bool> array;
+    std::vector<char> array;
     array.resize(bsize);
     for( int i=0; i<bsize; i++ ){
       array.at(i)=false;
     }
     
-    initializeBuffer1Dbool( buffer, array );
+    initializeBuffer1Dchar( buffer, array );
   }else{
     std::cerr << "ERROR (zeroBuffer1D): Buffer type not supported." << std::endl;
     exit(EXIT_FAILURE);
@@ -4121,6 +4191,35 @@ void RadiationModel::initializeBuffer1Dbool( RTbuffer &buffer, std::vector<bool>
   }
 
   RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+
+}
+
+void RadiationModel::initializeBuffer1Dchar( RTbuffer &buffer, std::vector<char> array ){
+
+    size_t bsize = array.size();
+
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    if( format!=RT_FORMAT_BYTE ){
+        std::cerr << "ERROR (initializeBuffer1Dchar): Buffer must have type char/byte." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    char* data = (char*)ptr;
+
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i] = array[i];
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 

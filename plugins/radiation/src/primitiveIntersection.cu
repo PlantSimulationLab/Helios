@@ -65,6 +65,8 @@ rtBuffer<uint,1> objectID;
 
 rtBuffer<int2,1> object_subdivisions;
 
+rtBuffer<char, 1> twosided_flag;
+
 //----------------- Rectangle Primitive ----------------------//
 
 /** OptiX ray-rectangle intersection program. */
@@ -72,9 +74,10 @@ rtBuffer<int2,1> object_subdivisions;
 RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
 
-  //the ray should not intersect the primitive from which it was launched
-  if( prd.origin_UUID == patch_UUID[objID] ){
+  if( prd.origin_UUID == patch_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
     return;
+  }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+      return;
   }
   
   float3 v0 = patch_vertices[ make_uint2(0, objID) ];
@@ -171,10 +174,11 @@ RT_PROGRAM void rectangle_bounds (int objID, float result[6])
 RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
 
-  //the ray should not intersect the primitive from which it was launched
-  if( prd.origin_UUID == triangle_UUID[objID] ){
-    return;
-  }
+    if( prd.origin_UUID == triangle_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
+        return;
+    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+        return;
+    }
 
   float3 v0 = triangle_vertices[ make_uint2(0, objID) ];
   float3 v1 = triangle_vertices[ make_uint2(1, objID) ];
@@ -268,10 +272,11 @@ RT_PROGRAM void triangle_bounds (int objID, float result[6])
 RT_PROGRAM void disk_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
 
-  //the ray should not intersect the primitive from which it was launched
-  if( prd.origin_UUID == disk_UUID[objID] ){
-    return;
-  }
+    if( prd.origin_UUID == disk_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
+        return;
+    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+        return;
+    }
 
   float3 center = make_float3(0,0,0);
   float3 normal = make_float3(0,0,1);
@@ -314,10 +319,11 @@ RT_PROGRAM void disk_bounds (int objID, float result[6])
 RT_PROGRAM void voxel_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
 
-  //the ray should not intersect the primitive from which it was launched
-  if( prd.origin_UUID == voxel_UUID[objID] ){
-    return;
-  }
+    if( prd.origin_UUID == voxel_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
+        return;
+    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+        return;
+    }
 
   float x0 = voxel_vertices[ make_uint2(0, objID) ].x;
   float y0 = voxel_vertices[ make_uint2(0, objID) ].y;
@@ -412,10 +418,11 @@ RT_PROGRAM void voxel_bounds (int objID, float result[6])
 RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
 
-  //the ray should not intersect the primitive from which it was launched
-  if( prd.origin_UUID == bbox_UUID[objID] ){
-    return;
-  }
+    if( prd.origin_UUID == bbox_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
+        return;
+    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+        return;
+    }
 
   float3 v0 = bbox_vertices[ make_uint2(0, objID) ];
   float3 v1 = bbox_vertices[ make_uint2(1, objID) ];
@@ -475,10 +482,11 @@ RT_PROGRAM void bbox_bounds (int objID, float result[6])
 RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometric object.*/)
 {
 
-  //the ray should not intersect the primitive from which it was launched
-  if( prd.origin_UUID == tile_UUID[objID] ){
-    return;
-  }
+    if( prd.origin_UUID == tile_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
+        return;
+    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+        return;
+    }
 
   float3 v0 = tile_vertices[ make_uint2(0, objID) ];
   float3 v1 = tile_vertices[ make_uint2(1, objID) ];

@@ -400,6 +400,11 @@ protected:
        \param[in] "array" 1D array used to initialize buffer. 
    */
   void initializeBuffer1Dbool( RTbuffer &buffer, std::vector<bool> array );
+//! Set size of 1D buffer and initialize all elements based on a 1D array of type bool.
+    /** \param[inout] "buffer" OptiX buffer to be initialized.
+        \param[in] "array" 1D array used to initialize buffer.
+    */
+    void initializeBuffer1Dchar( RTbuffer &buffer, std::vector<char> array );
   //! Set size of 2D buffer and initialize all elements to zero.
   /** \param[inout] "buffer" OptiX buffer to be initialized. 
       \param[in] "size" length of buffer. 

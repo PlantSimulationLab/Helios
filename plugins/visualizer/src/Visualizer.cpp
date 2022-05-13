@@ -61,6 +61,11 @@ METHODDEF(void) my_error_exit (j_common_ptr cinfo){
 
 int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, uint & height, uint & width){
 
+    std::string fn = filename;
+    if( fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ) {
+        throw( std::runtime_error("ERROR (read_JPEG_file): File " + fn + " is not JPEG format.") );
+    }
+
     struct jpeg_decompress_struct cinfo;
 
     struct my_error_mgr jerr;
@@ -262,6 +267,11 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
 }
 
 void read_png_file( const char* filename, std::vector<unsigned char> &texture, uint & height, uint & width){
+
+    std::string fn = filename;
+    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ){
+        throw( std::runtime_error("ERROR (read_PNG_file): File " + fn + " is not PNG format.") );
+    }
 
     int x, y;
 

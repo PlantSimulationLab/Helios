@@ -47,7 +47,6 @@ rtBuffer<float, 1>   radiation_out_top;
 rtBuffer<float, 1>   radiation_out_bottom;
 rtBuffer<float, 1>   scatter_buff_top;
 rtBuffer<float, 1>   scatter_buff_bottom;
-rtBuffer<bool, 1> twosided_flag;
 
 rtBuffer<float, 1>   Rsky;
 
