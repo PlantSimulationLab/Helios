@@ -649,7 +649,6 @@ struct WalnutCanopyParameters{
   //! Spacing between plant rows.
   float row_spacing;
 
-
   //! Radius of walnuts
   float fruit_radius;
 
@@ -670,7 +669,210 @@ struct WalnutCanopyParameters{
   
 };
 
+//! Parameters defining Sorghum plant canopy
+struct SorghumCanopyParameters{
 
+//! Default constructor
+    SorghumCanopyParameters();
+
+//! Sorghum categorized into 5 stages; 1 - Three leaf stage, 2 - Five leaf stage, 3 - Panicle initiation and flag leaf emergency, 4 - Booting, and flowering, 5 - Maturity;  Input of a value other than 1-5 will output stage 5
+    int sorghum_stage;
+
+    // STAGE 1
+
+//! Length of the sorghum stem for stage 1
+    float s1_stem_length;
+
+//! Radius of the sorghum stem for stage 1
+    float s1_stem_radius;
+
+//! Number of stem radial subdivisions for stage 1
+    float s1_stem_subdivisions;
+
+//! Length of leaf1 in x- (length) and y- (width) directions (prior to rotation) for stage 1
+    helios::vec2 s1_leaf_size1;
+
+//! Length of leaf2 in x- (length) and y- (width) directions (prior to rotation) for stage 1
+    helios::vec2 s1_leaf_size2;
+
+//! Length of leaf3 in x- (length) and y- (width) directions (prior to rotation) for stage 1
+    helios::vec2 s1_leaf_size3;
+
+//! Leaf1 vertical angle of rotation for stage 1
+    float s1_leaf1_angle;
+
+//! Leaf2 vertical angle of rotation for stage 1
+    float s1_leaf2_angle;
+
+//! Leaf3 vertical angle of rotation for stage 1
+    float s1_leaf3_angle;
+
+//! Number of sub-division segments of leaf in the x- (length) and y- (width) direction for stage 1
+    helios::int2 s1_leaf_subdivisions;
+
+//! Texture map for sorghum leaf1 for stage 1
+    std::string s1_leaf_texture_file;
+
+    // STAGE 2
+
+//! Length of the sorghum stem for stage 2
+    float s2_stem_length;
+
+//! Radius of the sorghum stem for stage 2
+    float s2_stem_radius;
+
+//! Number of stem radial subdivisions for stage 2
+    float s2_stem_subdivisions;
+
+//! Length of leaf1 in x- (length) and y- (width) directions (prior to rotation) for stage 2
+    helios::vec2 s2_leaf_size1;
+
+//! Length of leaf2 in x- (length) and y- (width) directions (prior to rotation) for stage 2
+    helios::vec2 s2_leaf_size2;
+
+//! Length of leaf3 in x- (length) and y- (width) directions (prior to rotation) for stage 2
+    helios::vec2 s2_leaf_size3;
+
+//! Length of leaf4 in x- (length) and y- (width) directions (prior to rotation) for stage 2
+    helios::vec2 s2_leaf_size4;
+
+//! Length of leaf5 in x- (length) and y- (width) directions (prior to rotation) for stage 2
+    helios::vec2 s2_leaf_size5;
+
+//! Leaf1 vertical angle of rotation for stage 2
+    float s2_leaf1_angle;
+
+//! Leaf2 vertical angle of rotation for stage 2
+    float s2_leaf2_angle;
+
+//! Leaf3 vertical angle of rotation for stage 2
+    float s2_leaf3_angle;
+
+//! Leaf4 vertical angle of rotation for stage 2
+    float s2_leaf4_angle;
+
+//! Leaf5 vertical angle of rotation for stage 2
+    float s2_leaf5_angle;
+
+//! Number of sub-division segments of leaf in the x- (length) and y- (width) direction for stage 2
+    helios::int2 s2_leaf_subdivisions;
+
+//! Texture map for sorghum leaf for stage 2
+    std::string s2_leaf_texture_file;
+
+    // STAGE 3
+
+//! Length of the sorghum stem for stage 3
+    float s3_stem_length;
+
+//! Radius of the sorghum stem for stage 3
+    float s3_stem_radius;
+
+//! Number of stem radial subdivisions for stage 3
+    float s3_stem_subdivisions;
+
+//! Length of leaf in x- (length) and y- (width) directions (prior to rotation) for stage 3
+    helios::vec2 s3_leaf_size;
+
+//! Number of sub-division segments of leaf in the x- (length) and y- (width) direction for stage 3
+    helios::int2 s3_leaf_subdivisions;
+
+//! Number of leaves along the stem for stage 3
+    int s3_number_of_leaves;
+
+//! Mean vertical angle of rotation of leaf for stage 3 in degrees; Standard deviation for the leaves is 5 degrees
+    float s3_mean_leaf_angle;
+
+//! Texture map for sorghum leaf for stage 3
+    std::string s3_leaf_texture_file;
+
+    // STAGE 4
+
+//! Length of the sorghum stem for stage 4
+    float s4_stem_length;
+
+//! Radius of the sorghum stem for stage 4
+    float s4_stem_radius;
+
+//! Number of stem radial subdivisions for stage 4
+    float s4_stem_subdivisions;
+
+//! Size of panicle in x- and y- directions for stage 4
+    helios::vec2 s4_panicle_size;
+
+//! Number of panicle subdivisions for each grain sphere within a panicle, stage 4
+    int s4_panicle_subdivisions;
+
+//! Texture map of the panicle for stage 4
+    std::string s4_seed_texture_file;
+
+//! Length of leaf in x- (length) and y- (width) directions (prior to rotation) for stage 4
+    helios::vec2 s4_leaf_size;
+
+//! Number of sub-division segments of leaf in the x- (length) and y- (width) direction for stage 4
+    helios::int2 s4_leaf_subdivisions;
+
+//! Number of leaves for the sorghum plant, stage 4
+    int s4_number_of_leaves;
+
+//! Mean vertical angle of rotation of leaf for stage 4 in degrees; Standard deviation for the angle is 5 degrees
+    float s4_mean_leaf_angle;
+
+//! Texture map for sorghum leaf, stage 4
+    std::string s4_leaf_texture_file;
+
+    // STAGE 5
+
+//! Length of the sorghum stem for stage 5
+    float s5_stem_length;
+
+//! Radius of the sorghum stem for stage 5
+    float s5_stem_radius;
+
+//! Bend of the stem from mid-section for stage 5. The distance from the mid-section of the stem to the imaginary perpendicular along the origin. i.e stem bend = 0 outputs a straight stem
+    float s5_stem_bend;
+
+//! Number of stem radial subdivisions for stage 5
+    int s5_stem_subdivisions;
+
+//! Size of panicle in x- and y- directions for stage 5
+    helios::vec2 s5_panicle_size;
+
+//! Number of panicle subdivisions for each grain sphere within a panicle, stage 5
+    int s5_panicle_subdivisions;
+
+//! Texture map of the panicle for stage 5
+    std::string s5_seed_texture_file;
+
+//! Length of leaf in x- (length) and y- (width) directions (prior to rotation) for stage 5
+    helios::vec2 s5_leaf_size;
+
+//! Number of sub-division segments of leaf in the x- (length) and y- (width) direction for stage 5
+    helios::int2 s5_leaf_subdivisions;
+
+//! Number of leaves for the sorghum plant, stage 5
+    int s5_number_of_leaves;
+
+//! Mean vertical angle of rotation of leaf for stage 5 in degrees; Standard deviation for the angle is 10 degrees
+    float s5_mean_leaf_angle;
+
+//! Texture map for sorghum leaf, stage 5
+    std::string s5_leaf_texture_file;
+
+    // CANOPY
+//! Spacing between adjacent plants along the row direction.
+    float plant_spacing;
+
+//! Spacing between plant rows.
+    float row_spacing;
+
+//! Number of crowns/plants in the x- and y-directions.
+    helios::int2 plant_count;
+
+//! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0.
+    helios::vec3 canopy_origin;
+
+};
 
 class CanopyGenerator{
  public:
@@ -737,6 +939,11 @@ class CanopyGenerator{
    */
   void buildCanopy(const WalnutCanopyParameters &params );
 
+  //! Build a canopy consisting of sorghum plants
+  /** \param[in] "params" Structure containing parameters for sorghum plant canopy.
+   */
+    void buildCanopy( const SorghumCanopyParameters &params );
+
   //! Build a ground consisting of texture sub-tiles and sub-patches, which can be different sizes
   /** \param[in] "ground_origin" x-, y-, and z-position of the ground center point.
       \param[in] "ground_extent" Width of the ground in the x- and y-directions.
@@ -744,6 +951,7 @@ class CanopyGenerator{
       \param[in] "texture_subpatches" Number of sub-divisions of each texture tile into sub-patches in the x- and y-directions.
       \param[in] "ground_texture_file" Path to file used for tile texture mapping.
   */
+
   void buildGround( const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, const char* ground_texture_file  );
 
   //! Build a ground with azimuthal rotation consisting of texture sub-tiles and sub-patches, which can be different sizes
@@ -878,6 +1086,13 @@ void grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec
    * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
   */ 
   void walnut(const WalnutCanopyParameters &params, const helios::vec3 &origin );
+
+ //! Function to add an individual sorghum plant
+ /**
+ * \param[in] "params" Set of parameters defining sorghum plants/canopy.
+ * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+ */
+    void sorghum( const SorghumCanopyParameters &params, const helios::vec3 &origin);
 
   //! Create primitive data that explicitly labels all primitives according to the plant element they correspond to
   void createElementLabels();

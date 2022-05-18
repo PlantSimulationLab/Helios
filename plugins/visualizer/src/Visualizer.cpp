@@ -2612,6 +2612,43 @@ void Visualizer::addCoordinateAxes(const helios::vec3 &origin, const helios::vec
 
 }
 
+
+void Visualizer::addGridWireFrame(const helios::vec3 center, const helios::vec3 size, const helios::int3 subdiv){
+    
+    helios::vec3 boxmin, boxmax;
+    boxmin = make_vec3(center.x - 0.5*size.x, center.y - 0.5*size.y, center.z - 0.5*size.z);
+    boxmax = make_vec3(center.x + 0.5*size.x, center.y + 0.5*size.y, center.z + 0.5*size.z);
+    
+    float spacing_x = size.x/subdiv.x;
+    float spacing_y = size.y/subdiv.y;
+    float spacing_z = size.z/subdiv.z;
+    
+    for(int i=0; i <= subdiv.x; i++)
+    {
+        for(int j=0; j <= subdiv.y; j++)
+        {
+            addLine(make_vec3(boxmin.x + i*spacing_x, boxmin.y + j*spacing_y, boxmin.z), make_vec3(boxmin.x + i*spacing_x, boxmin.y + j*spacing_y, boxmax.z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        }
+    }
+    
+    for(int i=0; i <= subdiv.z ; i++)
+    {
+        for(int j=0; j <= subdiv.y; j++)
+        {
+            addLine(make_vec3(boxmin.x , boxmin.y + j*spacing_y, boxmin.z + i*spacing_z), make_vec3(boxmax.x, boxmin.y + j*spacing_y, boxmin.z + i*spacing_z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        }
+    }
+    
+    for(int i=0; i <= subdiv.x ; i++)
+    {
+        for(int j=0; j <= subdiv.z ; j++)
+        {
+            addLine(make_vec3(boxmin.x + i*spacing_x , boxmin.y, boxmin.z + j*spacing_z), make_vec3(boxmin.x + i*spacing_x, boxmax.y, boxmin.z + j*spacing_z), RGB::black, 1, Visualizer::COORDINATES_CARTESIAN);
+        }
+    }
+    
+}
+
 void Visualizer::enableColorbar( void ){
     colorbar_flag = 2;
 }

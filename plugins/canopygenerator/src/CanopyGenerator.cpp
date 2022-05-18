@@ -421,6 +421,139 @@ WalnutCanopyParameters::WalnutCanopyParameters(){
 
 }
 
+SorghumCanopyParameters::SorghumCanopyParameters(){
+    sorghum_stage = 2;
+
+    // stage 1
+    s1_stem_length = 0.04;
+
+    s1_stem_radius = 0.003;
+
+    s1_stem_subdivisions = 10;
+
+    s1_leaf_size1 = make_vec2(0.14,0.012);
+
+    s1_leaf_size2 = make_vec2(0.12,0.012);
+
+    s1_leaf_size3 = make_vec2(0.06,0.008);
+
+    s1_leaf1_angle = 50;
+
+    s1_leaf2_angle = 50;
+
+    s1_leaf3_angle = 50;
+
+    s1_leaf_subdivisions = make_int2(20,2);
+
+    s1_leaf_texture_file = "plugins/canopygenerator/textures/s1_Sorghum_leaf.png";
+
+
+    // stage 2
+    s2_stem_length = 0.2;
+
+    s2_stem_radius = 0.003;
+
+    s2_stem_subdivisions = 10;
+
+    s2_leaf_size1 = make_vec2(0.25,0.02);
+
+    s2_leaf_size2 = make_vec2(0.14,0.02);
+
+    s2_leaf_size3 = make_vec2(0.2,0.015);
+
+    s2_leaf_size4 = make_vec2(0.12,0.012);
+
+    s2_leaf_size5 = make_vec2(0.08,0.01);
+
+    s2_leaf1_angle = 25;
+
+    s2_leaf2_angle = 50;
+
+    s2_leaf3_angle = 15;
+
+    s2_leaf4_angle = 25;
+
+    s2_leaf5_angle = 10;
+
+    s2_leaf_subdivisions = make_int2(30,2);
+
+    s2_leaf_texture_file = "plugins/canopygenerator/textures/s2_Sorghum_leaf.png";
+
+    // stage 3
+    s3_stem_length = 1.2;
+
+    s3_stem_radius = 0.01;
+
+    s3_stem_subdivisions = 10;
+
+    s3_leaf_size = make_vec2(0.8,0.08);
+
+    s3_leaf_subdivisions = make_int2(30,2);
+
+    s3_number_of_leaves = 15;
+
+    s3_mean_leaf_angle = 45;
+
+    s3_leaf_texture_file = "plugins/canopygenerator/textures/s3_Sorghum_leaf.png";
+
+    // stage 4
+    s4_stem_length = 1.6;
+
+    s4_stem_radius = 0.01;
+
+    s4_stem_subdivisions = 10;
+
+    s4_panicle_size = make_vec2(0.2,0.06);
+
+    s4_panicle_subdivisions = 5;
+
+    s4_seed_texture_file = "plugins/canopygenerator/textures/s4_Sorghum_seed.png";
+
+    s4_leaf_size = make_vec2(0.8,0.08);
+
+    s4_leaf_subdivisions = make_int2(30,2);
+
+    s4_number_of_leaves = 15;
+
+    s4_mean_leaf_angle = 40;
+
+    s4_leaf_texture_file = "plugins/canopygenerator/textures/s4_Sorghum_leaf.png";
+
+    // stage 5
+    s5_stem_length = 2.5;
+
+    s5_stem_radius = 0.01;
+
+    s5_stem_bend = 0.15;
+
+    s5_stem_subdivisions = 10;
+
+    s5_panicle_size = make_vec2(0.3,0.08);
+
+    s5_panicle_subdivisions = 5;
+
+    s5_seed_texture_file = "plugins/canopygenerator/textures/s5_Sorghum_seed.png";
+
+    s5_leaf_size = make_vec2(0.9,0.125);
+
+    s5_leaf_subdivisions = make_int2(30,2);
+
+    s5_number_of_leaves = 24;
+
+    s5_mean_leaf_angle = 20;  // std = 10 degrees
+
+    s5_leaf_texture_file = "plugins/canopygenerator/textures/s5_Sorghum_leaf.png";
+
+    // Canopy
+    plant_spacing = 0.2;
+
+    row_spacing = 0.2;
+
+    plant_count = make_int2(10 ,10);
+
+    canopy_origin = make_vec3(0,0,0);
+}
+
 CanopyGenerator::CanopyGenerator( helios::Context* m_context ){
 
     context = m_context;
@@ -518,6 +651,16 @@ int CanopyGenerator::selfTest(){
     WalnutCanopyParameters params_8;
     canopygenerator_8.buildCanopy(params_8);
     context_test.deletePrimitive(context_test.getAllUUIDs());
+
+    std::cout << "done." << std::endl;
+
+    std::cout << "Generating default sorghum plant canopy..." << std::flush;
+
+    CanopyGenerator canopygenerator_9(&context_test);
+    canopygenerator_9.disableMessages();
+    SorghumCanopyParameters params_9;
+    canopygenerator_9.buildCanopy(params_9);
+    context_test.deletePrimitive( context_test.getAllUUIDs() );
 
     std::cout << "done." << std::endl;
 
@@ -1350,6 +1493,327 @@ void CanopyGenerator::loadXML( const char* filename ){
 
         }
 
+        //SorghumCanopyParameters Canopy
+        for (pugi::xml_node s = cgen.child("SorghumCanopyParameters"); s; s = s.next_sibling("SorghumCanopyParameters")) {
+
+            SorghumCanopyParameters sorghumcanopyparameters;
+
+            int sorghum_stage = XMLloadint(s, "sorghum_stage");
+            if (sorghum_stage != nullvalue_i) {
+                sorghumcanopyparameters.sorghum_stage = sorghum_stage;
+            }
+            // STAGE 1
+            float s1_stem_length = XMLloadint(s, "s1_stem_length");
+            if (s1_stem_length != nullvalue_i) {
+                sorghumcanopyparameters.s1_stem_length = s1_stem_length;
+            }
+
+            float s1_stem_radius = XMLloadfloat(s, "s1_stem_radius");
+            if (s1_stem_radius != nullvalue_f) {
+                sorghumcanopyparameters.s1_stem_radius = s1_stem_radius;
+            }
+
+            int s1_stem_subdivisions = XMLloadint(s, "s1_stem_subdivisions");
+            if (s1_stem_subdivisions != nullvalue_f) {
+                sorghumcanopyparameters.s1_stem_subdivisions = uint(s1_stem_subdivisions);
+            }
+
+            vec2 s1_leaf_size1 = XMLloadvec2(s, "s1_leaf_size1");
+            if (s1_leaf_size1.x != nullvalue_f && s1_leaf_size1.y != nullvalue_f) {
+                sorghumcanopyparameters.s1_leaf_size1 = s1_leaf_size1;
+            }
+
+            vec2 s1_leaf_size2 = XMLloadvec2(s, "s1_leaf_size2");
+            if (s1_leaf_size2.x != nullvalue_f && s1_leaf_size2.y != nullvalue_f) {
+                sorghumcanopyparameters.s1_leaf_size2 = s1_leaf_size2;
+            }
+
+            vec2 s1_leaf_size3 = XMLloadvec2(s, "s1_leaf_size3");
+            if (s1_leaf_size3.x != nullvalue_f && s1_leaf_size3.y != nullvalue_f) {
+                sorghumcanopyparameters.s1_leaf_size3 = s1_leaf_size3;
+            }
+
+            float s1_leaf1_angle = XMLloadfloat(s, "s1_leaf1_angle");
+            if (s1_leaf1_angle != nullvalue_f) {
+                sorghumcanopyparameters.s1_leaf1_angle = s1_leaf1_angle;
+            }
+
+            float s1_leaf2_angle = XMLloadfloat(s, "s1_leaf2_angle");
+            if (s1_leaf2_angle != nullvalue_f) {
+                sorghumcanopyparameters.s1_leaf2_angle = s1_leaf2_angle;
+            }
+
+            float s1_leaf3_angle = XMLloadfloat(s, "s1_leaf3_angle");
+            if (s1_leaf3_angle != nullvalue_f) {
+                sorghumcanopyparameters.s1_leaf3_angle = s1_leaf3_angle;
+            }
+
+            int2 s1_leaf_subdivisions = XMLloadint2(s, "s1_leaf_subdivisions");
+            if (s1_leaf_subdivisions.x != nullvalue_i && s1_leaf_subdivisions.y != nullvalue_i) {
+                sorghumcanopyparameters.s1_leaf_subdivisions = s1_leaf_subdivisions;
+            }
+
+            std::string s1_leaf_texture_file = XMLloadstring(s, "s1_leaf_texture_file");
+            if (s1_leaf_texture_file.compare(nullvalue_s) != 0) {
+                sorghumcanopyparameters.s1_leaf_texture_file = s1_leaf_texture_file;
+            }
+            // STAGE 2
+            float s2_stem_length = XMLloadint(s, "s2_stem_length");
+            if (s2_stem_length != nullvalue_i) {
+                sorghumcanopyparameters.s2_stem_length = s2_stem_length;
+            }
+
+            float s2_stem_radius = XMLloadfloat(s, "s2_stem_radius");
+            if (s2_stem_radius != nullvalue_f) {
+                sorghumcanopyparameters.s2_stem_radius = s2_stem_radius;
+            }
+
+            int s2_stem_subdivisions = XMLloadint(s, "s2_stem_subdivisions");
+            if (s2_stem_subdivisions != nullvalue_f) {
+                sorghumcanopyparameters.s2_stem_subdivisions = uint(s2_stem_subdivisions);
+            }
+
+            vec2 s2_leaf_size1 = XMLloadvec2(s, "s2_leaf_size1");
+            if (s2_leaf_size1.x != nullvalue_f && s2_leaf_size1.y != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf_size1 = s2_leaf_size1;
+            }
+
+            vec2 s2_leaf_size2 = XMLloadvec2(s, "s2_leaf_size2");
+            if (s2_leaf_size2.x != nullvalue_f && s2_leaf_size2.y != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf_size2 = s2_leaf_size2;
+            }
+
+            vec2 s2_leaf_size3 = XMLloadvec2(s, "s2_leaf_size3");
+            if (s2_leaf_size3.x != nullvalue_f && s2_leaf_size3.y != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf_size3 = s2_leaf_size3;
+            }
+
+            vec2 s2_leaf_size4 = XMLloadvec2(s, "s2_leaf_size4");
+            if (s2_leaf_size4.x != nullvalue_f && s2_leaf_size4.y != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf_size4 = s2_leaf_size4;
+            }
+
+            vec2 s2_leaf_size5 = XMLloadvec2(s, "s2_leaf_size5");
+            if (s2_leaf_size5.x != nullvalue_f && s2_leaf_size5.y != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf_size5 = s2_leaf_size5;
+            }
+
+            float s2_leaf1_angle = XMLloadfloat(s, "s2_leaf1_angle");
+            if (s2_leaf1_angle != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf1_angle = s2_leaf1_angle;
+            }
+
+            float s2_leaf2_angle = XMLloadfloat(s, "s2_leaf2_angle");
+            if (s2_leaf2_angle != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf2_angle = s2_leaf2_angle;
+            }
+
+            float s2_leaf3_angle = XMLloadfloat(s, "s2_leaf3_angle");
+            if (s2_leaf3_angle != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf3_angle = s2_leaf3_angle;
+            }
+
+            float s2_leaf4_angle = XMLloadfloat(s, "s2_leaf4_angle");
+            if (s2_leaf4_angle != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf4_angle = s2_leaf4_angle;
+            }
+
+            float s2_leaf5_angle = XMLloadfloat(s, "s2_leaf5_angle");
+            if (s2_leaf3_angle != nullvalue_f) {
+                sorghumcanopyparameters.s2_leaf5_angle = s2_leaf5_angle;
+            }
+
+            int2 s2_leaf_subdivisions = XMLloadint2(s, "s2_leaf_subdivisions");
+            if (s2_leaf_subdivisions.x != nullvalue_i && s2_leaf_subdivisions.y != nullvalue_i) {
+                sorghumcanopyparameters.s2_leaf_subdivisions = s2_leaf_subdivisions;
+            }
+
+            std::string s2_leaf_texture_file = XMLloadstring(s, "s2_leaf_texture_file");
+            if (s2_leaf_texture_file.compare(nullvalue_s) != 0) {
+                sorghumcanopyparameters.s2_leaf_texture_file = s2_leaf_texture_file;
+            }
+            // STAGE 3
+            float s3_stem_length = XMLloadint(s, "s3_stem_length");
+            if (s3_stem_length != nullvalue_i) {
+                sorghumcanopyparameters.s3_stem_length = s3_stem_length;
+            }
+
+            float s3_stem_radius = XMLloadfloat(s, "s3_stem_radius");
+            if (s3_stem_radius != nullvalue_f) {
+                sorghumcanopyparameters.s3_stem_radius = s3_stem_radius;
+            }
+
+            int s3_stem_subdivisions = XMLloadint(s, "s3_stem_subdivisions");
+            if (s3_stem_subdivisions != nullvalue_f) {
+                sorghumcanopyparameters.s3_stem_subdivisions = uint(s3_stem_subdivisions);
+            }
+
+            vec2 s3_leaf_size = XMLloadvec2(s, "s3_leaf_size");
+            if (s3_leaf_size.x != nullvalue_f && s3_leaf_size.y != nullvalue_f) {
+                sorghumcanopyparameters.s3_leaf_size = s3_leaf_size;
+            }
+
+            int2 s3_leaf_subdivisions = XMLloadint2(s, "s3_leaf_subdivisions");
+            if (s3_leaf_subdivisions.x != nullvalue_i && s3_leaf_subdivisions.y != nullvalue_i) {
+                sorghumcanopyparameters.s3_leaf_subdivisions = s3_leaf_subdivisions;
+            }
+
+            int s3_number_of_leaves = XMLloadint(s, "s3_number_of_leaves");
+            if (s3_number_of_leaves != nullvalue_i) {
+                sorghumcanopyparameters.s3_number_of_leaves = s3_number_of_leaves;
+            }
+
+            float s3_mean_leaf_angle = XMLloadfloat(s, "s3_mean_leaf_angle");
+            if (s3_mean_leaf_angle != nullvalue_f) {
+                sorghumcanopyparameters.s3_mean_leaf_angle = s3_mean_leaf_angle;
+            }
+
+            std::string s3_leaf_texture_file = XMLloadstring(s, "s3_leaf_texture_file");
+            if (s3_leaf_texture_file.compare(nullvalue_s) != 0) {
+                sorghumcanopyparameters.s3_leaf_texture_file = s3_leaf_texture_file;
+            }
+
+            // STAGE 4
+            float s4_stem_length = XMLloadint(s, "s4_stem_length");
+            if (s4_stem_length != nullvalue_i) {
+                sorghumcanopyparameters.s4_stem_length = s4_stem_length;
+            }
+
+            float s4_stem_radius = XMLloadfloat(s, "s4_stem_radius");
+            if (s4_stem_radius != nullvalue_f) {
+                sorghumcanopyparameters.s4_stem_radius = s4_stem_radius;
+            }
+
+            int s4_stem_subdivisions = XMLloadint(s, "s4_stem_subdivisions");
+            if (s4_stem_subdivisions != nullvalue_f) {
+                sorghumcanopyparameters.s4_stem_subdivisions = uint(s4_stem_subdivisions);
+            }
+
+            vec2 s4_panicle_size = XMLloadvec2(s, "s4_panicle_size");
+            if (s4_panicle_size.x != nullvalue_f && s4_panicle_size.y != nullvalue_f) {
+                sorghumcanopyparameters.s4_panicle_size = s4_panicle_size;
+            }
+
+            int s4_panicle_subdivisions = XMLloadint(s, "s4_panicle_subdivisions");
+            if (s4_panicle_subdivisions != nullvalue_f) {
+                sorghumcanopyparameters.s4_panicle_subdivisions = uint(s4_panicle_subdivisions);
+            }
+
+            std::string s4_seed_texture_file = XMLloadstring(s, "s4_seed_texture_file");
+            if (s4_seed_texture_file.compare(nullvalue_s) != 0) {
+                sorghumcanopyparameters.s4_seed_texture_file = s4_seed_texture_file;
+            }
+
+            vec2 s4_leaf_size = XMLloadvec2(s, "s4_leaf_size");
+            if (s4_leaf_size.x != nullvalue_f && s4_leaf_size.y != nullvalue_f) {
+                sorghumcanopyparameters.s4_leaf_size = s4_leaf_size;
+            }
+
+            int2 s4_leaf_subdivisions = XMLloadint2(s, "s4_leaf_subdivisions");
+            if (s4_leaf_subdivisions.x != nullvalue_i && s4_leaf_subdivisions.y != nullvalue_i) {
+                sorghumcanopyparameters.s4_leaf_subdivisions = s4_leaf_subdivisions;
+            }
+
+            int s4_number_of_leaves = XMLloadint(s, "s4_number_of_leaves");
+            if (s4_number_of_leaves != nullvalue_i) {
+                sorghumcanopyparameters.s4_number_of_leaves = s4_number_of_leaves;
+            }
+
+            float s4_mean_leaf_angle = XMLloadfloat(s, "s4_mean_leaf_angle");
+            if (s4_mean_leaf_angle != nullvalue_f) {
+                sorghumcanopyparameters.s4_mean_leaf_angle = s4_mean_leaf_angle;
+            }
+
+            std::string s4_leaf_texture_file = XMLloadstring(s, "s4_leaf_texture_file");
+            if (s4_leaf_texture_file.compare(nullvalue_s) != 0) {
+                sorghumcanopyparameters.s4_leaf_texture_file = s4_leaf_texture_file;
+            }
+
+            // STAGE 5
+            float s5_stem_length = XMLloadint(s, "s5_stem_length");
+            if (s5_stem_length != nullvalue_i) {
+                sorghumcanopyparameters.s5_stem_length = s5_stem_length;
+            }
+
+            float s5_stem_radius = XMLloadfloat(s, "s5_stem_radius");
+            if (s5_stem_radius != nullvalue_f) {
+                sorghumcanopyparameters.s5_stem_radius = s5_stem_radius;
+            }
+
+            float s5_stem_bend = XMLloadfloat(s, "s5_stem_bend");
+            if (s5_stem_bend != nullvalue_f) {
+                sorghumcanopyparameters.s5_stem_bend = s5_stem_bend;
+            }
+
+            int s5_stem_subdivisions = XMLloadint(s, "s5_stem_subdivisions");
+            if (s5_stem_subdivisions != nullvalue_f) {
+                sorghumcanopyparameters.s5_stem_subdivisions = uint(s5_stem_subdivisions);
+            }
+
+            vec2 s5_panicle_size = XMLloadvec2(s, "s5_panicle_size");
+            if (s5_panicle_size.x != nullvalue_f && s5_panicle_size.y != nullvalue_f) {
+                sorghumcanopyparameters.s5_panicle_size = s5_panicle_size;
+            }
+
+            int s5_panicle_subdivisions = XMLloadint(s, "s5_panicle_subdivisions");
+            if (s5_panicle_subdivisions != nullvalue_f) {
+                sorghumcanopyparameters.s5_panicle_subdivisions = uint(s5_panicle_subdivisions);
+            }
+
+            std::string s5_seed_texture_file = XMLloadstring(s, "s5_seed_texture_file");
+            if (s5_seed_texture_file.compare(nullvalue_s) != 0) {
+                sorghumcanopyparameters.s5_seed_texture_file = s5_seed_texture_file;
+            }
+
+            vec2 s5_leaf_size = XMLloadvec2(s, "s5_leaf_size");
+            if (s5_leaf_size.x != nullvalue_f && s5_leaf_size.y != nullvalue_f) {
+                sorghumcanopyparameters.s5_leaf_size = s5_leaf_size;
+            }
+
+            int2 s5_leaf_subdivisions = XMLloadint2(s, "s5_leaf_subdivisions");
+            if (s5_leaf_subdivisions.x != nullvalue_i && s5_leaf_subdivisions.y != nullvalue_i) {
+                sorghumcanopyparameters.s5_leaf_subdivisions = s5_leaf_subdivisions;
+            }
+
+            int s5_number_of_leaves = XMLloadint(s, "s5_number_of_leaves");
+            if (s5_number_of_leaves != nullvalue_i) {
+                sorghumcanopyparameters.s5_number_of_leaves = s5_number_of_leaves;
+            }
+
+            float s5_mean_leaf_angle = XMLloadfloat(s, "s5_mean_leaf_angle");
+            if (s5_mean_leaf_angle != nullvalue_f) {
+                sorghumcanopyparameters.s5_mean_leaf_angle = s5_mean_leaf_angle;
+            }
+
+            std::string s5_leaf_texture_file = XMLloadstring(s, "s5_leaf_texture_file");
+            if (s5_leaf_texture_file.compare(nullvalue_s) != 0) {
+                sorghumcanopyparameters.s5_leaf_texture_file = s5_leaf_texture_file;
+            }
+
+            float plant_spacing = XMLloadfloat(s, "plant_spacing");
+            if (plant_spacing != nullvalue_f) {
+                sorghumcanopyparameters.plant_spacing = plant_spacing;
+            }
+
+            float row_spacing = XMLloadfloat(s, "row_spacing");
+            if (row_spacing != nullvalue_f) {
+                sorghumcanopyparameters.row_spacing = row_spacing;
+            }
+
+            int2 plant_count = XMLloadint2(s, "plant_count");
+            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
+                sorghumcanopyparameters.plant_count = plant_count;
+            }
+
+            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
+            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
+                sorghumcanopyparameters.canopy_origin = canopy_origin;
+            }
+
+            buildCanopy(sorghumcanopyparameters);
+
+        }
+
         //Ground
         for (pugi::xml_node s = cgen.child("Ground"); s; s = s.next_sibling("Ground")) {
 
@@ -1907,6 +2371,40 @@ void CanopyGenerator::buildCanopy(const WalnutCanopyParameters &params ){
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
 
             walnut( params, center );
+
+            std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
+            prim_count += UUIDs_all.size();
+
+            plant_ID++;
+
+        }
+    }
+
+    if( printmessages ){
+        std::cout << "done." << std::endl;
+        //std::cout << "Canopy consists of " << UUID_leaf.size()*UUID_leaf.front().size() << " leaves and " << prim_count << " total primitives." << std::endl;
+    }
+
+}
+
+void CanopyGenerator::buildCanopy( const SorghumCanopyParameters &params ){
+
+    if( printmessages ){
+        std::cout << "Building canopy of sorghum plants..." << std::flush;
+    }
+
+    std::uniform_real_distribution<float> unif_distribution;
+
+    vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
+
+    uint plant_ID = 0;
+    uint prim_count = 0;
+    for( int j=0; j<params.plant_count.y; j++ ){
+        for( int i=0; i<params.plant_count.x; i++ ){
+
+            vec3 center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+(i+0.5)*params.plant_spacing, -0.5*canopy_extent.y+(j+0.5)*params.row_spacing, 0 );
+
+            sorghum( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
