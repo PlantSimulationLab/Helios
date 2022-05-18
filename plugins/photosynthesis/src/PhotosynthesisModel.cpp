@@ -204,11 +204,11 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs ){
             gM = gM_default;
         }
 
-        float A, Ci;
+        float A, Ci, Gamma;
         int limitation_state;
 
         if( model_flag==2 ){ //Farquhar-von Caemmerer-Berry Model
-            A = evaluateFarquharModel( i_PAR, TL, CO2, gM, Ci, limitation_state );
+            A = evaluateFarquharModel( i_PAR, TL, CO2, gM, Ci, Gamma, limitation_state );
         }else{ //Empirical Model
             A = evaluateEmpiricalModel( i_PAR, TL, CO2, gM );
         }
@@ -224,6 +224,8 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs ){
                 context->setPrimitiveData(UUID,"Ci",Ci);
             }else if( data=="limitation_state" && model_flag==2 ){
                 context->setPrimitiveData(UUID,"limitation_state",limitation_state);
+            }else if( data=="Gamma_CO2" && model_flag==2 ){
+                context->setPrimitiveData(UUID,"Gamma_CO2",Gamma);
             }
         }
 
@@ -322,8 +324,6 @@ float PhotosynthesisModel::evaluateCi_Farquhar( float Ci, std::vector<float> &va
     float TL = variables[2];
     float gM = variables[3];
 
-//    printf("Variables = [%f %f %f %f]\n",CO2, i_PAR, TL, gM);
-
     //molar gas constant (kJ/K/mol)
     float R = 0.0083144598;
 
@@ -331,7 +331,7 @@ float PhotosynthesisModel::evaluateCi_Farquhar( float Ci, std::vector<float> &va
     float Vcmax = modelcoeffs.Vcmax*exp(modelcoeffs.c_Vcmax-modelcoeffs.dH_Vcmax/(R*TL));
     float Jmax = modelcoeffs.Jmax*exp(modelcoeffs.c_Jmax-modelcoeffs.dH_Jmax/(R*TL));
 
-    float Gamma = exp(modelcoeffs.c_Gamma-modelcoeffs.dH_Gamma/(R*TL));
+    float Gamma_star = exp(modelcoeffs.c_Gamma-modelcoeffs.dH_Gamma/(R*TL));
     float Kc = exp(modelcoeffs.c_Kc-modelcoeffs.dH_Kc/(R*TL));
     float Ko = exp(modelcoeffs.c_Ko-modelcoeffs.dH_Ko/(R*TL));
 
@@ -340,9 +340,9 @@ float PhotosynthesisModel::evaluateCi_Farquhar( float Ci, std::vector<float> &va
     float Wc = Vcmax*Ci/(Ci+Kco);
 
     float J = Jmax*i_PAR*modelcoeffs.alpha/(i_PAR*modelcoeffs.alpha+Jmax);
-    float Wj = J*Ci/(4.f*Ci+8.f*Gamma);
+    float Wj = J*Ci/(4.f*Ci+8.f*Gamma_star);
 
-    float A = (1-Gamma/Ci)*fmin(Wc,Wj)-Rd;
+    float A = (1-Gamma_star/Ci)*fmin(Wc,Wj)-Rd;
 
     float limitation_state;
     if( Wj<Wc ){ //light limited
@@ -358,21 +358,25 @@ float PhotosynthesisModel::evaluateCi_Farquhar( float Ci, std::vector<float> &va
     variables[4] = A;
     variables[5] = limitation_state;
 
+    float Gamma = (Gamma_star+Kco*Rd/Vcmax)/(1-Rd/Vcmax);  //Equation 39 of Farquhar et al. (1980)
+    variables[6] = Gamma;
+
     return resid;
 
 }
 
-float PhotosynthesisModel::evaluateFarquharModel( float i_PAR, float TL, float CO2, float gM, float& Ci, int& limitation_state ){
+float PhotosynthesisModel::evaluateFarquharModel( float i_PAR, float TL, float CO2, float gM, float& Ci, float& Gamma, int& limitation_state ){
 
     float A = 0;
     Ci = 100;
 
-    std::vector<float> variables{CO2, i_PAR, TL, gM, A, float(limitation_state)};
+    std::vector<float> variables{CO2, i_PAR, TL, gM, A, float(limitation_state), Gamma};
 
     Ci = fzero( evaluateCi_Farquhar, variables, &farquharmodelcoeffs, Ci );
 
     A = variables[4];
     limitation_state = (int)variables[5];
+    Gamma = variables[6];
 
     return A;
 
@@ -388,7 +392,7 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharModelCoefficients(){
 
 void PhotosynthesisModel::optionalOutputPrimitiveData( const char* label ){
 
-    if( strcmp(label,"Ci")==0 || strcmp(label,"limitation_state")==0 ){
+    if( strcmp(label,"Ci")==0 || strcmp(label,"limitation_state")==0 || strcmp(label,"Gamma_CO2")==0 ){
         output_prim_data.emplace_back(label );
     }else{
         std::cout << "WARNING (PhotosynthesisModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;

@@ -1298,13 +1298,13 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
 
 std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> UUIDs, helios::vec3 grid_center, helios::vec3 grid_size, helios::int3 grid_divisions)
 {
-
+    
     //set up the grid
     std::vector<std::vector<helios::vec3>> grid_face_vertices;
     helios::vec3 grid_min = make_vec3(grid_center.x - grid_size.x*0.5, grid_center.y - grid_size.y*0.5, grid_center.z - grid_size.z*0.5);
     helios::vec3 grid_max = make_vec3(grid_center.x + grid_size.x*0.5, grid_center.y + grid_size.y*0.5, grid_center.z + grid_size.z*0.5);
     helios::vec3 grid_spacing = make_vec3(grid_size.x/grid_divisions.x, grid_size.y/grid_divisions.y, grid_size.z/grid_divisions.z);
-
+    
     //faces in the y-z plane (change x)
     for(uint k=0;k< (grid_divisions.x + 1); k++)
     {
@@ -1315,7 +1315,7 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         this_face_vertices.push_back(make_vec3(grid_min.x + k*grid_spacing.x, grid_max.y, grid_max.z));
         grid_face_vertices.push_back(this_face_vertices);
     }
-
+    
     //faces in the x-z plane (change y)
     for(uint k=0;k< (grid_divisions.y + 1); k++)
     {
@@ -1326,7 +1326,7 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_min.y + k*grid_spacing.y, grid_max.z));
         grid_face_vertices.push_back(this_face_vertices);
     }
-
+    
     //faces in the x-z plane (change y)
     for(uint k=0;k< (grid_divisions.z + 1); k++)
     {
@@ -1337,26 +1337,26 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         this_face_vertices.push_back(make_vec3(grid_max.x, grid_max.y, grid_min.z + k*grid_spacing.z));
         grid_face_vertices.push_back(this_face_vertices);
     }
-
+    
     if( printmessages ){
         std::cout << UUIDs.size() << " input primitives" << std::endl;
         std::cout << grid_face_vertices.size() << " grid faces used for slicing" << std::endl;
         std::cout << grid_divisions.x*grid_divisions.y*grid_divisions.z << " total grid cells" << std::endl;
     }
-
-
+    
+    
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     // do an initial classification of primitives into grid cells based on if all their vertices fall into a given voxel
-
+    
     cell_primitives.resize(grid_divisions.x*grid_divisions.y*grid_divisions.z + 1);
-
+    
     //initially set all UUIDs as outside any voxel
     context->setPrimitiveData(UUIDs, "cell_ID", int(-1));
-
+    
     //vectors for UUIDs that do and do not need to be sliced
     std::vector<uint> UUIDs_to_slice;
     std::vector<uint> UUIDs_no_slice;
-
+    
     auto start = std::chrono::high_resolution_clock::now();
     for(uint p=0;p<UUIDs.size();p++)
     {
@@ -1371,21 +1371,21 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
                     helios::vec3 cell_min = make_vec3(grid_min.x + float(i)*grid_spacing.x, grid_min.y + float(j)*grid_spacing.y, grid_min.z + float(k)*grid_spacing.z);
                     helios::vec3 cell_max = make_vec3(grid_min.x + float(i)*grid_spacing.x + grid_spacing.x, grid_min.y + float(j)*grid_spacing.y + grid_spacing.y, grid_min.z + float(k)*grid_spacing.z + grid_spacing.z);
                     std::vector<helios::vec3> verts = context->getPrimitiveVertices(UUIDs.at(p));
-
+                    
                     uint v_in = 0;
                     for(uint v=0;v<verts.size();v++)
                     {
-
+                        
                         bool test2_x = (verts.at(v).x >= cell_min.x) && (verts.at(v).x <= cell_max.x );
                         bool test2_y = (verts.at(v).y >= cell_min.y ) && (verts.at(v).y <= cell_max.y );
                         bool test2_z =  (verts.at(v).z >= cell_min.z ) && (verts.at(v).z <= cell_max.z ) ;
-
+                        
                         if( test2_x && test2_y && test2_z)
                         {
                             v_in ++;
                         }
                     }
-
+                    
                     if(v_in == verts.size())
                     {
                         //the UUID doesn't need to be sliced since its vertices all are within a cell
@@ -1407,31 +1407,31 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
             }
             if(flag == true){break;}
         }
-
+        
         // if all vertices fell outside of all grid cells, add it to be sliced just in case (corner cases)
         if(flag == false){
             UUIDs_to_slice.push_back(UUIDs.at(p));
         }
-
+        
     }
-
+    
     if( printmessages ){
-
+        
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
         std::cout << duration.count() << " seconds to do initial grid cell classification" << std::endl;
         std::cout << UUIDs_no_slice.size() << " input primitives (" << float(UUIDs_no_slice.size())/float(UUIDs.size())*100 << "%) not sliced" << std::endl;
         std::cout << UUIDs_to_slice.size() << " input primitives (" << float(UUIDs_to_slice.size())/float(UUIDs.size())*100 << "%) being sliced" << std::endl;
     }
-
-
+    
+    
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     // do the slicing
-
+    
     std::vector<uint> primitives_to_remove;
     std::vector<uint> primitives_to_add;
     uint s1;
-
+    
     auto start2 = std::chrono::high_resolution_clock::now();
     //loop through each voxel face
     for(uint i=0;i<grid_face_vertices.size();i++)
@@ -1441,7 +1441,7 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
             //slice
             std::vector<uint> resulting_UUIDs;
             resulting_UUIDs = slicePrimitive(UUIDs_to_slice.at(j), grid_face_vertices.at(i));
-
+            
             //update the UUIDs_to_slice vector so it doesn't include deleted primitives (the originals that were split)
             bool exists = context->doesPrimitiveExist(UUIDs_to_slice.at(j));
             if(!exists)
@@ -1450,64 +1450,64 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
                 primitives_to_add.insert(primitives_to_add.end(), resulting_UUIDs.begin(), resulting_UUIDs.end());
             }
         }
-
+        
         for(int k=primitives_to_remove.size()-1; k>=0; k--)
         {
             UUIDs_to_slice.erase(UUIDs_to_slice.begin() + primitives_to_remove.at(k));
         }
         primitives_to_remove.clear();
-
+        
         UUIDs_to_slice.insert( UUIDs_to_slice.end(), primitives_to_add.begin(), primitives_to_add.end() );
         primitives_to_add.clear();
     }
-
+    
     if( printmessages ){
-
+        
         auto stop2 = std::chrono::high_resolution_clock::now();
         auto duration2 = std::chrono::duration_cast<std::chrono::seconds>(stop2 - start2);
         std::cout << duration2.count() << " seconds to do slicing" << std::endl;
-
+        
     }
-
+    
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     // now classify the sliced primitives into grid cells
     // save the cell_ID as primitive data for the triangle
     // save the primitive UUID to a vector of UUIDs that are in a given cell and save that
-
+    
     auto start3 = std::chrono::high_resolution_clock::now();
-
+    
     for(uint p=0;p<UUIDs_to_slice.size();p++)
     {
         int cell_ID = 0;
         bool flag = false;
-
+        
         for(uint k=0;k< (grid_divisions.z); k++)
         {
             for(uint j=0;j< (grid_divisions.y); j++)
             {
                 for(uint i=0;i< (grid_divisions.x); i++)
                 {
-
+                    
                     helios::vec3 cell_min = make_vec3(grid_min.x + i*grid_spacing.x, grid_min.y + j*grid_spacing.y, grid_min.z + k*grid_spacing.z);
                     helios::vec3 cell_max = make_vec3(grid_min.x + i*grid_spacing.x + grid_spacing.x, grid_min.y + j*grid_spacing.y + grid_spacing.y, grid_min.z + k*grid_spacing.z + grid_spacing.z);
-
+                    
                     std::vector<helios::vec3> verts = context->getPrimitiveVertices(UUIDs_to_slice.at(p));
                     uint v_in = 0;
                     for(uint v=0;v<verts.size();v++)
                     {
-
+                        
                         float absTol = pow(10, -6);
                         float relTol = pow(10, -20);
                         bool test2_x = (verts.at(v).x > cell_min.x || approxSame(verts.at(v).x, cell_min.x, absTol, relTol)) && (verts.at(v).x < cell_max.x || approxSame(verts.at(v).x, cell_max.x, absTol, relTol));
                         bool test2_y = (verts.at(v).y > cell_min.y || approxSame(verts.at(v).y, cell_min.y, absTol, relTol)) && (verts.at(v).y < cell_max.y || approxSame(verts.at(v).y, cell_max.y, absTol, relTol));
                         bool test2_z =  (verts.at(v).z > cell_min.z || approxSame(verts.at(v).z, cell_min.z, absTol, relTol)) && (verts.at(v).z < cell_max.z || approxSame(verts.at(v).z, cell_max.z, absTol, relTol)) ;
-
+                        
                         if( test2_x && test2_y && test2_z)
                         {
                             v_in ++;
                         }
                     }
-
+                    
                     if(v_in == verts.size())
                     {
                         context->setPrimitiveData(UUIDs_to_slice.at(p), "cell_ID", cell_ID);
@@ -1522,13 +1522,13 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
             }
             if(flag == true){break;}
         }
-
+        
         if(flag == false){
             cell_primitives.at(cell_primitives.size()-1).push_back(UUIDs_to_slice.at(p));
         }
-
+        
     }
-
+    
     if( printmessages ){
         auto stop3 = std::chrono::high_resolution_clock::now();
         auto duration3 = std::chrono::duration_cast<std::chrono::seconds>(stop3 - start3);
@@ -1538,14 +1538,14 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
     //Join the unsliced and sliced primitive UUIDs back into a single vector
     std::vector<uint>  UUIDs_out = UUIDs_no_slice;
     UUIDs_out.insert(UUIDs_out.end(), UUIDs_to_slice.begin(), UUIDs_to_slice.end());
-
+    
     if( printmessages ){
         std::cout << UUIDs_to_slice.size() << " primitives created from slicing" << std::endl;
         std::cout << UUIDs_out.size() << " total output primitives" << std::endl;
     }
-
+    
     return UUIDs_out;
-
+    
 }
 
 

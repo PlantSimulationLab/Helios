@@ -661,6 +661,15 @@ public:
    */
   void addCoordinateAxes(const helios::vec3 &origin, const helios::vec3 &length, const std::string &sign);
 
+  //! Add a coordinate axis
+  /** 
+   \param[in] "center" (x,y,z) location of the center of the grid
+   \param[in] "size" size of the grid in each direction
+   \param[in] "subdiv" number of grid subdivisions in each direction 
+   */
+  void addGridWireFrame(const helios::vec3 center, const helios::vec3 size, const helios::int3 subdiv);
+  
+  
   //! Enable the colorbar
   void enableColorbar( void );
 

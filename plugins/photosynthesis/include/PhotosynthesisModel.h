@@ -160,7 +160,7 @@ private:
 
   float evaluateEmpiricalModel( float i_PAR, float TL, float CO2, float gM );
 
-  float evaluateFarquharModel( float i_PAR, float TL, float CO2, float gM, float& Ci, int& limitation_state );
+  float evaluateFarquharModel( float i_PAR, float TL, float CO2, float gM, float& Ci, float& Gamma, int& limitation_state );
 
   float evaluateCi_Empirical( float Ci, float CO2, float fL, float Rd, float gM ) const;
 

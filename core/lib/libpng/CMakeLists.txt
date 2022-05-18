@@ -371,6 +371,22 @@ set(libpng_sources
   pngwtran.c
   pngwutil.c
 )
+
+#BNB 5/20/2022 - added for M1 Mac compatability
+if (CMAKE_OSX_ARCHITECTURES)
+  string(REGEX MATCH "arm64" is_arm "${CMAKE_OSX_ARCHITECTURES}")
+else ()
+  set (is_arm TRUE)
+endif ()
+
+if (is_arm)
+  LIST (APPEND libpng_sources
+          arm/arm_init.c
+          arm/filter_neon_intrinsics.c
+          )
+endif ()
+unset (is_arm)
+
 set(pngtest_sources
   pngtest.c
 )
