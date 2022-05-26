@@ -843,7 +843,6 @@ protected:
  */
 class Primitive{
 public:
-    
     //! Virtual destructor
     virtual ~Primitive()= default;
     
@@ -887,10 +886,10 @@ public:
     void setTransformationMatrix( float (&T)[16] );
     
     //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
-    virtual std::vector<helios::vec3> getVertices( ) const = 0;
+    std::vector<helios::vec3> getVertices() const;
     
     //! Function to return the (x,y,z) coordinates of the Primitive centroid
-    virtual helios::vec3 getCenter() const = 0;
+    virtual helios::vec3 getCenter() const;
     
     //! Function to return the diffuse color of a Primitive
     helios::RGBcolor getColor() const;
@@ -952,14 +951,14 @@ public:
      * \param[in] "rot" Rotation angle in radians.
      * \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
      */
-    virtual void rotate( float rot, const char* axis ) = 0;
+    void rotate( float rot, const char* axis );
     
     //! Function to rotate a Primitive about an arbitrary axis passing through the origin.
     /**
      * \param[in] "rot" Rotation angle in radians.
      * \param[in] "axis" Vector describing axis about which to rotate.
      */
-    virtual void rotate( float rot, const helios::vec3& axis ) = 0;
+    void rotate( float rot, const helios::vec3& axis );
     
     //! Function to rotate a Primitive about an arbitrary line (not necessarily passing through the origin)
     /**
@@ -967,7 +966,7 @@ public:
      * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
      * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
      */
-    virtual void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) = 0;
+    void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis );
     
     //! Function to scale the dimensions of a Primitive
     /**
@@ -1266,7 +1265,16 @@ protected:
     std::map<std::string, std::vector<bool> > primitive_data_bool;
     
     bool texturecoloroverridden;
-    
+
+    //! Returns a vector of untransformed vertices specific to this primitive.
+    virtual const std::vector<vec3>& canonicalVertices() const = 0;
+
+    //! Update cached vertices after a transformation.
+    void updateCachedVertices();
+
+private:
+    //! Vector containing transformed primitive vertices.
+    std::vector<vec3> cached_vertices;
 };
 
 
@@ -1299,45 +1307,14 @@ public:
     /** \return Unit vector normal to the surface of the Patch. */
     helios::vec3 getNormal() const override;
     
-    //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
-    /** \return Vector containing four sets of the (x,y,z) coordinates of each vertex.*/
-    std::vector<helios::vec3> getVertices() const override;
-    
     //! Get the size of the Patch in x- and y-directions
     /** \return vec2 describing the length and width of the Patch.*/
     helios::vec2 getSize() const;
     
-    //! Get the (x,y,z) coordinates of the Patch center point
-    /**
-     * \return vec3 describing (x,y,z) coordinate of Patch center.
-     */
-    helios::vec3 getCenter() const override;
-    
-    //! Function to rotate a Primitive about the x-, y-, or z-axis
-    /** \param[in] "rot" Rotation angle in radians.
-     \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
-     */
-    void rotate( float rot, const char* axis ) override;
-    
-    //! Function to rotate a Primitive about an arbitrary axis passing through the origin
-    /**
-     * \param[in] "rot" Rotation angle in radians.
-     * \param[in] "axis" Vector describing axis about which to rotate.
-     */
-    void rotate( float rot, const helios::vec3& axis ) override;
-    
-    //! Function to rotate a Primitive about an arbitrary line (not necessarily passing through the origin)
-    /**
-     * \param[in] "rot" Rotation angle in radians.
-     * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
-     * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
-     */
-    void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) override;
-    
-    
 protected:
     
-    
+    const std::vector<vec3>& canonicalVertices() const override;
+
 };
 
 //! Triangular geometric primitive object
@@ -1370,46 +1347,22 @@ public:
      */
     helios::vec3 getNormal() const override;
     
-    //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
-    /**
-     * \return Vector containing three sets of the (x,y,z) coordinates of each vertex.
-     */
-    std::vector<helios::vec3> getVertices() const override;
-    
     //! Function to return the (x,y,z) coordinates of a given Triangle vertex
     /**
      * \param[in] "number" Triangle vertex (0, 1, or 2)
      * \return (x,y,z) coordinates of triangle vertex
      */
     helios::vec3 getVertex( int number );
-    
-    //! Function to return the (x,y,z) coordinates of a given Triangle's center (centroid)
+
+    //! Get the (x,y,z) coordinates of the Patch center point
     /**
-     * \return (x,y,z) coordinates of triangle centroid
+     * \return vec3 describing (x,y,z) coordinate of Triangle center.
      */
     helios::vec3 getCenter() const override;
-    
-    //! Function to rotate a Primitive about the x-, y-, or z-axis
-    /**
-     * \param[in] "rot" Rotation angle in radians.
-     * \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
-     */
-    void rotate( float rot, const char* axis ) override;
-    
-    //! Function to rotate a Primitive about an arbitrary axis passing through the origin
-    /**
-     * \param[in] "rot" Rotation angle in radians.
-     * \param[in] "axis" Vector describing axis about which to rotate.
-     */
-    void rotate( float rot, const helios::vec3& axis ) override;
-    
-    //! Function to rotate a Primitive about an arbitrary line (not necessarily passing through the origin)
-    /**
-     * \param[in] "rot" Rotation angle in radians.
-     * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
-     * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
-     */
-    void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) override;
+
+protected:
+
+    const std::vector<vec3>& canonicalVertices() const override;
     
 private:
     
@@ -1450,53 +1403,22 @@ public:
     
     //! This function is not used for a Voxel
     helios::vec3 getNormal() const override;
-    
-    //! Function to return the (x,y,z) coordinates of the vertices of a Primitve
-    /**
-     * \return Vector containing eight sets of the (x,y,z) coordinates of each vertex.
-     */
-    std::vector<helios::vec3> getVertices() const override;
-    
+
     //! Function to return the Volume of a Voxel
     /**
      * \return Volume of the Voxel.
      */
     float getVolume();
     
-    //! Get the (x,y,z) coordinates of the Voxel center point
-    /**
-     * \return vec3 describing (x,y,z) coordinate of Voxel center.
-     */
-    helios::vec3 getCenter() const override;
-    
     //! Get the size of the Voxel in x-, y-, and z-directions
     /**
      * \return vec3 describing the length, width and depth of the Voxel.
      */
     helios::vec3 getSize();
-    
-    //! Function to rotate a Primitive about the x-, y-, or z-axis
-    /**
-     * \param[in] "rot" Rotation angle in radians.
-     * \param[in] "axis" Axis about which to rotate (must be one of x, y, z )
-     */
-    void rotate( float rot, const char* axis ) override;
-    
-    //! Function to rotate a Primitive about an arbitrary axis passing through the origin
-    /**
-     * \param[in] "rot" Rotation angle in radians.
-     * \param[in] "axis" Vector describing axis about which to rotate.
-     */
-    void rotate( float rot, const helios::vec3& axis ) override;
-    
-    
-    //! Function to rotate a Primitive about an arbitrary line (not necessarily passing through the origin)
-    /**
-     * \param[in] "rot" Rotation angle in radians.
-     * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
-     * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
-     */
-    void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) override;
+
+protected:
+
+    const std::vector<vec3>& canonicalVertices() const override;
     
 };
 
