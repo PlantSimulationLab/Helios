@@ -164,8 +164,15 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                     context->rotatePrimitive(s1_UUID_leaf_plant.back(), rotation_2, "z");
                     context->translatePrimitive(s1_UUID_leaf_plant.back(), base);
 
+
+                    vector<vector<vector<uint>>> s1_UUID_panicle_plant; // empty vector
+                    std::vector<uint> s1_UUID_branch_plant;    // empty vector
+
                     UUID_trunk.push_back(s1_UUID_stem_plant.front());
                     UUID_leaf.push_back(s1_UUID_leaf_plant);
+                    UUID_fruit.push_back(s1_UUID_panicle_plant);
+                    UUID_branch.push_back(s1_UUID_branch_plant);
+
 
                 }
 
@@ -350,8 +357,13 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 context->rotatePrimitive(s2_UUID_leaf_plant.back(), rotation_2, "z");
                 context->translatePrimitive(s2_UUID_leaf_plant.back(), base);
 
+                vector<vector<vector<uint>>> s2_UUID_panicle_plant; // empty vector
+                std::vector<uint> s2_UUID_branch_plant;    // empty vector
+
                 UUID_trunk.push_back(s2_UUID_stem_plant.front());
                 UUID_leaf.push_back(s2_UUID_leaf_plant);
+                UUID_fruit.push_back(s2_UUID_panicle_plant);
+                UUID_branch.push_back(s2_UUID_branch_plant);
 
             }
 
@@ -504,8 +516,14 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 }
 
             }
+
+        vector<vector<vector<uint>>> s3_UUID_panicle_plant; // empty vector
+        std::vector<uint> s3_UUID_branch_plant;    // empty vector
+
         UUID_trunk.push_back(s3_UUID_stem_plant);
         UUID_leaf.push_back(s3_UUID_leaf_plant);
+        UUID_fruit.push_back(s3_UUID_panicle_plant);
+        UUID_branch.push_back(s3_UUID_branch_plant);
 
     }
             // STAGE 4
@@ -745,9 +763,12 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
             }
 
-        UUID_trunk.push_back(s4_UUID_stem_plant);
+       std::vector<uint> s4_UUID_branch_plant;    // empty vector
+
+       UUID_trunk.push_back(s4_UUID_stem_plant);
        UUID_fruit.push_back(s4_UUID_panicle_plant);
-        UUID_leaf.push_back(s4_UUID_leaf_plant);
+       UUID_leaf.push_back(s4_UUID_leaf_plant);
+       UUID_branch.push_back(s4_UUID_branch_plant);
 
 
 
@@ -1020,9 +1041,12 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
         context->rotatePrimitive( flatten(s5_UUID_panicle_plant),plant_rotation,origin, make_vec3(0,0,1));
         context->rotatePrimitive( flatten(s5_UUID_leaf_plant),plant_rotation,origin, make_vec3(0,0,1));
 
+        std::vector<uint> s5_UUID_branch_plant;    // empty vector
+
         UUID_trunk.push_back(s5_UUID_stem_plant);
         UUID_fruit.push_back(s5_UUID_panicle_plant);
         UUID_leaf.push_back(s5_UUID_leaf_plant);
+        UUID_branch.push_back(s5_UUID_branch_plant);
 
     }
 
