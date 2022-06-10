@@ -1411,6 +1411,86 @@ void CanopyGenerator::loadXML( const char* filename ){
 
         }
 
+        //TomatoParameters Canopy
+        for (pugi::xml_node s = cgen.child("TomatoParameters"); s; s = s.next_sibling("TomatoParameters")) {
+
+            TomatoParameters tomatoparameters;
+
+            float leaf_length = XMLloadfloat(s, "leaf_length");
+            if (leaf_length != nullvalue_f) {
+                tomatoparameters.leaf_length = leaf_length;
+            }
+
+            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
+            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
+                tomatoparameters.leaf_subdivisions = leaf_subdivisions;
+            }
+
+            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
+            if ( leaf_texture_file != nullvalue_s ) {
+                tomatoparameters.leaf_texture_file = leaf_texture_file;
+            }
+
+            RGBAcolor shoot_color = XMLloadrgba(s, "shoot_color");
+            if (shoot_color.a != 0 ) {
+                tomatoparameters.shoot_color = make_RGBcolor(shoot_color.r,shoot_color.g,shoot_color.b);
+            }
+
+            int shoot_subdivisions = XMLloadint(s, "shoot_subdivisions");
+            if (shoot_subdivisions != nullvalue_i) {
+                tomatoparameters.shoot_subdivisions = shoot_subdivisions;
+            }
+
+            float h = XMLloadfloat(s, "plant_height");
+            if (h != nullvalue_f) {
+                tomatoparameters.plant_height = h;
+            }
+
+            float gr = XMLloadfloat(s, "fruit_radius");
+            if (gr != nullvalue_f) {
+                tomatoparameters.fruit_radius = gr;
+            }
+
+            RGBAcolor fruit_color = XMLloadrgba(s, "fruit_color");
+            if (fruit_color.a != 0 ) {
+                tomatoparameters.fruit_color = make_RGBcolor(fruit_color.r,fruit_color.g,fruit_color.b);
+            }
+
+
+            int fruit_subdivisions = XMLloadint(s, "fruit_subdivisions");
+            if (fruit_subdivisions != nullvalue_i) {
+                tomatoparameters.fruit_subdivisions = uint(fruit_subdivisions);
+            }
+
+            float plant_spacing = XMLloadfloat(s, "plant_spacing");
+            if (plant_spacing != nullvalue_f) {
+                tomatoparameters.plant_spacing = plant_spacing;
+            }
+
+            float row_spacing = XMLloadfloat(s, "row_spacing");
+            if (row_spacing != nullvalue_f) {
+                tomatoparameters.row_spacing = row_spacing;
+            }
+
+            int2 plant_count = XMLloadint2(s, "plant_count");
+            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
+                tomatoparameters.plant_count = plant_count;
+            }
+
+            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
+            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
+                tomatoparameters.canopy_origin = canopy_origin;
+            }
+
+            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
+            if (canopy_rotation != nullvalue_f) {
+                tomatoparameters.canopy_rotation = canopy_rotation;
+            }
+
+
+            buildCanopy(tomatoparameters);
+
+        }
 
         //WalnutCanopyParameters Canopy
         for (pugi::xml_node s = cgen.child("WalnutCanopyParameters"); s; s = s.next_sibling("WalnutCanopyParameters")) {

@@ -213,7 +213,7 @@
 
  <table>
  <tr><th>Variable</th><th>Units</th><th>Description</th></tr>
- <tr><td>\f$i\f$</td><td>\f$\mu\f$/m<sup>2</sup>-sec.</td><td>Photosynthetic radiation energy flux.</td></tr>
+ <tr><td>\f$i\f$</td><td>\f$\mu\f$mol/m<sup>2</sup>-sec.</td><td>Photosynthetic radiation energy flux.</td></tr>
  <tr><td>\f$T_s\f$</td><td>Kelvin</td><td>Surface temperature.</td></tr>
  <tr><td>\f$C_{amb}\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td><td>Ambient CO<sub>2</sub> concentration outside of boundary-layer.</td></tr>
  <tr><td>\f$g_M\f$</td><td>mol air/m<sup>2</sup>-s</td><td>Conductance to moisture transfer between inside of the leaf and outside of boundary-layer.</td></tr>
