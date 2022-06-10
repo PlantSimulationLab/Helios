@@ -156,6 +156,7 @@ void Primitive::setTransformationMatrix( float (&T)[16] ){
     for( int i=0; i<16; i++ ){
         transform[i] = T[i];
     }
+    updateCachedVertices();
 }
 
 float Patch::getArea() const{
@@ -188,21 +189,13 @@ float Voxel::getArea() const{
 }
 
 vec3 Patch::getNormal() const{
-
-    vec3 normal;
-
-    normal.x = transform[2];
-    normal.y = transform[6];
-    normal.z = transform[10];
-
-    normal.normalize();
-
-    return normal;
-
+    vec3 norm = make_vec3(transform[2], transform[6], transform[10]);
+    norm.normalize();
+    return norm;
 }
 
 vec3 Triangle::getNormal() const{
-    std::vector<vec3> vertices = getVertices();
+    const std::vector<vec3> vertices = getVertices();
     vec3 norm = cross(vertices.at(1)-vertices.at(0),vertices.at(2)-vertices.at(1));
     norm.normalize();
     return norm;
@@ -212,62 +205,67 @@ vec3 Voxel::getNormal() const{
     return make_vec3(0,0,0);
 }
 
-std::vector<vec3> Patch::getVertices() const{
+void Primitive::updateCachedVertices() {
+    const std::vector<vec3>& canonical = canonicalVertices();
+    cached_vertices.clear();
 
-    vec3 Y[4];
-    std::vector<vec3> vertices;
-    vertices.resize(4);
-    Y[0] = make_vec3( -0.5f, -0.5f, 0.f);
-    Y[1] = make_vec3( 0.5f, -0.5f, 0.f);
-    Y[2] = make_vec3( 0.5f, 0.5f, 0.f);
-    Y[3] = make_vec3( -0.5f, 0.5f, 0.f);
-
-    for( int i=0; i<4; i++ ){
-        vertices[i].x = transform[0] * Y[i].x + transform[1] * Y[i].y + transform[2] * Y[i].z + transform[3];
-        vertices[i].y = transform[4] * Y[i].x + transform[5] * Y[i].y + transform[6] * Y[i].z + transform[7];
-        vertices[i].z = transform[8] * Y[i].x + transform[9] * Y[i].y + transform[10] * Y[i].z + transform[11];
+    for( auto& cv : canonical ) {
+        cached_vertices.push_back(make_vec3(
+            transform[0] * cv.x + transform[1] * cv.y + transform[2] * cv.z + transform[3],
+            transform[4] * cv.x + transform[5] * cv.y + transform[6] * cv.z + transform[7],
+            transform[8] * cv.x + transform[9] * cv.y + transform[10] * cv.z + transform[11]
+        ));
     }
+}
+
+std::vector<vec3> Primitive::getVertices() const{
+    return cached_vertices;
+}
+
+const std::vector<vec3>& Patch::canonicalVertices() const{
+    static const std::vector<vec3> vertices({
+        make_vec3( -0.5f, -0.5f, 0.f),
+        make_vec3( 0.5f, -0.5f, 0.f),
+        make_vec3( 0.5f, 0.5f, 0.f),
+        make_vec3( -0.5f, 0.5f, 0.f)
+    });
     return vertices;
 }
 
-std::vector<vec3> Triangle::getVertices() const{
-
-    vec3 Y[3];
-    std::vector<vec3> vertices;
-    vertices.resize(3);
-    Y[0] = make_vec3( 0.f, 0.f, 0.f);
-    Y[1] = make_vec3( 0.f, 1.f, 0.f);
-    Y[2] = make_vec3( 1.f, 1.f, 0.f);
-
-    for( int i=0; i<3; i++ ){
-        vertices[i].x = transform[0] * Y[i].x + transform[1] * Y[i].y + transform[2] * Y[i].z + transform[3];
-        vertices[i].y = transform[4] * Y[i].x + transform[5] * Y[i].y + transform[6] * Y[i].z + transform[7];
-        vertices[i].z = transform[8] * Y[i].x + transform[9] * Y[i].y + transform[10] * Y[i].z + transform[11];
-    }
+const std::vector<vec3>& Triangle::canonicalVertices() const{
+    static const std::vector<vec3> vertices({
+        make_vec3( 0.f, 0.f, 0.f),
+        make_vec3( 0.f, 1.f, 0.f),
+        make_vec3( 1.f, 1.f, 0.f)
+    });
     return vertices;
-
 }
 
-std::vector<vec3> Voxel::getVertices() const{
-
-    vec3 Y[8];
-    std::vector<vec3> vertices;
-    vertices.resize(8);
-    Y[0] = make_vec3( -0.5f, -0.5f, -0.5f);
-    Y[1] = make_vec3( 0.5f, -0.5f, -0.5f);
-    Y[2] = make_vec3( 0.5f, 0.5f, -0.5f);
-    Y[3] = make_vec3( -0.5f, 0.5f, -0.5f);
-    Y[4] = make_vec3( -0.5f, -0.5f, 0.5f);
-    Y[5] = make_vec3( 0.5f, -0.5f, 0.5f);
-    Y[6] = make_vec3( 0.5f, 0.5f, 0.5f);
-    Y[7] = make_vec3( -0.5f, 0.5f, 0.5f);
-
-    for( int i=0; i<8; i++ ){
-        vertices[i].x = transform[0] * Y[i].x + transform[1] * Y[i].y + transform[2] * Y[i].z + transform[3];
-        vertices[i].y = transform[4] * Y[i].x + transform[5] * Y[i].y + transform[6] * Y[i].z + transform[7];
-        vertices[i].z = transform[8] * Y[i].x + transform[9] * Y[i].y + transform[10] * Y[i].z + transform[11];
-    }
+const std::vector<vec3>& Voxel::canonicalVertices() const{
+    static const std::vector<vec3> vertices({
+        make_vec3( -0.5f, -0.5f, -0.5f),
+        make_vec3( 0.5f, -0.5f, -0.5f),
+        make_vec3( 0.5f, 0.5f, -0.5f),
+        make_vec3( -0.5f, 0.5f, -0.5f),
+        make_vec3( -0.5f, -0.5f, 0.5f),
+        make_vec3( 0.5f, -0.5f, 0.5f),
+        make_vec3( 0.5f, 0.5f, 0.5f),
+        make_vec3( -0.5f, 0.5f, 0.5f)
+    });
     return vertices;
+}
+
+vec3 Primitive::getCenter() const{
+    return make_vec3(transform[3], transform[7], transform[11]);
+}
+
+vec3 Triangle::getCenter() const{
+    static const vec3 cv = make_vec3(1.f/3.f,2.f/3.f,0.f);
+    return make_vec3(
+        transform[0] * cv.x + transform[1] * cv.y + transform[2] * cv.z + transform[3],
+        transform[4] * cv.x + transform[5] * cv.y + transform[6] * cv.z + transform[7],
+        transform[8] * cv.x + transform[9] * cv.y + transform[10] * cv.z + transform[11]
+    );
 }
 
 RGBcolor Primitive::getColor() const{
@@ -358,6 +356,7 @@ void Primitive::scale( const vec3& S ){
     float T[16];
     makeScaleMatrix(S,T);
     matmult(T,transform,transform);
+    updateCachedVertices();
 }
 
 void Primitive::translate( const helios::vec3& shift ){
@@ -370,125 +369,46 @@ void Primitive::translate( const helios::vec3& shift ){
     float T[16];
     makeTranslationMatrix(shift,T);
     matmult(T,transform,transform);
+    updateCachedVertices();
 }
 
-void Patch::rotate( float rot, const char* axis ){
+void Primitive::rotate( float rot, const char* axis ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
-        return;
-    }
-
-    if( strcmp(axis,"z")==0 ){
-        float Rz[16];
-        makeRotationMatrix(rot,"z",Rz);
-        matmult(Rz,transform,transform);
-    }else if( strcmp(axis,"y")==0 ){
-        float Ry[16];
-        makeRotationMatrix(rot,"y",Ry);
-        matmult(Ry,transform,transform);
-    }else if( strcmp(axis,"x")==0 ){
-        float Rx[16];
-        makeRotationMatrix(rot,"x",Rx);
-        matmult(Rx,transform,transform);
-    }else{
-        throw( std::runtime_error( "ERROR (Patch::rotate): Rotation axis should be one of x, y, or z." ) );
-    }
-
-}
-
-void Patch::rotate( float rot, const helios::vec3& axis ){
-
-    if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cout << "WARNING (Primitive::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
         return;
     }
 
     float R[16];
     makeRotationMatrix(rot,axis,R);
     matmult(R,transform,transform);
+    updateCachedVertices();
 }
 
-void Patch::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
+void Primitive::rotate( float rot, const helios::vec3& axis ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
-        return;
-    }
-
-    float R[16];
-    makeRotationMatrix(rot,origin,axis,R);
-    matmult(R,transform,transform);
-}
-
-void Triangle::rotate( float rot, const char* axis ){
-
-    if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
-        return;
-    }
-
-    if( strcmp(axis,"z")==0 ){
-        float Rz[16];
-        makeRotationMatrix(rot,"z",Rz);
-        matmult(Rz,transform,transform);
-    }else if( strcmp(axis,"y")==0 ){
-        float Ry[16];
-        makeRotationMatrix(rot,"y",Ry);
-        matmult(Ry,transform,transform);
-    }else if( strcmp(axis,"x")==0 ){
-        float Rx[16];
-        makeRotationMatrix(rot,"x",Rx);
-        matmult(Rx,transform,transform);
-    }else{
-        throw( std::runtime_error( "ERROR (Triangle::rotate): Rotation axis should be one of x, y, or z." ) );
-    }
-
-}
-
-void Triangle::rotate( float rot, const helios::vec3& axis ){
-
-    if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cout << "WARNING (Primitive::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
         return;
     }
 
     float R[16];
     makeRotationMatrix(rot,axis,R);
     matmult(R,transform,transform);
+    updateCachedVertices();
 }
 
-void Triangle::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
+void Primitive::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cout << "WARNING (Primitive::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
         return;
     }
 
     float R[16];
     makeRotationMatrix(rot,origin,axis,R);
     matmult(R,transform,transform);
-}
-
-void Voxel::rotate( float rot, const char* axis ){
-
-    if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Voxel::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
-        return;
-    }
-
-    float Rz[16];
-    makeRotationMatrix(rot,"z",Rz);
-    matmult(Rz,transform,transform);
-
-}
-
-void Voxel::rotate( float rot, const helios::vec3& axis ){
-    std::cout << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
-}
-
-void Voxel::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
-    std::cout << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
+    updateCachedVertices();
 }
 
 void Triangle::makeTransformationMatrix( const helios::vec3& vert0, const helios::vec3& vert1, const helios::vec3& vert2 ){
@@ -689,7 +609,6 @@ void Triangle::makeTransformationMatrix( const helios::vec3& vert0, const helios
             }
         }
     }
-
 }
 
 void Primitive::setPrimitiveData( const char* label, const int& data ){
@@ -3073,6 +2992,7 @@ bool Context::doesGlobalDataExist( const char* label ) const{
 Patch::Patch( const RGBAcolor& a_color, uint a_UUID ){
 
     makeIdentityMatrix( transform );
+    updateCachedVertices();
 
     color = a_color;
     assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
@@ -3081,24 +3001,24 @@ Patch::Patch( const RGBAcolor& a_color, uint a_UUID ){
     solid_fraction = 1.f;
     texturefile = "";
     texturecoloroverridden = false;
-
 }
 
 Patch::Patch( const char* a_texturefile, float a_solid_fraction, uint a_UUID ){
 
     makeIdentityMatrix( transform );
+    updateCachedVertices();
 
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
     texturefile = a_texturefile;
     solid_fraction = a_solid_fraction;
     texturecoloroverridden = false;
-
 }
 
 Patch::Patch( const char* a_texturefile, const std::vector<vec2>& a_uv, float a_solid_fraction, uint a_UUID ){
 
     makeIdentityMatrix( transform );
+    updateCachedVertices();
 
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
@@ -3107,7 +3027,6 @@ Patch::Patch( const char* a_texturefile, const std::vector<vec2>& a_uv, float a_
     uv = a_uv;
     solid_fraction = a_solid_fraction;
     texturecoloroverridden = false;
-
 }
 
 helios::vec2 Patch::getSize() const{
@@ -3117,13 +3036,11 @@ helios::vec2 Patch::getSize() const{
     return make_vec2(l,w);
 }
 
-helios::vec3 Patch::getCenter() const{
-    return make_vec3(transform[3],transform[7],transform[11]);
-}
-
 Triangle::Triangle(  const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const RGBAcolor& a_color, uint a_UUID ){
 
     makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
+    updateCachedVertices();
+
     color = a_color;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_TRIANGLE;
@@ -3136,6 +3053,8 @@ Triangle::Triangle(  const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a
 Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const char* a_texturefile, const std::vector<vec2>& a_uv, float a_solid_fraction, uint a_UUID ){
 
     makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
+    updateCachedVertices();
+
     color = make_RGBAcolor(RGB::red,1);
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_TRIANGLE;
@@ -3153,41 +3072,13 @@ vec3 Triangle::getVertex( int number ){
         throw( std::runtime_error("ERROR (getVertex): vertex index must be 1, 2, or 3."));
     }
 
-    vec3 Y[3];
-    Y[0] = make_vec3( 0.f, 0.f, 0.f);
-    Y[1] = make_vec3( 0.f, 1.f, 0.f);
-    Y[2] = make_vec3( 1.f, 1.f, 0.f);
-
-    vec3 vertex;
-
-    vertex.x = transform[0] * Y[number].x + transform[1] * Y[number].y + transform[2] * Y[number].z + transform[3];
-    vertex.y = transform[4] * Y[number].x + transform[5] * Y[number].y + transform[6] * Y[number].z + transform[7];
-    vertex.z = transform[8] * Y[number].x + transform[9] * Y[number].y + transform[10] * Y[number].z + transform[11];
-
-    return vertex;
-
-}
-
-vec3 Triangle::getCenter() const{
-
-//    Y[0] = make_vec3( 0.f, 0.f, 0.f);
-//    Y[1] = make_vec3( 0.f, 1.f, 0.f);
-//    Y[2] = make_vec3( 1.f/3.f, 1.f, 0.f);
-
-    vec3 center0 = make_vec3(1.f/3.f,2.f/3.f,0.f);
-    vec3 center;
-
-    center.x = transform[0] * center0.x + transform[1] * center0.y + transform[2] * center0.z + transform[3];
-    center.y = transform[4] * center0.x + transform[5] * center0.y + transform[6] * center0.z + transform[7];
-    center.z = transform[8] * center0.x + transform[9] * center0.y + transform[10] * center0.z + transform[11];
-
-    return center;
-
+    return getVertices().at(number);
 }
 
 Voxel::Voxel( const RGBAcolor& a_color, uint a_UUID ){
 
     makeIdentityMatrix(transform);
+    updateCachedVertices();
 
     color = a_color;
     assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
@@ -3204,22 +3095,6 @@ float Voxel::getVolume(){
     vec3 size = getSize();
 
     return size.x*size.y*size.z;
-}
-
-vec3 Voxel::getCenter() const{
-
-    vec3 center;
-    vec3 Y;
-    Y.x = 0.f;
-    Y.y = 0.f;
-    Y.z = 0.f;
-
-    center.x = transform[0] * Y.x + transform[1] * Y.y + transform[2] * Y.z + transform[3];
-    center.y = transform[4] * Y.x + transform[5] * Y.y + transform[6] * Y.z + transform[7];
-    center.z = transform[8] * Y.x + transform[9] * Y.y + transform[10] * Y.z + transform[11];
-
-    return center;
-
 }
 
 vec3 Voxel::getSize(){
