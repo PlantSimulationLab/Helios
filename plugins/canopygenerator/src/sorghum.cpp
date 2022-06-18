@@ -78,20 +78,42 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
                     std::vector<uint> UUIDs4;
 
-                    float Nx =  params.s1_leaf_subdivisions.x ; // subdivisions only taken for the x, y is split into the minimum possible subdivisions (2)
-                    float Ny =  params.s1_leaf_subdivisions.y ;
+                    float Nx = params.s1_leaf_subdivisions.x;
+                    float Ny;
+
+                    if ( params.s1_leaf_subdivisions.y % 2 == 0){
+                        Ny = params.s1_leaf_subdivisions.y;
+                    } else {
+                        Ny = params.s1_leaf_subdivisions.y + 1;
+                    }
 
 
                     float dx = leaf_length/Nx;
                     float dy = leaf_width/Ny;
 
-                    float A_3 = leaf_length / float(0.08); // Half waves on the leaf 10
+                    float A_3 = leaf_length / float(0.08); // Half waves on the leaf
 
                     // leaf wave
-                    float A_2 = leaf_length / float(80); // amplitude 0.25
+                    float A_2 = leaf_length / float(80); // amplitude of each leaf wave
 
                     for (int i = 0; i < Nx; i++) {
                         for (float j = 0; j < Ny; j++) {
+
+                            float frac = 2/Ny;
+                            float y_frac = j/Ny;
+                            float Ny_frac_1, Ny_frac_2;
+
+                            if (y_frac > 0.5) {
+                                Ny_frac_1 = (1 - y_frac) * 2;
+                                Ny_frac_2 = Ny_frac_1 - frac;
+
+                            }else if (y_frac < 0.5) {
+                                Ny_frac_1 = y_frac * 2;
+                                Ny_frac_2 = Ny_frac_1 + frac;
+                            }else {
+                                Ny_frac_1 = (1 - y_frac) * 2;
+                                Ny_frac_2 = Ny_frac_1 - frac;
+                            }
 
                             float x = i * dx;
                             float y = j * dy;
@@ -114,8 +136,8 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                                 leaf_wave_1 = A_2 * sin(z_1);
                                 leaf_wave_2 = A_2 * sin(z_2);
                             } else {
-                                leaf_wave_1 = -leaf_curve;
-                                leaf_wave_2 = -leaf_curve;
+                                leaf_wave_1 = -leaf_curve * Ny_frac_1;
+                                leaf_wave_2 = -leaf_curve * Ny_frac_1;
                             }
 
                             z = leaf_bend * sin(x_i) + leaf_wave_1;
@@ -128,8 +150,8 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                                 leaf_wave_3 = A_2 * sin(z_2);
                                 leaf_wave_4 = A_2 * sin(z_1);
                             } else {
-                                leaf_wave_3 = -leaf_curve;
-                                leaf_wave_4 = -leaf_curve;
+                                leaf_wave_3 = -leaf_curve * Ny_frac_2;
+                                leaf_wave_4 = -leaf_curve * Ny_frac_2;
 
                             }
 
@@ -164,8 +186,15 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                     context->rotatePrimitive(s1_UUID_leaf_plant.back(), rotation_2, "z");
                     context->translatePrimitive(s1_UUID_leaf_plant.back(), base);
 
+
+                    vector<vector<vector<uint>>> s1_UUID_panicle_plant; // empty vector
+                    std::vector<uint> s1_UUID_branch_plant;    // empty vector
+
                     UUID_trunk.push_back(s1_UUID_stem_plant.front());
                     UUID_leaf.push_back(s1_UUID_leaf_plant);
+                    UUID_fruit.push_back(s1_UUID_panicle_plant);
+                    UUID_branch.push_back(s1_UUID_branch_plant);
+
 
                 }
 
@@ -266,19 +295,42 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 std::vector<std::vector<uint> > s2_UUID_leaf_plant;
 
                 std::vector<uint> UUIDs4;
-                float Nx = params.s2_leaf_subdivisions.x; // subdivisions only taken for the x, y is split into the minimum possible subdivisions (2)
-                float Ny = params.s2_leaf_subdivisions.y;
+
+                float Nx = params.s2_leaf_subdivisions.x;
+                float Ny;
+
+                if ( params.s2_leaf_subdivisions.y % 2 == 0){
+                    Ny = params.s2_leaf_subdivisions.y;
+                } else {
+                    Ny = params.s2_leaf_subdivisions.y + 1;
+                }
 
                 float dx = leaf_length /Nx;
                 float dy = leaf_width /Ny;
 
-                float A_3 = leaf_length * leaf_wave_no; // Half waves on the leaf 10
+                float A_3 = leaf_length * leaf_wave_no; // Half waves on the leaf
 
                 // leaf wave
-                float A_2 = leaf_length * leaf_wave; // amplitude 0.25
+                float A_2 = leaf_length * leaf_wave; // amplitude of each leaf wave
 
                 for (int i = 0; i < Nx; i++) {
                     for (float j = 0; j < Ny; j++) {
+
+                        float frac = 2/Ny;
+                        float y_frac = j/Ny;
+                        float Ny_frac_1, Ny_frac_2;
+
+                        if (y_frac > 0.5) {
+                            Ny_frac_1 = (1 - y_frac) * 2;
+                            Ny_frac_2 = Ny_frac_1 - frac;
+
+                        }else if (y_frac < 0.5) {
+                            Ny_frac_1 = y_frac * 2;
+                            Ny_frac_2 = Ny_frac_1 + frac;
+                        }else {
+                            Ny_frac_1 = (1 - y_frac) * 2;
+                            Ny_frac_2 = Ny_frac_1 - frac;
+                        }
 
                         float x = i * dx;
                         float y = j * dy;
@@ -301,8 +353,8 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                             leaf_wave_1 = A_2 * sin(z_1);
                             leaf_wave_2 = A_2 * sin(z_2);
                         } else {
-                            leaf_wave_1 = -leaf_curve;
-                            leaf_wave_2 = -leaf_curve;
+                            leaf_wave_1 = -leaf_curve * Ny_frac_1;
+                            leaf_wave_2 = -leaf_curve * Ny_frac_1;
                         }
 
                         z = leaf_bend * sin(x_i) + leaf_wave_1;
@@ -315,8 +367,8 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                             leaf_wave_3 = A_2 * sin(z_2);
                             leaf_wave_4 = A_2 * sin(z_1);
                         } else {
-                            leaf_wave_3 = -leaf_curve;
-                            leaf_wave_4 = -leaf_curve;
+                            leaf_wave_3 = -leaf_curve * Ny_frac_2;
+                            leaf_wave_4 = -leaf_curve * Ny_frac_2;
 
                         }
 
@@ -350,8 +402,13 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 context->rotatePrimitive(s2_UUID_leaf_plant.back(), rotation_2, "z");
                 context->translatePrimitive(s2_UUID_leaf_plant.back(), base);
 
+                vector<vector<vector<uint>>> s2_UUID_panicle_plant; // empty vector
+                std::vector<uint> s2_UUID_branch_plant;    // empty vector
+
                 UUID_trunk.push_back(s2_UUID_stem_plant.front());
                 UUID_leaf.push_back(s2_UUID_leaf_plant);
+                UUID_fruit.push_back(s2_UUID_panicle_plant);
+                UUID_branch.push_back(s2_UUID_branch_plant);
 
             }
 
@@ -390,8 +447,14 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
                 std::vector<uint> UUIDs4;
 
-                float Nx = params.s3_leaf_subdivisions.x; // subdivisions only taken for the x, y is split into the minimum possible subdivisions (2)
-                float Ny = params.s3_leaf_subdivisions.y;
+                float Nx = params.s3_leaf_subdivisions.x;
+                float Ny;
+
+                if ( params.s3_leaf_subdivisions.y % 2 == 0){
+                    Ny = params.s3_leaf_subdivisions.y;
+                } else {
+                    Ny = params.s3_leaf_subdivisions.y + 1;
+                }
 
                 float x;
 
@@ -404,14 +467,30 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 float dx = params.s3_leaf_size.x * x/Nx;
                 float dy = params.s3_leaf_size.y/Ny;
 
-                float A_3 = params.s3_leaf_size.x / float(0.08); // Half waves on the leaf 10
+                float A_3 = params.s3_leaf_size.x / float(0.08); // Half waves on the leaf
 
                 // leaf wave
-                float A_2 = params.s3_leaf_size.x / float(80); // amplitude 0.25
+                float A_2 = params.s3_leaf_size.x / float(80); // amplitude of each leaf wave
                 float leaf_amplitude = params.s3_leaf_size.x / float(6);
 
                 for (int i = 0; i < Nx; i++) {
                     for (float j = 0; j < Ny; j++) {
+
+                        float frac = 2/Ny;
+                        float y_frac = j/Ny;
+                        float Ny_frac_1, Ny_frac_2;
+
+                        if (y_frac > 0.5) {
+                            Ny_frac_1 = (1 - y_frac) * 2;
+                            Ny_frac_2 = Ny_frac_1 - frac;
+
+                        }else if (y_frac < 0.5) {
+                            Ny_frac_1 = y_frac * 2;
+                            Ny_frac_2 = Ny_frac_1 + frac;
+                        }else {
+                            Ny_frac_1 = (1 - y_frac) * 2;
+                            Ny_frac_2 = Ny_frac_1 - frac;
+                        }
 
                         float x = i * dx;
                         float y = j * dy;
@@ -434,8 +513,8 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                             leaf_wave_1 = A_2 * sin(z_1);
                             leaf_wave_2 = A_2 * sin(z_2);
                         } else {
-                            leaf_wave_1 = -params.s3_leaf_size.y * 0.425;
-                            leaf_wave_2 = -params.s3_leaf_size.y * 0.425;
+                            leaf_wave_1 = -params.s3_leaf_size.y * 0.425 * Ny_frac_1;
+                            leaf_wave_2 = -params.s3_leaf_size.y * 0.425 * Ny_frac_1;
                         }
 
                         z = leaf_amplitude * sin(x_i) + leaf_wave_1;
@@ -448,8 +527,8 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                             leaf_wave_3 = A_2 * sin(z_2);
                             leaf_wave_4 = A_2 * sin(z_1);
                         } else {
-                            leaf_wave_3 = -params.s3_leaf_size.y * 0.425;
-                            leaf_wave_4 = -params.s3_leaf_size.y * 0.425;
+                            leaf_wave_3 = -params.s3_leaf_size.y * 0.425 * Ny_frac_2;
+                            leaf_wave_4 = -params.s3_leaf_size.y * 0.425 * Ny_frac_2;
 
                         }
 
@@ -504,8 +583,14 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 }
 
             }
+
+        vector<vector<vector<uint>>> s3_UUID_panicle_plant; // empty vector
+        std::vector<uint> s3_UUID_branch_plant;    // empty vector
+
         UUID_trunk.push_back(s3_UUID_stem_plant);
         UUID_leaf.push_back(s3_UUID_leaf_plant);
+        UUID_fruit.push_back(s3_UUID_panicle_plant);
+        UUID_branch.push_back(s3_UUID_branch_plant);
 
     }
             // STAGE 4
@@ -566,13 +651,13 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
             float adj = 20; // scale factor to match the length of meters
             float width_panicle = params.s4_panicle_size.y * 10 * adj;
 
-            for (float n = 0; n < (width_panicle + 1); n++) { // Ball-shaped tubes which form the panicle
+            for (float n = 0; n < (width_panicle); n++) { // Ball-shaped tubes which form the panicle
                 float x = 0;
                 float y = 0;
                 float dz = n * (0.01);
                 float z = dz;
                 float angle = n * M_PI /width_panicle;
-                float dr = 0.008 * sin(angle);
+                float dr = 0.01 * sin(angle);
 
                 nodes_panicle.push_back(make_vec3(x, y, z));
                 radius_panicle.push_back(dr);
@@ -582,6 +667,8 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
             std::vector<uint> UUIDs2 = context->addTube(params.s4_panicle_subdivisions, nodes_panicle, radius_panicle, params.s4_seed_texture_file.c_str());
 
             float z_value = 0;
+            float di = 0;
+
             for (int i = (params.s4_panicle_size.x * adj) + 2; i > -1; i--) {
                 std::vector<uint> UUIDs2_copy = context->copyPrimitive(UUIDs2);
 
@@ -604,10 +691,23 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 context->translatePrimitive(UUIDs2_copy, tra1);
                 s4_UUID_panicle_plant.front().push_back(UUIDs2_copy);
 
-                for (int ii = 0; ii < 8; ii++) {
+                float i_value_1, i_value_2;
+
+                if (di == 0) {
+                    i_value_1 = 6;
+                    i_value_2 = 60;
+                    di = 1;
+                } else {
+                    i_value_1 = 5;
+                    i_value_2 = 72;
+                    di = 0;
+                }
+
+                for (int ii = 0; ii < i_value_1; ii++) {
                     s4_UUID_panicle_plant.front().push_back(context->copyPrimitive(UUIDs2_copy));
-                    float rot2 = ii * 45 * M_PI / float(180);
-                    context->rotatePrimitive(s4_UUID_panicle_plant.front().back(), rot2, "z");
+                    float rot2 = ii * i_value_2 * M_PI / float(180);
+                    context -> rotatePrimitive(s4_UUID_panicle_plant.front().back(), rot2, "z");
+
                 }
 
             };
@@ -620,7 +720,6 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
             int nodes_no = params.s4_number_of_leaves;
 
-
             float rotation_x1 = (context->randu(0, 360) * M_PI) / float(180);// inclination rotation, different for each plant
             std::vector<std::vector<uint> > s4_UUID_leaf_plant;
 
@@ -628,8 +727,14 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
                 std::vector<uint> UUIDs4;
 
-                float Nx = params.s4_leaf_subdivisions.x; // subdivisions only taken for the x, y is split into the minimum possible subdivisions (2)
-                float Ny = params.s4_leaf_subdivisions.y; // subdivisions only taken for the x, y is split into the minimum possible subdivisions (2)
+                float Nx = params.s4_leaf_subdivisions.x;
+                float Ny;
+
+                if ( params.s4_leaf_subdivisions.y % 2 == 0){
+                    Ny = params.s4_leaf_subdivisions.y;
+                } else {
+                    Ny = params.s4_leaf_subdivisions.y + 1;
+                }
 
                 float x;
 
@@ -647,12 +752,28 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 float A_3 = params.s4_leaf_size.x / float(0.08); // Half waves on the leaf 10
 
                 // leaf wave
-                float A_2 = params.s4_leaf_size.x / float(80); // amplitude 0.25
+                float A_2 = params.s4_leaf_size.x / float(80); // amplitude of each leaf wave
 
                 float leaf_amplitude = params.s4_leaf_size.x / float(6);
 
                 for (int i = 0; i < Nx; i++) {
                     for (float j = 0; j < Ny; j++) {
+
+                        float frac = 2/Ny;
+                        float y_frac = j/Ny;
+                        float Ny_frac_1, Ny_frac_2;
+
+                        if (y_frac > 0.5) {
+                            Ny_frac_1 = (1 - y_frac) * 2;
+                            Ny_frac_2 = Ny_frac_1 - frac;
+
+                        }else if (y_frac < 0.5) {
+                            Ny_frac_1 = y_frac * 2;
+                            Ny_frac_2 = Ny_frac_1 + frac;
+                        }else {
+                            Ny_frac_1 = (1 - y_frac) * 2;
+                            Ny_frac_2 = Ny_frac_1 - frac;
+                        }
 
                         float x = i * dx;
                         float y = j * dy;
@@ -675,9 +796,8 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                             leaf_wave_1 = A_2 * sin(z_1);
                             leaf_wave_2 = A_2 * sin(z_2);
                         } else {
-                            leaf_wave_1 = -params.s4_leaf_size.y*0.425;
-                            leaf_wave_2 = -params.s4_leaf_size.y*0.425;
-
+                            leaf_wave_1 = -params.s4_leaf_size.y*0.425 * Ny_frac_1;
+                            leaf_wave_2 = -params.s4_leaf_size.y*0.425 * Ny_frac_1;
                         }
 
                         z = leaf_amplitude * sin(x_i) + leaf_wave_1;
@@ -689,10 +809,9 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                         if (j == Ny - 1) {
                             leaf_wave_3 = A_2 * sin(z_2);
                             leaf_wave_4 = A_2 * sin(z_1);
-                        } else {
-                            leaf_wave_3 = -params.s4_leaf_size.y*0.425;
-                            leaf_wave_4 = -params.s4_leaf_size.y*0.425;
-
+                        } else  {
+                            leaf_wave_3 = -params.s4_leaf_size.y*0.425 * Ny_frac_2;
+                            leaf_wave_4 = -params.s4_leaf_size.y*0.425 * Ny_frac_2;
                         }
 
                         z = leaf_amplitude * sin(sx_i) + leaf_wave_3;
@@ -745,9 +864,12 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
             }
 
-        UUID_trunk.push_back(s4_UUID_stem_plant);
+       std::vector<uint> s4_UUID_branch_plant;    // empty vector
+
+       UUID_trunk.push_back(s4_UUID_stem_plant);
        UUID_fruit.push_back(s4_UUID_panicle_plant);
-        UUID_leaf.push_back(s4_UUID_leaf_plant);
+       UUID_leaf.push_back(s4_UUID_leaf_plant);
+       UUID_branch.push_back(s4_UUID_branch_plant);
 
 
 
@@ -758,7 +880,7 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
         std::vector<float> radius_stem;
         vector<RGBcolor> Color_stem;
 
-        float Nx_stem = params.s5_stem_subdivisions; // subdivisions only taken for the x, y is split into the minimum possible subdivisions (2)
+        float Nx_stem = params.s5_stem_subdivisions;
         float dx = 1.f / float(Nx_stem);
 
         for (float n = 0; n < params.s5_stem_length* Nx_stem; n++) {
@@ -825,13 +947,13 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
         float adj = 20; // scale factor to match the length of meters
         float width_panicle = params.s5_panicle_size.y * 10 * adj;
 
-        for (float n = 0; n < (width_panicle + 1); n++) {
+        for (float n = 0; n < width_panicle ; n++) {
             float x = 0;
             float y = 0;
             float dz = n * (0.01);
             float z = dz;
             float angle = n * M_PI / width_panicle;
-            float dr = 0.008 * sin(angle);
+            float dr = 0.01 * sin(angle);
 
             nodes_panicle.push_back(make_vec3(x, y, z));
             radius_panicle.push_back(dr);
@@ -840,9 +962,12 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
         std::vector<uint> UUIDs2 = context->addTube(params.s5_panicle_subdivisions, nodes_panicle, radius_panicle,params.s5_seed_texture_file.c_str());
 
-
         float z_value = 0;
+
+        float di = 0;
+
         for (int i = (params.s5_panicle_size.x*adj) + 2; i > -1; i--) {
+
 
             std::vector<uint> UUIDs_copy = context->copyPrimitive(UUIDs2);
 
@@ -863,16 +988,31 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
             context->rotatePrimitive(UUIDs_copy, rot1, "y");
             context->translatePrimitive(UUIDs_copy, base);
             context->translatePrimitive(UUIDs_copy, tra1);
+
+
             s5_UUID_panicle_plant.front().push_back(UUIDs_copy);
 
-            for (int ii = 0; ii < 8; ii++) {
+            float i_value_1, i_value_2;
+
+            if (di == 0) {
+                i_value_1 = 6;
+                i_value_2 = 60;
+                di = 1;
+            } else {
+                i_value_1 = 5;
+                i_value_2 = 72;
+                di = 0;
+            }
+
+            for (int ii = 0; ii < i_value_1; ii++) {
                 s5_UUID_panicle_plant.front().push_back(context->copyPrimitive(UUIDs_copy));
-                float rot2 = ii * 45 * M_PI / float(180);
+                float rot2 = ii * i_value_2 * M_PI / float(180);
                 context -> rotatePrimitive(s5_UUID_panicle_plant.front().back(), rot2, "z");
 
             }
 
         };
+
 
         context->deletePrimitive(UUIDs2);
         ;
@@ -899,8 +1039,14 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
             std::vector<uint> UUIDs4;
 
-            float Nx = params.s5_leaf_subdivisions.x; // subdivisions only taken for the x, y is split into the minimum possible subdivisions (2)
-            float Ny = params.s5_leaf_subdivisions.y;
+            float Nx = params.s5_leaf_subdivisions.x;
+            float Ny;
+
+            if ( params.s5_leaf_subdivisions.y % 2 == 0){
+                Ny = params.s5_leaf_subdivisions.y;
+            } else {
+                Ny = params.s5_leaf_subdivisions.y + 1;
+            }
 
             float x;
 
@@ -916,9 +1062,9 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
             float dx = params.s5_leaf_size.x * x/ Nx;
             float dy = params.s5_leaf_size.y/Ny;
 
-            float A_3 = params.s5_leaf_size.x / float(0.08); // Half waves on the leaf 10
-            float A_2 = params.s5_leaf_size.x / float(90); // amplitude 0.25        // leaf wave
-            float leaf_amplitude = params.s5_leaf_size.x / float(5); //        float leaf_amplitude = params.leaf_size.x/float(5);
+            float A_3 = params.s5_leaf_size.x / float(0.08); // Half waves on the leaf
+            float A_2 = params.s5_leaf_size.x / float(90); //
+            float leaf_amplitude = params.s5_leaf_size.x / float(5); //
 
             for (int i = 0; i < Nx; i++) {
                 for (float j = 0; j < Ny; j++) {
@@ -1020,9 +1166,12 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
         context->rotatePrimitive( flatten(s5_UUID_panicle_plant),plant_rotation,origin, make_vec3(0,0,1));
         context->rotatePrimitive( flatten(s5_UUID_leaf_plant),plant_rotation,origin, make_vec3(0,0,1));
 
+        std::vector<uint> s5_UUID_branch_plant;    // empty vector
+
         UUID_trunk.push_back(s5_UUID_stem_plant);
         UUID_fruit.push_back(s5_UUID_panicle_plant);
         UUID_leaf.push_back(s5_UUID_leaf_plant);
+        UUID_branch.push_back(s5_UUID_branch_plant);
 
     }
 
