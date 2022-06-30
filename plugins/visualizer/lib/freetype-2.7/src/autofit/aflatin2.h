@@ -2,7 +2,6 @@
 /*            of an alternative latin hinting algorithm that was always  */
 /*            marked as experimental.                                    */
 
-
 /***************************************************************************/
 /*                                                                         */
 /*  aflatin2.h                                                             */
@@ -21,26 +20,21 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef AFLATIN2_H_
 #define AFLATIN2_H_
 
 #include "afhints.h"
 
-
 FT_BEGIN_HEADER
 
+/* the `latin' writing system */
 
-  /* the `latin' writing system */
-
-  AF_DECLARE_WRITING_SYSTEM_CLASS( af_latin2_writing_system_class )
-
+AF_DECLARE_WRITING_SYSTEM_CLASS(af_latin2_writing_system_class)
 
 /* */
 
 FT_END_HEADER
 
 #endif /* AFLATIN_H_ */
-
 
 /* END */

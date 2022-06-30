@@ -24,27 +24,27 @@
 //
 //========================================================================
 
-#include <IOKit/IOKitLib.h>
 #include <IOKit/IOCFPlugIn.h>
-#include <IOKit/hid/IOHIDLib.h>
+#include <IOKit/IOKitLib.h>
 #include <IOKit/hid/IOHIDKeys.h>
+#include <IOKit/hid/IOHIDLib.h>
 
-#define _GLFW_PLATFORM_JOYSTICK_STATE         _GLFWjoystickNS ns
-#define _GLFW_PLATFORM_LIBRARY_JOYSTICK_STATE struct { int dummyJoystick; }
+#define _GLFW_PLATFORM_JOYSTICK_STATE _GLFWjoystickNS ns
+#define _GLFW_PLATFORM_LIBRARY_JOYSTICK_STATE \
+    struct {                                  \
+        int dummyJoystick;                    \
+    }
 
 #define _GLFW_PLATFORM_MAPPING_NAME "Mac OS X"
 
 // Cocoa-specific per-joystick data
 //
-typedef struct _GLFWjoystickNS
-{
-    IOHIDDeviceRef      device;
-    CFMutableArrayRef   axes;
-    CFMutableArrayRef   buttons;
-    CFMutableArrayRef   hats;
+typedef struct _GLFWjoystickNS {
+    IOHIDDeviceRef device;
+    CFMutableArrayRef axes;
+    CFMutableArrayRef buttons;
+    CFMutableArrayRef hats;
 } _GLFWjoystickNS;
-
 
 void _glfwInitJoysticksNS(void);
 void _glfwTerminateJoysticksNS(void);
-

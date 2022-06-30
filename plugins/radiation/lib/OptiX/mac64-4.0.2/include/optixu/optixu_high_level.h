@@ -1,16 +1,16 @@
 /**
-* \file optixu_high_level.h
-* \brief Simple API for rendering in OptiX
-*/
+ * \file optixu_high_level.h
+ * \brief Simple API for rendering in OptiX
+ */
 
 /**
-*
-* \ingroup rthRender
-*
-* \brief API for rendering in OptiX
-*
-* Maybe choose defaults and let user override by setting OptiX variable
-*/
+ *
+ * \ingroup rthRender
+ *
+ * \brief API for rendering in OptiX
+ *
+ * Maybe choose defaults and let user override by setting OptiX variable
+ */
 
 #ifndef __optixu_optix_high_level_h__
 #define __optixu_optix_high_level_h__
@@ -18,8 +18,8 @@
 #include <vector_types.h>
 
 #include "../optix.h"
-#include "optixu_matrix_namespace.h"
 #include "optixu_high_level_shared.h"
+#include "optixu_matrix_namespace.h"
 
 // TODO: My lazy, unformatted function-parameter format style has gotten
 // mixed up with Dave's tabbed style.  Pick one (probably tabbed) and make
@@ -27,13 +27,12 @@
 // TODO: Make this header work when included both in C and C++ code
 // TODO: The interface would be much nicer with float3 function parameters
 // instead of float param[3].  This problem is related to the problem with
-// including in both C and C++: I'm getting 'unresolved external symbol' 
+// including in both C and C++: I'm getting 'unresolved external symbol'
 // errors with float3 args, so using float arg[3] is a stop-gap workaround.
 /* Geometry */
 
 // TODO: Learn Doxygen notations and use them to full advantage, for example for
 // argument names
-
 
 /**
  * \ingroup rthContext
@@ -54,102 +53,81 @@ RTresult RTAPI rthContext(RTcontext* context);
 
 // TODO: Implement 'packed data' handling if signalled by 'format'
 /**
-* \ingroup rthRender
-*
-* Create an OptiX Geometry object for a list of triangles and associate it with
-* a context.  Triangles are given as "triangle" soup, that is, one vertex
-* specification in 'vertex_buffer' corresponds to exactly one triangle's vertex,
-* and to no other triangle.  Thus, the first three vertices belong to the first
-* triangle, the second three to the second triangle, and so forth.  The
-* 'format' parameter gives the layout of how each different Vertex
-* attribute, i.e.  vertex(position), normal, texture coordinates, and color, is
-* layed out in the 'vertex_buffer' buffer.
-*
-* The type of each component of each attribute is assumed to be 'float'
-*
-* Any parameter that is not specified per vertex here but is needed by the
-* geometry may be specified by a variable attached to the RTgeometry.
-* Any parameter that is not specified per vertex here but is needed by the
-* material may be specified by a variable attached to the RTmaterial.
-*
-*   \param        context         The context to attach the new geometry to
-*   \param[out]   geom_object     Return pointer to new OptiX Geometry object
-*   \param        vertex_buffer   The buffer containing all vertices
-*   \param        triangle_count  How many triangles to create
-*   \param        format   The format of how vertices are stored
-*/
-RTresult RTAPI rthGeometryTriangleList(
-  RTcontext               context,
-  RTgeometry*             geom_object,
-  RTbuffer                vertex_buffer,
-  unsigned int            triangle_count,
-  RTHvertexBufferFormat   format);
+ * \ingroup rthRender
+ *
+ * Create an OptiX Geometry object for a list of triangles and associate it with
+ * a context.  Triangles are given as "triangle" soup, that is, one vertex
+ * specification in 'vertex_buffer' corresponds to exactly one triangle's vertex,
+ * and to no other triangle.  Thus, the first three vertices belong to the first
+ * triangle, the second three to the second triangle, and so forth.  The
+ * 'format' parameter gives the layout of how each different Vertex
+ * attribute, i.e.  vertex(position), normal, texture coordinates, and color, is
+ * layed out in the 'vertex_buffer' buffer.
+ *
+ * The type of each component of each attribute is assumed to be 'float'
+ *
+ * Any parameter that is not specified per vertex here but is needed by the
+ * geometry may be specified by a variable attached to the RTgeometry.
+ * Any parameter that is not specified per vertex here but is needed by the
+ * material may be specified by a variable attached to the RTmaterial.
+ *
+ *   \param        context         The context to attach the new geometry to
+ *   \param[out]   geom_object     Return pointer to new OptiX Geometry object
+ *   \param        vertex_buffer   The buffer containing all vertices
+ *   \param        triangle_count  How many triangles to create
+ *   \param        format   The format of how vertices are stored
+ */
+RTresult RTAPI rthGeometryTriangleList(RTcontext context, RTgeometry* geom_object, RTbuffer vertex_buffer,
+                                       unsigned int triangle_count, RTHvertexBufferFormat format);
 
 // argument names
 // TODO: implemented 'packed data' handling if signaled by 'format'
 /**
-* \ingroup rthRender
-* 
-* Create an OptiX Geometry object for a list of indexed vertices, and associate
-* it with a context.  Triangles are given as three indices into a buffer of
-* pre-defined vertices; thus, a 'vertex_buffer' is provided which defines an
-* available set of vertices, and 'index_buffer' defines which vertices
-* are used for the three points of each triangle.  Thus, the indices of triangle
-* 0 are found in entry 0, 1, and 2 of the 'index_buffer, and in general
-* those of triangle i are found at entries 3*i+0, 3*i+1, and 3*i+2.
-*
-*   \param        context                 The context to associate the geometry with
-*   \param[out]   geom_object             Return pointer to the new OptiX Geometry object
-*   \param        vertex_buffer           The data of available vertices
-*   \param        index_buffer            Defines which vertices are used by which triangles
-*   \param        triangle_count          How many triangles to create
-*   \param        offset_count            How the vertex data is layed out in vertex_buffer
-*/
-RTresult RTAPI rthGeometryIndexedTriangles(
-  RTcontext                 context,
-  RTgeometry*               geom_object,
-  RTbuffer                  vertex_buffer,
-  RTbuffer                  index_buffer,
-  unsigned int              triangle_count,
-  RTHvertexBufferFormat     format);
+ * \ingroup rthRender
+ *
+ * Create an OptiX Geometry object for a list of indexed vertices, and associate
+ * it with a context.  Triangles are given as three indices into a buffer of
+ * pre-defined vertices; thus, a 'vertex_buffer' is provided which defines an
+ * available set of vertices, and 'index_buffer' defines which vertices
+ * are used for the three points of each triangle.  Thus, the indices of triangle
+ * 0 are found in entry 0, 1, and 2 of the 'index_buffer, and in general
+ * those of triangle i are found at entries 3*i+0, 3*i+1, and 3*i+2.
+ *
+ *   \param        context                 The context to associate the geometry with
+ *   \param[out]   geom_object             Return pointer to the new OptiX Geometry object
+ *   \param        vertex_buffer           The data of available vertices
+ *   \param        index_buffer            Defines which vertices are used by which triangles
+ *   \param        triangle_count          How many triangles to create
+ *   \param        offset_count            How the vertex data is layed out in vertex_buffer
+ */
+RTresult RTAPI rthGeometryIndexedTriangles(RTcontext context, RTgeometry* geom_object, RTbuffer vertex_buffer,
+                                           RTbuffer index_buffer, unsigned int triangle_count,
+                                           RTHvertexBufferFormat format);
 
 // TODO: Implement the previously documented contract:
 //     "If all the vertices share an attribute value, set the OptiX variable for
 //     that value on the returned Geometry."
 //
 /**
-* \ingroup rthRender
-* Create an OptiX Geometry object for spheres and associate a context with
-* it.  
-* TODO: Document parameters
-* TODO: Document that the .cu code will expect 'spheres_buffer' to have element
-*       size equal to 1, so client code should use rtBufferSetFormat( ...,
-*       RT_FORMAT_BYTE, ... ) or rtBufferSetElementSize(..., 1, ...) (or
-*       somehow fix the design or code so that it doesn't have to, so it's more
-*       straightforward to use custom client-side 'struct's). 
-*/
-RTresult RTAPI rthGeometrySpheres(
-  RTcontext               context,
-  RTgeometry*             geom_object,
-  RTbuffer                spheres_buffer,
-  unsigned int            sphere_count,
-  RTHsphereBufferFormat   format
-);
-
+ * \ingroup rthRender
+ * Create an OptiX Geometry object for spheres and associate a context with
+ * it.
+ * TODO: Document parameters
+ * TODO: Document that the .cu code will expect 'spheres_buffer' to have element
+ *       size equal to 1, so client code should use rtBufferSetFormat( ...,
+ *       RT_FORMAT_BYTE, ... ) or rtBufferSetElementSize(..., 1, ...) (or
+ *       somehow fix the design or code so that it doesn't have to, so it's more
+ *       straightforward to use custom client-side 'struct's).
+ */
+RTresult RTAPI rthGeometrySpheres(RTcontext context, RTgeometry* geom_object, RTbuffer spheres_buffer,
+                                  unsigned int sphere_count, RTHsphereBufferFormat format);
 
 /* Miss programs */
 
-RTresult RTAPI rthMissConstantColor(
-  RTcontext         context,
-  RTprogram*        miss_program,
-  float             color[3]);
+RTresult RTAPI rthMissConstantColor(RTcontext context, RTprogram* miss_program, float color[3]);
 
-RTresult RTAPI rthMissGradient(
-  RTcontext         context,
-  RTprogram*        miss_program,
-  float             color_up[3],
-  float             color_down[3],
-  float             up[3]);
+RTresult RTAPI rthMissGradient(RTcontext context, RTprogram* miss_program, float color_up[3], float color_down[3],
+                               float up[3]);
 
 // TODO: Dave's original interface here used a 'sun_direction' vector instead
 // of the 'sun_phi' and 'sun_theta' angles used here.  I now use angles here
@@ -164,55 +142,40 @@ RTresult RTAPI rthMissGradient(
 /**
  * An additional OptiX variable, "sun_sky_sky_scale" can be set on the returned
  * program, which controls how the Preetham sky computed colors are scaled
- * to display colors.  This function sets it to an initial default value of 
+ * to display colors.  This function sets it to an initial default value of
  * 4.0/100.0.
  */
-RTresult RTAPI rthMissSunSky(
-  RTcontext         context,
-  RTprogram*        miss_program,
-  float             overcast,
-  float             sun_theta,
-  float             sun_phi,
-  float             sky_up[3]);
+RTresult RTAPI rthMissSunSky(RTcontext context, RTprogram* miss_program, float overcast, float sun_theta, float sun_phi,
+                             float sky_up[3]);
 
-RTresult RTAPI rthMissEnvironmentMap(
-  RTcontext         context,
-  RTprogram*        miss_object,
-  RTtexturesampler  env_map,
-  optix::float3     up);
+RTresult RTAPI rthMissEnvironmentMap(RTcontext context, RTprogram* miss_object, RTtexturesampler env_map,
+                                     optix::float3 up);
 /* Render Mode
-  *
-  * The Render Mode indicates the ray generation program (and may also influence the closest hit and any hit programs)
-  * Render Mode specifies the rendering algorithm (Whitted for now) and the anti-aliasing approach.
-  */
+ *
+ * The Render Mode indicates the ray generation program (and may also influence the closest hit and any hit programs)
+ * Render Mode specifies the rendering algorithm (Whitted for now) and the anti-aliasing approach.
+ */
 
 /**
-* \ingroup rthRender
-* \brief Antialiasing algorithms
-*
-* Most of these will need parameters.
-*/
+ * \ingroup rthRender
+ * \brief Antialiasing algorithms
+ *
+ * Most of these will need parameters.
+ */
 typedef enum {
-  RTH_AA_POINT_SAMPLE = 0,  /*!< One sample at each pixel center */
-  RTH_AA_SUPERSAMPLING,     /*!< Supersampling */
-  RTH_AA_PATH_SPACE_FILTER, /*!< Path space filtering antialiasing */
-  RTH_AA_TXAA,              /*!< Morphological antialiasing */
+    RTH_AA_POINT_SAMPLE = 0,  /*!< One sample at each pixel center */
+    RTH_AA_SUPERSAMPLING,     /*!< Supersampling */
+    RTH_AA_PATH_SPACE_FILTER, /*!< Path space filtering antialiasing */
+    RTH_AA_TXAA,              /*!< Morphological antialiasing */
 } RTHantialiasingtype;
 
 /* Non-recursive ray traced rendering. May be a special case of Whitted with ray depths of 0? */
-RTresult RTAPI rthRenderModeRayCast(
-  RTcontext            context,
-  RTprogram*           render_mode_object,
-  RTbuffer             output_buffer,
-  RTHantialiasingtype  aa_type);
+RTresult RTAPI rthRenderModeRayCast(RTcontext context, RTprogram* render_mode_object, RTbuffer output_buffer,
+                                    RTHantialiasingtype aa_type);
 
 /* 1980s Whitted-style recursive ray tracing with reflection, refraction, and shadow rays */
-RTresult RTAPI rthRenderModeRecursive(
-  RTcontext            context,
-  RTprogram*           render_mode_object,
-  RTbuffer             output_buffer,
-  RTHantialiasingtype  aa_type);
-
+RTresult RTAPI rthRenderModeRecursive(RTcontext context, RTprogram* render_mode_object, RTbuffer output_buffer,
+                                      RTHantialiasingtype aa_type);
 
 // TODO: I haven't figured out the best way to merge rendering modes with ray
 // generation and material programs.
@@ -220,7 +183,7 @@ RTresult RTAPI rthRenderModeRecursive(
 // TODO: Figure out how to have Doxygen use this comment for the \inGroup
 // rthRayGeneration as a whole, not just for individual methods.
 // TODO: Switch rth_ray_generation_write_output()'s color parameter to type
-// float4, to allow alpha-channel rendering as well?  This would require 
+// float4, to allow alpha-channel rendering as well?  This would require
 // implementing alpha-channel rendering throughout the renderer.
 /**
  * A pinhole camera
@@ -230,14 +193,14 @@ RTresult RTAPI rthRenderModeRecursive(
  *
  * All RayGeneration programs rely on a separate Callable Program to write
  * the rendered color in the proper format to the output buffer.  This allows
- * The renderer to be used with any kind of ouput buffer format, so long as 
+ * The renderer to be used with any kind of ouput buffer format, so long as
  * the OptiX callable program "rth_write_output" is set on
  * the RayGeneration program.  The callable program returns 'void' and takes
  * arguments 'uint2 index' and 'float3 color', where float3 channel values are
  * rgb values in the range [0.0f, 1.0f].
  *
  * A number of 'rthOutputWriter*()' functions are provided for common cases.
- * If 'ray_gen_prog' is a Ray Generation program returned by one of the 
+ * If 'ray_gen_prog' is a Ray Generation program returned by one of the
  * rthRayGeneration*() methods, then its output writer callable program could be
  * assigned using code such as:
  *
@@ -273,12 +236,9 @@ RTresult RTAPI rthRenderModeRecursive(
  *                                 <desired buffer width>,
  *                                 <desired buffer height> );
  */
-RTresult RTAPI rthRayGenerationPinholeCamera(
-  RTcontext            context,
-  RTprogram*           ray_generation_program);
+RTresult RTAPI rthRayGenerationPinholeCamera(RTcontext context, RTprogram* ray_generation_program);
 
-
-/** 
+/**
  * Sets the camera pose for the ray generation program, using a 4x4
  * transformation matrix.
  *
@@ -296,23 +256,17 @@ RTresult RTAPI rthRayGenerationPinholeCamera(
 // starting pose.
 // TODO: Possibly provide facility for a different assumed home basis of i,j,k
 // TODO: Provide for using a column-major camera_transform
-RTresult RTAPI rthCameraSetPoseMatrix4x4(
-  RTprogram            ray_gen_prog,
-  const float*         camera_transform);
+RTresult RTAPI rthCameraSetPoseMatrix4x4(RTprogram ray_gen_prog, const float* camera_transform);
 
 /**
  * Sets the camera pose via its eye position, "screen-left" (u) axis,
- * "screen-up" axis (v), and "screen-out" axis (w).  Each axis vector should 
+ * "screen-up" axis (v), and "screen-out" axis (w).  Each axis vector should
  * be pre-normalized.
  *
  * The camera will look along w.
  */
-RTresult RTAPI rthCameraSetPoseEyeUVW(
-  RTprogram             ray_gen_program,
-  const float           eye[3],
-  const float           u[3],
-  const float           v[3],
-  const float           w[3]);
+RTresult RTAPI rthCameraSetPoseEyeUVW(RTprogram ray_gen_program, const float eye[3], const float u[3], const float v[3],
+                                      const float w[3]);
 
 /* Output writer programs for ray generators */
 
@@ -321,16 +275,12 @@ RTresult RTAPI rthCameraSetPoseEyeUVW(
  *
  * // TODO: document exact format this will write in
  */
-RTresult RTAPI rthOutputWriterByte4RGB(
-  RTcontext             context,
-  RTprogram*            writer_prog);
+RTresult RTAPI rthOutputWriterByte4RGB(RTcontext context, RTprogram* writer_prog);
 
 /**
  * \inGroup rthOutputWriter
  */
-RTresult RTAPI rthOutputWriterFloat3RGB(
-  RTcontext             context,
-  RTprogram*            writer_prog);
+RTresult RTAPI rthOutputWriterFloat3RGB(RTcontext context, RTprogram* writer_prog);
 
 /**
  * Attaches an image output buffer to the given OutputWriter program.
@@ -341,23 +291,20 @@ RTresult RTAPI rthOutputWriterFloat3RGB(
  * // TODO: Consider designing and implementing some checking/safety behaviors
  *          for this requirement, rather than leaving it at undefined bechavior.
  */
-RTresult RTAPI rthOutputWriterSetOutputBuffer(
-  RTprogram             output_writer_program,
-  RTbuffer              buffer);
+RTresult RTAPI rthOutputWriterSetOutputBuffer(RTprogram output_writer_program, RTbuffer buffer);
 
 /* Materials */
 
-/* Any hit programs are not specified by the app. They are implied by the render mode (for shadow rays) and the material. */
+/* Any hit programs are not specified by the app. They are implied by the render mode (for shadow rays) and the
+ * material. */
 
 /* Map the surface normal directly to the output color (for debugging and performance testing) */
-RTresult RTAPI rthMaterialNormalToColor(
-  RTcontext            context,
-  RTmaterial*          material);
+RTresult RTAPI rthMaterialNormalToColor(RTcontext context, RTmaterial* material);
 
 /**
  * The following parameters can be set by way of OptiX variables of the same
  * name on the returned material.  Default values are shown here.
- * 
+ *
  *     TODO: rename to index_of_refraction
  *     TODO: Document these parameters better
  *     float refraction_index = 1.4f
@@ -371,17 +318,14 @@ RTresult RTAPI rthMaterialNormalToColor(
  *     int refraction_maxdepth = 10
  *     int reflection_maxdepth = 5
  */
-RTresult RTAPI rthMaterialGlass(
-  RTcontext            context,
-  RTmaterial*          material,
-  float                refraction_color[3],
-  float                reflection_color[3]);
-  /* TODO: Add: The reflection_color and refraction_color both overridden by the
-   * vertex color, if there is one. */
-  /* TODO: For this and all other API functions, push the return value pointer
-   * to the last function parameter, for consistency with rt* API calls. */
+RTresult RTAPI rthMaterialGlass(RTcontext context, RTmaterial* material, float refraction_color[3],
+                                float reflection_color[3]);
+/* TODO: Add: The reflection_color and refraction_color both overridden by the
+ * vertex color, if there is one. */
+/* TODO: For this and all other API functions, push the return value pointer
+ * to the last function parameter, for consistency with rt* API calls. */
 
-/** 
+/**
  * Note: the returned material's closest hit program assumes the
  * RadianceRayPayload's 'importance' and 'depth' fields have been initialized
  * before rtTrace() is called.  In the partially implemented state of this API,
@@ -389,23 +333,15 @@ RTresult RTAPI rthMaterialGlass(
  * 'importance' and 'depth' is the responsibility of user-written ray generation
  * programs
  */
-RTresult RTAPI rthMaterialPhong(
-  RTcontext            context,
-  RTmaterial*          material,
-  float                ambient[3],
-  float                diffuse[3],   // How to specify texture vs. not?
-  float                specular[3],
-  float                reflectivity[3],
-  float                specular_exponent);
+RTresult RTAPI rthMaterialPhong(RTcontext context, RTmaterial* material, float ambient[3],
+                                float diffuse[3],  // How to specify texture vs. not?
+                                float specular[3], float reflectivity[3], float specular_exponent);
 
 /* Lights */
 
 // TODO: Make function names more clear for what exactly they do
 // (for example, rthRayGenerationCreate*() )
-RTresult RTAPI rthPointLightBuffer(
-  RTcontext            context,
-  RTbuffer*            lights,
-  unsigned int         count);
+RTresult RTAPI rthPointLightBuffer(RTcontext context, RTbuffer* lights, unsigned int count);
 
 /* Other */
 
@@ -415,24 +351,16 @@ RTresult RTAPI rthPointLightBuffer(
  * rthSetOutputWriter().  This call does not attach the exception program
  * to any context: that will need to be done in client code.
  */
-RTresult RTAPI rthException(
-  RTcontext            context,
-  RTprogram*           exception_program,
-  float                exception_color[3]);
-
+RTresult RTAPI rthException(RTcontext context, RTprogram* exception_program, float exception_color[3]);
 
 /* How to set up the right acceleration structure over the scene without additional API calls? */
 
 /* Common functions */
 
-
 /**
  * Assign an OutputWriter callable program to a Program that requires one, such
  * as a ray generation or exception program.
  */
-RTresult RTAPI rthSetOutputWriter(
-  RTprogram             program,
-  RTprogram             output_writer_program);
-
+RTresult RTAPI rthSetOutputWriter(RTprogram program, RTprogram output_writer_program);
 
 #endif /* _optixu_optix_high_level.h */

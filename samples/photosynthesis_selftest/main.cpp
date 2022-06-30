@@ -2,12 +2,9 @@
 
 using namespace helios;
 
-int main()
-{
-
+int main() {
     Context context;
     PhotosynthesisModel photosynthesis(&context);
 
     return photosynthesis.selfTest();
-
 }

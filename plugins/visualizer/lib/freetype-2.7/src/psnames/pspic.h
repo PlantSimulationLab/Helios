@@ -15,54 +15,43 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef PSPIC_H_
 #define PSPIC_H_
 
-
 #include FT_INTERNAL_PIC_H
-
 
 #ifndef FT_CONFIG_OPTION_PIC
 
-#define PSCMAPS_SERVICES_GET   pscmaps_services
-#define PSCMAPS_INTERFACE_GET  pscmaps_interface
+#define PSCMAPS_SERVICES_GET pscmaps_services
+#define PSCMAPS_INTERFACE_GET pscmaps_interface
 
 #else /* FT_CONFIG_OPTION_PIC */
 
 #include FT_SERVICE_POSTSCRIPT_CMAPS_H
 
-
 FT_BEGIN_HEADER
 
-  typedef struct  PSModulePIC_
-  {
-    FT_ServiceDescRec*     pscmaps_services;
-    FT_Service_PsCMapsRec  pscmaps_interface;
+typedef struct PSModulePIC_ {
+    FT_ServiceDescRec* pscmaps_services;
+    FT_Service_PsCMapsRec pscmaps_interface;
 
-  } PSModulePIC;
+} PSModulePIC;
 
+#define GET_PIC(lib) ((PSModulePIC*)((lib)->pic_container.psnames))
+#define PSCMAPS_SERVICES_GET (GET_PIC(library)->pscmaps_services)
+#define PSCMAPS_INTERFACE_GET (GET_PIC(library)->pscmaps_interface)
 
-#define GET_PIC( lib )                                     \
-          ( (PSModulePIC*)((lib)->pic_container.psnames) )
-#define PSCMAPS_SERVICES_GET   ( GET_PIC( library )->pscmaps_services )
-#define PSCMAPS_INTERFACE_GET  ( GET_PIC( library )->pscmaps_interface )
+/* see pspic.c for the implementation */
+void psnames_module_class_pic_free(FT_Library library);
 
-
-  /* see pspic.c for the implementation */
-  void
-  psnames_module_class_pic_free( FT_Library  library );
-
-  FT_Error
-  psnames_module_class_pic_init( FT_Library  library );
+FT_Error psnames_module_class_pic_init(FT_Library library);
 
 FT_END_HEADER
 
 #endif /* FT_CONFIG_OPTION_PIC */
 
- /* */
+/* */
 
 #endif /* PSPIC_H_ */
-
 
 /* END */

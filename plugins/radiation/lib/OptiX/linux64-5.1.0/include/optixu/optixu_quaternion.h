@@ -25,7 +25,6 @@
 // This needs to be included first, to make sure the CUDA vector types make it into the
 // global namespace to maintain backward compatibility.
 #include "optixu_math.h"
-
 #include "optixu_quaternion_namespace.h"
 
-#endif // #ifndef __optixu_optixu_quaternion_h__
+#endif  // #ifndef __optixu_optixu_quaternion_h__

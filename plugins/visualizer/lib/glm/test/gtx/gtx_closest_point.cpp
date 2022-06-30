@@ -1,8 +1,7 @@
 #include <glm/gtx/closest_point.hpp>
 
-int main()
-{
-	int Error(0);
+int main() {
+    int Error(0);
 
-	return Error;
+    return Error;
 }

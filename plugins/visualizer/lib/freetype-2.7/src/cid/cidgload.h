@@ -15,17 +15,14 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef CIDGLOAD_H_
 #define CIDGLOAD_H_
 
-
 #include <ft2build.h>
+
 #include "cidobjs.h"
 
-
 FT_BEGIN_HEADER
-
 
 #if 0
 
@@ -36,16 +33,13 @@ FT_BEGIN_HEADER
 
 #endif /* 0 */
 
-  FT_LOCAL( FT_Error )
-  cid_slot_load_glyph( FT_GlyphSlot  glyph,         /* CID_Glyph_Slot */
-                       FT_Size       size,          /* CID_Size       */
-                       FT_UInt       glyph_index,
-                       FT_Int32      load_flags );
-
+FT_LOCAL(FT_Error)
+cid_slot_load_glyph(FT_GlyphSlot glyph, /* CID_Glyph_Slot */
+                    FT_Size size,       /* CID_Size       */
+                    FT_UInt glyph_index, FT_Int32 load_flags);
 
 FT_END_HEADER
 
 #endif /* CIDGLOAD_H_ */
-
 
 /* END */

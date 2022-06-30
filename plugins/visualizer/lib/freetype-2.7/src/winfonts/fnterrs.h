@@ -15,13 +15,12 @@
 /*                                                                         */
 /***************************************************************************/
 
-
-  /*************************************************************************/
-  /*                                                                       */
-  /* This file is used to define the Windows FNT/FON error enumeration     */
-  /* constants.                                                            */
-  /*                                                                       */
-  /*************************************************************************/
+/*************************************************************************/
+/*                                                                       */
+/* This file is used to define the Windows FNT/FON error enumeration     */
+/* constants.                                                            */
+/*                                                                       */
+/*************************************************************************/
 
 #ifndef FNTERRS_H_
 #define FNTERRS_H_
@@ -30,13 +29,12 @@
 
 #undef FTERRORS_H_
 
-#undef  FT_ERR_PREFIX
-#define FT_ERR_PREFIX  FNT_Err_
-#define FT_ERR_BASE    FT_Mod_Err_Winfonts
+#undef FT_ERR_PREFIX
+#define FT_ERR_PREFIX FNT_Err_
+#define FT_ERR_BASE FT_Mod_Err_Winfonts
 
 #include FT_ERRORS_H
 
 #endif /* FNTERRS_H_ */
-
 
 /* END */

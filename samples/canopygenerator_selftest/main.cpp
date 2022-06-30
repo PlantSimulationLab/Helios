@@ -2,12 +2,10 @@
 
 using namespace helios;
 
-int main(){
-  
-  //Run the self-test
-  Context context;
+int main() {
+    // Run the self-test
+    Context context;
 
-  CanopyGenerator canopygenerator(&context);
-  return canopygenerator.selfTest();
-	
+    CanopyGenerator canopygenerator(&context);
+    return canopygenerator.selfTest();
 }

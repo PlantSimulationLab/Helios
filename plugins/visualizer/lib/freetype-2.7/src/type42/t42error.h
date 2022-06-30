@@ -15,12 +15,11 @@
 /*                                                                         */
 /***************************************************************************/
 
-
-  /*************************************************************************/
-  /*                                                                       */
-  /* This file is used to define the Type 42 error enumeration constants.  */
-  /*                                                                       */
-  /*************************************************************************/
+/*************************************************************************/
+/*                                                                       */
+/* This file is used to define the Type 42 error enumeration constants.  */
+/*                                                                       */
+/*************************************************************************/
 
 #ifndef T42ERROR_H_
 #define T42ERROR_H_
@@ -29,13 +28,12 @@
 
 #undef FTERRORS_H_
 
-#undef  FT_ERR_PREFIX
-#define FT_ERR_PREFIX  T42_Err_
-#define FT_ERR_BASE    FT_Mod_Err_Type42
+#undef FT_ERR_PREFIX
+#define FT_ERR_PREFIX T42_Err_
+#define FT_ERR_BASE FT_Mod_Err_Type42
 
 #include FT_ERRORS_H
 
 #endif /* T42ERROR_H_ */
-
 
 /* END */

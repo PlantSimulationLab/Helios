@@ -16,26 +16,21 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef AFINDIC_H_
 #define AFINDIC_H_
 
 #include "afhints.h"
 
-
 FT_BEGIN_HEADER
 
+/* the `indic' writing system */
 
-  /* the `indic' writing system */
-
-  AF_DECLARE_WRITING_SYSTEM_CLASS( af_indic_writing_system_class )
-
+AF_DECLARE_WRITING_SYSTEM_CLASS(af_indic_writing_system_class)
 
 /* */
 
 FT_END_HEADER
 
 #endif /* AFINDIC_H_ */
-
 
 /* END */

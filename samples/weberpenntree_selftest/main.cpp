@@ -2,12 +2,10 @@
 
 using namespace helios;
 
-int main(){
-  
-  Context context;
+int main() {
+    Context context;
 
-  WeberPennTree wpt(&context);
+    WeberPennTree wpt(&context);
 
-  return wpt.selfTest();
-
+    return wpt.selfTest();
 }

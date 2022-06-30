@@ -25,58 +25,54 @@
 #include "Atom.h"
 
 namespace optix {
-  namespace prime {
+namespace prime {
 
-    /// @cond
+/// @cond
 
-    /// Base class for reference counting.
-    class RefCountedObj
-    {
-    public:
-      /// Constructor initializes the reference count to \c 1.
-      RefCountedObj( unsigned int refCnt=1 ) : m_refCnt( refCnt )  { }
+/// Base class for reference counting.
+class RefCountedObj {
+   public:
+    /// Constructor initializes the reference count to \c 1.
+    RefCountedObj(unsigned int refCnt = 1) : m_refCnt(refCnt) {}
 
-      /// Virtual d'tor
-      virtual ~RefCountedObj() { }
+    /// Virtual d'tor
+    virtual ~RefCountedObj() {}
 
-    private:
-      friend class ContextObj;
-      friend class ModelObj;
-      template <class RefCountedObj> friend class Handle;
+   private:
+    friend class ContextObj;
+    friend class ModelObj;
+    template <class RefCountedObj>
+    friend class Handle;
 
-      /// Increment the reference count
-      virtual unsigned int ref();
+    /// Increment the reference count
+    virtual unsigned int ref();
 
-      /// Decrement the reference count
-      virtual unsigned int unref();
+    /// Decrement the reference count
+    virtual unsigned int unref();
 
-      mutable Atom32 m_refCnt;
-    };
+    mutable Atom32 m_refCnt;
+};
 
+//
+// Increment the reference count
+//
+inline unsigned int RefCountedObj::ref() { return ++m_refCnt; }
 
-    //
-    // Increment the reference count
-    //
-    inline unsigned int RefCountedObj::ref() {
-      return ++m_refCnt;
-    }
-
-
-    //
-    // Decrement the reference count
-    //
-    inline unsigned int RefCountedObj::unref() {
-      unsigned int cnt = --m_refCnt;
-      if( !cnt) {
+//
+// Decrement the reference count
+//
+inline unsigned int RefCountedObj::unref() {
+    unsigned int cnt = --m_refCnt;
+    if (!cnt) {
         delete this;
-      }
-
-      return cnt;
     }
-    
-    /// @endcond
 
-  } // end namespace prime
-} // end namespace optix
+    return cnt;
+}
 
-#endif // #ifndef __optix_optix_prime_ref_h__
+/// @endcond
+
+}  // end namespace prime
+}  // end namespace optix
+
+#endif  // #ifndef __optix_optix_prime_ref_h__

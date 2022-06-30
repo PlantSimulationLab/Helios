@@ -32,9 +32,8 @@
 
 */
 
-#include "optixu_math.h"
-
 #include "optixpp_namespace.h"
+#include "optixu_math.h"
 
 /*
  * optixpp's classes origninally were in the optixu namespace but have subsequently been
@@ -44,48 +43,45 @@
 
 namespace optixu {
 
-  using optix::AccelerationObj;
-  using optix::BufferObj;
-  using optix::ContextObj;
-  using optix::GeometryObj;
-  using optix::GeometryGroupObj;
-  using optix::GeometryInstanceObj;
-  using optix::GroupObj;
-  using optix::MaterialObj;
-  using optix::ProgramObj;
-  using optix::RemoteDeviceObj;
-  using optix::SelectorObj;
-  using optix::TextureSamplerObj;
-  using optix::TransformObj;
-  using optix::VariableObj;
+using optix::AccelerationObj;
+using optix::BufferObj;
+using optix::ContextObj;
+using optix::GeometryGroupObj;
+using optix::GeometryInstanceObj;
+using optix::GeometryObj;
+using optix::GroupObj;
+using optix::MaterialObj;
+using optix::ProgramObj;
+using optix::RemoteDeviceObj;
+using optix::SelectorObj;
+using optix::TextureSamplerObj;
+using optix::TransformObj;
+using optix::VariableObj;
 
-  using optix::APIObj;
-  using optix::DestroyableObj;
-  using optix::ScopedObj;
+using optix::APIObj;
+using optix::DestroyableObj;
+using optix::ScopedObj;
 
-  using optix::Handle;
+using optix::Handle;
 
-  using optix::Acceleration;
-  using optix::Buffer;
-  using optix::Context;
-  using optix::Geometry;
-  using optix::GeometryGroup;
-  using optix::GeometryInstance;
-  using optix::Group;
-  using optix::Material;
-  using optix::Program;
-  using optix::RemoteDevice;
-  using optix::Selector;
-  using optix::TextureSampler;
-  using optix::Transform;
-  using optix::Variable;
+using optix::Acceleration;
+using optix::Buffer;
+using optix::Context;
+using optix::Geometry;
+using optix::GeometryGroup;
+using optix::GeometryInstance;
+using optix::Group;
+using optix::Material;
+using optix::Program;
+using optix::RemoteDevice;
+using optix::Selector;
+using optix::TextureSampler;
+using optix::Transform;
+using optix::Variable;
 
-  using optix::Exception;
+using optix::Exception;
 
-  using optix::bufferId;
+using optix::bufferId;
 } /* end namespace optixu */
 
-
 #endif /* __optixu_optixpp_h__ */
-
-

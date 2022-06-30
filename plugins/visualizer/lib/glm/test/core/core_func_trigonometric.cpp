@@ -1,10 +1,7 @@
 #include <glm/trigonometric.hpp>
 
-int main()
-{
-	int Error = 0;
+int main() {
+    int Error = 0;
 
-
-	return Error;
+    return Error;
 }
-

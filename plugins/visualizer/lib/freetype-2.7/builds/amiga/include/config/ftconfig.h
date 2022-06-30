@@ -25,11 +25,11 @@
  */
 
 #if 0
-#define FT_EXPORT_DEF( x )  extern  x
+#define FT_EXPORT_DEF(x) extern x
 #endif
 
 #undef FT_EXPORT_DEF
-#define FT_EXPORT_DEF( x )  x
+#define FT_EXPORT_DEF(x) x
 
 /* Now include the original file */
 #ifndef __MORPHOS__

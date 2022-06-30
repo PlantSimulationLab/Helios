@@ -15,13 +15,12 @@
 /*                                                                         */
 /***************************************************************************/
 
-
-  /*************************************************************************/
-  /*                                                                       */
-  /* This file is used to define the PS names module error enumeration     */
-  /* constants.                                                            */
-  /*                                                                       */
-  /*************************************************************************/
+/*************************************************************************/
+/*                                                                       */
+/* This file is used to define the PS names module error enumeration     */
+/* constants.                                                            */
+/*                                                                       */
+/*************************************************************************/
 
 #ifndef PSNAMERR_H_
 #define PSNAMERR_H_
@@ -30,13 +29,12 @@
 
 #undef FTERRORS_H_
 
-#undef  FT_ERR_PREFIX
-#define FT_ERR_PREFIX  PSnames_Err_
-#define FT_ERR_BASE    FT_Mod_Err_PSnames
+#undef FT_ERR_PREFIX
+#define FT_ERR_PREFIX PSnames_Err_
+#define FT_ERR_BASE FT_Mod_Err_PSnames
 
 #include FT_ERRORS_H
 
 #endif /* PSNAMERR_H_ */
-
 
 /* END */

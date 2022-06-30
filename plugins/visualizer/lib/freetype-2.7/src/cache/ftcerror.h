@@ -15,13 +15,12 @@
 /*                                                                         */
 /***************************************************************************/
 
-
-  /*************************************************************************/
-  /*                                                                       */
-  /* This file is used to define the caching sub-system error enumeration  */
-  /* constants.                                                            */
-  /*                                                                       */
-  /*************************************************************************/
+/*************************************************************************/
+/*                                                                       */
+/* This file is used to define the caching sub-system error enumeration  */
+/* constants.                                                            */
+/*                                                                       */
+/*************************************************************************/
 
 #ifndef FTCERROR_H_
 #define FTCERROR_H_
@@ -30,13 +29,12 @@
 
 #undef FTERRORS_H_
 
-#undef  FT_ERR_PREFIX
-#define FT_ERR_PREFIX  FTC_Err_
-#define FT_ERR_BASE    FT_Mod_Err_Cache
+#undef FT_ERR_PREFIX
+#define FT_ERR_PREFIX FTC_Err_
+#define FT_ERR_BASE FT_Mod_Err_Cache
 
 #include FT_ERRORS_H
 
 #endif /* FTCERROR_H_ */
-
 
 /* END */

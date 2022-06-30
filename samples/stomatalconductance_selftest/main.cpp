@@ -2,12 +2,10 @@
 
 using namespace helios;
 
-int main(){
-  
-  Context context;
+int main() {
+    Context context;
 
-  StomatalConductanceModel stomatalconductance(&context);
+    StomatalConductanceModel stomatalconductance(&context);
 
-  return stomatalconductance.selfTest();
-
+    return stomatalconductance.selfTest();
 }

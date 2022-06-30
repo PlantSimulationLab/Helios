@@ -2,12 +2,10 @@
 
 using namespace helios;
 
-int main(){
-  
-  Context context;
+int main() {
+    Context context;
 
-  BLConductanceModel blc(&context);
+    BLConductanceModel blc(&context);
 
-  blc.selfTest();
-
+    blc.selfTest();
 }

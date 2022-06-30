@@ -5,8 +5,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/dual_quaternion.hpp>
 
-namespace glm
-{
+namespace glm {
 // tvec1 type explicit instantiation
 template struct tvec1<uint8, lowp>;
 template struct tvec1<uint16, lowp>;
@@ -243,7 +242,7 @@ template struct tquat<float64, mediump>;
 template struct tquat<float32, highp>;
 template struct tquat<float64, highp>;
 
-//tdualquat type explicit instantiation
+// tdualquat type explicit instantiation
 template struct tdualquat<float32, lowp>;
 template struct tdualquat<float64, lowp>;
 
@@ -253,5 +252,4 @@ template struct tdualquat<float64, mediump>;
 template struct tdualquat<float32, highp>;
 template struct tdualquat<float64, highp>;
 
-}//namespace glm
-
+}  // namespace glm

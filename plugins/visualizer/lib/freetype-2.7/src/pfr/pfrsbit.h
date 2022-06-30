@@ -15,7 +15,6 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef PFRSBIT_H_
 #define PFRSBIT_H_
 
@@ -23,14 +22,11 @@
 
 FT_BEGIN_HEADER
 
-  FT_LOCAL( FT_Error )
-  pfr_slot_load_bitmap( PFR_Slot  glyph,
-                        PFR_Size  size,
-                        FT_UInt   glyph_index );
+FT_LOCAL(FT_Error)
+pfr_slot_load_bitmap(PFR_Slot glyph, PFR_Size size, FT_UInt glyph_index);
 
 FT_END_HEADER
 
 #endif /* PFRSBIT_H_ */
-
 
 /* END */

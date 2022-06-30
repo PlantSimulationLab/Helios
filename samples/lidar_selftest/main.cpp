@@ -3,11 +3,8 @@
 
 using namespace helios;
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
+    LiDARcloud pointcloud;
 
-  LiDARcloud pointcloud;
-
-  return pointcloud.selfTest();
-
+    return pointcloud.selfTest();
 }

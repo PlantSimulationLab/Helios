@@ -25,164 +25,146 @@
 #include "Ref.h"
 
 namespace optix {
-  namespace prime {
-  
-    /// @cond
+namespace prime {
 
-    /// \brief Handle class that wraps reference counted objects
-    template <class RefCountedObj>
-    class Handle
-    {
-    public:
-      /// Default constructor, initializes handle to hold an invalid interface.
-      Handle();
+/// @cond
 
-      /// Constructor from Ref pointer, takes ownership of Ref.
-      ///
-      /// The constructor does not increment the reference count of \p ptr assuming it is
-      /// already set properly. It therefore takes over the ownership of the Ref pointer.
-      explicit Handle( RefCountedObj* ptr );
+/// \brief Handle class that wraps reference counted objects
+template <class RefCountedObj>
+class Handle {
+   public:
+    /// Default constructor, initializes handle to hold an invalid interface.
+    Handle();
 
-      /// Copy constructor, increments reference count if the Ref is valid.
-      Handle( const Handle<RefCountedObj>& other);
+    /// Constructor from Ref pointer, takes ownership of Ref.
+    ///
+    /// The constructor does not increment the reference count of \p ptr assuming it is
+    /// already set properly. It therefore takes over the ownership of the Ref pointer.
+    explicit Handle(RefCountedObj* ptr);
 
-      /// Swap two Refs.
-      void swap( Handle<RefCountedObj>& other);
+    /// Copy constructor, increments reference count if the Ref is valid.
+    Handle(const Handle<RefCountedObj>& other);
 
-      /// Assignment operator, releases old Ref and increments
-      /// reference count of the new Ref if Ref is valid.
-      Handle<RefCountedObj>& operator=( const Handle<RefCountedObj>& other);
+    /// Swap two Refs.
+    void swap(Handle<RefCountedObj>& other);
 
-      /// Assignment operator from Ref pointer, releases old Ref and assigns
-      /// new Ref \p ptr, takes ownership of Ref.
-      /// Does not increment reference count of \p ptr assuming it is already set
-      /// properly.
-      Handle<RefCountedObj>& operator=( RefCountedObj* ptr);
+    /// Assignment operator, releases old Ref and increments
+    /// reference count of the new Ref if Ref is valid.
+    Handle<RefCountedObj>& operator=(const Handle<RefCountedObj>& other);
 
-      /// Releases the current Ref, decrementing the reference count.
-      void unref();
+    /// Assignment operator from Ref pointer, releases old Ref and assigns
+    /// new Ref \p ptr, takes ownership of Ref.
+    /// Does not increment reference count of \p ptr assuming it is already set
+    /// properly.
+    Handle<RefCountedObj>& operator=(RefCountedObj* ptr);
 
-      /// Destructor, releases Ref if it is valid, which decrements
-      /// the reference count, and triggers thus the deletion of the interface
-      /// implementation once the reference count reaches zero.
-      ~Handle();
+    /// Releases the current Ref, decrementing the reference count.
+    void unref();
 
-      /// Returns \c true if Ref is valid (not zero).
-      bool isValid() const;
+    /// Destructor, releases Ref if it is valid, which decrements
+    /// the reference count, and triggers thus the deletion of the interface
+    /// implementation once the reference count reaches zero.
+    ~Handle();
 
-      /// Static object creation. Only valid for contexts.
-      static Handle<RefCountedObj> create( RTPcontexttype type ) { return RefCountedObj::create( type ); }
+    /// Returns \c true if Ref is valid (not zero).
+    bool isValid() const;
 
-      /// The arrow operator accesses the interface.
-      RefCountedObj* operator->() const;
-    private:
+    /// Static object creation. Only valid for contexts.
+    static Handle<RefCountedObj> create(RTPcontexttype type) { return RefCountedObj::create(type); }
 
-      RefCountedObj* m_iptr; // pointer to underlying interface, can be 0
-    };
+    /// The arrow operator accesses the interface.
+    RefCountedObj* operator->() const;
 
+   private:
+    RefCountedObj* m_iptr;  // pointer to underlying interface, can be 0
+};
 
-    //
-    // Default constructor
-    //
-    template <class RefCountedObj>
-    inline Handle<RefCountedObj>::Handle() : m_iptr(0)
-    {
+//
+// Default constructor
+//
+template <class RefCountedObj>
+inline Handle<RefCountedObj>::Handle() : m_iptr(0) {}
 
-    }
+//
+// Constructor from Ref pointer
+//
+template <class RefCountedObj>
+inline Handle<RefCountedObj>::Handle(RefCountedObj* ptr) : m_iptr(ptr) {}
 
-    //
-    // Constructor from Ref pointer
-    //
-    template <class RefCountedObj>
-    inline Handle<RefCountedObj>::Handle( RefCountedObj* ptr ) : m_iptr(ptr)
-    {
+//
+// Copy constructor
+//
+template <class RefCountedObj>
+inline Handle<RefCountedObj>::Handle(const Handle<RefCountedObj>& other) : m_iptr(other.m_iptr) {
+    if (m_iptr) m_iptr->ref();
+}
 
-    }
+//
+// Returns \c true if Ref is valid.
+//
+template <class RefCountedObj>
+inline bool Handle<RefCountedObj>::isValid() const {
+    return m_iptr != 0;
+}
 
-    //
-    // Copy constructor
-    //
-    template <class RefCountedObj>
-    inline Handle<RefCountedObj>::Handle( const Handle<RefCountedObj>& other ) : m_iptr(other.m_iptr)
-    {
-      if ( m_iptr)
-        m_iptr->ref();
-    }
-
-    //
-    // Returns \c true if Ref is valid.
-    //
-    template <class RefCountedObj>
-    inline bool Handle<RefCountedObj>::isValid() const
-    {
-      return m_iptr != 0;
-    }
-
-    //
-    // Releases the current Ref
-    //
-    template <class RefCountedObj>
-    inline void Handle<RefCountedObj>::unref()
-    {
-      if(m_iptr != NULL) {
+//
+// Releases the current Ref
+//
+template <class RefCountedObj>
+inline void Handle<RefCountedObj>::unref() {
+    if (m_iptr != NULL) {
         m_iptr->unref();
         m_iptr = NULL;
-      }
     }
+}
 
-    //
-    // Releases the current Ref
-    //
-    template <class RefCountedObj>
-    inline Handle<RefCountedObj>::~Handle()
-    {
-      if ( m_iptr )
-        m_iptr->unref();
-    }
+//
+// Releases the current Ref
+//
+template <class RefCountedObj>
+inline Handle<RefCountedObj>::~Handle() {
+    if (m_iptr) m_iptr->unref();
+}
 
-    //
-    // Assignment operator
-    //
-    template <class RefCountedObj>
-    inline Handle<RefCountedObj>& Handle<RefCountedObj>::operator=( RefCountedObj* ptr )
-    {
-      Handle<RefCountedObj>(ptr).swap(*this);
-      return *this;
-    }
+//
+// Assignment operator
+//
+template <class RefCountedObj>
+inline Handle<RefCountedObj>& Handle<RefCountedObj>::operator=(RefCountedObj* ptr) {
+    Handle<RefCountedObj>(ptr).swap(*this);
+    return *this;
+}
 
-    //
-    // Assignment operator
-    //
-    template <class RefCountedObj>
-    inline Handle<RefCountedObj>& Handle<RefCountedObj>::operator=( const Handle<RefCountedObj>& other )
-    {
-      Handle<RefCountedObj>(other).swap(*this);
-      return *this;
-    }
+//
+// Assignment operator
+//
+template <class RefCountedObj>
+inline Handle<RefCountedObj>& Handle<RefCountedObj>::operator=(const Handle<RefCountedObj>& other) {
+    Handle<RefCountedObj>(other).swap(*this);
+    return *this;
+}
 
-    //
-    // Swap two Refs
-    //
-    template <class RefCountedObj>
-    inline void Handle<RefCountedObj>::swap( Handle<RefCountedObj>& other )
-    {
-      RefCountedObj* tmp_iptr = m_iptr;
-      m_iptr = other.m_iptr;
-      other.m_iptr = tmp_iptr;
-    }
+//
+// Swap two Refs
+//
+template <class RefCountedObj>
+inline void Handle<RefCountedObj>::swap(Handle<RefCountedObj>& other) {
+    RefCountedObj* tmp_iptr = m_iptr;
+    m_iptr = other.m_iptr;
+    other.m_iptr = tmp_iptr;
+}
 
-    //
-    // The arrow operator accesses the interface.
-    //
-    template <class RefCountedObj>
-    inline RefCountedObj* Handle<RefCountedObj>::operator->() const
-    {
-      return  m_iptr;
-    }
+//
+// The arrow operator accesses the interface.
+//
+template <class RefCountedObj>
+inline RefCountedObj* Handle<RefCountedObj>::operator->() const {
+    return m_iptr;
+}
 
-    /// @endcond
+/// @endcond
 
-  } // end namespace prime
-} // end namespace optix
+}  // end namespace prime
+}  // end namespace optix
 
-#endif // #ifndef __optix_optix_prime_handle_h__
+#endif  // #ifndef __optix_optix_prime_handle_h__

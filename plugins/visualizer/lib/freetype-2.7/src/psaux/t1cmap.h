@@ -15,7 +15,6 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef T1CMAP_H_
 #define T1CMAP_H_
 
@@ -25,81 +24,68 @@
 
 FT_BEGIN_HEADER
 
+/*************************************************************************/
+/*************************************************************************/
+/*****                                                               *****/
+/*****          TYPE1 STANDARD (AND EXPERT) ENCODING CMAPS           *****/
+/*****                                                               *****/
+/*************************************************************************/
+/*************************************************************************/
 
-  /*************************************************************************/
-  /*************************************************************************/
-  /*****                                                               *****/
-  /*****          TYPE1 STANDARD (AND EXPERT) ENCODING CMAPS           *****/
-  /*****                                                               *****/
-  /*************************************************************************/
-  /*************************************************************************/
+/* standard (and expert) encoding cmaps */
+typedef struct T1_CMapStdRec_* T1_CMapStd;
 
-  /* standard (and expert) encoding cmaps */
-  typedef struct T1_CMapStdRec_*  T1_CMapStd;
+typedef struct T1_CMapStdRec_ {
+    FT_CMapRec cmap;
 
-  typedef struct  T1_CMapStdRec_
-  {
-    FT_CMapRec                cmap;
+    const FT_UShort* code_to_sid;
+    PS_Adobe_Std_StringsFunc sid_to_string;
 
-    const FT_UShort*          code_to_sid;
-    PS_Adobe_Std_StringsFunc  sid_to_string;
+    FT_UInt num_glyphs;
+    const char* const* glyph_names;
 
-    FT_UInt                   num_glyphs;
-    const char* const*        glyph_names;
+} T1_CMapStdRec;
 
-  } T1_CMapStdRec;
+FT_CALLBACK_TABLE const FT_CMap_ClassRec t1_cmap_standard_class_rec;
 
+FT_CALLBACK_TABLE const FT_CMap_ClassRec t1_cmap_expert_class_rec;
 
-  FT_CALLBACK_TABLE const FT_CMap_ClassRec
-  t1_cmap_standard_class_rec;
+/*************************************************************************/
+/*************************************************************************/
+/*****                                                               *****/
+/*****                  TYPE1 CUSTOM ENCODING CMAP                   *****/
+/*****                                                               *****/
+/*************************************************************************/
+/*************************************************************************/
 
-  FT_CALLBACK_TABLE const FT_CMap_ClassRec
-  t1_cmap_expert_class_rec;
+typedef struct T1_CMapCustomRec_* T1_CMapCustom;
 
+typedef struct T1_CMapCustomRec_ {
+    FT_CMapRec cmap;
+    FT_UInt first;
+    FT_UInt count;
+    FT_UShort* indices;
 
-  /*************************************************************************/
-  /*************************************************************************/
-  /*****                                                               *****/
-  /*****                  TYPE1 CUSTOM ENCODING CMAP                   *****/
-  /*****                                                               *****/
-  /*************************************************************************/
-  /*************************************************************************/
+} T1_CMapCustomRec;
 
-  typedef struct T1_CMapCustomRec_*  T1_CMapCustom;
+FT_CALLBACK_TABLE const FT_CMap_ClassRec t1_cmap_custom_class_rec;
 
-  typedef struct  T1_CMapCustomRec_
-  {
-    FT_CMapRec  cmap;
-    FT_UInt     first;
-    FT_UInt     count;
-    FT_UShort*  indices;
+/*************************************************************************/
+/*************************************************************************/
+/*****                                                               *****/
+/*****             TYPE1 SYNTHETIC UNICODE ENCODING CMAP             *****/
+/*****                                                               *****/
+/*************************************************************************/
+/*************************************************************************/
 
-  } T1_CMapCustomRec;
+/* unicode (synthetic) cmaps */
 
+FT_CALLBACK_TABLE const FT_CMap_ClassRec t1_cmap_unicode_class_rec;
 
-  FT_CALLBACK_TABLE const FT_CMap_ClassRec
-  t1_cmap_custom_class_rec;
-
-
-  /*************************************************************************/
-  /*************************************************************************/
-  /*****                                                               *****/
-  /*****             TYPE1 SYNTHETIC UNICODE ENCODING CMAP             *****/
-  /*****                                                               *****/
-  /*************************************************************************/
-  /*************************************************************************/
-
-  /* unicode (synthetic) cmaps */
-
-  FT_CALLBACK_TABLE const FT_CMap_ClassRec
-  t1_cmap_unicode_class_rec;
-
- /* */
-
+/* */
 
 FT_END_HEADER
 
 #endif /* T1CMAP_H_ */
-
 
 /* END */

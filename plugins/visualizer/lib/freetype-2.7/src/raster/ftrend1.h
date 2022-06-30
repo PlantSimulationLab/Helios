@@ -15,24 +15,18 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef FTREND1_H_
 #define FTREND1_H_
-
 
 #include <ft2build.h>
 #include FT_RENDER_H
 
-
 FT_BEGIN_HEADER
 
-
-  FT_DECLARE_RENDERER( ft_raster1_renderer_class )
-
+FT_DECLARE_RENDERER(ft_raster1_renderer_class)
 
 FT_END_HEADER
 
 #endif /* FTREND1_H_ */
-
 
 /* END */

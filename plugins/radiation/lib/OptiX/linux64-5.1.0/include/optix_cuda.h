@@ -23,7 +23,7 @@
  * optix_cuda.h
  *
  * This file provides the nvcc interface for generating PTX that the RT API
- * is capable of parsing and weaving into the final kernel.  
+ * is capable of parsing and weaving into the final kernel.
  *
  * This file is now deprecated -- the optix_cuda interface should now be included
  * via optix.h and, if desired, optix_math.h.
@@ -33,7 +33,7 @@
 #ifndef __optix_optix_cuda_h__
 #define __optix_optix_cuda_h__
 
-#include "optix_math.h"
 #include "optix_device.h"
+#include "optix_math.h"
 
 #endif /* __optix_optix_cuda_h__ */

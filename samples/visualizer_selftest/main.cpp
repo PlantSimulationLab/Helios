@@ -2,11 +2,9 @@
 
 using namespace helios;
 
-int main(){
+int main() {
+    Visualizer visualizer(100);
 
-  Visualizer visualizer(100);
-  
-  //Run the self-test
-  return visualizer.selfTest();
-	
+    // Run the self-test
+    return visualizer.selfTest();
 }

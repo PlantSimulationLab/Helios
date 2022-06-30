@@ -34,8 +34,8 @@
  * These need to be included first in order to make sure the CUDA vector types are defined
  * in the global namespace necessary to maintain backward compatibility.
  */
-#include <vector_types.h>
 #include <vector_functions.h>
+#include <vector_types.h>
 
 /*
  * Any types that were defined in the global namespace in previous versions need to be
@@ -43,10 +43,10 @@
  * optixu_math_namespace.h that these types have already been defined here.
  */
 #if defined(_WIN32)
-  /* uint and ushort are not already defined on Windows systems */
-  typedef unsigned int uint;
-  typedef unsigned short ushort;
-# define RT_UINT_USHORT_DEFINED
+/* uint and ushort are not already defined on Windows systems */
+typedef unsigned int uint;
+typedef unsigned short ushort;
+#define RT_UINT_USHORT_DEFINED
 #endif
 
 #include "optixu_math_namespace.h"
@@ -56,7 +56,6 @@
  * namespace into the global namespace.  If you need your global namespace unpolluted,
  * include optixu_math_namespace.h instead.
  */
-
 
 /* From optixu_math_namespace.h */
 

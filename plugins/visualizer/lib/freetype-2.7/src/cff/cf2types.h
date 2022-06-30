@@ -35,44 +35,36 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef CF2TYPES_H_
 #define CF2TYPES_H_
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-
 FT_BEGIN_HEADER
 
+/*
+ * The data models that we expect to support are as follows:
+ *
+ *   name  char short int long long-long pointer example
+ *  -----------------------------------------------------
+ *   ILP32  8    16    32  32     64*      32    32-bit MacOS, x86
+ *   LLP64  8    16    32  32     64       64    x64
+ *   LP64   8    16    32  64     64       64    64-bit MacOS
+ *
+ *    *) type may be supported by emulation on a 32-bit architecture
+ *
+ */
 
-  /*
-   * The data models that we expect to support are as follows:
-   *
-   *   name  char short int long long-long pointer example
-   *  -----------------------------------------------------
-   *   ILP32  8    16    32  32     64*      32    32-bit MacOS, x86
-   *   LLP64  8    16    32  32     64       64    x64
-   *   LP64   8    16    32  64     64       64    64-bit MacOS
-   *
-   *    *) type may be supported by emulation on a 32-bit architecture
-   *
-   */
+/* integers at least 32 bits wide */
+#define CF2_UInt FT_UFast
+#define CF2_Int FT_Fast
 
-
-  /* integers at least 32 bits wide */
-#define CF2_UInt  FT_UFast
-#define CF2_Int   FT_Fast
-
-
-  /* fixed-float numbers */
-  typedef FT_Int32  CF2_F16Dot16;
-
+/* fixed-float numbers */
+typedef FT_Int32 CF2_F16Dot16;
 
 FT_END_HEADER
 
-
 #endif /* CF2TYPES_H_ */
-
 
 /* END */

@@ -23,113 +23,105 @@
 #define __optix_optix_prime_atom_h__
 
 #if defined(_MSC_VER)
-#  define PRIME_ATOM32_MSC
-#  include <math.h>
-#  include <intrin.h>
-#  pragma intrinsic (_InterlockedExchangeAdd)
-#  pragma intrinsic (_InterlockedCompareExchange)
+#define PRIME_ATOM32_MSC
+#include <intrin.h>
+#include <math.h>
+#pragma intrinsic(_InterlockedExchangeAdd)
+#pragma intrinsic(_InterlockedCompareExchange)
 typedef unsigned int atomic_word;
 #elif (defined(__GNUC__) && defined(__powerpc64__)) || defined(__ICC)
-#  include <ext/atomicity.h>
+#include <ext/atomicity.h>
 typedef int atomic_word;
 #else
-#  define PRIME_ATOM32_GCC
+#define PRIME_ATOM32_GCC
 typedef unsigned int atomic_word;
 #endif
 
-
 namespace optix {
-  namespace prime {
-  
-    /// @cond
+namespace prime {
 
-    /// 32-bit unsigned counter with atomic increments, and decrements.
-    class Atom32
-    {
-    public:
-      /// Constructor initializes the counter to \c val.
-      Atom32(const unsigned int val) : m_atom(val) {}
+/// @cond
 
-      /// Increments counter by one.
-      unsigned int operator++();
+/// 32-bit unsigned counter with atomic increments, and decrements.
+class Atom32 {
+   public:
+    /// Constructor initializes the counter to \c val.
+    Atom32(const unsigned int val) : m_atom(val) {}
 
-      /// Decrements counter by one.
-      unsigned int operator--();
+    /// Increments counter by one.
+    unsigned int operator++();
 
-    private:
-      volatile atomic_word m_atom;
-    };
+    /// Decrements counter by one.
+    unsigned int operator--();
+
+   private:
+    volatile atomic_word m_atom;
+};
 
 #if defined(PRIME_ATOM32_MSC)
 
-    //
-    // operator++
-    //
-    inline unsigned int Atom32::operator++() {
-      return _InterlockedExchangeAdd(reinterpret_cast<volatile long *>(&m_atom),1L) + 1L;
-    }
+//
+// operator++
+//
+inline unsigned int Atom32::operator++() {
+    return _InterlockedExchangeAdd(reinterpret_cast<volatile long *>(&m_atom), 1L) + 1L;
+}
 
-    //
-    // operator--
-    //
-    inline unsigned int Atom32::operator--() {
-      return _InterlockedExchangeAdd(reinterpret_cast<volatile long *>(&m_atom),-1L) - 1L;
-    }
+//
+// operator--
+//
+inline unsigned int Atom32::operator--() {
+    return _InterlockedExchangeAdd(reinterpret_cast<volatile long *>(&m_atom), -1L) - 1L;
+}
 
-#elif defined ( __GNUC__ ) && defined ( __powerpc64__) 
+#elif defined(__GNUC__) && defined(__powerpc64__)
 
-    inline unsigned int Atom32::operator++() {
-      return (unsigned int)__gnu_cxx::__exchange_and_add( &m_atom, 1) + 1u;
-    }
+inline unsigned int Atom32::operator++() { return (unsigned int)__gnu_cxx::__exchange_and_add(&m_atom, 1) + 1u; }
 
-    inline unsigned int Atom32::operator--() {
-      return (unsigned int)__gnu_cxx::__exchange_and_add( &m_atom, -1) - 1u;
-    }
+inline unsigned int Atom32::operator--() { return (unsigned int)__gnu_cxx::__exchange_and_add(&m_atom, -1) - 1u; }
 
-#elif defined(PRIME_ATOM32_GCC) // defined(PRIME_ATOM32_X86MSC)
+#elif defined(PRIME_ATOM32_GCC)  // defined(PRIME_ATOM32_X86MSC)
 
-    //
-    // operator++
-    //
-    inline unsigned int Atom32::operator++() {
-      unsigned int retval;
-      asm volatile (
+//
+// operator++
+//
+inline unsigned int Atom32::operator++() {
+    unsigned int retval;
+    asm volatile(
         "movl $1,%0\n"
         "lock; xaddl %0,%1\n"
         "addl $1,%0\n"
-        : "=&r" (retval), "+m" (m_atom)
+        : "=&r"(retval), "+m"(m_atom)
         :
-        : "cc"
-        );
-      return retval;
-    }
+        : "cc");
+    return retval;
+}
 
-    //
-    // operator--
-    //
-    inline unsigned int Atom32::operator--() {
-      unsigned int retval;
-      asm volatile (
+//
+// operator--
+//
+inline unsigned int Atom32::operator--() {
+    unsigned int retval;
+    asm volatile(
         "movl $-1,%0\n"
         "lock; xaddl %0,%1\n"
         "addl $-1,%0\n"
-        : "=&r" (retval), "+m" (m_atom)
+        : "=&r"(retval), "+m"(m_atom)
         :
-        : "cc"
-        );
-      return retval;
-    }
+        : "cc");
+    return retval;
+}
 
 #else
-#  error One of PRIME_ATOM32_X86MSC, PRIME_ATOM32_X86GCC must be defined.
+#error One of PRIME_ATOM32_X86MSC, PRIME_ATOM32_X86GCC must be defined.
 #endif
 
 #undef PRIME_ATOM32_MSC
 #undef PRIME_ATOM32_GCC
 
-    /// @endcond
+/// @endcond
 
-  } // namespace prime
-} // namespace optix
+}  // namespace prime
+}  // namespace optix
 
-#endif // #ifndef  __optix_optix_prime_atom_h__
+#endif  // #ifndef  __optix_optix_prime_atom_h__

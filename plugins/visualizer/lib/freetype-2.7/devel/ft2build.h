@@ -15,26 +15,24 @@
 /*                                                                         */
 /***************************************************************************/
 
-
- /*
-  *  This is a development version of <ft2build.h> to build the library in
-  *  debug mode.  Its only difference to the default version is that it
-  *  includes a local `ftoption.h' header file with different settings for
-  *  many configuration macros.
-  *
-  *  To use it, simply ensure that the directory containing this file is
-  *  scanned by the compiler before the default FreeType header directory.
-  *
-  */
+/*
+ *  This is a development version of <ft2build.h> to build the library in
+ *  debug mode.  Its only difference to the default version is that it
+ *  includes a local `ftoption.h' header file with different settings for
+ *  many configuration macros.
+ *
+ *  To use it, simply ensure that the directory containing this file is
+ *  scanned by the compiler before the default FreeType header directory.
+ *
+ */
 
 #ifndef FT2BUILD_H_
 #define FT2BUILD_H_
 
-#define FT_CONFIG_OPTIONS_H  <ftoption.h>
+#define FT_CONFIG_OPTIONS_H <ftoption.h>
 
 #include <freetype/config/ftheader.h>
 
 #endif /* FT2BUILD_H_ */
-
 
 /* END */

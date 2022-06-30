@@ -16,25 +16,21 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef AFDUMMY_H_
 #define AFDUMMY_H_
 
 #include "aftypes.h"
 
-
 FT_BEGIN_HEADER
 
-  /* A dummy writing system used when no hinting should be performed. */
+/* A dummy writing system used when no hinting should be performed. */
 
-  AF_DECLARE_WRITING_SYSTEM_CLASS( af_dummy_writing_system_class )
+AF_DECLARE_WRITING_SYSTEM_CLASS(af_dummy_writing_system_class)
 
 /* */
 
 FT_END_HEADER
 
-
 #endif /* AFDUMMY_H_ */
-
 
 /* END */

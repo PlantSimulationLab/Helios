@@ -15,13 +15,12 @@
 /*                                                                         */
 /***************************************************************************/
 
-
-  /*************************************************************************/
-  /*                                                                       */
-  /* This file is used to define the smooth renderer error enumeration     */
-  /* constants.                                                            */
-  /*                                                                       */
-  /*************************************************************************/
+/*************************************************************************/
+/*                                                                       */
+/* This file is used to define the smooth renderer error enumeration     */
+/* constants.                                                            */
+/*                                                                       */
+/*************************************************************************/
 
 #ifndef FTSMERRS_H_
 #define FTSMERRS_H_
@@ -30,13 +29,12 @@
 
 #undef FTERRORS_H_
 
-#undef  FT_ERR_PREFIX
-#define FT_ERR_PREFIX  Smooth_Err_
-#define FT_ERR_BASE    FT_Mod_Err_Smooth
+#undef FT_ERR_PREFIX
+#define FT_ERR_PREFIX Smooth_Err_
+#define FT_ERR_BASE FT_Mod_Err_Smooth
 
 #include FT_ERRORS_H
 
 #endif /* FTSMERRS_H_ */
-
 
 /* END */

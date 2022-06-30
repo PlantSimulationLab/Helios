@@ -2,12 +2,10 @@
 
 using namespace helios;
 
-int main(){
-  
-  Context context;
+int main() {
+    Context context;
 
-  SolarPosition solarposition(&context);
+    SolarPosition solarposition(&context);
 
-  return solarposition.selfTest();
-
+    return solarposition.selfTest();
 }

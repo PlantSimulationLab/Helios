@@ -18,65 +18,50 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef AFBLUE_H_
 #define AFBLUE_H_
 
-
 FT_BEGIN_HEADER
 
+/* an auxiliary macro to decode a UTF-8 character -- since we only use */
+/* hard-coded, self-converted data, no error checking is performed     */
+#define GET_UTF8_CHAR(ch, p)                                         \
+    do {                                                             \
+        ch = (unsigned char)*p++;                                    \
+        if (ch >= 0x80) {                                            \
+            FT_UInt len_;                                            \
+                                                                     \
+            if (ch < 0xE0) {                                         \
+                len_ = 1;                                            \
+                ch &= 0x1F;                                          \
+            } else if (ch < 0xF0) {                                  \
+                len_ = 2;                                            \
+                ch &= 0x0F;                                          \
+            } else {                                                 \
+                len_ = 3;                                            \
+                ch &= 0x07;                                          \
+            }                                                        \
+                                                                     \
+            for (; len_ > 0; len_--) ch = (ch << 6) | (*p++ & 0x3F); \
+        }                                                            \
+    } while (0)
 
-  /* an auxiliary macro to decode a UTF-8 character -- since we only use */
-  /* hard-coded, self-converted data, no error checking is performed     */
-#define GET_UTF8_CHAR( ch, p )                      \
-          do                                        \
-          {                                         \
-            ch = (unsigned char)*p++;               \
-            if ( ch >= 0x80 )                       \
-            {                                       \
-              FT_UInt  len_;                        \
-                                                    \
-                                                    \
-              if ( ch < 0xE0 )                      \
-              {                                     \
-                len_ = 1;                           \
-                ch  &= 0x1F;                        \
-              }                                     \
-              else if ( ch < 0xF0 )                 \
-              {                                     \
-                len_ = 2;                           \
-                ch  &= 0x0F;                        \
-              }                                     \
-              else                                  \
-              {                                     \
-                len_ = 3;                           \
-                ch  &= 0x07;                        \
-              }                                     \
-                                                    \
-              for ( ; len_ > 0; len_-- )            \
-                ch = ( ch << 6 ) | ( *p++ & 0x3F ); \
-            }                                       \
-          } while ( 0 )
+/*************************************************************************/
+/*************************************************************************/
+/*****                                                               *****/
+/*****                    B L U E   S T R I N G S                    *****/
+/*****                                                               *****/
+/*************************************************************************/
+/*************************************************************************/
 
+/* At the bottommost level, we define strings for finding blue zones. */
 
-  /*************************************************************************/
-  /*************************************************************************/
-  /*****                                                               *****/
-  /*****                    B L U E   S T R I N G S                    *****/
-  /*****                                                               *****/
-  /*************************************************************************/
-  /*************************************************************************/
+#define AF_BLUE_STRING_MAX_LEN 51
 
-  /* At the bottommost level, we define strings for finding blue zones. */
+/* The AF_Blue_String enumeration values are offsets into the */
+/* `af_blue_strings' array.                                   */
 
-
-#define AF_BLUE_STRING_MAX_LEN  51
-
-  /* The AF_Blue_String enumeration values are offsets into the */
-  /* `af_blue_strings' array.                                   */
-
-  typedef enum  AF_Blue_String_
-  {
+typedef enum AF_Blue_String_ {
     AF_BLUE_STRING_ARABIC_TOP = 0,
     AF_BLUE_STRING_ARABIC_BOTTOM = 18,
     AF_BLUE_STRING_ARABIC_JOIN = 33,
@@ -197,48 +182,42 @@ FT_BEGIN_HEADER
     af_blue_1_2 = af_blue_1_1 + 0,
 #endif /* AF_CONFIG_OPTION_CJK                */
 
+    AF_BLUE_STRING_MAX /* do not remove */
 
-    AF_BLUE_STRING_MAX   /* do not remove */
+} AF_Blue_String;
 
-  } AF_Blue_String;
+FT_LOCAL_ARRAY(char)
+af_blue_strings[];
 
+/*************************************************************************/
+/*************************************************************************/
+/*****                                                               *****/
+/*****                 B L U E   S T R I N G S E T S                 *****/
+/*****                                                               *****/
+/*************************************************************************/
+/*************************************************************************/
 
-  FT_LOCAL_ARRAY( char )
-  af_blue_strings[];
+/* The next level is to group blue strings into style-specific sets. */
 
+/* Properties are specific to a writing system.  We assume that a given  */
+/* blue string can't be used in more than a single writing system, which */
+/* is a safe bet.                                                        */
+#define AF_BLUE_PROPERTY_LATIN_TOP (1U << 0) /* must have value 1 */
+#define AF_BLUE_PROPERTY_LATIN_SUB_TOP (1U << 1)
+#define AF_BLUE_PROPERTY_LATIN_NEUTRAL (1U << 2)
+#define AF_BLUE_PROPERTY_LATIN_X_HEIGHT (1U << 3)
+#define AF_BLUE_PROPERTY_LATIN_LONG (1U << 4)
 
-  /*************************************************************************/
-  /*************************************************************************/
-  /*****                                                               *****/
-  /*****                 B L U E   S T R I N G S E T S                 *****/
-  /*****                                                               *****/
-  /*************************************************************************/
-  /*************************************************************************/
+#define AF_BLUE_PROPERTY_CJK_TOP (1U << 0)   /* must have value 1 */
+#define AF_BLUE_PROPERTY_CJK_HORIZ (1U << 1) /* must have value 2 */
+#define AF_BLUE_PROPERTY_CJK_RIGHT AF_BLUE_PROPERTY_CJK_TOP
 
-  /* The next level is to group blue strings into style-specific sets. */
+#define AF_BLUE_STRINGSET_MAX_LEN 8
 
+/* The AF_Blue_Stringset enumeration values are offsets into the */
+/* `af_blue_stringsets' array.                                   */
 
-  /* Properties are specific to a writing system.  We assume that a given  */
-  /* blue string can't be used in more than a single writing system, which */
-  /* is a safe bet.                                                        */
-#define AF_BLUE_PROPERTY_LATIN_TOP       ( 1U << 0 )  /* must have value 1 */
-#define AF_BLUE_PROPERTY_LATIN_SUB_TOP   ( 1U << 1 )
-#define AF_BLUE_PROPERTY_LATIN_NEUTRAL   ( 1U << 2 )
-#define AF_BLUE_PROPERTY_LATIN_X_HEIGHT  ( 1U << 3 )
-#define AF_BLUE_PROPERTY_LATIN_LONG      ( 1U << 4 )
-
-#define AF_BLUE_PROPERTY_CJK_TOP    ( 1U << 0 )       /* must have value 1 */
-#define AF_BLUE_PROPERTY_CJK_HORIZ  ( 1U << 1 )       /* must have value 2 */
-#define AF_BLUE_PROPERTY_CJK_RIGHT  AF_BLUE_PROPERTY_CJK_TOP
-
-
-#define AF_BLUE_STRINGSET_MAX_LEN  8
-
-  /* The AF_Blue_Stringset enumeration values are offsets into the */
-  /* `af_blue_stringsets' array.                                   */
-
-  typedef enum  AF_Blue_Stringset_
-  {
+typedef enum AF_Blue_Stringset_ {
     AF_BLUE_STRINGSET_ARAB = 0,
     AF_BLUE_STRINGSET_ARMN = 4,
     AF_BLUE_STRINGSET_BENG = 11,
@@ -280,29 +259,23 @@ FT_BEGIN_HEADER
     af_blue_2_2 = af_blue_2_1 + 0,
 #endif /* AF_CONFIG_OPTION_CJK                */
 
+    AF_BLUE_STRINGSET_MAX /* do not remove */
 
-    AF_BLUE_STRINGSET_MAX   /* do not remove */
+} AF_Blue_Stringset;
 
-  } AF_Blue_Stringset;
+typedef struct AF_Blue_StringRec_ {
+    AF_Blue_String string;
+    FT_UShort properties;
 
+} AF_Blue_StringRec;
 
-  typedef struct  AF_Blue_StringRec_
-  {
-    AF_Blue_String  string;
-    FT_UShort       properties;
-
-  } AF_Blue_StringRec;
-
-
-  FT_LOCAL_ARRAY( AF_Blue_StringRec )
-  af_blue_stringsets[];
+FT_LOCAL_ARRAY(AF_Blue_StringRec)
+af_blue_stringsets[];
 
 /* */
 
 FT_END_HEADER
 
-
 #endif /* AFBLUE_H_ */
-
 
 /* END */

@@ -15,33 +15,27 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef AFRANGES_H_
 #define AFRANGES_H_
 
-
 #include "aftypes.h"
-
 
 FT_BEGIN_HEADER
 
-#undef  SCRIPT
-#define SCRIPT( s, S, d, h, H, ss )                                     \
-          extern const AF_Script_UniRangeRec  af_ ## s ## _uniranges[];
+#undef SCRIPT
+#define SCRIPT(s, S, d, h, H, ss) extern const AF_Script_UniRangeRec af_##s##_uniranges[];
 
 #include "afscript.h"
 
-#undef  SCRIPT
-#define SCRIPT( s, S, d, h, H, ss )                                             \
-          extern const AF_Script_UniRangeRec  af_ ## s ## _nonbase_uniranges[];
+#undef SCRIPT
+#define SCRIPT(s, S, d, h, H, ss) extern const AF_Script_UniRangeRec af_##s##_nonbase_uniranges[];
 
 #include "afscript.h"
 
- /* */
+/* */
 
 FT_END_HEADER
 
 #endif /* AFRANGES_H_ */
-
 
 /* END */

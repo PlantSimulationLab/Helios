@@ -6,18 +6,15 @@
 
 //! Dummy model class
 /** This model simply adds a variable to the context and sets it value for all primitives */
-class DummyModel{
-public:
+class DummyModel {
+   public:
+    //! Constructor
+    DummyModel(helios::Context* context);
 
-  //! Constructor
-  DummyModel( helios::Context* context );
+    //! Function to run the dummy model
+    void run(void);
 
-  //! Function to run the dummy model
-  void run( void );
-
-private:
-
-  //! Copy of a pointer to the context
-  helios::Context* context;
-
+   private:
+    //! Copy of a pointer to the context
+    helios::Context* context;
 };

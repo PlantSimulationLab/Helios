@@ -27,7 +27,6 @@
  * in the global namespace necessary to maintain backward compatibility.
  */
 #include "optixu_math.h"
-
 #include "optixu_matrix_namespace.h"
 
 #endif /*  __optixu_optixu_matrix_h__ */

@@ -1,4 +1,4 @@
-/** \file "global.h" Header file for all global function/object definitions. 
+/** \file "global.h" Header file for all global function/object definitions.
     \author Brian Bailey
 
     Copyright (C) 2016-2022  Brian Bailey
@@ -15,7 +15,7 @@
 */
 
 #ifdef __GNUC__
-#define DEPRECATED(func) func __attribute__ ((deprecated))
+#define DEPRECATED(func) func __attribute__((deprecated))
 #elif defined(_MSC_VER)
 #define DEPRECATED(func) __declspec(deprecated) func
 #else
@@ -30,31 +30,30 @@
 #ifndef HELIOS_GLOBAL
 #define HELIOS_GLOBAL
 
-#include <cstdlib>
-#include <cstdio>
-#include <cstring>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <vector>
-#include <stdexcept>
-#include <exception>
-#include <cassert>
-#include <cmath>
-#include <memory>
-#include <ctime>
-#include <map>
 #include <algorithm>
-#include <ctime>
-#include <random>
+#include <cassert>
 #include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <exception>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <random>
+#include <sstream>
+#include <stdexcept>
 #include <thread>
+#include <vector>
 
 typedef unsigned int uint;
 
 #include "helios_vector_types.h"
 
-//pugi XML parser
+// pugi XML parser
 #include "pugixml.hpp"
 
 // *** Groups *** //
@@ -68,65 +67,66 @@ typedef unsigned int uint;
 //! Geometric objects comprised of multiple primitives
 /** \defgroup compoundobjects Compound Objects */
 
-namespace helios{
+namespace helios {
 
 //--------------------- HELPER FUNCTIONS -----------------------------------//
 
 //! Construct a rotation matrix to perform rotation about the x-, y-, or z-axis.
-/** 4x4 Affine rotation matrix 
+/** 4x4 Affine rotation matrix
     \param[in] "rotation" Rotation angle about axis in radians.
     \param[in] "axis" Axis about which to rotate (one of 'x', 'y', or 'z').
     \param[out] "transform" Transformation matrix in a 1D array
     \ingroup functions
 */
-void makeRotationMatrix( float rotation, const char* axis, float (&transform)[16] );
+void makeRotationMatrix(float rotation, const char *axis, float (&transform)[16]);
 
 //! Construct a rotation matrix to perform rotation about an arbitrary axis passing through the origin.
-/** 4x4 Affine rotation matrix 
+/** 4x4 Affine rotation matrix
     \param[in] "rotation" Rotation angle about axis in radians.
     \param[in] "axis" Vector describing axis about which to perform rotation.
     \param[out] "transform" Transformation matrix in a 1D array
     \ingroup functions
 */
-void makeRotationMatrix( float rotation, const helios::vec3& axis, float (&transform)[16] );
+void makeRotationMatrix(float rotation, const helios::vec3 &axis, float (&transform)[16]);
 
-//! Construct a rotation matrix to perform rotation about an arbitrary line (not necessarily passing through the origin).
+//! Construct a rotation matrix to perform rotation about an arbitrary line (not necessarily passing through the
+//! origin).
 /** 4x4 Affine rotation matrix
  * \param[in] "rotation" Rotation angle about axis in radians.
  * \param[in] "origin" Cartesian coordinate of the base/origin of rotation axis.
  * \param[in] "axis" Vector describing axis about which to perform rotation.
  * \param[out] "transform" Transformation matrix in a 1D array
  * \ingroup functions
-*/
-void makeRotationMatrix( float rotation, const helios::vec3& origin, const helios::vec3& axis, float (&transform)[16] );
+ */
+void makeRotationMatrix(float rotation, const helios::vec3 &origin, const helios::vec3 &axis, float (&transform)[16]);
 
 //! Construct translation matrix
-/** 4x4 Affine translation matrix 
+/** 4x4 Affine translation matrix
     \param[in] "translation" Distance to translate in x, y, and z directions.
     \param[out] "transform" Transformation matrix in a 1D array
     \ingroup functions
 */
-void makeTranslationMatrix( const helios::vec3& translation, float (&transform)[16] );
+void makeTranslationMatrix(const helios::vec3 &translation, float (&transform)[16]);
 
- //! Construct matrix to scale
-/** 4x4 Affine scaling matrix 
+//! Construct matrix to scale
+/** 4x4 Affine scaling matrix
     \param[in] "scale" Scaling factor to apply in x, y, and z directions.
     \param[out] "transform" Transformation matrix in a 1D array
     \ingroup functions
 */
-void makeScaleMatrix( const helios::vec3& scale, float (&T)[16] );
+void makeScaleMatrix(const helios::vec3 &scale, float (&T)[16]);
 
-//! Multiply 4x4 matrices: T=ML*MR 
-void matmult( const float ML[16], const float MR[16], float (&T)[16] );
+//! Multiply 4x4 matrices: T=ML*MR
+void matmult(const float ML[16], const float MR[16], float (&T)[16]);
 
-//! Multiply 4x4 transformation matrix by 3-element vector: T=M*v 
-void vecmult( const float M[16], const float v[3], float (&result)[3] );
+//! Multiply 4x4 transformation matrix by 3-element vector: T=M*v
+void vecmult(const float M[16], const float v[3], float (&result)[3]);
 
-//! Multiply 4x4 transformation matrix by 3-element vector: T=M*v 
- void vecmult( const float M[16], const helios::vec3& v3, helios::vec3& result );
+//! Multiply 4x4 transformation matrix by 3-element vector: T=M*v
+void vecmult(const float M[16], const helios::vec3 &v3, helios::vec3 &result);
 
- //! Construct an identity matrix
- void makeIdentityMatrix( float (&T)[16] );
+//! Construct an identity matrix
+void makeIdentityMatrix(float (&T)[16]);
 
 //! Convert degrees to radians
 /** \param deg angle in degrees
@@ -134,7 +134,7 @@ void vecmult( const float M[16], const float v[3], float (&result)[3] );
     \sa rad2deg()
     \ingroup functions
 */
- float deg2rad( const float& deg );
+float deg2rad(const float &deg);
 
 //! Convert radians to degrees
 /** \param rad angle in radians
@@ -142,58 +142,58 @@ void vecmult( const float M[16], const float v[3], float (&result)[3] );
     \sa deg2rad()
     \ingroup functions
 */
- float rad2deg( const float& rad );
+float rad2deg(const float &rad);
 
 //! Four quadrant arc tangent between 0 and 2*pi
 /** \note atan2_2pi(0,1) = 0, atan2_2pi(1,0) = pi/2, etc.
     \ingroup functions */
- float atan2_2pi( const float& y, const float& x);
+float atan2_2pi(const float &y, const float &x);
 
- //! Convert Cartesian coordinates to spherical coordinates
+//! Convert Cartesian coordinates to spherical coordinates
 /** \param[in] "Cartesian" (x,y,z) Cartesian coordinates
     \returns SphericalCoord vector.
     \sa \ref sphere2cart(), \ref SphericalCoord
 */
- SphericalCoord cart2sphere( const vec3& Cartesian );
+SphericalCoord cart2sphere(const vec3 &Cartesian);
 
 //! Convert Spherical coordinates to Cartesian coordinates
 /** \param[in] "Spherical" (radius,elevation,azimuth) \ref SphericalCoord vector
     \returns vec3 vector of Cartesian coordinates
     \sa \ref cart2sphere()
 */
- vec3 sphere2cart( const SphericalCoord& Spherical );
+vec3 sphere2cart(const SphericalCoord &Spherical);
 
 //! Convert a space-delimited string into a vec2 vector
 /** \ingroup functions */
-vec2 string2vec2( const char* str );
+vec2 string2vec2(const char *str);
 
 //! Convert a space-delimited string into a vec3 vector
 /** \ingroup functions */
-vec3 string2vec3( const char* str );
+vec3 string2vec3(const char *str);
 
 //! Convert a space-delimited string into a vec4 vector
 /** \ingroup functions */
-vec4 string2vec4( const char* str );
+vec4 string2vec4(const char *str);
 
 //! Convert a space-delimited string into an int2 vector
 /** \ingroup functions */
-int2 string2int2( const char* str );
+int2 string2int2(const char *str);
 
 //! Convert a space-delimited string into an int3 vector
 /** \ingroup functions */
-int3 string2int3( const char* str );
+int3 string2int3(const char *str);
 
 //! Convert a space-delimited string into an int4 vector
 /** \ingroup functions */
-int4 string2int4( const char* str );
+int4 string2int4(const char *str);
 
 //! Convert a space-delimited string into an RGBcolor vector
 /** \ingroup functions */
-RGBAcolor string2RGBcolor( const char* str );
+RGBAcolor string2RGBcolor(const char *str);
 
 //! Remove whitespace from character array
 /** \ingroup functions */
-    std::string deblank(const char* input);
+std::string deblank(const char *input);
 
 //! Clamp value to be within some specified bounds
 /** \param[in] "value" Value to be clamped
@@ -201,61 +201,61 @@ RGBAcolor string2RGBcolor( const char* str );
     \param[in] "max" Upper bound
     \ingroup functions */
 template <typename anytype>
-anytype clamp( anytype value, anytype min, anytype max );
+anytype clamp(anytype value, anytype min, anytype max);
 
 //! Mean value of a vector of floats
-/** \param[in] "vect" C++ vector of floats 
+/** \param[in] "vect" C++ vector of floats
  \ingroup functions
 */
-float mean( const std::vector<float>& vect );
+float mean(const std::vector<float> &vect);
 
 //! Minimum value of a vector of floats
-/** \param[in] "vect" C++ vector of floats 
+/** \param[in] "vect" C++ vector of floats
  \ingroup functions
 */
-float min( const std::vector<float>& vect );
+float min(const std::vector<float> &vect);
 
 //! Minimum value of a vector of ints
-/** \param[in] "vect" C++ vector of ints 
+/** \param[in] "vect" C++ vector of ints
  \ingroup functions
 */
-int min( const std::vector<int>& vect );
+int min(const std::vector<int> &vect);
 
 //! Minimum value of a vector of vec3's
-/** \param[in] "vect" C++ vector of vec3's 
+/** \param[in] "vect" C++ vector of vec3's
  \ingroup functions
 */
-vec3 min( const std::vector<vec3>& vect );
+vec3 min(const std::vector<vec3> &vect);
 
 //! Maximum value of a vector of floats
 /** \param[in] "vect" C++ vector of floats
 \ingroup functions
 */
-float max( const std::vector<float>& vect );
+float max(const std::vector<float> &vect);
 
 //! Maximum value of a vector of ints
 /** \param[in] "vect" C++ vector of ints
 \ingroup functions
 */
-int max( const std::vector<int>& vect );
+int max(const std::vector<int> &vect);
 
 //! Maximum value of a vector of vec3's
 /** \param[in] "vect" C++ vector of vec3's
 \ingroup functions
 */
-vec3 max( const std::vector<vec3>& vect );
+vec3 max(const std::vector<vec3> &vect);
 
 //! Standard deviation of a vector of floats
 /** \param[in] "vect" C++ vector of floats
  \ingroup functions
  */
-float stdev( const std::vector<float> &vect );
+float stdev(const std::vector<float> &vect);
 
 //! Median of a vector of floats
 /** \param[in] "vect" C++ vector of floats
  \ingroup functions
  */
-float median( std::vector<float> vect );
+float median(std::vector<float> vect);
 
 //! Resize 2D C++ vector
 /** \param[in] "vec" C++ vector
@@ -264,7 +264,7 @@ float median( std::vector<float> vect );
     \ingroup functions
 */
 template <typename anytype>
-void resize_vector( std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny );
+void resize_vector(std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny);
 
 //! Resize 3D C++ vector
 /** \param[in] "vec" C++ vector
@@ -274,7 +274,7 @@ void resize_vector( std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny );
     \ingroup functions
 */
 template <typename anytype>
-void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, int Nx, int Ny, int Nz );
+void resize_vector(std::vector<std::vector<std::vector<anytype> > > &vec, int Nx, int Ny, int Nz);
 
 //! Resize 4D C++ vector
 /** \param[in] "vec" C++ vector
@@ -285,38 +285,40 @@ void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, int N
     \ingroup functions
 */
 template <typename anytype>
-void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, int Nx, int Ny, int Nz, int Nw );
+void resize_vector(std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, int Nx, int Ny, int Nz, int Nw);
 
 //! Blend two RGB colors together
 /**
  * \param[in] "color0" First color to blend
  * \param[in] "color1" Second color to blend
- * \param[in] "weight" Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.
+ * \param[in] "weight" Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5
+ * will be an average of color0 and color1, weight=1 will produce color1.
  */
-RGBcolor blend( RGBcolor color0, RGBcolor color1, float weight );
+RGBcolor blend(RGBcolor color0, RGBcolor color1, float weight);
 
 //! Blend two RGBA colors together
 /**
  * \param[in] "color0" First color to blend
  * \param[in] "color1" Second color to blend
- * \param[in] "weight" Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.
+ * \param[in] "weight" Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5
+ * will be an average of color0 and color1, weight=1 will produce color1.
  */
-RGBAcolor blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight );
+RGBAcolor blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight);
 
 //! Function to rotate a 3D vector given spherical angles elevation and azimuth
 /** \param[in] "position" 3D coordinate of point to be rotated.
     \param[in] "rotation" Spherical rotation angles (elevation,azimuth)
     \ingroup functions
 */
-vec3 rotatePoint(const vec3& position, const SphericalCoord& rotation );
+vec3 rotatePoint(const vec3 &position, const SphericalCoord &rotation);
 
 //! Function to rotate a 3D vector given spherical angles elevation and azimuth
 /** \param[in] "position" 3D coordinate of point to be rotated.
     \param[in] "theta" elevation angle of rotation.
-    \param[in] "phi" azimuthal angle of rotation. 
+    \param[in] "phi" azimuthal angle of rotation.
     \ingroup functions
 */
-vec3 rotatePoint(const vec3& position, float theta, float phi);
+vec3 rotatePoint(const vec3 &position, float theta, float phi);
 
 //! Rotate a 3D vector about an arbitrary line
 /** \param[in] "point" 3D coordinate of point to be rotated
@@ -324,7 +326,7 @@ vec3 rotatePoint(const vec3& position, float theta, float phi);
     \param[in] "line_direction" Unit vector pointing in the direction of the line
     \param[in] "theta" Rotation angle in radians
 */
- vec3 rotatePointAboutLine(const vec3& point, const vec3& line_base, const vec3& line_direction, float theta);
+vec3 rotatePointAboutLine(const vec3 &point, const vec3 &line_base, const vec3 &line_direction, float theta);
 
 //! Calculate the area of a triangle given its three vertices
 /** \param[in] "v0" (x,y,z) coordinate of first vertex
@@ -333,16 +335,16 @@ vec3 rotatePoint(const vec3& position, float theta, float phi);
     \return One-sided surface area of triangle
     \ingroup functions
 */
-float calculateTriangleArea( const vec3& v0, const vec3& v1, const vec3& v2 );
+float calculateTriangleArea(const vec3 &v0, const vec3 &v1, const vec3 &v2);
 
 //! Convert Julian day to calendar day (day,month,year)
-/** 
+/**
     \param[in] "Julian_day" Julian day of year (1-366)
     \return \ref int3, with \ref int3::x = day, \ref int3::y = month, \ref int3::z = year
     \sa \ref JulianDay()
     \ingroup sun
 */
-Date CalendarDay( int Julian_day, int year );
+Date CalendarDay(int Julian_day, int year);
 
 //! Convert calendar day (day,month,year) to Julian day
 /**
@@ -353,7 +355,7 @@ Date CalendarDay( int Julian_day, int year );
    \sa \ref CalendarDay()
    \ingroup sun
 */
-int JulianDay( int day, int month, int year );
+int JulianDay(int day, int month, int year);
 
 //! Convert calendar day (day,month,year) to Julian day
 /**
@@ -363,7 +365,7 @@ int JulianDay( int day, int month, int year );
    \ingroup functions
    \ingroup sun
 */
-int JulianDay( const Date& date );
+int JulianDay(const Date &date);
 
 //! Random number from a uniform distribution between 0 and 1
 /** \ingroup functions */
@@ -371,287 +373,284 @@ float randu();
 
 //! Random integer from a uniform distribution between imin and imax
 /** \ingroup functions */
-int randu( int imin, int imax  );
+int randu(int imin, int imax);
 
-//! arccosine function to handle cases when round-off errors cause an argument <-1 or >1, and thus regular acos() returns NaN
-float acos_safe( float x );
+//! arccosine function to handle cases when round-off errors cause an argument <-1 or >1, and thus regular acos()
+//! returns NaN
+float acos_safe(float x);
 
-//! arcsine function to handle cases when round-off errors cause an argument <-1 or >1, and thus regular asin() returns NaN
-float asin_safe( float x );
+//! arcsine function to handle cases when round-off errors cause an argument <-1 or >1, and thus regular asin() returns
+//! NaN
+float asin_safe(float x);
 
-//!Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2).
+//! Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2).
 bool lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, const vec2 &q2);
 
-//!Determine whether point lines within a polygon
-bool pointInPolygon(const vec2 &point, const std::vector<vec2> &polygon_verts );
+//! Determine whether point lines within a polygon
+bool pointInPolygon(const vec2 &point, const std::vector<vec2> &polygon_verts);
 
 //! MATLAB-style timer.  Call tic() to start timer, call toc() to stop timer and print duration
-struct Timer{
-public:
+struct Timer {
+   public:
+    Timer() { running = false; }
 
-  Timer(){
-    running=false;
-  }
+    //! Start timer
+    void tic() {
+        timer_start = std::chrono::high_resolution_clock::now();
+        running = true;
+    };
 
-  //! Start timer
-  void tic(){
-    timer_start = std::chrono::high_resolution_clock::now();
-    running = true;
-  };
+    //! Stop timer and print elapsed time
+    double toc() const { return toc(""); }
 
-  //! Stop timer and print elapsed time
-  double toc() const{
-    return toc("");
-  }
-  
-  //! Stop timer and print elapsed time and a user-defined message
-  /**
-   * \note the timer print message can be turned off by passing the message argument  "mute"
-  */
-  double toc( const char* message ) const {
-      if (!running) {
-          std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..."
-                    << std::endl;
-          return 0;
-      }
+    //! Stop timer and print elapsed time and a user-defined message
+    /**
+     * \note the timer print message can be turned off by passing the message argument  "mute"
+     */
+    double toc(const char *message) const {
+        if (!running) {
+            std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..."
+                      << std::endl;
+            return 0;
+        }
 
-      auto timer_end = std::chrono::high_resolution_clock::now();;
-      double duration = std::chrono::duration<double>(timer_end - timer_start).count();
-      if (strcmp(message, "mute")!=0) {
-          std::cout << "Elapsed time is " << duration << " seconds: " << message << std::endl;
-      }
-      return duration;
-  }
+        auto timer_end = std::chrono::high_resolution_clock::now();
+        ;
+        double duration = std::chrono::duration<double>(timer_end - timer_start).count();
+        if (strcmp(message, "mute") != 0) {
+            std::cout << "Elapsed time is " << duration << " seconds: " << message << std::endl;
+        }
+        return duration;
+    }
 
-private:
-
-  bool running;
-  std::chrono::high_resolution_clock::time_point timer_start;
-
+   private:
+    bool running;
+    std::chrono::high_resolution_clock::time_point timer_start;
 };
 
 //! Wait/sleep for a specified amount of time
 /** \param[in] "seconds" Number of seconds to wait
     \ingroup functions
 */
-void wait( float seconds );
+void wait(float seconds);
 
- //! Check whether PNG image file has an alpha/transparency channel
- /** \param[in] "filename" Name of the PNG image file
-  */
- bool PNGHasAlpha( const char* filename );
- 
- //! Function to read the alpha channel from a PNG image
- /** \param[in] "filename" Name of the PNG image file
-       \return 2D mask, where false denotes no material
+//! Check whether PNG image file has an alpha/transparency channel
+/** \param[in] "filename" Name of the PNG image file
  */
- std::vector<std::vector<bool> > readPNGAlpha( const char* filename );
+bool PNGHasAlpha(const char *filename);
 
-    //! Function to flatten a 2D int vector into a 1D vector
-    std::vector<int> flatten( const std::vector<std::vector<int> > &vec );
+//! Function to read the alpha channel from a PNG image
+/** \param[in] "filename" Name of the PNG image file
+      \return 2D mask, where false denotes no material
+*/
+std::vector<std::vector<bool> > readPNGAlpha(const char *filename);
 
-    //! Function to flatten a 2D uint &vector into a 1D vector
-    std::vector<uint> flatten( const std::vector<std::vector<uint> > &vec );
+//! Function to flatten a 2D int vector into a 1D vector
+std::vector<int> flatten(const std::vector<std::vector<int> > &vec);
 
-    //! Function to flatten a 2D float vector into a 1D vector
-    std::vector<float> flatten( const std::vector<std::vector<float> > &vec );
+//! Function to flatten a 2D uint &vector into a 1D vector
+std::vector<uint> flatten(const std::vector<std::vector<uint> > &vec);
 
-    //! Function to flatten a 2D double vector into a 1D vector
-    std::vector<double> flatten( const std::vector<std::vector<double> > &vec );
+//! Function to flatten a 2D float vector into a 1D vector
+std::vector<float> flatten(const std::vector<std::vector<float> > &vec);
 
-    //! Function to flatten a 2D vec2 vector into a 1D vector
-    std::vector<helios::vec2> flatten( const std::vector<std::vector<helios::vec2> > &vec );
+//! Function to flatten a 2D double vector into a 1D vector
+std::vector<double> flatten(const std::vector<std::vector<double> > &vec);
 
-    //! Function to flatten a 2D vec3 vector into a 1D vector
-    std::vector<helios::vec3> flatten( const std::vector<std::vector<helios::vec3> > &vec );
+//! Function to flatten a 2D vec2 vector into a 1D vector
+std::vector<helios::vec2> flatten(const std::vector<std::vector<helios::vec2> > &vec);
 
-    //! Function to flatten a 2D vec4 vector into a 1D vector
-    std::vector<helios::vec4> flatten( const std::vector<std::vector<helios::vec4> > &vec );
+//! Function to flatten a 2D vec3 vector into a 1D vector
+std::vector<helios::vec3> flatten(const std::vector<std::vector<helios::vec3> > &vec);
 
-    //! Function to flatten a 2D int2 vector into a 1D vector
-    std::vector<helios::int2> flatten( const std::vector<std::vector<helios::int2> > &vec );
+//! Function to flatten a 2D vec4 vector into a 1D vector
+std::vector<helios::vec4> flatten(const std::vector<std::vector<helios::vec4> > &vec);
 
-    //! Function to flatten a 2D int3 vector into a 1D vector
-    std::vector<helios::int3> flatten( const std::vector<std::vector<helios::int3> > &vec );
+//! Function to flatten a 2D int2 vector into a 1D vector
+std::vector<helios::int2> flatten(const std::vector<std::vector<helios::int2> > &vec);
 
-    //! Function to flatten a 2D int4 vector into a 1D vector
-    std::vector<helios::int4> flatten( const std::vector<std::vector<helios::int4> > &vec );
+//! Function to flatten a 2D int3 vector into a 1D vector
+std::vector<helios::int3> flatten(const std::vector<std::vector<helios::int3> > &vec);
 
-    //! Function to flatten a 2D string vector into a 1D vector
-    std::vector<std::string> flatten( const std::vector<std::vector<std::string> > &vec );
+//! Function to flatten a 2D int4 vector into a 1D vector
+std::vector<helios::int4> flatten(const std::vector<std::vector<helios::int4> > &vec);
 
-    //! Function to flatten a 3D int vector into a 1D vector
-    std::vector<int> flatten( const std::vector<std::vector<std::vector<int> > > &vec );
+//! Function to flatten a 2D string vector into a 1D vector
+std::vector<std::string> flatten(const std::vector<std::vector<std::string> > &vec);
 
-    //! Function to flatten a 3D uint vector into a 1D vector
-    std::vector<uint> flatten( const std::vector<std::vector<std::vector<uint> > > &vec );
+//! Function to flatten a 3D int vector into a 1D vector
+std::vector<int> flatten(const std::vector<std::vector<std::vector<int> > > &vec);
 
-    //! Function to flatten a 3D float vector into a 1D vector
-    std::vector<float> flatten( const std::vector<std::vector<std::vector<float> > > &vec );
+//! Function to flatten a 3D uint vector into a 1D vector
+std::vector<uint> flatten(const std::vector<std::vector<std::vector<uint> > > &vec);
 
-    //! Function to flatten a 3D double vector into a 1D vector
-    std::vector<double> flatten( const std::vector<std::vector<std::vector<double> > > &vec );
+//! Function to flatten a 3D float vector into a 1D vector
+std::vector<float> flatten(const std::vector<std::vector<std::vector<float> > > &vec);
 
-    //! Function to flatten a 3D vec2 vector into a 1D vector
-    std::vector<helios::vec2> flatten( const std::vector<std::vector<std::vector<helios::vec2> > > &vec );
+//! Function to flatten a 3D double vector into a 1D vector
+std::vector<double> flatten(const std::vector<std::vector<std::vector<double> > > &vec);
 
-    //! Function to flatten a 3D vec3 vector into a 1D vector
-    std::vector<helios::vec3> flatten( const std::vector<std::vector<std::vector<helios::vec3> > > &vec );
+//! Function to flatten a 3D vec2 vector into a 1D vector
+std::vector<helios::vec2> flatten(const std::vector<std::vector<std::vector<helios::vec2> > > &vec);
 
-    //! Function to flatten a 3D vec4 vector into a 1D vector
-    std::vector<helios::vec4> flatten( const std::vector<std::vector<std::vector<helios::vec4> > > &vec );
+//! Function to flatten a 3D vec3 vector into a 1D vector
+std::vector<helios::vec3> flatten(const std::vector<std::vector<std::vector<helios::vec3> > > &vec);
 
-    //! Function to flatten a 3D int2 vector into a 1D vector
-    std::vector<helios::int2> flatten( const std::vector<std::vector<std::vector<helios::int2> > > &vec );
+//! Function to flatten a 3D vec4 vector into a 1D vector
+std::vector<helios::vec4> flatten(const std::vector<std::vector<std::vector<helios::vec4> > > &vec);
 
-    //! Function to flatten a 3D int3 vector into a 1D vector
-    std::vector<helios::int3> flatten( const std::vector<std::vector<std::vector<helios::int3> > > &vec );
+//! Function to flatten a 3D int2 vector into a 1D vector
+std::vector<helios::int2> flatten(const std::vector<std::vector<std::vector<helios::int2> > > &vec);
 
-    //! Function to flatten a 3D int4 vector into a 1D vector
-    std::vector<helios::int4> flatten( const std::vector<std::vector<std::vector<helios::int4> > > &vec );
+//! Function to flatten a 3D int3 vector into a 1D vector
+std::vector<helios::int3> flatten(const std::vector<std::vector<std::vector<helios::int3> > > &vec);
 
-    //! Function to flatten a 3D string vector into a 1D vector
-    std::vector<std::string> flatten( const std::vector<std::vector<std::vector<std::string> > > &vec );
+//! Function to flatten a 3D int4 vector into a 1D vector
+std::vector<helios::int4> flatten(const std::vector<std::vector<std::vector<helios::int4> > > &vec);
 
+//! Function to flatten a 3D string vector into a 1D vector
+std::vector<std::string> flatten(const std::vector<std::vector<std::vector<std::string> > > &vec);
 
-    //! Function to flatten a 4D int vector into a 1D vector
-    std::vector<int> flatten( const std::vector<std::vector<std::vector<std::vector<int> > > > &vec );
+//! Function to flatten a 4D int vector into a 1D vector
+std::vector<int> flatten(const std::vector<std::vector<std::vector<std::vector<int> > > > &vec);
 
-    //! Function to flatten a 4D uint vector into a 1D vector
-    std::vector<uint> flatten( const std::vector<std::vector<std::vector<std::vector<uint> > > > &vec );
+//! Function to flatten a 4D uint vector into a 1D vector
+std::vector<uint> flatten(const std::vector<std::vector<std::vector<std::vector<uint> > > > &vec);
 
-    //! Function to flatten a 4D float vector into a 1D vector
-    std::vector<float> flatten( const std::vector<std::vector<std::vector<std::vector<float> > > > &vec );
+//! Function to flatten a 4D float vector into a 1D vector
+std::vector<float> flatten(const std::vector<std::vector<std::vector<std::vector<float> > > > &vec);
 
-    //! Function to flatten a 4D double vector into a 1D vector
-    std::vector<double> flatten( const std::vector<std::vector<std::vector<std::vector<double> > > > &vec );
+//! Function to flatten a 4D double vector into a 1D vector
+std::vector<double> flatten(const std::vector<std::vector<std::vector<std::vector<double> > > > &vec);
 
-    //! Function to flatten a 4D vec2 vector into a 1D vector
-    std::vector<helios::vec2> flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec2> > > > &vec );
+//! Function to flatten a 4D vec2 vector into a 1D vector
+std::vector<helios::vec2> flatten(const std::vector<std::vector<std::vector<std::vector<helios::vec2> > > > &vec);
 
-    //! Function to flatten a 4D vec3 vector into a 1D vector
-    std::vector<helios::vec3> flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec3> > > > &vec );
+//! Function to flatten a 4D vec3 vector into a 1D vector
+std::vector<helios::vec3> flatten(const std::vector<std::vector<std::vector<std::vector<helios::vec3> > > > &vec);
 
-    //! Function to flatten a 4D vec4 vector into a 1D vector
-    std::vector<helios::vec4> flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec4> > > > &vec );
+//! Function to flatten a 4D vec4 vector into a 1D vector
+std::vector<helios::vec4> flatten(const std::vector<std::vector<std::vector<std::vector<helios::vec4> > > > &vec);
 
-    //! Function to flatten a 4D int2 vector into a 1D vector
-    std::vector<helios::int2> flatten( const std::vector<std::vector<std::vector<std::vector<helios::int2> > > > &vec );
+//! Function to flatten a 4D int2 vector into a 1D vector
+std::vector<helios::int2> flatten(const std::vector<std::vector<std::vector<std::vector<helios::int2> > > > &vec);
 
-    //! Function to flatten a 4D int3 vector into a 1D vector
-    std::vector<helios::int3> flatten( const std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &vec );
+//! Function to flatten a 4D int3 vector into a 1D vector
+std::vector<helios::int3> flatten(const std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &vec);
 
-    //! Function to flatten a 4D int4 vector into a 1D vector
-    std::vector<helios::int4> flatten( const std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &vec );
+//! Function to flatten a 4D int4 vector into a 1D vector
+std::vector<helios::int4> flatten(const std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &vec);
 
-    //! Function to flatten a 4D string vector into a 1D vector
-    std::vector<std::string> flatten( const std::vector<std::vector<std::vector<std::vector<std::string> > > > &vec );
+//! Function to flatten a 4D string vector into a 1D vector
+std::vector<std::string> flatten(const std::vector<std::vector<std::vector<std::vector<std::string> > > > &vec);
 
+//! Function to perform cubic Hermite spline interpolation
+/**
+ * \param[in] "u" Interpolation point as a fraction of the distance between the start and end points (must be between 0
+ * and 1). \param[in] "x_start" (x,y,z) Cartesian coordinate of spline starting point. \param[in] "tan_start" Vector
+ * tangent to spline at starting point. \param[in] "x_end" (x,y,z) Cartesian coordinate of spline ending point.
+ * \param[in] "tan_end" Vector tangent to spline at ending point.
+ * \return Interpolated (x,y,z) Cartesian point.
+ */
+helios::vec3 spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end,
+                            const vec3 &tan_end);
 
-    //! Function to perform cubic Hermite spline interpolation
-  /**
-   * \param[in] "u" Interpolation point as a fraction of the distance between the start and end points (must be between 0 and 1).
-   * \param[in] "x_start" (x,y,z) Cartesian coordinate of spline starting point.
-   * \param[in] "tan_start" Vector tangent to spline at starting point.
-   * \param[in] "x_end" (x,y,z) Cartesian coordinate of spline ending point.
-   * \param[in] "tan_end" Vector tangent to spline at ending point.
-   * \return Interpolated (x,y,z) Cartesian point.
-  */
-  helios::vec3 spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end );
+//! Function to load and convert a field in a pugi XML node into a float
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+float XMLloadfloat(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into a float
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  float XMLloadfloat( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into an int
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+int XMLloadint(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into an int
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  int XMLloadint( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into a string
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+std::string XMLloadstring(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into a string
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  std::string XMLloadstring( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into a vec2
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+helios::vec2 XMLloadvec2(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into a vec2
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  helios::vec2 XMLloadvec2( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into a vec3
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+helios::vec3 XMLloadvec3(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into a vec3
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  helios::vec3 XMLloadvec3( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into a vec4
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+helios::vec4 XMLloadvec4(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into a vec4
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  helios::vec4 XMLloadvec4( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into a vec2
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+helios::int2 XMLloadint2(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into a vec2
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  helios::int2 XMLloadint2( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into a int3
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+helios::int3 XMLloadint3(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into a int3
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  helios::int3 XMLloadint3( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into a int4
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+helios::int4 XMLloadint4(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into a int4
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  helios::int4 XMLloadint4( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into an RGB color vector
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+helios::RGBcolor XMLloadrgb(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into an RGB color vector
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  helios::RGBcolor XMLloadrgb( pugi::xml_node node, const char* field );
+//! Function to load and convert a field in a pugi XML node into an RGBA color vector
+/** \param[in] "node" Pugi XML node
+    \param[in] "field" String corresponding to field value to be read
+*/
+helios::RGBAcolor XMLloadrgba(pugi::xml_node node, const char *field);
 
-  //! Function to load and convert a field in a pugi XML node into an RGBA color vector
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
-  */
-  helios::RGBAcolor XMLloadrgba( pugi::xml_node node, const char* field );
+//! Use Newton-Raphson method to find the zero of a function
+/**
+ * \param[in] "function" Function to be evaluated. The function should take as its first argument the value at which the
+ * function should be evaluated, as second argument any function arguments. \param[in] "initial_guess" Initial guess for
+ * the zero of the function. \param[in] "err_tol" Maximum allowable relative error in solution. \param[in]
+ * "max_iterations" Maximum number of iterations to allow before exiting solver.
+ */
+float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters),
+            std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f,
+            int max_iterations = 100);
 
-  //! Use Newton-Raphson method to find the zero of a function
-  /**
-   * \param[in] "function" Function to be evaluated. The function should take as its first argument the value at which the function should be evaluated, as second argument any function arguments.
-   * \param[in] "initial_guess" Initial guess for the zero of the function.
-   * \param[in] "err_tol" Maximum allowable relative error in solution.
-   * \param[in] "max_iterations" Maximum number of iterations to allow before exiting solver.
-   */
-  float fzero(float(*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100 );
+//! Function to perform linear interpolation based on a vector of discrete (x,y) values
+/**
+ * \param[in] "points" Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
+ * \param[in] "x" x value at which to interpolate. If x is less than the first x-value in points or greater than the
+ * last x-value in points, interp1 will respectively return the first or last y value. \return Value of y interpolated
+ * at location x.
+ */
+float interp1(const std::vector<helios::vec2> &points, float x);
 
-  //! Function to perform linear interpolation based on a vector of discrete (x,y) values
-    /**
-     * \param[in] "points" Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
-     * \param[in] "x" x value at which to interpolate. If x is less than the first x-value in points or greater than the last x-value in points, interp1 will respectively return the first or last y value.
-     * \return Value of y interpolated at location x.
-     */
-    float interp1( const std::vector<helios::vec2> &points, float x );
+//! Function to calculate the distance between two points
+/**
+ * \param[in] "p1" first point (vec3)
+ * \param[in] "p2" second point (vec3)
+ * \return distance between p1 and p2 in three dimensions
+ */
+float point_distance(const helios::vec3 &p1, const helios::vec3 &p2);
 
-    //! Function to calculate the distance between two points
-    /**
-     * \param[in] "p1" first point (vec3)
-     * \param[in] "p2" second point (vec3)
-     * \return distance between p1 and p2 in three dimensions
-     */
-    float point_distance( const helios::vec3 &p1 , const helios::vec3 &p2);
+extern SphericalCoord nullrotation;
 
-    extern SphericalCoord nullrotation;
-
-}
+}  // namespace helios
 
 #endif

@@ -27,8 +27,6 @@
  * in the global namespace necessary to maintain backward compatibility.
  */
 #include "optixu_math.h"
-
 #include "optixu_math_stream_namespace.h"
 
 #endif /* #ifndef __optixu_optixu_math_stream_h__ */
-

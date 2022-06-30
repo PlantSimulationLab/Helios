@@ -3,13 +3,10 @@
 
 using namespace helios;
 
-int main(int argc, char* argv[])
-{
-  
-  Context context;
+int main(int argc, char* argv[]) {
+    Context context;
 
-  RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel(&context);
 
-  return radiationmodel.selfTest();
-
+    return radiationmodel.selfTest();
 }

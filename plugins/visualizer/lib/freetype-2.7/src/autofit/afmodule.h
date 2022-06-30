@@ -15,7 +15,6 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef AFMODULE_H_
 #define AFMODULE_H_
 
@@ -23,36 +22,30 @@
 #include FT_INTERNAL_OBJECTS_H
 #include FT_MODULE_H
 
-
 FT_BEGIN_HEADER
 
+/*
+ *  This is the `extended' FT_Module structure that holds the
+ *  autofitter's global data.
+ */
 
-  /*
-   *  This is the `extended' FT_Module structure that holds the
-   *  autofitter's global data.
-   */
+typedef struct AF_ModuleRec_ {
+    FT_ModuleRec root;
 
-  typedef struct  AF_ModuleRec_
-  {
-    FT_ModuleRec  root;
-
-    FT_UInt       fallback_style;
-    FT_UInt       default_script;
+    FT_UInt fallback_style;
+    FT_UInt default_script;
 #ifdef AF_CONFIG_OPTION_USE_WARPER
-    FT_Bool       warping;
+    FT_Bool warping;
 #endif
-    FT_Bool       no_stem_darkening;
-    FT_Int        darken_params[8];
+    FT_Bool no_stem_darkening;
+    FT_Int darken_params[8];
 
-  } AF_ModuleRec, *AF_Module;
+} AF_ModuleRec, *AF_Module;
 
-
-FT_DECLARE_MODULE( autofit_module_class )
-
+FT_DECLARE_MODULE(autofit_module_class)
 
 FT_END_HEADER
 
 #endif /* AFMODULE_H_ */
-
 
 /* END */

@@ -2,12 +2,10 @@
 
 using namespace helios;
 
-int main(){
-  
-  Context context;
+int main() {
+    Context context;
 
-  EnergyBalanceModel energymodel(&context);
+    EnergyBalanceModel energymodel(&context);
 
-  return energymodel.selfTest();
-
+    return energymodel.selfTest();
 }

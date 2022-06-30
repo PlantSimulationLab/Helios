@@ -1,8 +1,7 @@
 #include <glm/gtx/handed_coordinate_space.hpp>
 
-int main()
-{
-	int Error(0);
+int main() {
+    int Error(0);
 
-	return Error;
+    return Error;
 }

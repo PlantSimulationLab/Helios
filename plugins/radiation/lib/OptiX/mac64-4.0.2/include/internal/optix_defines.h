@@ -18,8 +18,8 @@
  * INABILITY TO USE THIS SOFTWARE, EVEN IF NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGES
  */
- 
- /**
+
+/**
  * @file   optix_defines.h
  * @author NVIDIA Corporation
  * @brief  OptiX public API
@@ -32,44 +32,37 @@
 
 /*! Transform type */
 enum RTtransformkind {
-  RT_WORLD_TO_OBJECT = 0xf00, /*!< World to Object transformation */
-  RT_OBJECT_TO_WORLD          /*!< Object to World transformation */
+    RT_WORLD_TO_OBJECT = 0xf00, /*!< World to Object transformation */
+    RT_OBJECT_TO_WORLD          /*!< Object to World transformation */
 };
 
 /*! Transform flags */
 enum RTtransformflags {
-  RT_INTERNAL_INVERSE_TRANSPOSE = 0x1000 /*!< Inverse transpose flag */
+    RT_INTERNAL_INVERSE_TRANSPOSE = 0x1000 /*!< Inverse transpose flag */
 };
 
 namespace rti_internal_typeinfo {
-  enum rtiTypeKind {
-    _OPTIX_VARIABLE = 0x796152
-  };
-  struct rti_typeinfo {
+enum rtiTypeKind { _OPTIX_VARIABLE = 0x796152 };
+struct rti_typeinfo {
     unsigned int kind;
     unsigned int size;
-  };
-}
+};
+}  // namespace rti_internal_typeinfo
 
 namespace rti_internal_typeinfo {
 
-  enum rtiTypeEnum {
-    _OPTIX_TYPE_ENUM_UNKNOWN = 0x1337,
-    _OPTIX_TYPE_ENUM_PROGRAM_ID,
-    _OPTIX_TYPE_ENUM_PROGRAM_AS_ID
-  };
-  // Specialize this class (struct) to change the value of m_typeenum
-  template<typename T>
-  struct rti_typeenum
-  {
+enum rtiTypeEnum { _OPTIX_TYPE_ENUM_UNKNOWN = 0x1337, _OPTIX_TYPE_ENUM_PROGRAM_ID, _OPTIX_TYPE_ENUM_PROGRAM_AS_ID };
+// Specialize this class (struct) to change the value of m_typeenum
+template <typename T>
+struct rti_typeenum {
     static const int m_typeenum = _OPTIX_TYPE_ENUM_UNKNOWN;
-  };
-}
+};
+}  // namespace rti_internal_typeinfo
 
 namespace optix {
-  /* Internal enums for identifying texture function lookup types.  Don't add new items in
-   * the middle.  Only add at the end. */
-  enum rtiTexLookupKind {   
+/* Internal enums for identifying texture function lookup types.  Don't add new items in
+ * the middle.  Only add at the end. */
+enum rtiTexLookupKind {
     TEX_LOOKUP_1D = 1,
     TEX_LOOKUP_2D = 2,
     TEX_LOOKUP_3D = 3,
@@ -77,30 +70,28 @@ namespace optix {
     TEX_LOOKUP_A2 = 5,
     TEX_LOOKUP_CUBE = 6,
     TEX_LOOKUP_ACUBE = 7
-  };
-}
-  
-
+};
+}  // namespace optix
 
 #if defined(__x86_64) || defined(AMD64) || defined(_M_AMD64)
-#define OPTIX_ASM_PTR          "l"
-#define OPTIX_ASM_SIZE_T       "l"
+#define OPTIX_ASM_PTR "l"
+#define OPTIX_ASM_SIZE_T "l"
 #define OPTIX_ASM_PTR_SIZE_STR "64"
-#define OPTIX_BITNESS_SUFFIX   "_64"
+#define OPTIX_BITNESS_SUFFIX "_64"
 namespace optix {
-#if defined( _WIN64 )
-  typedef unsigned __int64   optix_size_t;
+#if defined(_WIN64)
+typedef unsigned __int64 optix_size_t;
 #else
-  typedef unsigned long long optix_size_t;
+typedef unsigned long long optix_size_t;
 #endif
-}
+}  // namespace optix
 #else
-#define OPTIX_ASM_PTR          "r"
-#define OPTIX_ASM_SIZE_T       "r"
+#define OPTIX_ASM_PTR "r"
+#define OPTIX_ASM_SIZE_T "r"
 #define OPTIX_ASM_PTR_SIZE_STR "32"
-#define OPTIX_BITNESS_SUFFIX   ""
+#define OPTIX_BITNESS_SUFFIX ""
 namespace optix {
-  typedef size_t optix_size_t;
+typedef size_t optix_size_t;
 }
 #endif
 

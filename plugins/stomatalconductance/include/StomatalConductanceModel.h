@@ -20,9 +20,8 @@
 #include "Context.h"
 
 //! Coefficients for simplified Buckley, Mott, & Farquhar stomatal conductance model
-struct BMFcoefficients{
-
-    BMFcoefficients(){
+struct BMFcoefficients {
+    BMFcoefficients() {
         Em = 7.0;
         k = 496;
         b = 6.1;
@@ -33,14 +32,11 @@ struct BMFcoefficients{
     float i0;
     float k;
     float b;
-
 };
 
-
 //! Coefficients for simplified Bailey stomatal conductance model
-struct BBcoefficients{
-
-    BBcoefficients(){
+struct BBcoefficients {
+    BBcoefficients() {
         pi_0 = 1.0;
         pi_m = 1.67;
         theta = 211.22;
@@ -48,51 +44,48 @@ struct BBcoefficients{
         chi = 2.076;
     }
 
-    float pi_0; //MPa
-    float pi_m; //MPa
-    float theta; //umol/m^2-s
-    float sigma; //unitless
-    float chi ; //mol/m^2-s-MPa
-
+    float pi_0;   // MPa
+    float pi_m;   // MPa
+    float theta;  // umol/m^2-s
+    float sigma;  // unitless
+    float chi;    // mol/m^2-s-MPa
 };
 
-class StomatalConductanceModel{
-public:
-
+class StomatalConductanceModel {
+   public:
     //! Default constructor
     /** \param[in] "__context" Pointer to the helios context
      */
-    explicit StomatalConductanceModel( helios::Context* m_context );
+    explicit StomatalConductanceModel(helios::Context *m_context);
 
     //! Self-test (unit test) routine
     static int selfTest();
 
     //! Set the model coefficient values for all primitives
     /** \param[in] "coeffs" Model coefficient values */
-    void setModelCoefficients( const BMFcoefficients &coeffs );
+    void setModelCoefficients(const BMFcoefficients &coeffs);
 
     //! Set the model coefficient values for a subset of primitives based on their UUIDs
     /** \param[in] "coeffs" Model coefficient values */
-    void setModelCoefficients( const BMFcoefficients &coeffs, const std::vector<uint> &UUIDs );
+    void setModelCoefficients(const BMFcoefficients &coeffs, const std::vector<uint> &UUIDs);
 
     //! Set the model coefficient values for all primitives
     /** \param[in] "coeffs" Model coefficient values */
-    void setModelCoefficients( const BBcoefficients &coeffs );
+    void setModelCoefficients(const BBcoefficients &coeffs);
 
     //! Set the model coefficient values for a subset of primitives based on their UUIDs
     /** \param[in] "coeffs" Model coefficient values */
-    void setModelCoefficients( const BBcoefficients &coeffs, const std::vector<uint> &UUIDs );
+    void setModelCoefficients(const BBcoefficients &coeffs, const std::vector<uint> &UUIDs);
 
     //! Update the stomatal conductance for all primitives in the context
     void run();
 
     //! Update the stomatal conductance for a subset of primitives in the context
-    void run( const std::vector<uint> &UUIDs );
+    void run(const std::vector<uint> &UUIDs);
 
-private:
-
+   private:
     //! Pointer to the Helios context
-    helios::Context* context;
+    helios::Context *context;
 
     std::string model;
     BMFcoefficients BMFcoeffs;
@@ -105,11 +98,10 @@ private:
     float air_humidity_default;
     float xylem_potential_default;
 
-    std::map<uint,BMFcoefficients> BMFmodel_coefficients;
-    std::map<uint,BBcoefficients> BBmodel_coefficients;
+    std::map<uint, BMFcoefficients> BMFmodel_coefficients;
+    std::map<uint, BBcoefficients> BBmodel_coefficients;
 
-    static float evaluate_BBmodel( float gs, std::vector<float> &variables, const void* parameters );
-
+    static float evaluate_BBmodel(float gs, std::vector<float> &variables, const void *parameters);
 };
 
 #endif

@@ -15,24 +15,18 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef PSMODULE_H_
 #define PSMODULE_H_
-
 
 #include <ft2build.h>
 #include FT_MODULE_H
 
-
 FT_BEGIN_HEADER
 
-
-  FT_DECLARE_MODULE( psnames_module_class )
-
+FT_DECLARE_MODULE(psnames_module_class)
 
 FT_END_HEADER
 
 #endif /* PSMODULE_H_ */
-
 
 /* END */

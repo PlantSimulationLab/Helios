@@ -15,38 +15,34 @@
 /*                                                                         */
 /***************************************************************************/
 
-
 #ifndef AFWRTSYS_H_
 #define AFWRTSYS_H_
 
-  /* Since preprocessor directives can't create other preprocessor */
-  /* directives, we have to include the header files manually.     */
+/* Since preprocessor directives can't create other preprocessor */
+/* directives, we have to include the header files manually.     */
 
-#include "afdummy.h"
-#include "aflatin.h"
 #include "afcjk.h"
+#include "afdummy.h"
 #include "afindic.h"
+#include "aflatin.h"
 #ifdef FT_OPTION_AUTOFIT2
 #include "aflatin2.h"
 #endif
 
 #endif /* AFWRTSYS_H_ */
 
+/* The following part can be included multiple times. */
+/* Define `WRITING_SYSTEM' as needed.                 */
 
-  /* The following part can be included multiple times. */
-  /* Define `WRITING_SYSTEM' as needed.                 */
+/* Add new writing systems here.  The arguments are the writing system */
+/* name in lowercase and uppercase, respectively.                      */
 
-
-  /* Add new writing systems here.  The arguments are the writing system */
-  /* name in lowercase and uppercase, respectively.                      */
-
-  WRITING_SYSTEM( dummy,  DUMMY  )
-  WRITING_SYSTEM( latin,  LATIN  )
-  WRITING_SYSTEM( cjk,    CJK    )
-  WRITING_SYSTEM( indic,  INDIC  )
+WRITING_SYSTEM(dummy, DUMMY)
+WRITING_SYSTEM(latin, LATIN)
+WRITING_SYSTEM(cjk, CJK)
+WRITING_SYSTEM(indic, INDIC)
 #ifdef FT_OPTION_AUTOFIT2
-  WRITING_SYSTEM( latin2, LATIN2 )
+WRITING_SYSTEM(latin2, LATIN2)
 #endif
-
 
 /* END */

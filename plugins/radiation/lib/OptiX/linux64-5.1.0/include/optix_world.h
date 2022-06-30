@@ -18,8 +18,8 @@
  * INABILITY TO USE THIS SOFTWARE, EVEN IF NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGES
  */
- 
- /**
+
+/**
  * @file   optix_world.h
  * @author NVIDIA Corporation
  * @brief  OptiX public API C and C++ API
@@ -44,36 +44,36 @@
 
 #include "optix_host.h"
 #if defined(__CUDACC__)
-#  include "optix_device.h"
+#include "optix_device.h"
 #endif
 
 #ifdef _WIN32
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
-#  include <windows.h>
-#  include "optix_d3d9_interop.h"
-#  include "optix_d3d10_interop.h"
-#  include "optix_d3d11_interop.h"
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
+#include "optix_d3d10_interop.h"
+#include "optix_d3d11_interop.h"
+#include "optix_d3d9_interop.h"
 #endif
 #include "optix_gl_interop.h"
 #include "optixu/optixu.h"
 #include "optixu/optixu_traversal.h"
-
-#include "optixu/optixu_vector_types.h"
 #include "optixu/optixu_vector_functions.h"
+#include "optixu/optixu_vector_types.h"
 
 /* None of these headers are compatible with C */
 #if defined(__cplusplus)
-#  if !defined(__CUDACC__)
-#    include "optixu/optixpp_namespace.h"
-#  endif
-#  include "optixu/optixu_math_namespace.h"
-#  include "optixu/optixu_aabb_namespace.h"
-#  include "optixu/optixu_matrix_namespace.h"
-#  if !defined(__CUDACC_RTC__)
-#    include "optixu/optixu_math_stream_namespace.h"
-#  endif
+#if !defined(__CUDACC__)
+#include "optixu/optixpp_namespace.h"
+#endif
+#include "optixu/optixu_aabb_namespace.h"
+#include "optixu/optixu_math_namespace.h"
+#include "optixu/optixu_matrix_namespace.h"
+#if !defined(__CUDACC_RTC__)
+#include "optixu/optixu_math_stream_namespace.h"
+#endif
 #endif
 
 #endif /* #ifndef __optixu_optixu_world_h__ */

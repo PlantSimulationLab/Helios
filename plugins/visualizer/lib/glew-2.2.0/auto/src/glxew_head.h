@@ -17,13 +17,13 @@
 #define __glx_h__
 
 #include <X11/Xlib.h>
-#include <X11/Xutil.h>
 #include <X11/Xmd.h>
+#include <X11/Xutil.h>
 
 #ifndef GLEW_INCLUDE
-#  include <GL/glew.h>
+#include <GL/glew.h>
 #else
-#  include GLEW_INCLUDE
+#include GLEW_INCLUDE
 #endif
 
 #ifdef __cplusplus
@@ -68,25 +68,25 @@ typedef struct __glXContextRec *GLXContext;
 typedef struct __GLXcontextRec *GLXContext;
 #endif
 
-typedef unsigned int GLXVideoDeviceNV; 
+typedef unsigned int GLXVideoDeviceNV;
 
-extern Bool glXQueryExtension (Display *dpy, int *errorBase, int *eventBase);
-extern Bool glXQueryVersion (Display *dpy, int *major, int *minor);
-extern int glXGetConfig (Display *dpy, XVisualInfo *vis, int attrib, int *value);
-extern XVisualInfo* glXChooseVisual (Display *dpy, int screen, int *attribList);
-extern GLXPixmap glXCreateGLXPixmap (Display *dpy, XVisualInfo *vis, Pixmap pixmap);
-extern void glXDestroyGLXPixmap (Display *dpy, GLXPixmap pix);
-extern GLXContext glXCreateContext (Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct);
-extern void glXDestroyContext (Display *dpy, GLXContext ctx);
-extern Bool glXIsDirect (Display *dpy, GLXContext ctx);
-extern void glXCopyContext (Display *dpy, GLXContext src, GLXContext dst, GLulong mask);
-extern Bool glXMakeCurrent (Display *dpy, GLXDrawable drawable, GLXContext ctx);
-extern GLXContext glXGetCurrentContext (void);
-extern GLXDrawable glXGetCurrentDrawable (void);
-extern void glXWaitGL (void);
-extern void glXWaitX (void);
-extern void glXSwapBuffers (Display *dpy, GLXDrawable drawable);
-extern void glXUseXFont (Font font, int first, int count, int listBase);
+extern Bool glXQueryExtension(Display *dpy, int *errorBase, int *eventBase);
+extern Bool glXQueryVersion(Display *dpy, int *major, int *minor);
+extern int glXGetConfig(Display *dpy, XVisualInfo *vis, int attrib, int *value);
+extern XVisualInfo *glXChooseVisual(Display *dpy, int screen, int *attribList);
+extern GLXPixmap glXCreateGLXPixmap(Display *dpy, XVisualInfo *vis, Pixmap pixmap);
+extern void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix);
+extern GLXContext glXCreateContext(Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct);
+extern void glXDestroyContext(Display *dpy, GLXContext ctx);
+extern Bool glXIsDirect(Display *dpy, GLXContext ctx);
+extern void glXCopyContext(Display *dpy, GLXContext src, GLXContext dst, GLulong mask);
+extern Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext ctx);
+extern GLXContext glXGetCurrentContext(void);
+extern GLXDrawable glXGetCurrentDrawable(void);
+extern void glXWaitGL(void);
+extern void glXWaitX(void);
+extern void glXSwapBuffers(Display *dpy, GLXDrawable drawable);
+extern void glXUseXFont(Font font, int first, int count, int listBase);
 
 #define GLXEW_VERSION_1_0 GLXEW_GET_VAR(__GLXEW_VERSION_1_0)
 
@@ -101,11 +101,10 @@ extern void glXUseXFont (Font font, int first, int count, int listBase);
 #define GLX_VERSION 0x2
 #define GLX_EXTENSIONS 0x3
 
-extern const char* glXQueryExtensionsString (Display *dpy, int screen);
-extern const char* glXGetClientString (Display *dpy, int name);
-extern const char* glXQueryServerString (Display *dpy, int screen, int name);
+extern const char *glXQueryExtensionsString(Display *dpy, int screen);
+extern const char *glXGetClientString(Display *dpy, int name);
+extern const char *glXQueryServerString(Display *dpy, int screen, int name);
 
 #define GLXEW_VERSION_1_1 GLXEW_GET_VAR(__GLXEW_VERSION_1_1)
 
 #endif /* GLX_VERSION_1_1 */
-

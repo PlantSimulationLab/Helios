@@ -9,11 +9,11 @@
 #define __wglext_h_
 
 #if !defined(WINAPI)
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN 1
-#  endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN 1
+#endif
 #include <windows.h>
-#  undef WIN32_LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
 #endif
 
 /*
@@ -21,16 +21,15 @@
  * GLEW_BUILD is set when building the DLL version.
  */
 #ifdef GLEW_STATIC
-#  define GLEWAPI extern
+#define GLEWAPI extern
 #else
-#  ifdef GLEW_BUILD
-#    define GLEWAPI extern __declspec(dllexport)
-#  else
-#    define GLEWAPI extern __declspec(dllimport)
-#  endif
+#ifdef GLEW_BUILD
+#define GLEWAPI extern __declspec(dllexport)
+#else
+#define GLEWAPI extern __declspec(dllimport)
+#endif
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-

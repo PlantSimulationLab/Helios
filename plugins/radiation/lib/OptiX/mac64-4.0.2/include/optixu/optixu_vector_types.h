@@ -34,19 +34,15 @@
  * overloaded function in the optix namespace function correctly
  */
 
-#  if defined(__VECTOR_TYPES_H__)
-#    define RT_PULL_IN_VECTOR_TYPES
-#  endif
+#if defined(__VECTOR_TYPES_H__)
+#define RT_PULL_IN_VECTOR_TYPES
+#endif
 
 namespace optix {
 
 #endif /* #if defined (__cplusplus) */
 
-
-
 #include <vector_types.h>
-
-
 
 #if defined(__cplusplus)
 } /* end namespace optix */
@@ -55,10 +51,10 @@ namespace optix {
 /* Pull the global namespace CUDA functions into the optix namespace. */
 #if defined(RT_PULL_IN_VECTOR_TYPES)
 #define RT_DEFINE_HELPER(type) \
-  using ::type##1; \
-  using ::type##2; \
-  using ::type##3; \
-  using ::type##4;
+    using ::type##1;           \
+    using ::type##2;           \
+    using ::type##3;           \
+    using ::type##4;
 
 /* Some types didn't exist until CUDA 3.0.  CUDA_VERSION isn't defined while
  * building CUDA code, so we also need to check the CUDART_VERSION value. */
@@ -66,8 +62,8 @@ namespace optix {
 #define RT_DEFINE_HELPER2(type) RT_DEFINE_HELPER(type)
 #else
 #define RT_DEFINE_HELPER2(type) \
-  using ::type##1; \
-  using ::type##2;
+    using ::type##1;            \
+    using ::type##2;
 #endif
 
 namespace optix {
@@ -92,4 +88,3 @@ using ::dim3;
 #endif
 
 #endif /* #ifndef __optixu_optixu_vector_types_h__ */
-

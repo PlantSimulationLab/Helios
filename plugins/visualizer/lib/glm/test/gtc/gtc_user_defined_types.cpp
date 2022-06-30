@@ -10,21 +10,19 @@
 #define GLM_FORCE_RADIANS
 #include <glm/gtc/user_defined_type.hpp>
 
-int test_make_pointer_vec()
-{
-	int Error = 0;
+int test_make_pointer_vec() {
+    int Error = 0;
 
-	glm::func();
-	//func();
+    glm::func();
+    // func();
 
-	return Error;
+    return Error;
 }
 
-int main()
-{
-	int Error = 0;
+int main() {
+    int Error = 0;
 
-	Error += test_make_pointer_vec();
+    Error += test_make_pointer_vec();
 
-	return Error;
+    return Error;
 }

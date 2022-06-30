@@ -15,12 +15,11 @@
 /*                                                                         */
 /***************************************************************************/
 
-
-  /*************************************************************************/
-  /*                                                                       */
-  /* This file is used to define the PFR error enumeration constants.      */
-  /*                                                                       */
-  /*************************************************************************/
+/*************************************************************************/
+/*                                                                       */
+/* This file is used to define the PFR error enumeration constants.      */
+/*                                                                       */
+/*************************************************************************/
 
 #ifndef PFRERROR_H_
 #define PFRERROR_H_
@@ -29,13 +28,12 @@
 
 #undef FTERRORS_H_
 
-#undef  FT_ERR_PREFIX
-#define FT_ERR_PREFIX  PFR_Err_
-#define FT_ERR_BASE    FT_Mod_Err_PFR
+#undef FT_ERR_PREFIX
+#define FT_ERR_PREFIX PFR_Err_
+#define FT_ERR_BASE FT_Mod_Err_PFR
 
 #include FT_ERRORS_H
 
 #endif /* PFRERROR_H_ */
-
 
 /* END */

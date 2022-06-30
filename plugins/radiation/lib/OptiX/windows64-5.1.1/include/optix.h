@@ -18,8 +18,8 @@
  * INABILITY TO USE THIS SOFTWARE, EVEN IF NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGES
  */
- 
- /**
+
+/**
  * @file   optix.h
  * @author NVIDIA Corporation
  * @brief  OptiX public API header
@@ -40,16 +40,15 @@
 #ifndef __optix_optix_h__
 #define __optix_optix_h__
 
-#define OPTIX_VERSION 50101  /* major =  OPTIX_VERSION/10000,        *
-                              * minor = (OPTIX_VERSION%10000)/100,   *
-                              * micro =  OPTIX_VERSION%100           */
-
+#define OPTIX_VERSION                               \
+    50101 /* major =  OPTIX_VERSION/10000,        * \
+           * minor = (OPTIX_VERSION%10000)/100,   * \
+           * micro =  OPTIX_VERSION%100           */
 
 #ifdef __CUDACC__
-#  include "optix_device.h"
+#include "optix_device.h"
 #else
-#  include "optix_host.h"
+#include "optix_host.h"
 #endif
-
 
 #endif /* __optix_optix_h__ */
