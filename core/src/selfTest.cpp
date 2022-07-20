@@ -1017,6 +1017,85 @@ int Context::selfTest(){
         error_count ++;
     }
 
+    
+    //------- deletion of objects when all constituent primitives are deleted  --------//
+    
+    // CASE # 1 Changing Object ID of one object primitive
+    // Would expect a single object to remain containing one primitive and a separate non-object primitive
+    
+    Context context_dzpo;
+    context_dzpo.addTileObject(make_vec3(0,0,0), make_vec2(1,1), nullrotation, make_int2(1,2));
+    
+    //set primitive parent object ID to zero
+    context_dzpo.setPrimitiveParentObjectID(0, uint(0));
+    
+    std::vector<uint> opi = context_dzpo.getObjectPrimitiveUUIDs(1);
+    if(opi.size() != 1)
+    {
+        std::cerr << "failed. Changing Object ID of one object primitive did not result in correct number of primitives in the object" << std::endl;
+        error_count ++;
+    }
+    context_dzpo.writeXML("./dzpo_case1.xml");
+    
+    Context context_dzpo_load;
+    context_dzpo_load.loadXML("./dzpo_case1.xml");
+    std::vector<uint> opi_load = context_dzpo_load.getObjectPrimitiveUUIDs(1);
+    if(opi_load.size() != 1)
+    {
+        std::cerr << "failed. Changing Object ID of one object primitive and writing/loading did not result in correct number of primitives in the object (Case 1)" << std::endl;
+        error_count ++;
+    }
+    
+    //CASE # 2 Changing Object ID of one object primitive and deleting it
+    //Would expect a single object to remain containing one primitive
+    
+    Context context_dzpo2;
+    context_dzpo2.addTileObject(make_vec3(0,0,0), make_vec2(1,1), nullrotation, make_int2(1,2));
+
+    //set one primitive parent object ID to zero 
+    context_dzpo2.setPrimitiveParentObjectID(0, uint(0));
+    // delete it
+    context_dzpo2.deletePrimitive(0);
+
+    context_dzpo2.writeXML("./dzpo_case2.xml");
+
+    Context context_dzpo2_load;
+    context_dzpo2_load.loadXML("./dzpo_case2.xml");
+    uint opi_load2 = context_dzpo2_load.getObjectPrimitiveUUIDs(1).size();
+    uint n_prim2 = context_dzpo2_load.getAllUUIDs().size();
+    uint n_obj2 = context_dzpo2_load.getAllObjectIDs().size();
+    
+    if(opi_load2 != 1 | n_prim2 != 1 | n_obj2 != 1)
+    {
+        std::cerr << "failed. Changing Object ID of one object primitive, deleting, and writing/loading did not result in correct number of primitives or objects (Case 2)" << std::endl;
+        error_count ++;
+    }
+
+
+    //CASE #3 Changing Object ID of one object primitive and deleting the other object primitive
+    //Would expect the object to be deleted since it has no primitives
+    Context context_dzpo3;
+    context_dzpo3.addTileObject(make_vec3(0,0,0), make_vec2(1,1), nullrotation, make_int2(1,2));
+
+    //set one primitive parent object ID to zero
+    context_dzpo3.setPrimitiveParentObjectID(0, uint(0));
+    //delete the other (only) primitive that is part of the object
+    context_dzpo3.deletePrimitive(1);
+
+    context_dzpo3.writeXML("./dzpo_case3.xml");
+
+    Context context_dzpo3_load;
+    context_dzpo3_load.loadXML("./dzpo_case3.xml");
+    uint n_prim3 = context_dzpo3_load.getAllUUIDs().size();
+    uint n_obj3 = context_dzpo3_load.getAllObjectIDs().size();
+    
+    if(n_prim3 != 1 | n_obj3 != 0)
+    {
+        std::cerr << "failed. Changing Object ID of one object primitive, deleting, and writing/loading did not result in correct number of primitives or objects (Case 3)" << std::endl;
+        error_count ++;
+    }
+    
+
     //-------------------------------------------//
 
     if( error_count==0 ){

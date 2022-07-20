@@ -422,7 +422,7 @@ WalnutCanopyParameters::WalnutCanopyParameters(){
 }
 
 SorghumCanopyParameters::SorghumCanopyParameters(){
-    sorghum_stage = 2;
+    sorghum_stage = 5;
 
     // stage 1
     s1_stem_length = 0.04;
@@ -545,9 +545,9 @@ SorghumCanopyParameters::SorghumCanopyParameters(){
     s5_leaf_texture_file = "plugins/canopygenerator/textures/s5_Sorghum_leaf.png";
 
     // Canopy
-    plant_spacing = 0.2;
+    plant_spacing = 0.45;
 
-    row_spacing = 0.2;
+    row_spacing = 0.45;
 
     plant_count = make_int2(10 ,10);
 

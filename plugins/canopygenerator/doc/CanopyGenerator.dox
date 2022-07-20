@@ -343,14 +343,14 @@
 
   \image html SorghumCanopy.png
 
- <table>
+   <table>
  <caption>Sorghum Stages</caption>
    <tr>	
-      <td>\s1SorghumCanopy.png</td>
-      <td>\s2SorghumCanopy.png</td>
-      <td>\s3SorghumCanopy.png</td>
-      <td>\s4SorghumCanopy.png</td>
-      <td>\s5SorghumCanopy.png</td>
+      <td>\image html s1SorghumCanopy.png</td>
+      <td>\image html s2SorghumCanopy.png</td>
+      <td>\image html s3SorghumCanopy.png</td>
+      <td>\image html s4SorghumCanopy.png</td>
+      <td>\image html s5SorghumCanopy.png</td>
    </tr>
    <tr>	
       <td>Stage 1</td>
@@ -360,6 +360,7 @@
       <td>Stage 5</td>
    </tr>
  </table>
+
 
   <table>
   <tr><th>Parameters Structure</th><td>\ref SorghumCanopyParameters</td></tr>

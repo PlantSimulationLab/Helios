@@ -3497,8 +3497,8 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
         int A = 0;
         int At = 0;
         int2 sz = textures.at(texture_file).getSize();
-        int2 uv_min( floor(uv.at(0).x*float(sz.x)), floor(uv.at(0).y*float(sz.y)) );
-        int2 uv_max( floor(uv.at(2).x*float(sz.x)), floor(uv.at(2).y*float(sz.y)) );
+        int2 uv_min( floor(uv.at(0).x*float(sz.x)), floor((1.f-uv.at(2).y)*float(sz.y)) );
+        int2 uv_max( floor(uv.at(2).x*float(sz.x)), floor((1.f-uv.at(0).y)*float(sz.y)) );
         for( int j=uv_min.y; j<uv_max.y; j++ ){
             for( int i=uv_min.x; i<uv_max.x; i++ ){
                 At += 1;
@@ -3605,7 +3605,7 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
 
                 if(test_sum == 0 || test_sum == 3){
                     At += 1;
-                    if( alpha->at(j).at(i) ){
+                    if( alpha->at(alpha->size()-j-1 ).at(i) ){
                         A += 1;
                     }
                 }
@@ -3726,28 +3726,34 @@ void Context::deletePrimitive( const std::vector<uint>& UUIDs ){
 }
 
 void Context::deletePrimitive(uint UUID ){
-
+    
     if( primitives.find(UUID) == primitives.end() ){
         throw( std::runtime_error("ERROR (deletePrimitive): UUID of " + std::to_string(UUID) + " not found in the context.") );
     }
-
+    
     Primitive* prim = primitives.at(UUID);
-
+    
     if( prim->getParentObjectID()!=0 ){//primitive belongs to an object
-
+        
         uint ObjID = prim->getParentObjectID();
         if( doesObjectExist(ObjID) ) {
             objects.at(ObjID)->deleteChildPrimitive(UUID);
+            if(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().size() == 0)
+            {
+                CompoundObject* obj = objects.at(ObjID);
+                delete obj;
+                objects.erase(ObjID);
+            }
         }
     }
-
+    
     delete prim;
     primitives.erase(UUID);
-
+    
     markGeometryDirty();
-
+    
+    
 }
-
 std::vector<uint> Context::copyPrimitive(const std::vector<uint> &UUIDs ){
 
     std::vector<uint> UUIDs_copy(UUIDs.size());
@@ -5375,21 +5381,23 @@ void Context::deleteObject(const std::vector<uint> &ObjIDs ){
 }
 
 void Context::deleteObject(uint ObjID ){
-
+    
     if( objects.find(ObjID) == objects.end() ){
         throw( std::runtime_error("ERROR (deleteObject): Object ID of " + std::to_string(ObjID) + " not found in the context."));
     }
-
+    
     CompoundObject* obj = objects.at(ObjID);
-
+    
     std::vector<uint> UUIDs = obj->getPrimitiveUUIDs();
-    deletePrimitive(UUIDs);
-
+    
+    
     delete obj;
     objects.erase(ObjID);
-
+    
+    deletePrimitive(UUIDs);
+    
     markGeometryDirty();
-
+    
 }
 
 std::vector<uint> Context::copyObject(const std::vector<uint> &ObjIDs ){
@@ -5793,9 +5801,6 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
             //if the current tile object has the same texture file as the current unique texture file
             if(current_texture_file == tex.at(j))
             {
-                //delete the original object primitives
-                deletePrimitive(UUIDs_old);
-                
                 //copy the template primitives and create a new tile with them
                 std::vector<uint> new_primitives = copyPrimitive(template_primitives.at(j));
                 
@@ -5803,6 +5808,9 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
                 setPrimitiveParentObjectID(new_primitives, textured_tile_ObjectIDs.at(i));
                 current_object_pointer->setPrimitiveUUIDs(new_primitives);
                 current_object_pointer->setSubdivisionCount(new_subdiv);
+                
+                //delete the original object primitives
+                deletePrimitive(UUIDs_old);
                 
                 float IM[16];
                 makeIdentityMatrix(IM);
@@ -5981,9 +5989,6 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
             //if the current tile object has the same texture file as the current unique texture file
             if(current_texture_file == tex.at(j))
             {
-                //delete the original object primitives
-                deletePrimitive(UUIDs_old);
-                
                 //copy the template primitives and create a new tile with them
                 std::vector<uint> new_primitives = copyPrimitive(template_primitives.at(j));
                 
@@ -5993,6 +5998,9 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
                 int2 new_subdiv = getTileObjectPointer(object_templates.at(j))->getSubdivisionCount();
                 current_object_pointer->setPrimitiveUUIDs(new_primitives);
                 current_object_pointer->setSubdivisionCount(new_subdiv);
+                
+                //delete the original object primitives
+                deletePrimitive(UUIDs_old);
                 
                 float IM[16];
                 makeIdentityMatrix(IM);
@@ -7038,8 +7046,8 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
                 int A = 0;
                 int At = 0;
 
-                int2 uv_min( floor(uv.at(0).x*(float(sz.x)-1.f)), floor(uv.at(0).y*(float(sz.y)-1.f)) );
-                int2 uv_max( floor(uv.at(2).x*(float(sz.x)-1.f)), floor(uv.at(2).y*(float(sz.y)-1.f)) );
+                int2 uv_min( floor(uv.at(0).x*(float(sz.x)-1.f)), floor((1.f-uv.at(2).y)*(float(sz.y)-1.f)) );
+                int2 uv_max( floor(uv.at(2).x*(float(sz.x)-1.f)), floor((1.f-uv.at(0).y)*(float(sz.y)-1.f)) );
 
                 assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
 
@@ -8246,8 +8254,8 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
                 int A = 0;
                 int At = 0;
 
-                int2 uv_min( floor(uv[0].x*float(sz.x-1)), floor(uv[0].y*float(sz.y-1)) );
-                int2 uv_max( floor(uv[2].x*float(sz.x-1)), floor(uv[2].y*float(sz.y-1)) );
+                int2 uv_min( floor(uv[0].x*float(sz.x-1)), floor((1.f-uv[2].y)*float(sz.y-1)) );
+                int2 uv_max( floor(uv[2].x*float(sz.x-1)), floor((1.f-uv[0].y)*float(sz.y-1)) );
 
                 assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
 
@@ -9985,85 +9993,85 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 }
 
 std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
-
+    
     if( !quiet ) {
         std::cout << "Loading XML file: " << filename << "..." << std::flush;
     }
-
+    
     std::string fn = filename;
     if(fn.substr(fn.find_last_of(".") + 1) != "xml") {
         throw( std::runtime_error("failed.\n File " + fn + " is not XML format.") );
     }
-
+    
     XMLfiles.emplace_back( filename );
-
+    
     uint ID;
     std::vector<uint> UUID;
-
+    
     // Using "pugixml" parser.  See pugixml.org
     pugi::xml_document xmldoc;
-
+    
     //load file
     pugi::xml_parse_result result = xmldoc.load_file(filename);
-
+    
     //error checking
     if (!result){
         throw( std::runtime_error("failed.\n XML [" + std::string(filename) + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + result.description() + "\nError offset: " + std::to_string(result.offset) + " (error at [..." + (filename + result.offset) + "]\n"));
     }
-
+    
     pugi::xml_node helios = xmldoc.child("helios");
-
+    
     if( helios.empty() ){
         if( !quiet ) {
             std::cout << "failed." << std::endl;
         }
         throw( std::runtime_error("ERROR (loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags."));
     }
-
+    
     //if primitives are added that belong to an object, store there UUIDs here so that we can make sure their UUIDs are consistent
     std::map<uint,std::vector<uint> > object_prim_UUIDs;
-
+    
     //-------------- TIME/DATE ---------------//
-
+    
     for (pugi::xml_node p = helios.child("date"); p; p = p.next_sibling("date")){
-
+        
         pugi::xml_node year_node = p.child("year");
         const char* year_str = year_node.child_value();
         int year = std::stoi( year_str );
-
+        
         pugi::xml_node month_node = p.child("month");
         const char* month_str = month_node.child_value();
         int month = std::stoi( month_str );
-
+        
         pugi::xml_node day_node = p.child("day");
         const char* day_str = day_node.child_value();
         int day = std::stoi( day_str );
-
+        
         setDate( day, month, year );
-
+        
     }
-
+    
     for (pugi::xml_node p = helios.child("time"); p; p = p.next_sibling("time")){
-
+        
         pugi::xml_node hour_node = p.child("hour");
         const char* hour_str = hour_node.child_value();
         int hour = std::stoi( hour_str );
-
+        
         pugi::xml_node minute_node = p.child("minute");
         const char* minute_str = minute_node.child_value();
         int minute = std::stoi( minute_str );
-
+        
         pugi::xml_node second_node = p.child("second");
         const char* second_str = second_node.child_value();
         int second = std::stoi( second_str );
-
+        
         setTime( second, minute, hour );
-
+        
     }
-
+    
     //-------------- PATCHES ---------------//
     for (pugi::xml_node p = helios.child("patch"); p; p = p.next_sibling("patch")){
-
+        
         // * Patch Object ID * //
         uint objID = 0;
         pugi::xml_node objID_node = p.child("objID");
@@ -10071,11 +10079,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( !oid.empty() ){
             objID = std::stoi( oid );
         }
-
+        
         // * Patch Transformation Matrix * //
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
-
+        
         const char* transform_str = transform_node.child_value();
         if( strlen(transform_str)==0 ){
             makeIdentityMatrix(transform);
@@ -10094,7 +10102,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 makeIdentityMatrix(transform);
             }
         }
-
+        
         // * Patch Texture * //
         std::string texture_file;
         pugi::xml_node texture_node = p.child("texture");
@@ -10104,7 +10112,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         }else{
             texture_file = texfile;
         }
-
+        
         // * Patch Texture (u,v) Coordinates * //
         std::vector<vec2> uv;
         pugi::xml_node uv_node = p.child("textureUV");
@@ -10130,18 +10138,18 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 uv.resize(0);
             }
         }
-
+        
         // * Patch Diffuse Colors * //
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
-
+        
         const char* color_str = color_node.child_value();
         if( strlen(color_str)==0 ){
             color = make_RGBAcolor(0,0,0,1);//assume default color of black
         }else{
             color=string2RGBcolor(color_str);
         }
-
+        
         // * Add the Patch * //
         if( strcmp(texture_file.c_str(),"none")==0 ){
             ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), color );
@@ -10153,24 +10161,24 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             }
         }
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
-
+        
         if( objID>0 ) {
             object_prim_UUIDs[objID].push_back(ID);
         }
-
+        
         UUID.push_back(ID);
-
+        
         // * Primitive Data * //
-
+        
         loadPData( p, ID );
-
+        
     }//end patches
-
+    
     //-------------- TRIANGLES ---------------//
-
+    
     //looping over any triangles specified in XML file
     for (pugi::xml_node tri = helios.child("triangle"); tri; tri = tri.next_sibling("triangle")){
-
+        
         // * Triangle Object ID * //
         uint objID = 0;
         pugi::xml_node objID_node = tri.child("objID");
@@ -10178,11 +10186,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( !oid.empty() ){
             objID = std::stoi( oid );
         }
-
+        
         // * Triangle Transformation Matrix * //
         float transform[16];
         pugi::xml_node transform_node = tri.child("transform");
-
+        
         const char* transform_str = transform_node.child_value();
         if( strlen(transform_str)==0 ){
             makeIdentityMatrix(transform);
@@ -10201,7 +10209,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 makeIdentityMatrix(transform);
             }
         }
-
+        
         // * Triangle Texture * //
         std::string texture_file;
         pugi::xml_node texture_node = tri.child("texture");
@@ -10211,7 +10219,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         }else{
             texture_file = texfile;
         }
-
+        
         // * Triangle Texture (u,v) Coordinates * //
         std::vector<vec2> uv;
         pugi::xml_node uv_node = tri.child("textureUV");
@@ -10237,24 +10245,24 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 uv.resize(0);
             }
         }
-
+        
         // * Triangle Diffuse Colors * //
         RGBAcolor color;
         pugi::xml_node color_node = tri.child("color");
-
+        
         const char* color_str = color_node.child_value();
         if( strlen(color_str)==0 ){
             color = make_RGBAcolor(0,0,0,1);//assume default color of black
         }else{
             color=string2RGBcolor(color_str);
         }
-
+        
         std::vector<vec3> vert_pos;
         vert_pos.resize(3);
         vert_pos.at(0) = make_vec3( 0.f, 0.f, 0.f);
         vert_pos.at(1) = make_vec3( 0.f, 1.f, 0.f);
         vert_pos.at(2) = make_vec3( 1.f, 1.f, 0.f);
-
+        
         // * Add the Triangle * //
         if( strcmp(texture_file.c_str(),"none")==0 || uv.empty() ){
             ID = addTriangle( vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), color );
@@ -10262,22 +10270,22 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             ID = addTriangle( vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2) );
         }
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
-
+        
         if( objID>0 ) {
             object_prim_UUIDs[objID].push_back(ID);
         }
-
+        
         UUID.push_back(ID);
-
+        
         // * Primitive Data * //
-
+        
         loadPData( tri, ID );
-
+        
     }
-
+    
     //-------------- VOXELS ---------------//
     for (pugi::xml_node p = helios.child("voxel"); p; p = p.next_sibling("voxel")){
-
+        
         // * Voxel Object ID * //
         uint objID = 0;
         pugi::xml_node objID_node = p.child("objID");
@@ -10285,11 +10293,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( !oid.empty() ){
             objID = std::stoi( oid );
         }
-
+        
         // * Voxel Transformation Matrix * //
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
-
+        
         const char* transform_str = transform_node.child_value();
         if( strlen(transform_str)==0 ){
             makeIdentityMatrix(transform);
@@ -10308,39 +10316,39 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 makeIdentityMatrix(transform);
             }
         }
-
+        
         // * Voxel Diffuse Colors * //
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
-
+        
         const char* color_str = color_node.child_value();
         if( strlen(color_str)==0 ){
             color = make_RGBAcolor(0,0,0,1);//assume default color of black
         }else{
             color=string2RGBcolor(color_str);
         }
-
+        
         // * Add the Voxel * //
         ID = addVoxel( make_vec3(0,0,0), make_vec3(0,0,0), 0, color );
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
-
+        
         if( objID>0 ) {
             object_prim_UUIDs[objID].push_back(ID);
         }
-
+        
         UUID.push_back(ID);
-
+        
         // * Primitive Data * //
-
+        
         loadPData( p, ID );
-
+        
     }
-
+    
     //-------------- COMPOUND OBJECTS ---------------//
-
+    
     //-------------- TILES ---------------//
     for (pugi::xml_node p = helios.child("tile"); p; p = p.next_sibling("tile")) {
-
+        
         // * Tile Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
@@ -10348,11 +10356,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( !oid.empty() ){
             objID = std::stoi( oid );
         }
-
+        
         // * Tile Transformation Matrix * //
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
-
+        
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10371,7 +10379,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 makeIdentityMatrix(transform);
             }
         }
-
+        
         // * Tile Texture * //
         std::string texture_file;
         pugi::xml_node texture_node = p.child("texture");
@@ -10381,7 +10389,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             texture_file = texfile;
         }
-
+        
         // * Tile Texture (u,v) Coordinates * //
         std::vector<vec2> uv;
         pugi::xml_node uv_node = p.child("textureUV");
@@ -10407,16 +10415,16 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 uv.resize(0);
             }
         }
-
+        
         // * Tile Diffuse Colors * //
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
-
+        
         const char *color_str = color_node.child_value();
         if ( strlen(color_str) != 0) {
             color = string2RGBcolor(color_str);
         }
-
+        
         // * Tile Subdivisions * //
         int2 subdiv;
         pugi::xml_node subdiv_node = p.child("subdivisions");
@@ -10427,11 +10435,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             subdiv = string2int2(subdiv_str);
         }
-
+        
         //Create a dummy patch in order to get the center, size, and rotation based on transformation matrix
         Patch patch( make_RGBAcolor(0,0,0,0), 0 );
         patch.setTransformationMatrix(transform);
-
+        
         // * Add the Tile * //
         if (strcmp(texture_file.c_str(), "none") == 0) {
             if( strlen(color_str) == 0 ){
@@ -10442,28 +10450,31 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             ID = addTileObject(patch.getCenter(), patch.getSize(), cart2sphere(patch.getNormal()), subdiv, texture_file.c_str());
         }
-
+        
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
-            deletePrimitive(getObjectPrimitiveUUIDs(ID)); // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives.
+
+            std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            deletePrimitive(uuids_to_delete); // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives.
+            
         }
-
+        
         // * Tile Sub-Patch Data * //
-
+        
         loadOsubPData(p,ID);
-
+        
         // * Tile Object Data * //
-
+        
         loadOData(p,ID);
-
-//        UUID.push_back(ID);
-
+        
+        //        UUID.push_back(ID);
+        
     }//end tiles
-
+    
     //-------------- SPHERES ---------------//
     for (pugi::xml_node p = helios.child("sphere"); p; p = p.next_sibling("sphere")) {
-
+        
         // * Sphere Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
@@ -10471,11 +10482,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( !oid.empty() ){
             objID = std::stoi( oid );
         }
-
+        
         // * Sphere Transformation Matrix * //
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
-
+        
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10494,7 +10505,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 makeIdentityMatrix(transform);
             }
         }
-
+        
         // * Sphere Texture * //
         std::string texture_file;
         pugi::xml_node texture_node = p.child("texture");
@@ -10504,16 +10515,16 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             texture_file = texfile;
         }
-
+        
         // * Sphere Diffuse Colors * //
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
-
+        
         const char *color_str = color_node.child_value();
         if ( strlen(color_str) != 0) {
             color = string2RGBcolor(color_str);
         }
-
+        
         // * Sphere Subdivisions * //
         uint subdiv;
         pugi::xml_node subdiv_node = p.child("subdivisions");
@@ -10524,12 +10535,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             subdiv = std::stoi(subdiv_str);
         }
-
+        
         //Create a dummy sphere in order to get the center and radius based on transformation matrix
         std::vector<uint> empty;
         Sphere sphere( 0, empty, 3, "", this );
         sphere.setTransformationMatrix(transform);
-
+        
         // * Add the Sphere * //
         if (strcmp(texture_file.c_str(), "none") == 0) {
             if( strlen(color_str) == 0 ){
@@ -10540,26 +10551,26 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             ID = addSphereObject( subdiv, sphere.getCenter(), sphere.getRadius(), texture_file.c_str());
         }
-
+        
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
             deletePrimitive(getObjectPrimitiveUUIDs(ID));
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
         }
-
+        
         // * Sphere Sub-Triangle Data * //
-
+        
         loadOsubPData(p,ID);
-
+        
         // * Sphere Object Data * //
-
+        
         loadOData(p,ID);
-
+        
     }//end spheres
-
+    
     //-------------- TUBES ---------------//
     for (pugi::xml_node p = helios.child("tube"); p; p = p.next_sibling("tube")) {
-
+        
         // * Tube Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
@@ -10567,11 +10578,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( !oid.empty() ){
             objID = std::stoi( oid );
         }
-
+        
         // * Tube Transformation Matrix * //
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
-
+        
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10590,7 +10601,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 makeIdentityMatrix(transform);
             }
         }
-
+        
         // * Tube Texture * //
         std::string texture_file;
         pugi::xml_node texture_node = p.child("texture");
@@ -10600,7 +10611,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             texture_file = texfile;
         }
-
+        
         // * Tube Subdivisions * //
         uint subdiv;
         pugi::xml_node subdiv_node = p.child("subdivisions");
@@ -10611,12 +10622,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             subdiv = std::stoi(subdiv_str);
         }
-
+        
         // * Tube Nodes * //
-
+        
         pugi::xml_node nodes_node = p.child("nodes");
         const char* nodes_str = nodes_node.child_value();
-
+        
         std::vector<vec3> nodes;
         if (strlen(nodes_str) > 0) {
             std::istringstream data_stream(nodes_str);
@@ -10631,12 +10642,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 }
             }
         }
-
+        
         // * Tube Radius * //
-
+        
         pugi::xml_node radii_node = p.child("radius");
         const char* radii_str = radii_node.child_value();
-
+        
         std::vector<float> radii;
         if (strlen(radii_str) > 0) {
             std::istringstream data_stream(radii_str);
@@ -10646,12 +10657,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 radii.push_back(tmp);
             }
         }
-
+        
         // * Tube Color * //
-
+        
         pugi::xml_node color_node = p.child("color");
         const char* color_str = color_node.child_value();
-
+        
         std::vector<RGBcolor> colors;
         if (strlen(color_str) > 0) {
             std::istringstream data_stream(color_str);
@@ -10666,35 +10677,35 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 }
             }
         }
-
+        
         // * Add the Tube * //
         if( texture_file == "none" ) {
             ID = addTubeObject(subdiv, nodes, radii, colors);
         }else{
             ID = addTubeObject(subdiv, nodes, radii, texture_file.c_str());
         }
-
+        
         getObjectPointer(ID)->setTransformationMatrix(transform);
-
+        
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
             deletePrimitive(getObjectPrimitiveUUIDs(ID));
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
         }
-
+        
         // * Tube Sub-Triangle Data * //
-
+        
         loadOsubPData(p,ID);
-
+        
         // * tube Object Data * //
-
+        
         loadOData(p,ID);
-
+        
     }//end tubes
-
+    
     //-------------- BOXES ---------------//
     for (pugi::xml_node p = helios.child("box"); p; p = p.next_sibling("box")) {
-
+        
         // * Box Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
@@ -10702,11 +10713,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( !oid.empty() ){
             objID = std::stoi( oid );
         }
-
+        
         // * Box Transformation Matrix * //
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
-
+        
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10725,7 +10736,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 makeIdentityMatrix(transform);
             }
         }
-
+        
         // * Box Texture * //
         std::string texture_file;
         pugi::xml_node texture_node = p.child("texture");
@@ -10735,16 +10746,16 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             texture_file = texfile;
         }
-
+        
         // * Box Diffuse Colors * //
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
-
+        
         const char *color_str = color_node.child_value();
         if ( strlen(color_str) != 0) {
             color = string2RGBcolor(color_str);
         }
-
+        
         // * Box Subdivisions * //
         int3 subdiv;
         pugi::xml_node subdiv_node = p.child("subdivisions");
@@ -10755,12 +10766,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             subdiv = string2int3(subdiv_str);
         }
-
+        
         //Create a dummy box in order to get the center and size based on transformation matrix
         std::vector<uint> empty;
         Box box( 0, empty, make_int3(1,1,1), "", this );
         box.setTransformationMatrix(transform);
-
+        
         // * Add the box * //
         if (strcmp(texture_file.c_str(), "none") == 0) {
             if( strlen(color_str) == 0 ){
@@ -10771,26 +10782,26 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             ID = addBoxObject( box.getCenter(), box.getSize(), subdiv, texture_file.c_str());
         }
-
+        
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
             deletePrimitive(getObjectPrimitiveUUIDs(ID));
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
         }
-
+        
         // * Box Sub-Patch Data * //
-
+        
         loadOsubPData(p,ID);
-
+        
         // * Box Object Data * //
-
+        
         loadOData(p,ID);
-
+        
     }//end boxes
-
+    
     //-------------- DISKS ---------------//
     for (pugi::xml_node p = helios.child("disk"); p; p = p.next_sibling("disk")) {
-
+        
         // * Disk Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
@@ -10798,11 +10809,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( !oid.empty() ){
             objID = std::stoi( oid );
         }
-
+        
         // * Disk Transformation Matrix * //
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
-
+        
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10821,7 +10832,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 makeIdentityMatrix(transform);
             }
         }
-
+        
         // * Disk Texture * //
         std::string texture_file;
         pugi::xml_node texture_node = p.child("texture");
@@ -10831,16 +10842,16 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             texture_file = texfile;
         }
-
+        
         // * Disk Diffuse Colors * //
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
-
+        
         const char *color_str = color_node.child_value();
         if ( strlen(color_str) != 0) {
             color = string2RGBcolor(color_str);
         }
-
+        
         // * Disk Subdivisions * //
         uint subdiv;
         pugi::xml_node subdiv_node = p.child("subdivisions");
@@ -10851,12 +10862,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             subdiv = std::stoi(subdiv_str);
         }
-
+        
         //Create a dummy disk in order to get the center and size based on transformation matrix
         std::vector<uint> empty;
         Disk disk( 0, empty, 1, "", this );
         disk.setTransformationMatrix(transform);
-
+        
         // * Add the disk * //
         if (strcmp(texture_file.c_str(), "none") == 0) {
             if( strlen(color_str) == 0 ){
@@ -10867,26 +10878,26 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize(), nullrotation, texture_file.c_str());
         }
-
+        
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
             deletePrimitive(getObjectPrimitiveUUIDs(ID));
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
         }
-
+        
         // * Disk Sub-Triangle Data * //
-
+        
         loadOsubPData(p,ID);
-
+        
         // * Disk Object Data * //
-
+        
         loadOData(p,ID);
-
+        
     }//end disks
-
+    
     //-------------- CONES ---------------//
     for (pugi::xml_node p = helios.child("cone"); p; p = p.next_sibling("cone")) {
-
+        
         // * Cone Object ID * //
         pugi::xml_node objID_node = p.child("objID");
         std::string oid = deblank(objID_node.child_value());
@@ -10894,11 +10905,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( !oid.empty() ){
             objID = std::stoi( oid );
         }
-
+        
         // * Cone Transformation Matrix * //
         float transform[16];
         pugi::xml_node transform_node = p.child("transform");
-
+        
         const char *transform_str = transform_node.child_value();
         if (strlen(transform_str) == 0) {
             makeIdentityMatrix(transform);
@@ -10917,7 +10928,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 makeIdentityMatrix(transform);
             }
         }
-
+        
         // * Cone Texture * //
         std::string texture_file;
         pugi::xml_node texture_node = p.child("texture");
@@ -10927,16 +10938,16 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             texture_file = texfile;
         }
-
+        
         // * Cone Diffuse Colors * //
         RGBAcolor color;
         pugi::xml_node color_node = p.child("color");
-
+        
         const char *color_str = color_node.child_value();
         if ( strlen(color_str) != 0) {
             color = string2RGBcolor(color_str);
         }
-
+        
         // * Cone Subdivisions * //
         uint subdiv;
         pugi::xml_node subdiv_node = p.child("subdivisions");
@@ -10947,12 +10958,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         } else {
             subdiv = std::stoi(subdiv_str);
         }
-
+        
         // * Cone Nodes * //
-
+        
         pugi::xml_node nodes_node = p.child("nodes");
         const char* nodes_str = nodes_node.child_value();
-
+        
         std::vector<vec3> nodes;
         if (strlen(nodes_str) > 0) {
             std::istringstream data_stream(nodes_str);
@@ -10981,48 +10992,48 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 throw(std::runtime_error("ERROR (loadXML): Loading of cone failed. Cone end nodes must be specified as pairs of 3 x,y,z coordinates."));
             }
         }
-
+        
         // * Cone Radius * //
-
+        
         pugi::xml_node radii_node = p.child("radius");
         const char* radii_str = radii_node.child_value();
-
+        
         std::vector<float> radii(2);
         if (strlen(radii_str) > 0) {
             std::istringstream data_stream(radii_str);
             data_stream >> radii.at(0);
             data_stream >> radii.at(1);
         }
-
+        
         // * Add the Cone * //
         if( texture_file == "none" ){
             ID = addConeObject( subdiv, nodes.at(0), nodes.at(1), radii.at(0), radii.at(1), make_RGBcolor(color.r,color.g,color.b));
         }else {
             ID = addConeObject(subdiv, nodes.at(0), nodes.at(1), radii.at(0), radii.at(1), texture_file.c_str());
         }
-
+        
         getObjectPointer(ID)->setTransformationMatrix(transform);
-
+        
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
             deletePrimitive(getObjectPrimitiveUUIDs(ID));
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
         }
-
+        
         // * Cone Sub-Triangle Data * //
-
+        
         loadOsubPData(p,ID);
-
+        
         // * Cone Object Data * //
-
+        
         loadOData(p,ID);
-
+        
     }//end cones
-
+    
     //-------------- GLOBAL DATA ---------------//
-
+    
     for (pugi::xml_node data = helios.child("globaldata_int"); data; data = data.next_sibling("globaldata_int")){
-
+        
         const char* data_str = data.child_value();
         std::vector<int> datav;
         if( strlen(data_str)>0 ){
@@ -11032,19 +11043,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 datav.push_back(tmp);
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_INT,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_uint"); data; data = data.next_sibling("globaldata_uint")){
-
+        
         const char* data_str = data.child_value();
         std::vector<uint> datav;
         if( strlen(data_str)>0 ){
@@ -11054,19 +11065,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 datav.push_back(tmp);
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_UINT,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_float"); data; data = data.next_sibling("globaldata_float")){
-
+        
         const char* data_str = data.child_value();
         std::vector<float> datav;
         if( strlen(data_str)>0 ){
@@ -11076,19 +11087,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 datav.push_back(tmp);
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_FLOAT,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_double"); data; data = data.next_sibling("globaldata_double")){
-
+        
         const char* data_str = data.child_value();
         std::vector<double> datav;
         if( strlen(data_str)>0 ){
@@ -11098,19 +11109,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 datav.push_back(tmp);
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_DOUBLE,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_vec2"); data; data = data.next_sibling("globaldata_vec2")){
-
+        
         const char* data_str = data.child_value();
         std::vector<vec2> datav;
         if( strlen(data_str)>0 ){
@@ -11126,19 +11137,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 }
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_VEC2,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_vec3"); data; data = data.next_sibling("globaldata_vec3")){
-
+        
         const char* data_str = data.child_value();
         std::vector<vec3> datav;
         if( strlen(data_str)>0 ){
@@ -11154,19 +11165,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 }
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_VEC3,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_vec4"); data; data = data.next_sibling("globaldata_vec4")){
-
+        
         const char* data_str = data.child_value();
         std::vector<vec4> datav;
         if( strlen(data_str)>0 ){
@@ -11182,19 +11193,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 }
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_VEC4,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_int2"); data; data = data.next_sibling("globaldata_int2")){
-
+        
         const char* data_str = data.child_value();
         std::vector<int2> datav;
         if( strlen(data_str)>0 ){
@@ -11210,19 +11221,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 }
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_INT2,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_int3"); data; data = data.next_sibling("globaldata_int3")){
-
+        
         const char* data_str = data.child_value();
         std::vector<int3> datav;
         if( strlen(data_str)>0 ){
@@ -11238,19 +11249,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 }
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_INT3,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_int4"); data; data = data.next_sibling("globaldata_int4")){
-
+        
         const char* data_str = data.child_value();
         std::vector<int4> datav;
         if( strlen(data_str)>0 ){
@@ -11266,19 +11277,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 }
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_INT4,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     for (pugi::xml_node data = helios.child("globaldata_string"); data; data = data.next_sibling("globaldata_string")){
-
+        
         const char* data_str = data.child_value();
         std::vector<std::string> datav;
         if( strlen(data_str)>0 ){
@@ -11288,24 +11299,24 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 datav.push_back(tmp);
             }
         }
-
+        
         const char* label = data.attribute("label").value();
-
+        
         if( datav.size()==1 ){
             setGlobalData(label,datav.front());
         }else if( datav.size()>1 ){
             setGlobalData(label,HELIOS_TYPE_STRING,datav.size(),&datav[0]);
         }
-
+        
     }
-
+    
     //-------------- TIMESERIES DATA ---------------//
     for (pugi::xml_node p = helios.child("timeseries"); p; p = p.next_sibling("timeseries")){
-
+        
         const char* label = p.attribute("label").value();
-
+        
         for (pugi::xml_node d = p.child("datapoint"); d; d = d.next_sibling("datapoint")){
-
+            
             Time time;
             pugi::xml_node time_node = d.child("time");
             const char* time_str = time_node.child_value();
@@ -11322,10 +11333,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             }else{
                 throw( std::runtime_error("ERROR (loadXML): No time was specified for timeseries datapoint."));
             }
-
+            
             Date date;
             bool date_flag=false;
-
+            
             pugi::xml_node date_node = d.child("date");
             const char* date_str = date_node.child_value();
             if( strlen(date_str)>0 ){
@@ -11340,7 +11351,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 date = make_Date(date_.x, date_.y, date_.z );
                 date_flag=true;
             }
-
+            
             pugi::xml_node Jdate_node = d.child("dateJulian");
             const char* Jdate_str = Jdate_node.child_value();
             if( strlen(Jdate_str)>0 ){
@@ -11353,11 +11364,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 date = Julian2Calendar( date_.x, date_.y );
                 date_flag=true;
             }
-
+            
             if( !date_flag ){
                 throw( std::runtime_error("ERROR (loadXML): No date was specified for timeseries datapoint."));
             }
-
+            
             float value;
             pugi::xml_node value_node = d.child("value");
             const char* value_str = value_node.child_value();
@@ -11366,19 +11377,19 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             }else{
                 throw( std::runtime_error("ERROR (loadXML): No value was specified for timeseries datapoint."));
             }
-
+            
             addTimeseriesData(label,value,date,time);
-
+            
         }
-
+        
     }
-
+    
     if( !quiet ) {
         std::cout << "done." << std::endl;
     }
-
+    
     return UUID;
-
+    
 }
 
 std::vector<std::string> Context::getLoadedXMLFiles() {
@@ -13214,12 +13225,31 @@ PrimitiveType Context::getPrimitiveType(uint UUID) const {
 }
 
 void Context::setPrimitiveParentObjectID(uint UUID, uint objID){
+    
+    uint current_objID = getPrimitivePointer_private(UUID)->getParentObjectID();
     getPrimitivePointer_private(UUID)->setParentObjectID(objID);
+    
+    if(current_objID != uint(0))
+    {
+
+        if( doesObjectExist(current_objID) ) {
+            objects.at(current_objID)->deleteChildPrimitive(UUID);
+            
+            if(getObjectPointer_private(current_objID)->getPrimitiveUUIDs().size() == 0)
+            {
+                CompoundObject* obj = objects.at(current_objID);
+                delete obj;
+                objects.erase(current_objID);
+                markGeometryDirty();
+            }
+        }
+    }
+    
 }
 
 void Context::setPrimitiveParentObjectID(const std::vector<uint> &UUIDs, uint objID) {
     for( uint UUID : UUIDs){
-        getPrimitivePointer_private(UUID)->setParentObjectID(objID);
+        setPrimitiveParentObjectID(UUID, objID);
     }
 }
 
