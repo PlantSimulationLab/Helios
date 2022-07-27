@@ -2647,6 +2647,21 @@ public:
      */
     uint getPrimitiveParentObjectID( uint UUID  )const;
     
+    
+    //! Function to return unique parent object IDs for a vector of primitive UUIDs
+    /**
+     * \param[in] "UUIDs" Vector of universal unique identifiers of primitives.
+     */
+    std::vector<uint> getUniquePrimitiveParentObjectIDs(std::vector<uint> UUIDs) const;
+    
+    
+    //! Function to return unique parent object IDs for a vector of primitive UUIDs
+    /**
+     * \param[in] "UUIDs" Vector of universal unique identifiers of primitives.
+     */
+    std::vector<uint> getUniquePrimitiveParentObjectIDs(std::vector<uint> UUIDs, bool include_ObjID_zero) const;
+    
+    
     //! Function to return the surface area of a Primitive
     /** \param[in] "UUID" Universal unique identifier of primitive.
      */
