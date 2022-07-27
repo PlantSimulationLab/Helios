@@ -13257,6 +13257,38 @@ uint Context::getPrimitiveParentObjectID(uint UUID) const {
     return getPrimitivePointer_private(UUID)->getParentObjectID();
 }
 
+
+std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(std::vector<uint> UUIDs) const {
+    return getUniquePrimitiveParentObjectIDs(UUIDs, false);
+}
+
+
+std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(std::vector<uint> UUIDs, bool include_ObjID_zero) const {
+    
+    //vector of parent object ID for each primitive
+    std::vector<uint> primitiveObjIDs;
+    primitiveObjIDs.resize(UUIDs.size());
+    for(uint i=0;i<UUIDs.size();i++)
+    {
+        primitiveObjIDs.at(i) = getPrimitivePointer_private(UUIDs.at(i))->getParentObjectID();
+    }
+    
+    // sort
+    std::sort(primitiveObjIDs.begin(), primitiveObjIDs.end());
+    
+    // unique
+    auto it = unique(primitiveObjIDs.begin(), primitiveObjIDs.end());
+    primitiveObjIDs.resize(distance(primitiveObjIDs.begin(), it));
+    
+    // remove object ID = 0 from the output if desired and it exisits
+    if(include_ObjID_zero == false & primitiveObjIDs.at(0) == uint(0))
+    {
+        primitiveObjIDs.erase(primitiveObjIDs.begin()); 
+    }
+    
+    return primitiveObjIDs;
+}
+
 float Context::getPrimitiveArea(uint UUID) const {
     return getPrimitivePointer_private(UUID)->getArea();
 }
