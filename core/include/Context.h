@@ -1689,6 +1689,13 @@ public:
      */
     int selfTest();
     
+    //ERK
+    //! Set seed for random generator
+    /**
+     * \param[in] "seed" uint used to seed the generator
+     */
+    void setSeed(uint seed); 
+    
     //! Mark the Context geometry as ``clean", meaning that the geometry has not been modified since last set as clean
     /** \sa \ref markGeometryDirty(), \ref isGeometryDirty() */
     void markGeometryClean();

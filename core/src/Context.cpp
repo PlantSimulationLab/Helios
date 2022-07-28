@@ -45,6 +45,11 @@ Context::Context(){
 
 }
 
+//ERK
+void Context::setSeed(uint seed){
+    generator.seed(seed);
+}
+
 void Context::addTexture( const char* texture_file ){
     if( textures.find(texture_file)==textures.end() ){//texture has not already been added
         Texture text( texture_file );
