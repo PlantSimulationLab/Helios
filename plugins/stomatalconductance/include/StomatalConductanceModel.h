@@ -1,7 +1,7 @@
 /** \file "StomatalConductance.h" Primary header file for stomatalconductance plug-in.
     \author Brian Bailey
 
-    Copyright (C) 2016-2021  Brian Bailey
+    Copyright (C) 2016-2022 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,20 +19,65 @@
 
 #include "Context.h"
 
+//! Coefficients for original Ball, Woodrow, Berry (1987) stomatal conductance model
+struct BWBcoefficients{
+
+    BWBcoefficients(){
+        gs0 = 0.0733;
+        a1 = 9.422;
+    }
+
+    float gs0;  //mol/m^2-s
+    float a1;  //unitless
+
+};
+
+//! Coefficients for Ball, Berry, Leuning (Leuning 1990, 1995) stomatal conductance model
+struct BBLcoefficients{
+
+    BBLcoefficients(){
+        gs0 = 0.0743;
+        a1 = 4.265;
+        D0 = 14570.0;
+    }
+
+    float gs0;  //mol/m^2-s
+    float a1;  //unitless
+    float D0;  //mmol/mol
+
+};
+
+//! Coefficients for optimality-based Medlyn et al. (2011) stomatal conductance model
+struct MOPTcoefficients{
+
+  MOPTcoefficients(){
+    gs0 = 0.0825;
+    g1 = 2.637;
+  }
+
+  float gs0;  //mol/m^2/s
+  float g1;  //(kPa)^0.5
+
+};
+
 //! Coefficients for simplified Buckley, Mott, & Farquhar stomatal conductance model
 struct BMFcoefficients{
 
     BMFcoefficients(){
-        Em = 7.0;
-        k = 496;
-        b = 6.1;
-        i0 = 6.6;
+      Em = 258.25;
+      i0 = 38.65;
+      k = 232916.82;
+      b = 609.67;
+//      Em = 7.0;
+//      k = 496;
+//      b = 6.1;
+//      i0 = 6.6;
     }
 
-    float Em;
-    float i0;
-    float k;
-    float b;
+    float Em;  //mmol/m^2/s
+    float i0;  //umol/m^2/s
+    float k;   //umol/m^2/s mmol/mol
+    float b;   //mmol/mol
 
 };
 
@@ -65,28 +110,80 @@ public:
     explicit StomatalConductanceModel( helios::Context* m_context );
 
     //! Self-test (unit test) routine
-    static int selfTest();
+    int selfTest();
 
-    //! Set the model coefficient values for all primitives
-    /** \param[in] "coeffs" Model coefficient values */
+    //! Set the model coefficient values for all primitives - Ball, Woodrow, Berry model
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     */
+    void setModelCoefficients( const BWBcoefficients &coeffs );
+
+    //! Set the model coefficient values for a subset of primitives based on their UUIDs - Ball, Woodrow, Berry model
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     * \params[in] "UUIDs" Universal unique identifiers for primitives to set
+     */
+    void setModelCoefficients( const BWBcoefficients &coeffs, const std::vector<uint> &UUIDs );
+
+    //! Set the model coefficient values for all primitives - Ball-Berry-Leuning model
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     */
+    void setModelCoefficients( const BBLcoefficients &coeffs );
+
+    //! Set the model coefficient values for a subset of primitives based on their UUIDs - Ball-Berry-Leuning model
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     * \params[in] "UUIDs" Universal unique identifiers for primitives to set
+     */
+    void setModelCoefficients( const BBLcoefficients &coeffs, const std::vector<uint> &UUIDs );
+
+    //! Set the model coefficient values for all primitives - Medlyn et al. optimality model
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     */
+    void setModelCoefficients( const MOPTcoefficients &coeffs );
+
+    //! Set the model coefficient values for a subset of primitives based on their UUIDs - Medlyn et al. optimality model
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     * \params[in] "UUIDs" Universal unique identifiers for primitives to set
+     */
+    void setModelCoefficients( const MOPTcoefficients &coeffs, const std::vector<uint> &UUIDs );
+
+    //! Set the model coefficient values for all primitives - Buckley, Mott, Farquhar model
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     */
     void setModelCoefficients( const BMFcoefficients &coeffs );
 
-    //! Set the model coefficient values for a subset of primitives based on their UUIDs
-    /** \param[in] "coeffs" Model coefficient values */
+    //! Set the model coefficient values for a subset of primitives based on their UUIDs - Buckley, Mott, Farquhar model
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     * \params[in] "UUIDs" Universal unique identifiers for primitives to set
+     */
     void setModelCoefficients( const BMFcoefficients &coeffs, const std::vector<uint> &UUIDs );
 
     //! Set the model coefficient values for all primitives
-    /** \param[in] "coeffs" Model coefficient values */
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     */
     void setModelCoefficients( const BBcoefficients &coeffs );
 
     //! Set the model coefficient values for a subset of primitives based on their UUIDs
-    /** \param[in] "coeffs" Model coefficient values */
+    /**
+     * \param[in] "coeffs" Model coefficient values
+     * \params[in] "UUIDs" Universal unique identifiers for primitives to set
+     */
     void setModelCoefficients( const BBcoefficients &coeffs, const std::vector<uint> &UUIDs );
 
     //! Update the stomatal conductance for all primitives in the context
     void run();
 
     //! Update the stomatal conductance for a subset of primitives in the context
+    /**
+     * \params[in] "UUIDs" Universal unique identifiers for primitives to set
+     */
     void run( const std::vector<uint> &UUIDs );
 
 private:
@@ -95,6 +192,9 @@ private:
     helios::Context* context;
 
     std::string model;
+    BWBcoefficients BWBcoeffs;
+    BBLcoefficients BBLcoeffs;
+    MOPTcoefficients MOPTcoeffs;
     BMFcoefficients BMFcoeffs;
     BBcoefficients BBcoeffs;
 
@@ -104,10 +204,22 @@ private:
     float air_temperature_default;
     float air_humidity_default;
     float xylem_potential_default;
+    float An_default;
+    float Gamma_default;
+    float air_CO2_default;
+    float blconductance_default;
+    float beta_default;
 
+    std::map<uint,BWBcoefficients> BWBmodel_coefficients;
+    std::map<uint,BBLcoefficients> BBLmodel_coefficients;
+    std::map<uint,MOPTcoefficients> MOPTmodel_coefficients;
     std::map<uint,BMFcoefficients> BMFmodel_coefficients;
     std::map<uint,BBcoefficients> BBmodel_coefficients;
 
+    static float evaluate_BWBmodel( float esurf, std::vector<float> &variables, const void* parameters );
+    static float evaluate_BBLmodel( float esurf, std::vector<float> &variables, const void* parameters );
+    static float evaluate_MOPTmodel( float esurf, std::vector<float> &variables, const void* parameters );
+    static float evaluate_BMFmodel( float esurf, std::vector<float> &variables, const void* parameters );
     static float evaluate_BBmodel( float gs, std::vector<float> &variables, const void* parameters );
 
 };

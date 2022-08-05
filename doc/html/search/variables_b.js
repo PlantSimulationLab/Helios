@@ -1,12 +1,5 @@
 var searchData=
 [
-  ['n_1681',['n',['../struct_soil_properties.html#a66822a676047cdbf1fafdc3406127a30',1,'SoilProperties']]],
-  ['needle_5fcolor_1682',['needle_color',['../struct_white_spruce_canopy_parameters.html#ab3687772981118c2b4aaeb4ff544289a',1,'WhiteSpruceCanopyParameters']]],
-  ['needle_5flength_1683',['needle_length',['../struct_white_spruce_canopy_parameters.html#a41a653b953bd7a5f9c6cecfb07f1bfb4',1,'WhiteSpruceCanopyParameters']]],
-  ['needle_5fsubdivisions_1684',['needle_subdivisions',['../struct_white_spruce_canopy_parameters.html#a28eb26d944a0e67a41b1b06343090fc0',1,'WhiteSpruceCanopyParameters']]],
-  ['needle_5fwidth_1685',['needle_width',['../struct_white_spruce_canopy_parameters.html#a11cc85d4a6176b908aff31b408d70cf3',1,'WhiteSpruceCanopyParameters']]],
-  ['nhits_1686',['Nhits',['../struct_scan_metadata.html#a41835673b243a8a5757de3922d8c7880',1,'ScanMetadata']]],
-  ['nphi_1687',['Nphi',['../struct_scan_metadata.html#a8d9273e0fccbfc20916c284ab6c573ac',1,'ScanMetadata']]],
-  ['nrays_1688',['Nrays',['../struct_aerial_scan_metadata.html#a14b34575b0c5f8de6e1e203667a1d8a6',1,'AerialScanMetadata']]],
-  ['ntheta_1689',['Ntheta',['../struct_scan_metadata.html#a8432ab0ab545a0027bb47ce84f0a6704',1,'ScanMetadata']]]
+  ['origin_1676',['origin',['../struct_scan_metadata.html#a200bf65b728866855ace6456365d66a3',1,'ScanMetadata']]],
+  ['origin_5fuuid_1677',['origin_UUID',['../struct_per_ray_data.html#a6eb01aac11b5c8d4cfe02f15330dd868',1,'PerRayData::origin_UUID()'],['../struct_per_ray_data___m_c_r_t.html#a6682deff8e9d6b9ed887abf0bf87d87b',1,'PerRayData_MCRT::origin_UUID()']]]
 ];

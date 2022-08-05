@@ -45,15 +45,17 @@
       <th>Units</th>
       <th>Data Type</th>
       <th>Description</th>
+      <th>Applicable model(s)</th>
       <th>Available Plug-ins</th>
       <th>Default Value</th>
    </tr>
    <tr>
       <td>radiation_flux_PAR</td>
-      <td>\f$i\f$</td>
+      <td>\f$Q\f$</td>
       <td>W/m<sup>2</sup></td>
       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-      <td>PAR photon flux density</td>
+      <td>PAR photon flux density. Note W/m<sup>2</sup> is automatically converted to \f$\mu\f$mol/<sup>2</sup> using a factor of 4.57.</td>
+      <td>BMF</td>
       <td>Can be computed by \ref RadiationModel plug-in.</td>
       <td>0</td>
    </tr>
@@ -63,6 +65,7 @@
       <td>Kelvin</td>
       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
       <td>Primitive surface temperature.</td>
+      <td>All</td>
       <td>Can be computed by \ref EnergyBalanceModel plug-in.</td>
       <td>300 K</td>
    </tr>
@@ -72,6 +75,7 @@
       <td>Pascals</td>
       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
       <td>Atmospheric pressure.</td>
+      <td>All</td>
       <td>N/A</td>
       <td>101,000 Pa</td>
    </tr> 
@@ -81,6 +85,7 @@
       <td>Kelvin</td>
       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
       <td>Temperature of air outside of primitive boundary-layer.</td>
+      <td>All</td>
       <td>N/A</td>
       <td>300 K</td>
    </tr> 
@@ -90,6 +95,7 @@
       <td>Unitless</td>
       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
       <td>Relative humidity of air outside of primitive boundary-layer.</td>
+      <td>All</td>
       <td>N/A</td>
       <td>0.5</td>
    </tr>
@@ -98,11 +104,52 @@
       <td>\f$g_H\f$</td>
       <td>mol air/m<sup>2</sup>-s</td>
       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-      <td>Boundary-layer conductance to heat.</td>
+      <td>Boundary-layer conductance to heat. (Assumed that b.l. conductance to moisture is 0.97 that of heat.)</td>
+      <td>All</td>
       <td>N/A</td>
       <td>0.1 mol/m<sup>2</sup>-s</td>
-   </tr>  	   
- </table>	
+   </tr>
+     <tr>
+         <td>beta_soil</td>
+         <td>\f$\beta\f$</td>
+         <td>unitless</td>
+         <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+         <td>Soil moisture factor, defined as \f$(\theta-\theta_w)/(\theta_f-\theta_w)\f$, with \f$\theta,\,\theta_f,\,\theta_w\f$ being the effective soil water content, water content at field capacity, and water content at the wilting point.</td>
+         <td>All</td>
+         <td>N/A</td>
+         <td>1.0</td>
+     </tr>
+     <tr>
+         <td>net_photosynthesis</td>
+         <td>\f$A\f$</td>
+         <td>\f$\mu\f$mol/m<sup>2</sup>-s</td>
+         <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+         <td>Net CO<sub>2</sub> (photosynthetic) flux.</td>
+         <td>BWB, BBL, Mopt</td>
+         <td>Can be computed by \ref PhotosynthesisModel plug-in.</td>
+         <td>0</td>
+     </tr>
+     <tr>
+         <td>air_CO2</td>
+         <td>\f$C_a\f$</td>
+         <td>\f$\mu\f$mol/mol</td>
+         <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+         <td>CO<sub>2</sub> concentration of air outside primitive boundary-layer.</td>
+         <td>BWB, BBL, Mopt</td>
+         <td>N/A</td>
+         <td>400 \f$\mu\f$mol/mol</td>
+     </tr>
+     <tr>
+         <td>Gamma_CO2</td>
+         <td>\f$\Gamma\f$</td>
+         <td>\f$\mu\f$mol/mol</td>
+         <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+         <td>CO<sub>2</sub> compensation point of photosynthesis including dark respiration. (Note: only used for Ball-Berry models.)</td>
+         <td>BBL</td>
+         <td>Can be computed by \ref PhotosynthesisModel plug-in (need to enable optional primitive data output).</td>
+         <td>100 \f$\mu\f$mol/mol</td>
+     </tr>
+  </table>
    
  \subsection StomatalOutputData Output Primitive Data
 
@@ -125,122 +172,373 @@
 
  \section StomatalIntro Introduction
 
- This plugin implements the stomatal conductance model of Buckley, Turnbill, and Adams (2012).  Click <a href="http://onlinelibrary.wiley.com/doi/10.1111/j.1365-3040.2012.02515.x/full">here</a> for the publication fully describing the model. A brief description is given in this documentation below.
+ This plugin implements several different stomatal conductance models. A brief description of the theory behind each model is given below, along with coefficients obtained from several example species.
 
- \section StomatalTheory Model Equations
+ The default model is the Buckley, Mott, Farquhar model (see \ref BMFTheory).
 
- Stomatal conductance is calculated using the following equation
+ \section BWBTheory Ball, Woodrow, Berry (1987) Model Theory
 
- \f[g_s = \frac{E_m(i+i_0)}{k+bi+(i+i_0)D}\f]
+ The <a href="https://link.springer.com/chapter/10.1007/978-94-017-0519-6_48">Ball, Woodrow, and Berry (1987)</a> model is based on the empirical observation that stomatal conductance various roughly linearly with the net photosynthetic flux \f$A\f$ and relative humidity at the leaf surface \f$h_s\f$. They proposed the relationship:
 
- Variables in this equation are listed in this table:
+ \f[g_s = g_{s,0}+a_1A\beta\frac{h_s}{C_s},\f]
 
- <table>
-   <tr>	
-     <th>Variable</th>
-     <th>Units</th>
-     <th>Description</th>
-   </tr>
-   <tr>	
-     <td>\f$g_s\f$</td>
-     <td>mol air/m<sup>2</sup>-s</td>
-     <td>Conductance of water vapor between substomatal cavity and just outside of stoma.</td>
-   </tr>
-   <tr>	
-     <td>\f$i\f$</td>
-     <td>\f$\mu\f$mol photons/m<sup>2</sup>-s</td>
-     <td>Photon flux density in photosynthetically active band.</td>
-   </tr>
-   <tr>	
-     <td>\f$D\f$</td>
-     <td>mmol water/mol air</td>
-     <td>Molar concentration of water vapor at leaf surface.</td>
-   </tr>
+ where \f$C_s\f$ is the air CO<sub>2</sub> concentration at the leaf surface, and \f$g_{s,0}\f$ and \f$a_1\f$ are empirical parameters. \f$\beta\f$ is a factor to account for reduction in stomatal conductance with soil drying and is defined as
+
+ \f[\beta = \frac{\theta-\theta_w}{\theta_f-\theta_w},\f]
+
+ where \f$\theta,\,\theta_f,\,\theta_w\f$ are the effective soil water content, water content at field capacity, and water content at the wilting point. By default, it is assumed that \f$\beta=1\f$.
+
+ This model is at odds with several more recent observation of stomatal function, including: 1) stomata have been shown to respond to the intercellular CO<sub>2</sub> concentration \f$C_i\f$ and not the concentration outside of the leaf <a href="https://academic.oup.com/plphys/article/86/1/200/6082897">(Mott 1988)</a>; 2) stomata respond to the rate of evaporation, not humidity itself <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-3040.1991.tb01521.x?casa_token=FVBmxdVmcYgAAAAA:FKEQjeKvXUSfz2fWQRhMmpi-7TiT8WTPz1pAE6U-PV92CaHLPATox31guMa_bd2ecd_EqwC1XYW-AdhE">(Mott and Parkhurst 1991)</a>; 3) the predicted \f$g_s\f$ value could become negative; 4) the predicted value of \f$g_s\f$ approaches infinity as \f$C_s\rightarrow \infty\f$; 5) the predicted value of \f$g_s\f$ does not respond to soil drying. Another more practical limitation is that photosynthesis must also be modeled in order to calculate stomatal conductance. Nonetheless, this model is one of the most commonly used models of stomatal conductance.
+
+ The CO<sub>2</sub> concentration at the leaf surface is calculated as
+
+ \f[C_s = C_a-\frac{A}{0.75g_{bw}},\f]
+
+ where \f$0.75g_{bw}\f$ is the boundary-layer conductance to CO<sub>2</sub> (assuming the diffusivity of CO<sub>2</sub> in air is 0.75 that of water vapor), and \f$C_a\f$ is the air CO<sub>2</sub> concentration outside of the leaf boundary-layer.
+
+ The relative humidity at the leaf surface is calculated by setting up a water vapor flux balance at the leaf surface and iteratively solving for the humidity at the leaf surface:
+
+ \f[g_s*e_{sat}(T_L)*(1-h_s) = g_{bw}*(e_{sat}(T_L)h_s-e_{sat}(T_a)h_a),\f]
+
+ where \f$e_{sat}(T_L)\f$ and \f$e_{sat}(T_a)\f$ are the saturated vapor pressure evaluated respectively at the leaf surface and air temperature (calculated according to the <a href="https://en.wikipedia.org/wiki/Tetens_equation">Tetens equation</a>), and \f$h_a\f$ is the air relative humidity outside the leaf boundary-layer.
+
+ Below are example parameter values for several different tree crop species (a description of how calibration data was collected is given in the section below). Note that, as mentioned above, in order to apply the model photosynthesis must also be modeled - coefficients for these species are also given in the photosynthesis model documentation.
+
+<table>
+<tr>
+        <th>Species</th>
+        <th>\f$g_{s,0}\f$ (mol air/m<sup>2</sup>-s)</th>
+        <th>\f$a_1\f$ (unitless)</th>
+        <th>\f$R^2\f$ of fit</th>
+</tr>
+<tr>
+        <td>Almond (default)</td>
+        <td>0.0733</td>
+        <td>9.422</td>
+        <td>0.976</td>
+</tr>
+<tr>
+        <td>Apple</td>
+        <td>0.0444</td>
+        <td>7.681</td>
+        <td>0.809</td>
+</tr>
+<tr>
+        <td>Cherry</td>
+        <td>0.0939</td>
+        <td>5.226</td>
+        <td>0.839</td>
+</tr>
+<tr>
+        <td>Prune</td>
+        <td>0.0425</td>
+        <td>7.120</td>
+        <td>0.917</td>
+</tr>
+<tr>
+        <td>Pear</td>
+        <td>0.0775</td>
+        <td>8.298</td>
+        <td>0.928</td>
+</tr>
+<tr>
+        <td>Pistachio (female)</td>
+        <td>0.0647</td>
+        <td>10.732</td>
+        <td>0.956</td>
+</tr>
+<tr>
+        <td>Pistachio (male)</td>
+        <td>0.0419</td>
+        <td>7.580</td>
+        <td>0.953</td>
+</tr>
+<tr>
+        <td>Walnut</td>
+        <td>0.1253</td>
+        <td>5.527</td>
+        <td>0.962</td>
+</tr>
+</table>
+
+\section BBLTheory Ball-Berry-Leuning Model Theory
+
+<a href="https://link.springer.com/chapter/10.1007/978-94-017-0519-6_48">Leuning et al. (1990,1995)</a> revised the original Ball, Woodrow, Berry model to overcome some of it's original limitations, namely the fact that \f$g_s\f$ approaches infinity as \f$C_s\rightarrow \infty\f$ by calculating stomatal conductance as
+
+\f[g_s = g_{s,0}+\frac{a_1A\beta}{\left(C_s-\Gamma\right)\left(1+\frac{D_s}{D_0}\right)},\f]
+
+where \f$D_s\f$ is the vapor pressure deficit between the sub-stomatal cavity and the leaf surface, \f$\Gamma\f$ is the CO<sub>2</sub> compensation point of photosynthesis (including dark respiration), and \f$D_0\f$ (mmol/mol) is an additional empirical parameter.
+
+\f$D_s\f$ is calculated by first determining the surface relative humidity as described above for the Ball, Woodrow, Berry model, then calculating the surface vapor pressure deficit as \f$D_s=\frac{e_{sat}(T_L)(1-h_s)}{p_{atm}}\f$ (\f$p_{atm}\f$ is atmospheric pressure).
+
+Below are example parameter values for several different tree crop species (a description of how calibration data was collected is given in the section below). Note that, as mentioned above, in order to apply the model photosynthesis must also be modeled - coefficients for these species are also given in the photosynthesis model documentation.
+
+<table>
+    <tr>
+        <th>Species</th>
+        <th>\f$g_{s,0}\f$ (mol air/m<sup>2</sup>-s)</th>
+        <th>\f$a_1\f$ (unitless)</th>
+        <th>\f$D_0\f$ (mmol/mol)</th>
+        <th>\f$R^2\f$ of fit</th>
+    </tr>
+    <tr>
+        <td>Almond (default)</td>
+        <td>0.0743</td>
+        <td>4.265</td>
+        <td>14570.0</td>
+        <td>0.984</td>
+    </tr>
+    <tr>
+        <td>Apple</td>
+        <td>0.0405</td>
+        <td>3.511</td>
+        <td>32950.2</td>
+        <td>0.869</td>
+    </tr>
+    <tr>
+        <td>Cherry</td>
+        <td>0.0881</td>
+        <td>2.485</td>
+        <td>1578689.7</td>
+        <td>0.947</td>
+    </tr>
+    <tr>
+        <td>Prune</td>
+        <td>0.0425</td>
+        <td>3.185</td>
+        <td>30488.1</td>
+        <td>0.846</td>
+    </tr>
+    <tr>
+        <td>Pear</td>
+        <td>0.0814</td>
+        <td>3.718</td>
+        <td>61725.6</td>
+        <td>0.894</td>
+    </tr>
+    <tr>
+        <td>Pistachio (female)</td>
+        <td>0.0675</td>
+        <td>4.743</td>
+        <td>1566202.4</td>
+        <td>0.971</td>
+    </tr>
+    <tr>
+        <td>Pistachio (male)</td>
+        <td>0.0465</td>
+        <td>3.370</td>
+        <td>26990.8</td>
+        <td>0.934</td>
+    </tr>
+    <tr>
+        <td>Walnut</td>
+        <td>0.1248</td>
+        <td>4.548</td>
+        <td>   21.4</td>
+        <td>0.977</td>
+    </tr>
  </table>
 
- There are four additional empirical parameters: \f$E_m,\,i_0,\,k,\f$ and \f$b\f$, which are further described below.
+\section MoptTheory Medlyn et al. (2011) Optimality-Based Model
 
- <!--
-  
- The vapor concentration deficit at the leaf surface is related to the deficit outside the leaf boundary-layer using the following equation, which is found by equating the water flux across the stoma and the water flux across the stoma and boundary layer in series:
+The stomatal conductance mode of <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2486.2010.02375.x">Medlyn et al. (2011)</a> combines the empirical modeling approach with the hypothesis that stomata should act should act to optimally minimize the amount of water used per unit carbon gained.
 
-  \f[E = \frac{g_v g_s}{g_v+g_s}D = g_s D_s,\f]
+\f[g_s = g_{s,0}+1.6\left(1+\frac{g_1\sqrt{\beta}}{\sqrt{D_s P_{atm}}}\right)\frac{A}{C_s},\f]
 
-  where \f$g_v\f$ is the boundary-layer conductance to water vapor. Solving for \f$D_s\f$ yields
+where \f$D_s\f$ is in units of mol/mol, and \f$P_{atm}\f$ is atmospheric pressure in kPa. Note that there are a couple of deviations of this equation from that presented in <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2486.2010.02375.x">Medlyn et al. (2011)</a>: 1) The factor of 1.6 is needed for the resulting conductance to be that of water vapor, 2) We express \f$D_s\f$ in units of mol/mol, and thus multiplication by the atmospheric pressure is needed to get units of kPa, 3) We use surface values for VPD and CO<sub>2</sub> concentration, which allows for incorporation of boundary-layer effects.
 
-  \f[D_s = \frac{g_v}{g_v+g_s}D\f]
+One issue with this model is that stomatal conductance blows up to infinity as \f$D_s\rightarrow 0\f$. Our implementation imposes an arbitrary minimum \f$D_s\f$ value of 0.00001 mol/mol.
 
- -->
-     
- The vapor pressure deficit is calculated based on the temperature of the leaf and air, the relative humidity of the air, and the atmospheric pressure
+Below are example parameter values for several different tree crop species (a description of how calibration data was collected is given in the section below). Note that, as mentioned above, in order to apply the model photosynthesis must also be modeled - coefficients for these species are also given in the photosynthesis model documentation.
 
- \f[D = \frac{e_s(T_s)-e_s(T_a)h}{p_{atm}},\f]
+<table>
+    <tr>
+        <th>Species</th>
+        <th>\f$g_{s,0}\f$ (mol air/m<sup>2</sup>-s)</th>
+        <th>\f$g_1\f$ (\f$\sqrt{kPa}\f$)</th>
+        <th>\f$R^2\f$ of fit</th>
+    </tr>
+    <tr>
+        <td>Almond (default)</td>
+        <td>0.0825</td>
+        <td> 2.637</td>
+        <td>0.941</td>
+    </tr>
+    <tr>
+        <td>Apple</td>
+        <td>0.0426</td>
+        <td> 2.160</td>
+        <td>0.864</td>
+    </tr>
+    <tr>
+        <td>Cherry</td>
+        <td>0.0936</td>
+        <td> 1.043</td>
+        <td>0.893</td>
+    </tr>
+    <tr>
+        <td>Prune</td>
+        <td>0.0412</td>
+        <td> 1.863</td>
+        <td>0.949</td>
+    </tr>
+    <tr>
+        <td>Pear</td>
+        <td>0.0775</td>
+        <td> 2.418</td>
+        <td>0.966</td>
+    </tr>
+    <tr>
+        <td>Pistachio (female)</td>
+        <td>0.0756</td>
+        <td> 3.252</td>
+        <td>0.902</td>
+    </tr>
+    <tr>
+        <td>Pistachio (male)</td>
+        <td>0.0434</td>
+        <td> 2.039</td>
+        <td>0.941</td>
+    </tr>
+    <tr>
+        <td>Walnut</td>
+        <td>0.1246</td>
+        <td> 1.167</td>
+        <td>0.973</td>
+    </tr>
+</table>
 
- with \f$e_s(T)\f$ calculated according to the <a href="https://en.wikipedia.org/wiki/Tetens_equation">Tetens equation</a>.
+\section BMFTheory Buckley, Mott, Farquhar (2003) Model (simplified version given in Buckley, Turnbull, and Adams 2012)
 
- <!--
+The stomatal conductance model of <a href="http://onlinelibrary.wiley.com/doi/10.1111/j.1365-3040.2012.02515.x/full">Buckley, Turnbull, and Adams (2012)</a> is a simplification of the hydromechanical/biochemical model orignially proposed by <a href="https://onlinelibrary.wiley.com/doi/abs/10.1046/j.1365-3040.2003.01094.x">Buckley, Mott, and Farquhar (2003)</a>. The original model is highly complex with many parameters, but with the simplifications described by Buckley, Turnbull, and Adams (2003), an explicit expression for stomatal conductance can be written as
 
- Finally, the overall conductance to moisture across the stoma and boundary-layer in series is given by
+\f[g_s = \frac{E_m\beta(Q+i_0)}{k+bQ+(Q+i_0)D_s},\f]
 
-  \f[g_M=\frac{0.97g_H g_s}{0.97g_H+g_s},\f]
+where \f$Q\f$ is the photosynthetic photon flux density, \f$D_s\f$ is defined and calculated as described for other models above, \f$E_m,\,i_0,\,k,\f$ and \f$b\f$ are semi-empirical parameters. Note that the photosynthetic flux that is input to the plug-in is in units of energy flux (W/m<sup>2</sup>), but \f$Q\f$ in this equation is photon flux density (\f$\mu\f$mol/m<sup>2</sup>-s). This is because the primitive data value output from the radiation model is in energy flux. The stomatal conductance plug-in automatically converts energy flux to photon flux density using a factor of <a href="https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf">4.57 \f$\mu\f$mol/W</a>.
 
-  with
+Below are example parameter values for several different tree crop species (a description of how calibration data was collected is given in the section below).
 
-  \f$0.97g_H=g_v\f$
-
- -->
-
- \section StomatalUse Using the Stomatal Conductance Model
-   
- \subsection StomatalCoeffs Setting the Model Coefficients
-
- The model coefficients \f$E_m,\,i_0,\,k,\f$ and \f$b\f$ are set using the structure \ref BMFcoefficients. This structure has four member elements of type float (Em, i0, k, and b), each corresponding to the respective model coefficents (\f$E_m,\,i_0,\,k,\f$ and \f$b\f$). Default values are listed in the table below.
-
- In order to modify model coefficients from the default values, one should 1) declare and instance of the \ref BMFcoefficients structure, 2) modify the appropriate data elements of the data structure, and 3) pass the data structure to the \ref StomatalConductanceModel::setModelCoefficients() function. Example code is given below
-
- <table>
-   <tr>	
-     <th>Parameter</th>
-     <th>Units</th>
-     <th>Default Value</th>
-   </tr>
-   <tr>	
-     <td>\f$E_m\f$</td>
-     <td>mmol/m<sup>2</sup>-s</td>
-     <td>7.0</td>
-   </tr>
-   <tr>	
-     <td>\f$i_0\f$</td>
-     <td>\f$\mu\f$mol/m<sup>2</sup>-s</td>
-     <td>6.6</td>
-   </tr>
-   <tr>	
-     <td>\f$k\f$</td>
-     <td>\f$\mu\f$mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup></td>
-     <td>496</td>
-   </tr>
-   <tr>	
-     <td>\f$b\f$</td>
-     <td>mmol/mol</td>
-     <td>6.1</td>
-   </tr>
+<table>
+    <tr>
+        <th>Species</th>
+        <th>\f$E_m\f$ (mmol/m<sup>2</sup>-s)</th>
+        <th>\f$i_0\f$ (\f$\mu\f$mol/m<sup>2</sup>-s)</th>
+        <th>\f$k\f$ (\f$\mu\f$mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup>)</th>
+        <th>\f$b\f$ (mmol/mol)</th>
+        <th>\f$R^2\f$ of fit</th>
+    </tr>
+    <tr>
+        <td>Almond (default)</td>
+        <td>865.52</td>
+        <td>38.65</td>
+        <td>780320.1</td>
+        <td>2086.07</td>
+        <td>0.991</td>
+    </tr>
+    <tr>
+        <td>Apple</td>
+        <td>24.82</td>
+        <td>182.86</td>
+        <td>109688.7</td>
+        <td>21.30</td>
+        <td>0.986</td>
+    </tr>
+    <tr>
+        <td>Cherry</td>
+        <td>138.03</td>
+        <td>154.24</td>
+        <td>262462.7</td>
+        <td>545.59</td>
+        <td>0.963</td>
+    </tr>
+    <tr>
+        <td>Prune</td>
+        <td> 5.47</td>
+        <td>115.73</td>
+        <td>12280.2</td>
+        <td> 6.10</td>
+        <td>0.993</td>
+    </tr>
+    <tr>
+        <td>Pear</td>
+        <td>13.06</td>
+        <td>167.89</td>
+        <td>25926.4</td>
+        <td> 9.81</td>
+        <td>0.960</td>
+    </tr>
+    <tr>
+        <td>Pistachio (female)</td>
+        <td>24865.61</td>
+        <td>171.52</td>
+        <td>63444078.5</td>
+        <td>22428.01</td>
+        <td>0.968</td>
+    </tr>
+    <tr>
+        <td>Pistachio (male)</td>
+        <td>236.89</td>
+        <td>272.74</td>
+        <td>1224393.7</td>
+        <td>257.26</td>
+        <td>0.964</td>
+    </tr>
+    <tr>
+        <td>Walnut</td>
+        <td>29.12</td>
+        <td>68.03</td>
+        <td>19778.8</td>
+        <td>75.26</td>
+        <td>0.972</td>
+    </tr>
  </table>
 
- <p> <br> </p>
+\section StomatalUse Using the Stomatal Conductance Model
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+\subsection StomatalCoeffs Setting the Model Coefficients
+
+Each model has a data structure containing member variables for each of the model parameters. These are listed in the table below.
+
+<table>
+    <tr>
+        <th>Model</th>
+        <th>Parameter Structure</th>
+    </tr>
+    <tr>
+        <td>Ball, Woodrow, Berry</td>
+        <td>\ref BWBcoefficients "BWBcoefficients"</td>
+    </tr>
+    <tr>
+        <td>Ball, Berry, Leuning</td>
+        <td>\ref BBLcoefficients "BBLcoefficients"</td>
+    </tr>
+    <tr>
+        <td>Medlyn et al. Optimality</td>
+        <td>\ref MOPTcoefficients "MOPTcoefficients"</td>
+    </tr>
+    <tr>
+        <td>Buckley, Mott, Farquhar</td>
+        <td>\ref BMFcoefficients "BMFcoefficients"</td>
+    </tr>
+</table>
+
+In order to modify model coefficients from the default values, one should 1) declare and instance of the coefficient structure, 2) modify the appropriate data elements of the data structure, and 3) pass the data structure to the \ref StomatalConductanceModel::setModelCoefficients() function. Model coefficients can be set to the same value for all primitives, or differently for a subset of primitives based on a vector of UUIDs. Example code is given below
+
+<p> <br> </p>
+
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code> %BMFcoefficients modelcoeffs;
  modelcoeffs.Em = 9.3;
  modelcoeffs.i0 = 5.3;
  modelcoeffs.k = 672;
  modelcoeffs.b = 6.7;</code></pre></div>
-   
- \subsection StomatalRun Running the Model
 
- There are two possible functions to run the model: one to run the model for all primitives in the Context (see \ref StomatalConductanceModel::run()), and another to run the model only for a subset of primitives given their UUIDs (see \ref StomatalConductanceModel::run( std::vector<uint> UUIDs )). 
+\subsection StomatalRun Running the Model
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+There are two possible functions to run the model: one to run the model for all primitives in the Context (see \ref StomatalConductanceModel::run()), and another to run the model only for a subset of primitives given their UUIDs (see \ref StomatalConductanceModel::run( std::vector<uint> &UUIDs )).
+
+  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code>  #include "Context.h"
   #include "StomatalConductanceModel.h"
 
   using namespace helios;
@@ -256,8 +554,8 @@
      %StomatalConductanceModel stomatalmodel( &context );
 
      \c//Initialize model coefficients and modify their values
-     %BMFcoefficients modelcoeffs;
-     modelcoeffs.Em = 9.3;
+     %BMFcoefficients modelcoeffs;  //values are initialized with default values
+     modelcoeffs.Em = 9.3;  //we can modify one or more parameters
      modelcoeffs.i0 = 5.3;
      modelcoeffs.k = 672;
      modelcoeffs.b = 6.7;

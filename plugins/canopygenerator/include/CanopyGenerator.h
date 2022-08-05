@@ -1,7 +1,7 @@
 /** \file "CanopyGenerator.h" Primary header file for canopy geometry generator plug-in.
     \author Brian Bailey
     
-    Copyright (C) 2016-2021  Brian Bailey
+    Copyright (C) 2016-2022 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

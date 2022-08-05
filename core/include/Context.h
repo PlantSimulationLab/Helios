@@ -1,7 +1,7 @@
 /** \file "Context.h" Context header file. 
  \author Brian Bailey
  
- Copyright (C) 2016-2022  Brian Bailey
+ Copyright (C) 2016-2022 Brian Bailey
  
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -1688,6 +1688,12 @@ public:
      * \return 0 if test was successful, 1 if test failed.
      */
     int selfTest();
+
+    //! Set seed for random generator
+    /**
+     * \param[in] "seed" uint used to seed the generator
+     */
+    void seedRandomGenerator(uint seed);
     
     //! Mark the Context geometry as ``clean", meaning that the geometry has not been modified since last set as clean
     /** \sa \ref markGeometryDirty(), \ref isGeometryDirty() */
@@ -2646,6 +2652,21 @@ public:
      * \param[in] "UUID" Universal unique identifier of primitive.
      */
     uint getPrimitiveParentObjectID( uint UUID  )const;
+    
+    
+    //! Function to return unique parent object IDs for a vector of primitive UUIDs
+    /**
+     * \param[in] "UUIDs" Vector of universal unique identifiers of primitives.
+     */
+    std::vector<uint> getUniquePrimitiveParentObjectIDs(std::vector<uint> UUIDs) const;
+    
+    
+    //! Function to return unique parent object IDs for a vector of primitive UUIDs
+    /**
+     * \param[in] "UUIDs" Vector of universal unique identifiers of primitives.
+     */
+    std::vector<uint> getUniquePrimitiveParentObjectIDs(std::vector<uint> UUIDs, bool include_ObjID_zero) const;
+    
     
     //! Function to return the surface area of a Primitive
     /** \param[in] "UUID" Universal unique identifier of primitive.

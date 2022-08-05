@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.40</span>
+   &#160;<span id="projectnumber">v1.2.41</span>
    </div>
   </td>
  </tr>
@@ -64,8 +64,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
+<a href="#pub-methods">Public Member Functions</a>  </div>
   <div class="headertitle">
 <div class="title">StomatalConductanceModel Class Reference</div>  </div>
 </div><!--header-->
@@ -76,11 +75,33 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a8d0993a2649b696c37c2f24799b1b545"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a8d0993a2649b696c37c2f24799b1b545">StomatalConductanceModel</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *m_context)</td></tr>
 <tr class="memdesc:a8d0993a2649b696c37c2f24799b1b545"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <a href="class_stomatal_conductance_model.html#a8d0993a2649b696c37c2f24799b1b545">More...</a><br /></td></tr>
 <tr class="separator:a8d0993a2649b696c37c2f24799b1b545"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="memItemLeft" align="right" valign="top"><a id="aa32dad6bf0ee3ecb37b02957ebea0e3d"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#aa32dad6bf0ee3ecb37b02957ebea0e3d">selfTest</a> ()</td></tr>
+<tr class="memdesc:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test (unit test) routine. <br /></td></tr>
+<tr class="separator:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbbb0af7d8b3c7966058dbb1289dca13"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#afbbb0af7d8b3c7966058dbb1289dca13">setModelCoefficients</a> (const <a class="el" href="struct_b_w_bcoefficients.html">BWBcoefficients</a> &amp;coeffs)</td></tr>
+<tr class="memdesc:afbbb0af7d8b3c7966058dbb1289dca13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for all primitives - Ball, Woodrow, Berry model.  <a href="class_stomatal_conductance_model.html#afbbb0af7d8b3c7966058dbb1289dca13">More...</a><br /></td></tr>
+<tr class="separator:afbbb0af7d8b3c7966058dbb1289dca13"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae0ce3cb199ab635b5563ec2added7ae8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#ae0ce3cb199ab635b5563ec2added7ae8">setModelCoefficients</a> (const <a class="el" href="struct_b_w_bcoefficients.html">BWBcoefficients</a> &amp;coeffs, const std::vector&lt; uint &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:ae0ce3cb199ab635b5563ec2added7ae8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for a subset of primitives based on their UUIDs - Ball, Woodrow, Berry model.  <a href="class_stomatal_conductance_model.html#ae0ce3cb199ab635b5563ec2added7ae8">More...</a><br /></td></tr>
+<tr class="separator:ae0ce3cb199ab635b5563ec2added7ae8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a37d7b81a2082a09d351bea4590d3eadb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a37d7b81a2082a09d351bea4590d3eadb">setModelCoefficients</a> (const <a class="el" href="struct_b_b_lcoefficients.html">BBLcoefficients</a> &amp;coeffs)</td></tr>
+<tr class="memdesc:a37d7b81a2082a09d351bea4590d3eadb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for all primitives - Ball-Berry-Leuning model.  <a href="class_stomatal_conductance_model.html#a37d7b81a2082a09d351bea4590d3eadb">More...</a><br /></td></tr>
+<tr class="separator:a37d7b81a2082a09d351bea4590d3eadb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a48b91aeb301f53d13656d0a6f1d16fe7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a48b91aeb301f53d13656d0a6f1d16fe7">setModelCoefficients</a> (const <a class="el" href="struct_b_b_lcoefficients.html">BBLcoefficients</a> &amp;coeffs, const std::vector&lt; uint &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:a48b91aeb301f53d13656d0a6f1d16fe7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for a subset of primitives based on their UUIDs - Ball-Berry-Leuning model.  <a href="class_stomatal_conductance_model.html#a48b91aeb301f53d13656d0a6f1d16fe7">More...</a><br /></td></tr>
+<tr class="separator:a48b91aeb301f53d13656d0a6f1d16fe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24ba00d45416d57afe43628712a32fc3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a24ba00d45416d57afe43628712a32fc3">setModelCoefficients</a> (const <a class="el" href="struct_m_o_p_tcoefficients.html">MOPTcoefficients</a> &amp;coeffs)</td></tr>
+<tr class="memdesc:a24ba00d45416d57afe43628712a32fc3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for all primitives - Medlyn et al. optimality model.  <a href="class_stomatal_conductance_model.html#a24ba00d45416d57afe43628712a32fc3">More...</a><br /></td></tr>
+<tr class="separator:a24ba00d45416d57afe43628712a32fc3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17211c4b6d87e120f182de8cc3cc7aa7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a17211c4b6d87e120f182de8cc3cc7aa7">setModelCoefficients</a> (const <a class="el" href="struct_m_o_p_tcoefficients.html">MOPTcoefficients</a> &amp;coeffs, const std::vector&lt; uint &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:a17211c4b6d87e120f182de8cc3cc7aa7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for a subset of primitives based on their UUIDs - Medlyn et al. optimality model.  <a href="class_stomatal_conductance_model.html#a17211c4b6d87e120f182de8cc3cc7aa7">More...</a><br /></td></tr>
+<tr class="separator:a17211c4b6d87e120f182de8cc3cc7aa7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a97e78eaec6ca94159c55499a40bc7807"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a97e78eaec6ca94159c55499a40bc7807">setModelCoefficients</a> (const <a class="el" href="struct_b_m_fcoefficients.html">BMFcoefficients</a> &amp;coeffs)</td></tr>
-<tr class="memdesc:a97e78eaec6ca94159c55499a40bc7807"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for all primitives.  <a href="class_stomatal_conductance_model.html#a97e78eaec6ca94159c55499a40bc7807">More...</a><br /></td></tr>
+<tr class="memdesc:a97e78eaec6ca94159c55499a40bc7807"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for all primitives - Buckley, Mott, Farquhar model.  <a href="class_stomatal_conductance_model.html#a97e78eaec6ca94159c55499a40bc7807">More...</a><br /></td></tr>
 <tr class="separator:a97e78eaec6ca94159c55499a40bc7807"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1b6ffb0b1beef707d77b273b9cc7f9c9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a1b6ffb0b1beef707d77b273b9cc7f9c9">setModelCoefficients</a> (const <a class="el" href="struct_b_m_fcoefficients.html">BMFcoefficients</a> &amp;coeffs, const std::vector&lt; uint &gt; &amp;UUIDs)</td></tr>
-<tr class="memdesc:a1b6ffb0b1beef707d77b273b9cc7f9c9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for a subset of primitives based on their UUIDs.  <a href="class_stomatal_conductance_model.html#a1b6ffb0b1beef707d77b273b9cc7f9c9">More...</a><br /></td></tr>
+<tr class="memdesc:a1b6ffb0b1beef707d77b273b9cc7f9c9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for a subset of primitives based on their UUIDs - Buckley, Mott, Farquhar model.  <a href="class_stomatal_conductance_model.html#a1b6ffb0b1beef707d77b273b9cc7f9c9">More...</a><br /></td></tr>
 <tr class="separator:a1b6ffb0b1beef707d77b273b9cc7f9c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a07294b1dfa951bcdf2fb1608959607c4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a07294b1dfa951bcdf2fb1608959607c4">setModelCoefficients</a> (const <a class="el" href="struct_b_bcoefficients.html">BBcoefficients</a> &amp;coeffs)</td></tr>
 <tr class="memdesc:a07294b1dfa951bcdf2fb1608959607c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for all primitives.  <a href="class_stomatal_conductance_model.html#a07294b1dfa951bcdf2fb1608959607c4">More...</a><br /></td></tr>
@@ -92,21 +113,13 @@ Public Member Functions</h2></td></tr>
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#acb041e756e00d5ced85b03905a97f5c6">run</a> ()</td></tr>
 <tr class="memdesc:acb041e756e00d5ced85b03905a97f5c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update the stomatal conductance for all primitives in the context. <br /></td></tr>
 <tr class="separator:acb041e756e00d5ced85b03905a97f5c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae08af8bff0c6924133948c7459baf91f"><td class="memItemLeft" align="right" valign="top"><a id="ae08af8bff0c6924133948c7459baf91f"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#ae08af8bff0c6924133948c7459baf91f">run</a> (const std::vector&lt; uint &gt; &amp;UUIDs)</td></tr>
-<tr class="memdesc:ae08af8bff0c6924133948c7459baf91f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update the stomatal conductance for a subset of primitives in the context. <br /></td></tr>
+<tr class="memitem:ae08af8bff0c6924133948c7459baf91f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#ae08af8bff0c6924133948c7459baf91f">run</a> (const std::vector&lt; uint &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:ae08af8bff0c6924133948c7459baf91f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update the stomatal conductance for a subset of primitives in the context.  <a href="class_stomatal_conductance_model.html#ae08af8bff0c6924133948c7459baf91f">More...</a><br /></td></tr>
 <tr class="separator:ae08af8bff0c6924133948c7459baf91f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
-Static Public Member Functions</h2></td></tr>
-<tr class="memitem:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="memItemLeft" align="right" valign="top"><a id="aa32dad6bf0ee3ecb37b02957ebea0e3d"></a>
-static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#aa32dad6bf0ee3ecb37b02957ebea0e3d">selfTest</a> ()</td></tr>
-<tr class="memdesc:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test (unit test) routine. <br /></td></tr>
-<tr class="separator:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8h_source.html#l00059">59</a> of file <a class="el" href="_stomatal_conductance_model_8h_source.html">StomatalConductanceModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8h_source.html#l00104">104</a> of file <a class="el" href="_stomatal_conductance_model_8h_source.html">StomatalConductanceModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a8d0993a2649b696c37c2f24799b1b545"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8d0993a2649b696c37c2f24799b1b545">&#9670;&nbsp;</a></span>StomatalConductanceModel()</h2>
@@ -145,8 +158,31 @@ static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="ae08af8bff0c6924133948c7459baf91f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae08af8bff0c6924133948c7459baf91f">&#9670;&nbsp;</a></span>run()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void StomatalConductanceModel::run </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Update the stomatal conductance for a subset of primitives in the context. </p>
+<p>\params[in] "UUIDs" Universal unique identifiers for primitives to set </p>
+
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00203">203</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a07294b1dfa951bcdf2fb1608959607c4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a07294b1dfa951bcdf2fb1608959607c4">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[1/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a07294b1dfa951bcdf2fb1608959607c4">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[1/10]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -169,12 +205,12 @@ static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00058">58</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00186">186</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a29e691b7d3fa4348b8a5ef859483ed91"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a29e691b7d3fa4348b8a5ef859483ed91">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[2/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a29e691b7d3fa4348b8a5ef859483ed91">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[2/10]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -202,7 +238,71 @@ static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href
 <p>Set the model coefficient values for a subset of primitives based on their UUIDs. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">coeffs</td><td>Model coefficient values \params[in] "UUIDs" Universal unique identifiers for primitives to set </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a37d7b81a2082a09d351bea4590d3eadb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a37d7b81a2082a09d351bea4590d3eadb">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[3/10]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void StomatalConductanceModel::setModelCoefficients </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_b_b_lcoefficients.html">BBLcoefficients</a> &amp;&#160;</td>
+          <td class="paramname"><em>coeffs</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the model coefficient values for all primitives - Ball-Berry-Leuning model. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">coeffs</td><td>Model coefficient values </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00147">147</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a48b91aeb301f53d13656d0a6f1d16fe7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a48b91aeb301f53d13656d0a6f1d16fe7">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[4/10]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void StomatalConductanceModel::setModelCoefficients </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_b_b_lcoefficients.html">BBLcoefficients</a> &amp;&#160;</td>
+          <td class="paramname"><em>coeffs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the model coefficient values for a subset of primitives based on their UUIDs - Ball-Berry-Leuning model. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">coeffs</td><td>Model coefficient values \params[in] "UUIDs" Universal unique identifiers for primitives to set </td></tr>
   </table>
   </dd>
 </dl>
@@ -210,7 +310,7 @@ static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href
 </div>
 </div>
 <a id="a97e78eaec6ca94159c55499a40bc7807"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a97e78eaec6ca94159c55499a40bc7807">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[3/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a97e78eaec6ca94159c55499a40bc7807">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[5/10]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -225,7 +325,7 @@ static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href
       </table>
 </div><div class="memdoc">
 
-<p>Set the model coefficient values for all primitives. </p>
+<p>Set the model coefficient values for all primitives - Buckley, Mott, Farquhar model. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">coeffs</td><td>Model coefficient values </td></tr>
@@ -233,12 +333,12 @@ static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00045">45</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00173">173</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a1b6ffb0b1beef707d77b273b9cc7f9c9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1b6ffb0b1beef707d77b273b9cc7f9c9">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[4/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a1b6ffb0b1beef707d77b273b9cc7f9c9">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[6/10]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -263,10 +363,138 @@ static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href
       </table>
 </div><div class="memdoc">
 
-<p>Set the model coefficient values for a subset of primitives based on their UUIDs. </p>
+<p>Set the model coefficient values for a subset of primitives based on their UUIDs - Buckley, Mott, Farquhar model. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">coeffs</td><td>Model coefficient values \params[in] "UUIDs" Universal unique identifiers for primitives to set </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="afbbb0af7d8b3c7966058dbb1289dca13"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afbbb0af7d8b3c7966058dbb1289dca13">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[7/10]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void StomatalConductanceModel::setModelCoefficients </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_b_w_bcoefficients.html">BWBcoefficients</a> &amp;&#160;</td>
+          <td class="paramname"><em>coeffs</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the model coefficient values for all primitives - Ball, Woodrow, Berry model. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">coeffs</td><td>Model coefficient values </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00134">134</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae0ce3cb199ab635b5563ec2added7ae8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae0ce3cb199ab635b5563ec2added7ae8">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[8/10]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void StomatalConductanceModel::setModelCoefficients </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_b_w_bcoefficients.html">BWBcoefficients</a> &amp;&#160;</td>
+          <td class="paramname"><em>coeffs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the model coefficient values for a subset of primitives based on their UUIDs - Ball, Woodrow, Berry model. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">coeffs</td><td>Model coefficient values \params[in] "UUIDs" Universal unique identifiers for primitives to set </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a24ba00d45416d57afe43628712a32fc3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24ba00d45416d57afe43628712a32fc3">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[9/10]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void StomatalConductanceModel::setModelCoefficients </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_m_o_p_tcoefficients.html">MOPTcoefficients</a> &amp;&#160;</td>
+          <td class="paramname"><em>coeffs</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the model coefficient values for all primitives - Medlyn et al. optimality model. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">coeffs</td><td>Model coefficient values </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00160">160</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a17211c4b6d87e120f182de8cc3cc7aa7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17211c4b6d87e120f182de8cc3cc7aa7">&#9670;&nbsp;</a></span>setModelCoefficients() <span class="overload">[10/10]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void StomatalConductanceModel::setModelCoefficients </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_m_o_p_tcoefficients.html">MOPTcoefficients</a> &amp;&#160;</td>
+          <td class="paramname"><em>coeffs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the model coefficient values for a subset of primitives based on their UUIDs - Medlyn et al. optimality model. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">coeffs</td><td>Model coefficient values \params[in] "UUIDs" Universal unique identifiers for primitives to set </td></tr>
   </table>
   </dd>
 </dl>

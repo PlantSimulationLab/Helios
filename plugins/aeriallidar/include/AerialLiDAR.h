@@ -1,7 +1,7 @@
 /** \file "AerialLiDAR.h" Header file for Aerial LiDAR plug-in dealing with aerial scans.
     \author Brian Bailey
 
-    Copyright (C) 2019-2022  Brian Bailey
+    Copyright (C) 2016-2022 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

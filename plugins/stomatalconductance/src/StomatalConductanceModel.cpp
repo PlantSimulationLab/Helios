@@ -1,7 +1,7 @@
 /** \file "StomatalConductanceModel.cpp" Primary source file for stomatalconductance plug-in.
     \author Brian Bailey
 
-    Copyright (C) 2016-2022  Brian Bailey
+    Copyright (C) 2016-2022 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,10 +36,138 @@ StomatalConductanceModel::StomatalConductanceModel( helios::Context* m_context )
 
     xylem_potential_default = -0.1; //MPa
 
+    An_default = 0;   //umol/m^2/s
+
+    Gamma_default = 100;   //umol/mol
+
+    air_CO2_default = 400;  //umol/mol
+
+    blconductance_default = 0.1;   //mol/m^2/s
+
+    beta_default = 1.f;   //unitless
+
+    model = "BMF"; //default model - Buckley, Mott, Farquhar
+
 }
 
 int StomatalConductanceModel::selfTest(){
-    return 0;
+
+  std::cout << "Running stomatal conductance model self-test..." << std::flush;
+
+  float RMSE_max = 0.03;
+
+  std::vector<float> An_ref{21.81, 22.71, 20.02, 22.60, 19.97, 17.32, 11.90, 6.87, 1.21, -1.49};
+  std::vector<float> Tair_ref{20.69, 30.37, 39.19, 27.06, 27.12, 27.11, 27.08, 26.98, 26.87, 26.81};
+  std::vector<float> TL_ref{21.00, 30.02, 38.01, 26.99, 27.00, 27.01, 27.01, 27.00, 27.00, 26.99};
+  std::vector<float> Q_ref{2000, 2000, 2000, 2000, 1200, 800, 400, 200, 50, 0};
+  float gbw_ref = 3.5;
+  float Cs_ref = 400;
+  float hs_ref = 0.55;
+  float Patm_ref = 101300;
+  std::vector<float> Gamma_ref = {43.7395, 70.2832, 105.5414, 60.0452, 60.0766, 60.1080, 60.1080, 60.0766, 60.0766, 60.0452};
+
+  std::vector<float> gs_ref{0.3437, 0.3386, 0.3531, 0.3811, 0.3247, 0.2903, 0.2351, 0.1737, 0.0868, 0.0421};
+  std::vector<float> gs_BWB(gs_ref.size());
+  std::vector<float> gs_BBL(gs_ref.size());
+  std::vector<float> gs_MOPT(gs_ref.size());
+  std::vector<float> gs_BMF(gs_ref.size());
+
+  uint UUID0 = context->addPatch();
+
+  BWBcoefficients BWBcoeffs;
+  BBLcoefficients BBLcoeffs;
+  MOPTcoefficients MOPTcoeffs;
+  BMFcoefficients BMFcoeffs;
+
+  StomatalConductanceModel gsm(context);
+
+  float RMSE_BWB = 0.f;
+  float RMSE_BBL = 0.f;
+  float RMSE_MOPT = 0.f;
+  float RMSE_BMF = 0.f;
+
+  for( uint i=0; i<gs_ref.size(); i++ ) {
+
+    context->setPrimitiveData( UUID0, "radiation_flux_PAR", Q_ref.at(i)/4.57f );
+    context->setPrimitiveData( UUID0, "net_photosynthesis", An_ref.at(i) );
+    context->setPrimitiveData( UUID0, "temperature", TL_ref.at(i)+273.f );
+    context->setPrimitiveData( UUID0, "air_temperature", Tair_ref.at(i)+273.f );
+    context->setPrimitiveData( UUID0, "air_CO2", Cs_ref );
+    context->setPrimitiveData( UUID0, "air_humidity", hs_ref );
+    context->setPrimitiveData( UUID0, "air_pressure", Patm_ref );
+    context->setPrimitiveData( UUID0, "boundarylayer_conductance", gbw_ref);
+    context->setPrimitiveData( UUID0, "Gamma_CO2", Gamma_ref.at(i));
+
+    gsm.setModelCoefficients(BWBcoeffs);
+    gsm.run();
+    context->getPrimitiveData(UUID0,"moisture_conductance",gs_BWB.at(i));
+    RMSE_BWB += pow(gs_BWB.at(i)-gs_ref.at(i),2)/float(gs_ref.size());
+
+    gsm.setModelCoefficients(BBLcoeffs);
+    gsm.run();
+    context->getPrimitiveData(UUID0,"moisture_conductance",gs_BBL.at(i));
+    RMSE_BBL += pow(gs_BBL.at(i)-gs_ref.at(i),2)/float(gs_ref.size());
+
+    gsm.setModelCoefficients(MOPTcoeffs);
+    gsm.run();
+    context->getPrimitiveData(UUID0,"moisture_conductance",gs_MOPT.at(i));
+    RMSE_MOPT += pow(gs_MOPT.at(i)-gs_ref.at(i),2)/float(gs_ref.size());
+
+    gsm.setModelCoefficients(BMFcoeffs);
+    gsm.run();
+    context->getPrimitiveData(UUID0,"moisture_conductance",gs_BMF.at(i));
+    RMSE_BMF += pow(gs_BMF.at(i)-gs_ref.at(i),2)/float(gs_ref.size());
+
+  }
+
+  if( sqrtf(RMSE_BWB) > RMSE_max || sqrtf(RMSE_BBL) > RMSE_max || sqrtf(RMSE_MOPT) > RMSE_max || sqrtf(RMSE_BMF) > RMSE_max ){
+    std::cout << "failed." << std::endl;
+    std::cout << sqrtf(RMSE_BWB) << " " << sqrtf(RMSE_BBL) << " " << sqrtf(RMSE_MOPT) << " " << sqrtf(RMSE_BMF) << std::endl;
+        return 1;
+  }
+
+  std::cout << "passed." << std::endl;
+  return 0;
+
+}
+
+void StomatalConductanceModel::setModelCoefficients(const BWBcoefficients &coeffs ){
+  BWBcoeffs = coeffs;
+  BWBmodel_coefficients.clear();
+  model = "BWB";
+}
+
+void StomatalConductanceModel::setModelCoefficients(const BWBcoefficients &coeffs, const vector<uint> &UUIDs ){
+  for( uint UUID : UUIDs){
+    BWBmodel_coefficients[UUID] = coeffs;
+  }
+  model = "BWB";
+}
+
+void StomatalConductanceModel::setModelCoefficients(const BBLcoefficients &coeffs ){
+  BBLcoeffs = coeffs;
+  BBLmodel_coefficients.clear();
+  model = "BBL";
+}
+
+void StomatalConductanceModel::setModelCoefficients(const BBLcoefficients &coeffs, const vector<uint> &UUIDs ){
+  for( uint UUID : UUIDs){
+    BBLmodel_coefficients[UUID] = coeffs;
+  }
+  model = "BBL";
+}
+
+void StomatalConductanceModel::setModelCoefficients(const MOPTcoefficients &coeffs ){
+  MOPTcoeffs = coeffs;
+  MOPTmodel_coefficients.clear();
+  model = "MOPT";
+}
+
+void StomatalConductanceModel::setModelCoefficients(const MOPTcoefficients &coeffs, const vector<uint> &UUIDs ){
+  for( uint UUID : UUIDs){
+    MOPTmodel_coefficients[UUID] = coeffs;
+  }
+  model = "MOPT";
 }
 
 void StomatalConductanceModel::setModelCoefficients(const BMFcoefficients &coeffs ){
@@ -80,6 +208,11 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
     size_t assumed_default_Ta = 0;
     size_t assumed_default_rh = 0;
     size_t assumed_default_Psix = 0;
+    size_t assumed_default_An = 0;
+    size_t assumed_default_Gamma = 0;
+    size_t assumed_default_CO2 = 0;
+    size_t assumed_default_gbw = 0;
+    size_t assumed_default_beta = 0;
 
     for( uint UUID : UUIDs){
 
@@ -88,7 +221,7 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
             continue;
         }
 
-        //PAR radiation flux
+        //PAR radiation flux (W/m^2)
         float i = i_default;
         if( context->doesPrimitiveDataExist(UUID,"radiation_flux_PAR") && context->getPrimitiveDataType(UUID,"radiation_flux_PAR")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"radiation_flux_PAR",i); //W/m^2
@@ -97,43 +230,76 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
             assumed_default_i++;
         }
 
-        //surface temperature
+        //surface temperature (K)
         float TL = TL_default;
         if( context->doesPrimitiveDataExist(UUID,"temperature") && context->getPrimitiveDataType(UUID,"temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"temperature",TL); //Kelvin
+            if( TL<250.f ) {
+              std::cout << "WARNING (StomatalConductanceModel::run): Specified surface temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
+              TL = TL_default;
+            }
         }else{
             assumed_default_TL++;
         }
 
-        //air pressure
+        //air pressure (Pa)
         float press = pressure_default;
         if( context->doesPrimitiveDataExist(UUID,"air_pressure") && context->getPrimitiveDataType(UUID,"air_pressure")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_pressure",press); //Pa
+            if( press<50000 ) {
+              std::cout << "WARNING (StomatalConductanceModel::run): Specified air pressure value is very low - assuming default value instead. Did you accidentally specify pressure in kPA instead of Pa?" << std::endl;
+              press = pressure_default;
+            }
         }else{
             assumed_default_p++;
         }
 
-        //air temperature
+        //air temperature (K)
         float Ta = air_temperature_default;
         if( context->doesPrimitiveDataExist(UUID,"air_temperature") && context->getPrimitiveDataType(UUID,"air_temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_temperature",Ta); //Kelvin
+            if( Ta<250.f ) {
+              std::cout << "WARNING (StomatalConductanceModel::run): Specified air temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
+              Ta = air_temperature_default;
+            }
         }else{
             assumed_default_Ta++;
+        }
+
+        //boundary-layer conductance to heat/moisture (mol/m^2/s)
+        float gbw = blconductance_default;
+        if( context->doesPrimitiveDataExist(UUID,"boundarylayer_conductance") && context->getPrimitiveDataType(UUID,"boundarylayer_conductance")==HELIOS_TYPE_FLOAT ){
+          context->getPrimitiveData(UUID,"boundarylayer_conductance",gbw);
+          gbw = gbw*0.97f;  //assume bl conductance to moisture is 0.97 of conductance to heat
+        }else{
+          assumed_default_gbw++;
+        }
+
+        //beta soil moisture factor
+        float beta = beta_default;
+        if( context->doesPrimitiveDataExist(UUID,"beta_soil") && context->getPrimitiveDataType(UUID,"beta_soil")==HELIOS_TYPE_FLOAT ){
+          context->getPrimitiveData(UUID,"beta_soil",beta);
+        }else{
+          assumed_default_beta++;
         }
 
         //air humidity
         float rh = air_humidity_default;
         if( context->doesPrimitiveDataExist(UUID,"air_humidity") && context->getPrimitiveDataType(UUID,"air_humidity")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_humidity",rh);
+            if( rh>1.f ) {
+              std::cout << "WARNING (StomatalConductanceModel::run): Specified air humidity value is greater than 1 - clamping to 1. Did you accidentally specify in percent instead of a decimal?" << std::endl;
+              rh = 1.f;
+            }
         }else{
             assumed_default_rh++;
         }
 
-        //calculate VPD
+        //calculate VPD (mmol/mol) between sub-stomatal cavity and outside of boundary layer
         float esat = 611.f * exp(17.502f * (Ta - 273.f) / ((Ta - 273.f) + 240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in degC, and result is in Pascals
         float ea = rh * esat; // Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)
         float es = 611.f * exp(17.502f * (TL - 273.f) / ((TL - 273.f) + 240.97f));
-        float D = max(0.f, (es - ea) / press * 1000.f);
+        float D = max(0.f, (es - ea) / press * 1000.f); //mmol/mol
 
         //xylem moisture potential
         float Psix = xylem_potential_default;
@@ -143,12 +309,110 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
             assumed_default_Psix++;
         }
 
+        //net photosynthesis
+        float An = An_default;
+        if( context->doesPrimitiveDataExist(UUID,"net_photosynthesis") && context->getPrimitiveDataType(UUID,"net_photosynthesis")==HELIOS_TYPE_FLOAT ){
+          context->getPrimitiveData(UUID,"net_photosynthesis",An);
+        }else{
+          assumed_default_An++;
+        }
+
+        //CO2 compensation point - Gamma
+        float Gamma = Gamma_default;
+        if( context->doesPrimitiveDataExist(UUID,"Gamma_CO2") && context->getPrimitiveDataType(UUID,"Gamma_CO2")==HELIOS_TYPE_FLOAT ){
+          context->getPrimitiveData(UUID,"Gamma_CO2",Gamma);
+        }else{
+          assumed_default_Gamma++;
+        }
+
+        //Compute CO2 concentration at leaf surface
+        float Cs = air_CO2_default;
+        if( model == "BWB" || model == "BBL" || model == "MOPT" ){
+
+          //ambient air CO2
+          float Ca = air_CO2_default;
+          if( context->doesPrimitiveDataExist(UUID,"air_CO2") && context->getPrimitiveDataType(UUID,"air_CO2")==HELIOS_TYPE_FLOAT ){
+            context->getPrimitiveData(UUID,"air_CO2",Ca);
+          }else{
+            assumed_default_CO2++;
+          }
+
+          float gbc = 0.75f*gbw; //bl conductance to CO2
+
+          //An = gbc*(Ca-Cs)
+          Cs = Ca - An/gbc;
+
+        }
+
+
         float gs;
-        if( model == "BB" ) {
+        if( model == "BWB" ){
+
+          //model coefficients
+          float gs0;
+          float a1;
+          BWBcoefficients coeffs;
+          if ( BWBmodel_coefficients.empty() || BWBmodel_coefficients.find(UUID)==BWBmodel_coefficients.end() ) {
+            coeffs = BWBcoeffs;
+          } else {
+            coeffs = BWBmodel_coefficients.at(UUID);
+          }
+          gs0 = coeffs.gs0;
+          a1 = coeffs.a1;
+
+          std::vector<float> variables{An,Cs,es,ea,gbw,beta};
+
+          float esurf = fzero( evaluate_BWBmodel, variables, &coeffs, es );
+          float hs = esurf/es;
+          gs = gs0 + a1*An*beta*hs/Cs;
+
+        }else if(model == "BBL" ) {
+
+          //model coefficients
+          float gs0;
+          float a1;
+          float D0;
+          BBLcoefficients coeffs;
+          if ( BBLmodel_coefficients.empty() || BBLmodel_coefficients.find(UUID)==BBLmodel_coefficients.end() ) {
+            coeffs = BBLcoeffs;
+          } else {
+            coeffs = BBLmodel_coefficients.at(UUID);
+          }
+          gs0 = coeffs.gs0;
+          a1 = coeffs.a1;
+          D0 = coeffs.D0;
+
+          std::vector<float> variables{An,Cs,Gamma,es,ea,gbw,press,beta};
+
+          float esurf = fzero( evaluate_BBLmodel, variables, &coeffs, es ); //Pa
+          float Ds = max(0.f, (es - esurf) / press * 1000.f); //mmol/mol
+          gs = gs0 + a1*An*beta/(Cs-Gamma)/(1.f+Ds/D0);
+
+        }else if(model == "MOPT" ) {
+
+          //model coefficients
+          float gs0;
+          float g1;
+          MOPTcoefficients coeffs;
+          if ( MOPTmodel_coefficients.empty() || MOPTmodel_coefficients.find(UUID)==MOPTmodel_coefficients.end() ) {
+            coeffs = MOPTcoeffs;
+          } else {
+            coeffs = MOPTmodel_coefficients.at(UUID);
+          }
+          gs0 = coeffs.gs0;
+          g1 = coeffs.g1;
+
+          std::vector<float> variables{An,Cs,es,ea,gbw,beta};
+
+          float esurf = fzero( evaluate_MOPTmodel, variables, &coeffs, ea );
+          float Ds = max(0.00001f, (es - esurf)/1000.f ); //kPa
+          gs = gs0 + 1.6f*(1.f+g1*sqrtf(beta/Ds))*An/Cs;
+
+        }else if(model == "BB" ) {
 
             //model coefficients
             BBcoefficients coeffs;
-            if ( BBmodel_coefficients.empty() ) {
+            if ( BBmodel_coefficients.empty() || BBmodel_coefficients.find(UUID)==BBmodel_coefficients.end() ) {
                 coeffs = BBcoeffs;
             } else {
                 coeffs = BBmodel_coefficients.at(UUID);
@@ -161,30 +425,135 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
         }else{
 
             //model coefficients
-            float Em;
-            float i0;
-            float k;
-            float b;
-            if ( BMFmodel_coefficients.empty() ) {
-                Em = BMFcoeffs.Em;
-                i0 = BMFcoeffs.i0;
-                k = BMFcoeffs.k;
-                b = BMFcoeffs.b;
+            BMFcoefficients coeffs;
+            if ( BMFmodel_coefficients.empty() || BMFmodel_coefficients.find(UUID)==BMFmodel_coefficients.end() ) {
+                coeffs = BMFcoeffs;
             } else {
-                BMFcoefficients coeffs = BMFmodel_coefficients.at(UUID);
-                Em = coeffs.Em;
-                i0 = coeffs.i0;
-                k = coeffs.k;
-                b = coeffs.b;
+                coeffs = BMFmodel_coefficients.at(UUID);
             }
+            float Em = coeffs.Em;
+            float i0 = coeffs.i0;
+            float k = coeffs.k;
+            float b = coeffs.b;
 
-            gs = Em * (i + i0) / (k + b * i + (i + i0) * D);
+            std::vector<float> variables{i,es,ea,gbw,press,beta};
+
+            float esurf = fzero( evaluate_BMFmodel, variables, &coeffs, es );
+            float Ds = max(0.f, (es - esurf) / press * 1000.f);
+
+            gs = Em * beta * (i + i0) / (k + b * i + (i + i0) * Ds);
 
         }
 
         context->setPrimitiveData( UUID, "moisture_conductance", gs);
 
     }
+
+    if( model == "BWB" && assumed_default_An>0 ){
+      std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Woodrow-Berry stomatal conductance model requires net photosynthesis, but primitive data ""net_photosynthesis"" could not be found for " << assumed_default_An << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
+    }else if( model == "BBL" && assumed_default_An>0 ){
+      std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires net photosynthesis, but primitive data ""net_photosynthesis"" could not be found for " << assumed_default_An << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
+    }
+    if( model == "BBL" && assumed_default_Gamma>0 ){
+      std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires the CO2 compensation point ""Gamma"", but primitive data ""Gamma_CO2"" could not be found for " << assumed_default_An << " primitives. Did you forget to set optional output primitive data ""Gamma_CO2"" in the photosynthesis model?" << std::endl;
+    }
+
+}
+
+float StomatalConductanceModel::evaluate_BWBmodel( float esurf, std::vector<float> &variables, const void* parameters ){
+
+  // We want to find the vapor pressure at the surface, esurf, that balances the equation gs(esurf)*(es-esurf) = gbw*(esurf-ea). This function returns the residual of this equation.
+
+  const auto* coeffs = reinterpret_cast<const BWBcoefficients*>(parameters);
+
+  float gs0 = coeffs->gs0;
+  float a1 = coeffs->a1;
+
+  float An = variables[0];
+  float Cs = variables[1];
+  float es = variables[2];
+  float ea = variables[3];
+  float gbw = variables[4];
+  float beta = variables[5];
+
+  float hs = esurf/es;
+  float gs = gs0+a1*An*beta*hs/Cs;
+
+  return gs*(es-esurf) - gbw*(esurf-ea);
+
+}
+
+float StomatalConductanceModel::evaluate_BBLmodel( float esurf, std::vector<float> &variables, const void* parameters ){
+
+  // We want to find the vapor pressure at the surface, esurf, that balances the equation gs(esurf)*(es-esurf) = gbw*(esurf-ea). This function returns the residual of this equation.
+
+  const auto* coeffs = reinterpret_cast<const BBLcoefficients*>(parameters);
+
+  float gs0 = coeffs->gs0;
+  float a1 = coeffs->a1;
+  float D0 = coeffs->D0;
+
+  float An = variables[0];
+  float Cs = variables[1];
+  float Gamma = variables[2];
+  float es = variables[3];
+  float ea = variables[4];
+  float gbw = variables[5];
+  float press = variables[6];
+  float beta = variables[7];
+
+  float Ds = max(0.f, (es - esurf) / press * 1000.f); //mmol/mol
+  float gs = gs0+a1*An*beta/(Cs-Gamma)/(1.f+Ds/D0);
+
+  return gs*(es - esurf) - gbw*(esurf-ea);
+
+}
+
+float StomatalConductanceModel::evaluate_MOPTmodel( float esurf, std::vector<float> &variables, const void* parameters ){
+
+  // We want to find the vapor pressure at the surface, esurf, that balances the equation gs(esurf)*(es-esurf) = gbw*(esurf-ea). This function returns the residual of this equation.
+
+  const auto* coeffs = reinterpret_cast<const MOPTcoefficients*>(parameters);
+
+  float gs0 = coeffs->gs0;
+  float g1 = coeffs->g1;
+
+  float An = variables[0];
+  float Cs = variables[1];
+  float es = variables[2];
+  float ea = variables[3];
+  float gbw = variables[4];
+  float beta = variables[5];
+
+  float Ds = max(0.f, (es - esurf)/1000.f );  //kPa
+  float gs = gs0+1.6f*(1.f+g1*sqrtf(beta/Ds))*An/Cs;
+
+  return gs*(es - esurf) - gbw*(esurf-ea);
+
+}
+
+float StomatalConductanceModel::evaluate_BMFmodel( float esurf, std::vector<float> &variables, const void* parameters ){
+
+  // We want to find the vapor pressure at the surface, esurf, that balances the equation gs(esurf)*(es-esurf) = gbw*(esurf-ea). This function returns the residual of this equation.
+
+  const auto* coeffs = reinterpret_cast<const BMFcoefficients*>(parameters);
+
+  float Em = coeffs->Em;
+  float i0 = coeffs->i0;
+  float k = coeffs->k;
+  float b = coeffs->b;
+
+  float i = variables[0];
+  float es = variables[1];
+  float ea = variables[2];
+  float gbw = variables[3];
+  float press = variables[4];
+  float beta = variables[5];
+
+  float Ds = max(0.f, (es - esurf) / press * 1000.f);  //mmol/mol
+  float gs = Em * beta * (i + i0) / (k + b * i + (i + i0) * Ds);
+
+  return gs*(es - esurf) - gbw*(esurf-ea);
 
 }
 

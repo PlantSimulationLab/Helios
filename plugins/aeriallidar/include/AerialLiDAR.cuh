@@ -1,7 +1,7 @@
 /** \file "AerialLiDAR.cuh" Header file for CUDA-related Aerial LiDAR functions.
     \author Brian Bailey
 
-    Copyright (C) 2019-2022  Brian Bailey
+    Copyright (C) 2016-2022 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

@@ -1,0 +1,673 @@
+/*! \page Tutorials Tutorials
+
+
+  The following provides a several tutorials to help in getting started with the core Helios system and associated plug-ins. Programs associated with the tutorials can be found in the "samples" directory. Assuming that you have the necessary dependent software installed (see \ref Dependencies), the samples/tutorials can be built by changing into the "build" subdirectory for the tutorial, then running the command "cmake .." followed by "make". This should generate an executable file with the same name as the tutorial directory.
+
+  \section ContextTuts Context
+
+  \subsection ContextBasicsTut Context Basics
+
+  - \subpage context_selftest "Tutorial 0: Context Self-Test"
+  - \subpage context_vectors "Tutorial 1: Helios Vector Types"
+  - \subpage context_primitives "Tutorial 2: Working with Context Geometry"
+  - \subpage context_timeseries "Tutorial 3: Data Timeseries"
+  - Tutorial 4: File I/O
+
+  \subsection PrimDataTut Working with Context Data
+  - \subpage context_primdata "Tutorial 5: Primitive Data"
+  - \subpage context_globaldata "Tutorial 6: Global Data"
+
+  \section VisualizerTuts Visualizer Plug-In
+  - \subpage visualizer_basics "Tutorial 7: Visualizer Basics"
+  - Tutorial 8: Visualizing Variable and Primitive Data
+  - Tutorial 9: Customizing %Visualizer Configuration
+
+*/
+
+##################### TUTORIAL 0 #####################
+
+/*! \page context_selftest Tutorial 0: Context Self-Test Tutorial
+
+  This tutorial illustrates a very simple example of how to declare the Helios context, and run its self-test function.  The self-test function runs through a series of sanity checks to verify that the core system is working properly.  This tutorial will illustrate how to:
+
+  1. Write a simple program that uses the Helios API.
+     - Declare and instance of the Helios context class.
+     - Run the context self-test function.
+  2. Build and compile the core Helios library.
+
+  \section program_1 C++ Program	  
+
+  We will first write a basic C++ program that uses types included as part of the Helios library. The program is written in the same way any C++ program, and contains a <a href="http://en.cppreference.com/w/cpp/language/main_function">main function</a>.  Helios simply provides a group of data types and functions that manages model geometry and data.  These types and functions are defined in the header file "Context.h", which must be included in any files that use Helios constructs. 
+
+  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code> #include "Context.h"
+
+  int main(void){
+
+    \c//Write program here
+
+  }</code></pre></div>
+
+  The above program does not actually perform any calculations.  Next, we will declare and instance of the Helios context, which is a C++ <a href="http://en.cppreference.com/w/cpp/language/class">class</a> that contains a number of functions and data structures.  We will declare an instance of the class, which we will give the arbitrary name of "context".  
+
+  Next, we will call the function within the Context class called \ref helios::Context::selfTest() "selfTest()", which performs a number of basic tests to ensure that the context is working properly.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  int main(void){
+
+     \c//Declare and initialize the Helios context
+     %helios::Context context; 
+
+     \c//Run the self-test
+     context.selfTest(); 
+
+  }</code></pre></div>
+
+  Note that the Context is within the "helios" <a href="http://en.cppreference.com/w/cpp/language/namespace">namespace</a>.  Alternatively, we could use the "using namespace helios" directive before our main function to avoid the need to explicitly specify the namespace for each name (i.e., "helios::" no longer needed).
+
+  We will save this file as "main.cpp", which we will reference later when building/compiling.
+
+  \section build_2 Building, Compiling, and Running
+
+  Before building and compiling, please reference the \ref QuickStart "Getting Started" page to ensure you have installed all required dependent libraries.
+
+  The files needed to build and compile this tutorial are located in the directory "samples/context_selftest".  There is a "CMakeLists.txt" file that contains the information needed to build the project.  There is also the file "main.cpp" which contains the source code for the program that we wrote previously, and there is a directory called "build" which will be used to hold the files and folders for the current build of the code.  Note, however, that the build directory could be placed anywhere and have any name.
+
+  To build the project, change into the build directory.  Next, use the "cmake" command to build the code.  The argument to the cmake command should be an absolute or relative path to the directory that contains the CMakeLists.txt file for the build.  Given the directory structure used in this project, the CMakeLists.txt file is up one directory, so the relative path to this directory is "..".  The following commands should build the project, assuming you are starting from the base Helios directory:
+
+  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> $ cd samples/context_selftest/build
+  $ cmake ..</code></pre></div>
+
+ If all goes well, the command should output many lines of information, the last of which is
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> $ -- Build files have been written to: /path/to/Helios/samples/context_selftest/build </code></pre></div>
+
+ and there should be a file named "Makefile" now in the build directory.  Use this makefile to complile the code into an executable
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> $ make</code></pre></div>
+
+ This should produce an executable file named "context_selftest" that can be run:
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> $ ./context_selftest</code></pre></div>
+
+ which should produce the following output:
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> $ Running Context self-test...passed.</code></pre></div>
+
+ So what determines the name of the executable file (i.e., why is it called "context_selftest")?  This was specified in the CMakeLists.txt file.  If you open up the CMakeLists.txt file, you will find several inputs on the first couple of lines:
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #-------- USER INPUTS ---------#
+
+  #provide the path (relative or absolute) to Helios base directory
+  set( BASE_DIRECTORY "../.." )
+	
+  #define the name of the executable to be created
+  set( EXECUTABLE_NAME "context_selftest" )
+
+  #provide name of source file(s) (separate multiple file names with semicolon)
+  set( SOURCE_FILES "main.cpp" )
+
+  #specify which plug-ins to use (separate plug-in names with semicolon)
+  set( PLUGINS "" )
+ </code></pre></div>
+
+ Notice the line where we have set the name of the executable to "context_selftest", which we could change to any name.  Notice also just below where we specify the name of the source code file ("main.cpp").  It is important to note that the path to the source files is relative to the directory where the CMakeLists.txt file is located.
+
+ */
+
+ ##################### TUTORIAL 1 #####################
+
+/*! \page context_vectors Tutorial 1: Helios Vector Types Tutorial
+
+ There are several vector types commonly used in Helios, which are listed in the table below.  These are essentially C++ structures, that contain several data elements and functions to operate on that data.
+
+ One example of these vector types is a vector of three values: \ref vec3.  It contains three elements - x,y,z - and is commonly used to represent 3D coordinates in space.  When working with 3D vectors, there are operations that often need to be performed such as normalizing the vector to unit length, performing a dot product, or adding two vectors.  Thus, there are many built-in funcitons and operations associated with these vector types.
+
+ In this simple tutorial, we will learn how to work with Helios vector types.
+
+ <table>
+   <tr><th>Type</th><th>Description</th><th>Data Fields</th><th>Member Functions</th><th>Creation Function</th></tr>
+   <tr><td>\ref helios::vec2 "vec2"</td><td>2D vector of floats</td><td>\ref helios::vec2::x "x", \ref helios::vec2::y "y"</td><td>\ref helios::vec2::normalize() "normalize()", \ref helios::vec2::magnitude() "magnitude()"</td><td>\ref helios::make_vec2() "make_vec2()"</td></tr>
+   <tr><td>\ref helios::vec3 "vec3"</td><td>3D vector of floats</td><td>\ref helios::vec3::x "x", \ref helios::vec3::y "y", \ref helios::vec3::z "z"</td><td>\ref helios::vec3::normalize() "normalize()", \ref helios::vec3::magnitude() "magnitude()"</td><td>\ref helios::make_vec3() "make_vec3()"</td></tr>
+   <tr><td>\ref helios::vec4 "vec4"</td><td>4D vector of floats</td><td>\ref helios::vec4::x "x", \ref helios::vec4::y "y", \ref helios::vec4::z "z", \ref helios::vec4::w "w"</td><td>none</td><td>\ref helios::make_vec4() "make_vec4()"</td></tr>
+   <tr><td>\ref helios::int2 "int2"</td><td>2D vector of integers</td><td>\ref helios::int2::x "x", \ref helios::int2::y "y"</td><td>none</td><td>\ref helios::make_int2() "make_int2()"</td></tr>
+   <tr><td>\ref helios::int3 "int3"</td><td>3D vector of integers</td><td>\ref helios::int3::x "x", \ref helios::int3::y "y", \ref helios::int3::z "z"</td><td>none</td><td>\ref helios::make_int3() "make_int3()"</td></tr>
+   <tr><td>\ref helios::int4 "int4"</td><td>4D vector of integers</td><td>\ref helios::int4::x "x", \ref helios::int4::y "y", \ref helios::int4::z "z", \ref helios::int4::w "w"</td><td>none</td><td>\ref helios::make_int4() "make_int4()"</td></tr>
+   <tr><td>\ref helios::RGBcolor "RGBcolor"</td><td>red-green-blue color code</td><td>\ref helios::RGBcolor::r "r", \ref helios::RGBcolor::g "g", \ref helios::RGBcolor::b "b"</td><td>\ref helios::RGBcolor::scale() "scale()"</td><td>\ref helios::make_RGBcolor() "make_RGBcolor()"</td></tr>
+   <tr>	<td>\ref helios::RGBAcolor "RGBAcolor"</td> <td>red-green-blue-alpha color code</td><td>\ref helios::RGBAcolor::r "r", \ref helios::RGBAcolor::g "g", \ref helios::RGBAcolor::b "b", \ref helios::RGBAcolor::a "a"</td><td>\ref helios::RGBAcolor::scale() "scale()", \ref helios::RGBAcolor::clamp() "clamp()"</td><td>\ref helios::make_RGBAcolor() "make_RGBAcolor()"</td> </tr>
+   <tr>	<td>\ref helios::Time "Time"</td><td>Time of day</td><td>\ref helios::Time::second "second", \ref helios::Time::minute "minute", \ref helios::Time::hour "hour"</td><td>none</td><td>\ref helios::make_Time() "make_Time()"</td></tr>
+   <tr>	<td>\ref helios::Date "Date"</td><td>Calendar date (MM,DD,YYYY)</td><td>\ref helios::Date::day "day", \ref helios::Date::month "month", \ref helios::Date::year "year"</td><td>\ref helios::Date::JulianDay() "JulianDay()"</td><td>\ref helios::make_Date() "make_Date()"</td></tr>
+ </table> 
+
+ \section int3tut Vector of Integers
+
+ Vector types are available for a 2-element (\ref helios::int2 "int2") and 3-element (\ref helios::int3 "int3") vector of integers. An int2 has two elements: x and y, and and int3 has three elements: x, y, and z.  These values of the elements are set using either the \ref helios::make_int2() "make_int2()" or \ref helios::make_int3() "make_int3()" functions.
+
+ In the code example below, we'll make an int3, and set is data values to x=1, y=2, and z=3.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     \c//Declare our int3, named 'a'
+     int3 a;
+
+     \c//Set the data values
+     a = make_int3(1,2,3);
+
+     \c//Alternatively, we could have initialized data values in the following equivalent ways
+     int3 b(1,2,3);
+     int3 b = make_int3(1,2,3);
+
+  }</code></pre></div>
+
+ \section vec3tut Vector of Floats
+
+ Vector types are also available for a 2-element (\ref helios::vec2 "vec2") and 3-element (\ref helios::vec3 "vec3") vector of floats. In addition to the similar elements and creation functions as for integers, we will also demonstrate several built-in funcions and operators.
+
+  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     \c//Declare our vec3, named 'a' and set its values
+     vec3 a = make_vec3(0,0.1,0.2);
+
+     \c//Declare another vec3, named 'b' and set its values
+     vec3 b = make_vec3(1.5,1.4,1.3);
+
+     \c//Add a and b, and assign it to 'c'
+     vec3 c = a + b; //result is c = (1.5,1.5,1.5)
+
+     \c//Normalize 'c' to have unit length
+     c.normalize(); //result is c = (0.577,0.577,0.577)
+
+     \c//Compute the dot product of a and b, and assign it to 'd'
+     float d = a * b; //result is d = 0.4
+
+  }</code></pre></div>
+
+  \section RGBtut RGB Color Vector
+
+  Colors in an image are typically represented using three channels: red, green, and blue (see <a href="https://en.wikipedia.org/wiki/RGB_color_space">this page</a> for more info).  For a given r-g-b color triple, red, green, and blue values range from 0 to 1.  A value of 0 means that particular channel does not contribute to the overall color, and a value of 1 means that channel fully contributes to the overall color.  For example, (r,g,b)=(0,0,0) produces the color black, (r,g,b)=(1,1,1) produces black, (r,g,b)=(1,0,0) produces red, (r,g,b)=(0,1,0) produces green, etc.  Additionally, an r-g-b-a color value can also be used to specify the transparency of the color, where 'a' is the alpha value.  A value of 'a' = 0 means the color is completely transparent, and 'a' = 1 means it is completely opaque.  For example, (r,g,b,a)=(1,0,0,0.5) would produce a red color that is semi-transparent. Note that defining a color using an r-g-b vector implicitly assumes that 'a' = 1 (opaque).
+
+  The Helios vector type for representing an r-g-b color vector is \ref helios::RGBcolor "RGBcolor", and \ref helios::RGBAcolor "RGBAcolor" is used to represent an r-g-b-a vector. There are several constructors for r-g-b vectors (i.e., ways of initializing).  These are listed in the table below.
+
+  <table>
+   <tr><th>RGBcolor Constructor</th><th>RGBAcolor Constructor</th></tr>
+   <tr><td>\ref helios::RGBcolor(void) "RGBcolor(void)"</td><td>\ref helios::RGBAcolor(void) "RGBAcolor(void)"</td></tr>
+   <tr><td>\ref helios::RGBcolor( float r, float g, float b ) "RGBcolor( float r, float g, float b )"</td><td>\ref helios::RGBAcolor( float r, float g, float b, float a ) "RGBAcolor( float r, float g, float b, float a )"</td></tr>
+   <tr><td>\ref helios::RGBcolor( float C[3] ) "RGBcolor( float C[3] )"</td><td>\ref helios::RGBAcolor( float C[4] ) "RGBAcolor( float C[4] )"</td></tr>
+   <tr><td>\ref helios::RGBcolor( std::vector<float> C ) "RGBcolor( std::vector<float> C )"</td><td>\ref helios::RGBAcolor( std::vector<float> C ) "RGBAcolor( std::vector<float> C )"</td></tr>
+   <tr><td>\ref helios::RGBcolor( helios::vec3 C ) "RGBcolor( helios::vec3 C )"</td><td>N/A</td></tr>
+   </table>	
+
+  After an r-g-b vector has already been initialized, channel values are changed using the functions \ref helios::make_RGBcolor() "make_RGBcolor()" and \ref helios::make_RGBAcolor() "make_RGBAcolor()".
+
+  The code below gives several simple examples of using color vectors.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     RGBcolor color(1,0,0); //red color (opaque)
+     RGBAcolor color_t(1,0,0,0.5); //red color (semi-transparent)
+
+     color = make_RGBcolor(0,0,1); //change color to blue
+
+  }</code></pre></div>
+
+  \section Timetut Time Vector
+
+  The vector type \ref helios::Time "Time" is used to represent times of day.  This vector type has three data elements: 'hour' (0-23), 'minute' (0-59), and 'second' (0-59).  These element values are set in the usual way using the \ref helios::make_Time( int hour, int minute, int second ) "make_Time( int hour, int minute, int second )" function. 
+
+  Example code is given below.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Time time = make_Time(12,30,00); // time of 12:30:00
+
+  }</code></pre></div>
+
+ \section Datetut Date Vector
+
+ Dates are represented using a similar vector type \ref helios::Date "Date".  This vector type has three data elements: 'day' (1-31), 'month' (1-12), 'year' (YYYY).  These element values are set in the usual way using the \ref helios::make_Date( int day, int month, int year ) "make_Date( int day, int month, int year )" function. 
+
+ It is often convenient to represent dates as a <a href="https://en.wikipedia.org/wiki/Julian_day">Julian day</a> of year.  There is a built-in member function that can compute the Julian day from a Date vector: \ref helios::Date::JulianDay() "Date::JulianDay()".  A Julian Day can also be converted back to a Date vectory using the function \ref helios::Julian2Calendar( int JulianDay, int year ) "Julian2Calendar( int JulianDay, int year )".
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Date date = make_Date(1,1,2000); //Jan 1, 2000
+
+     \c//Convert to Julian day
+     int JD = %date.JulianDay();
+
+     \c//Convert Julian day back to Date
+     date = Julian2Calendar( JD, 2000 );
+
+  }</code></pre></div>
+ 
+*/
+
+##################### TUTORIAL 2 #####################
+
+/*! \page context_primitives Tutorial 2: Working with Context Geometry
+
+\section context_primitives_overview Overview
+
+ In this tutorial, you will gain experience working with model geometry or "primitives". There are several types of geometric elements, which can be used to make up virtually any shape/object. Available primitives are given in the table below.
+
+ <table>
+   <tr>	<th>Primitive</th><th>Description</th></tr>
+   <tr> <td>\ref helios::Patch "Patch"</td> <td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td> </tr>
+   <tr>	<td>\ref helios::Triangle "Triangle"</td> <td>Triangular polygon specified by its three vertices.</td> </tr>
+   <tr>	<td>\ref helios::Voxel "Voxel"</td> <td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td> </tr>
+ </table> 
+
+ There are functions to add each of these primitive types defined in the Context. For example, a Patch can be added via the \ref Context::addPatch( vec3, vec2 ) function. Note that these functions to add primitives are usually <a href="http://www.cplusplus.com/doc/tutorial/functions2/">"overloaded"</a>, which means there are multiple definitions of the functions.
+
+ \section AddPatch Adding a Patch to the Context
+    
+ Let's write a program that adds a Patch to the Context. We will begin with a blank program that includes the Context.h header (provides context definitions), and declares the Context. We then want to write the code to add a Patch.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context; //Declare the "Context" class
+
+     \c//Write code here to add a Patch to the Context
+
+  }</code></pre></div>
+
+ We will then call the \ref helios::Context::addPatch( const vec3& position, const vec2& size ) "addPatch( vec3 position, vec2 size )" function to add a patch to the Context. Note that member functions (e.g., addPatch) of a class (e.g., Context) are called using a ".". We will pass two arguments to the addPatch function: the (x,y,z) position of the Patch center point, and the length and width (size) of the Patch. The position argument is a \ref helios::vec3 "vec3", and the size argument is a \ref helios::vec2 "vec2". We will create variables "position" and "size" with types of vec3 and vec2, respectively.  We will initialize position with the coordinate (0,0,0) and size with (1,1). There are other optional arguments to the addPatch command such as arguments that specify a Patch rotation or color, but we'll worry about that later. Example code is given below. Note that we have added a few lines of code in order to be able to visualize the results using the Visualizer plug-in. Use of the visualizer will be explained in more depth in a later tutorial.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  #include "Context.h"
+  #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 position(0,0,0); //(x,y,z) position of patch center
+     vec2 size(1,1); //length and width of patch
+
+     context.addPatch( position, size );
+
+     \c//Visualizer code
+     %Visualizer vis(800); //our Visualizer window will be 800 pixels wide
+     vis.buildContextGeometry(&context);
+     vis.plotInteractive();
+
+  }</code></pre></div>
+
+ \section AddPatch_UUIDs Unique Universal Identifiers (UUIDs)
+
+ The addPatch function and other functions to add primitives return a "Unique Universal Identifier" or UUID for that particular primitive. In the example above, we ignored the returned UUID, but in this example we will assign the UUID to a variable and use it to modify attributes of the primitive.
+
+ UUIDs are of type "unsigned int" or "uint" for short, which is the return type for addPatch, addTriangle, etc. Functions that add multiple primitives at once return a vector of UUIDs (uints). The code below does the same thing as the previous example, except that it stores the UUID for the Patch.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  #include "Context.h"
+  #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 position(0,0,0); //(x,y,z) position of patch center
+     vec2 size(1,1); //length and width of patch
+
+     uint UUID; //declare the UUID variable
+     
+     UUID = context.addPatch( position, size ); //this will assign the UUID for this patch to the UUID variable
+
+     \c//Visualizer code
+     %Visualizer vis(800); //our Visualizer window will be 800 pixels wide
+     vis.buildContextGeometry(&context);
+     vis.plotInteractive();
+
+  }</code></pre></div>
+
+
+*/
+
+<!--
+##################### TUTORIAL 3 #####################
+
+/*! \page context_timeseries Tutorial 3: Data Timeseries
+
+*/
+
+##################### TUTORIAL 4 #####################
+
+/*! \page context_fileio Tutorial 4: File I/O
+
+*/
+-->
+
+ ##################### TUTORIAL 5 #####################
+
+/*! \page context_primdata Tutorial 5: Primitive Data
+
+ \section context_primdata_intro Introduction to Primitive Data
+
+ Primitive data is information associated with a given primitive. This may be a physical propeerty of a primitive (e.g., reflectivity, roughness) or a the output of a model calculation (e.g., radiative flux, temperature). A few properites of primitive data is listed below:
+
+ - Primitive data can be defined for some primitives but not others.
+ - Primitive data can have types of float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, and std::string.
+ - Primitive data can have variable length.
+
+ A graphical depiction of primitive data (green boxes) is given in the figure below.
+
+ \image html images/Context_sketch.png 
+ 
+ \section context_primdata_scalar Creating Primitive Data (Scalars)
+
+ Adding primitive data that is a single (scalar) value can be accomplished using the \ref Context::addPrimitiveData() "addPrimitiveData()" function. We simply need to pass this function the UUID of a primitive, the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or std::string. An example is given below where we add some data for a primitive called "my_data". We will add a sphere, which is comprised of many triangles, and add primitive data for one or more of these triangles. 
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 center(0,0,0); //(x,y,z) position of sphere center
+     float r = 1; //radius of sphere
+
+     std::vector<uint> UUIDs; //vector to store UUIDs of sphere 
+
+     UUIDs = context.addSphere( 10, center, r ); //add a sphere to the Context
+     
+     float data = 10;
+
+     context.setPrimitiveData(UUIDs.at(0),"my_data",data); //add primitive data called my_data to only the first primitive with a value of 10
+
+     context.setPrimitiveData(UUIDs,"my_data",data); //we could also set the value of all primitives at once
+	 
+ }</code></pre></div>
+
+ To retrieve the primitive value we set, we can use the \ref Context::getPrimitiveData() "getPrimitiveData()" function as illustrated below.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 center(0,0,0); //(x,y,z) position of sphere center
+     float r = 1; //radius of sphere
+
+     std::vector<uint> UUIDs; //vector to store UUIDs of sphere 
+
+     UUIDs = context.addSphere( 10, center, r ); //add a sphere to the Context
+     
+     float data = 10;
+
+     context.setPrimitiveData(UUIDs.at(0),"my_data",data); //add primitive data called my_data to only the first primitive with a value of 10
+
+     float data_new;
+
+     context.getPrimitiveData(UUIDs.at(0),"my_data",data_new); //get the primitive data and assign it to 'data_new'
+	 
+ }</code></pre></div>
+
+ \section context_primdata_scalar Creating Primitive Data (Arrays)
+
+ Adding primitive data that has length greater than one (array) requires a little extra information, namely the type of the data to be added and the length of the data array. The type is specified by one of the enumerations given in the table below;
+
+ <table>
+   <tr>	<th>Data type</th> <th>Enumeration (HeliosDataType)</th> </tr>
+   <tr>	<td>int</td><td>\ref helios::HELIOS_TYPE_INT "HELIOS_TYPE_INT"</td></tr>
+   <tr>	<td>uint</td> <td>\ref helios::HELIOS_TYPE_UINT "HELIOS_TYPE_UINT"</td></tr>
+   <tr>	<td>float</td> <td>\ref helios::HELIOS_TYPE_FLOAT "HELIOS_TYPE_FLOAT"</td> </tr>
+   <tr>	<td>double</td><td>\ref helios::HELIOS_TYPE_DOUBLE "HELIOS_TYPE_DOUBLE"</td> </tr>
+   <tr>	<td>vec2</td><td>\ref helios::HELIOS_TYPE_VEC2 "HELIOS_TYPE_VEC2"</td></tr>
+   <tr>	<td>vec3</td><td>\ref helios::HELIOS_TYPE_VEC3 "HELIOS_TYPE_VEC3"</td></tr>
+   <tr>	<td>vec4</td> <td>\ref helios::HELIOS_TYPE_VEC4 "HELIOS_TYPE_VEC4"</td></tr>
+   <tr>	<td>int2</td> <td>\ref helios::HELIOS_TYPE_INT2 "HELIOS_TYPE_INT2"</td> </tr>
+   <tr>	<td>int3</td> <td>\ref helios::HELIOS_TYPE_INT3 "HELIOS_TYPE_INT3"</td></tr>
+   <tr>	<td>int4</td><td>\ref helios::HELIOS_TYPE_INT4 "HELIOS_TYPE_INT4"</td></tr>
+   <tr>	<td>std::string</td><td>\ref helios::HELIOS_TYPE_STRING "HELIOS_TYPE_STRING"</td></tr>
+ </table>
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 center(0,0,0); //(x,y,z) position of sphere center
+     float r = 1; //radius of sphere
+
+     std::vector<uint> UUIDs; //vector to store UUIDs of sphere 
+
+     UUIDs = context.addSphere( 10, center, r ); //add a sphere to the Context
+     
+     float data[5] = {10, 11, 12, 13, 14};
+
+     context.setPrimitiveData(UUIDs.at(0),"my_data",HELIOS_TYPE_FLOAT,5,&data); //add primitive data called my_data to only the first primitive
+
+     std::vector<float> data_new;
+
+     context.getPrimitiveData(UUIDs.at(0),"my_data",data_new); //get the primitive data and assign it to 'data_new'
+	 
+ }</code></pre></div>
+ 
+*/
+
+##################### TUTORIAL 6 #####################
+
+/*! \page context_globaldata Tutorial 6: Global Data
+
+ \section context_globaldata_intro Introduction to Global Data
+
+ Using global data is very similar to using primitive data (see \ref context_primdata), with the only notable difference being that global data is not defined for every primitive, but rather there exists only one instance of particular global data.
+
+ A graphical depiction of global data (right box) and primitive data (green boxes) is given in the figure below.
+
+ \image html images/Context_sketch.png 
+ 
+ \section context_globaldata_scalar Creating Global Data (Scalars)
+
+ Adding global data that is a single (scalar) value is essentially the same as adding scalar primitive data except that we do not pass the function a UUID (since global data does not correspond to any given primitive). To add/set global data, we use the \ref Context::addGlobalData() "addGlobalData()" function. We simply need to pass this function the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or string. An example is given below where we add some global data called "my_data". 
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context;  //Declare the "Context" class
+
+     context.setGlobalData("my_data",10.0); //add global data called my_data with a value of 10
+	 
+ }</code></pre></div>
+
+ \section context_globaldata_scalar Creating Global Data (Arrays)
+ 
+ Adding global data that has length greater than one (array) requires a little extra information, namely the type of the data to be added and the length of the data array. The type is specified by one of the enumerations given in the table below.
+
+ <table>
+   <tr>	<th>Data type</th> <th>Enumeration (HeliosDataType)</th> </tr>
+   <tr>	<td>int</td><td>\ref helios::HELIOS_TYPE_INT "HELIOS_TYPE_INT"</td></tr>
+   <tr>	<td>uint</td> <td>\ref helios::HELIOS_TYPE_UINT "HELIOS_TYPE_UINT"</td></tr>
+   <tr>	<td>float</td> <td>\ref helios::HELIOS_TYPE_FLOAT "HELIOS_TYPE_FLOAT"</td> </tr>
+   <tr>	<td>double</td><td>\ref helios::HELIOS_TYPE_DOUBLE "HELIOS_TYPE_DOUBLE"</td> </tr>
+   <tr>	<td>vec2</td><td>\ref helios::HELIOS_TYPE_VEC2 "HELIOS_TYPE_VEC2"</td></tr>
+   <tr>	<td>vec3</td><td>\ref helios::HELIOS_TYPE_VEC3 "HELIOS_TYPE_VEC3"</td></tr>
+   <tr>	<td>vec4</td> <td>\ref helios::HELIOS_TYPE_VEC4 "HELIOS_TYPE_VEC4"</td></tr>
+   <tr>	<td>int2</td> <td>\ref helios::HELIOS_TYPE_INT2 "HELIOS_TYPE_INT2"</td> </tr>
+   <tr>	<td>int3</td> <td>\ref helios::HELIOS_TYPE_INT3 "HELIOS_TYPE_INT3"</td></tr>
+   <tr>	<td>int4</td><td>\ref helios::HELIOS_TYPE_INT4 "HELIOS_TYPE_INT4"</td></tr>
+   <tr>	<td>std::string</td><td>\ref helios::HELIOS_TYPE_STRING "HELIOS_TYPE_STRING"</td></tr>
+ </table>
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context;  //Declare the "Context" class
+
+     float data[5] = {10, 11, 12, 13, 14};
+
+     context.setGlobalData("my_data",HELIOS_TYPE_FLOAT,5,&data); //add global data called my_data to only the first primitive
+
+     std::vector<float> data_new;
+
+     context.getGlobalData("my_data",data_new); //get the global data and assign it to 'data_new'
+	 
+ }</code></pre></div>
+
+*/
+
+##################### TUTORIAL 7 #####################
+
+/*! \page visualizer_basics Tutorial 7: %Visualizer Basics
+
+ In this tutorial, we will explain in more depth the use of the Visualizer plug-in functions that were shown in previous tutorials. Users are strongly encouraged to read through the detailed \ref VisualizerDoc.
+
+ Using the Visualizer typically consists of four steps:
+
+ 1. Declare and initialize the %Visualizer class.
+ 2. Add geometry to the %Visualizer.
+ 3. Modify %Visualizer options.
+ 4. Plot the result.
+
+ Each of these steps will be detailed in depth below. The purpose of the Visualizer is to provide a graphical representation of geometry and associated data.
+
+ \section vis_step1 Step 1. Declare and initialize the Visualizer class
+
+ To begin using the Visualizer, we must first declare the \ref Visualizer class. Note that the "Visualizer.h" header file must be included in our program, and the "PLUGINS" variable in our project's CMakeLists.txt file must include "visualizer".
+
+ The Visualizer constructor takes one or two arguments that specifies the size of the graphics window in pixels. If only one argument is provided (see \ref Visualizer( uint Wdisplay )), the argument is an integer that specifies the width of the diplay window in pixels, with the hight of the window specified according to the default aspect ratio. If two arguments are provided (see \ref Visualizer( uint Wdisplay, uint Hdisplay )), the two arguments correspond respectively to the width and height of the display window in pixels. Example code is given below.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+  #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+     
+     %Visualizer vis(800); //creates a display window 800 pixels wide
+
+  }</code></pre></div>
+
+
+ \section vis_step2 Step 2. Add geometry to the Visualizer
+
+ There are a variety of ways to add geometry to the Visualizer. Primitives can be manually added to the Visualizer in a similar manner as primitives are added to the Context, with several notable differences. First, there are additional primitive types available in the Visualizer such as lines and points. Second, there are additional arguments that must be specified when adding primitives to the Visualizer, namely the graphics layer associated with the primitive (see \ref Layer) and the coordinate system to be used (see \ref coord).
+
+ Most commonly, we do not wish to manually add geometry to the Visualizer, but rather we simply want to visualize geometry in the Context. There is a simple command that will automatically add all geometry in the Context to the Visualizer: \ref Visualizer::buildContextGeometry(). This function takes a pointer to the Context, which is used to import all geometry. There are other variations on the buildContextGeometry() command that allow for the placement of Context geometry on any layer or to add only a subset of the geometry in the Context (see \ref ContextGeom). In the example below, we add all geometry in the Context to the default layer (layer 0).
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+  #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 position(0,0,0); //(x,y,z) position of patch center
+     vec2 size(1,1); //length and width of patch
+
+     context.addPatch( position, size ); //add the patch to Context
+
+     %Visualizer vis(800); //creates a display window 800 pixels wide
+
+     vis.buildContextGeometry( &context ); //add all geometry in the context to the visualizer
+
+  }</code></pre></div>
+
+ Note that in the above example, we've given our Visualizer class the name of "vis", which is the name that should be used to reference it.
+ 
+ \section vis_step3 Step 3. Modify Visualizer options
+
+ Additional options for the Visualizer are set by calling the appropriate member functions in the Visualizer class. Various options may be changing the lighting model, changing the default camera view configuration, changing data used to color primitives, etc.
+ Consult the \ref VisualizerDoc for more details on available options. In this tutorial, we'll just use the default options (by not setting any options explicitly).
+ 
+ \section vis_step4 Step 4. Plot the result
+
+ Finally, we'll want to actually plot the result to the graphics window. There are two primary functions to do so.  One is \ref Visualizer::plotInteractive(), which generates an interactive plot in which the user can interactively modify the camera configuation via keystrokes. In this case, the graphics window will stay open until the user closes it, and the program will pause until the window is closed.
+
+ Another method is to simply update the graphics window and move on with the program using the function \ref Visualizer::plotUpdate(). This is typically used when the graphics window is to be printed to file using the Visualizer::printWindow() function.
+
+ In the example below, we'll first update the window, move on in the program where we'll print the graphics window to an image file, then we'll open an interactive plot window. Note that all file paths in Helios should either be absolute paths, or relative to the build directory where the executable file is being run. So in the example below, the image file will be located in the build directory.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Context.h"
+  #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(void){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 position(0,0,0); //(x,y,z) position of patch center
+     vec2 size(1,1); //length and width of patch
+
+     context.addPatch( position, size ); //add the patch to Context
+
+     %Visualizer vis(800); //creates a display window 800 pixels wide
+
+     vis.buildContextGeometry( &context ); //add all geometry in the context to the visualizer
+
+     vis.plotUpdate(); //update the graphics window and move on
+     vis.printWindow( "patch.jpeg" ); //print window to JPEG file
+     
+     vis.plotInteractive(); //open an interactive graphics window
+   
+  }</code></pre></div>
+
+*/

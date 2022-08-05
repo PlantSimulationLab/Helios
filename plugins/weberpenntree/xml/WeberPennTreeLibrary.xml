@@ -36,7 +36,7 @@
   <LeafFile> plugins/weberpenntree/leaves/AlmondLeaf.png </LeafFile>
   <LeafScale> 0.12 </LeafScale>
   <LeafScaleX> 0.25 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood2.jpg </WoodFile>
+  <WoodFile> plugins/weberpenntree/wood/wood2.jpg </WoodFile>
   <!--
   <LeafAngleDist>0.2290 0.6650 0.9170 0.9450 0.8650 0.7450 0.6190 0.4240 0.3100 0 0 0 0 0 0 0 0 0</LeafAngleDist>
    -->
@@ -75,7 +75,7 @@
   <LeafFile> plugins/weberpenntree/leaves/AppleLeaf.png </LeafFile>
   <LeafScale> 0.15 </LeafScale>
   <LeafScaleX> 0.5 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+  <WoodFile> plugins/weberpenntree/wood/wood.jpg </WoodFile>
 </WeberPennTree>
 
 <WeberPennTree label="Avocado">
@@ -112,7 +112,7 @@
   <LeafFile> plugins/weberpenntree/leaves/AvocadoLeaf.png </LeafFile>
   <LeafScale> 0.25 </LeafScale>
   <LeafScaleX> 0.5 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+  <WoodFile> plugins/weberpenntree/wood/wood.jpg </WoodFile>
 </WeberPennTree>
 
 <WeberPennTree label="Lemon">
@@ -149,7 +149,7 @@
   <LeafFile> plugins/weberpenntree/leaves/LemonLeaf.png </LeafFile>
   <LeafScale> 0.17 </LeafScale>
   <LeafScaleX> 0.5 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+  <WoodFile> plugins/weberpenntree/wood/wood.jpg </WoodFile>
 </WeberPennTree>
 
 <WeberPennTree label="Olive">
@@ -186,7 +186,7 @@
   <LeafFile> plugins/weberpenntree/leaves/OliveLeaf.png </LeafFile>
   <LeafScale> 0.14 </LeafScale>
   <LeafScaleX> 0.2 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+  <WoodFile> plugins/weberpenntree/wood/wood.jpg </WoodFile>
 </WeberPennTree>
 
 <WeberPennTree label="Orange">
@@ -223,7 +223,7 @@
   <LeafFile> plugins/weberpenntree/leaves/OrangeLeaf.png </LeafFile>
   <LeafScale> 0.2 </LeafScale>
   <LeafScaleX> 0.5 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+  <WoodFile> plugins/weberpenntree/wood/wood.jpg </WoodFile>
 </WeberPennTree>
 
 <WeberPennTree label="Peach">
@@ -260,7 +260,7 @@
   <LeafFile> plugins/weberpenntree/leaves/AvocadoLeaf.png </LeafFile>
   <LeafScale> 0.2 </LeafScale>
   <LeafScaleX> 0.2 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+  <WoodFile> plugins/weberpenntree/wood/wood.jpg </WoodFile>
   <LeafAngleDist>0.0000 0.1910 0.3820 0.5730 0.9549 1.7189 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000</LeafAngleDist>
 </WeberPennTree>
 
@@ -298,7 +298,7 @@
   <LeafFile> plugins/weberpenntree/leaves/PistachioLeaf.png </LeafFile>
   <LeafScale> 0.15 </LeafScale>
   <LeafScaleX> 0.6 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+  <WoodFile> plugins/weberpenntree/wood/wood.jpg </WoodFile>
 </WeberPennTree>
 
 <WeberPennTree label="Walnut">
@@ -335,7 +335,7 @@
   <LeafFile> plugins/weberpenntree/leaves/AlmondLeaf.png </LeafFile>
   <LeafScale> 0.2 </LeafScale>
   <LeafScaleX> 0.5 </LeafScaleX>
-  <WoodFile> plugins/visualizer/textures/wood.jpg </WoodFile>
+  <WoodFile> plugins/weberpenntree/wood/wood.jpg </WoodFile>
 </WeberPennTree>
 
 <!-- Blank
