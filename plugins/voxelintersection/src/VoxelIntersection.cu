@@ -1,6 +1,6 @@
 /** \file "VoxelIntersection.cu" CUDA-related functions for voxel-intersection plug-in
 
-    Copyright (C) 2018  Brian Bailey
+    Copyright (C) 2016-2022 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

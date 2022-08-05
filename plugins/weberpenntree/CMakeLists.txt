@@ -15,5 +15,6 @@ include_directories(../../core/include)
 add_library(weberpenntree STATIC "src/WeberPennTree.cpp" )
 
 file( COPY leaves/ DESTINATION ${CMAKE_BINARY_DIR}/plugins/weberpenntree/leaves/ )
+file( COPY wood/ DESTINATION ${CMAKE_BINARY_DIR}/plugins/weberpenntree/wood/ )
 file( COPY xml/ DESTINATION ${CMAKE_BINARY_DIR}/plugins/weberpenntree/xml/ )
 

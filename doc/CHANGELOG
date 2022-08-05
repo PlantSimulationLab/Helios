@@ -1,0 +1,940 @@
+#Changelog
+
+[1.0.0] - 2018-11-15
+
+**** Initial commit ****
+
+[1.0.1] - 2018-11-26
+
+*Radiation Model*
+- Running radiation model for only a subset of UUIDs was not working properly (not implemented correctly).
+- Texture-masked patches were causing an OptiX error under certain cases. Cause was an indexing typo in rayGeneration.cu
+
+*Visualizer*
+- Visualizing texture-masked patches by primitive data was not working properly
+- File needed in selfTest() function was missing (Helios_logo.jpg)
+
+[1.0.2] - 2018-11-26
+
+*Visualizer*
+- Error corrected with adding texture-mapped triangles in buildContextGeometry() function.
+
+[1.0.3] - 2018-12-13
+
+*Context*
+- Errors in timeseries data querying were corrected in which some date/time combinations did not work correctly. Also, if a time/date is queried that is outside the range of all the data in the timeseries, the error will be caught rather than producing a segmentation fault.
+
+*Visualizer*
+- colorPrimitivesByData() now supports primitive data types of int, uint, and double. Note: it will convert these data types to float.
+
+*LiDAR*
+- Functionality added to be able to visualize triangulated fill groups used to create the leaf reconstruction: see function addReconstructedTriangleGroupsToContext().
+- Calling addLeafReconstructionToContext() now creates primitive data for each leaf called ``directFlag" which equals 1 if the leaf came from the direct reconstruction, and equal to 0 if the leaf was backfilled.
+- An initial implementation of functions to deal with aerial LiDAR data has been implemented, but has not been fully tested.
+
+[1.0.4] - 2018-12-17
+
+*Context*
+- Further errors corrected in timeseries data query due to precision issues near beginning/end of timeseries
+- Errors corrected in calculating the area of primitives. Areas were not properly calculated for patches with custom (u,v) coordinates, and for primitives where a scaling transformation is applied, or when primitives were read from an xml file.
+
+[1.0.5] - 2019-1-24
+
+*Photosynthesis*
+- Added temperature response functions to Farquhar model following Bernacchi et al. (2001)
+- Error corrected in where PAR was not converted from W/m^2 to umol/m^2/s
+
+*Energy Balance*
+- Error corrected which caused a segmentation fault in the energy balance model if any primitives are deleted from the Context.
+
+*Weber-Penn Tree*
+- Default tree library updated. Currently contains nine trees: almond, apple, avocado, lemon, olive, orange, peach, pistachio, and walnut.
+- Error fixed that caused tree height to vary with "Shape" parameter if "BaseSplits">0.
+
+*Voxel Intersection*
+- Error corrected that caused compilation to fail if voxel intersection plugin and lidar plugin are both used in the same build.
+
+[1.0.6] - 2019-04-02
+
+*Context*
+- Added file core/lib/libpng/pnglibconf.h. Not having this file causes problems on some systems.
+- Error fixed with Patch::getNormal() function.
+- selfTest() tests added for rotate patches, and boxes.
+
+*LiDAR*
+- Aerial LiDAR scan can now have a coneangle of zero without causing problems
+- Aerial LiDAR updated to use advanced method for inverting Beer's law
+
+[1.0.7] - 2019-04-03
+
+*Context*
+- Implemented acos_safe() and asin_safe() functions to catch instances where round-off errors cause normal acos() and asin() to return NaN. The new functions were implemented with the LiDAR and solarposition plug-ins where acos() or asin() was used previously.
+- Error was corrected from v1.0.6 in which voxels sizes were not properly set when using addVoxel().
+
+[1.0.8] - 2019-05-09
+
+*LiDAR*
+- Aerial LiDAR reverted to before v1.0.6, except that acos_safe() function is still implemented. There are still apparently problems with the changes implemented in v1.0.6.
+
+[1.0.9] - 2019-05-24
+
+*Radiation*
+- Having a radiation band name longer than about 8 characters would cause a segmentation fault. You can now have names of up to 80 characters.
+
+*Energy Balance*
+- There is now a function optionalOutputPrimitiveData() that allows you to output the calculated boundary-layer conductance and vapor pressure deficit to primitive data.
+
+*LiDAR*
+- Added new scheme for inversion of LAD from aerial LiDAR data. When vegetation in a voxel is very dense, a method is used that fits to the hit point distance PDF.
+- Added aerial LiDAR self-test and sample to run the self-test.
+
+[1.0.10] - 2019-05-30
+
+*Context*
+- Error fixed when calling addTile() with a non-zero spherical rotation.
+
+*LiDAR*
+- Certain compiler versions would cause a compiler error with the 'fmin' function, which has been corrected.
+
+[1.0.11] - 2019-07-24
+
+*Context*
+- Error fixed with texture mapping of tiles.
+
+*Radiation*
+- Error fixed that could cause an infinite loop in certain cases where the primitive has a texture mask.
+
+[1.0.12] - 2019-08-08
+
+*Context*
+- Adding texture-masked tiles with a transparency channel was previously excessively slow. A new implementation was added such that there is no slow-down when texturing a tile.
+
+*Radiation*
+- Error fixed that caused errors in absorbed radiation when the scence contains two different texture masks of different size.
+
+*LiDAR*
+- Stability improvements.
+
+[1.0.13] - 2019-08-09
+
+*Context*
+- Error corrected causing incorrect rotation of tile sub-patches.
+- Additional selfTest() cases added for rotated and texture-masked tiles.
+
+[1.0.14] - 2019-09-14
+
+*Context*
+- Minor change to randu() functions for case when the minimum range and maximum range arguments are equal.
+- calculateTriangleArea() function added to calculate area of a triangle given its three vertices (in global.h/global.cpp).
+- Copying texture-mapped triangles is much faster (similar implementation as for patches added.
+- Functions added to translate, rotate, and scale primitives or groups of primitives directly from the Context without having to get their individual pointers (see translatePrimitive(), rotatePrimitive(), scalePrimitive()).
+
+*Radiation Model*
+- Calculations for diffuse radiation in a canopy were not correct, causing the flux on leaves to be under predicted (but the flux reaching the ground was correct).
+- Self-tests added based on a homogeneous "canopy" of patches and comparing against the exact Beer's law solution for collimated and diffuse radiation.
+
+*Energy Balance Model*
+- Some changes were needed based on the above changes to the radiation model.
+- Functions added to disable or enable command-line output messages.
+
+*Visualizer*
+- Error corrected to function colorContextPrimitivesByData() with a UUID vector argument, which did not properly separate primitives by UUID.
+
+[1.0.15] - 2019-10-04
+
+*Context*
+- Minor changes to standard CMakeLists.txt file to allow for custom CXX compiler flags.
+
+*Radiation Model*
+- Freeing GPU memory was previously accomplished via the finalize() function. Failing to call the finalize() function, say inside a loop, results in a GPU memory leak. This function has been removed, and now GPU memory is automatically done in the RadiationModel class destructor.
+- selfTest() cases added for an enclosure (furnace) filled with a non-scattering participating medium, and infinite parallel plates filled with a purely scattering participating medium.
+
+*Visualizer*
+- Very minor change to the command-line output messages (easier to read).
+
+*Weber Penn Tree*
+- Option to set the the branch, trunk, and leaf subdivision resolutions (see functions setBranchSegmentResolution(), setTrunkSegmentResolution(), and setLeafSubdivisions()).
+- Option to dynamically modify the architectural parameters for a tree in the library (see functions getTreeParameters() and setTreeParameters()).
+
+[1.0.16] - 2019-11-07
+
+*Context*
+- Primitives with a texture can now be colored based on the R-G-B color set in the Context, but have its shape masked using the transparency channel of the texture. This is accomplished with the new Context::overrideTextureColor() function.
+- Functions added to calculate bounding box (getDomainBoundingBox()) or bounding sphere (getDomainBoundingSphere()) of a subset of primitives given a vector of their UUIDs.
+
+*Visualizer*
+- Minor bug fixed that would not update colorbar ticks if buildContextGeometry() was never called.
+- Performance enhancements when rendering a subset of primitives based on a UUID vector.
+
+*Weber-Penn Tree*
+- Leaf UUIDs were not properly assigned when leaves are segmented with sub-patches.
+
+*LiDAR*
+- First attempt to add several new features to aerial LiDAR data processing:
+	+ Use RANSAC to determine the ground height and effective canopy height
+	+ Calculate maximum canopy height
+	+ Shift grid in vertical direction to line up with ground (see alignGridToGround() funciton)
+	+ selfTest() case to check these calculations
+- Added option to addLeafReconstructionToContext() to all for sub-patch distretization (tile) of leaves.
+- If the total number of grid cells (aerial LiDAR) was larger than 2,097,120 then leaf area calculation would error out without any useful error message. A catch for this has been implemented.
+
+[1.0.17] - 2019-11-08
+
+*Context*
+- "Swizzle" capability for vec3 removed.
+- Error corrected in getDomainBoundingBox() that could cause an error if primitives are deleted from the Context.
+
+*Weber Penn Tree*
+- Re-implemented leaf sub-patch tiling to be much faster.
+
+*LiDAR*
+- Re-implemented leaf sub-patch tiling to be much faster.
+
+[1.0.18] - 2019-11-14
+
+*Context*
+- addBox() functions added to allow for texture mapping of boxes.
+- useTextureColor() function added, which can be used to reverse a previous call to overrideTextureColor().
+
+*Radiation*
+- Previously, the maximum total number of rays for a scene could not exceed ~50 billion, otherwise the radiation model would not actually launch any rays. If a ray launch exceeds 50 billion rays, the launch is now segmented into multiple launches to avoid this problem.
+- There was some inconsistency between references for the "twosided flag" primitive data, where in some instances the primitive data 'twosided-flag' was referenced or 'twosided_flag' in others. It is now always 'twosided_flag'.
+
+*Weber-Penn Tree*
+- Added selfTest() function, which builds all trees in the default library.
+- Option to manually seed the random number generator for reproducable trees.
+
+*Visualizer*
+- Stability improvements.
+
+[1.1.0] - 2020-02-07
+
++++++ NEW PLUG-IN ++++++
+- Aerial LiDAR was separated from the terrestrial LiDAR plug-in and moved to its own plug-in.
+
+*Context*
+- Error corrected in which textures became flipped about x- and y-axes.
+- Voxels can now be texture-mapped.
+- Error corrected in which the area of texture-mapped triangles could potentially be calculated incorrectly.
+
+*Visualizer*
+- Error corrected in which textures became flipped about x- and y-axes.
+- Visualization of voxels was temporarily disabled due to an error, which has been fixed.
+
+*LiDAR*
+- Stability improvements for terrestrial LiDAR leaf reconstruction.
+- Added capability to perform synthetic scans of texture-mapped patches and triangles.
+
+*Photosynthesis*
+- Optional outputs added to allow writing C_i and photosynthesis limitation state to primitive data.
+- An error was corrected that resulted in no response of Vc,max to temperature variation.
+
+*Radiation*
+-Error corrected in which textures became flipped about x- and y-axes.
+
+*Energy Balance*
+- Capability added to solve unsteady energy balance equation with heat storage.
+
+[1.1.1] - 2020-04-10
+
+*Visualizer*
+- Correction was not picked up in previous version that caused Helios watermark to be flipped.
+
+[1.1.2] - 2020-04-14
+
+*Radiation*
+- Periodic boundary condition added. See function RadiationModel::enforcePeriodicBoundary().
+
+*Aerial LiDAR*
+- Documentation page added, but still under construction.
+
+[1.1.3] - 2020-06-16
+
+*Context*
+- Further problems with patch texturing corrected. A lingering error was causing patches with custom (u,v) coordinates to have zero surface area. This was likely introduced in v1.1.0 in correcting a similar error with triangles.
+
+*LiDAR*
+- For full-waveform scans, leaf area calculations now use equal weighting of hit points.
+- Function added to gap fill missing scan points due to "sky" hit points (see function gapfillMisses()). This function is only incorporated within the "testing" leaf area calculation function calculateLeafAreaGPU_testing().
+
+*Aerial LiDAR*
+- Aerial LiDAR sample was not compiling because of an error in the CMakeLists.txt file.
+
+[1.1.4] - 2020-06-18
+
+*Aerial LiDAR*
+- Functions added to get the beam mean free path and numerator and denominator of the probability of interception calculated in calculateLeafAreaGPU(). See functions getCellTransmissionProbability() and getCellRbar().
+
+[1.1.5] - 2020-08-07
+
++++++ NEW PLUG-IN ++++++
+- Canopy Generator: Initial testing version of Canopy Generator plug-in added.
+
+*LiDAR*
+- Files were not properly copied to allow running the selfTest() function from a directory other than samples/lidar_selftest. You should now be able to run the selfTest() from any directory in which the lidar plug-in is built.
+- Error corrected in which sine weighting of G(theta) in calculateLeafAreaGPU() was not performed correctly.
+
+*Radiation*
+- There was a problem with the periodic boundary condition with diffuse radiation that could cause unexpected results. This was due to rare instances when a ray would hit the periodic boundaries many times and apparently cause a stack overflow (although no error is actually thrown). This was corrected by limiting the maximum number of times a ray could hit the periodic boundary.
+
+*Photosynthesis*
+- Error corrected in FvCB photosynthesis model solution.
+
+*Visualizer*
+- Helios watermark corrected to scale properly as aspect ratio of visualizer window is changed.
+
+*Weber-Penn Tree*
+- Issue corrected in which leaves not positioned correctly with respect to parent branch.
+
+[1.1.6] - 2020-08-19
+
+*Context*
+- Overloaded functions added to set primitive data based on a 2D or 3D vector of UUIDs (see setPrimitiveData() functions).
+- If a patch is created with size of 0, an explicit error message is thrown rather than triggering an ambiguous "assert".
+- Functions added to flatten a 2D or 3D vector into a 1D vector (see "flatten" function).
+
+*Weber-Penn Tree*
+- Issue with leaf rotations from v1.1.5 was not completed fixed, but appears to be working now.
+
+*Radiation*
+- If the user mistakenly sets emissivity<1 but keeps scattering iterations at 0, the model would not satisfy the second law of thermodynamics because there would be missing energy. This has been changed such that the model will default to emisssivity=1 if scattering iterations is 0.
+- If the user sets emissivity<1 but keeps the default reflectivity and transmissivity for the band, it is now automatically assumed that reflectivity=1-emissivity and transmissivity=0.
+
+*Visualizer*
+- Issue fixed in which there could be white "speckles" on the edges of texture-mappped primitives with transparency.
+
+*Canopy Generator*
+- Function added to get UUIDs for ground primitives.
+- Error in grapevine geometries corrected that caused the radius of the end of each shoot to be very large.
+- Default shoot radius changed for grapevine plants.
+
+[1.1.7] - 2020-08-24
+
+*Context*
+- Functions added to crop the domain based on some axis-aligned bounding box. This is especially helpful when using periodic boundaries with the radiation model to delete any primitives that may accidentally lie beyond the ground surface.
+
+*Canopy Generator*
+- canopygenerator_selftest case added to 'samples' directory, and is now included in the run_samples.sh script.
+- Added variable for grapevine canopies to change the color of the grapes.
+- Corrected error in getBranchUUIDs(), getLeafUUIDs(), and getFruitUUIDs(), which could incorrectly throw an error if a trunk does not exist.
+- If primitives created by CanopyGenerator are deleted from the context, their UUIDs will now not be returned by getTrunkUUIDs(), getBranchUUIDs(), getLeafUUIDs(), getFruitUUIDs(), and getAllUUIDs() functions.
+
+*Energy Balance Model*
+- Documentation added for unsteady energy balance model.
+- Input primitive data for unsteady energy balance model changed. Users now specify the object heat capacity instead of the object heat capacity.
+
+[1.2.0] - 2020-09-11
+
++++++ NEW FEATURE ++++++
+- Compound Objects: Functionality to group primitives into compound object has been added (tiles, spheres, tubes, boxes, disks). When a compound object is added, information about the object as a whole is retained, rather than just adding each primitive separately. For example, when a tile object is added (see Context::addTileObject() function), the original dimension of the tile and subdivision resolution can be later queried. The current implementation is an initial draft with further development needed. It is not yet documented in the User's Guide.
+
++++++ PLUG-IN RELEASE ++++++
+- Canopy Generator: The Canopy Generator plug-in has been tested by several users, and appears to be relatively stable. The base functionality has been implemented, and documentation is relatively thorough.
+
+*Context*
+- Function added to add a "default" patch to the Context (see Context::addPatch( void ))
+- Function added to clear the primitive data for a given primitive (see Primitive::clearPrimitiveData() and Context::clearPrimitiveData()).
+- Error corrected in which Triangle::getVertices() returned a 4-element vector, with the last element equal to (0,0,0).
+- deletePrimitive() function now clears primitive data for the primitive(s) to free up the memory.
+- Copying a primitive now also copies the primitive data for that primitive.
+
+*Energy Balance*
+- Error in selfTest() causing failure of Case #5 (actual source code was fine).
+
+*Canopy Generator*
+- samples/canopygenerator_selftest had not been added to git control, and thus was missing in the repository.
+- Added capability to change fruit color.
+- Added capability to change the number of triangles used to make fruit spheres.
+
+*Radiation*
+- CMakeLists.txt modified to be more robust - it was possible if there was an erroneous file in the src/ directory with a .cu extension, CMake would try to build it and fail.
+
+*Visualizer*
+- Upgraded GLEW library to v2.2.0
+- Upgraded GLFW library to v3.3.2
+- Fixed issue in which writing an image to file (printWindow()) would render a blank image.
+
+[1.2.1] - 2020-11-18
+
+*Context*
+- addTile() function will automatically delete sub-patches with zero solid area due to transparency mask.
+- An error was corrected in the getVertices() function for a Tile object.
+
+*Canopy Generator*
+- Fixed issue in which seeding the random generator still resulted in inconsistent random generaton of the grape clusters.
+- Fixed issue with "Split" vineyard canopy that resulted in odd behavior if the canopy was rotated.
+
+*Visualizer*
+- The size/with of pixels is now actually set when passed as an argument to addPoint(). However, one limitation is that the size of points is constant within a scene and set based on the last value passed to addPoint(). Hopefully a future release will allow for variable point size within a scene.
+
+*Energy Balance*
+- There was a discrepancy between the documentation and source code behavior for setting the storage heat flux, which has been made consistent.
+
+*LiDAR*
+- Fixed an error that could cause out of bounds indexing if primitives have been deleted from the Context.
+
+*Aerial LiDAR*
+- Fixed an error that could cause out of bounds indexing if primitives have been deleted from the Context.
+
+[1.2.2] - 2020-11-25
+
+*Canopy Generator*
+- An initial tomato model was added to the canopy generator in v1.2.1, but the file src/tomato.cpp was not added to the git repository, which will cause an error while building the canopy generator.
+
+[1.2.3] - 2020-12-02
+
+*Context*
+- Function was added to get the normal vector (getNormal()) of a compound tile object.
+
+*Canopy Generator*
+- The canopy generator now uses compound tile objects for leaves.
+- Leaves are now created by copying a prototype element, which greatly improves efficiency when building in the case that leaves are transparency masked.
+- There was an error in the spherical crowns canopy causing the leaf angle distribution to be non-spherical.
+- There was an error in the "split" vineyard canopy in which the UUIDs for cross-arms were not being stored.
+
+*Weber Penn Tree*
+- Leaves are now represented by compound tile objects.
+
+[1.2.4] - 2020-12-10
+
+*Context*
+- Error handling has been improved. Errors in the Context no longer call "exit(EXIT_FAILURE)", but rather call "throw(1)". This allows for catching of errors in a debugger to provide a stack trace and line numbers for the errors. Future releases will throw more specific and informative error codes, but for now "1" is always thrown.
+
+*Visualizer*
+- An error was corrected related to window sizing on a Mac, which could result in a segmentation faullt.
+
+[1.2.5] - 2021-01-20
+
+*Context*
+- Updating to latest LLMV compiler on Mac now causes build of ZLIB to fail due to the 'LSEEK' function. Adding the header "#include <unistd.h>" to the file gzguts.h solved this problem.
+- On Mac, ZLIB was giving a compiler warning related to shifting a negative signed value. This was corrected by changing line 1507 of inflate.c to -(1L<<16)
+
+*Visualizer*
+- setColorbarFontsize() function was not properly setting the font size.
+- The problem with the image only filling 1/4 of the window on Mac Retina displays has finally been fixed!
+- New way of throwing errors for improved debugging was added to Visualizer.
+
+*Canopy Generator*
+- The user can now set the leaf angle distribution for homogeneous and spherical crowns canopies.
+- There was an error in the homogeneous and spherical crowns canopies where the specified leaf area index or leaf area density would not be correct if leaves had a transparency mask.
+
+*Radiation*
+- Function created to add sun sphere radiation source with default sun direction (see addSunSphereRadiationSource( void ) ).
+
+[1.2.6] - 2021-03-02
+
+*Context*
+- Improvements made to writeOBJ() function for cases with multiple materials (acknowledgement to Clark Zha)
+- Capability to set/get compound object data. This allows data to be associated with a given compound object, similar to how primitive data is associated with a given primitive.
+- Added selfTest() routines for testing compound object data functions.
+
+*Solar Position Model*
+- Functions were added to calculate just the PAR or NIR component of incoming solar radiation (see getSolarFluxPAR() and getSolarFluxNIR()).
+
+*Visualizer*
+- The default camera view calculation was improved to make a better guess of where to put the camera.
+- An error was corrected that would cause the camera settings to be overwritten if buildContextGeometry() was called after setCameraPosition().
+
+*Canopy Generator*
+- Added initial draft of strawberry model and documentation.
+
+*Radiation, LiDAR, AerialLiDAR, Energy Balance, Voxel Intersection*
+- Architecture-specific CUDA compiler flags were removed from CMakeLists.txt file, which could cause build failure depending on architecture.
+- Upgraded OptiX to version 5.1.0.
+
+*LiDAR*
+- Overloaded version of loadXML() function added that can allow for loading details of the grid only.
+
+[1.2.7] - 2021-04-09
+
++++++ PLUG-IN RELEASE ++++++
+- Boundary-Layer Conductance Model: The Boundary-Layer Conductance plug-in provides several models to calculate the primitive boundary-layer conductance. Currently, 4 models are available, and more will be added periodically.
+- Added selftest in samples directory.
+- Added selftest to utilities/run_samples.sh script.
+
+*Context*
+- Issues corrected with transformations and compound objects, where things like the whole-object size, nodes, etc. were not being transformed.
+- Functions added to get the whole-object center position of compound objects Tiles, Spheres, Boxes, and Disks.
+
+*Energy Balance*
+- Minor modification to avoid getting wind speed or object length if boundary-layer conductance is specified through primitive data.
+
+[1.2.8] - 2021-04-26
+
+*Context*
+- Added texture mapping for spheres and sphere compound objects.
+- Added "Cone" compound object and self-test.
+
+[1.2.9] - 2021-06-17
+
+*Context*
+- Fix to cone objects to use more stable acos_safe() function.
+- Error corrected with Tube Objects that caused translation to be applied twice.
+- The warning was removed when calling Primitive::setColor() or Primitive::overrideTextureColor() for primitives part of an object. This was removed because a warning would be issued whenever changing the color or texture override from an object.
+
+*Radiation*
+- An error was fixed that would apparently cause rays to intersect the primitive from which they were launched in some instances.
+- There seemed to be a problem when rays would intersect the periodic boundaries 10 or more times, which would cause a large amount of energy to accumulate in the first primitive added to the Context. This may have been associated with an inherent recursion depth limit in OptiX. The maxumum ray recursion depth was limited to 9, which appeared to fix the problem.
+
+*Energy Balance*
+- A variable associated with the net radiation was not explicitly initiallized to 0, which could cause anomalous behavior.
+
+*Weber-Penn Tree*
+- Checks were added to throw an error if UUIDs are requested for a tree ID that does not exist.
+
+*Visualizer*
+- addCoordinateAxes() function was added to label coordinate axes (credit to Eric Kent).
+- Added capability to disable messaged to the command line (see disableMessages(), enableMessages())
+- Added capability to color context primitives based on compound object data (see colorContextPrimitivesByObjectData())
+
+*Canopy Generator*
+- Functions added to get UUIDs for all primitives of a given type (see getLeafUUIDs(), getTrunkUUIDs(), getBranchUUIDs(), getFruitUUIDs()).
+
+*Stomatal Conductance*
+- There was a correction to the units of Em in the documentation, which should be mol/m^2/s.
+
+[1.2.10] - 2021-06-21
+
+*Visualizer*
+- An error was corrected that caused shadows to not be rendered when using plotUpdate().
+
+*Canopy Generator*
+- Walnut tree model added with documentation.
+
+*Stomatal Conductance*
+- There was not actually an error with the units of Em - they were changed back as before.
+
+[1.2.11] - 2021-06-30
+
+*Context*
+- Documentation added for Compound Objects
+
+*Radiation*
+- Radiation model adapted to more efficiently handle sub-divided patches via Tile Objects. When tile objects are used to represent sub-divided patches, there is now a dramatic reduction in the amount of GPU memory used, and ray-tracing computations are more efficient.
+
+[1.2.12] - 2021-06-30
+
+*Canopy Generator*
+- The file walnut.cpp was not added to the repository, so it has been missing for the past two versions.
+
+*Radiation*
+- There was an error in the selfTest() function, causing the compile to fail.
+
+[1.2.13] - 2021-07-13
+
+*Context*
+- There was an error in the vecmult function, causing incorrect values.
+- There were errors with the getSize() functions for sphere, box, and disk compound objects that caused them to return incorrect values when rotation was applied.
+*Credit to Eric Kent for implementing the updates below
+- Order of (u,v) texture coordinates for patches changed to be consistent with documentation.
+- Function added to copy all primitive data from one primitive to another (see copyPrimitiveData()).
+- Changed the way solid fraction was calculated for triangles so that the order of vertices doesn't matter - otherwise solid fraction would get set to zero erroneously for some triangles because the vertices were not always specified in a counterclockwise direction.
+- Function added to get the solid fraction of a texture masked triangle (see Triangle::getSolidFraction()).
+- Overloaded function to crop the domain based on a subset of UUIDs (see cropDomain()).
+- Operators added for to test whether vec2, vec3, and vec4 vectors are equal.
+
+*Radiation*
+- Anisotropic diffuse radiation capability was added (see setDiffuseRadiationExtinctionCoeff()).
+
+*Voxel Intersection*
+*Credit to Eric Kent for implementing these updates
+- Numerous functions added to slice primitives into two sub-elements when they land on the edge of a voxel. This is useful for calculating primitive area within a voxel when the primitives intersect the walls of the voxel.
+
+*Canopy Generator*
+*Credit to Eric Kent for implementing these updates
+- Option added for homogeneous canopy to change behavior related to the buffer on the edge of the domain to ensure leaves are completely inside the specified canopy volume.
+
+[1.2.14] - 2021-07-21
+
+*Radiation*
+- Correction in the normalization of anisotropic diffuse distribution. For a horizontal, unobstructed patch, it should always give a normalized diffuse flux of 1 regardless of the value of K.
+
+*Canopy Generator*
+- The 'spherical crowns' canopy has been generalized to include ellipsoidal crowns with different principal radii.
+
+*Visualizer*
+- There is apparently an issue with the printWindow() function on Linux that causes a segmentation fault. A work-around has been implemented to remove the window "decorations", which seems to fix the problem. A new overloaded constructor has been added to allow for disabling of the window decorations. When a fix for the issue is eventually found, this constructor will likely be removed.
+
+[1.2.15] - 2021-07-28
+*Context*
+- Errror in copyPrimitive() function was fixed in which the primitive parent object ID, primitive texture color override, and object transformation matrix were not copied.
+- Fixed issue with tubes, cones, and voxels in which the radii/size/center may have been incorrect if a rotation was applied.
+
+*Visualizer*
+- There were some potential issues with aliasing_samples set to 0 or 1 on Linux systems that would still do multisampling. A fix for this was implemented.
+- There was an error when using colorPrimitivesByObjectData() when the object data was not of type float.
+
+*Voxel Intersection*
+- Bug fixes and corrections for cases where primitives lie on corners or exactly on the edges of voxels.
+- Overloaded version of approxSame() function added for vec3's.
+- Two new self-tests added.
+
+[1.2.16] - 2021-09-07
+
+*Context*
+- Header file for pugi XML library (pugixml.hpp) was moved to global.h (was previously just included in Context.cpp).
+- Functions added to read and convert a value from a pugi XML node (see, e.g., XMLloadfloat, XMLloadvec3, etc.)
+- string2vec4 and string2int4 functions added in global.cpp
+
+*Canopy Generator*
+- loadXML() function added to allow for setting of canopy geometry parameters from an XML file. Currently, this is only implemented for the homogeneous and VSP grapevine canopies.
+
+*LiDAR*
+- calculateSyntheticGtheta() and calculateSyntheticLeafArea() functions now outputs the synthetic G(theta) values as a vector and writes primitive data rather than writing them to file.
+- Function added to add a grid programmatically rather than just reading from an XML file (see addGrid()).
+- Function added to add a wireframe of the grid to the visualizer (see addGridWireframeToVisualizer())
+- Rays for synthetic full-waveform beams are now sampled according to a radial Gaussian distribution, rather than uniformly across the beam diameter. This is more consistent with the radial distribution of a real LiDAR beam.
+- The syntheticScan() function no longer takes an XML file as an argument, but rather the parameters of the scan are now set using the normal loadXML() function.
+- Option added to synthetic scans to record "miss" points.
+- calculateLeafAreaGPU_synthetic() function added to allow for more in-depth analysis of synthetic LiDAR data processing.
+- Hit points can be labeled according to primitive data 'object_label'
+- exportPointCloud() function was upgraded to allow more control over the format using the <ASCII_format> tag in XML file.
+
+[1.2.17] - 2021-09-15
+
+*Canopy Generator*
+- Visual improvements to VSP grapevine canopy.
+
+*Visualizer*
+- If buildContextGeometry() is called and there is no geometry in the Context, it could mess with the camera view. This behavior was changed to simply skip the function call if there is no geometry to build.
+- A version of plotUpdate() has been added to not open the graphics window.
+
+[1.2.18] - 2021-09-19
+
+- The project creation script (utilities/create_project.sh), and default project CMakeLists.txt file (version 1.4), has been modified to make the executable name the same as the build target. This makes using Helios with IDEs easier.
+
+*Context*
+- The functions getGlobalDataType() and getGlobalDataSize() were declared but never implemented.
+- The functions string2int2, string2vec2, etc. have been updated to be more robust by using the stoi() and stof() functions to convert parsed strings into values.
+
+*Canopy Generator*
+- Ability to generate the other canopy types from XML file has been implemented. Credit to Dario Guevara for finishing these.
+
+*LiDAR*
+- Change made to synthetic waveform data generation to improve delineation of adjacent hit points.
+
+[1.2.19] - 2021-10-14
+
+* All projects in the samples/ directory have been moved to Helios CMakeLists.txt version 1.4, which includes Windows support and avoids the *_exe build target issue in CLion.
+* Working on Windows/PC support: Several changes have been made to support PC, which will be tested and eventually released in v1.3 when it appears stable.
+
+*Context*
+- Many changes in the core/ files to clean up the code based on clang-tidy suggestions
+- Removed strdup function in favor of strcpy function in global.cpp, because strdup could cause problems on some architectures
+- Added define of M_PI in global.h in case it is not defined on some architectures
+
+*LiDAR*
+- Checks were added to addScan() function to avoid specifying invalid scan angle ranges.
+
+[1.2.20] - 2021-10-19
+
+* Further improvements for Windows support - all plug-ins should now work. Continued testing needed..
+* Helios project CMakeLists.txt updated to version 1.5, which has updates for Windows support
+
+*Context*
+- There was an error in which two of the arguments for one overloaded version of addTileObject() were reversed.
+
+*Visualizer*
+- Stability improvements for cases in which Visualizer functions are called out of order. For example, previously calling colorContextPrimitivesByData() before buildContextGeometry() would likely result in a runtime error.
+- Check added to colorbar initializer to ensure that the minimum colorbar value is less than the maximum value.
+
+*Radiation*
+- 'to_be_scattered' variable was not initialized, which could cause an error on some platforms.
+- Type of size argument to function rtGetBufferSize1D() changed to RTsize to avoid possible compile errors on some platforms.
+- Definition of M_PI and uint added to RayTracing.cu.h file, which were not defined when using MSVC compiler.
+- Explicit type conversion added to argument of pow() function in rayHit.cu, which caused and error when using MSVC compiler.
+- Some unneeded OptiX .so library files were deleted for Linux to speed up Git code clones and checkouts.
+- OptiX library files added for Windows.
+
+*LiDAR*
+- Fix to selfTest() in which a variable was uninitialized, which could cause memory errors.
+
+*Weber Penn Tree*
+- Fix that caused build failure on Windows
+
+[1.2.21] - 2021-11-1
+
+* utilities/create_project.sh script changed to not put 'void' in main function argument, and to not include Context.h header if a plug-in is used.
+
+*Context*
+- Build directory for samples/context_selftest was accidentally deleted from the git repository
+- Timer was broken, and would not print the elapsed time properly.
+- Added global function to apply Newton-Raphson method to find the zero of a function (see fzero).
+
+*Photosynthesis*
+- Improved selfTest() to actually check against known result.
+- Farquhar model now solved using fzero function (see above).
+
+*Stomatal Conductance*
+- New stomatal conductance model has been added, but is still in testing phase and thus has not been added to the documentation.
+
+*Canopy Generator*
+- Now uses fzero function (see above) for leaf angle distribution sampling.
+- Added option to create primitive data labels for each element type (VSP canopy only for now).
+- General cleaning up of the code based on clang-tidy suggestions.
+
+*Visualizer*
+- Error corrected that could cause visualizer to fail if not coloring primitives by data.
+
+[1.2.22] - 2021-11-19
+
+* Helper functions added to global.cpp to calculate median and standard deviation of float values in a vector.
+
+* Standard project CMakeLists.txt updated to v1.6 to correct potential build issues on certain systems.
+
+[1.2.23] - 2021-11-28
+
+*Documentation added for set-up on Windows systems.
+
+*Context*
+- Include file in core/include/pugixml.h changed from <cstring> to <string>, which could cause build issues on some systems.
+- Issues with inconsistent treatment of (u,v) texture coordinates corrected.
+- Added "nullrotation" global variable to avoid having to type out make_SphericalCoord(0,0).
+
+[1.2.24] - 2021-12-14
+
+*Context*
+- interp1 function added for linear interpolation of a vector of vec2's
+- Explicit definition of 'blend' function was missing in global.h
+- Compound Object functions getRGBColor() and getRGBAColor() were changed to getColorRGB() and getColorRGBA() to be consistent with how things are done for primitives.
+- Compound Object functions hasTexture() and getTextureFile() added.
+- cropDomain*() functions updated to also delete objects when cropping.
+- loadXML() and writeXML() updated for compound objects.
+- Handling of textures within the Context backend re-worked to avoid storing pointers to textures.
+- CompoundObject::setPrimitiveUUIDs() function added to allow for updating of object child UUIDs.
+- setSubdivisionCount() functions added for all compound object types to allow for updating of subdivisions.
+
+*Canopy Generator*
+- Tomato and strawberry models updated to properly store element UUIDs.
+
+*Visualizer*
+- Version of write_JPEG_file() function added to write JPEG image based on pixel data instead of visualizer window.
+
+*Radiation*
+- "--use_fast_math" flag was removed in a previous version, but it has been re-added as this caused issues on some systems.
+
+[1.2.25] - 2021-12-15
+
+*Context*
+- Added getter functions related to primitive texture properties: getPrimitiveTextureSize(), primitiveTextureHasTransparencyChannel(), getPrimitiveTextureTransparencyData()
+
+*Radiation*
+- Fixed issues in v1.2.24 related to textures.
+- Some updates made to avoid use of getPrimitivePointer().
+
+*LiDAR*
+- Fixed issues in v1.2.24 related to textures.
+- Some updates made to avoid use of getPrimitivePointer().
+
+*Aerial LiDAR*
+- Fixed issues in v1.2.24 related to textures.
+- Some updates made to avoid use of getPrimitivePointer().
+
+[1.2.26] - 2021-12-31
+
+* Documentation "Dependent Software" updated for CLion 2021.3
+* Utah teapot PLY model added *
+* CLion Live Templates for Helios added (see utilities/CLion_Helios_settings.zip) *
+
+*Context*
+- Previous implementation of loadXML for objects was not correct, and led to object primitives not being properly transformed.
+- flatten() function added for 4D vectors.
+- flatten() functions re-written to improve efficiency.
+- Tile::setTileObjectAreaRatio() and Tile::getTileObjectAreaRatio() functions added (credit to Eric Kent).
+- Tile::setTileObjectSubdivisionCount() function added to easily change the tile sub-patch resolution (credit to Eric Kent).
+- Additional selfTest() added for Tile Objects (credit to Eric Kent).
+- getObjectCount() function added.
+
+*Visualizer*
+- Default light direction changed to give a reasonable value.
+
+[1.2.27] - 2022-01-07
+
+*Context*
+- Functions to get pointers to primitives (getPrimitivePointer(), getPatchPointer(), getTrianglePointer(), getVoxelPointer()) have been deprecated and removed from the documentation, and will be removed in a future version. Replace primitive-specific functions with direct calls from the Context (e.g., instead of context.getPrimitivePointer(UUID)->getArea() use context.getPrimitiveArea(UUID)).
+- std::cout support added for Helios vector types (credit to jannessm).
+- Function writePrimitiveData() added to make writing of primitive data to ASCII text file easier.
+- getPrimitiveSolidFraction() function added.
+- isPrimitiveTextureOverridden() function added.
+- selfTest() function was getting very long, so it was moved to its own file (selfTest.cpp).
+- Correction was made to loadXML() to correct an error occurring when object primitives had multiple primitive data fields.
+
+*Visualizer*
+- Minor edits to Visualizer based on clangtidy suggestions.
+- Updates to remove usage of getPrimitivePointer(), getPatchPointer(), getTrianglePointer(), getVoxelPointer().
+
+*LiDAR, Aerial LiDAR, Boundary-Layer Conductance, Energy Balance, Radiation, and Voxel Intersection*
+- Updates to remove usage of getPrimitivePointer(), getPatchPointer(), getTrianglePointer(), getVoxelPointer().
+
+[1.2.28] - 2022-01-13
+
+*Visualizer*
+- Error corrected that could result in GLFW_INVALID_OPERATION error on Windows when the visualizer window is closed.
+- The default filename when printWindow() is called with no arguments is not valid on Windows machines.
+
+*Energy Balance*
+- Documentation updated to better clarify the meaning of the "moisture conductance".
+
+[1.2.29] - 2022-01-30
+
+*Context*
+- The normals were reversed for triangles at the top and bottom of spheres (sphere objects were already correct).
+- Error was introduced in v1.2.27, which caused scaling of tile objects not to work.
+
+*Canopy Generator*
+- Walnut, Tomato, and Strawberry models: if fruit_radius=0, don't add any fruit.
+- Tomato textures were inadvertently removed from Git. They have been re-added.
+- Definition of fruit_radius for walnut model was missing from documentation.
+
+[1.2.30] - 2022-03-06
+
+*Context*
+- Correction made for Cones in which color was not properly being set.
+- Correction made for Cones in which reading from XML would incorrectly assign a texture file of "none" if no texture file was specified.
+- Tube Objects now store the RGB color values for each node, and is properly written and read to/from XML files.
+- If a primitive belonging to a compound object is deleted, now the object is deleted but all other primitives will still remain but not belong to any object.
+- Functions added to get compound object primitive UUIDs directly from a context function without using pointers (credit to Eric Kent).
+- Function added to filter compound objects based on an object data threshold (credit to Eric Kent).
+
+*Visualizer*
+- When rendering with the visualizer, the window will now remain hidden until after the geometry is built. This should eliminate the 'window is not responding' warning message on some systems.
+
+*Radiation*
+- Correction made to CLion Live Template when adding longwave band.
+- Maximum number of rays in a launch reduced to 1024^3, which is a new (but undocumented) requirement in OptiX 6+.
+- OptiX 6.5 libraries for Windows added to Git.
+- Option added to allow switching between OptiX 5.1 and 6.5 depending on available system hardware.
+
+*Stomatal Conductance*
+- Error corrected that could cause a segmentation fault when setting model coefficients based on a subset of UUIDs.
+- Input parameters specified through primitive data are now checked to make sure they have the correct datatype (usually 'float').
+
+*Energy Balance*
+- Input parameters specified through primitive data are now checked to make sure they have the correct datatype (usually 'float').
+
+*Photosynthesis*
+- Input parameters specified through primitive data are now checked to make sure they have the correct datatype (usually 'float').
+
+[1.2.31] - 2022-03-08
+
+*LiDAR*
+- Error corrected causing build failure on Windows systems.
+
+[1.2.32] - 2022-03-29
+
+*Context*
+- Added functions to rotate a primitive and compound object about an arbitrary line not necessarily passing through the origin (see Context::rotatePrimitive() functions).
+- Work started to eliminate the need for "getObjectPointer()" function. The following functions have been added so far: translateObject(), rotateObject(), getObjectType().
+- The getPrimitiveCenter() function was added, which will now return the centroid of all primitive types.
+- Function added to easily print information about a primitive for debugging purposes (see printPrimitiveInfo() function).
+
+*Visualizer*
+- Visualizer now checks primitive data for infinity or NaN, which previously would cause an ambiguous error.
+
+*Voxel Intersection*
+- Miscellaneous edits to slicePrimitive() function to improve stability and handle edge cases.
+
+*LiDAR*
+- Certain architectures could cause an error related to the size of the GPU kernel launch for full-waveform simulations. This was fixed by reducing the launch dimension.
+
+*Aerial LiDAR*
+- Certain architectures could cause an error related to the size of the GPU kernel launch for full-waveform simulations. This was fixed by reducing the launch dimension.
+
+[1.2.33] - 2022-04-11
+
+*Context*
+- There was an error in OBJ texture writing that caused texture coordinates to be flipped about y-axis.
+- There was an error in OBJ texture writing that gave invalid texture coordinates for patches.
+- If a primitive that belongs to a compound object is deleted (via Context::deletePrimitive()), it will delete the primitive and remove its UUID from the list stored with the object. A function was added Context::areObjectPrimitivesComplete() that allows for querying of whether some primitives have been deleted from the object.
+
+*Radiation*
+- Tile objects are now checked to see if any child primitives have been deleted. If so, it will treat it as individual primitives and ignore the fact that it is an object.
+
+*Visualizer*
+- If a UUID for a primitive that does not exist was passed to the Visualizer, it would previously cause a segmentation fault.
+
+[1.2.34] - 2022-04-26
+
+*Context*
+- Added warning messages to setTileObjectCount() and getTileObjectAreaRatio() related to incomplete objects, minor related documentation changes.
+- Changed Tile::getVerticies so that a missing corner primitive doesn't break it.
+- Added many functions to set/get object information without using pointers.
+
+*Visualizer*
+- added Visualizer::colorContextPrimitivesRandomly to easily visualize object sub-primitives.
+
+[1.2.35] - 2022-04-29
+
+*Context*
+- Added functions to calculate the axis-aligned bounding box for a primitive or group of primitives (see getPrimitiveBoundingBox()).
+- Added functions to calculate the axis-aligned bounding box for a compound object or group of compound objects (see getObjectBoundingBox()).
+
+[1.2.36] - 2022-05-13
+
+*Context*
+- Added numerous checks for texture image files to ensure they are either PNG or JPEG files.
+- loadPLY() and loadOBJ() functions check to be sure the input files have the correct extensions.
+- When loading compound objects using loadXML(), it will first look to see if there are any primitives in the file assigned to that object, and if so it will build the object based on those primitives. If no primitives are assigned to the object, it will build a fresh/complete object from scratch.
+- Corrected an issue with cropDomain() functions to be consistent with new treatment of incomplete compound objects (i.e., primitives can be deleted from within objects).
+
+*Visualizer*
+- Functions for reading PNG and JPEG files now check to ensure they have the correct file extension.
+
+*Radiation*
+- Users can now set primitive data "twosided_flag" equal to 2 to make the primitive a one-sided "sensor" that does not attenuate or emit any radiation.
+
+[1.2.37] - 2022-05-27
+
+*Context*
+- Building was failing on M1 Macs. A fix was implemented into the libpng CMakeLists.txt file.
+
+*Photosynthesis*
+- Users can now optionally output 'Gamma' (CO2 compensation point) as primitive data.
+
+*Canopy Generator*
+- First version of a sorghum model is now included. (credit to Ismael Mayanja)
+
+[1.2.38] - 2022-06-20
+
+*Canopy Generator*
+- Improvement to sorghum panicle shape
+- Bug fixed in sorghum model that caused jagged leaf edge when subpatch resolution was changed
+
+[1.2.39] - 2022-07-19
+
+++++NEW PLUGIN++++
+- First version of synthetic data annotation plug-in is now included.
+
+*Canopy Generator*
+- Tomato canopy was missing from loadXML() function.
+
+[1.2.40] - 2022-07-25
+
+*Context*
+- Error fixed that caused incorrect transparent texture mapping in the y-direction, which could result in incorrect areas when there are sub-patches/triangles or custom (u,v) coordinates.
+- Changes related to deleting objects when all constituent primitives have been deleted in deletePrimitive, deleteObject, setTileObjectSubdivisionsCount, loadXML, and setPrimitiveParentObjectID.
+- Added related self tests.
+
+*Canopy Generator*
+- Fixed formatting error for documentation.
+- Edited default parameter values to match documentation.
+
+[1.2.41] - 2022-
+
+*Copyright updated to (C) 2016-2022 for all files
+*Files in doc/ needed to build documentation have been added to the Git repository.
+
+*Stomatal Conductance*
+- Default BMF model coefficients (almond) have been changed.
+- Added Ball, Woodrow, Berry, Ball-Berry-Leuning, and Medlyn optimality-based stomatal conductance models.
+- The vapor pressure deficit used in now calculated based on the leaf surface vapor pressure rather than the ambient vapor pressure.
+- Self-test case has been added for all models.
+
+*Photosynthesis*
+- Changed default parameters to match parameter set given in stomatalconductance plug-in.
+- Added model parameters to documentation for various tree species.
+- Added optional output primitive data for Gamma_CO2, which is the CO2 compensation point including dark respiration.
+- Model coefficients can be specified differently for different primitives based on UUIDs.
+
+*Weber-Penn Tree*
+- Wood textures are now packaged with the plug-in, so that references to textures from the visualizer plug-in could be removed (which caused failure if visualizer plug-in was not also built).
