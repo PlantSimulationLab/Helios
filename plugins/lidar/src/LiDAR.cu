@@ -3756,7 +3756,7 @@ __global__ void LIDAR_CUDA::intersectTriangles( const size_t Npulse, const int r
 	  float2 uv2 = d_tri_uv[tri*3+2];
 
 	    float2 uv;
-	    uv.x = 1.f - (uv0.x + beta*(uv1.x-uv0.x) + gamma*(uv2.x-uv0.x));
+	    uv.x = (uv0.x + beta*(uv1.x-uv0.x) + gamma*(uv2.x-uv0.x));
 	    uv.y = (uv0.y + beta*(uv1.y-uv0.y) + gamma*(uv2.y-uv0.y));
 
 	    uint2 ind = make_uint2( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)) );

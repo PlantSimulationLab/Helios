@@ -919,7 +919,7 @@
 - Fixed formatting error for documentation.
 - Edited default parameter values to match documentation.
 
-[1.2.41] - 2022-
+[1.2.41] - 2022-08-05
 
 *Copyright updated to (C) 2016-2022 for all files
 *Files in doc/ needed to build documentation have been added to the Git repository.
@@ -938,3 +938,15 @@
 
 *Weber-Penn Tree*
 - Wood textures are now packaged with the plug-in, so that references to textures from the visualizer plug-in could be removed (which caused failure if visualizer plug-in was not also built).
+
+[1.2.42] - 2022-09-02
+
+*Context*
+- Minor updates to helios_vector_types.h
+- Bug fixed that would cause segmentation fault if texture (u,v) coordinates are out of bounds. These will now be truncated to [0,1]
+- Change made to Context::loadOBJ() such that if a 'height' value of 0 is given, the model will not be scaled
+- Overloaded versions of Context::loadOBJ() added to only write geometry for a subset of UUIDs, and to write a .dat file containing primitive data for Unity visualization tool
+- Feature added to Context::writePrimitiveData() to allow for writing primitive UUID without explicitly creating primitive data for UUID
+
+*LiDAR*
+- Bug fixed that caused triangle textures to be flipped about the y-axis in synthetic scans

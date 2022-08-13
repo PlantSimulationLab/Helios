@@ -31,12 +31,16 @@ typedef unsigned int uint;
 #include <exception>
 
 //! Vector data structures
-/** \defgroup vectors Vectors */
+/**
+ * \defgroup vectors Vectors
+ */
 
 namespace helios{
 
 //! Vector of two elements of type 'int'. 
-/** \ingroup vectors */
+/**
+ * \ingroup vectors
+ */
 struct int2{
 public:
 
@@ -46,13 +50,13 @@ public:
   int y;
 
   //! Default constructor
-  //* initializes to zero */
+  /* initializes to zero */
   int2(){
     x=0;
     y=0;
   }
   //! Construct int2 from a vector of ints
-  explicit int2( std::vector<int> v ){
+  explicit int2( const std::vector<int> &v ){
     if( v.size()!=2){
       throw(std::runtime_error("ERROR: vector for initialization of int2 must have length 2."));
     }
@@ -82,9 +86,10 @@ public:
 };
 
 //! Make an int2 vector from two ints
-/* \param[in] "X" First component of integer vector
-   \param[in] "Y" First component of integer vector
-   \ingroup vectors
+/**
+ * \param[in] "X" First component of integer vector
+ * \param[in] "Y" First component of integer vector
+ * \ingroup vectors
 */
 inline int2 make_int2( int X, int Y ){
   int2 v(X,Y);
@@ -92,8 +97,9 @@ inline int2 make_int2( int X, int Y ){
 }
  
 //! Make an int2 vector from an array of ints
-/* \param[in] "X" 2D array if integers
-   \ingroup vectors
+/**
+ * \param[in] "X" 2D array if integers
+ * \ingroup vectors
 */
 inline int2 make_int2( int X[2] ){
   int2 v(X[0],X[1]);
@@ -127,14 +133,14 @@ public:
   int z;
 
   //! Default constructor
-  //* initializes to zero */
+  /* initializes to zero */
   int3(){
     x=0;
     y=0;
     z=0;
   }
   //! Construct int3 from a vector of ints
-  explicit int3( std::vector<int> v ){
+  explicit int3( const std::vector<int> &v ){
     if( v.size()!=3){
         throw(std::runtime_error("ERROR: vector for initialization of int3 must have length 3."));
     }
@@ -209,7 +215,7 @@ public:
   int w;
 
   //! Default constructor
-  //* initializes to zero */
+  /* initializes to zero */
   int4(){
     x=0;
     y=0;
@@ -217,7 +223,7 @@ public:
     w=0;
   }
   //! Construct int3 from a vector of ints
-  explicit int4( std::vector<int> v ){
+  explicit int4( const std::vector<int> &v ){
     if( v.size()!=4){
         throw(std::runtime_error("ERROR: vector for initialization of int4 must have length 4."));
     }
@@ -314,7 +320,7 @@ public:
     y=0;
   }
   //! Initialize vec2 using a vector of floats
-  explicit vec2( std::vector<float> v ){
+  explicit vec2( const std::vector<float> &v ){
     if( v.size()!=2){
         throw(std::runtime_error("ERROR: vector for initialization of vec2 must have length 2."));
     }
@@ -462,7 +468,7 @@ public:
     x=y=z=0;
   }
   //! Initialize vec3 using a vector of floats
-  explicit vec3( std::vector<float> v ){
+  explicit vec3( const std::vector<float> &v ){
     if( v.size()!=3){
         throw(std::runtime_error("ERROR: vector for initialization of vec3 must have length 3."));
     }
@@ -617,7 +623,9 @@ public:
   }
 
   //! Compute the vector magnitude 
-  //*   \return magnitude of vector: \f$\sqrt{x^2+y^2+z^2+w^2}\f$ */
+  /**
+   * \return magnitude of vector.
+   */
   float magnitude() const{
     return sqrt( x*x + y*y + z*z + w*w );
   }
@@ -628,7 +636,7 @@ public:
     x=y=z=w=0;
   }
   //! Initialize vec4 using a vector of floats
-  explicit vec4( std::vector<float> v ){
+  explicit vec4( const std::vector<float> &v ){
     if( v.size()!=4){
         throw(std::runtime_error("ERROR: vector for initialization of vec4 must have length 4."));
     }
@@ -778,25 +786,34 @@ public:
     g=0;
     b=0;
   }
-  //! Constructor given three floats denoting R-G-B components.  \note If arguments are outside of the range 0 to 1, values are clamped.
+  //! Constructor given three floats denoting R-G-B components.
+  /**
+   *\param[in] "r_" Red color component
+   * \param[in] "g_" Green color component
+   * \param[in] "b_" Blue color component
+   * \note If arguments are outside of the range 0 to 1, values are clamped.
+   */
   RGBcolor( float r_, float g_, float b_ ){
-    /** @param [in] "r_" Red color component */
-    /** @param [in] "g_" Green color component */
-    /** @param [in] "b_" Blue color component */
     r=clamp(r_);
     g=clamp(g_);
     b=clamp(b_);
   }
-  //! Constructor given an array of three floats denoting R-G-B components.  \note If arguments are outside of the range 0 to 1, values are clamped.
+  //! Constructor given an array of three floats denoting R-G-B components.
+  /**
+   * \param[in] "C" Array (3-elements) of R-G-B color components
+   * \note If arguments are outside of the range 0 to 1, values are clamped.
+   */
   explicit RGBcolor( const float C[3] ){
-    /** @param [in] "C" Array (3-elements) of R-G-B color components */
     r=clamp(C[0]);
     g=clamp(C[1]);
     b=clamp(C[2]);
   }
-  //! Constructor given a vector of three floats denoting R-G-B components.  \note If arguments are outside of the range 0 to 1, values are clamped.
-  explicit RGBcolor( std::vector<float> C ){
-    /** @param [in] "C" Vector (3-elements) of R-G-B color components */
+  //! Constructor given a vector of three floats denoting R-G-B components.
+  /**
+   * \param[in] "C" Vector (3-elements) of R-G-B color components
+   * \note If arguments are outside of the range 0 to 1, values are clamped.
+   */
+  explicit RGBcolor( const std::vector<float> &C ){
     if( C.size()!=3 ){
         throw(std::runtime_error("ERROR: cannot initialize RGBcolor using supplied vector - size should be 3."));
     }
@@ -804,17 +821,22 @@ public:
     g=clamp(C.at(1));
     b=clamp(C.at(2));
   }
-  //! Constructor given a vec3 denoting R-G-B components.  \note If arguments are outside of the range 0 to 1, values are clamped.
+  //! Constructor given a vec3 denoting R-G-B components.
+  /**
+   * \param[in] "C" vec3 of R-G-B color components
+   * \note If arguments are outside of the range 0 to 1, values are clamped.
+   */
   explicit RGBcolor(const vec3 &C ){
-    /** @param [in] "C" vec3 of R-G-B color components */
     r=clamp(C.x);
     g=clamp(C.y);
     b=clamp(C.z);
   }
 
   //! Scale RGBcolor by some factor.
+  /**
+   * \param[in] "scl" Positive scaling factor
+   */
   void scale( float scl ){
-    //* @param [in] "scl" Positive scaling factor */
     if( scl<0 ){
         throw(std::runtime_error("ERROR: cannot scale RGBcolor by negative factor."));
     }
@@ -829,9 +851,11 @@ public:
 
 private:
   //! Clamp float to range of 0 to 1.
-  /** \return Clamped value */
+  /**
+   * \param[in] "value" Value to be clamped.
+   * \return Clamped value
+   */
   static float clamp( float value ){
-    /** @param [in] "value" Value to be clamped. */
     if( value<0.f ){
       return 0.f;
     }else if( value>1.f ){
@@ -910,28 +934,37 @@ public:
     b=0;
     a=0;
   }
-  //! Constructor given three floats denoting R-G-B components.  \note If arguments are outside of the range 0 to 1, values are clamped.
+  //! Constructor given three floats denoting R-G-B components.
+  /**
+   * \param[in] "r_" Red color component
+   * \param[in] "g_" Green color component
+   * \param [in] "b_" Blue color component
+   * \param[in] "a_" Alpha (transparency) component
+   * \note If arguments are outside of the range 0 to 1, values are clamped.
+   */
   RGBAcolor( float r_, float g_, float b_, float a_ ){
-    /** @param [in] "r_" Red color component */
-    /** @param [in] "g_" Green color component */
-    /** @param [in] "b_" Blue color component */
-    /** @param [in] "a_" Alpha (transparency) component */
     r=clamp(r_);
     g=clamp(g_);
     b=clamp(b_);
     a=clamp(a_);
   }
-  //! Constructor given an array of three floats denoting R-G-B-A components.  \note If arguments are outside of the range 0 to 1, values are clamped.
+  //! Constructor given an array of three floats denoting R-G-B-A components.
+  /**
+   * \note If arguments are outside of the range 0 to 1, values are clamped.
+   * \param[in] "C" Array (4-elements) of R-G-B-A color components
+   */
   explicit RGBAcolor( const float C[4] ){
-    /** @param [in] "C" Array (4-elements) of R-G-B-A color components */
     r=clamp(C[0]);
     g=clamp(C[1]);
     b=clamp(C[2]);
     a=clamp(C[3]);
   }
-  //! Constructor given a vector of three floats denoting R-G-B-A components.  \note If arguments are outside of the range 0 to 1, values are clamped.
-  explicit RGBAcolor( std::vector<float> C ){
-    /** @param [in] "C" Vector (4-elements) of R-G-B-A color components */
+  //! Constructor given a vector of three floats denoting R-G-B-A components.
+  /**
+   * \param[in] "C" Vector (4-elements) of R-G-B-A color components
+   * \note If arguments are outside of the range 0 to 1, values are clamped.
+   */
+  explicit RGBAcolor( const std::vector<float> &C ){
     if( C.size()!=4 ){
         throw(std::runtime_error("ERROR: cannot initialize RGBAcolor using supplied vector - size should be 4."));
     }
@@ -942,8 +975,10 @@ public:
   }
 
   //! Scale RGBAcolor by some factor.
+  /**
+   * \param[in] "scl" Positive scaling factor
+   */
   void scale( float scl ){
-    //* @param [in] "scl" Positive scaling factor */
     if( scl<0 ){
         throw(std::runtime_error("ERROR: cannot scale RGBAcolor by negative factor."));
     }
@@ -959,9 +994,11 @@ public:
 
 private:
   //! Clamp float to range of 0 to 1.
-  /** \return Clamped value */
+  /**
+   * \param[in] "value" Value to be clamped.
+   * \return Clamped value
+   */
   static float clamp( float value ){
-    /** @param [in] "value" Value to be clamped. */
     if( value<0.f ){
       return 0.f;
     }else if( value>1.f ){
@@ -974,11 +1011,12 @@ private:
 };
 
 //! Make an RGBAcolor vector
-/** \param[in] "r" Red component
-    \param[in] "g" Green component
-    \param[in] "b" Blue component
-    \param[in] "a" Alpha (transparency) component
-    \ingroup vectors
+/**
+ * \param[in] "r" Red component
+ * \param[in] "g" Green component
+ * \param[in] "b" Blue component
+ * \param[in] "a" Alpha (transparency) component
+ * \ingroup vectors
 */
 inline RGBAcolor make_RGBAcolor( float r, float g, float b, float a ){
   return {r,g,b,a};
@@ -1051,11 +1089,12 @@ public:
 
 };
 
-//! Make a \ref Date vector
-/** \param[in] "day" Day of month (1-31)
-    \param[in] "month" Day of year (1-12)
-    \param[in] "year" Year in YYYY format
-    \ingroup vectors
+//! Make a Date vector
+/**
+ * \param[in] "day" Day of month (1-31)
+ * \param[in] "month" Day of year (1-12)
+ * \param[in] "year" Year in YYYY format
+ * \ingroup vectors
 */
 inline Date make_Date( int day, int month, int year ){
   if( day<1 || day>31 ){
@@ -1075,9 +1114,10 @@ inline Date make_Date( int day, int month, int year ){
 }
 
 //! Convert a Julian day to a calendar \ref Date vector.
-/** \param[in] "JulianDay" Julian day of year (0-366)
-    \param[in] "year" Year in YYYY format
-    \ingroup vectors
+/**
+ * \param[in] "JulianDay" Julian day of year (0-366)
+ * \param[in] "year" Year in YYYY format
+ * \ingroup vectors
 */
 inline Date Julian2Calendar( int JulianDay, int year ){
 
@@ -1116,9 +1156,10 @@ inline Date Julian2Calendar( int JulianDay, int year ){
   
 }
 
-//! Convert a calendar \ref Date vector to Julian day.
-/** \param[in] "Date" Date vector
-    \ingroup vectors
+//! Convert a calendar Date vector to Julian day.
+/**
+ * \param[in] "Date" Date vector
+ * \ingroup vectors
 */
 inline int Calendar2Julian( Date date ){
 
@@ -1139,10 +1180,11 @@ inline int Calendar2Julian( Date date ){
   
 }
 
-//! Make a \ref Date vector
-/** \param[in] "JulianDay" Julian day of year (0-366)
-    \param[in] "year" Year in YYYY format
-    \ingroup vectors
+//! Make a Date vector
+/**
+ * \param[in] "JulianDay" Julian day of year (0-366)
+ * \param[in] "year" Year in YYYY format
+ * \ingroup vectors
 */
 inline Date make_Date( int JulianDay, int year ){
   if( JulianDay<1 || JulianDay>366 ){
@@ -1221,10 +1263,11 @@ struct Time{
 
 };
 
-//! Make a \ref Time vector
-/** \param[in] "hour" Hour of day (0-23)
-    \param[in] "minute" Minute of hour (0-59)
-    \ingroup vectors
+//! Make a Time vector
+/**
+ * \param[in] "hour" Hour of day (0-23)
+ * \param[in] "minute" Minute of hour (0-59)
+ * \ingroup vectors
 */
 inline Time make_Time( int hour, int minute ){
   if( minute<0 || minute>59 ){
@@ -1237,11 +1280,12 @@ inline Time make_Time( int hour, int minute ){
   
 }
 
-//! Make a \ref Time vector
-/** \param[in] "hour" Hour of day (0-23)
-    \param[in] "minute" Minute of hour (0-59)
-    \param[in] "second" Second of minute (0-59)
-    \ingroup vectors
+//! Make a Time vector
+/**
+ * \param[in] "hour" Hour of day (0-23)
+ * \param[in] "minute" Minute of hour (0-59)
+ * \param[in] "second" Second of minute (0-59)
+ * \ingroup vectors
 */
 inline Time make_Time( int hour, int minute, int second ){
   if( second<0 || second>59 ){
