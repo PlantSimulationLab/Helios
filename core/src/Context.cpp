@@ -3501,8 +3501,8 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
         int A = 0;
         int At = 0;
         int2 sz = textures.at(texture_file).getSize();
-        int2 uv_min( floor(uv.at(0).x*float(sz.x)), floor((1.f-uv.at(2).y)*float(sz.y)) );
-        int2 uv_max( floor(uv.at(2).x*float(sz.x)), floor((1.f-uv.at(0).y)*float(sz.y)) );
+        int2 uv_min( std::max(0,(int)lroundf(uv.at(0).x*float(sz.x))), std::max(0,(int)lroundf((1.f-uv.at(2).y)*float(sz.y))) );
+        int2 uv_max( std::min(sz.x-1,(int)lroundf(uv.at(2).x*float(sz.x))), std::min(sz.y-1,(int)lroundf((1.f-uv.at(0).y)*float(sz.y))) );
         for( int j=uv_min.y; j<uv_max.y; j++ ){
             for( int i=uv_min.x; i<uv_max.x; i++ ){
                 At += 1;
@@ -3592,8 +3592,8 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
     if( textures.at(texture_file).hasTransparencyChannel() ){
         const std::vector<std::vector<bool> >* alpha = textures.at(texture_file).getTransparencyData();
         int2 sz = textures.at(texture_file).getSize();
-        int2 uv_min( (int)lroundf(fmin(fmin(uv0.x,uv1.x),uv2.x)*float(sz.x)), (int)lroundf(fmin(fmin(uv0.y,uv1.y),uv2.y)*float(sz.y)) );
-        int2 uv_max( (int)lroundf(fmax(fmax(uv0.x,uv1.x),uv2.x)*float(sz.x)), (int)lroundf(fmax(fmax(uv0.y,uv1.y),uv2.y)*float(sz.y)) );
+        int2 uv_min( std::max(0,(int)lroundf(fmin(fmin(uv0.x,uv1.x),uv2.x)*float(sz.x))), std::max(0,(int)lroundf(fmin(fmin(uv0.y,uv1.y),uv2.y)*float(sz.y))) );
+        int2 uv_max( std::min(sz.x-1,(int)lroundf(fmax(fmax(uv0.x,uv1.x),uv2.x)*float(sz.x))), std::min(sz.y-1,(int)lroundf(fmax(fmax(uv0.y,uv1.y),uv2.y)*float(sz.y))) );
         int A = 0;
         int At = 0;
         vec2 xy;
@@ -7050,8 +7050,8 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
                 int A = 0;
                 int At = 0;
 
-                int2 uv_min( floor(uv.at(0).x*(float(sz.x)-1.f)), floor((1.f-uv.at(2).y)*(float(sz.y)-1.f)) );
-                int2 uv_max( floor(uv.at(2).x*(float(sz.x)-1.f)), floor((1.f-uv.at(0).y)*(float(sz.y)-1.f)) );
+                int2 uv_min( std::max(0,(int)lroundf(uv.at(0).x*(float(sz.x)-1.f))), std::max(0,(int)lroundf((1.f-uv.at(2).y)*(float(sz.y)-1.f))) );
+                int2 uv_max( std::min(sz.x-1,(int)lroundf(uv.at(2).x*(float(sz.x)-1.f))), std::min(sz.y-1,(int)lroundf((1.f-uv.at(0).y)*(float(sz.y)-1.f))) );
 
                 assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
 
@@ -8258,8 +8258,8 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
                 int A = 0;
                 int At = 0;
 
-                int2 uv_min( floor(uv[0].x*float(sz.x-1)), floor((1.f-uv[2].y)*float(sz.y-1)) );
-                int2 uv_max( floor(uv[2].x*float(sz.x-1)), floor((1.f-uv[0].y)*float(sz.y-1)) );
+                int2 uv_min( std::max(0,(int)lroundf(uv[0].x*float(sz.x-1))), std::max(0,(int)lroundf((1.f-uv[2].y)*float(sz.y-1))) );
+                int2 uv_max( std::min(sz.x-1,(int)lroundf(uv[2].x*float(sz.x-1))), std::min(sz.y-1,(int)lroundf((1.f-uv[0].y)*float(sz.y-1))) );
 
                 assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
 
@@ -12715,7 +12715,10 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, flo
         }
     }
 
-    float scl = height/(boxmax-boxmin);
+    float scl = 1.f;
+    if( height>0 ){
+      scl = height/(boxmax-boxmin);
+    }
 
     for(std::map<std::string,std::vector<std::vector<int> > >::const_iterator iter = face_inds.begin(); iter != face_inds.end(); ++iter){
 
@@ -12879,197 +12882,254 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
 
 }
 
-void Context::writeOBJ( const char* filename ) const{
+void Context::writeOBJ( const char* filename ) const {
+  writeOBJ(filename, getAllUUIDs(),{});
+}
 
-    //To-Do list for OBJ writer
-    // - image files need to be copied to the location where the .obj file is being written otherwise they won't be found.
-    // - should parse "filename" to check that extension is .obj, and remove .obj extension when appending .mtl for material file.
-    // - it would make more sense to write patches  as quads rather than two triangles
+void Context::writeOBJ( const char* filename, const std::vector<uint> &UUIDs ) const {
+  writeOBJ(filename,UUIDs,{});
+}
 
-    std::cout << "Writing OBJ file " << filename << "..." << std::flush;
-    std::ofstream file;
+void Context::writeOBJ( const char* filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields ) const{
 
-    char objfilename[50];
-    sprintf(objfilename, "%s.obj", filename);
-    file.open(objfilename);
+  //To-Do list for OBJ writer
+  // - image files need to be copied to the location where the .obj file is being written otherwise they won't be found.
+  // - should parse "filename" to check that extension is .obj, and remove .obj extension when appending .mtl for material file.
+  // - it would make more sense to write patches  as quads rather than two triangles
 
-    file << "# Helios generated OBJ File" << std::endl;
-    file << "# baileylab.ucdavis.edu/software/helios" << std::endl;
-    file << "mtllib " << filename << ".mtl" << std::endl;
-    std::vector < int3 > faces;
-    std::vector < vec3 > verts;
-    std::vector < vec2 > uv;
-    std::vector < int3 > uv_inds;
-    std::vector < std::string > texture_list;
-    std::vector < RGBcolor > colors;
-    size_t vertex_count = 1;  //OBJ files start indices at 1
-    size_t uv_count = 1;
+  std::cout << "Writing OBJ file " << filename << "..." << std::flush;
+  std::ofstream file;
 
-    for (auto primitive : primitives) {
+  char objfilename[50];
+  sprintf(objfilename, "%s.obj", filename);
+  file.open(objfilename);
 
-        uint p = primitive.first;
+  bool uuidexistswarning = false;
 
-        std::vector < vec3 > vertices = getPrimitivePointer_private(p)->getVertices();
-        PrimitiveType type = getPrimitivePointer_private(p)->getType();
-        RGBcolor C = getPrimitivePointer_private(p)->getColor();
+  file << "# Helios generated OBJ File" << std::endl;
+  file << "# baileylab.ucdavis.edu/software/helios" << std::endl;
+  file << "mtllib " << filename << ".mtl" << std::endl;
+  std::vector < int3 > faces;
+  std::vector < vec3 > verts;
+  std::vector < vec2 > uv;
+  std::vector < int3 > uv_inds;
+  std::vector < std::string > texture_list;
+  std::vector < RGBcolor > colors;
+  size_t vertex_count = 1;  //OBJ files start indices at 1
+  size_t uv_count = 1;
 
-        if (type == PRIMITIVE_TYPE_TRIANGLE) {
+  for ( size_t p : UUIDs ) {
 
-            faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
-            colors.push_back(C);
-            for (int i = 0; i < 3; i++) {
-                verts.push_back(vertices.at(i));
-                vertex_count++;
-            }
+    if( !doesPrimitiveExist(p) ){
+      uuidexistswarning = true;
+      continue;
+    }
 
-            std::vector < vec2 > uv_v = getTrianglePointer_private(p)->getTextureUV();
-            if (getTrianglePointer_private(p)->hasTexture()) {
-                uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
-                texture_list.push_back(getTrianglePointer_private(p)->getTextureFile());
-                for (int i = 0; i < 3; i++) {
-                    uv.push_back( uv_v.at(i) );
-                    uv_count++;
-                }
-            } else {
-                texture_list.emplace_back("");
-                uv_inds.push_back(make_int3(-1, -1, -1));
-            }
+    std::vector < vec3 > vertices = getPrimitivePointer_private(p)->getVertices();
+    PrimitiveType type = getPrimitivePointer_private(p)->getType();
+    RGBcolor C = getPrimitivePointer_private(p)->getColor();
 
-        } else if (type == PRIMITIVE_TYPE_PATCH) {
-            faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
-            faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 2, (int)vertex_count + 3));
-            colors.push_back(C);
-            colors.push_back(C);
-            for (int i = 0; i < 4; i++) {
-                verts.push_back(vertices.at(i));
-                vertex_count++;
-            }
-            std::vector < vec2 > uv_v;
-            std::string texturefile;
-            uv_v = getPatchPointer_private(p)->getTextureUV();
-            texturefile = getPatchPointer_private(p)->getTextureFile();
+    if (type == PRIMITIVE_TYPE_TRIANGLE) {
 
-            if (getPatchPointer_private(p)->hasTexture()) {
-                texture_list.push_back(texturefile);
-                texture_list.push_back(texturefile);
-                uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
-                uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 2, (int)uv_count + 3));
-                if (uv_v.empty()) {  //default (u,v)
-                    uv.push_back( make_vec2(0, 1) );
-                    uv.push_back( make_vec2(1, 1) );
-                    uv.push_back( make_vec2(1, 0) );
-                    uv.push_back( make_vec2(0, 0) );
-                    uv_count += 4;
-                } else {  //custom (u,v)
-                    for (int i = 0; i < 4; i++) {
-                        uv.push_back( uv_v.at(i) );
-                        uv_count++;
-                    }
-                }
-            } else {
-                texture_list.emplace_back("");
-                texture_list.emplace_back("");
-                uv_inds.push_back(make_int3(-1, -1, -1));
-                uv_inds.push_back(make_int3(-1, -1, -1));
-            }
+      faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
+      colors.push_back(C);
+      for (int i = 0; i < 3; i++) {
+        verts.push_back(vertices.at(i));
+        vertex_count++;
+      }
+
+      std::vector < vec2 > uv_v = getTrianglePointer_private(p)->getTextureUV();
+      if (getTrianglePointer_private(p)->hasTexture()) {
+        uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
+        texture_list.push_back(getTrianglePointer_private(p)->getTextureFile());
+        for (int i = 0; i < 3; i++) {
+          uv.push_back( uv_v.at(i) );
+          uv_count++;
         }
+      } else {
+        texture_list.emplace_back("");
+        uv_inds.push_back(make_int3(-1, -1, -1));
+      }
+
+    } else if (type == PRIMITIVE_TYPE_PATCH) {
+      faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
+      faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 2, (int)vertex_count + 3));
+      colors.push_back(C);
+      colors.push_back(C);
+      for (int i = 0; i < 4; i++) {
+        verts.push_back(vertices.at(i));
+        vertex_count++;
+      }
+      std::vector < vec2 > uv_v;
+      std::string texturefile;
+      uv_v = getPatchPointer_private(p)->getTextureUV();
+      texturefile = getPatchPointer_private(p)->getTextureFile();
+
+      if (getPatchPointer_private(p)->hasTexture()) {
+        texture_list.push_back(texturefile);
+        texture_list.push_back(texturefile);
+        uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
+        uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 2, (int)uv_count + 3));
+        if (uv_v.empty()) {  //default (u,v)
+          uv.push_back( make_vec2(0, 1) );
+          uv.push_back( make_vec2(1, 1) );
+          uv.push_back( make_vec2(1, 0) );
+          uv.push_back( make_vec2(0, 0) );
+          uv_count += 4;
+        } else {  //custom (u,v)
+          for (int i = 0; i < 4; i++) {
+            uv.push_back( uv_v.at(i) );
+            uv_count++;
+          }
+        }
+      } else {
+        texture_list.emplace_back("");
+        texture_list.emplace_back("");
+        uv_inds.push_back(make_int3(-1, -1, -1));
+        uv_inds.push_back(make_int3(-1, -1, -1));
+      }
+    }
+  }
+
+  assert(uv_inds.size() == faces.size());
+  assert(texture_list.size() == faces.size());
+  assert(colors.size() == faces.size());
+
+  for (auto & vert : verts) {
+    file << "v " << vert.x << " " << vert.y << " " << vert.z << std::endl;
+  }
+
+  for (auto & v : uv) {
+    file << "vt " << v.x << " " << v.y << std::endl;
+  }
+
+  std::string current_texture;
+  int material_count = 1;
+  std::vector < size_t > exsit_mtl_list;
+
+  current_texture = texture_list.at(0);
+  file << "usemtl material" << material_count << std::endl;
+  material_count++;
+  exsit_mtl_list.push_back(0);
+
+  if (uv_inds.at(0).x < 0) {
+    file << "f " << faces.at(0).x << " " << faces.at(0).y << " " << faces.at(0).z << std::endl;
+  } else {
+    //assert( uv_inds.at(f).x <= uv.size() && uv_inds.at(f).y <= uv.size() && uv_inds.at(f).z <= uv.size() );
+    file << "f " << faces.at(0).x << "/" << uv_inds.at(0).x << " "
+         << faces.at(0).y << "/" << uv_inds.at(0).y << " " << faces.at(0).z
+         << "/" << uv_inds.at(0).z << std::endl;
+  }
+
+  for (size_t f = 1; f < faces.size(); f++) {
+
+    if (current_texture != texture_list.at(f)) {
+      bool mtl_exist_flag = false;
+      size_t mtl_index = 0;
+      size_t mtl_index_f = 0;
+      for (size_t index = 0; index < exsit_mtl_list.size(); index++) {
+        if (texture_list.at(f) == texture_list.at(exsit_mtl_list[index])) {
+          mtl_exist_flag = true;
+          mtl_index = index;
+          mtl_index_f = exsit_mtl_list[index];
+          break;
+        }
+      }
+
+      if (mtl_exist_flag) {
+        current_texture = texture_list.at(mtl_index_f);
+        file << "usemtl material" << (mtl_index + 1) << std::endl;  //we plus 1 here as we index mtl from 1 instead of 0 in the file.
+      } else {
+        current_texture = texture_list.at(f);
+        file << "usemtl material" << material_count << std::endl;
+        material_count++;
+        exsit_mtl_list.push_back(f);
+      }
     }
 
-    assert(uv_inds.size() == faces.size());
-    assert(texture_list.size() == faces.size());
-    assert(colors.size() == faces.size());
-
-    for (auto & vert : verts) {
-        file << "v " << vert.x << " " << vert.y << " " << vert.z << std::endl;
-    }
-
-    for (auto & v : uv) {
-        file << "vt " << v.x << " " << v.y << std::endl;
-    }
-
-    std::string current_texture;
-    int material_count = 1;
-    std::vector < size_t > exsit_mtl_list;
-
-    current_texture = texture_list.at(0);
-    file << "usemtl material" << material_count << std::endl;
-    material_count++;
-    exsit_mtl_list.push_back(0);
-
-    if (uv_inds.at(0).x < 0) {
-        file << "f " << faces.at(0).x << " " << faces.at(0).y << " "
-             << faces.at(0).z << std::endl;
+    if (uv_inds.at(f).x < 0) {
+      file << "f " << faces.at(f).x << " " << faces.at(f).y << " "
+           << faces.at(f).z << std::endl;
     } else {
-        //assert( uv_inds.at(f).x <= uv.size() && uv_inds.at(f).y <= uv.size() && uv_inds.at(f).z <= uv.size() );
-        file << "f " << faces.at(0).x << "/" << uv_inds.at(0).x << " "
-             << faces.at(0).y << "/" << uv_inds.at(0).y << " " << faces.at(0).z
-             << "/" << uv_inds.at(0).z << std::endl;
+      //assert( uv_inds.at(f).x <= uv.size() && uv_inds.at(f).y <= uv.size() && uv_inds.at(f).z <= uv.size() );
+      file << "f " << faces.at(f).x << "/" << uv_inds.at(f).x << " "
+           << faces.at(f).y << "/" << uv_inds.at(f).y << " " << faces.at(f).z
+           << "/" << uv_inds.at(f).z << std::endl;
     }
+  }
+  file.close();
 
-    for (size_t f = 1; f < faces.size(); f++) {
+  char mtlfilename[50];
+  sprintf(mtlfilename, "%s.mtl", filename);
+  file.open(mtlfilename);
 
-        if (current_texture != texture_list.at(f)) {
-            bool mtl_exist_flag = false;
-            size_t mtl_index = 0;
-            size_t mtl_index_f = 0;
-            for (size_t index = 0; index < exsit_mtl_list.size(); index++) {
-                if (texture_list.at(f) == texture_list.at(exsit_mtl_list[index])) {
-                    mtl_exist_flag = true;
-                    mtl_index = index;
-                    mtl_index_f = exsit_mtl_list[index];
-                    break;
-                }
-            }
+  current_texture = "";
+  material_count = 1;
+  RGBcolor current_color = make_RGBcolor(0.010203, 0.349302, 0.8372910);
+  std::vector < size_t > exsit_mtl_list2;
 
-            if (mtl_exist_flag) {
-                current_texture = texture_list.at(mtl_index_f);
-                file << "usemtl material" << (mtl_index + 1) << std::endl;  //we plus 1 here as we index mtl from 1 instead of 0 in the file.
-            } else {
-                current_texture = texture_list.at(f);
-                file << "usemtl material" << material_count << std::endl;
-                material_count++;
-                exsit_mtl_list.push_back(f);
-            }
-        }
-
-        if (uv_inds.at(f).x < 0) {
-            file << "f " << faces.at(f).x << " " << faces.at(f).y << " "
-                 << faces.at(f).z << std::endl;
-        } else {
-            //assert( uv_inds.at(f).x <= uv.size() && uv_inds.at(f).y <= uv.size() && uv_inds.at(f).z <= uv.size() );
-            file << "f " << faces.at(f).x << "/" << uv_inds.at(f).x << " "
-                 << faces.at(f).y << "/" << uv_inds.at(f).y << " " << faces.at(f).z
-                 << "/" << uv_inds.at(f).z << std::endl;
-        }
+  if (texture_list.at(0).empty()) {  //has no texture
+    if (current_color.r != colors.at(0).r && current_color.g != colors.at(0).g
+        && current_color.b != colors.at(0).b) {  //new color
+      current_texture = texture_list.at(0);
+      current_color = colors.at(0);
+      file << "newmtl material" << material_count << std::endl;
+      file << "Ka " << current_color.r << " " << current_color.g << " "
+           << current_color.b << std::endl;
+      file << "Kd " << current_color.r << " " << current_color.g << " "
+           << current_color.b << std::endl;
+      file << "Ks 0.0 0.0 0.0" << std::endl;
+      file << "illum 2 " << std::endl;
     }
-    file.close();
+  }
 
-    char mtlfilename[50];
-    sprintf(mtlfilename, "%s.mtl", filename);
-    file.open(mtlfilename);
+  else {
+    current_texture = texture_list.at(0);
+    file << "newmtl material" << material_count << std::endl;
+    file << "Ka 1.0 1.0 1.0" << std::endl;
+    file << "Kd 1.0 1.0 1.0" << std::endl;
+    file << "Ks 0.0 0.0 0.0" << std::endl;
+    file << "illum 2 " << std::endl;
+    file << "map_Ka " << current_texture << std::endl;
+    file << "map_Kd " << current_texture << std::endl;
+    file << "map_d " << current_texture << std::endl;
+  }
 
-    current_texture = "";
-    material_count = 1;
-    RGBcolor current_color = make_RGBcolor(0.010203, 0.349302, 0.8372910);
-    std::vector < size_t > exsit_mtl_list2;
+  material_count++;
+  exsit_mtl_list2.push_back(0);
 
-    if (texture_list.at(0).empty()) {  //has no texture
-        if (current_color.r != colors.at(0).r && current_color.g != colors.at(0).g
-            && current_color.b != colors.at(0).b) {  //new color
-            current_texture = texture_list.at(0);
-            current_color = colors.at(0);
-            file << "newmtl material" << material_count << std::endl;
-            file << "Ka " << current_color.r << " " << current_color.g << " "
-                 << current_color.b << std::endl;
-            file << "Kd " << current_color.r << " " << current_color.g << " "
-                 << current_color.b << std::endl;
-            file << "Ks 0.0 0.0 0.0" << std::endl;
-            file << "illum 2 " << std::endl;
-        }
+  for (size_t f = 1; f < faces.size(); f++) {
+    bool mtl_exist_flag = false;
+    size_t mtl_index = 0;
+    size_t mtl_index_f = 0;
+    for (size_t index = 0; index < exsit_mtl_list2.size(); index++) {
+      if ( !(texture_list.at(f) != texture_list.at(exsit_mtl_list2.at(index)))) {
+        mtl_exist_flag = true;
+        mtl_index = index;
+        mtl_index_f = exsit_mtl_list2[index];
+        break;
+      }
     }
+    if ( !mtl_exist_flag) {
 
-    else {
-        current_texture = texture_list.at(0);
+      if (texture_list.at(f).empty()) {
+        if (current_color.r != colors.at(f).r
+            && current_color.g != colors.at(f).g
+            && current_color.b != colors.at(f).b) {  //new color
+
+          current_texture = texture_list.at(f);
+          current_color = colors.at(f);
+          file << "newmtl material" << material_count << std::endl;
+          file << "Ka " << current_color.r << " " << current_color.g << " "
+               << current_color.b << std::endl;
+          file << "Kd " << current_color.r << " " << current_color.g << " "
+               << current_color.b << std::endl;
+          file << "Ks 0.0 0.0 0.0" << std::endl;
+          file << "illum 2 " << std::endl;
+          material_count++;
+        }
+      } else {
+        current_texture = texture_list.at(f);
         file << "newmtl material" << material_count << std::endl;
         file << "Ka 1.0 1.0 1.0" << std::endl;
         file << "Kd 1.0 1.0 1.0" << std::endl;
@@ -13078,59 +13138,103 @@ void Context::writeOBJ( const char* filename ) const{
         file << "map_Ka " << current_texture << std::endl;
         file << "map_Kd " << current_texture << std::endl;
         file << "map_d " << current_texture << std::endl;
+        material_count++;
+        exsit_mtl_list2.push_back(f);
+      }
+
+    }
+  }
+  file.close();
+
+  if( !primitive_dat_fields.empty() ){
+
+    bool dataexistswarning = false;
+    bool datatypewarning = false;
+
+
+    for( std::string label : primitive_dat_fields ){
+
+      std::string datfilename = std::string(label) + ".dat";
+      std::ofstream datout(datfilename);
+
+      for( size_t UUID : UUIDs ){
+
+        if( !doesPrimitiveExist(UUID) ){
+          uuidexistswarning = true;
+          continue;
+        }
+
+        //a patch is converted to 2 triangles, so need to write 2 data values for patches
+        int Nprims = 1;
+        if( getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH ){
+          Nprims = 2;
+        }
+
+        if( !doesPrimitiveDataExist(UUID,label.c_str()) ){
+          dataexistswarning=true;
+          for( int i=0; i<Nprims; i++ ) {
+            datout << 0 << std::endl;
+          }
+          continue;
+        }
+
+        HeliosDataType type = getPrimitiveDataType( UUID, label.c_str() );
+        if( type == HELIOS_TYPE_INT ){
+          int data;
+          getPrimitiveData( UUID, label.c_str(), data );
+          for( int i=0; i<Nprims; i++ ) {
+            datout << data << std::endl;
+          }
+        }else if( type == HELIOS_TYPE_UINT ) {
+          uint data;
+          getPrimitiveData(UUID, label.c_str(), data);
+          for( int i=0; i<Nprims; i++ ) {
+            datout << data << std::endl;
+          }
+        }else if( type == HELIOS_TYPE_FLOAT ) {
+          float data;
+          getPrimitiveData(UUID, label.c_str(), data);
+          for( int i=0; i<Nprims; i++ ) {
+            datout << data << std::endl;
+          }
+        }else if( type == HELIOS_TYPE_DOUBLE ) {
+          double data;
+          getPrimitiveData(UUID, label.c_str(), data);
+          for( int i=0; i<Nprims; i++ ) {
+            datout << data << std::endl;
+          }
+        }else if( type == HELIOS_TYPE_STRING ) {
+          std::string data;
+          getPrimitiveData(UUID, label.c_str(), data);
+          for( int i=0; i<Nprims; i++ ) {
+            datout << data << std::endl;
+          }
+        }else{
+          datatypewarning=true;
+          for( int i=0; i<Nprims; i++ ) {
+            datout << 0 << std::endl;
+          }
+        }
+      }
+
+      datout.close();
+
     }
 
-    material_count++;
-    exsit_mtl_list2.push_back(0);
-
-    for (size_t f = 1; f < faces.size(); f++) {
-        bool mtl_exist_flag = false;
-        size_t mtl_index = 0;
-        size_t mtl_index_f = 0;
-        for (size_t index = 0; index < exsit_mtl_list2.size(); index++) {
-            if ( !(texture_list.at(f) != texture_list.at(exsit_mtl_list2.at(index)))) {
-                mtl_exist_flag = true;
-                mtl_index = index;
-                mtl_index_f = exsit_mtl_list2[index];
-                break;
-            }
-        }
-        if ( !mtl_exist_flag) {
-
-            if (texture_list.at(f).empty()) {
-                if (current_color.r != colors.at(f).r
-                    && current_color.g != colors.at(f).g
-                    && current_color.b != colors.at(f).b) {  //new color
-
-                    current_texture = texture_list.at(f);
-                    current_color = colors.at(f);
-                    file << "newmtl material" << material_count << std::endl;
-                    file << "Ka " << current_color.r << " " << current_color.g << " "
-                         << current_color.b << std::endl;
-                    file << "Kd " << current_color.r << " " << current_color.g << " "
-                         << current_color.b << std::endl;
-                    file << "Ks 0.0 0.0 0.0" << std::endl;
-                    file << "illum 2 " << std::endl;
-                    material_count++;
-                }
-            } else {
-                current_texture = texture_list.at(f);
-                file << "newmtl material" << material_count << std::endl;
-                file << "Ka 1.0 1.0 1.0" << std::endl;
-                file << "Kd 1.0 1.0 1.0" << std::endl;
-                file << "Ks 0.0 0.0 0.0" << std::endl;
-                file << "illum 2 " << std::endl;
-                file << "map_Ka " << current_texture << std::endl;
-                file << "map_Kd " << current_texture << std::endl;
-                file << "map_d " << current_texture << std::endl;
-                material_count++;
-                exsit_mtl_list2.push_back(f);
-            }
-
-        }
+    if( uuidexistswarning ){
+      std::cerr << "WARNING (Context::writeOBJ): Vector of UUIDs passed to writePrimitiveData() function contained UUIDs that do not exist, which were skipped." << std::endl;
     }
-    file.close();
-    std::cout << "done." << std::endl;
+    if( dataexistswarning ){
+      std::cerr << "WARNING (Context::writeOBJ): Primitive data requested did not exist for one or more primitives. A default value of 0 was written in these cases." << std::endl;
+    }
+    if( datatypewarning ){
+      std::cerr << "WARNING (Context::writeOBJ): Only scalar primitive data types (uint, int, float, and double) are supported for this function. A column of 0's was written in these cases." << std::endl;
+    }
+
+  }
+
+
+  std::cout << "done." << std::endl;
 }
 
 void Context::writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, bool print_header ) const{
@@ -13159,6 +13263,10 @@ void Context::writePrimitiveData( std::string filename, const std::vector<std::s
             continue;
         }
         for( const auto &label : column_format ) {
+          if( label == "UUID" ){
+            file << UUID << " ";
+            continue;
+          }
             if( !doesPrimitiveDataExist(UUID,label.c_str()) ){
                 dataexistswarning=true;
                 file << 0 << " ";

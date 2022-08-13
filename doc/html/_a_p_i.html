@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.41</span>
+   &#160;<span id="projectnumber">v1.2.42</span>
    </div>
   </td>
  </tr>
@@ -287,7 +287,7 @@ Vector Types</h1>
 <tr>
 <td><a class="el" href="structhelios_1_1vec4.html">vec4</a></td><td>4D vector of floats</td><td><a class="el" href="structhelios_1_1vec4.html#a96036e1d3ac15f03190a7bbf74ce0d73">x</a>, <a class="el" href="structhelios_1_1vec4.html#a3dd547e787593c51f07a6ea131bcab8d">y</a>, <a class="el" href="structhelios_1_1vec4.html#a660ee0cf07d74bac3c989ce39e035d3b">z</a>, <a class="el" href="structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937">w</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#ab90da9b5ba29d966547fcfe82de87ea5">make_vec4()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1int2.html">int2</a></td><td>2D vector of integers</td><td><a class="el" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, <a class="el" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#a05ad3ecab7f008a6b1ee04b35f227115">make_int2()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1int2.html">int2</a></td><td>2D vector of integers</td><td><a class="el" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, <a class="el" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a></td><td>none</td><td><a class="el" href="group__vectors.html#ga05ad3ecab7f008a6b1ee04b35f227115">make_int2()</a> </td></tr>
 <tr>
 <td><a class="el" href="structhelios_1_1int3.html">int3</a></td><td>3D vector of integers</td><td><a class="el" href="structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50">x</a>, <a class="el" href="structhelios_1_1int3.html#aeba3aa4380ec4d9c216f98be95083d5c">y</a>, <a class="el" href="structhelios_1_1int3.html#adb4b47bc05bdb62677200e025e4bf641">z</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#a88347513c8d7e764d5c820b61e5905e2">make_int3()</a> </td></tr>
 <tr>
@@ -353,7 +353,7 @@ R-G-B(-A) color vectors</h2>
 </table>
 <p>Note that the above colors can be directly passed to <a class="el" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor</a> to specify an alpha (transparency) value:</p>
 <div style="padding:2px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><div class="fragment"><div class="line">RGBAcolor red_trans = <a class="code" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor</a>( RGB::red, 0.5 );</div>
-<div class="ttc" id="agroup__vectors_html_gacc4916e29a0757214b7c558c6e5f7cd3"><div class="ttname"><a href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">helios::make_RGBAcolor</a></div><div class="ttdeci">RGBAcolor make_RGBAcolor(float r, float g, float b, float a)</div><div class="ttdoc">Make an RGBAcolor vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00983">helios_vector_types.h:983</a></div></div>
+<div class="ttc" id="agroup__vectors_html_gacc4916e29a0757214b7c558c6e5f7cd3"><div class="ttname"><a href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">helios::make_RGBAcolor</a></div><div class="ttdeci">RGBAcolor make_RGBAcolor(float r, float g, float b, float a)</div><div class="ttdoc">Make an RGBAcolor vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01021">helios_vector_types.h:1021</a></div></div>
 </div><!-- fragment --></pre> </div><h1><a class="anchor" id="Coord"></a>
 Coordinate System</h1>
 <p>Helios uses a right-handed Cartesian coordinate system. (x,y,z) coordinates are typically specified using the 'vec3' data structure (see <a class="el" href="_a_p_i.html#VecTypes">Vector Types</a>). <br  />
@@ -443,8 +443,8 @@ Adding Patches</h3>
 <div class="line">    UUID = context.addPatch( center, size );</div>
 <div class="line"> </div>
 <div class="line"> }</div>
-<div class="ttc" id="agroup__vectors_html_ga34e381a53377fbe8682d89d8a9c24cc5"><div class="ttname"><a href="group__vectors.html#ga34e381a53377fbe8682d89d8a9c24cc5">helios::make_vec2</a></div><div class="ttdeci">vec2 make_vec2(float X, float Y)</div><div class="ttdoc">Make a vec2 from two floats.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00370">helios_vector_types.h:370</a></div></div>
-<div class="ttc" id="ahelios__vector__types_8h_html_a35b1ff50d62c80cf63426e25ee814ca9"><div class="ttname"><a href="helios__vector__types_8h.html#a35b1ff50d62c80cf63426e25ee814ca9">helios::make_vec3</a></div><div class="ttdeci">vec3 make_vec3(float X, float Y, float Z)</div><div class="ttdoc">Make a vec3 from three floats.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00518">helios_vector_types.h:518</a></div></div>
+<div class="ttc" id="agroup__vectors_html_ga34e381a53377fbe8682d89d8a9c24cc5"><div class="ttname"><a href="group__vectors.html#ga34e381a53377fbe8682d89d8a9c24cc5">helios::make_vec2</a></div><div class="ttdeci">vec2 make_vec2(float X, float Y)</div><div class="ttdoc">Make a vec2 from two floats.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00376">helios_vector_types.h:376</a></div></div>
+<div class="ttc" id="ahelios__vector__types_8h_html_a35b1ff50d62c80cf63426e25ee814ca9"><div class="ttname"><a href="helios__vector__types_8h.html#a35b1ff50d62c80cf63426e25ee814ca9">helios::make_vec3</a></div><div class="ttdeci">vec3 make_vec3(float X, float Y, float Z)</div><div class="ttdoc">Make a vec3 from three floats.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00524">helios_vector_types.h:524</a></div></div>
 </div><!-- fragment --></pre> </div><p>This will add the Patch shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the '<a class="el" href="class_visualizer.html">Visualizer</a>' plugin is needed to replicate this image, which is not shown in the example code.)</p>
 <div class="image">
 <img src="Patch.png" alt=""/>
@@ -455,7 +455,7 @@ Patch geometric primitive.</div></div>
 <div class="line"> vec2 size = <a class="code" href="group__vectors.html#ga34e381a53377fbe8682d89d8a9c24cc5">make_vec2</a>(1,1);</div>
 <div class="line"> SphericalCoord rotation = <a class="code" href="helios__vector__types_8h.html#a3251464aab839c05b993a999226bb2a1">make_SphericalCoord</a>(0.25*M_PI,0.5*M_PI);</div>
 <div class="line"> context.addPatch( center, size, rotation );</div>
-<div class="ttc" id="ahelios__vector__types_8h_html_a3251464aab839c05b993a999226bb2a1"><div class="ttname"><a href="helios__vector__types_8h.html#a3251464aab839c05b993a999226bb2a1">helios::make_SphericalCoord</a></div><div class="ttdeci">SphericalCoord make_SphericalCoord(float a_elevation, float a_azimuth)</div><div class="ttdoc">Make a SphericalCoord by specifying elevation and azimuth.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01303">helios_vector_types.h:1303</a></div></div>
+<div class="ttc" id="ahelios__vector__types_8h_html_a3251464aab839c05b993a999226bb2a1"><div class="ttname"><a href="helios__vector__types_8h.html#a3251464aab839c05b993a999226bb2a1">helios::make_SphericalCoord</a></div><div class="ttdeci">SphericalCoord make_SphericalCoord(float a_elevation, float a_azimuth)</div><div class="ttdoc">Make a SphericalCoord by specifying elevation and azimuth.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01347">helios_vector_types.h:1347</a></div></div>
 </div><!-- fragment --></pre> </div><p>This will first rotate the patch by 0.25 <img class="formulaInl" alt="$\pi$" src="form_2.png" width="11" height="8"/> rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 <img class="formulaInl" alt="$\pi$" src="form_2.png" width="11" height="8"/> rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
 <h3><a class="anchor" id="AddingTriangle"></a>
 Adding Triangles</h3>
@@ -908,12 +908,12 @@ Objects</h2>
 </table>
 <p>Similar to individual primitives, objects have functions to perform transformations on the entire object in unison. These functions are member functions of the <a class="el" href="classhelios_1_1_compound_object.html">helios::CompoundObject</a> class. As with primitives, you can use the identifier to an object to get its pointer, from which you can access member functions.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><div class="fragment"><div class="line">uint objID; <span class="comment">//unique identifier to object</span></div>
-<div class="line">objID = context.addTileObject( center, size, rotation, <a class="code" href="helios__vector__types_8h.html#a05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>(2,2) );</div>
+<div class="line">objID = context.addTileObject( center, size, rotation, <a class="code" href="group__vectors.html#ga05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>(2,2) );</div>
 <div class="line"> </div>
 <div class="line">CompoundObject* <span class="keywordtype">object</span> = context.getObjectPointer(objID);</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">float</span> area = <span class="keywordtype">object</span>-&gt;getArea();</div>
-<div class="ttc" id="ahelios__vector__types_8h_html_a05ad3ecab7f008a6b1ee04b35f227115"><div class="ttname"><a href="helios__vector__types_8h.html#a05ad3ecab7f008a6b1ee04b35f227115">helios::make_int2</a></div><div class="ttdeci">int2 make_int2(int X, int Y)</div><div class="ttdoc">Make an int2 vector from two ints.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00089">helios_vector_types.h:89</a></div></div>
+<div class="ttc" id="agroup__vectors_html_ga05ad3ecab7f008a6b1ee04b35f227115"><div class="ttname"><a href="group__vectors.html#ga05ad3ecab7f008a6b1ee04b35f227115">helios::make_int2</a></div><div class="ttdeci">int2 make_int2(int X, int Y)</div><div class="ttdoc">Make an int2 vector from two ints.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00094">helios_vector_types.h:94</a></div></div>
 </div><!-- fragment --></pre> </div><p>or a shorthand would be</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><div class="fragment"><div class="line">uint objID; <span class="comment">//object identifier</span></div>
 <div class="line"><span class="keywordtype">float</span> area = context.getObjectPointer(objID)-&gt;getArea();</div>
@@ -1241,8 +1241,8 @@ Data Timeseries</h2>
 <div class="line">   }</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="agroup__vectors_html_ga7a29e9916b97d9f7533e87e7125e5b66"><div class="ttname"><a href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66">helios::make_Time</a></div><div class="ttdeci">Time make_Time(int hour, int minute)</div><div class="ttdoc">Make a Time vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01229">helios_vector_types.h:1229</a></div></div>
-<div class="ttc" id="agroup__vectors_html_gad4c811a7a39319de43f58c93e14ecda6"><div class="ttname"><a href="group__vectors.html#gad4c811a7a39319de43f58c93e14ecda6">helios::make_Date</a></div><div class="ttdeci">Date make_Date(int day, int month, int year)</div><div class="ttdoc">Make a Date vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01060">helios_vector_types.h:1060</a></div></div>
+<div class="ttc" id="agroup__vectors_html_ga7a29e9916b97d9f7533e87e7125e5b66"><div class="ttname"><a href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66">helios::make_Time</a></div><div class="ttdeci">Time make_Time(int hour, int minute)</div><div class="ttdoc">Make a Time vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01272">helios_vector_types.h:1272</a></div></div>
+<div class="ttc" id="agroup__vectors_html_gad4c811a7a39319de43f58c93e14ecda6"><div class="ttname"><a href="group__vectors.html#gad4c811a7a39319de43f58c93e14ecda6">helios::make_Date</a></div><div class="ttdeci">Date make_Date(int day, int month, int year)</div><div class="ttdoc">Make a Date vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01099">helios_vector_types.h:1099</a></div></div>
 </div><!-- fragment --></pre> </div><p>Typically, data is not entered manually, but rather through an XML file (see Reading XML Files for information).</p>
 <p>It is often necessary to get the number of data points in a given timeseries, which can be accomplished with the command:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><div class="fragment"><div class="line">uint N = context.getTimeseriesLength( <span class="stringliteral">&quot;temperature&quot;</span> );</div>

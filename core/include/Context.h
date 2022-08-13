@@ -4918,9 +4918,24 @@ public:
     
     //! Write geometry in the Context to a Wavefront file (.obj)
     /**
-     \param[in] "filename" Base filename of .obj and .mtl file
+     * \param[in] "filename" Base filename of .obj and .mtl file
      */
     void writeOBJ( const char* filename ) const;
+
+    //! Write geometry in the Context to a Wavefront file (.obj) for a subset of UUIDs
+    /**
+     * \param[in] "filename" Base filename of .obj and .mtl file
+     * \param[in] "UUIDs" Vector of UUIDs for which geometry should be written
+     */
+    void writeOBJ( const char* filename, const std::vector<uint> &UUIDs ) const;
+
+    //! Write geometry in the Context to a Wavefront file (.obj)
+    /**
+     * \param[in] "filename" Base filename of .obj and .mtl file
+     * \param[in] "UUIDs" Vector of UUIDs for which geometry should be written
+     * \param[in] "primitive_dat_fields" A .dat file will be written containing primitive data given in this vector (for Unity visualization)
+     */
+    void writeOBJ( const char* filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields ) const;
     
     //! Set simulation date by day, month, year
     /**
