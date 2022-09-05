@@ -212,7 +212,7 @@ strawberryShoot(const StrawberryParameters &params, const helios::vec3 base_posi
     
 }
 
-void CanopyGenerator::strawberry(const StrawberryParameters &params, const vec3 &origin ){
+uint CanopyGenerator::strawberry(const StrawberryParameters &params, const vec3 &origin ){
 
     std::vector<std::vector<uint> > leaf_UUIDs;
     std::vector<uint> branch_UUIDs;
@@ -239,6 +239,7 @@ void CanopyGenerator::strawberry(const StrawberryParameters &params, const vec3 
   UUID_leaf.push_back( leaf_UUIDs );
   UUID_branch.push_back( branch_UUIDs );
   UUID_fruit.push_back( fruit_UUIDs );
-  
+
+  return UUID_leaf.size()-1;
 
 }

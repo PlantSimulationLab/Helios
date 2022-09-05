@@ -320,6 +320,10 @@ std::string Primitive::getTextureFile() const{
     return texturefile;
 }
 
+void Primitive::setTextureFile( const char* texture ){
+  texturefile = texture;
+}
+
 std::vector<vec2> Primitive::getTextureUV(){
     return uv;
 }
@@ -350,6 +354,10 @@ bool Primitive::isTextureColorOverridden() const{
 
 float Primitive::getSolidFraction() const{
     return solid_fraction;
+}
+
+void Primitive::setSolidFraction( float solidFraction ){
+  solid_fraction = solidFraction;
 }
 
 void Primitive::scale( const vec3& S ){
@@ -10142,6 +10150,14 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 uv.resize(0);
             }
         }
+
+        // * Patch Solid Fraction * //
+        float solid_fraction = 1;
+        pugi::xml_node sfrac_node = p.child("solid_fraction");
+        std::string sfrac = deblank(sfrac_node.child_value());
+        if( !sfrac.empty() ){
+          solid_fraction = std::stof( sfrac );
+        }
         
         // * Patch Diffuse Colors * //
         RGBAcolor color;
@@ -10158,11 +10174,21 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( strcmp(texture_file.c_str(),"none")==0 ){
             ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), color );
         }else{
-            if( uv.empty() ){
-                ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), texture_file.c_str() );
-            }else{
-                ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), texture_file.c_str(), 0.5*(uv.at(2)+uv.at(0)), uv.at(2)-uv.at(0) );
-            }
+          std::string texture_file_copy;
+          if( solid_fraction!=1.f ){
+            texture_file_copy = texture_file;
+            texture_file = "lib/images/solid.jpg"; //load dummy solid texture
+          }
+          if( uv.empty() ){
+            ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), texture_file.c_str() );
+          }else{
+            ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), texture_file.c_str(), 0.5*(uv.at(2)+uv.at(0)), uv.at(2)-uv.at(0) );
+          }
+          if( solid_fraction!=1.f ) {
+            getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
+            addTexture(texture_file_copy.c_str());
+            getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+          }
         }
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
         
@@ -10249,6 +10275,14 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 uv.resize(0);
             }
         }
+
+        // * Triangle Solid Fraction * //
+        float solid_fraction = 1;
+        pugi::xml_node sfrac_node = tri.child("solid_fraction");
+        std::string sfrac = deblank(sfrac_node.child_value());
+        if( !sfrac.empty() ){
+          solid_fraction = std::stof( sfrac );
+        }
         
         // * Triangle Diffuse Colors * //
         RGBAcolor color;
@@ -10271,7 +10305,17 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( strcmp(texture_file.c_str(),"none")==0 || uv.empty() ){
             ID = addTriangle( vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), color );
         }else{
-            ID = addTriangle( vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2) );
+          std::string texture_file_copy;
+          if( solid_fraction!=1.f ){
+            texture_file_copy = texture_file;
+            texture_file = "lib/images/solid.jpg"; //load dummy solid texture
+          }
+          ID = addTriangle( vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2) );
+          if( solid_fraction!=1.f ) {
+            getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
+            addTexture(texture_file_copy.c_str());
+            getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+          }
         }
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
         
@@ -10319,6 +10363,14 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
                 }
                 makeIdentityMatrix(transform);
             }
+        }
+
+        // * Voxel Solid Fraction * //
+        float solid_fraction = 1;
+        pugi::xml_node sfrac_node = p.child("solid_fraction");
+        std::string sfrac = deblank(sfrac_node.child_value());
+        if( !sfrac.empty() ){
+          solid_fraction = std::stof( sfrac );
         }
         
         // * Voxel Diffuse Colors * //
@@ -11712,6 +11764,9 @@ void Context::writeXML( const char* filename, bool quiet ) const{
                 }
                 outfile << "</textureUV>" << std::endl;
             }
+            if( primitiveTextureHasTransparencyChannel(p) ){
+              outfile << "\t<solid_fraction> " << getPrimitiveSolidFraction(p) << " </solid_fraction>\n";
+            }
             outfile << "   </patch>" << std::endl;
 
             //Triangles
@@ -11737,6 +11792,9 @@ void Context::writeXML( const char* filename, bool quiet ) const{
                 }
                 outfile << "</textureUV>" << std::endl;
             }
+            if( primitiveTextureHasTransparencyChannel(p) ){
+              outfile << "\t<solid_fraction> " << getPrimitiveSolidFraction(p) << " </solid_fraction>\n";
+            }
             outfile << "   </triangle>" << std::endl;
 
             //Voxels
@@ -11750,6 +11808,9 @@ void Context::writeXML( const char* filename, bool quiet ) const{
                 outfile << i << " ";
             }
             outfile << "</transform>" << std::endl;
+            if( primitiveTextureHasTransparencyChannel(p) ){
+              outfile << "\t<solid_fraction> " << getPrimitiveSolidFraction(p) << " </solid_fraction>\n";
+            }
 
             outfile << "   </voxel>" << std::endl;
 
@@ -12577,21 +12638,27 @@ void Context::writePLY( const char* filename ) const{
 
 }
 
-std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color ){
-    return loadOBJ(filename,origin,height,rotation,default_color,"ZUP");
+std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, bool silent ){
+    return loadOBJ(filename,origin,make_vec3(0,0,height),rotation,default_color,"ZUP",silent);
 }
 
-std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis ){
+std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent ) {
+  return loadOBJ(filename,origin,make_vec3(0,0,height),rotation,default_color,upaxis,silent);
+}
 
+std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, const helios::vec3 &scale, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent ){
+
+  if( !silent ) {
     std::cout << "Reading OBJ file " << filename << "..." << std::flush;
+  }
 
     std::string fn = filename;
     if( fn.substr(fn.find_last_of(".") + 1) != "obj" ) {
-        throw( std::runtime_error("ERROR (loadOBJ): File " + fn + " is not OBJ format.") );
+        throw( std::runtime_error("ERROR (Context::loadOBJ): File " + fn + " is not OBJ format.") );
     }
 
     if( strcmp(upaxis,"XUP") != 0 && strcmp(upaxis,"YUP") != 0 && strcmp(upaxis,"ZUP") != 0 ){
-        throw(std::runtime_error("ERROR (loadOBJ): Up axis of " + std::string(upaxis) + " is not valid.  Should be one of 'XUP', 'YUP', or 'ZUP'."));
+        throw(std::runtime_error("ERROR (Context::loadOBJ): Up axis of " + std::string(upaxis) + " is not valid.  Should be one of 'XUP', 'YUP', or 'ZUP'."));
     }
 
     std::string line, prop;
@@ -12608,7 +12675,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, flo
     inputOBJ.open(filename);
 
     if (!inputOBJ.is_open()) {
-        throw(std::runtime_error("ERROR (loadOBJ): Couldn't open " + std::string(filename) ));
+        throw(std::runtime_error("ERROR (Context::loadOBJ): Couldn't open " + std::string(filename) ));
     }
 
     //determine the base file path for 'filename'
@@ -12715,9 +12782,22 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, flo
         }
     }
 
-    float scl = 1.f;
-    if( height>0 ){
-      scl = height/(boxmax-boxmin);
+    vec3 scl = scale;
+    if( scl.x==0 && scl.y==0 && scl.z>0 ) {
+      scl = make_vec3( scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin) );
+    }
+
+    if( scl.x==0 ) {
+      std::cout << "WARNING (Context::loadOBJ): Scaling factor given for x-direction is zero. Setting scaling factor to 1" << std::endl;
+      scl.x = 0;
+    }
+    if( scl.y==0 ) {
+      std::cout << "WARNING (Context::loadOBJ): Scaling factor given for y-direction is zero. Setting scaling factor to 1" << std::endl;
+      scl.y = 0;
+    }
+    if( scl.z==0 ) {
+      std::cout << "WARNING (Context::loadOBJ): Scaling factor given for z-direction is zero. Setting scaling factor to 1" << std::endl;
+      scl.z = 0;
     }
 
     for(std::map<std::string,std::vector<std::vector<int> > >::const_iterator iter = face_inds.begin(); iter != face_inds.end(); ++iter){
@@ -12760,13 +12840,13 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, flo
                         int iuv1 = texture_inds.at(material).at(i).at(t-1)-1;
                         int iuv2 = texture_inds.at(material).at(i).at(t)-1;
 
-                        ID = addTriangle( origin+v0*scl, origin+v1*scl, origin+v2*scl, texture.c_str(), texture_uv.at(iuv0), texture_uv.at(iuv1), texture_uv.at(iuv2) );
+                        ID = addTriangle( origin+v0*scl.x, origin+v1*scl.y, origin+v2*scl.z, texture.c_str(), texture_uv.at(iuv0), texture_uv.at(iuv1), texture_uv.at(iuv2) );
 
                         vec3 normal = getPrimitivePointer_private(ID)->getNormal();
 
                     }
                 }else{
-                    ID = addTriangle( origin+v0*scl, origin+v1*scl, origin+v2*scl, color );
+                    ID = addTriangle( origin+v0*scl.x, origin+v1*scl.y, origin+v2*scl.z, color );
                 }
 
                 UUID.push_back(ID);
@@ -12775,7 +12855,9 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, flo
         }
     }
 
-    std::cout << "done." << std::endl;
+    if( !silent ) {
+      std::cout << "done." << std::endl;
+    }
 
     return UUID;
 
@@ -12801,11 +12883,11 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
             }
         }
         if( file.empty() ){
-            throw(std::runtime_error("ERROR (loadMTL): Material file does not have correct file extension (.mtl)."));
+            throw(std::runtime_error("ERROR (Context::loadMTL): Material file does not have correct file extension (.mtl)."));
         }
         inputMTL.open( file.c_str() );
         if( !inputMTL.is_open() ){
-            throw(std::runtime_error("ERROR (loadMTL): Material file " + std::string(file) + " given in .obj file cannot be found."));
+            throw(std::runtime_error("ERROR (Context::loadMTL): Material file " + std::string(file) + " given in .obj file cannot be found."));
         }
     }
 
@@ -12824,8 +12906,6 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
             getline(inputMTL, line);
             std::string material_name = line;
             material_textures[material_name] = "";
-
-            //std::cout << "Found a material library: " << material_name << std::endl;
 
             while( strcmp("newmtl",line.c_str())!=0 && inputMTL.good() ){
 
@@ -12854,7 +12934,7 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
                                 texturefile = filebase+texturefile;
                                 tfile.open( texturefile.c_str() );
                                 if( !tfile.is_open() ){
-                                    std::cerr << "WARNING (loadOBJ): Texture file " << texturefile << " given in .mtl file cannot be found." << std::endl;
+                                    std::cerr << "WARNING (Context::loadOBJ): Texture file " << texturefile << " given in .mtl file cannot be found." << std::endl;
                                 }
                             }
                             tfile.close();

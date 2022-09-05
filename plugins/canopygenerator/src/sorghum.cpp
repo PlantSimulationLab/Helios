@@ -5,7 +5,7 @@ using namespace helios;
 
 
 // SORGHUM PLANT
-void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3 &origin ) {
+uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3 &origin ) {
         // STAGE 1
         if (params.sorghum_stage ==1){
 
@@ -1175,7 +1175,9 @@ void CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
     }
 
-    };
+    return UUID_leaf.size()-1;
+
+};
 
 
 

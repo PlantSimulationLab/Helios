@@ -2182,19 +2182,16 @@ void CanopyGenerator::buildCanopy(const VSPGrapevineParameters &params ){
 
     vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
 
-    uint plant_ID = 0;
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
 
-            grapevineVSP( params, center );
+            uint plant_ID = grapevineVSP( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
-
-            plant_ID++;
 
         }
     }
@@ -2217,19 +2214,16 @@ void CanopyGenerator::buildCanopy(const SplitGrapevineParameters &params ){
 
     vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
 
-    uint plant_ID = 0;
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
 
-            grapevineSplit( params, center );
+            uint plant_ID = grapevineSplit( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
-
-            plant_ID++;
 
         }
     }
@@ -2252,19 +2246,16 @@ void CanopyGenerator::buildCanopy(const UnilateralGrapevineParameters &params ){
 
     vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
 
-    uint plant_ID = 0;
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
 
-            grapevineUnilateral( params, center );
+            uint plant_ID = grapevineUnilateral( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
-
-            plant_ID++;
 
         }
     }
@@ -2287,19 +2278,16 @@ void CanopyGenerator::buildCanopy(const GobletGrapevineParameters &params ){
 
     vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
 
-    uint plant_ID = 0;
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
 
-            grapevineGoblet( params, center );
+            uint plant_ID = grapevineGoblet( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
-
-            plant_ID++;
 
         }
     }
@@ -2330,7 +2318,6 @@ void CanopyGenerator::buildCanopy(const WhiteSpruceCanopyParameters &params ){
 
     float r = params.crown_radius;
 
-    uint plant_ID = 0;
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
@@ -2348,12 +2335,10 @@ void CanopyGenerator::buildCanopy(const WhiteSpruceCanopyParameters &params ){
                 center = rotatePointAboutLine( center, params.canopy_origin, make_vec3(0,0,1), params.canopy_rotation );
             }
 
-            whitespruce( params, center );
+            uint plant_ID = whitespruce( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
-
-            plant_ID++;
 
         }
     }
@@ -2375,19 +2360,16 @@ void CanopyGenerator::buildCanopy(const TomatoParameters &params ){
 
     vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
 
-    uint plant_ID = 0;
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
 
-            tomato( params, center );
+            uint plant_ID = tomato( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
-
-            plant_ID++;
 
         }
     }
@@ -2409,19 +2391,16 @@ void CanopyGenerator::buildCanopy(const StrawberryParameters &params ){
 
     vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
 
-    uint plant_ID = 0;
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
 
-            strawberry( params, center );
+            uint plant_ID = strawberry( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
-
-            plant_ID++;
 
         }
     }
@@ -2443,19 +2422,16 @@ void CanopyGenerator::buildCanopy(const WalnutCanopyParameters &params ){
 
     vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
 
-    uint plant_ID = 0;
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
 
-            walnut( params, center );
+            uint plant_ID = walnut( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
-
-            plant_ID++;
 
         }
     }
@@ -2477,19 +2453,16 @@ void CanopyGenerator::buildCanopy( const SorghumCanopyParameters &params ){
 
     vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
 
-    uint plant_ID = 0;
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
             vec3 center = params.canopy_origin+make_vec3(-0.5*canopy_extent.x+(i+0.5)*params.plant_spacing, -0.5*canopy_extent.y+(j+0.5)*params.row_spacing, 0 );
 
-            sorghum( params, center );
+            uint plant_ID = sorghum( params, center );
 
             std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
             prim_count += UUIDs_all.size();
-
-            plant_ID++;
 
         }
     }
@@ -2558,27 +2531,42 @@ float CanopyGenerator::sampleLeafAngle(const std::vector<float> &leafAngleDist )
 
 }
 
+void CanopyGenerator::cleanDeletedUUIDs( std::vector<uint> &UUIDs ){
+    for( int p=UUIDs.size()-1; p>=0; p-- ){
+        if( !context->doesPrimitiveExist(UUIDs.at(p)) ){
+            std::swap( UUIDs.at(p), UUIDs.back() );
+            UUIDs.pop_back();
+        }
+    }
+}
+
+void CanopyGenerator::cleanDeletedUUIDs( std::vector<std::vector<uint> > &UUIDs ){
+    for( auto & UUID : UUIDs){
+        cleanDeletedUUIDs( UUID );
+    }
+}
+
+void CanopyGenerator::cleanDeletedUUIDs( std::vector<std::vector<std::vector<uint> > > &UUIDs ){
+    for( auto & UUID : UUIDs){
+        cleanDeletedUUIDs( UUID );
+    }
+}
+
 std::vector<uint> CanopyGenerator::getTrunkUUIDs(uint PlantID ){
     if( PlantID>=UUID_trunk.size() ){
         throw( std::runtime_error("ERROR (CanopyGenerator::getTrunkUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_trunk.size()) + " plants have been built.") );
     }
 
-    std::vector<uint> UUID;
+    cleanDeletedUUIDs(UUID_trunk.at(PlantID));
 
-    for( uint i : UUID_trunk.at(PlantID)){
-
-        if( context->doesPrimitiveExist(i) ){
-            UUID.push_back(i);
-        }
-
-    }
-
-    return UUID;
+    return UUID_trunk.at(PlantID);
 
 }
 
 std::vector<uint> CanopyGenerator::getTrunkUUIDs(){
-    return flatten( UUID_trunk );
+    std::vector<uint> UUID_flat = flatten( UUID_trunk );
+    cleanDeletedUUIDs(UUID_flat);
+    return UUID_flat;
 }
 
 std::vector<uint> CanopyGenerator::getBranchUUIDs(uint PlantID ){
@@ -2586,22 +2574,16 @@ std::vector<uint> CanopyGenerator::getBranchUUIDs(uint PlantID ){
         throw(std::runtime_error("ERROR (CanopyGenerator::getBranchUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_branch.size()) + " plants have been built."));
     }
 
-    std::vector<uint> UUID;
+    cleanDeletedUUIDs(UUID_branch.at(PlantID));
 
-    for( uint i : UUID_branch.at(PlantID)){
-
-        if( context->doesPrimitiveExist(i) ){
-            UUID.push_back(i);
-        }
-
-    }
-
-    return UUID;
+    return UUID_branch.at(PlantID);
 
 }
 
 std::vector<uint> CanopyGenerator::getBranchUUIDs(){
-    return flatten( UUID_branch );
+    std::vector<uint> UUID_flat = flatten( UUID_branch );
+    cleanDeletedUUIDs(UUID_flat);
+    return UUID_flat;
 }
 
 std::vector<std::vector<uint> > CanopyGenerator::getLeafUUIDs(uint PlantID ){
@@ -2609,31 +2591,15 @@ std::vector<std::vector<uint> > CanopyGenerator::getLeafUUIDs(uint PlantID ){
         throw(std::runtime_error("ERROR (CanopyGenerator::getLeafUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_leaf.size()) + " plants have been built."));
     }
 
-    //in case primitives have been deleted, only return UUIDs that still exist
+    cleanDeletedUUIDs(UUID_leaf.at(PlantID));
 
-    std::vector<std::vector<uint> > UUID;
-
-    for( auto & j : UUID_leaf.at(PlantID)){
-        std::vector<uint> U;
-        for( uint i : j){
-
-            if( context->doesPrimitiveExist(i) ){
-                U.push_back(i);
-            }
-
-        }
-
-        if( !U.empty() ){
-            UUID.push_back(U);
-        }
-
-    }
-
-    return UUID;
+    return UUID_leaf.at(PlantID);
 }
 
 std::vector<uint> CanopyGenerator::getLeafUUIDs(){
-    return flatten( UUID_leaf );
+    std::vector<uint> UUID_flat = flatten( UUID_leaf );
+    cleanDeletedUUIDs(UUID_flat);
+    return UUID_flat;
 }
 
 std::vector<std::vector<std::vector<uint> > > CanopyGenerator::getFruitUUIDs(uint PlantID ){
@@ -2641,46 +2607,23 @@ std::vector<std::vector<std::vector<uint> > > CanopyGenerator::getFruitUUIDs(uin
         throw(std::runtime_error("ERROR (CanopyGenerator::getFruitUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_fruit.size()) + " plants have been built."));
     }
 
-    std::vector<std::vector<std::vector<uint> > > UUID;
+    cleanDeletedUUIDs(UUID_fruit.at(PlantID));
 
-    for( auto & k : UUID_fruit.at(PlantID)){
-        std::vector<std::vector<uint> > U2;
-        for( size_t j=0; j<k.size(); j++ ){
-            std::vector<uint> U1;
-            for( size_t i=0; i<k.at(j).size(); i++ ){
-
-                if( context->doesPrimitiveExist(k.at(j).at(i)) ){
-                    U1.push_back(k.at(j).at(i));
-                }
-
-            }
-
-            if( !U1.empty() ){
-                U2.push_back(U1);
-            }
-
-        }
-
-        if( !U2.empty() ){
-            UUID.push_back(U2);
-        }
-
-    }
-
-    return UUID;
+    return UUID_fruit.at(PlantID);
 
 }
 
 std::vector<uint> CanopyGenerator::getFruitUUIDs(){
 
-    std::vector<uint> UUIDs, U;
+    std::vector<uint> UUIDs_flat, U;
 
     for( auto & p : UUID_fruit){
         U = flatten( p );
-        UUIDs.insert( UUIDs.end(), U.begin(), U.end() );
+        UUIDs_flat.insert( UUIDs_flat.end(), U.begin(), U.end() );
     }
 
-    return UUIDs;
+    cleanDeletedUUIDs(UUIDs_flat);
+    return UUIDs_flat;
 }
 
 std::vector<uint> CanopyGenerator::getGroundUUIDs(){
@@ -2720,15 +2663,9 @@ std::vector<uint> CanopyGenerator::getAllUUIDs(uint PlantID ){
         }
     }
 
-    std::vector<uint> U;
+    cleanDeletedUUIDs(UUIDs);
 
-    for( uint UUID : UUIDs){
-        if( context->doesPrimitiveExist(UUID) ){
-            U.push_back(UUID);
-        }
-    }
-
-    return U;
+    return UUIDs;
 }
 
 uint CanopyGenerator::getPlantCount(){
