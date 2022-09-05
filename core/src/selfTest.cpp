@@ -524,6 +524,13 @@ int Context::selfTest(){
         std::cerr << "failed: Triangle masked with (u,v) coordinates did not return correct area." << std::endl;
     }
 
+    uint UUIDt2 = context_test.addTriangle( make_vec3(0,0,0), make_vec3(1,0,0), make_vec3(1,1,0), "lib/images/diamond_texture.png", make_vec2(0,0), make_vec2(1,0), make_vec2(1,1) );
+    float solid_fraction = context_test.getPrimitiveSolidFraction(UUIDt2);
+    if( fabs(solid_fraction-0.5f)>errtol ){
+      error_count ++;
+      std::cerr << "failed: Textured triangle solid fraction was not correct." << std::endl;
+    }
+
     //------- Global Data --------//
 
     float gdata = 5;
@@ -1035,10 +1042,10 @@ int Context::selfTest(){
         std::cerr << "failed. Changing Object ID of one object primitive did not result in correct number of primitives in the object" << std::endl;
         error_count ++;
     }
-    context_dzpo.writeXML("./dzpo_case1.xml");
+    context_dzpo.writeXML("./dzpo_case1.xml", true );
     
     Context context_dzpo_load;
-    context_dzpo_load.loadXML("./dzpo_case1.xml");
+    context_dzpo_load.loadXML("./dzpo_case1.xml", true);
     std::vector<uint> opi_load = context_dzpo_load.getObjectPrimitiveUUIDs(1);
     if(opi_load.size() != 1)
     {
@@ -1057,10 +1064,10 @@ int Context::selfTest(){
     // delete it
     context_dzpo2.deletePrimitive(0);
 
-    context_dzpo2.writeXML("./dzpo_case2.xml");
+    context_dzpo2.writeXML("./dzpo_case2.xml", true);
 
     Context context_dzpo2_load;
-    context_dzpo2_load.loadXML("./dzpo_case2.xml");
+    context_dzpo2_load.loadXML("./dzpo_case2.xml", true);
     uint opi_load2 = context_dzpo2_load.getObjectPrimitiveUUIDs(1).size();
     uint n_prim2 = context_dzpo2_load.getAllUUIDs().size();
     uint n_obj2 = context_dzpo2_load.getAllObjectIDs().size();
@@ -1082,10 +1089,10 @@ int Context::selfTest(){
     //delete the other (only) primitive that is part of the object
     context_dzpo3.deletePrimitive(1);
 
-    context_dzpo3.writeXML("./dzpo_case3.xml");
+    context_dzpo3.writeXML("./dzpo_case3.xml", true);
 
     Context context_dzpo3_load;
-    context_dzpo3_load.loadXML("./dzpo_case3.xml");
+    context_dzpo3_load.loadXML("./dzpo_case3.xml", true);
     uint n_prim3 = context_dzpo3_load.getAllUUIDs().size();
     uint n_obj3 = context_dzpo3_load.getAllObjectIDs().size();
     

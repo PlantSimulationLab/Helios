@@ -443,9 +443,18 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
             gs = Em * beta * (i + i0) / (k + b * i + (i + i0) * Ds);
 
+            for( const auto &data : output_prim_data ){
+              if( data=="vapor_pressure_deficit" ) {
+                context->setPrimitiveData(UUID, "vapor_pressure_deficit", Ds);
+              }
+            }
+
         }
 
         context->setPrimitiveData( UUID, "moisture_conductance", gs);
+
+
+
 
     }
 
@@ -581,5 +590,15 @@ float StomatalConductanceModel::evaluate_BBmodel( float gs, std::vector<float> &
     float gsm = chi*Pg;
 
     return gs-gsm;
+
+}
+
+void StomatalConductanceModel::optionalOutputPrimitiveData( const char* label ){
+
+  if( strcmp(label,"vapor_pressure_deficit")==0 ){
+    output_prim_data.emplace_back(label );
+  }else{
+    std::cout << "WARNING (StomatalConductanceModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+  }
 
 }

@@ -518,7 +518,7 @@ struct TomatoParameters{
   //! Path to texture map file for leaves.
   std::string leaf_texture_file;
 
-  //! Color of shoorts
+  //! Color of shoots
   helios::RGBcolor shoot_color;
 
   //! Number of radial subdivisions for shoot tubes
@@ -548,7 +548,7 @@ struct TomatoParameters{
   //! Color of tomato fruit
   helios::RGBcolor fruit_color;
 
-  //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly grape_subdivisions^2 triangles per fruit)
+  //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly fruit_subdivisions^2 triangles per fruit)
   uint fruit_subdivisions;
   
 };
@@ -604,7 +604,7 @@ struct StrawberryParameters{
   //! Texture map for strawberry fruit
   std::string fruit_texture_file;
 
-  //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly grape_subdivisions^2 triangles per fruit)
+  //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly fruit_subdivisions^2 triangles per fruit)
   uint fruit_subdivisions;
 
   //! Number of strawberry clusters per plant stem. Clusters randomly have 1, 2, or 3 berries.
@@ -655,7 +655,7 @@ struct WalnutCanopyParameters{
   //! Texture map for walnut fruit
   std::string fruit_texture_file;
 
-  //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly grape_subdivisions^2 triangles per fruit)
+  //! Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly fruit_subdivisions^2 triangles per fruit)
   uint fruit_subdivisions;
 
   //! Number of crowns/plants in the x- and y-directions.
@@ -925,7 +925,8 @@ class CanopyGenerator{
   void buildCanopy( const WhiteSpruceCanopyParameters &params );
 
   //! Build a canopy consisting of tomato plants
-  /** \param[in] "params" Structure containing parameters for tomato canopy.
+  /**
+   * \param[in] "params" Structure containing parameters for tomato canopy.
    */
   void buildCanopy( const TomatoParameters &params );
 
@@ -1010,7 +1011,9 @@ class CanopyGenerator{
   uint getPlantCount();
 
   //! Seed the random number generator. This can be useful for generating repeatable trees, say, within a loop.
-  /** \param[in] "seed" Random number seed */
+  /**
+   * \param[in] "seed" Random number seed
+   */
   void seedRandomGenerator( uint seed );
 
   //! Disable standard messages from being printed to screen (default is to enable messages)
@@ -1035,64 +1038,73 @@ class CanopyGenerator{
 /**
  * \param[in] "params" Set of parameters defining grapevine plant.
  * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+ * \return Plant ID of bean plant.
 */ 
-void grapevineVSP(const VSPGrapevineParameters &params, const helios::vec3 &origin );
+uint grapevineVSP(const VSPGrapevineParameters &params, const helios::vec3 &origin );
 
 //! Function to add an individual grapevine plant on a split trellis.
 /**
  * \param[in] "params" Set of parameters defining grapevine plant.
  * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+ * \return Plant ID of bean plant.
 */ 
-void grapevineSplit( const SplitGrapevineParameters &params, const helios::vec3 &origin );
+uint grapevineSplit( const SplitGrapevineParameters &params, const helios::vec3 &origin );
 
 //! Function to add an individual grapevine plant on a unilateral trellis.
 /**
  * \param[in] "params" Set of parameters defining grapevine plant.
  * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+ * \return Plant ID of bean plant.
 */ 
-void grapevineUnilateral( const UnilateralGrapevineParameters &params, const helios::vec3 &origin );
+uint grapevineUnilateral( const UnilateralGrapevineParameters &params, const helios::vec3 &origin );
 
 //! Function to add an individual grapevine plant on a goblet (vent a taille) trellis.
 /**
  * \param[in] "params" Set of parameters defining grapevine plant.
  * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+ * \return Plant ID of bean plant.
 */ 
-void grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec3 &origin );
+uint grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec3 &origin );
 
   //! Function to add an individual white spruce tree
   /**
    * \param[in] "params" Set of parameters defining white spruce tree.
    * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+   * \return Plant ID of bean plant.
   */ 
-  void whitespruce( const WhiteSpruceCanopyParameters &params, const helios::vec3 &origin );
+  uint whitespruce( const WhiteSpruceCanopyParameters &params, const helios::vec3 &origin );
 
   //! Function to add an individual tomato plant
   /**
    * \param[in] "params" Set of parameters defining tomato plants/canopy.
    * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+   * \return Plant ID of bean plant.
   */ 
-  void tomato( const TomatoParameters &params, const helios::vec3 &origin );
+  uint tomato( const TomatoParameters &params, const helios::vec3 &origin );
 
   //! Function to add an individual strawberry plant
   /**
    * \param[in] "params" Set of parameters defining strawberry plants/canopy.
    * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+   * \return Plant ID of bean plant.
   */ 
-  void strawberry( const StrawberryParameters &params, const helios::vec3 &origin );
+  uint strawberry( const StrawberryParameters &params, const helios::vec3 &origin );
 
   //! Function to add an individual walnut tree
   /**
    * \param[in] "params" Set of parameters defining walnut trees/canopy.
    * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+   * \return Plant ID of bean plant.
   */ 
-  void walnut(const WalnutCanopyParameters &params, const helios::vec3 &origin );
+  uint walnut(const WalnutCanopyParameters &params, const helios::vec3 &origin );
 
  //! Function to add an individual sorghum plant
  /**
  * \param[in] "params" Set of parameters defining sorghum plants/canopy.
  * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+  * \return Plant ID of bean plant.
  */
-    void sorghum( const SorghumCanopyParameters &params, const helios::vec3 &origin);
+ uint sorghum( const SorghumCanopyParameters &params, const helios::vec3 &origin);
 
   //! Create primitive data that explicitly labels all primitives according to the plant element they correspond to
   void createElementLabels();
@@ -1105,19 +1117,26 @@ void grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec
   helios::Context* context;
 
   //! UUIDs for trunk primitives
-  /* \note First index in the vector is the plant, second index is the UUIDs making up the trunk for that plant. */
+  /**
+   * \note First index in the vector is the plant, second index is the UUIDs making up the trunk for that plant.
+   */
   std::vector<std::vector<uint> > UUID_trunk;
 
   //! UUIDs for branch primitives
-  /* \note First index in the vector is the plant, second index is the UUIDs making up the branches for that plant. */
+  /**
+   * \note First index in the vector is the plant, second index is the UUIDs making up the branches for that plant.
+   */
   std::vector<std::vector<uint> > UUID_branch;
 
   //! UUIDs for leaf primitives
-  /* \note First index in the vector is the plant, second index is the leaf, third index is the UUIDs making up the sub-primitives of the leaf (if appplicable). */
+  /** \note First index in the vector is the plant, second index is the leaf, third index is the UUIDs making up the sub-primitives of the leaf (if applicable).
+   */
   std::vector<std::vector<std::vector<uint> > > UUID_leaf;
 
   //! UUIDs for fruit primitives
-  /* \note First index in the vector is the plant, second index is the cluster of fruit (if applicable), third index is the fruit, fourth index is the UUIDs making up the sub-primitives making of the fruit. */
+  /**
+   * \note First index in the vector is the plant, second index is the cluster of fruit (if applicable), third index is the fruit, fourth index is the UUIDs making up the sub-primitives making of the fruit.
+   */
   std::vector<std::vector<std::vector<std::vector<uint> > > > UUID_fruit;
 
   //! UUIDs for ground primitives
@@ -1132,6 +1151,12 @@ void grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec
   bool printmessages;
 
   bool enable_element_labels;
+
+  void cleanDeletedUUIDs( std::vector<uint> &UUIDs );
+
+  void cleanDeletedUUIDs( std::vector<std::vector<uint> > &UUIDs );
+
+  void cleanDeletedUUIDs( std::vector<std::vector<std::vector<uint> > > &UUIDs );
 
 };
 

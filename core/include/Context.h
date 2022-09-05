@@ -918,8 +918,14 @@ public:
     
     //! Function to return the texture map file of a Primitive
     std::string getTextureFile( ) const;
-    
-    //! Get u-v texture coordinates at primitive vertices
+
+    //! Function to set the texture map file of a Primitive
+    /**
+    * \param[in] texture Path to texture file
+    */
+    void setTextureFile( const char* texture );
+
+  //! Get u-v texture coordinates at primitive vertices
     /**
      *\return 2D vector of u-v texture coordinates
      */
@@ -936,16 +942,21 @@ public:
     
     //! Get fraction of primitive surface area that is non-transparent
     /**
-     * \param[in] "UUID" Universal unique identifier of primitive.
      * \return Fraction of non-transparent area (=1 if primitive does not have a transparent texture).
      */
     float getSolidFraction() const;
-    
-    //! Function to translate/shift a Primitive
+
+    //! Get fraction of primitive surface area that is non-transparent
     /**
-     * \param[in] "shift" Distance to translate in (x,y,z) directions.
-     */
-    void translate( const helios::vec3& shift );
+   * \param[in] "solidFraction" Fraction of primitive surface area that is non-transparent
+  */
+  void setSolidFraction( float solidFraction );
+
+  //! Function to translate/shift a Primitive
+  /**
+   * \param[in] "shift" Distance to translate in (x,y,z) directions.
+   */
+  void translate( const helios::vec3& shift );
     
     //! Function to rotate a Primitive about the x-, y-, or z-axis
     /**
@@ -1421,9 +1432,6 @@ private:
     
     //!(x,y,z) coordinates of triangle vertex #2
     helios::vec3 vertex2;
-    
-    //fraction of surface area that is solid material (i.e., non-transparent)
-    float solid_fraction;
     
     void makeTransformationMatrix( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2 );
     
@@ -4852,70 +4860,89 @@ public:
     void writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header = false ) const;
     
     //! Load geometry contained in a Stanford polygon file (.ply)
-    /** \param[in] "filename" name of ply file.
-     \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
-     \param[in] "scale" Scaling factor to be applied to PLY vertex coordinates
-     \note Assumes default color of blue if no colors are specified in the .ply file
-     \ingroup context
+    /**
+     * \param[in] "filename" name of ply file.
+     * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
+     * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
+     * \note Assumes default color of blue if no colors are specified in the .ply file
+     * \ingroup context
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height );
     
     //! Load geometry contained in a Stanford polygon file (.ply)
-    /** \param[in] "filename" name of ply file.
-     \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
-     \param[in] "scale" Scaling factor to be applied to PLY vertex coordinates
-     \param[in] "rotation" Spherical rotation of PLY object about origin
-     \note Assumes default color of blue if no colors are specified in the .ply file
-     \ingroup context
+    /**
+     * \param[in] "filename" name of ply file.
+     * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift).
+     * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
+     * \param[in] "rotation" Spherical rotation of PLY object about origin
+     * \note Assumes default color of blue if no colors are specified in the .ply file
+     * \ingroup context
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation );
     
     //! Load geometry contained in a Stanford polygon file (.ply)
-    /** \param[in] "filename" name of ply file.
-     \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
-     \param[in] "scale" Scaling factor to be applied to PLY vertex coordinates
-     \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     \ingroup context
+    /**
+     * \param[in] "filename" name of ply file.
+     * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
+     * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
+     * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
+     * \ingroup context
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color );
     
     //! Load geometry contained in a Stanford polygon file (.ply)
-    /** \param[in] "filename" name of ply file.
-     \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
-     \param[in] "scale" Scaling factor to be applied to PLY vertex coordinates
-     \param[in] "rotation" Spherical rotation of PLY object about origin
-     \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     \ingroup context
+    /**
+     * \param[in] "filename" name of ply file.
+     * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
+     * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
+     * \param[in] "rotation" Spherical rotation of PLY object about origin
+     * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
+     * \ingroup context
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color );
     
     //! Write geometry in the Context to a Stanford polygon file (.ply)
     /**
-     \param[in] "filename" name of ply file
-     */
+     * \param[in] "filename" name of ply file
+    */
     void writePLY( const char* filename ) const;
     
     //! Load geometry contained in a Wavefront OBJ file (.obj)
-    /** \param[in] "filename" name of OBJ file.
-     \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
-     \param[in] "scale" Scaling factor to be applied to PLY vertex coordinates
-     \param[in] "rotation" Spherical rotation of PLY object about origin
-     \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     \ingroup context
+    /**
+     * \param[in] "filename" name of OBJ file
+     * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
+     * \param[in] "height" A z-scaling factor is applied to make the model 'height' tall. If height=0, no scaling is applied
+     * \param[in] "rotation" Spherical rotation of PLY object about origin
+     * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
+     * \param[in] "silent" If set to true, output messaged will be disabled
      */
-    std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color );
+    std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, bool silent=false );
     
     //! Load geometry contained in a Wavefront OBJ file (.obj)
-    /** \param[in] "filename" name of OBJ file.
-     \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
-     \param[in] "scale" Scaling factor to be applied to PLY vertex coordinates
-     \param[in] "rotation" Spherical rotation of PLY object about origin
-     \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     \param[in] "upaxis" Direction of "up" vector used when creating OBJ file
-     \ingroup context
+    /**
+     * \param[in] "filename" name of OBJ file
+     * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
+     * \param[in] "height" A z-scaling factor is applied to make the model 'height' tall. If height=0, no scaling is applied
+     * \param[in] "rotation" Spherical rotation of PLY object about origin
+     * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
+     * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file
+     * \param[in] "silent" If set to true, output messaged will be disabled
      */
-    std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis );
-    
+    std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );
+
+
+    //! Load geometry contained in a Wavefront OBJ file (.obj)
+    /**
+     * \param[in] "filename" name of OBJ file
+     * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
+     * \param[in] "scale" (x,y,z) scaling factor to be applied to PLY vertex coordinates
+     * \param[in] "rotation" Spherical rotation of PLY object about origin
+     * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
+     * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file
+     * \param[in] "silent" If set to true, output messaged will be disabled
+     */
+    std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, const helios::vec3 &scale, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );
+
     //! Write geometry in the Context to a Wavefront file (.obj)
     /**
      * \param[in] "filename" Base filename of .obj and .mtl file

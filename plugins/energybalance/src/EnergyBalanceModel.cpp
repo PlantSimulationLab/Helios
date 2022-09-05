@@ -341,13 +341,15 @@ void EnergyBalanceModel::disableMessages(){
 }
 
 void EnergyBalanceModel::addRadiationBand( const char* band ){
-  radiation_bands.push_back(band);
+    if( std::find(radiation_bands.begin(),radiation_bands.end(),band)==radiation_bands.end()) { //only add band if it doesn't exist
+        radiation_bands.emplace_back(band);
+    }
 }
 
 void EnergyBalanceModel::optionalOutputPrimitiveData( const char* label ){
 
   if( strcmp(label,"boundarylayer_conductance_out")==0 || strcmp(label,"vapor_pressure_deficit")==0 ){
-    output_prim_data.push_back( label );
+    output_prim_data.emplace_back( label );
   }else{
     std::cout << "WARNING (EnergyBalanceModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
   }

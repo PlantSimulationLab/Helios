@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.42</span>
+   &#160;<span id="projectnumber">v1.2.43</span>
    </div>
   </td>
  </tr>
@@ -134,7 +134,7 @@ Input Primitive Data</h2>
 <tr>
 <td>air_CO2 </td><td><img class="formulaInl" alt="$C_a$" src="form_70.png" width="17" height="15"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/mol </td><td> <font face="courier" color="green">float</font> </td><td>CO<sub>2</sub> concentration of air outside primitive boundary-layer. </td><td>BWB, BBL, Mopt </td><td>N/A </td><td>400 <img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/mol  </td></tr>
 <tr>
-<td>Gamma_CO2 </td><td><img class="formulaInl" alt="$\Gamma$" src="form_74.png" width="11" height="11"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/mol </td><td> <font face="courier" color="green">float</font> </td><td>CO<sub>2</sub> compensation point of photosynthesis including dark respiration. (Note: only used for Ball-Berry models.) </td><td>BBL </td><td>Can be computed by <a class="el" href="class_photosynthesis_model.html">PhotosynthesisModel</a> plug-in (need to enable optional primitive data output). </td><td>100 <img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/mol  </td></tr>
+<td>Gamma_CO2 </td><td><img class="formulaInl" alt="$\Gamma$" src="form_74.png" width="11" height="12"/> </td><td><img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/mol </td><td> <font face="courier" color="green">float</font> </td><td>CO<sub>2</sub> compensation point of photosynthesis including dark respiration. (Note: only used for Ball-Berry models.) </td><td>BBL </td><td>Can be computed by <a class="el" href="class_photosynthesis_model.html">PhotosynthesisModel</a> plug-in (need to enable optional primitive data output). </td><td>100 <img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/mol  </td></tr>
 </table>
 <h2><a class="anchor" id="StomatalOutputData"></a>
 Output Primitive Data</h2>
@@ -199,7 +199,7 @@ Ball-Berry-Leuning Model Theory</h1>
 <p class="formulaDsp">
 <img class="formulaDsp" alt="\[g_s = g_{s,0}+\frac{a_1A\beta}{\left(C_s-\Gamma\right)\left(1+\frac{D_s}{D_0}\right)},\]" src="form_171.png" width="204" height="48"/>
 </p>
-<p>where <img class="formulaInl" alt="$D_s$" src="form_172.png" width="18" height="15"/> is the vapor pressure deficit between the sub-stomatal cavity and the leaf surface, <img class="formulaInl" alt="$\Gamma$" src="form_74.png" width="11" height="11"/> is the CO<sub>2</sub> compensation point of photosynthesis (including dark respiration), and <img class="formulaInl" alt="$D_0$" src="form_173.png" width="18" height="15"/> (mmol/mol) is an additional empirical parameter.</p>
+<p>where <img class="formulaInl" alt="$D_s$" src="form_172.png" width="18" height="15"/> is the vapor pressure deficit between the sub-stomatal cavity and the leaf surface, <img class="formulaInl" alt="$\Gamma$" src="form_74.png" width="11" height="12"/> is the CO<sub>2</sub> compensation point of photosynthesis (including dark respiration), and <img class="formulaInl" alt="$D_0$" src="form_173.png" width="18" height="15"/> (mmol/mol) is an additional empirical parameter.</p>
 <p><img class="formulaInl" alt="$D_s$" src="form_172.png" width="18" height="15"/> is calculated by first determining the surface relative humidity as described above for the Ball, Woodrow, Berry model, then calculating the surface vapor pressure deficit as <img class="formulaInl" alt="$D_s=\frac{e_{sat}(T_L)(1-h_s)}{p_{atm}}$" src="form_174.png" width="125" height="24"/> ( <img class="formulaInl" alt="$p_{atm}$" src="form_46.png" width="30" height="11"/> is atmospheric pressure).</p>
 <p>Below are example parameter values for several different tree crop species (a description of how calibration data was collected is given in the section below). Note that, as mentioned above, in order to apply the model photosynthesis must also be modeled - coefficients for these species are also given in the photosynthesis model documentation.</p>
 <table class="doxtable">
@@ -261,7 +261,7 @@ Buckley, Mott, Farquhar (2003) Model (simplified version given in Buckley, Turnb
 <p>Below are example parameter values for several different tree crop species (a description of how calibration data was collected is given in the section below).</p>
 <table class="doxtable">
 <tr>
-<th>Species </th><th><img class="formulaInl" alt="$E_m$" src="form_183.png" width="21" height="14"/> (mmol/m<sup>2</sup>-s) </th><th><img class="formulaInl" alt="$i_0$" src="form_184.png" width="12" height="14"/> ( <img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/m<sup>2</sup>-s) </th><th><img class="formulaInl" alt="$k$" src="form_185.png" width="8" height="12"/> ( <img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup>) </th><th><img class="formulaInl" alt="$b$" src="form_182.png" width="6" height="12"/> (mmol/mol) </th><th><img class="formulaInl" alt="$R^2$" src="form_92.png" width="17" height="14"/> of fit  </th></tr>
+<th>Species </th><th><img class="formulaInl" alt="$E_m$" src="form_183.png" width="21" height="15"/> (mmol/m<sup>2</sup>-s) </th><th><img class="formulaInl" alt="$i_0$" src="form_184.png" width="12" height="14"/> ( <img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/m<sup>2</sup>-s) </th><th><img class="formulaInl" alt="$k$" src="form_185.png" width="8" height="12"/> ( <img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol/m<sup>-2</sup>s<sup>-1</sup> mmol mol<sup>-1</sup>) </th><th><img class="formulaInl" alt="$b$" src="form_182.png" width="6" height="12"/> (mmol/mol) </th><th><img class="formulaInl" alt="$R^2$" src="form_92.png" width="17" height="14"/> of fit  </th></tr>
 <tr>
 <td>Almond (default) </td><td>865.52 </td><td>38.65 </td><td>780320.1 </td><td>2086.07 </td><td>0.991  </td></tr>
 <tr>

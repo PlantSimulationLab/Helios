@@ -186,6 +186,12 @@ public:
      */
     void run( const std::vector<uint> &UUIDs );
 
+    //! Add optional output primitive data values to the Context
+    /**
+        * \param[in] "label" Name of primitive data (e.g., Ci)
+     */
+    void optionalOutputPrimitiveData( const char* label );
+
 private:
 
     //! Pointer to the Helios context
@@ -221,6 +227,10 @@ private:
     static float evaluate_MOPTmodel( float esurf, std::vector<float> &variables, const void* parameters );
     static float evaluate_BMFmodel( float esurf, std::vector<float> &variables, const void* parameters );
     static float evaluate_BBmodel( float gs, std::vector<float> &variables, const void* parameters );
+
+
+    //! Names of additional primitive data to add to the Context
+    std::vector<std::string> output_prim_data;
 
 };
 

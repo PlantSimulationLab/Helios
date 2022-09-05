@@ -146,7 +146,7 @@ std::vector<uint> leafPrototype( const int2 leaf_subdivisions, const char* leaf_
 
 }
 
-void CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const vec3 &origin ){
+uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const vec3 &origin ){
 
     float mean_shoot_angle = 0.1*M_PI;
 
@@ -423,9 +423,11 @@ void CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
     UUID_leaf.push_back( UUID_leaf_plant );
     UUID_fruit.push_back( UUID_fruit_plant );
 
+    return UUID_leaf.size()-1;
+
 }
 
-void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, const vec3 &origin ){
+uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, const vec3 &origin ){
 
     vector<uint> U;
     std::vector<uint> UUID_trunk_plant, UUID_branch_plant;
@@ -737,9 +739,11 @@ void CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     UUID_leaf.push_back( UUID_leaf_plant );
     UUID_fruit.push_back( UUID_fruit_plant );
 
+    return UUID_leaf.size()-1;
+
 }
 
-void CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &params, const vec3 &origin){
+uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &params, const vec3 &origin){
 
     float mean_shoot_angle = 0.1*M_PI;
 
@@ -926,9 +930,11 @@ void CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
     UUID_leaf.push_back( UUID_leaf_plant );
     UUID_fruit.push_back( UUID_fruit_plant );
 
+    return UUID_leaf.size()-1;
+
 }
 
-void CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, const vec3 &origin ){
+uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, const vec3 &origin ){
 
     vector<uint> U;
     std::vector<uint> UUID_trunk_plant, UUID_branch_plant;
@@ -1077,5 +1083,7 @@ void CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
     UUID_branch.push_back( UUID_branch_plant );
     UUID_leaf.push_back( UUID_leaf_plant );
     UUID_fruit.push_back( UUID_fruit_plant );
+
+    return UUID_leaf.size()-1;
 
 }

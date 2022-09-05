@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.42</span>
+   &#160;<span id="projectnumber">v1.2.43</span>
    </div>
   </td>
  </tr>
@@ -154,7 +154,7 @@ Optional Output Primitive Data</h2>
 <tr>
 <td>Ci</td><td><img class="formulaInl" alt="$C_i$" src="form_73.png" width="15" height="15"/></td><td><img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol CO<sub>2</sub>/mol</td><td> <font face="courier" color="green">float</font></td><td>Intercellular CO<sub>2</sub> concentration. </td></tr>
 <tr>
-<td>Gamma_CO2</td><td><img class="formulaInl" alt="$\Gamma$" src="form_74.png" width="11" height="11"/></td><td><img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol CO<sub>2</sub>/mol</td><td> <font face="courier" color="green">float</font></td><td>Photosynthetic CO<sub>2</sub> compensation point (including "dark respiration"). </td></tr>
+<td>Gamma_CO2</td><td><img class="formulaInl" alt="$\Gamma$" src="form_74.png" width="11" height="12"/></td><td><img class="formulaInl" alt="$\mu$" src="form_71.png" width="11" height="11"/>mol CO<sub>2</sub>/mol</td><td> <font face="courier" color="green">float</font></td><td>Photosynthetic CO<sub>2</sub> compensation point (including "dark respiration"). </td></tr>
 <tr>
 <td>limitation_state</td><td>N/A</td><td>N/A</td><td> <font face="courier" color="green">int</font></td><td>Photosynthesis limitation state. limitation_state=0 if photosynthesis is Rubisco-limited, limitation_state=1 if photosynthesis is electron transport limited. </td></tr>
 </table>
@@ -260,10 +260,10 @@ Light Response Function</h2>
 Temperature Response</h2>
 <p>It is assumed that the maximum CO<sub>2</sub> assimilation rate <img class="formulaInl" alt="$A_{max}$" src="form_98.png" width="36" height="15"/> decreases exponentially about some optimum temperature <img class="formulaInl" alt="$T_{opt}$" src="form_99.png" width="27" height="15"/>. The temperature response function is given by:</p>
 <p><img class="formulaInl" alt="$f_T(T_s) = \left(\dfrac{T_s-T_{min}}{T_{ref}-T_{min}}\right)^q\left(\dfrac{(1+q)T_{opt}-T_{min}-qT_s}{(1+q)T_{opt}-T_{min}-qT_{ref}}\right)$" src="form_100.png" width="374" height="39"/>,</p>
-<p>where <img class="formulaInl" alt="$T_{min}$" src="form_101.png" width="32" height="14"/> is the minimum temperature at which assimilation occurs, <img class="formulaInl" alt="$T_{opt}$" src="form_99.png" width="27" height="15"/> is the temperature at which the maximum assimilation rate occurs, <img class="formulaInl" alt="$T_{ref}$" src="form_95.png" width="29" height="15"/> is the reference temperature chosen to define <img class="formulaInl" alt="$A_{ref}$" src="form_102.png" width="30" height="17"/>, and <img class="formulaInl" alt="$q$" src="form_103.png" width="8" height="11"/> is a shape parameter.</p>
+<p>where <img class="formulaInl" alt="$T_{min}$" src="form_101.png" width="32" height="14"/> is the minimum temperature at which assimilation occurs, <img class="formulaInl" alt="$T_{opt}$" src="form_99.png" width="27" height="15"/> is the temperature at which the maximum assimilation rate occurs, <img class="formulaInl" alt="$T_{ref}$" src="form_95.png" width="29" height="15"/> is the reference temperature chosen to define <img class="formulaInl" alt="$A_{ref}$" src="form_102.png" width="32" height="17"/>, and <img class="formulaInl" alt="$q$" src="form_103.png" width="8" height="11"/> is a shape parameter.</p>
 <p>The "dark" respiration rate <img class="formulaInl" alt="$R_d$" src="form_104.png" width="18" height="15"/> is assumed to increase exponentially with temperature following the Arrhenius equation (and assumed not to vary with ambient CO<sub>2</sub> concentration). Thus, the dark respiration rate is calculated simply as</p>
 <p><img class="formulaInl" alt="$R_d = R\sqrt{T_s}\mathrm{exp}\left(-E_R/(T_s+273)\right)$" src="form_105.png" width="221" height="18"/>,</p>
-<p>where <img class="formulaInl" alt="$R$" src="form_39.png" width="12" height="12"/> and <img class="formulaInl" alt="$E_R$" src="form_106.png" width="20" height="14"/> are parameters, and temperature is in Kelvin.</p>
+<p>where <img class="formulaInl" alt="$R$" src="form_39.png" width="12" height="12"/> and <img class="formulaInl" alt="$E_R$" src="form_106.png" width="20" height="15"/> are parameters, and temperature is in Kelvin.</p>
 <h2><a class="anchor" id="CO2Response"></a>
 CO2 Response Function</h2>
 <p>We assume that the maximum assimilation rate varies linearly with intercellular CO<sub>2</sub> concentration over the range of expected concentrations, and is zero at zero CO<sub>2</sub>. Thus, the response function is simply</p>
@@ -311,7 +311,7 @@ Summary of Empirical Model Parameters</h3>
 <tr>
 <td><img class="formulaInl" alt="$R$" src="form_39.png" width="12" height="12"/></td><td><img class="formulaInl" alt="${\mu}$" src="form_114.png" width="11" height="11"/>mol K<sup>1/2</sup>/m<sup>2</sup>-s</td><td>Pre-exponential factor for respiration temperature response. </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$E_R$" src="form_106.png" width="20" height="14"/></td><td>1/Kelvin</td><td>Respiration temperature response rate. </td></tr>
+<td><img class="formulaInl" alt="$E_R$" src="form_106.png" width="20" height="15"/></td><td>1/Kelvin</td><td>Respiration temperature response rate. </td></tr>
 <tr>
 <td><img class="formulaInl" alt="$k_C$" src="form_115.png" width="17" height="15"/></td><td>unitless</td><td>CO<sub>2</sub> response rate. </td></tr>
 </table>

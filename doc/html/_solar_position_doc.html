@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.42</span>
+   &#160;<span id="projectnumber">v1.2.43</span>
    </div>
   </td>
  </tr>
@@ -132,7 +132,7 @@ Model Theory</h1>
 <h2><a class="anchor" id="SolarPosTheory"></a>
 Position of the Sun</h2>
 <p>The solar position model was implemented following the description in <a href="https://www.sciencedirect.com/science/article/pii/B9780123737502500069">Chapter 1 of Iqbal (1983)</a>.</p>
-<p>The day angle <img class="formulaInl" alt="$\Gamma$" src="form_74.png" width="11" height="11"/> given as the polar angle of the earth relative to the sun ( <img class="formulaInl" alt="$\Gamma=0$" src="form_139.png" width="38" height="11"/> on Jan. 1) is calculated as</p>
+<p>The day angle <img class="formulaInl" alt="$\Gamma$" src="form_74.png" width="11" height="12"/> given as the polar angle of the earth relative to the sun ( <img class="formulaInl" alt="$\Gamma=0$" src="form_139.png" width="38" height="12"/> on Jan. 1) is calculated as</p>
 <center> <img class="formulaInl" alt="$\Gamma = 2\pi(DOY-1)/365.25$" src="form_140.png" width="171" height="17"/>, (1) </center><p>where DOY is the <a href="https://en.wikipedia.org/wiki/Julian_day">Julian Day</a> of the year.</p>
 <p>The solar declination angle is then calculated as</p>
 <center> <img class="formulaInl" alt="$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$" src="form_141.png" width="575" height="35"/>. (2) </center><p>The <a href="https://en.wikipedia.org/wiki/Equation_of_time">equation of time</a> is calculated as</p>

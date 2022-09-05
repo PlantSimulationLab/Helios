@@ -950,3 +950,22 @@
 
 *LiDAR*
 - Bug fixed that caused triangle textures to be flipped about the y-axis in synthetic scans
+
+[1.2.43] - 2022-09-07
+
+*Context*
+- Overloaded loadOBJ() function added to scale the model in the x,y,z directions.
+- Messages can now be disabled when loading OBJ files.
+- Primitive solid area fraction is written and read from XML so that it doesn't need to be re-calculated when loading.
+- Change made to Context::loadPLY() such that if a 'height' value of 0 is given, the model will not be scaled.
+- An error was introduced in v1.2.41 associated with texture indexing/truncating.
+- The member variable 'solid_fraction' was erroneously declared for Triangles, which was redundant and conflicting with the definition for Primitive.
+- Added additional self-test case to test solid fraction for triangles.
+
+* Energy Balance *
+- Check added to only add a radiation band if it has not already been added previously to avoid duplicates.
+
+* Canopy Generator *
+- Functions to add individual plants now return the plant ID.
+- Functions added to clean up deleted UUIDs.
+- Issues were fixed with get[*]UUIDs() functions that would return UUIDs for deleted primitives in some cases.
