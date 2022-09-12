@@ -969,3 +969,24 @@
 - Functions to add individual plants now return the plant ID.
 - Functions added to clean up deleted UUIDs.
 - Issues were fixed with get[*]UUIDs() functions that would return UUIDs for deleted primitives in some cases.
+
+[1.2.44] 2022-09-16 ** revised 2022-09-23
+
+**This commit originally pushed 2022-09-16 introduced an error that would cause build of the Context to fail on many systems. This commit was reverted and re-committed with a correction on 2022-09-23 *
+
+* Context *
+- Added functions to read and write PNG images from the Context (see readPNG() and writePNG()).
+- Added equality operators for int2, int3, int4, RGBcolor, and RGBAcolor
+- Separate member functions added to compute solid fraction for Patches and Triangles.
+- Update to loadXML() to make it output all added UUIDs for both individual primitives and primitives belonging to compound objects.
+- If patches have "default" texture u,v coordinates that encompass the entire texture, the solid fraction will be looked up from the texture rather than re-calculating it.
+- writeOBJ() function has been substantially re-written:
+    + More efficient arrangement of materials to eliminate duplicate materials and frequent switching between materials.
+    + Texture image files are all copied to a new directory and referenced in the .mtl file to make things more portable.
+    + Filename function argument changed from const char* to strings.
+    + 'map_d' property is only written for .png textures with transparency, otherwise this apparently causes a translucent appearance for solid textures.
+- Added functions to read and write JPEG images (see readJPEG(), writeJPEG()).
+- Added Primitive::setTextureUV() function.
+
+* Radiation *
+- CMakeLists.txt file improved so that the *.ptx files will only be re-built if the source *.cu file is changed.

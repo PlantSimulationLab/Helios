@@ -21,6 +21,10 @@
 #define PNG_SKIP_SETJMP_CHECK 1
 #include <png.h>
 
+//JPEG Libraries (reading and writing JPEG images)
+#include <cstdio> //<-- note libjpeg requires this header be included before its headers.
+#include <jpeglib.h>
+
 using namespace helios;
 
 RGBcolor RGB::red = make_RGBcolor( 1.f, 0.f, 0.f );
@@ -1095,7 +1099,7 @@ bool helios::PNGHasAlpha( const char* filename ){
 
 }
 
-std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
+std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filename ){
 
     std::string fn = filename;
     if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ) {
@@ -1114,7 +1118,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
   char header[8];    // 8 is the maximum size that can be checked
 
   /* open file and test for it being a png */
-  FILE *fp = fopen(filename, "rb");
+  FILE *fp = fopen(filename.c_str(), "rb");
   if (!fp){
       throw(std::runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading."));
   }
@@ -1188,6 +1192,281 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
 
   return mask;
   
+}
+
+void helios::readPNG( const std::string &filename, uint & width, uint & height, std::vector<helios::RGBAcolor> &texture ){
+
+  std::string fn = filename;
+  if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ){
+    throw( std::runtime_error("ERROR (readPNG): File " + fn + " is not PNG format.") );
+  }
+
+  int x, y;
+
+  png_byte color_type;
+  png_byte bit_depth;
+
+  png_structp png_ptr;
+  png_infop info_ptr;
+  int number_of_passes;
+  png_bytep * row_pointers;
+
+  char header[8];    // 8 is the maximum size that can be checked
+
+  /* open file and test for it being a png */
+  FILE *fp = fopen(filename.c_str(), "rb");
+  if (!fp){
+    throw(std::runtime_error("ERROR (readPNG): File " + filename + "could not be opened for reading."));
+   }
+  fread(header, 1, 8, fp);
+
+  /* initialize stuff */
+  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+
+  if (!png_ptr){
+    throw(std::runtime_error("ERROR (readPNG): failed to create PNG read structure."));
+  }
+
+  info_ptr = png_create_info_struct(png_ptr);
+  if (!info_ptr){
+    throw(std::runtime_error("ERROR (readPNG): failed to create PNG inof structure."));
+  }
+
+  if (setjmp(png_jmpbuf(png_ptr))){
+    throw(std::runtime_error("ERROR (readPNG): init_io failed."));
+  }
+
+  png_init_io(png_ptr, fp);
+  png_set_sig_bytes(png_ptr, 8);
+
+  png_read_info(png_ptr, info_ptr);
+
+  width = png_get_image_width(png_ptr, info_ptr);
+  height = png_get_image_height(png_ptr, info_ptr);
+  color_type = png_get_color_type(png_ptr, info_ptr);
+  bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+
+  number_of_passes = png_set_interlace_handling(png_ptr);
+  png_read_update_info(png_ptr, info_ptr);
+
+  /* read file */
+  if (setjmp(png_jmpbuf(png_ptr))){
+    throw(std::runtime_error("ERROR (readPNG): PNG read failed."));
+  }
+
+  row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
+  for (y=0; y<height; y++)
+    row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr,info_ptr));
+
+  png_read_image(png_ptr, row_pointers);
+
+  fclose(fp);
+
+  texture.resize(height*width);
+
+  for (uint j=0; j<height; j++){
+    png_byte* row=row_pointers[j];
+    for (int i=0; i < width; i++ ){
+      png_byte* ba=&row[i*4];
+      texture.at(j*width+i).r = (float)ba[0]/255.f;
+      texture.at(j*width+i).g = (float)ba[1]/255.f;
+      texture.at(j*width+i).b = (float)ba[2]/255.f;
+      texture.at(j*width+i).a = (float)ba[3]/255.f;
+    }
+  }
+
+  free(row_pointers);
+
+}
+
+void helios::writePNG( const std::string &filename, uint width, uint height, const std::vector<helios::RGBAcolor> &pixel_data ) {
+  int y;
+
+  FILE *fp = fopen(filename.c_str(), "wb");
+  if(!fp){
+    throw(std::runtime_error("ERROR (writePNG): failed to open image file."));
+  }
+
+  png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+  if (!png){
+    throw(std::runtime_error("ERROR (writePNG): failed to create PNG write structure."));
+  }
+
+  png_infop info = png_create_info_struct(png);
+  if (!info){
+    throw(std::runtime_error("ERROR (writePNG): failed to create PNG info structure."));
+  }
+
+  if (setjmp(png_jmpbuf(png))){
+    throw(std::runtime_error("ERROR (writePNG): init_io failed."));
+  }
+
+  png_init_io(png, fp);
+
+  // Output is 8bit depth, RGBA format.
+  png_set_IHDR(
+      png,
+      info,
+      width,
+      height,
+      8,
+      PNG_COLOR_TYPE_RGBA,
+      PNG_INTERLACE_NONE,
+      PNG_COMPRESSION_TYPE_DEFAULT,
+      PNG_FILTER_TYPE_DEFAULT
+  );
+  png_write_info(png, info);
+
+  // To remove the alpha channel for PNG_COLOR_TYPE_RGB format,
+  // Use png_set_filler().
+  //png_set_filler(png, 0, PNG_FILLER_AFTER);
+
+  std::vector<unsigned char*> row_pointers;
+  row_pointers.resize(height);
+
+  std::vector<std::vector<unsigned char> > data;
+  data.resize(height);
+
+  for( uint row=0; row<height; row++ ) {
+    data.at(row).resize(4*width);
+    for( uint col=0; col<width; col++ ){
+      data.at(row).at(4*col) = (unsigned char)round(pixel_data.at(row*width+col).r*255.f);
+      data.at(row).at(4*col+1) = (unsigned char)round(pixel_data.at(row*width+col).g*255.f);
+      data.at(row).at(4*col+2) = (unsigned char)round(pixel_data.at(row*width+col).b*255.f);
+      data.at(row).at(4*col+3) = (unsigned char)round(pixel_data.at(row*width+col).a*255.f);
+    }
+    row_pointers.at(row) = &data.at(row).at(0);
+  }
+
+  png_write_image(png, &row_pointers.at(0) );
+  png_write_end(png, nullptr);
+
+  fclose(fp);
+
+  png_destroy_write_struct(&png, &info);
+}
+
+void helios::readJPEG( const std::string &filename, uint &width, uint &height, std::vector<helios::RGBcolor> &pixel_data ) {
+
+    auto file_extension = getFileExtension(filename);
+    if ( file_extension != ".jpg" && file_extension != ".JPG" && file_extension != ".jpeg" && file_extension != ".JPEG" ) {
+        throw (std::runtime_error("ERROR (Context::readJPEG): File " + filename + " is not JPEG format."));
+    }
+
+    struct jpeg_decompress_struct cinfo;
+
+    FILE * infile;		/* source file */
+    JSAMPARRAY buffer;		/*output row buffer */
+    int row_stride;
+
+    if ((infile = fopen(filename.c_str(), "rb")) == nullptr ) {
+        throw (std::runtime_error("ERROR (Context::readJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it."));
+    }
+
+    jpeg_create_decompress(&cinfo);
+
+    jpeg_stdio_src(&cinfo, infile);
+
+    (void) jpeg_read_header(&cinfo, TRUE);
+
+    (void) jpeg_start_decompress(&cinfo);
+
+    row_stride = cinfo.output_width * cinfo.output_components;
+    buffer = (*cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+
+    width=cinfo.output_width;
+    height=cinfo.output_height;
+
+    if(cinfo.output_components!=3){
+        throw (std::runtime_error("ERROR (Context::readJPEG): Image file does not have RGB components."));
+    }
+
+    pixel_data.resize(width*height);
+
+    JSAMPLE* ba;
+    int row = 0;
+    while (cinfo.output_scanline < cinfo.output_height) {
+        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+        ba=buffer[0];
+
+        for (int col=0; col < row_stride; col+=3){
+            pixel_data.at(row*width+col) = make_RGBcolor(ba[row]/255.f,ba[row+1]/255.f,ba[row+2]/255.f);
+        }
+
+        row++;
+    }
+
+    (void) jpeg_finish_decompress(&cinfo);
+
+    jpeg_destroy_decompress(&cinfo);
+
+    fclose(infile);
+
+}
+
+void helios::writeJPEG( const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data ) {
+
+    std::string filename = a_filename;
+    auto file_extension = getFileExtension(filename);
+    if ( file_extension != ".jpg" && file_extension != ".JPG" && file_extension != ".jpeg" && file_extension != ".JPEG" ) {
+        filename.append(".jpeg");
+    }
+
+    if( pixel_data.size()!=width*height ){
+        throw( std::runtime_error("ERROR (Context::writeJPEG): Pixel data does not have size of width*height.") );
+    }
+
+    const uint bsize = 3 * width * height;
+    std::vector<unsigned char> screen_shot_trans(bsize);
+
+    size_t ii = 0;
+    for( size_t i=0; i<width*height; i++ ){
+        screen_shot_trans.at(ii) = (unsigned char)clamp(pixel_data.at(i).r,0.f,1.f)*255;
+        screen_shot_trans.at(ii+1) = (unsigned char)clamp(pixel_data.at(i).g,0.f,1.f)*255;
+        screen_shot_trans.at(ii+2) = (unsigned char)clamp(pixel_data.at(i).b,0.f,1.f)*255;
+        ii+=3;
+    }
+
+    struct jpeg_compress_struct cinfo;
+
+    /* More stuff */
+    FILE * outfile;		/* target file */
+    JSAMPROW row_pointer;	/* pointer to JSAMPLE row[s] */
+    int row_stride;
+
+    /* Now we can initialize the JPEG compression object. */
+    jpeg_create_compress(&cinfo);
+
+    if ((outfile = fopen(filename.c_str(), "wb")) == nullptr ) {
+        throw (std::runtime_error("ERROR (Context::writeJPEG): File " + filename + " could not be opened. Check that the file path is correct you have permission to write to it."));
+    }
+    jpeg_stdio_dest(&cinfo, outfile);
+
+    cinfo.image_width = width; 	/* image width and height, in pixels */
+    cinfo.image_height = height;
+    cinfo.input_components = 3;		/* # of color components per pixel */
+    cinfo.in_color_space = JCS_RGB; 	/* colorspace of input image */
+
+    jpeg_set_defaults(&cinfo);
+
+    jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
+
+    jpeg_start_compress(&cinfo, TRUE);
+
+    row_stride = width * 3;	/* JSAMPLEs per row in image_buffer */
+
+    while (cinfo.next_scanline < cinfo.image_height) {
+        row_pointer = (JSAMPROW) &screen_shot_trans[ (cinfo.image_height-cinfo.next_scanline-1) * row_stride ];
+        (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+    }
+
+    jpeg_finish_compress(&cinfo);
+    /* After finish_compress, we can close the output file. */
+    fclose(outfile);
+
+    jpeg_destroy_compress(&cinfo);
+
 }
 
 std::vector<int> helios::flatten( const std::vector<std::vector<int> > &vec ){
@@ -2316,4 +2595,67 @@ float helios::interp1( const std::vector<helios::vec2> &points, float x ) {
 
 float helios::point_distance( const helios::vec3 &p1 , const helios::vec3 &p2){
     return (p1-p2).magnitude();
+}
+
+std::string helios::getFileExtension( const std::string &filepath ){
+  std::string ext;
+  if( filepath.find_last_of('.') < filepath.size() ){
+    ext = filepath.substr(filepath.find_last_of('.') );
+  }
+
+  //edge case when file is in a hidden directory AND there is no file extension (return empty string)
+  if( filepath.find_last_of('/')<filepath.size() && filepath.at(filepath.find_last_of('.')-1)=='/' ){
+    ext = "";
+  }
+
+  //edge case when file is in a hidden directory AND there is no file extension AND file path starts with '.' (return empty string)
+  if( filepath.find_last_of('.')==0 ){
+    ext = "";
+  }
+
+  return ext;
+}
+
+std::string helios::getFileStem( const std::string &filepath ){
+  std::string fn = filepath;
+  if( filepath.find('/')<filepath.size() ) {
+    fn = filepath.substr(filepath.find_last_of('/') + 1);
+  }else if( filepath.find('\\')<filepath.size() ){
+    fn = filepath.substr(filepath.find_last_of('\\') + 1);
+  }
+
+  if( fn.find('.')<fn.size() ) {
+    fn = fn.substr( 0, fn.find_last_of('.') );
+  }
+
+  return fn;
+}
+
+std::string helios::getFileName( const std::string &filepath ){
+  if( filepath.find('/')<filepath.size() ) {
+    return filepath.substr(filepath.find_last_of('/') + 1);
+  }else if( filepath.find('\\')==filepath.size() ) {
+    return filepath.substr(filepath.find_last_of('\\') + 1);
+  }else{
+    return filepath;
+  }
+
+}
+
+std::string helios::getFilePath( const std::string &filepath, bool trailingslash ){
+  if( filepath.find('/')==filepath.size() ){
+    if( trailingslash ){
+      std::string str = "/";
+      return str;
+    }else {
+      std::string str;
+      return str;
+    }
+  }else{
+    if( trailingslash ) {
+      return filepath.substr(0, filepath.find_last_of('/') + 1);
+    }else{
+      return filepath.substr(0, filepath.find_last_of('/'));
+    }
+  }
 }

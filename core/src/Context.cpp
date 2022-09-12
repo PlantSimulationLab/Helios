@@ -328,6 +328,10 @@ std::vector<vec2> Primitive::getTextureUV(){
     return uv;
 }
 
+void Primitive::setTextureUV( const std::vector<vec2> &a_uv ){
+  uv = a_uv;
+}
+
 void Primitive::overrideTextureColor(){
 
     // if( parent_object_ID!=0 ){
@@ -358,6 +362,81 @@ float Primitive::getSolidFraction() const{
 
 void Primitive::setSolidFraction( float solidFraction ){
   solid_fraction = solidFraction;
+}
+
+void Patch::calculateSolidFraction( const std::map<std::string,Texture> &textures ){
+
+  if( textures.at(texturefile).hasTransparencyChannel() ){
+    const std::vector<std::vector<bool> >* alpha = textures.at(texturefile).getTransparencyData();
+    int A = 0;
+    int At = 0;
+    int2 sz = textures.at(texturefile).getSize();
+    int2 uv_min( std::max(0,(int)round(uv.at(0).x*float(sz.x))), std::max(0,(int)round((1.f-uv.at(2).y)*float(sz.y))) );
+    int2 uv_max( std::min(sz.x-1,(int)round(uv.at(2).x*float(sz.x))), std::min(sz.y-1,(int)round((1.f-uv.at(0).y)*float(sz.y))) );
+    for( int j=uv_min.y; j<uv_max.y; j++ ){
+      for( int i=uv_min.x; i<uv_max.x; i++ ){
+        At += 1;
+        if( alpha->at(j).at(i) ){
+          A += 1;
+        }
+      }
+    }
+    if( At==0 ){
+      solid_fraction = 0;
+    }else{
+      solid_fraction = float(A)/float(At);
+    }
+  }else{
+    solid_fraction = 1.f;
+  }
+
+}
+
+void Triangle::calculateSolidFraction( const std::map<std::string,Texture> &textures ){
+
+  if( textures.at(texturefile).hasTransparencyChannel() ){
+    const std::vector<std::vector<bool> >* alpha = textures.at(texturefile).getTransparencyData();
+    int2 sz = textures.at(texturefile).getSize();
+    int2 uv_min( std::max(0,(int)round(fmin(fmin(uv.at(0).x,uv.at(1).x),uv.at(2).x)*float(sz.x))), std::max(0,(int)round(fmin(fmin(uv.at(0).y,uv.at(1).y),uv.at(2).y)*float(sz.y))) );
+    int2 uv_max( std::min(sz.x-1,(int)round(fmax(fmax(uv.at(0).x,uv.at(1).x),uv.at(2).x)*float(sz.x))), std::min(sz.y-1,(int)round(fmax(fmax(uv.at(0).y,uv.at(1).y),uv.at(2).y)*float(sz.y))) );
+    int A = 0;
+    int At = 0;
+    vec2 xy;
+    for( int j=uv_min.y; j<uv_max.y; j++ ){
+      for( int i=uv_min.x; i<uv_max.x; i++ ){
+        xy.x = float(i+0.5)/float(sz.x-1);
+        xy.y = float(j+0.5)/float(sz.y-1);
+
+        bool test_0 = edgeFunction( uv.at(0), uv.at(1), xy);
+        bool test_1 = edgeFunction( uv.at(1), uv.at(2), xy );
+        bool test_2 = edgeFunction( uv.at(2), uv.at(0), xy ) ;
+        uint test_sum =  test_0 + test_1 + test_2;
+
+        if(test_sum == 0 || test_sum == 3){
+          At += 1;
+          if( alpha->at(alpha->size()-j-1 ).at(i) ){
+            A += 1;
+          }
+        }
+      }
+    }
+    if( At==0 ){
+      solid_fraction = 0;
+    }else{
+      solid_fraction = float(A)/float(At);
+    }
+  }else{
+    solid_fraction = 1.f;
+  }
+
+}
+
+void Voxel::calculateSolidFraction( const std::map<std::string,Texture> &textures ){
+
+}
+
+bool Triangle::edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::vec2 &c){
+  return ((c.y - a.y) * (b.x - a.x)-(c.x - a.x) * (b.y - a.y) >= 0);
 }
 
 void Primitive::scale( const vec3& S ){
@@ -3082,12 +3161,13 @@ bool Context::doesGlobalDataExist( const char* label ) const{
 }
 
 
-Patch::Patch( const RGBAcolor& a_color, uint a_UUID ){
+Patch::Patch( const RGBAcolor& a_color, uint a_parent_objID, uint a_UUID ){
 
     makeIdentityMatrix( transform );
 
     color = a_color;
     assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
+    parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
     solid_fraction = 1.f;
@@ -3096,10 +3176,11 @@ Patch::Patch( const RGBAcolor& a_color, uint a_UUID ){
 
 }
 
-Patch::Patch( const char* a_texturefile, float a_solid_fraction, uint a_UUID ){
+Patch::Patch( const char* a_texturefile, float a_solid_fraction, uint a_parent_objID, uint a_UUID ){
 
     makeIdentityMatrix( transform );
 
+    parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
     texturefile = a_texturefile;
@@ -3108,17 +3189,23 @@ Patch::Patch( const char* a_texturefile, float a_solid_fraction, uint a_UUID ){
 
 }
 
-Patch::Patch( const char* a_texturefile, const std::vector<vec2>& a_uv, float a_solid_fraction, uint a_UUID ){
+Patch::Patch( const char* a_texturefile, const std::vector<vec2>& a_uv, const std::map<std::string,Texture> &textures, uint a_parent_objID, uint a_UUID ){
 
     makeIdentityMatrix( transform );
 
+    parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
 
     texturefile = a_texturefile;
     uv = a_uv;
-    solid_fraction = a_solid_fraction;
     texturecoloroverridden = false;
+
+    if( uv.size()==4 && uv.at(0).x==0 && uv.at(0).y==0 && uv.at(1).x==1 && uv.at(1).y==0 && uv.at(2).x==1 && uv.at(2).y==1 && uv.at(3).x== 0 && uv.at(3).y==1 ){
+      solid_fraction = textures.at(texturefile).getSolidFraction();
+    }else {
+      this->calculateSolidFraction(textures);
+    }
 
 }
 
@@ -3133,10 +3220,11 @@ helios::vec3 Patch::getCenter() const{
     return make_vec3(transform[3],transform[7],transform[11]);
 }
 
-Triangle::Triangle(  const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const RGBAcolor& a_color, uint a_UUID ){
+Triangle::Triangle(  const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const RGBAcolor& a_color, uint a_parent_objID, uint a_UUID ){
 
     makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
     color = a_color;
+    parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_TRIANGLE;
     texturefile = "";
@@ -3145,17 +3233,20 @@ Triangle::Triangle(  const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a
 
 }
 
-Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const char* a_texturefile, const std::vector<vec2>& a_uv, float a_solid_fraction, uint a_UUID ){
+Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const char* a_texturefile, const std::vector<vec2>& a_uv, const std::map<std::string,Texture> &textures, uint a_parent_objID, uint a_UUID ){
 
     makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
     color = make_RGBAcolor(RGB::red,1);
+    parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_TRIANGLE;
 
     texturefile = a_texturefile;
     uv = a_uv;
-    solid_fraction = a_solid_fraction;
+    solid_fraction = 1.f;
     texturecoloroverridden = false;
+
+    this->calculateSolidFraction(textures);
 
 }
 
@@ -3197,13 +3288,14 @@ vec3 Triangle::getCenter() const{
 
 }
 
-Voxel::Voxel( const RGBAcolor& a_color, uint a_UUID ){
+Voxel::Voxel( const RGBAcolor& a_color, uint a_parent_objID, uint a_UUID ){
 
     makeIdentityMatrix(transform);
 
     color = a_color;
     assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
     solid_fraction = 1.f;
+    parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_VOXEL;
     texturefile = "";
@@ -3417,13 +3509,11 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
         throw( std::runtime_error("ERROR (addPatch): Size of patch must be greater than 0.") );
     }
 
-    auto* patch_new = (new Patch( color, currentUUID ));
+    auto* patch_new = (new Patch( color, 0, currentUUID ));
 
 //    if( patch_new->getArea()==0 ){
 //        throw( std::runtime_error("ERROR (Context::addPatch): Patch has area of zero.") );
 //    }
-
-    patch_new->setParentObjectID(0);
 
     patch_new->scale( make_vec3(size.x,size.y,1) );
 
@@ -3452,13 +3542,11 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
     addTexture( texture_file );
 
-    auto* patch_new = (new Patch( texture_file, textures.at(texture_file).getSolidFraction(), currentUUID ));
+    auto* patch_new = (new Patch( texture_file, textures.at(texture_file).getSolidFraction(), 0, currentUUID ));
 
 //    if( patch_new->getArea()==0 ){
 //        throw( std::runtime_error("ERROR (Context::addPatch): Patch has area of zero.") );
 //    }
-
-    patch_new->setParentObjectID(0);
 
     assert( size.x>0.f && size.y>0.f );
     patch_new->scale( make_vec3(size.x,size.y,1) );
@@ -3503,37 +3591,11 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
     uv.at(2) =  uv_center+make_vec2(+0.5f*uv_size.x,+0.5f*uv_size.y);
     uv.at(3) =  uv_center+make_vec2(-0.5f*uv_size.x,+0.5f*uv_size.y);
 
-    float solid_fraction;
-    if( textures.at(texture_file).hasTransparencyChannel() ){
-        const std::vector<std::vector<bool> >* alpha = textures.at(texture_file).getTransparencyData();
-        int A = 0;
-        int At = 0;
-        int2 sz = textures.at(texture_file).getSize();
-        int2 uv_min( std::max(0,(int)floorf(uv.at(0).x*float(sz.x))), std::max(0,(int)floorf((1.f-uv.at(2).y)*float(sz.y))) );
-        int2 uv_max( std::min(sz.x-1,(int)floorf(uv.at(2).x*float(sz.x))), std::min(sz.y-1,(int)floorf((1.f-uv.at(0).y)*float(sz.y))) );
-        for( int j=uv_min.y; j<uv_max.y; j++ ){
-            for( int i=uv_min.x; i<uv_max.x; i++ ){
-                At += 1;
-                if( alpha->at(j).at(i) ){
-                    A += 1;
-                }
-            }
-        }
-        if( At==0 ){
-            solid_fraction = 0;
-        }else{
-            solid_fraction = float(A)/float(At);
-        }
-    }else{
-        solid_fraction = 1.f;
-    }
-    auto* patch_new = (new Patch( texture_file, uv, solid_fraction, currentUUID ));
+    auto* patch_new = (new Patch( texture_file, uv, textures, 0, currentUUID ));
 
 //    if( patch_new->getArea()==0 ){
 //        throw( std::runtime_error("ERROR (Context::addPatch): Patch has area of zero.") );
 //    }
-
-    patch_new->setParentObjectID(0);
 
     assert( size.x>0.f && size.y>0.f );
     patch_new->scale( make_vec3(size.x,size.y,1) );
@@ -3561,19 +3623,14 @@ uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3&
     return addTriangle( vertex0, vertex1, vertex2, make_RGBAcolor(color,1) );
 }
 
-bool edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::vec2 &c){
-    return ((c.y - a.y) * (b.x - a.x)-(c.x - a.x) * (b.y - a.y) >= 0);
-}
-
 uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3& vertex2, const RGBAcolor& color ){
 
-    auto* tri_new = (new Triangle( vertex0, vertex1, vertex2, color, currentUUID ));
+    auto* tri_new = (new Triangle( vertex0, vertex1, vertex2, color, 0, currentUUID ));
 
 //    if( tri_new->getArea()==0 ){
 //        throw( std::runtime_error("ERROR (Context::addTriangle): Triangle has area of zero.") );
 //    }
 
-    tri_new->setParentObjectID(0);
     primitives[currentUUID] = tri_new;
     markGeometryDirty();
     currentUUID++;
@@ -3596,49 +3653,12 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
     uv.at(1) = uv1;
     uv.at(2) = uv2;
 
-    float solid_fraction;
-    if( textures.at(texture_file).hasTransparencyChannel() ){
-        const std::vector<std::vector<bool> >* alpha = textures.at(texture_file).getTransparencyData();
-        int2 sz = textures.at(texture_file).getSize();
-        int2 uv_min( std::max(0,(int)floorf(fmin(fmin(uv0.x,uv1.x),uv2.x)*float(sz.x))), std::max(0,(int)floorf(fmin(fmin(uv0.y,uv1.y),uv2.y)*float(sz.y))) );
-        int2 uv_max( std::min(sz.x-1,(int)floorf(fmax(fmax(uv0.x,uv1.x),uv2.x)*float(sz.x))), std::min(sz.y-1,(int)floorf(fmax(fmax(uv0.y,uv1.y),uv2.y)*float(sz.y))) );
-        int A = 0;
-        int At = 0;
-        vec2 xy;
-        for( int j=uv_min.y; j<uv_max.y; j++ ){
-            for( int i=uv_min.x; i<uv_max.x; i++ ){
-                xy.x = float(i+0.5)/float(sz.x-1);
-                xy.y = float(j+0.5)/float(sz.y-1);
-
-                bool test_0 = edgeFunction( uv.at(0), uv.at(1), xy);
-                bool test_1 = edgeFunction( uv.at(1), uv.at(2), xy );
-                bool test_2 = edgeFunction( uv.at(2), uv.at(0), xy ) ;
-                uint test_sum =  test_0 + test_1 + test_2;
-
-                if(test_sum == 0 || test_sum == 3){
-                    At += 1;
-                    if( alpha->at(alpha->size()-j-1 ).at(i) ){
-                        A += 1;
-                    }
-                }
-            }
-        }
-        if( At==0 ){
-            solid_fraction = 0;
-        }else{
-            solid_fraction = float(A)/float(At);
-        }
-    }else{
-        solid_fraction = 1.f;
-    }
-
-    auto* tri_new = (new Triangle( vertex0, vertex1, vertex2, texture_file, uv, solid_fraction, currentUUID ));
+    auto* tri_new = (new Triangle( vertex0, vertex1, vertex2, texture_file, uv, textures, 0, currentUUID ));
 
 //    if( tri_new->getArea()==0 ){
 //        throw( std::runtime_error("ERROR (Context::addTriangle): Triangle has area of zero.") );
 //    }
 
-    tri_new->setParentObjectID(0);
     primitives[currentUUID] = tri_new;
     markGeometryDirty();
     currentUUID++;
@@ -3659,13 +3679,11 @@ uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotat
 
 uint Context::addVoxel( const vec3& center, const vec3& size, const float& rotation, const RGBAcolor& color ){
 
-    auto* voxel_new = (new Voxel( color, currentUUID ));
+    auto* voxel_new = (new Voxel( color, 0, currentUUID ));
 
     if( size.x*size.y*size.z==0 ){
         throw( std::runtime_error("ERROR (Context::addVoxel): Voxel has size of zero.") );
     }
-
-    voxel_new->setParentObjectID(0);
 
     voxel_new->scale( size );
 
@@ -3796,19 +3814,19 @@ uint Context::copyPrimitive( uint UUID ){
         float solid_fraction = p->getArea()/(size.x*size.y);
         Patch* patch_new;
         if( !p->hasTexture() ){
-            patch_new = (new Patch( p->getColorRGBA(), currentUUID ));
+            patch_new = (new Patch( p->getColorRGBA(), parentID, currentUUID ));
         }else{
             std::string texture_file = p->getTextureFile();
             if( uv.size()==4 ){
-                patch_new = (new Patch( texture_file.c_str(), uv, solid_fraction, currentUUID ));
+                patch_new = (new Patch( texture_file.c_str(), solid_fraction, parentID, currentUUID ));
+                patch_new->setTextureUV(uv);
             }else{
-                patch_new = (new Patch( texture_file.c_str(), solid_fraction, currentUUID ));
+                patch_new = (new Patch( texture_file.c_str(), solid_fraction, parentID, currentUUID ));
             }
         }
         float transform[16];
         p->getTransformationMatrix(transform);
         patch_new->setTransformationMatrix(transform);
-        patch_new->setParentObjectID(parentID);
         primitives[currentUUID] = patch_new;
     }else if( type==PRIMITIVE_TYPE_TRIANGLE ){
         Triangle* p = getTrianglePointer_private(UUID);
@@ -3816,22 +3834,22 @@ uint Context::copyPrimitive( uint UUID ){
         std::vector<vec2> uv = p->getTextureUV();
         Triangle* tri_new;
         if( !p->hasTexture() ){
-            tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), p->getColorRGBA(), currentUUID ));
+            tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), p->getColorRGBA(), parentID, currentUUID ));
         }else{
             std::string texture_file = p->getTextureFile();
             float solid_fraction = p->getArea()/calculateTriangleArea( vertices.at(0), vertices.at(1), vertices.at(2) );
-            tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), texture_file.c_str(), uv, solid_fraction, currentUUID ));
+            tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), texture_file.c_str(), uv, textures, parentID, currentUUID ));
+            tri_new->setSolidFraction(solid_fraction);
         }
         float transform[16];
         p->getTransformationMatrix(transform);
         tri_new->setTransformationMatrix(transform);
-        tri_new->setParentObjectID(parentID);
         primitives[currentUUID] = tri_new;
     }else if( type==PRIMITIVE_TYPE_VOXEL ){
         Voxel* p = getVoxelPointer_private(UUID);
         Voxel* voxel_new;
         //if( !p->hasTexture() ){
-        voxel_new = (new Voxel( p->getColorRGBA(), currentUUID ));
+        voxel_new = (new Voxel( p->getColorRGBA(), parentID, currentUUID ));
         //}else{
         //  voxel_new = (new Voxel( p->getColorRGBA(), currentUUID ));
         /* \todo Texture-mapped voxels constructor here */
@@ -3839,7 +3857,6 @@ uint Context::copyPrimitive( uint UUID ){
         float transform[16];
         p->getTransformationMatrix(transform);
         voxel_new->setTransformationMatrix(transform);
-        voxel_new->setParentObjectID(parentID);
         primitives[currentUUID] = voxel_new;
     }
 
@@ -7053,36 +7070,12 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
             uv.at(2) = make_vec2(float(i+1)*uv_sub.x,float(j+1)*uv_sub.y);
             uv.at(3) = make_vec2(float(i)*uv_sub.x,float(j+1)*uv_sub.y);
 
-            float solid_fraction;
-            if( textures.at(texturefile).hasTransparencyChannel() ){
-                int A = 0;
-                int At = 0;
+            auto* patch_new = (new Patch( texturefile, uv,  textures, 0, currentUUID ));
 
-                int2 uv_min( std::max(0,(int)floorf(uv.at(0).x*(float(sz.x)-1.f))), std::max(0,(int)floorf((1.f-uv.at(2).y)*(float(sz.y)-1.f))) );
-                int2 uv_max( std::min(sz.x-1,(int)floorf(uv.at(2).x*(float(sz.x)-1.f))), std::min(sz.y-1,(int)floorf((1.f-uv.at(0).y)*(float(sz.y)-1.f))) );
-
-                assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
-
-                for( int jj=uv_min.y; jj<uv_max.y; jj++ ){
-                    for( int ii=uv_min.x; ii<uv_max.x; ii++ ){
-                        At += 1;
-                        if( alpha->at(jj).at(ii) ){
-                            A += 1;
-                        }
-                    }
-                }
-                if( At==0 ){
-                    solid_fraction = 0;
-                }else{
-                    solid_fraction = float(A)/float(At);
-                }
-            }else{
-                solid_fraction = 1.f;
+            if( patch_new->getSolidFraction()==0 ){
+              free(patch_new);
+              continue;
             }
-
-            auto* patch_new = (new Patch( texturefile, uv, solid_fraction, currentUUID ));
-
-            patch_new->setParentObjectID(0);
 
             assert( size.x>0.f && size.y>0.f );
             patch_new->scale( make_vec3(subsize.x,subsize.y,1) );
@@ -8261,40 +8254,12 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
             uv[2] = make_vec2(float(i+1)*uv_sub.x,float(j+1)*uv_sub.y);
             uv[3] = make_vec2(float(i)*uv_sub.x,float(j+1)*uv_sub.y);
 
-            float solid_fraction;
-            if( textures.at(texturefile).hasTransparencyChannel() ){
-                int A = 0;
-                int At = 0;
+            auto* patch_new = (new Patch( texturefile, uv, textures, 0, currentUUID ));
 
-                int2 uv_min( std::max(0,(int)floorf(uv[0].x*float(sz.x-1))), std::max(0,(int)floorf((1.f-uv[2].y)*float(sz.y-1))) );
-                int2 uv_max( std::min(sz.x-1,(int)floorf(uv[2].x*float(sz.x-1))), std::min(sz.y-1,(int)floorf((1.f-uv[0].y)*float(sz.y-1))) );
-
-                assert( uv_min.x>=0 && uv_min.y>=0 && uv_max.x<sz.x && uv_max.y<sz.y );
-
-                for( int jj=uv_min.y; jj<uv_max.y; jj++ ){
-                    for( int ii=uv_min.x; ii<uv_max.x; ii++ ){
-                        At += 1;
-                        if( alpha[jj][ii] ){
-                            A += 1;
-                        }
-                    }
-                }
-                if( At==0 ){
-                    solid_fraction = 0;
-                }else{
-                    solid_fraction = float(A)/float(At);
-                }
-            }else{
-                solid_fraction = 1.f;
+            if( patch_new->getSolidFraction()==0 ){
+              free(patch_new);
+              continue;
             }
-
-            if( solid_fraction==0.f ){
-                continue;
-            }
-
-            auto* patch_new = (new Patch( texturefile, uv, solid_fraction, currentUUID ));
-
-            patch_new->setParentObjectID(0);
 
             assert( size.x>0.f && size.y>0.f );
             patch_new->scale( make_vec3(subsize.x,subsize.y,1) );
@@ -10493,7 +10458,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         }
         
         //Create a dummy patch in order to get the center, size, and rotation based on transformation matrix
-        Patch patch( make_RGBAcolor(0,0,0,0), 0 );
+        Patch patch( make_RGBAcolor(0,0,0,0), 0, 0 );
         patch.setTransformationMatrix(transform);
         
         // * Add the Tile * //
@@ -10523,8 +10488,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Tile Object Data * //
         
         loadOData(p,ID);
-        
-        //        UUID.push_back(ID);
+
+        std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
+        UUID.insert( UUID.end(), childUUIDs.begin(), childUUIDs.end() );
         
     }//end tiles
     
@@ -10621,6 +10587,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Sphere Object Data * //
         
         loadOData(p,ID);
+
+        std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
+        UUID.insert( UUID.end(), childUUIDs.begin(), childUUIDs.end() );
         
     }//end spheres
     
@@ -10756,6 +10725,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * tube Object Data * //
         
         loadOData(p,ID);
+
+        std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
+        UUID.insert( UUID.end(), childUUIDs.begin(), childUUIDs.end() );
         
     }//end tubes
     
@@ -10852,6 +10824,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Box Object Data * //
         
         loadOData(p,ID);
+
+        std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
+        UUID.insert( UUID.end(), childUUIDs.begin(), childUUIDs.end() );
         
     }//end boxes
     
@@ -10948,6 +10923,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Disk Object Data * //
         
         loadOData(p,ID);
+
+        std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
+        UUID.insert( UUID.end(), childUUIDs.begin(), childUUIDs.end() );
         
     }//end disks
     
@@ -11083,6 +11061,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         // * Cone Object Data * //
         
         loadOData(p,ID);
+
+        std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
+        UUID.insert( UUID.end(), childUUIDs.begin(), childUUIDs.end() );
         
     }//end cones
     
@@ -11673,8 +11654,15 @@ void Context::writeXML( const char* filename, bool quiet ) const{
         std::cout << "Writing XML file " << filename << "..." << std::flush;
     }
 
+    std::string xmlfilename = filename;
+
+    auto file_extension = getFileExtension(filename);
+    if( file_extension != ".xml" && file_extension != ".XML" ) { // append xml to file name
+      xmlfilename.append(".xml");
+    }
+
     std::ofstream outfile;
-    outfile.open(filename);
+    outfile.open(xmlfilename);
 
     outfile << "<?xml version=\"1.0\"?>\n\n";
 
@@ -12959,39 +12947,52 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
 
 }
 
-void Context::writeOBJ( const char* filename ) const {
+void Context::writeOBJ( const std::string &filename ) const {
   writeOBJ(filename, getAllUUIDs(),{});
 }
 
-void Context::writeOBJ( const char* filename, const std::vector<uint> &UUIDs ) const {
+void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs ) const {
   writeOBJ(filename,UUIDs,{});
 }
 
-void Context::writeOBJ( const char* filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields ) const{
+void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields ) const{
 
   //To-Do list for OBJ writer
-  // - image files need to be copied to the location where the .obj file is being written otherwise they won't be found.
-  // - should parse "filename" to check that extension is .obj, and remove .obj extension when appending .mtl for material file.
   // - it would make more sense to write patches  as quads rather than two triangles
 
   std::cout << "Writing OBJ file " << filename << "..." << std::flush;
-  std::ofstream file;
 
-  char objfilename[50];
-  sprintf(objfilename, "%s.obj", filename);
-  file.open(objfilename);
+  if( UUIDs.empty() ){
+    std::cout << "failed. UUID vector was empty - OBJ file will not be written." << std::endl;
+    return;
+  }else if( filename.empty() ){
+    std::cout << "failed. Filename was empty - OBJ file will not be written." << std::endl;
+    return;
+  }
+
+  std::string objfilename = filename;
+  std::string mtlfilename = filename;
+
+  auto file_extension = getFileExtension(filename);
+  auto file_stem = getFileStem(filename);
+  auto file_path = getFilePath(filename);
+
+  std::string fn = filename;
+  if( file_extension != ".obj" && file_extension != ".OBJ" ) { // append obj to file name
+    objfilename.append(".obj");
+    mtlfilename.append(".mtl");
+  }else{
+    mtlfilename = file_path + "/" + file_stem + ".mtl";
+  }
+
+  std::vector<OBJmaterial> materials;
 
   bool uuidexistswarning = false;
 
-  file << "# Helios generated OBJ File" << std::endl;
-  file << "# baileylab.ucdavis.edu/software/helios" << std::endl;
-  file << "mtllib " << filename << ".mtl" << std::endl;
-  std::vector < int3 > faces;
-  std::vector < vec3 > verts;
-  std::vector < vec2 > uv;
-  std::vector < int3 > uv_inds;
-  std::vector < std::string > texture_list;
-  std::vector < RGBcolor > colors;
+  std::vector<vec3> verts;
+  std::vector<vec2> uv;
+  std::map< uint, std::vector<int3> > faces;
+  std::map< uint, std::vector<int3> > uv_inds;
   size_t vertex_count = 1;  //OBJ files start indices at 1
   size_t uv_count = 1;
 
@@ -13005,48 +13006,76 @@ void Context::writeOBJ( const char* filename, const std::vector<uint> &UUIDs, co
     std::vector < vec3 > vertices = getPrimitivePointer_private(p)->getVertices();
     PrimitiveType type = getPrimitivePointer_private(p)->getType();
     RGBcolor C = getPrimitivePointer_private(p)->getColor();
+    std::string texturefile = getPrimitivePointer_private(p)->getTextureFile();
+
+    bool material_exists=false;
+    uint material_ID = 99999;
+
+    if( getPrimitivePointer_private(p)->isTextureColorOverridden() ) {
+      texturefile = "";
+    }
+
+    if (getPrimitivePointer_private(p)->hasTexture() && !getPrimitivePointer_private(p)->isTextureColorOverridden() ) {
+      for( auto & material : materials){
+        if( texturefile==material.texture ){
+          material_exists=true;
+          material_ID = material.materialID;
+          break;
+        }
+      }
+    }else{
+      for( auto & material : materials){
+        if( C==material.color ){
+          material_exists=true;
+          material_ID = material.materialID;
+          break;
+        }
+      }
+    }
+
+    if( !material_exists ){
+      OBJmaterial mat(C,texturefile, materials.size() );
+      materials.emplace_back(mat);
+      material_ID = mat.materialID;
+      if( primitiveTextureHasTransparencyChannel(p) ){
+        materials.back().textureHasTransparency=true;
+      }
+    }
 
     if (type == PRIMITIVE_TYPE_TRIANGLE) {
 
-      faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
-      colors.push_back(C);
+      faces[material_ID].push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
       for (int i = 0; i < 3; i++) {
         verts.push_back(vertices.at(i));
         vertex_count++;
       }
 
       std::vector < vec2 > uv_v = getTrianglePointer_private(p)->getTextureUV();
-      if (getTrianglePointer_private(p)->hasTexture()) {
-        uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
-        texture_list.push_back(getTrianglePointer_private(p)->getTextureFile());
+      if (getTrianglePointer_private(p)->hasTexture() && !getTrianglePointer_private(p)->isTextureColorOverridden() ) {
+        uv_inds[material_ID].push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
         for (int i = 0; i < 3; i++) {
           uv.push_back( uv_v.at(i) );
           uv_count++;
         }
-      } else {
-        texture_list.emplace_back("");
-        uv_inds.push_back(make_int3(-1, -1, -1));
+      }
+      else {
+        uv_inds[material_ID].push_back(make_int3(-1, -1, -1));
       }
 
     } else if (type == PRIMITIVE_TYPE_PATCH) {
-      faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
-      faces.push_back(make_int3( (int)vertex_count, (int)vertex_count + 2, (int)vertex_count + 3));
-      colors.push_back(C);
-      colors.push_back(C);
+
+      faces[material_ID].push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
+      faces[material_ID].push_back(make_int3( (int)vertex_count, (int)vertex_count + 2, (int)vertex_count + 3));
       for (int i = 0; i < 4; i++) {
         verts.push_back(vertices.at(i));
         vertex_count++;
       }
       std::vector < vec2 > uv_v;
-      std::string texturefile;
       uv_v = getPatchPointer_private(p)->getTextureUV();
-      texturefile = getPatchPointer_private(p)->getTextureFile();
 
-      if (getPatchPointer_private(p)->hasTexture()) {
-        texture_list.push_back(texturefile);
-        texture_list.push_back(texturefile);
-        uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
-        uv_inds.push_back(make_int3( (int)uv_count, (int)uv_count + 2, (int)uv_count + 3));
+      if (getPatchPointer_private(p)->hasTexture() && !getPatchPointer_private(p)->isTextureColorOverridden()) {
+        uv_inds[material_ID].push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
+        uv_inds[material_ID].push_back(make_int3( (int)uv_count, (int)uv_count + 2, (int)uv_count + 3));
         if (uv_v.empty()) {  //default (u,v)
           uv.push_back( make_vec2(0, 1) );
           uv.push_back( make_vec2(1, 1) );
@@ -13060,168 +13089,99 @@ void Context::writeOBJ( const char* filename, const std::vector<uint> &UUIDs, co
           }
         }
       } else {
-        texture_list.emplace_back("");
-        texture_list.emplace_back("");
-        uv_inds.push_back(make_int3(-1, -1, -1));
-        uv_inds.push_back(make_int3(-1, -1, -1));
+        uv_inds[material_ID].push_back(make_int3(-1, -1, -1));
+        uv_inds[material_ID].push_back(make_int3(-1, -1, -1));
       }
+
     }
   }
 
+//  assert(verts.size() == faces.size());
   assert(uv_inds.size() == faces.size());
-  assert(texture_list.size() == faces.size());
-  assert(colors.size() == faces.size());
-
-  for (auto & vert : verts) {
-    file << "v " << vert.x << " " << vert.y << " " << vert.z << std::endl;
+  for( int i=0; i<faces.size(); i++ ){
+    assert( uv_inds.at(i).size() == faces.at(i).size() );
   }
 
-  for (auto & v : uv) {
-    file << "vt " << v.x << " " << v.y << std::endl;
+  //copy material textures to new directory and edit old file paths
+  //DISABLED TEMPORARILY UNTIL A MORE PORTABLE FIX IS IMPLEMENTED
+//  std::string texture_dir;
+//  if( std::string(file_path).empty() ){
+//    texture_dir = "obj_textures/";
+//  }else{
+//    texture_dir = std::string(file_path) + "/obj_textures/";
+//  }
+//  auto ret = fs::create_directory( texture_dir );
+//  for (int mat = 0; mat < materials.size(); mat++) {
+//    std::string texture = materials.at(mat).texture;
+//    if( !texture.empty() && fs::exists(texture) ) {
+//      auto file = fs::path(texture).filename();
+//      fs::copy_file( texture, texture_dir + std::string(file), fs::copy_options::overwrite_existing );
+//      materials.at(mat).texture = texture_dir + std::string(file);
+//    }
+//  }
+
+  std::ofstream objfstream;
+  objfstream.open(objfilename);
+  std::ofstream mtlfstream;
+  mtlfstream.open(mtlfilename);
+
+  objfstream << "# Helios auto-generated OBJ File" << std::endl;
+  objfstream << "# baileylab.ucdavis.edu/software/helios" << std::endl;
+  objfstream << "mtllib " << mtlfilename << std::endl;
+
+  for( auto &vert : verts) {
+    objfstream << "v " << vert.x << " " << vert.y << " " << vert.z << std::endl;
+  }
+  for( auto &v : uv){
+    objfstream << "vt " << v.x << " " << v.y << std::endl;
   }
 
-  std::string current_texture;
-  int material_count = 1;
-  std::vector < size_t > exsit_mtl_list;
+  for( int mat=0; mat<materials.size(); mat++ ) {
 
-  current_texture = texture_list.at(0);
-  file << "usemtl material" << material_count << std::endl;
-  material_count++;
-  exsit_mtl_list.push_back(0);
+    assert(materials.at(mat).materialID==mat);
 
-  if (uv_inds.at(0).x < 0) {
-    file << "f " << faces.at(0).x << " " << faces.at(0).y << " " << faces.at(0).z << std::endl;
-  } else {
-    //assert( uv_inds.at(f).x <= uv.size() && uv_inds.at(f).y <= uv.size() && uv_inds.at(f).z <= uv.size() );
-    file << "f " << faces.at(0).x << "/" << uv_inds.at(0).x << " "
-         << faces.at(0).y << "/" << uv_inds.at(0).y << " " << faces.at(0).z
-         << "/" << uv_inds.at(0).z << std::endl;
-  }
+    objfstream << "usemtl material" << mat << std::endl;
 
-  for (size_t f = 1; f < faces.size(); f++) {
+    for (int f = 0; f < faces.at(mat).size(); f++) {
 
-    if (current_texture != texture_list.at(f)) {
-      bool mtl_exist_flag = false;
-      size_t mtl_index = 0;
-      size_t mtl_index_f = 0;
-      for (size_t index = 0; index < exsit_mtl_list.size(); index++) {
-        if (texture_list.at(f) == texture_list.at(exsit_mtl_list[index])) {
-          mtl_exist_flag = true;
-          mtl_index = index;
-          mtl_index_f = exsit_mtl_list[index];
-          break;
-        }
-      }
-
-      if (mtl_exist_flag) {
-        current_texture = texture_list.at(mtl_index_f);
-        file << "usemtl material" << (mtl_index + 1) << std::endl;  //we plus 1 here as we index mtl from 1 instead of 0 in the file.
+      if (uv_inds.at(mat).at(f).x < 0) {
+        objfstream << "f " << faces.at(mat).at(f).x << " "
+                   << faces.at(mat).at(f).y << " " << faces.at(mat).at(f).z
+                   << std::endl;
       } else {
-        current_texture = texture_list.at(f);
-        file << "usemtl material" << material_count << std::endl;
-        material_count++;
-        exsit_mtl_list.push_back(f);
+        objfstream << "f " << faces.at(mat).at(f).x << "/"
+                   << uv_inds.at(mat).at(f).x << " " << faces.at(mat).at(f).y
+                   << "/" << uv_inds.at(mat).at(f).y << " "
+                   << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z
+                   << std::endl;
       }
     }
 
-    if (uv_inds.at(f).x < 0) {
-      file << "f " << faces.at(f).x << " " << faces.at(f).y << " "
-           << faces.at(f).z << std::endl;
-    } else {
-      //assert( uv_inds.at(f).x <= uv.size() && uv_inds.at(f).y <= uv.size() && uv_inds.at(f).z <= uv.size() );
-      file << "f " << faces.at(f).x << "/" << uv_inds.at(f).x << " "
-           << faces.at(f).y << "/" << uv_inds.at(f).y << " " << faces.at(f).z
-           << "/" << uv_inds.at(f).z << std::endl;
-    }
-  }
-  file.close();
-
-  char mtlfilename[50];
-  sprintf(mtlfilename, "%s.mtl", filename);
-  file.open(mtlfilename);
-
-  current_texture = "";
-  material_count = 1;
-  RGBcolor current_color = make_RGBcolor(0.010203, 0.349302, 0.8372910);
-  std::vector < size_t > exsit_mtl_list2;
-
-  if (texture_list.at(0).empty()) {  //has no texture
-    if (current_color.r != colors.at(0).r && current_color.g != colors.at(0).g
-        && current_color.b != colors.at(0).b) {  //new color
-      current_texture = texture_list.at(0);
-      current_color = colors.at(0);
-      file << "newmtl material" << material_count << std::endl;
-      file << "Ka " << current_color.r << " " << current_color.g << " "
-           << current_color.b << std::endl;
-      file << "Kd " << current_color.r << " " << current_color.g << " "
-           << current_color.b << std::endl;
-      file << "Ks 0.0 0.0 0.0" << std::endl;
-      file << "illum 2 " << std::endl;
-    }
-  }
-
-  else {
-    current_texture = texture_list.at(0);
-    file << "newmtl material" << material_count << std::endl;
-    file << "Ka 1.0 1.0 1.0" << std::endl;
-    file << "Kd 1.0 1.0 1.0" << std::endl;
-    file << "Ks 0.0 0.0 0.0" << std::endl;
-    file << "illum 2 " << std::endl;
-    file << "map_Ka " << current_texture << std::endl;
-    file << "map_Kd " << current_texture << std::endl;
-    file << "map_d " << current_texture << std::endl;
-  }
-
-  material_count++;
-  exsit_mtl_list2.push_back(0);
-
-  for (size_t f = 1; f < faces.size(); f++) {
-    bool mtl_exist_flag = false;
-    size_t mtl_index = 0;
-    size_t mtl_index_f = 0;
-    for (size_t index = 0; index < exsit_mtl_list2.size(); index++) {
-      if ( !(texture_list.at(f) != texture_list.at(exsit_mtl_list2.at(index)))) {
-        mtl_exist_flag = true;
-        mtl_index = index;
-        mtl_index_f = exsit_mtl_list2[index];
-        break;
+    if( materials.at(mat).texture.empty() ) {
+      RGBcolor current_color = materials.at(mat).color;
+      mtlfstream << "newmtl material" << mat << std::endl;
+      mtlfstream << "Ka " << current_color.r << " " << current_color.g << " " << current_color.b << std::endl;
+      mtlfstream << "Kd " << current_color.r << " " << current_color.g << " " << current_color.b << std::endl;
+      mtlfstream << "Ks 0.0 0.0 0.0" << std::endl;
+      mtlfstream << "illum 2 " << std::endl;
+    }else {
+      std::string current_texture = materials.at(mat).texture;
+      mtlfstream << "newmtl material" << mat << std::endl;
+      mtlfstream << "Ka 1.0 1.0 1.0" << std::endl;
+      mtlfstream << "Kd 1.0 1.0 1.0" << std::endl;
+      mtlfstream << "Ks 0.0 0.0 0.0" << std::endl;
+      mtlfstream << "illum 2 " << std::endl;
+      mtlfstream << "map_Ka " << current_texture << std::endl;
+      mtlfstream << "map_Kd " << current_texture << std::endl;
+      if( materials.at(mat).textureHasTransparency ){
+        mtlfstream << "map_d " << current_texture << std::endl;
       }
     }
-    if ( !mtl_exist_flag) {
 
-      if (texture_list.at(f).empty()) {
-        if (current_color.r != colors.at(f).r
-            && current_color.g != colors.at(f).g
-            && current_color.b != colors.at(f).b) {  //new color
-
-          current_texture = texture_list.at(f);
-          current_color = colors.at(f);
-          file << "newmtl material" << material_count << std::endl;
-          file << "Ka " << current_color.r << " " << current_color.g << " "
-               << current_color.b << std::endl;
-          file << "Kd " << current_color.r << " " << current_color.g << " "
-               << current_color.b << std::endl;
-          file << "Ks 0.0 0.0 0.0" << std::endl;
-          file << "illum 2 " << std::endl;
-          material_count++;
-        }
-      } else {
-        current_texture = texture_list.at(f);
-        file << "newmtl material" << material_count << std::endl;
-        file << "Ka 1.0 1.0 1.0" << std::endl;
-        file << "Kd 1.0 1.0 1.0" << std::endl;
-        file << "Ks 0.0 0.0 0.0" << std::endl;
-        file << "illum 2 " << std::endl;
-        file << "map_Ka " << current_texture << std::endl;
-        file << "map_Kd " << current_texture << std::endl;
-        file << "map_d " << current_texture << std::endl;
-        material_count++;
-        exsit_mtl_list2.push_back(f);
-      }
-
-    }
   }
-  file.close();
+
+  objfstream.close();
+  mtlfstream.close();
 
   if( !primitive_dat_fields.empty() ){
 
@@ -13312,6 +13272,297 @@ void Context::writeOBJ( const char* filename, const std::vector<uint> &UUIDs, co
 
 
   std::cout << "done." << std::endl;
+}
+
+
+void Context::colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, const std::string &primitive_data, const std::string &colormap, uint Ncolors ){
+
+  colorPrimitiveByDataPseudocolor(UUIDs,primitive_data,colormap, Ncolors,9999999,-9999999);
+
+}
+
+void Context::colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, const std::string &primitive_data, const std::string &colormap, uint Ncolors, float data_min, float data_max ){
+
+  std::map<uint,float> pcolor_data;
+
+  float data_min_new=9999999;
+  float data_max_new=-9999999;
+  for( uint UUID : UUIDs ){
+
+    if( !doesPrimitiveExist(UUID) ){
+      std::cout << "WARNING (Context::colorPrimitiveDataPseudocolor): primitive for UUID " << std::to_string(UUID) << " does not exist. Skipping this primitive." << std::endl;
+      continue;
+    }
+    if( !doesPrimitiveDataExist(UUID,primitive_data.c_str()) ){
+      std::cout << "WARNING (Context::colorPrimitiveDataPseudocolor): primitive data " << primitive_data << " for UUID " << std::to_string(UUID) << " does not exist. Skipping this primitive." << std::endl;
+      continue;
+    }
+    if( getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_FLOAT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_INT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_UINT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_DOUBLE  ){
+      std::cout << "WARNING (Context::colorPrimitiveDataPseudocolor): Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive." << std::endl;
+      continue;
+    }
+
+    float dataf=0;
+    if( getPrimitiveDataType(UUID,primitive_data.c_str())==HELIOS_TYPE_FLOAT ){
+      float data;
+      getPrimitiveData(UUID,primitive_data.c_str(),data);
+      dataf=data;
+    }else if( getPrimitiveDataType(UUID,primitive_data.c_str())==HELIOS_TYPE_DOUBLE ){
+      double data;
+      getPrimitiveData(UUID,primitive_data.c_str(),data);
+      dataf=float(data);
+    }else if( getPrimitiveDataType(UUID,primitive_data.c_str())==HELIOS_TYPE_INT ){
+      int data;
+      getPrimitiveData(UUID,primitive_data.c_str(),data);
+      dataf=float(data);
+    }else if( getPrimitiveDataType(UUID,primitive_data.c_str())==HELIOS_TYPE_UINT ) {
+      uint data;
+      getPrimitiveData(UUID, primitive_data.c_str(), data);
+      dataf = float(data);
+    }
+
+    if( data_min==9999999 && data_max==-9999999 ) {
+      if (dataf < data_min_new) {
+        data_min_new = dataf;
+      }
+      if (dataf > data_max_new) {
+        data_max_new = dataf;
+      }
+    }
+
+    pcolor_data[UUID] = dataf;
+
+  }
+
+  if( data_min==9999999 && data_max==-9999999 ) {
+    data_min = data_min_new;
+    data_max = data_max_new;
+  }
+
+  std::vector<RGBcolor> colormap_data = generateColormap( colormap, Ncolors );
+
+  std::map<std::string,std::vector<std::string> > cmap_texture_filenames;
+
+  for( auto &data : pcolor_data ) {
+
+    uint UUID = data.first;
+    float pdata = data.second;
+
+    std::string texturefile = getPrimitiveTextureFile(UUID);
+
+    int cmap_ind = round((pdata - data_min) / (data_max - data_min) * float(Ncolors - 1));
+
+    assert(cmap_ind >= 0 && cmap_ind < Ncolors);
+
+    if (!texturefile.empty() && primitiveTextureHasTransparencyChannel(UUID)) { // primitive has texture with transparency channel
+
+      if (cmap_texture_filenames.find(texturefile) == cmap_texture_filenames.end()) {
+        cmap_texture_filenames[texturefile] = generateTexturesFromColormap(texturefile, colormap_data);
+      }
+
+      setPrimitiveTextureFile( UUID, cmap_texture_filenames.at(texturefile).at(cmap_ind));
+
+    } else { // primitive does not have texture with transparency channel - assign constant color
+
+      if (!getPrimitiveTextureFile(UUID).empty()) {
+        overridePrimitiveTextureColor(UUID);
+      }
+
+      setPrimitiveColor(UUID, colormap_data.at(cmap_ind));
+    }
+  }
+
+}
+
+std::vector<RGBcolor> Context::generateColormap( const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors ){
+
+  if( Ncolors>9999 ){
+    std::cout << "WARNING (Context::generateColormapTextures): Truncating number of color map textures to maximum value of 9999." << std::endl;
+  }
+
+  if( ctable.size()!=cfrac.size() ){
+    throw( std::runtime_error("ERROR (Context::generateColormap): The length of arguments 'ctable' and 'cfrac' must match.") );
+  }
+  if( ctable.empty() ){
+    throw( std::runtime_error("ERROR (Context::generateColormap): 'ctable' and 'cfrac' arguments contain empty vectors.") );
+  }
+
+  std::vector<RGBcolor> color_table;
+  color_table.resize(Ncolors);
+
+  for (int i = 0; i < Ncolors; i++){
+
+    float frac = float(i)/float(Ncolors-1)*cfrac.back();
+
+    int j;
+    for( j=0; j<cfrac.size()-1; j++ ){
+      if( frac>=cfrac.at(j) && frac<=cfrac.at(j+1) ){
+        break;
+      }
+    }
+
+    float cminus = std::fmaxf(0.f,cfrac.at(j));
+    float cplus = std::fminf(1.f,cfrac.at(j+1));
+
+    float jfrac = (frac-cminus)/(cplus-cminus);
+
+    RGBcolor color;
+    color.r = ctable.at(j).r+jfrac*(ctable.at(j+1).r-ctable.at(j).r);
+    color.g = ctable.at(j).g+jfrac*(ctable.at(j+1).g-ctable.at(j).g);
+    color.b = ctable.at(j).b+jfrac*(ctable.at(j+1).b-ctable.at(j).b);
+
+    color_table.at(i) = color;
+
+  }
+
+  return color_table;
+
+}
+
+std::vector<RGBcolor> Context::generateColormap( const std::string &colormap, uint Ncolors ){
+
+  std::vector<RGBcolor> ctable_c;
+  std::vector<float> clocs_c;
+
+  if( colormap == "hot" ) {
+
+    ctable_c.resize(5);
+    ctable_c.at(0) = make_RGBcolor(0.f, 0.f, 0.f);
+    ctable_c.at(1) = make_RGBcolor(0.5f, 0.f, 0.5f);
+    ctable_c.at(2) = make_RGBcolor(1.f, 0.f, 0.f);
+    ctable_c.at(3) = make_RGBcolor(1.f, 0.5f, 0.f);
+    ctable_c.at(4) = make_RGBcolor(1.f, 1.f, 0.f);
+
+    clocs_c.resize(5);
+    clocs_c.at(0) = 0.f;
+    clocs_c.at(1) = 0.25f;
+    clocs_c.at(2) = 0.5f;
+    clocs_c.at(3) = 0.75f;
+    clocs_c.at(4) = 1.f;
+
+  }else if( colormap == "cool") {
+
+    ctable_c.resize(2);
+    ctable_c.at(1) = RGB::cyan;
+    ctable_c.at(2) = RGB::magenta;
+
+    clocs_c.resize(2);
+    clocs_c.at(1) = 0.f;
+    clocs_c.at(2) = 1.f;
+
+  }else if( colormap == "lava" ) {
+
+    ctable_c.resize(5);
+    ctable_c.at(0) = make_RGBcolor(0.f, 0.05f, 0.05f);
+    ctable_c.at(1) = make_RGBcolor(0.f, 0.6f, 0.6f);
+    ctable_c.at(2) = make_RGBcolor(1.f, 1.f, 1.f);
+    ctable_c.at(3) = make_RGBcolor(1.f, 0.f, 0.f);
+    ctable_c.at(4) = make_RGBcolor(0.5f, 0.f, 0.f);
+
+    clocs_c.resize(5);
+    clocs_c.at(0) = 0.f;
+    clocs_c.at(1) = 0.4f;
+    clocs_c.at(2) = 0.5f;
+    clocs_c.at(3) = 0.6f;
+    clocs_c.at(4) = 1.f;
+
+  }else if( colormap == "rainbow" ){
+
+    ctable_c.resize(4);
+    ctable_c.at(0) = RGB::navy;
+    ctable_c.at(1) = RGB::cyan;
+    ctable_c.at(2) = RGB::yellow;
+    ctable_c.at(3) = make_RGBcolor( 0.75f, 0.f, 0.f );
+
+    clocs_c.resize(4);
+    clocs_c.at(0) = 0.f;
+    clocs_c.at(1) = 0.3f;
+    clocs_c.at(2) = 0.7f;
+    clocs_c.at(3) = 1.f;
+
+  }else if( colormap == "parula" ){
+
+    ctable_c.resize(4);
+    ctable_c.at(0) = RGB::navy;
+    ctable_c.at(1) = make_RGBcolor(0,0.6,0.6);
+    ctable_c.at(2) = RGB::goldenrod;
+    ctable_c.at(3) = RGB::yellow;
+
+    clocs_c.resize(4);
+    clocs_c.at(0) = 0.f;
+    clocs_c.at(1) = 0.4f;
+    clocs_c.at(2) = 0.7f;
+    clocs_c.at(3) = 1.f;
+
+  }else if( colormap == "gray" ) {
+
+    ctable_c.resize(2);
+    ctable_c.at(0) = RGB::black;
+    ctable_c.at(1) = RGB::white;
+
+    clocs_c.resize(2);
+    clocs_c.at(0) = 0.f;
+    clocs_c.at(1) = 1.f;
+  }else{
+    throw( std::runtime_error("ERROR (Context::generateColormapTextures): Unknown colormap "+colormap+".") );
+  }
+
+  return generateColormap( ctable_c, clocs_c, Ncolors );
+
+}
+
+std::vector<std::string> Context::generateTexturesFromColormap( const std::string &texturefile, const std::vector<RGBcolor> &colormap_data ){
+
+  uint Ncolors = colormap_data.size();
+
+  // check that texture file exists
+  std::ifstream tfile(texturefile);
+  if (!tfile) {
+    throw(std::runtime_error("ERROR (Context::generateTexturesFromColormap): Texture file " + texturefile + " does not exist, or you do not have permission to read it."));
+  }
+  tfile.close();
+
+  // get file extension
+  std::string file_ext = texturefile.substr(texturefile.find_last_of(".") + 1);
+
+  // get file base
+  std::string base_filename = texturefile.substr(texturefile.find_last_of("/\\") + 1);
+  std::string::size_type const p(base_filename.find_last_of('.'));
+  std::string file_base = base_filename.substr(0, p);
+
+  std::vector<RGBcolor> color_table;
+  color_table.resize(Ncolors);
+
+  std::vector<std::string> texture_filenames(Ncolors);
+
+  if (file_ext == "png" || file_ext == "PNG") {
+
+    std::vector<RGBAcolor> pixel_data;
+    uint width, height;
+    readPNG(texturefile, width, height, pixel_data);
+
+    for (int i = 0; i < Ncolors; i++) {
+
+      std::ostringstream filename;
+      filename << "lib/images/colormap_" << file_base << "_" << std::setw(4) << std::setfill('0') << std::to_string(i) << ".png";
+
+      texture_filenames.at(i) = filename.str();
+
+      RGBcolor color = colormap_data.at(i);
+
+      for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+          pixel_data.at(row * width + col) = make_RGBAcolor(color, pixel_data.at(row * width + col).a);
+        }
+      }
+
+      writePNG(filename.str(), width, height, pixel_data);
+    }
+
+  }
+
+  return texture_filenames;
+
 }
 
 void Context::writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, bool print_header ) const{
@@ -13587,6 +13838,10 @@ void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBAcolor 
 
 std::string Context::getPrimitiveTextureFile( uint UUID ) const{
     return getPrimitivePointer_private(UUID)->getTextureFile();
+}
+
+void Context::setPrimitiveTextureFile( uint UUID, const std::string &texturefile ){
+  getPrimitivePointer_private(UUID)->setTextureFile(texturefile.c_str());
 }
 
 helios::int2 Context::getPrimitiveTextureSize( uint UUID ) const{

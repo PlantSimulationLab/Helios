@@ -141,7 +141,7 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
     glfwSwapBuffers((GLFWwindow*)_window);
     glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
 
-    //depending on the ative frame buffer, we may get all zero data and need to swap it again.
+    //depending on the active frame buffer, we may get all zero data and need to swap it again.
     bool zeros = true;
     for( int i=0; i<bsize; i++ ){
         if( screen_shot_trans[i]!=0 ){

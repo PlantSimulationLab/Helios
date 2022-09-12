@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.2.43
+/*! \mainpage Helios Documentation v1.2.44
 
   \image html Helios_logo.png
 
@@ -449,6 +449,7 @@
    <tr><td><random></td></tr>
    <tr><td><chrono></td></tr>
    <tr><td><thread></td></tr>
+   <tr><td><filesystem></td></tr>
    </table>
  
  <!-- **************** CONTEXT ***************** -->

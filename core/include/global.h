@@ -49,6 +49,7 @@
 #include <random>
 #include <chrono>
 #include <thread>
+#include <iomanip>
 
 typedef unsigned int uint;
 
@@ -445,7 +446,44 @@ void wait( float seconds );
  /** \param[in] "filename" Name of the PNG image file
        \return 2D mask, where false denotes no material
  */
- std::vector<std::vector<bool> > readPNGAlpha( const char* filename );
+ std::vector<std::vector<bool> > readPNGAlpha(const std::string &filename );
+
+ //! Function to read a PNG image file into pixel data array
+ /**
+  * \param[in] "filename" Name of the PNG image file
+  * \param[out] "width" Image width in pixels
+  * \param[out] "height" Image height in pixels
+  * \param[out] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
+  */
+ void readPNG( const std::string &filename, uint &width, uint &height, std::vector<helios::RGBAcolor> &pixel_data);
+
+//! Function to write a PNG image based on pixel data
+/**
+ * \param[in] "filename" Name of the PNG image file
+ * \param[out] "width" Image width in pixels
+ * \param[out] "height" Image height in pixels
+ * \param[out] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
+*/
+void writePNG( const std::string &filename, uint width, uint height, const std::vector<helios::RGBAcolor> &pixel_data );
+
+
+//! Function to read a JPEG image file into pixel data array
+/**
+     * \param[in] "filename" Name of the JPEG image file
+     * \param[out] "width" Image width in pixels
+     * \param[out] "height" Image height in pixels
+     * \param[out] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
+*/
+    void readJPEG( const std::string &filename, uint &width, uint &height, std::vector<helios::RGBcolor> &pixel_data);
+
+//! Function to write a JPEG image based on pixel data
+/**
+ * \param[in] "filename" Name of the JPEG image file
+ * \param[out] "width" Image width in pixels
+ * \param[out] "height" Image height in pixels
+ * \param[out] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
+*/
+    void writeJPEG( const std::string &filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data );
 
     //! Function to flatten a 2D int vector into a 1D vector
     std::vector<int> flatten( const std::vector<std::vector<int> > &vec );
@@ -649,6 +687,14 @@ void wait( float seconds );
      * \return distance between p1 and p2 in three dimensions
      */
     float point_distance( const helios::vec3 &p1 , const helios::vec3 &p2);
+
+    std::string getFileExtension( const std::string &filepath );
+
+    std::string getFileStem( const std::string &filepath );
+
+    std::string getFileName( const std::string &filepath );
+
+    std::string getFilePath( const std::string &filepath, bool trailingslash = true );
 
     extern SphericalCoord nullrotation;
 

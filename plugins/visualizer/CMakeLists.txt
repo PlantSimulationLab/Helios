@@ -20,11 +20,11 @@ add_subdirectory("lib/glew-2.2.0/build/cmake")
 target_link_libraries( visualizer glew_s )
 #target_link_libraries( visualizer GLEW_static )
 
-#jpeg
-include_directories("lib/libjpeg-9a")
-include_directories("${CMAKE_BINARY_DIR}/plugins/visualizer/lib/libjpeg-9a")
-add_subdirectory("lib/libjpeg-9a")
+#jpeg (built with the Helios core)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../core/lib/libjpeg-9a")
+include_directories("${CMAKE_BINARY_DIR}/lib/lib/libjpeg-9a")
 target_link_libraries( visualizer jpeg )
+add_dependencies( visualizer jpeg )
 
 #libpng
 include_directories("../../core/lib/libpng")
@@ -57,6 +57,8 @@ if(X11_FOUND)
 endif(X11_FOUND)
 
 target_link_libraries( visualizer helios )
+
+add_dependencies( visualizer helios )
 
 set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/glm" PARENT_SCOPE )
 

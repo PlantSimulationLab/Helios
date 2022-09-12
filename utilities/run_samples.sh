@@ -115,6 +115,9 @@ for i in "${SAMPLES[@]}";do
     else
 	echo -e "\r\e[31mBuilding sample ${i}...failed.\e[39m"
 	ERROR_CASE=1
+	rm -rf "$i"/build/*
+	cd ../..
+	continue
     fi
 
     echo -ne "Compiling sample ${i}..."
@@ -125,10 +128,16 @@ for i in "${SAMPLES[@]}";do
 	else
 	    echo -e "\r\e[31mCompiling sample ${i}...failed.\e[39m"
 	    ERROR_CASE=1
+	    rm -rf "$i"/build/*
+	    cd ../..
+      continue
 	fi
     else
 	echo -e "\r\e[31mCompiling sample ${i}...failed.\e[39m"
 	ERROR_CASE=1
+	rm -rf "$i"/build/*
+	cd ../..
+  	continue
     fi
 
     echo -ne "Running sample ${i}..."
@@ -140,6 +149,9 @@ for i in "${SAMPLES[@]}";do
     else
 	echo -e "\r\e[31mRunning sample ${i}...failed.\e[39m"
 	ERROR_CASE=1
+	rm -rf "$i"/build/*
+	cd ../..
+  	continue
     fi
 
     rm -rf *

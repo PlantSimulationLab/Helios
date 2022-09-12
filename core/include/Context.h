@@ -17,6 +17,8 @@
 #ifndef HELIOS_CONTEXT
 #define HELIOS_CONTEXT
 
+#include <utility>
+
 #include "global.h"
 
 //! Timeseries-related functions
@@ -930,6 +932,13 @@ public:
      *\return 2D vector of u-v texture coordinates
      */
     std::vector<vec2> getTextureUV( );
+
+
+    //! Set u-v texture coordinates at primitive vertices
+    /**
+     *\param[in] vector of u-v texture coordinates
+     */
+    void setTextureUV( const std::vector<vec2> &uv );
     
     //! Override the color in the texture map, in which case the primitive will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
     void overrideTextureColor( );
@@ -1236,6 +1245,8 @@ public:
     
     //! Return labels for all primitive data for this particular primitive
     std::vector<std::string> listPrimitiveData() const;
+
+    virtual void calculateSolidFraction( const std::map<std::string,Texture> &textures ) = 0;
     
 protected:
     
@@ -1291,13 +1302,13 @@ class Patch : public Primitive{
 public:
     
     //! Patch constructor - colored by RGBcolor
-    Patch( const helios::RGBAcolor& color, uint UUID );
+    Patch( const helios::RGBAcolor& color, uint parent_objID, uint UUID );
     
     //! Patch constructor - colored by texture map
-    Patch( const char* texturefile, float solid_fraction, uint UUID );
+    Patch( const char* texturefile, float solid_fraction, uint parent_objID, uint UUID );
     
     //! Patch constructor - colored by texture map with custom (u,v) coordinates
-    Patch( const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint UUID );
+    Patch( const char* texturefile, const std::vector<helios::vec2>& uv, const std::map<std::string,Texture> &textures, uint parent_objID, uint UUID );
     
     //! Patch destructor
     ~Patch() override= default;
@@ -1345,9 +1356,7 @@ public:
      */
     void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) override;
     
-    
-protected:
-    
+    void calculateSolidFraction( const std::map<std::string,Texture> &textures ) override;
     
 };
 
@@ -1361,10 +1370,10 @@ class Triangle : public Primitive{
 public:
     
     //! Triangle constructor
-    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const helios::RGBAcolor& color, uint UUID );
+    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const helios::RGBAcolor& color, uint parent_objID, uint UUID );
     
     //! Triangle constructor
-    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint UUID );
+    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, const std::map<std::string,Texture> &textures, uint parent_objID, uint UUID );
     
     //! Triangle destructor
     ~Triangle() override= default;
@@ -1421,6 +1430,8 @@ public:
      * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
      */
     void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) override;
+
+    void calculateSolidFraction( const std::map<std::string,Texture> &textures ) override;
     
 private:
     
@@ -1434,6 +1445,8 @@ private:
     helios::vec3 vertex2;
     
     void makeTransformationMatrix( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2 );
+
+    bool edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::vec2 &c);
     
 };
 
@@ -1445,7 +1458,7 @@ class Voxel : public Primitive{
 public:
     
     //! Voxel constructors
-    Voxel( const helios::RGBAcolor& color, uint UUID );
+    Voxel( const helios::RGBAcolor& color, uint parent_objID, uint UUID );
     
     //! Voxel destructor
     ~Voxel() override= default;
@@ -1505,6 +1518,8 @@ public:
      * \param[in] "axis" Vector describing the direction of the axis about which to rotate.
      */
     void rotate( float rot, const helios::vec3 &origin, const helios::vec3 &axis ) override;
+
+    void calculateSolidFraction( const std::map<std::string,Texture> &textures ) override;
     
 };
 
@@ -1667,7 +1682,14 @@ private:
     void loadOsubPData( pugi::xml_node p, uint ID );
     
     void writeDataToXMLstream( const char* data_group, const std::vector<std::string> &data_labels, void* ptr, std::ofstream &outfile ) const;
-    
+
+    std::vector<std::string> generateTexturesFromColormap( const std::string &texturefile, const std::vector<RGBcolor> &colormap_data );
+
+    std::vector<RGBcolor> generateColormap( const std::string &colormap, uint Ncolors );
+
+    std::vector<RGBcolor> generateColormap( const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors );
+
+
     //---------- CONTEXT INITIALIZATION FLAGS ---------//
     
     //! Flag indicating whether Context has been initialized
@@ -1685,7 +1707,7 @@ private:
     
 public:
     
-    //! Context default constructor
+  //! Context default constructor
     Context();
     
     //! Context destructor
@@ -2797,7 +2819,6 @@ public:
      */
     void overrideObjectTextureColor( uint ObjID );
     
-    
     //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
     /**
      * \param[in] "ObjID" Identifier of the object.
@@ -2922,6 +2943,14 @@ public:
      * @return Path to texture map file.
      */
     std::string getPrimitiveTextureFile( uint UUID ) const;
+
+
+    //! Set the texture map file for a primitive
+    /**
+     * \param[in] UUID Unique universal identifier of primitive to be queried.
+     * \param[in] texturefile Path to texture image file.
+     */
+    void setPrimitiveTextureFile( uint UUID, const std::string &texturefile );
     
     //! Get the size (number of pixels) of primitive texture map image.
     /**
@@ -4821,7 +4850,11 @@ public:
      \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
      */
     void cropDomain(const vec2 &xbounds, const vec2 &ybounds, const vec2 &zbounds );
-    
+
+    void colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, const std::string &primitive_data, const std::string &colormap, uint Ncolors );
+
+    void colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, const std::string &primitive_data, const std::string &colormap, uint Ncolors, float data_min, float data_max );
+
     //! Load inputs specified in an XML file.
     /**
      * \param[in] "filename" name of XML file.
@@ -4947,14 +4980,14 @@ public:
     /**
      * \param[in] "filename" Base filename of .obj and .mtl file
      */
-    void writeOBJ( const char* filename ) const;
+    void writeOBJ( const std::string &filename ) const;
 
     //! Write geometry in the Context to a Wavefront file (.obj) for a subset of UUIDs
     /**
      * \param[in] "filename" Base filename of .obj and .mtl file
      * \param[in] "UUIDs" Vector of UUIDs for which geometry should be written
      */
-    void writeOBJ( const char* filename, const std::vector<uint> &UUIDs ) const;
+    void writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs ) const;
 
     //! Write geometry in the Context to a Wavefront file (.obj)
     /**
@@ -4962,7 +4995,19 @@ public:
      * \param[in] "UUIDs" Vector of UUIDs for which geometry should be written
      * \param[in] "primitive_dat_fields" A .dat file will be written containing primitive data given in this vector (for Unity visualization)
      */
-    void writeOBJ( const char* filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields ) const;
+    void writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields ) const;
+
+    struct OBJmaterial{
+
+      RGBcolor color;
+      std::string texture;
+      uint materialID;
+      bool textureHasTransparency = false;
+
+      OBJmaterial( const RGBcolor &a_color, std::string a_texture, uint a_materialID ) : color{a_color}, texture{std::move(a_texture)}, materialID{a_materialID} {};
+
+    };
+
     
     //! Set simulation date by day, month, year
     /**
