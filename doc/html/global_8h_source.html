@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.43</span>
+   &#160;<span id="projectnumber">v1.2.44</span>
    </div>
   </td>
  </tr>
@@ -318,124 +318,130 @@ $(function() {
 <div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160; </div>
 <div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160; std::vector&lt;std::vector&lt;bool&gt; &gt; readPNGAlpha( <span class="keyword">const</span> <span class="keywordtype">char</span>* filename );</div>
 <div class="line"><a name="l00449"></a><span class="lineno">  449</span>&#160; </div>
-<div class="line"><a name="l00451"></a><span class="lineno">  451</span>&#160;    std::vector&lt;int&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;int&gt; &gt; &amp;vec );</div>
-<div class="line"><a name="l00452"></a><span class="lineno">  452</span>&#160; </div>
-<div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160;    std::vector&lt;uint&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;uint&gt; &gt; &amp;vec );</div>
-<div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160; </div>
-<div class="line"><a name="l00457"></a><span class="lineno">  457</span>&#160;    std::vector&lt;float&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;float&gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00451"></a><span class="lineno">  451</span>&#160; </div>
+<div class="line"><a name="l00457"></a><span class="lineno">  457</span>&#160; <span class="keywordtype">void</span> readPNG( <span class="keyword">const</span> std::string &amp;filename, uint &amp;width, uint &amp;height, std::vector&lt;helios::RGBAcolor&gt; &amp;pixel_data);</div>
 <div class="line"><a name="l00458"></a><span class="lineno">  458</span>&#160; </div>
-<div class="line"><a name="l00460"></a><span class="lineno">  460</span>&#160;    std::vector&lt;double&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;double&gt; &gt; &amp;vec );</div>
-<div class="line"><a name="l00461"></a><span class="lineno">  461</span>&#160; </div>
-<div class="line"><a name="l00463"></a><span class="lineno">  463</span>&#160;    std::vector&lt;helios::vec2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::vec2&gt; &gt; &amp;vec );</div>
-<div class="line"><a name="l00464"></a><span class="lineno">  464</span>&#160; </div>
-<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160;    std::vector&lt;helios::vec3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::vec3&gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00460"></a><span class="lineno">  460</span>&#160; </div>
+<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160;<span class="keywordtype">void</span> writePNG( <span class="keyword">const</span> std::string &amp;filename, uint width, uint height, <span class="keyword">const</span> std::vector&lt;helios::RGBAcolor&gt; &amp;pixel_data );</div>
 <div class="line"><a name="l00467"></a><span class="lineno">  467</span>&#160; </div>
-<div class="line"><a name="l00469"></a><span class="lineno">  469</span>&#160;    std::vector&lt;helios::vec4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::vec4&gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00469"></a><span class="lineno">  469</span>&#160;    std::vector&lt;int&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;int&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00470"></a><span class="lineno">  470</span>&#160; </div>
-<div class="line"><a name="l00472"></a><span class="lineno">  472</span>&#160;    std::vector&lt;helios::int2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::int2&gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00472"></a><span class="lineno">  472</span>&#160;    std::vector&lt;uint&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;uint&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00473"></a><span class="lineno">  473</span>&#160; </div>
-<div class="line"><a name="l00475"></a><span class="lineno">  475</span>&#160;    std::vector&lt;helios::int3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::int3&gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00475"></a><span class="lineno">  475</span>&#160;    std::vector&lt;float&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;float&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00476"></a><span class="lineno">  476</span>&#160; </div>
-<div class="line"><a name="l00478"></a><span class="lineno">  478</span>&#160;    std::vector&lt;helios::int4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::int4&gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00478"></a><span class="lineno">  478</span>&#160;    std::vector&lt;double&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;double&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00479"></a><span class="lineno">  479</span>&#160; </div>
-<div class="line"><a name="l00481"></a><span class="lineno">  481</span>&#160;    std::vector&lt;std::string&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::string&gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00481"></a><span class="lineno">  481</span>&#160;    std::vector&lt;helios::vec2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::vec2&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00482"></a><span class="lineno">  482</span>&#160; </div>
-<div class="line"><a name="l00484"></a><span class="lineno">  484</span>&#160;    std::vector&lt;int&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;int&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00484"></a><span class="lineno">  484</span>&#160;    std::vector&lt;helios::vec3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::vec3&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00485"></a><span class="lineno">  485</span>&#160; </div>
-<div class="line"><a name="l00487"></a><span class="lineno">  487</span>&#160;    std::vector&lt;uint&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;uint&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00487"></a><span class="lineno">  487</span>&#160;    std::vector&lt;helios::vec4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::vec4&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00488"></a><span class="lineno">  488</span>&#160; </div>
-<div class="line"><a name="l00490"></a><span class="lineno">  490</span>&#160;    std::vector&lt;float&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;float&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00490"></a><span class="lineno">  490</span>&#160;    std::vector&lt;helios::int2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::int2&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00491"></a><span class="lineno">  491</span>&#160; </div>
-<div class="line"><a name="l00493"></a><span class="lineno">  493</span>&#160;    std::vector&lt;double&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;double&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00493"></a><span class="lineno">  493</span>&#160;    std::vector&lt;helios::int3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::int3&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00494"></a><span class="lineno">  494</span>&#160; </div>
-<div class="line"><a name="l00496"></a><span class="lineno">  496</span>&#160;    std::vector&lt;helios::vec2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::vec2&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00496"></a><span class="lineno">  496</span>&#160;    std::vector&lt;helios::int4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::int4&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00497"></a><span class="lineno">  497</span>&#160; </div>
-<div class="line"><a name="l00499"></a><span class="lineno">  499</span>&#160;    std::vector&lt;helios::vec3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::vec3&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00499"></a><span class="lineno">  499</span>&#160;    std::vector&lt;std::string&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::string&gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00500"></a><span class="lineno">  500</span>&#160; </div>
-<div class="line"><a name="l00502"></a><span class="lineno">  502</span>&#160;    std::vector&lt;helios::vec4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::vec4&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00502"></a><span class="lineno">  502</span>&#160;    std::vector&lt;int&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;int&gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00503"></a><span class="lineno">  503</span>&#160; </div>
-<div class="line"><a name="l00505"></a><span class="lineno">  505</span>&#160;    std::vector&lt;helios::int2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::int2&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00505"></a><span class="lineno">  505</span>&#160;    std::vector&lt;uint&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;uint&gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00506"></a><span class="lineno">  506</span>&#160; </div>
-<div class="line"><a name="l00508"></a><span class="lineno">  508</span>&#160;    std::vector&lt;helios::int3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::int3&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00508"></a><span class="lineno">  508</span>&#160;    std::vector&lt;float&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;float&gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00509"></a><span class="lineno">  509</span>&#160; </div>
-<div class="line"><a name="l00511"></a><span class="lineno">  511</span>&#160;    std::vector&lt;helios::int4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::int4&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00511"></a><span class="lineno">  511</span>&#160;    std::vector&lt;double&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;double&gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00512"></a><span class="lineno">  512</span>&#160; </div>
-<div class="line"><a name="l00514"></a><span class="lineno">  514</span>&#160;    std::vector&lt;std::string&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::string&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00514"></a><span class="lineno">  514</span>&#160;    std::vector&lt;helios::vec2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::vec2&gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00515"></a><span class="lineno">  515</span>&#160; </div>
-<div class="line"><a name="l00516"></a><span class="lineno">  516</span>&#160; </div>
-<div class="line"><a name="l00518"></a><span class="lineno">  518</span>&#160;    std::vector&lt;int&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;int&gt; &gt; &gt; &gt; &amp;vec );</div>
-<div class="line"><a name="l00519"></a><span class="lineno">  519</span>&#160; </div>
-<div class="line"><a name="l00521"></a><span class="lineno">  521</span>&#160;    std::vector&lt;uint&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;uint&gt; &gt; &gt; &gt; &amp;vec );</div>
-<div class="line"><a name="l00522"></a><span class="lineno">  522</span>&#160; </div>
-<div class="line"><a name="l00524"></a><span class="lineno">  524</span>&#160;    std::vector&lt;float&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;float&gt; &gt; &gt; &gt; &amp;vec );</div>
-<div class="line"><a name="l00525"></a><span class="lineno">  525</span>&#160; </div>
-<div class="line"><a name="l00527"></a><span class="lineno">  527</span>&#160;    std::vector&lt;double&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;double&gt; &gt; &gt; &gt; &amp;vec );</div>
-<div class="line"><a name="l00528"></a><span class="lineno">  528</span>&#160; </div>
-<div class="line"><a name="l00530"></a><span class="lineno">  530</span>&#160;    std::vector&lt;helios::vec2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::vec2&gt; &gt; &gt; &gt; &amp;vec );</div>
-<div class="line"><a name="l00531"></a><span class="lineno">  531</span>&#160; </div>
-<div class="line"><a name="l00533"></a><span class="lineno">  533</span>&#160;    std::vector&lt;helios::vec3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::vec3&gt; &gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00517"></a><span class="lineno">  517</span>&#160;    std::vector&lt;helios::vec3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::vec3&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00518"></a><span class="lineno">  518</span>&#160; </div>
+<div class="line"><a name="l00520"></a><span class="lineno">  520</span>&#160;    std::vector&lt;helios::vec4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::vec4&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00521"></a><span class="lineno">  521</span>&#160; </div>
+<div class="line"><a name="l00523"></a><span class="lineno">  523</span>&#160;    std::vector&lt;helios::int2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::int2&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00524"></a><span class="lineno">  524</span>&#160; </div>
+<div class="line"><a name="l00526"></a><span class="lineno">  526</span>&#160;    std::vector&lt;helios::int3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::int3&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00527"></a><span class="lineno">  527</span>&#160; </div>
+<div class="line"><a name="l00529"></a><span class="lineno">  529</span>&#160;    std::vector&lt;helios::int4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;helios::int4&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00530"></a><span class="lineno">  530</span>&#160; </div>
+<div class="line"><a name="l00532"></a><span class="lineno">  532</span>&#160;    std::vector&lt;std::string&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::string&gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00533"></a><span class="lineno">  533</span>&#160; </div>
 <div class="line"><a name="l00534"></a><span class="lineno">  534</span>&#160; </div>
-<div class="line"><a name="l00536"></a><span class="lineno">  536</span>&#160;    std::vector&lt;helios::vec4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::vec4&gt; &gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00536"></a><span class="lineno">  536</span>&#160;    std::vector&lt;int&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;int&gt; &gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00537"></a><span class="lineno">  537</span>&#160; </div>
-<div class="line"><a name="l00539"></a><span class="lineno">  539</span>&#160;    std::vector&lt;helios::int2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::int2&gt; &gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00539"></a><span class="lineno">  539</span>&#160;    std::vector&lt;uint&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;uint&gt; &gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00540"></a><span class="lineno">  540</span>&#160; </div>
-<div class="line"><a name="l00542"></a><span class="lineno">  542</span>&#160;    std::vector&lt;helios::int3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::int3&gt; &gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00542"></a><span class="lineno">  542</span>&#160;    std::vector&lt;float&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;float&gt; &gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00543"></a><span class="lineno">  543</span>&#160; </div>
-<div class="line"><a name="l00545"></a><span class="lineno">  545</span>&#160;    std::vector&lt;helios::int4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::int4&gt; &gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00545"></a><span class="lineno">  545</span>&#160;    std::vector&lt;double&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;double&gt; &gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00546"></a><span class="lineno">  546</span>&#160; </div>
-<div class="line"><a name="l00548"></a><span class="lineno">  548</span>&#160;    std::vector&lt;std::string&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;std::string&gt; &gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00548"></a><span class="lineno">  548</span>&#160;    std::vector&lt;helios::vec2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::vec2&gt; &gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00549"></a><span class="lineno">  549</span>&#160; </div>
-<div class="line"><a name="l00550"></a><span class="lineno">  550</span>&#160; </div>
+<div class="line"><a name="l00551"></a><span class="lineno">  551</span>&#160;    std::vector&lt;helios::vec3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::vec3&gt; &gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00552"></a><span class="lineno">  552</span>&#160; </div>
-<div class="line"><a name="l00560"></a><span class="lineno">  560</span>&#160;  <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> spline_interp3(<span class="keywordtype">float</span> u, <span class="keyword">const</span> vec3 &amp;x_start, <span class="keyword">const</span> vec3 &amp;tan_start, <span class="keyword">const</span> vec3 &amp;x_end, <span class="keyword">const</span> vec3 &amp;tan_end );</div>
+<div class="line"><a name="l00554"></a><span class="lineno">  554</span>&#160;    std::vector&lt;helios::vec4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::vec4&gt; &gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00555"></a><span class="lineno">  555</span>&#160; </div>
+<div class="line"><a name="l00557"></a><span class="lineno">  557</span>&#160;    std::vector&lt;helios::int2&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::int2&gt; &gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00558"></a><span class="lineno">  558</span>&#160; </div>
+<div class="line"><a name="l00560"></a><span class="lineno">  560</span>&#160;    std::vector&lt;helios::int3&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::int3&gt; &gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00561"></a><span class="lineno">  561</span>&#160; </div>
-<div class="line"><a name="l00563"></a><span class="lineno">  563</span>&#160; </div>
-<div class="line"><a name="l00566"></a><span class="lineno">  566</span>&#160;  <span class="keywordtype">float</span> XMLloadfloat( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00563"></a><span class="lineno">  563</span>&#160;    std::vector&lt;helios::int4&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;helios::int4&gt; &gt; &gt; &gt; &amp;vec );</div>
+<div class="line"><a name="l00564"></a><span class="lineno">  564</span>&#160; </div>
+<div class="line"><a name="l00566"></a><span class="lineno">  566</span>&#160;    std::vector&lt;std::string&gt; flatten( <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::vector&lt;std::vector&lt;std::string&gt; &gt; &gt; &gt; &amp;vec );</div>
 <div class="line"><a name="l00567"></a><span class="lineno">  567</span>&#160; </div>
-<div class="line"><a name="l00569"></a><span class="lineno">  569</span>&#160; </div>
-<div class="line"><a name="l00572"></a><span class="lineno">  572</span>&#160;  <span class="keywordtype">int</span> XMLloadint( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
-<div class="line"><a name="l00573"></a><span class="lineno">  573</span>&#160; </div>
-<div class="line"><a name="l00575"></a><span class="lineno">  575</span>&#160; </div>
-<div class="line"><a name="l00578"></a><span class="lineno">  578</span>&#160;  std::string XMLloadstring( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00568"></a><span class="lineno">  568</span>&#160; </div>
+<div class="line"><a name="l00570"></a><span class="lineno">  570</span>&#160; </div>
+<div class="line"><a name="l00578"></a><span class="lineno">  578</span>&#160;  <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> spline_interp3(<span class="keywordtype">float</span> u, <span class="keyword">const</span> vec3 &amp;x_start, <span class="keyword">const</span> vec3 &amp;tan_start, <span class="keyword">const</span> vec3 &amp;x_end, <span class="keyword">const</span> vec3 &amp;tan_end );</div>
 <div class="line"><a name="l00579"></a><span class="lineno">  579</span>&#160; </div>
 <div class="line"><a name="l00581"></a><span class="lineno">  581</span>&#160; </div>
-<div class="line"><a name="l00584"></a><span class="lineno">  584</span>&#160;  <a class="code" href="structhelios_1_1vec2.html">helios::vec2</a> XMLloadvec2( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00584"></a><span class="lineno">  584</span>&#160;  <span class="keywordtype">float</span> XMLloadfloat( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
 <div class="line"><a name="l00585"></a><span class="lineno">  585</span>&#160; </div>
 <div class="line"><a name="l00587"></a><span class="lineno">  587</span>&#160; </div>
-<div class="line"><a name="l00590"></a><span class="lineno">  590</span>&#160;  <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> XMLloadvec3( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00590"></a><span class="lineno">  590</span>&#160;  <span class="keywordtype">int</span> XMLloadint( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
 <div class="line"><a name="l00591"></a><span class="lineno">  591</span>&#160; </div>
 <div class="line"><a name="l00593"></a><span class="lineno">  593</span>&#160; </div>
-<div class="line"><a name="l00596"></a><span class="lineno">  596</span>&#160;  <a class="code" href="structhelios_1_1vec4.html">helios::vec4</a> XMLloadvec4( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00596"></a><span class="lineno">  596</span>&#160;  std::string XMLloadstring( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
 <div class="line"><a name="l00597"></a><span class="lineno">  597</span>&#160; </div>
 <div class="line"><a name="l00599"></a><span class="lineno">  599</span>&#160; </div>
-<div class="line"><a name="l00602"></a><span class="lineno">  602</span>&#160;  <a class="code" href="structhelios_1_1int2.html">helios::int2</a> XMLloadint2( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00602"></a><span class="lineno">  602</span>&#160;  <a class="code" href="structhelios_1_1vec2.html">helios::vec2</a> XMLloadvec2( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
 <div class="line"><a name="l00603"></a><span class="lineno">  603</span>&#160; </div>
 <div class="line"><a name="l00605"></a><span class="lineno">  605</span>&#160; </div>
-<div class="line"><a name="l00608"></a><span class="lineno">  608</span>&#160;  <a class="code" href="structhelios_1_1int3.html">helios::int3</a> XMLloadint3( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00608"></a><span class="lineno">  608</span>&#160;  <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> XMLloadvec3( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
 <div class="line"><a name="l00609"></a><span class="lineno">  609</span>&#160; </div>
 <div class="line"><a name="l00611"></a><span class="lineno">  611</span>&#160; </div>
-<div class="line"><a name="l00614"></a><span class="lineno">  614</span>&#160;  <a class="code" href="structhelios_1_1int4.html">helios::int4</a> XMLloadint4( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00614"></a><span class="lineno">  614</span>&#160;  <a class="code" href="structhelios_1_1vec4.html">helios::vec4</a> XMLloadvec4( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
 <div class="line"><a name="l00615"></a><span class="lineno">  615</span>&#160; </div>
 <div class="line"><a name="l00617"></a><span class="lineno">  617</span>&#160; </div>
-<div class="line"><a name="l00620"></a><span class="lineno">  620</span>&#160;  <a class="code" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> XMLloadrgb( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00620"></a><span class="lineno">  620</span>&#160;  <a class="code" href="structhelios_1_1int2.html">helios::int2</a> XMLloadint2( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
 <div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160; </div>
 <div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160; </div>
-<div class="line"><a name="l00626"></a><span class="lineno">  626</span>&#160;  <a class="code" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> XMLloadrgba( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00626"></a><span class="lineno">  626</span>&#160;  <a class="code" href="structhelios_1_1int3.html">helios::int3</a> XMLloadint3( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
 <div class="line"><a name="l00627"></a><span class="lineno">  627</span>&#160; </div>
 <div class="line"><a name="l00629"></a><span class="lineno">  629</span>&#160; </div>
-<div class="line"><a name="l00635"></a><span class="lineno">  635</span>&#160;  <span class="keywordtype">float</span> fzero(<span class="keywordtype">float</span>(*<span class="keyword">function</span>)(<span class="keywordtype">float</span> value, std::vector&lt;float&gt; &amp;variables, <span class="keyword">const</span> <span class="keywordtype">void</span> *parameters), std::vector&lt;float&gt; &amp;variables, <span class="keyword">const</span> <span class="keywordtype">void</span> *parameters, <span class="keywordtype">float</span> init_guess, <span class="keywordtype">float</span> err_tol = 0.0001f, <span class="keywordtype">int</span> max_iterations = 100 );</div>
-<div class="line"><a name="l00636"></a><span class="lineno">  636</span>&#160; </div>
-<div class="line"><a name="l00638"></a><span class="lineno">  638</span>&#160; </div>
-<div class="line"><a name="l00643"></a><span class="lineno">  643</span>&#160;    <span class="keywordtype">float</span> interp1( <span class="keyword">const</span> std::vector&lt;helios::vec2&gt; &amp;points, <span class="keywordtype">float</span> x );</div>
-<div class="line"><a name="l00644"></a><span class="lineno">  644</span>&#160; </div>
-<div class="line"><a name="l00646"></a><span class="lineno">  646</span>&#160; </div>
-<div class="line"><a name="l00651"></a><span class="lineno">  651</span>&#160;    <span class="keywordtype">float</span> point_distance( <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;p1 , <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;p2);</div>
-<div class="line"><a name="l00652"></a><span class="lineno">  652</span>&#160; </div>
-<div class="line"><a name="l00653"></a><span class="lineno">  653</span>&#160;    <span class="keyword">extern</span> SphericalCoord nullrotation;</div>
+<div class="line"><a name="l00632"></a><span class="lineno">  632</span>&#160;  <a class="code" href="structhelios_1_1int4.html">helios::int4</a> XMLloadint4( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00633"></a><span class="lineno">  633</span>&#160; </div>
+<div class="line"><a name="l00635"></a><span class="lineno">  635</span>&#160; </div>
+<div class="line"><a name="l00638"></a><span class="lineno">  638</span>&#160;  <a class="code" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> XMLloadrgb( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00639"></a><span class="lineno">  639</span>&#160; </div>
+<div class="line"><a name="l00641"></a><span class="lineno">  641</span>&#160; </div>
+<div class="line"><a name="l00644"></a><span class="lineno">  644</span>&#160;  <a class="code" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> XMLloadrgba( pugi::xml_node node, <span class="keyword">const</span> <span class="keywordtype">char</span>* field );</div>
+<div class="line"><a name="l00645"></a><span class="lineno">  645</span>&#160; </div>
+<div class="line"><a name="l00647"></a><span class="lineno">  647</span>&#160; </div>
+<div class="line"><a name="l00653"></a><span class="lineno">  653</span>&#160;  <span class="keywordtype">float</span> fzero(<span class="keywordtype">float</span>(*<span class="keyword">function</span>)(<span class="keywordtype">float</span> value, std::vector&lt;float&gt; &amp;variables, <span class="keyword">const</span> <span class="keywordtype">void</span> *parameters), std::vector&lt;float&gt; &amp;variables, <span class="keyword">const</span> <span class="keywordtype">void</span> *parameters, <span class="keywordtype">float</span> init_guess, <span class="keywordtype">float</span> err_tol = 0.0001f, <span class="keywordtype">int</span> max_iterations = 100 );</div>
 <div class="line"><a name="l00654"></a><span class="lineno">  654</span>&#160; </div>
-<div class="line"><a name="l00655"></a><span class="lineno">  655</span>&#160;}</div>
 <div class="line"><a name="l00656"></a><span class="lineno">  656</span>&#160; </div>
-<div class="line"><a name="l00657"></a><span class="lineno">  657</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00661"></a><span class="lineno">  661</span>&#160;    <span class="keywordtype">float</span> interp1( <span class="keyword">const</span> std::vector&lt;helios::vec2&gt; &amp;points, <span class="keywordtype">float</span> x );</div>
+<div class="line"><a name="l00662"></a><span class="lineno">  662</span>&#160; </div>
+<div class="line"><a name="l00664"></a><span class="lineno">  664</span>&#160; </div>
+<div class="line"><a name="l00669"></a><span class="lineno">  669</span>&#160;    <span class="keywordtype">float</span> point_distance( <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;p1 , <span class="keyword">const</span> <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;p2);</div>
+<div class="line"><a name="l00670"></a><span class="lineno">  670</span>&#160; </div>
+<div class="line"><a name="l00671"></a><span class="lineno">  671</span>&#160;    <span class="keyword">extern</span> SphericalCoord nullrotation;</div>
+<div class="line"><a name="l00672"></a><span class="lineno">  672</span>&#160; </div>
+<div class="line"><a name="l00673"></a><span class="lineno">  673</span>&#160;}</div>
+<div class="line"><a name="l00674"></a><span class="lineno">  674</span>&#160; </div>
+<div class="line"><a name="l00675"></a><span class="lineno">  675</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="ttc" id="aglobal_8h_html_a09ae9efe6ba5dddb144519931bcf94b5"><div class="ttname"><a href="global_8h.html#a09ae9efe6ba5dddb144519931bcf94b5">helios::rotatePointAboutLine</a></div><div class="ttdeci">vec3 rotatePointAboutLine(const vec3 &amp;point, const vec3 &amp;line_base, const vec3 &amp;line_direction, float theta)</div><div class="ttdoc">Rotate a 3D vector about an arbitrary line.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00125">global.cpp:125</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a2404c4bfe8b03cdbde4421a2e0be2b19"><div class="ttname"><a href="global_8h.html#a2404c4bfe8b03cdbde4421a2e0be2b19">helios::matmult</a></div><div class="ttdeci">void matmult(const float ML[16], const float MR[16], float(&amp;T)[16])</div><div class="ttdoc">Multiply 4x4 matrices: T=ML*MR.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00438">global.cpp:438</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a32a34b00e0a28f4b35e501b8b34cfccd"><div class="ttname"><a href="global_8h.html#a32a34b00e0a28f4b35e501b8b34cfccd">helios::cart2sphere</a></div><div class="ttdeci">SphericalCoord cart2sphere(const vec3 &amp;Cartesian)</div><div class="ttdoc">Convert Cartesian coordinates to spherical coordinates.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00549">global.cpp:549</a></div></div>

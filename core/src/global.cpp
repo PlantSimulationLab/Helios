@@ -1190,6 +1190,158 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const char* filename ){
   
 }
 
+void helios::readPNG( const std::string &filename, uint & width, uint & height, std::vector<helios::RGBAcolor> &texture ){
+
+  std::string fn = filename;
+  if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ){
+    throw( std::runtime_error("ERROR (readPNG): File " + fn + " is not PNG format.") );
+  }
+
+  int x, y;
+
+  png_byte color_type;
+  png_byte bit_depth;
+
+  png_structp png_ptr;
+  png_infop info_ptr;
+  int number_of_passes;
+  png_bytep * row_pointers;
+
+  char header[8];    // 8 is the maximum size that can be checked
+
+  /* open file and test for it being a png */
+  FILE *fp = fopen(filename.c_str(), "rb");
+  if (!fp){
+    throw(std::runtime_error("ERROR (readPNG): File " + filename + "could not be opened for reading."));
+   }
+  fread(header, 1, 8, fp);
+
+  /* initialize stuff */
+  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+
+  if (!png_ptr){
+    throw(std::runtime_error("ERROR (readPNG): failed to create PNG read structure."));
+  }
+
+  info_ptr = png_create_info_struct(png_ptr);
+  if (!info_ptr){
+    throw(std::runtime_error("ERROR (readPNG): failed to create PNG inof structure."));
+  }
+
+  if (setjmp(png_jmpbuf(png_ptr))){
+    throw(std::runtime_error("ERROR (readPNG): init_io failed."));
+  }
+
+  png_init_io(png_ptr, fp);
+  png_set_sig_bytes(png_ptr, 8);
+
+  png_read_info(png_ptr, info_ptr);
+
+  width = png_get_image_width(png_ptr, info_ptr);
+  height = png_get_image_height(png_ptr, info_ptr);
+  color_type = png_get_color_type(png_ptr, info_ptr);
+  bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+
+  number_of_passes = png_set_interlace_handling(png_ptr);
+  png_read_update_info(png_ptr, info_ptr);
+
+  /* read file */
+  if (setjmp(png_jmpbuf(png_ptr))){
+    throw(std::runtime_error("ERROR (readPNG): PNG read failed."));
+  }
+
+  row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
+  for (y=0; y<height; y++)
+    row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr,info_ptr));
+
+  png_read_image(png_ptr, row_pointers);
+
+  fclose(fp);
+
+  texture.resize(height*width);
+
+  for (uint j=0; j<height; j++){
+    png_byte* row=row_pointers[j];
+    for (int i=0; i < width; i++ ){
+      png_byte* ba=&row[i*4];
+      texture.at(j*width+i).r = (float)ba[0]/255.f;
+      texture.at(j*width+i).g = (float)ba[1]/255.f;
+      texture.at(j*width+i).b = (float)ba[2]/255.f;
+      texture.at(j*width+i).a = (float)ba[3]/255.f;
+    }
+  }
+
+  free(row_pointers);
+
+}
+
+void helios::writePNG( const std::string &filename, uint width, uint height, const std::vector<helios::RGBAcolor> &pixel_data ) {
+  int y;
+
+  FILE *fp = fopen(filename.c_str(), "wb");
+  if(!fp){
+    throw(std::runtime_error("ERROR (writePNG): failed to open image file."));
+  }
+
+  png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+  if (!png){
+    throw(std::runtime_error("ERROR (writePNG): failed to create PNG write structure."));
+  }
+
+  png_infop info = png_create_info_struct(png);
+  if (!info){
+    throw(std::runtime_error("ERROR (writePNG): failed to create PNG info structure."));
+  }
+
+  if (setjmp(png_jmpbuf(png))){
+    throw(std::runtime_error("ERROR (writePNG): init_io failed."));
+  }
+
+  png_init_io(png, fp);
+
+  // Output is 8bit depth, RGBA format.
+  png_set_IHDR(
+      png,
+      info,
+      width,
+      height,
+      8,
+      PNG_COLOR_TYPE_RGBA,
+      PNG_INTERLACE_NONE,
+      PNG_COMPRESSION_TYPE_DEFAULT,
+      PNG_FILTER_TYPE_DEFAULT
+  );
+  png_write_info(png, info);
+
+  // To remove the alpha channel for PNG_COLOR_TYPE_RGB format,
+  // Use png_set_filler().
+  //png_set_filler(png, 0, PNG_FILLER_AFTER);
+
+  std::vector<unsigned char*> row_pointers;
+  row_pointers.resize(height);
+
+  std::vector<std::vector<unsigned char> > data;
+  data.resize(height);
+
+  for( uint row=0; row<height; row++ ) {
+    data.at(row).resize(4*width);
+    for( uint col=0; col<width; col++ ){
+      data.at(row).at(4*col) = (unsigned char)round(pixel_data.at(row*width+col).r*255.f);
+      data.at(row).at(4*col+1) = (unsigned char)round(pixel_data.at(row*width+col).g*255.f);
+      data.at(row).at(4*col+2) = (unsigned char)round(pixel_data.at(row*width+col).b*255.f);
+      data.at(row).at(4*col+3) = (unsigned char)round(pixel_data.at(row*width+col).a*255.f);
+    }
+    row_pointers.at(row) = &data.at(row).at(0);
+  }
+
+  png_write_image(png, &row_pointers.at(0) );
+  png_write_end(png, nullptr);
+
+  fclose(fp);
+
+  png_destroy_write_struct(&png, &info);
+}
+
 std::vector<int> helios::flatten( const std::vector<std::vector<int> > &vec ){
 
     size_t ind = 0;

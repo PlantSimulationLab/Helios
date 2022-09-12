@@ -78,6 +78,8 @@ public:
   int2 operator+(const int2& a) const;
   //! Subtract two int2 vectors
   int2 operator-(const int2& a) const;
+  //! Equality for all elements
+  bool operator==( const int2& a ) const;
 
   friend std::ostream &operator<<(std::ostream &os, helios::int2 const &vec) {
     return os << "helios::int2<" << vec.x << ", " << vec.y << ">";
@@ -118,6 +120,10 @@ inline int2 int2::operator-(const int2& a) const{
   c.x=x-a.x;
   c.y=y-a.y;
   return  c;
+}
+
+inline bool int2::operator==( const int2& a ) const{
+  return a.x==x && a.y==y;
 }
 
 //! Vector of three elements of type 'int'. 
@@ -165,6 +171,8 @@ public:
   int3 operator+(const int3& a) const;
   //! Subtract two int3 vectors
   int3 operator-(const int3& a) const;
+  //! Equality for all elements
+  bool operator==( const int3& a ) const;
 
   friend std::ostream &operator<<(std::ostream &os, helios::int3 const &vec) {
     return os << "helios::int3<" << vec.x << ", " << vec.y << ", " << vec.z << ">";
@@ -198,6 +206,10 @@ inline int3 int3::operator-(const int3& a) const{
   c.y=y-a.y;
   c.z=z-a.z;
   return  c;
+}
+
+inline bool int3::operator==( const int3& a ) const{
+  return a.x==x && a.y==y && a.z==z;
 }
 
 //! Vector of four elements of type 'int'. 
@@ -251,6 +263,8 @@ public:
   int4 operator+(const int4& a) const;
   //! Subtract two int4 vectors
   int4 operator-(const int4& a) const;
+  //! Equality for all elements
+  bool operator==( const int4& a ) const;
 
   friend std::ostream &operator<<(std::ostream &os, helios::int4 const &vec) {
     return os << "helios::int4<" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ">";
@@ -286,6 +300,10 @@ inline int4 int4::operator-(const int4& a) const{
   c.z=z-a.z;
   c.w=w-a.w;
   return  c;
+}
+
+inline bool int4::operator==( const int4& a ) const{
+  return a.x==x && a.y==y && a.z==z && a.w==w;
 }
 
 //! Vector of two elements of type 'float'. 
@@ -430,8 +448,7 @@ inline vec2 vec2::operator/(const float a) const{
 }
 
 inline bool vec2::operator==(const vec2& a) const{
-  bool c = (x == a.x && y == a.y);
-  return c;
+  return x == a.x && y == a.y;
 }
 
 //! Vector of three elements of type 'float'. 
@@ -595,8 +612,7 @@ inline vec3 vec3::operator/(const float a) const{
 }
 
 inline bool vec3::operator==(const vec3& a) const{
-  bool c = (x == a.x && y == a.y && z == a.z);
-  return c;
+  return x == a.x && y == a.y && z == a.z;
 }
 
 //! Vector of four elements of type 'float'. 
@@ -761,8 +777,7 @@ inline vec4 vec4::operator/(const float a) const{
 }
 
 inline bool vec4::operator==(const vec4& a) const{
-  bool c = (x == a.x && y == a.y && z == a.z && w == a.w);
-  return c;
+  return x == a.x && y == a.y && z == a.z && w == a.w;
 }
 
 //! R-G-B color vector
@@ -849,6 +864,8 @@ public:
     return os << "helios::RGBcolor<" << c.r << ", " << c.g << ", " << c.b << ">";
   }
 
+  bool operator==( const RGBcolor &c );
+
 private:
   //! Clamp float to range of 0 to 1.
   /**
@@ -883,6 +900,10 @@ inline RGBcolor make_RGBcolor( float r, float g, float b ){
     \param[out] "weight" Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
 */
 RGBcolor blend( RGBcolor color0, RGBcolor color1, float weight );
+
+inline bool RGBcolor::operator==( const RGBcolor &c ){
+  return c.r==r && c.g==g && c.b==b;
+}
 
 namespace RGB{
 
@@ -992,6 +1013,8 @@ public:
     return os << "helios::RGBAcolor<" << c.r << ", " << c.g << ", " << c.b << ", " << c.a << ">";
   }
 
+  bool operator==( const RGBAcolor &c );
+
 private:
   //! Clamp float to range of 0 to 1.
   /**
@@ -1037,6 +1060,10 @@ inline RGBAcolor make_RGBAcolor( RGBcolor color, float a ){
     \param[out] "weight" Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
 */
 RGBAcolor blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight );
+
+inline bool RGBAcolor::operator==( const RGBAcolor &c ){
+  return c.r==r && c.g==g && c.b==b && c.a==a;
+}
 
 //! Date vector
 /** \sa \ref make_Date()

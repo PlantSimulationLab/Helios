@@ -49,6 +49,7 @@
 #include <random>
 #include <chrono>
 #include <thread>
+#include <filesystem>
 
 typedef unsigned int uint;
 
@@ -446,6 +447,24 @@ void wait( float seconds );
        \return 2D mask, where false denotes no material
  */
  std::vector<std::vector<bool> > readPNGAlpha( const char* filename );
+
+ //! Function to read a PNG image file into pixel data array
+ /**
+  * \param[in] "filename" Name of the PNG image file
+  * \param[out] "width" Image width in pixels
+  * \param[out] "height" Image height in pixels
+  * \param[out] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
+  */
+ void readPNG( const std::string &filename, uint &width, uint &height, std::vector<helios::RGBAcolor> &pixel_data);
+
+//! Function to write a PNG image based on pixel data
+/**
+ * \param[in] "filename" Name of the PNG image file
+ * \param[out] "width" Image width in pixels
+ * \param[out] "height" Image height in pixels
+ * \param[out] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
+*/
+void writePNG( const std::string &filename, uint width, uint height, const std::vector<helios::RGBAcolor> &pixel_data );
 
     //! Function to flatten a 2D int vector into a 1D vector
     std::vector<int> flatten( const std::vector<std::vector<int> > &vec );
