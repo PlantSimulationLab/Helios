@@ -12652,7 +12652,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
     std::vector<vec2> texture_uv;
     std::map<std::string,std::vector<std::vector<int> > > face_inds, texture_inds;
 
-    std::map<std::string,std::string> material_textures;
+    std::map<std::string,OBJmaterial> materials;
 
     std::vector<uint> UUID;
 
@@ -12685,7 +12685,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
         }else if( strcmp("mtllib",line.c_str())==0 ){
             getline(inputOBJ, line);
             std::string material_file = deblank(line.c_str());
-            material_textures = loadMTL( filebase, material_file );
+            materials = loadMTL( filebase, material_file );
 
             // ------- VERTICES --------- //
         }else if( strcmp("v",line.c_str())==0 ){
@@ -12762,38 +12762,45 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
     vec3 scl = scale;
     if( scl.x==0 && scl.y==0 && scl.z>0 ) {
       scl = make_vec3( scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin) );
+    }else {
+
+      if (scl.x == 0) {
+        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for x-direction is zero. Setting scaling factor to 1"
+                  << std::endl;
+        scl.x = 1;
+      }
+      if (scl.y == 0) {
+        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for y-direction is zero. Setting scaling factor to 1"
+                  << std::endl;
+        scl.y = 1;
+      }
+      if (scl.z == 0) {
+        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for z-direction is zero. Setting scaling factor to 1"
+                  << std::endl;
+        scl.z = 1;
+      }
+
     }
 
-    if( scl.x==0 ) {
-      std::cout << "WARNING (Context::loadOBJ): Scaling factor given for x-direction is zero. Setting scaling factor to 1" << std::endl;
-      scl.x = 0;
-    }
-    if( scl.y==0 ) {
-      std::cout << "WARNING (Context::loadOBJ): Scaling factor given for y-direction is zero. Setting scaling factor to 1" << std::endl;
-      scl.y = 0;
-    }
-    if( scl.z==0 ) {
-      std::cout << "WARNING (Context::loadOBJ): Scaling factor given for z-direction is zero. Setting scaling factor to 1" << std::endl;
-      scl.z = 0;
-    }
+    for( auto iter = face_inds.begin(); iter != face_inds.end(); ++iter){
 
-    for(std::map<std::string,std::vector<std::vector<int> > >::const_iterator iter = face_inds.begin(); iter != face_inds.end(); ++iter){
+        std::string materialname = iter->first;
 
-        std::string material = iter->first;
-        std::string texture;
-        if( material_textures.find(material)!=material_textures.end() ){
-            texture = material_textures.at(material);
-        }
+        assert( materials.find(materialname)!=materials.end() );
 
-        for( size_t i=0; i<face_inds.at(material).size(); i++ ){
+        OBJmaterial mat = materials.at(materialname);
 
-            for( uint t=2; t<face_inds.at(material).at(i).size(); t++ ){
+        std::string texture = mat.texture;
+        RGBcolor color = mat.color;
+        bool textureColorIsOverridden = mat.textureColorIsOverridden;
 
-                RGBcolor color = default_color;
+        for( size_t i=0; i<face_inds.at(materialname).size(); i++ ){
 
-                vec3 v0 = vertices.at(face_inds.at(material).at(i).at(0)-1);
-                vec3 v1 = vertices.at(face_inds.at(material).at(i).at(t-1)-1);
-                vec3 v2 = vertices.at(face_inds.at(material).at(i).at(t)-1);
+            for( uint t=2; t<face_inds.at(materialname).at(i).size(); t++ ){
+
+                vec3 v0 = vertices.at(face_inds.at(materialname).at(i).at(0)-1);
+                vec3 v1 = vertices.at(face_inds.at(materialname).at(i).at(t-1)-1);
+                vec3 v2 = vertices.at(face_inds.at(materialname).at(i).at(t)-1);
 
                 if( (v0-v1).magnitude()==0 || (v0-v2).magnitude()==0 || (v1-v2).magnitude()==0 ){
                     continue;
@@ -12810,16 +12817,21 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
                 v2 = rotatePoint(v2,rotation);
 
                 uint ID;
-                if( !texture.empty() && !texture_inds.at(material).at(i).empty() ){//has texture
+                if( !texture.empty() && !texture_inds.at(materialname).at(i).empty() ){//has texture
 
-                    if( t<texture_inds.at(material).at(i).size() ){
-                        int iuv0 = texture_inds.at(material).at(i).at(0)-1;
-                        int iuv1 = texture_inds.at(material).at(i).at(t-1)-1;
-                        int iuv2 = texture_inds.at(material).at(i).at(t)-1;
+                    if( t<texture_inds.at(materialname).at(i).size() ){
+                        int iuv0 = texture_inds.at(materialname).at(i).at(0)-1;
+                        int iuv1 = texture_inds.at(materialname).at(i).at(t-1)-1;
+                        int iuv2 = texture_inds.at(materialname).at(i).at(t)-1;
 
                         ID = addTriangle( origin+v0*scl.x, origin+v1*scl.y, origin+v2*scl.z, texture.c_str(), texture_uv.at(iuv0), texture_uv.at(iuv1), texture_uv.at(iuv2) );
 
-                        vec3 normal = getPrimitivePointer_private(ID)->getNormal();
+//                        vec3 normal = getPrimitivePointer_private(ID)->getNormal();
+
+                        if( textureColorIsOverridden ){
+                          setPrimitiveColor( ID, color );
+                          overridePrimitiveTextureColor( ID );
+                        }
 
                     }
                 }else{
@@ -12840,7 +12852,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
 
 }
 
-std::map<std::string, std::string> Context::loadMTL(const std::string &filebase, const std::string &material_file ){
+std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &filebase, const std::string &material_file ){
 
     std::ifstream inputMTL;
 
@@ -12868,7 +12880,7 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
         }
     }
 
-    std::map<std::string, std::string> material_textures;
+    std::map<std::string, OBJmaterial> materials;
 
     std::string line;
 
@@ -12879,26 +12891,30 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
         if( strcmp("#",line.c_str())==0 ){ //comments
             getline(inputMTL, line);
             inputMTL>>line;
-        }else if( strcmp("newmtl",line.c_str())==0 ){ //material library
+        }else if( line=="newmtl" ){ //material library
             getline(inputMTL, line);
             std::string material_name = line;
-            material_textures[material_name] = "";
+            OBJmaterial mat(RGB::red,"",0);
+            materials.emplace( std::pair(material_name,mat) );
 
-            while( strcmp("newmtl",line.c_str())!=0 && inputMTL.good() ){
+            std::string map_Kd, map_d;
 
-                if( strcmp("map_a",line.c_str())==0 ){
-                    getline(inputMTL, line);
-                }else if( strcmp("map_Ka",line.c_str())==0 ){
-                    getline(inputMTL, line);
-                }else if( strcmp("map_Kd",line.c_str())==0 ){
-                    getline(inputMTL, line);
+            while( line!="newmtl" && inputMTL.good() ){
 
+                if( line=="map_a" ){
+                    getline(inputMTL, line);
+                }else if( line=="map_Ka" ){
+                    getline(inputMTL, line);
+                }else if( line=="map_Kd" || line=="map_d" ){
+                  std::string maptype = line;
+                    getline(inputMTL, line);
+                    line = deblank(line);
                     std::istringstream stream(line);
                     std::string tmp;
                     while( stream.good() ){
                         stream >> tmp;
-                        int e = (int)tmp.size();
-                        if( (strncmp(&tmp[e-1],"g",1)==0 && strncmp(&tmp[e-2],"n",1)==0 && strncmp(&tmp[e-3],"p",1)==0 ) || (strncmp(&tmp[e-1],"g",1)==0 && strncmp(&tmp[e-2],"p",1)==0 && strncmp(&tmp[e-3],"j",1)==0 ) || (strncmp(&tmp[e-1],"g",1)==0 && strncmp(&tmp[e-2],"e",1)==0 && strncmp(&tmp[e-3],"p",1)==0  && strncmp(&tmp[e-4],"j",1)==0 ) ){
+                        std::string ext = getFileExtension(tmp);
+                        if( ext==".png" || ext==".PNG" || ext==".jpg" || ext==".JPG" || ext==".jpeg" || ext==".JPEG" ){
 
                             std::string texturefile = tmp;
                             std::ifstream tfile;
@@ -12906,7 +12922,7 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
                             //first look for texture file using path given in mtl file
                             tfile.open(texturefile.c_str());
                             if( !tfile.is_open() ){
-                                //if that doesn't work, try looking in the same directry where obj file is located
+                                //if that doesn't work, try looking in the same directory where obj file is located
                                 tfile.close();
                                 texturefile = filebase+texturefile;
                                 tfile.open( texturefile.c_str() );
@@ -12916,17 +12932,33 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
                             }
                             tfile.close();
 
-                            material_textures[material_name] = texturefile;
+                            materials.at(material_name).texture = texturefile;
+
+                            if( maptype=="map_d" ) {
+                              map_d = texturefile;
+                            }else{
+                              map_Kd = texturefile;
+                            }
                         }
                     }
 
-                }else if( strcmp("map_Ks",line.c_str())==0 ){
+                }else if( line=="map_Ks" ){
                     getline(inputMTL, line);
+
+                }else if( line=="Kd" ){
+                  getline(inputMTL, line);
+                  std::string color_str = deblank(line );
+                  RGBAcolor color = string2RGBcolor(color_str.c_str());
+                  materials.at(material_name).color = make_RGBcolor(color.r,color.g,color.b);
                 }else{
                     getline(inputMTL, line);
                 }
 
                 inputMTL>>line;
+            }
+
+            if( map_Kd.empty() && !map_d.empty() ){
+              materials.at(material_name).textureColorIsOverridden=true;
             }
 
         }else{
@@ -12935,7 +12967,7 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
         }
     }
 
-    return material_textures;
+    return materials;
 
 }
 
@@ -13007,33 +13039,37 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
     bool material_exists=false;
     uint material_ID = 99999;
 
-//    if( getPrimitivePointer_private(p)->isTextureColorOverridden() ) {
-//      texturefile = "";
-//    }
-
     for( auto & material : materials) {
 
-      if (getPrimitivePointer_private(p)->hasTexture() ){
-        if( getPrimitivePointer_private(p)->isTextureColorOverridden() ){
-          if( material.textureColorIsOverridden==true && texturefile==material.texture && C==material.color ){
-            material_exists=true;
-            material_ID = material.materialID;
-            break;
-          }
-        }else{
-          if( material.textureColorIsOverridden==false && texturefile==material.texture ){
-            material_exists=true;
-            material_ID = material.materialID;
-            break;
-          }
-        }
-      }else{
-        if( C==material.color ){
-          material_exists=true;
-          material_ID = material.materialID;
-          break;
-        }
+//      if (getPrimitivePointer_private(p)->hasTexture() ){
+//        if( getPrimitivePointer_private(p)->isTextureColorOverridden() ){
+//          if( material.textureColorIsOverridden==true && texturefile==material.texture && C==material.color ){
+//            material_exists=true;
+//            material_ID = material.materialID;
+//            break;
+//          }
+//        }else{
+//          if( material.textureColorIsOverridden==false && texturefile==material.texture ){
+//            material_exists=true;
+//            material_ID = material.materialID;
+//            break;
+//          }
+//        }
+//      }else{
+//        if( C==material.color ){
+//          material_exists=true;
+//          material_ID = material.materialID;
+//          break;
+//        }
+//      }
+
+
+      if( material.texture==texturefile && material.color==C && material.textureColorIsOverridden==getPrimitivePointer_private(p)->isTextureColorOverridden() ){
+        material_exists=true;
+        material_ID = material.materialID;
+        break;
       }
+
     }
 
     if( !material_exists ){
