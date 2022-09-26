@@ -1672,8 +1672,20 @@ private:
     //---------- CONTEXT I/O ---------//
     
     std::vector<std::string> XMLfiles;
+
+    struct OBJmaterial{
+
+      RGBcolor color;
+      std::string texture;
+      uint materialID;
+      bool textureHasTransparency = false;
+      bool textureColorIsOverridden = false;
+
+      OBJmaterial( const RGBcolor &a_color, std::string a_texture, uint a_materialID ) : color{a_color}, texture{std::move(a_texture)}, materialID{a_materialID} {};
+
+    };
     
-    static std::map<std::string,std::string> loadMTL(const std::string &filebase, const std::string &material_file );
+    static std::map<std::string,OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file );
     
     void loadPData( pugi::xml_node p, uint UUID );
     
@@ -4996,18 +5008,6 @@ public:
      * \param[in] "primitive_dat_fields" A .dat file will be written containing primitive data given in this vector (for Unity visualization)
      */
     void writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields ) const;
-
-    struct OBJmaterial{
-
-      RGBcolor color;
-      std::string texture;
-      uint materialID;
-      bool textureHasTransparency = false;
-
-      OBJmaterial( const RGBcolor &a_color, std::string a_texture, uint a_materialID ) : color{a_color}, texture{std::move(a_texture)}, materialID{a_materialID} {};
-
-    };
-
     
     //! Set simulation date by day, month, year
     /**

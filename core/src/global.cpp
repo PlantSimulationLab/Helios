@@ -723,6 +723,22 @@ std::string helios::deblank(const char* input)
 
 }
 
+std::string helios::deblank(const std::string &input){
+
+  const std::string WHITESPACE = " \n\r\t\f\v";
+
+  std::string outstring;
+
+  size_t start = input.find_first_not_of(WHITESPACE);
+  outstring = (start == std::string::npos) ? "" : input.substr(start);
+
+  size_t end = outstring.find_last_not_of(WHITESPACE);
+  outstring = (end == std::string::npos) ? "" : outstring.substr(0, end + 1);
+
+  return outstring;
+
+}
+
 template <typename anytype>
 anytype helios::clamp( anytype value, anytype min, anytype max ){
   if( value<min ){

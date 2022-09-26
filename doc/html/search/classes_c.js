@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['perraydata_943',['PerRayData',['../struct_per_ray_data.html',1,'']]],
-  ['perraydata_5fmcrt_944',['PerRayData_MCRT',['../struct_per_ray_data___m_c_r_t.html',1,'']]],
-  ['photosynthesismodel_945',['PhotosynthesisModel',['../class_photosynthesis_model.html',1,'']]],
-  ['polymesh_946',['Polymesh',['../classhelios_1_1_polymesh.html',1,'helios']]]
+  ['radiationmodel_954',['RadiationModel',['../class_radiation_model.html',1,'']]],
+  ['rgbacolor_955',['RGBAcolor',['../structhelios_1_1_r_g_b_acolor.html',1,'helios']]],
+  ['rgbcolor_956',['RGBcolor',['../structhelios_1_1_r_g_bcolor.html',1,'helios']]]
 ];

@@ -1,9 +1,7 @@
 var searchData=
 [
-  ['vec2_971',['vec2',['../structhelios_1_1vec2.html',1,'helios']]],
-  ['vec3_972',['vec3',['../structhelios_1_1vec3.html',1,'helios']]],
-  ['vec4_973',['vec4',['../structhelios_1_1vec4.html',1,'helios']]],
-  ['visualizer_974',['Visualizer',['../class_visualizer.html',1,'']]],
-  ['voxelintersection_975',['VoxelIntersection',['../class_voxel_intersection.html',1,'']]],
-  ['vspgrapevineparameters_976',['VSPGrapevineParameters',['../struct_v_s_p_grapevine_parameters.html',1,'']]]
+  ['walnutcanopyparameters_984',['WalnutCanopyParameters',['../struct_walnut_canopy_parameters.html',1,'']]],
+  ['weberpenntree_985',['WeberPennTree',['../class_weber_penn_tree.html',1,'']]],
+  ['weberpenntreeparameters_986',['WeberPennTreeParameters',['../struct_weber_penn_tree_parameters.html',1,'']]],
+  ['whitesprucecanopyparameters_987',['WhiteSpruceCanopyParameters',['../struct_white_spruce_canopy_parameters.html',1,'']]]
 ];

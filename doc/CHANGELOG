@@ -990,3 +990,13 @@
 
 * Radiation *
 - CMakeLists.txt file improved so that the *.ptx files will only be re-built if the source *.cu file is changed.
+
+[1.2.45] 2022-09-26
+
+* Context *
+- If any primitives have (u,v) coordinates, writeOBJ() will now write 'dummy' (u,v)'s for primitives that are not UV mapped. This is apparently needed to correctly read the .obj file into Blender.
+- writeOBJ() function was not working properly based on updates in v.1.2.44.
+- Deblank function added for strings (previously was only for character arrays).
+
+* Canopy Generator *
+- Draft model for common bean added. It is not documented yet, and bean pods are not yet supported.

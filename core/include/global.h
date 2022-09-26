@@ -196,6 +196,11 @@ RGBAcolor string2RGBcolor( const char* str );
 /** \ingroup functions */
     std::string deblank(const char* input);
 
+
+//! Remove whitespace from a string
+/** \ingroup functions */
+std::string deblank(const std::string &input);
+
 //! Clamp value to be within some specified bounds
 /** \param[in] "value" Value to be clamped
     \param[in] "min" Lower bound

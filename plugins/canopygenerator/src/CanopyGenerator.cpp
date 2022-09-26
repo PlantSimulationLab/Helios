@@ -554,7 +554,45 @@ SorghumCanopyParameters::SorghumCanopyParameters(){
     canopy_origin = make_vec3(0,0,0);
 }
 
-CanopyGenerator::CanopyGenerator( helios::Context* m_context ){
+BeanParameters::BeanParameters() {
+
+  leaf_length = 0.075;
+
+  leaf_subdivisions = make_int2(6, 4);
+
+  leaf_texture_file = "plugins/canopygenerator/textures/BeanLeaf.png";
+
+  shoot_color = make_RGBcolor(0.6471, 0.7333, 0.1176);
+
+  shoot_subdivisions = 10;
+
+  stem_radius = 0.004;
+
+  stem_length = 0.075;
+
+  leaflet_length = 0.075;
+
+  pod_length = 0; //pods not supported yet
+
+  pod_color = make_RGBcolor(0.7, 0.28, 0.2);
+
+  pod_subdivisions = 8;
+
+  plant_spacing = 0.15;
+
+  row_spacing = 0.6;
+
+  plant_count = make_int2(3, 3);
+
+  germination_probability = 1.f;
+
+  canopy_origin = make_vec3(0, 0, 0);
+
+  canopy_rotation = 0;
+
+}
+
+  CanopyGenerator::CanopyGenerator( helios::Context* m_context ){
 
     context = m_context;
 
@@ -1894,6 +1932,100 @@ void CanopyGenerator::loadXML( const char* filename ){
 
         }
 
+        //BeanParameters Canopy
+        for (pugi::xml_node s = cgen.child("BeanParameters"); s; s = s.next_sibling("BeanParameters")) {
+
+            BeanParameters beanparameters;
+
+            float leaf_length = XMLloadfloat(s, "leaf_length");
+            if (leaf_length != nullvalue_f) {
+                beanparameters.leaf_length = leaf_length;
+            }
+
+            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
+            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
+                beanparameters.leaf_subdivisions = leaf_subdivisions;
+            }
+
+            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
+            if ( leaf_texture_file != nullvalue_s ) {
+                beanparameters.leaf_texture_file = leaf_texture_file;
+            }
+
+            int shoot_subdivisions = XMLloadint(s, "shoot_subdivisions");
+            if (shoot_subdivisions != nullvalue_i) {
+                beanparameters.shoot_subdivisions = shoot_subdivisions;
+            }
+
+            float stem_radius = XMLloadfloat(s, "stem_radius");
+            if (stem_radius != nullvalue_f) {
+                beanparameters.stem_radius = stem_radius;
+            }
+
+            RGBAcolor shoot_color = XMLloadrgba(s, "shoot_color");
+            if( shoot_color.a != 0 ){
+                beanparameters.shoot_color = make_RGBcolor(shoot_color.r,shoot_color.g,shoot_color.b);
+            }
+
+            float stem_length = XMLloadfloat(s, "stem_length");
+            if (stem_length != nullvalue_f ) {
+                beanparameters.stem_length = stem_length;
+            }
+
+            float leaflet_length = XMLloadfloat(s, "leaflet_length");
+            if (leaflet_length != nullvalue_f ) {
+                beanparameters.leaflet_length = leaflet_length;
+            }
+
+            float pod_length = XMLloadfloat(s, "pod_length");
+            if (pod_length != nullvalue_f ) {
+                beanparameters.pod_length = pod_length;
+            }
+
+            RGBAcolor pod_color = XMLloadrgba(s, "pod_color");
+            if( pod_color.a != 0 ){
+                beanparameters.pod_color = make_RGBcolor(pod_color.r,pod_color.g,pod_color.b);
+            }
+
+            int pod_subdivisions = XMLloadint(s, "pod_subdivisions");
+            if (pod_subdivisions != nullvalue_i ) {
+                beanparameters.pod_subdivisions = pod_subdivisions;
+            }
+
+            float plant_spacing = XMLloadfloat(s, "plant_spacing");
+            if (plant_spacing != nullvalue_f) {
+                beanparameters.plant_spacing = plant_spacing;
+            }
+
+            float row_spacing = XMLloadfloat(s, "row_spacing");
+            if (row_spacing != nullvalue_f) {
+                beanparameters.row_spacing = row_spacing;
+            }
+
+            int2 plant_count = XMLloadint2(s, "plant_count");
+            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
+                beanparameters.plant_count = plant_count;
+            }
+
+            float germination_probability = XMLloadfloat(s, "germination_probability");
+            if (germination_probability != nullvalue_f) {
+                beanparameters.germination_probability = germination_probability;
+            }
+
+            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
+            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
+                beanparameters.canopy_origin = canopy_origin;
+            }
+
+            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
+            if (canopy_rotation != nullvalue_f) {
+                beanparameters.canopy_rotation = canopy_rotation;
+            }
+
+            buildCanopy(beanparameters);
+
+        }
+
         //Ground
         for (pugi::xml_node s = cgen.child("Ground"); s; s = s.next_sibling("Ground")) {
 
@@ -2471,6 +2603,48 @@ void CanopyGenerator::buildCanopy( const SorghumCanopyParameters &params ){
         std::cout << "done." << std::endl;
         //std::cout << "Canopy consists of " << UUID_leaf.size()*UUID_leaf.front().size() << " leaves and " << prim_count << " total primitives." << std::endl;
     }
+
+}
+
+void CanopyGenerator::buildCanopy(const BeanParameters &params ){
+
+  if( printmessages ){
+    std::cout << "Building canopy of bean plants..." << std::flush;
+  }
+
+  std::uniform_real_distribution<float> unif_distribution;
+
+  vec2 canopy_extent( params.plant_spacing*float(params.plant_count.x), params.row_spacing*float(params.plant_count.y) );
+
+  uint plant_ID = 0;
+  uint prim_count = 0;
+    for( int j=0; j<params.plant_count.y; j++ ){
+        for( int i=0; i<params.plant_count.x; i++ ){
+
+            if ( unif_distribution(generator) > params.germination_probability) {
+                continue;
+            }
+
+            vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
+
+            if( params.canopy_rotation!=0 ){
+                center = rotatePointAboutLine( center, params.canopy_origin, make_vec3(0,0,1), params.canopy_rotation );
+            }
+
+            bean( params, center );
+
+            std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
+            prim_count += UUIDs_all.size();
+
+            plant_ID++;
+
+    }
+  }
+
+
+  if( printmessages ){
+    std::cout << "done." << std::endl;
+  }
 
 }
 
