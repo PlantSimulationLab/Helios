@@ -874,6 +874,65 @@ struct SorghumCanopyParameters{
 
 };
 
+//! Parameters defining the bean plant canopy
+struct BeanParameters{
+
+  //! Default constructor
+  BeanParameters();
+
+  //! Maximum width of leaves.
+  float leaf_length;
+
+  //! Number of sub-division segments per leaf
+  helios::int2 leaf_subdivisions;
+
+  //! Path to texture map file for leaves.
+  std::string leaf_texture_file;
+
+  //! Color of shoots
+  helios::RGBcolor shoot_color;
+
+  //! Number of radial subdivisions for shoot tubes
+  int shoot_subdivisions;
+
+  //! Radius of main stem at base
+  float stem_radius;
+
+  //! Length of stems before splitting to leaflets
+  float stem_length;
+
+  //! Length of the leaflet from base to tip leaf
+  float leaflet_length;
+
+  //! Spacing between adjacent plants along the row direction.
+  float plant_spacing;
+
+  //! Spacing between plant rows.
+  float row_spacing;
+
+  //! Number of crowns/plants in the x- and y-directions.
+  helios::int2 plant_count;
+
+  //! Probability that a plant in the canopy germinated
+  float germination_probability;
+
+  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
+  helios::vec3 canopy_origin;
+
+  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
+  float canopy_rotation;
+
+  //! Length of bean pods
+  float pod_length;
+
+  //! Color of bean pods
+  helios::RGBcolor pod_color;
+
+  //! Number of lengthwise subdivisions making up pods
+  uint pod_subdivisions;
+
+};
+
 class CanopyGenerator{
  public:
 
@@ -944,6 +1003,12 @@ class CanopyGenerator{
   /** \param[in] "params" Structure containing parameters for sorghum plant canopy.
    */
     void buildCanopy( const SorghumCanopyParameters &params );
+
+    //! Build a canopy consisting of common bean plants
+    /**
+        * \param[in] "params" Structure containing parameters for bean canopy.
+     */
+    void buildCanopy( const BeanParameters &params );
 
   //! Build a ground consisting of texture sub-tiles and sub-patches, which can be different sizes
   /** \param[in] "ground_origin" x-, y-, and z-position of the ground center point.
@@ -1105,6 +1170,14 @@ uint grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec
   * \return Plant ID of bean plant.
  */
  uint sorghum( const SorghumCanopyParameters &params, const helios::vec3 &origin);
+
+    //! Function to add an individual bean plant
+    /**
+        * \param[in] "params" Set of parameters defining bean plants/canopy.
+        * \param[in] "origin" Cartesian (x,y,z) position of the center of the canopy.
+        * \return Plant ID of bean plant.
+     */
+    uint bean( const BeanParameters &params, const helios::vec3 &origin );
 
   //! Create primitive data that explicitly labels all primitives according to the plant element they correspond to
   void createElementLabels();

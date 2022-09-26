@@ -12665,15 +12665,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
 
     //determine the base file path for 'filename'
     std::string fstring = filename;
-    std::string filebase;
-    for( size_t i=fstring.size()-1; i>=0; i-- ){
-        if( strncmp(&fstring[i],"/",1)==0 ){
-            for( int ii=0; ii<=i; ii++ ){
-                filebase.push_back(fstring.at(ii));
-            }
-            break;
-        }
-    }
+    std::string filebase = getFilePath(fstring);
 
     //determine bounding box
     float boxmin = 100000;
@@ -12857,7 +12849,7 @@ std::map<std::string, std::string> Context::loadMTL(const std::string &filebase,
     //first look for mtl file using path given in obj file
     inputMTL.open(file.c_str());
     if( !inputMTL.is_open() ){
-        //if that doesn't work, try looking in the same directry where obj file is located
+        //if that doesn't work, try looking in the same directory where obj file is located
         file = filebase+file;
         file.erase( remove( file.begin(), file.end(), ' ' ), file.end() );
         for( size_t i=file.size()-1; i>=0; i-- ){
@@ -12960,8 +12952,6 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
   //To-Do list for OBJ writer
   // - it would make more sense to write patches  as quads rather than two triangles
 
-  std::cout << "Writing OBJ file " << filename << "..." << std::flush;
-
   if( UUIDs.empty() ){
     std::cout << "failed. UUID vector was empty - OBJ file will not be written." << std::endl;
     return;
@@ -12982,8 +12972,14 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
     objfilename.append(".obj");
     mtlfilename.append(".mtl");
   }else{
-    mtlfilename = file_path + "/" + file_stem + ".mtl";
+    if( !file_path.empty() ){
+      mtlfilename = file_path + "/" + file_stem + ".mtl";
+    }else{
+      mtlfilename = file_stem + ".mtl";
+    }
   }
+
+  std::cout << "Writing OBJ file " << objfilename << "..." << std::flush;
 
   std::vector<OBJmaterial> materials;
 
@@ -13011,20 +13007,27 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
     bool material_exists=false;
     uint material_ID = 99999;
 
-    if( getPrimitivePointer_private(p)->isTextureColorOverridden() ) {
-      texturefile = "";
-    }
+//    if( getPrimitivePointer_private(p)->isTextureColorOverridden() ) {
+//      texturefile = "";
+//    }
 
-    if (getPrimitivePointer_private(p)->hasTexture() && !getPrimitivePointer_private(p)->isTextureColorOverridden() ) {
-      for( auto & material : materials){
-        if( texturefile==material.texture ){
-          material_exists=true;
-          material_ID = material.materialID;
-          break;
+    for( auto & material : materials) {
+
+      if (getPrimitivePointer_private(p)->hasTexture() ){
+        if( getPrimitivePointer_private(p)->isTextureColorOverridden() ){
+          if( material.textureColorIsOverridden==true && texturefile==material.texture && C==material.color ){
+            material_exists=true;
+            material_ID = material.materialID;
+            break;
+          }
+        }else{
+          if( material.textureColorIsOverridden==false && texturefile==material.texture ){
+            material_exists=true;
+            material_ID = material.materialID;
+            break;
+          }
         }
-      }
-    }else{
-      for( auto & material : materials){
+      }else{
         if( C==material.color ){
           material_exists=true;
           material_ID = material.materialID;
@@ -13040,6 +13043,9 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
       if( primitiveTextureHasTransparencyChannel(p) ){
         materials.back().textureHasTransparency=true;
       }
+      if( isPrimitiveTextureColorOverridden(p) ){
+        materials.back().textureColorIsOverridden=true;
+      }
     }
 
     if (type == PRIMITIVE_TYPE_TRIANGLE) {
@@ -13051,7 +13057,7 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
       }
 
       std::vector < vec2 > uv_v = getTrianglePointer_private(p)->getTextureUV();
-      if (getTrianglePointer_private(p)->hasTexture() && !getTrianglePointer_private(p)->isTextureColorOverridden() ) {
+      if (getTrianglePointer_private(p)->hasTexture() ) {
         uv_inds[material_ID].push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
         for (int i = 0; i < 3; i++) {
           uv.push_back( uv_v.at(i) );
@@ -13073,7 +13079,7 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
       std::vector < vec2 > uv_v;
       uv_v = getPatchPointer_private(p)->getTextureUV();
 
-      if (getPatchPointer_private(p)->hasTexture() && !getPatchPointer_private(p)->isTextureColorOverridden()) {
+      if (getPatchPointer_private(p)->hasTexture() ) {
         uv_inds[material_ID].push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
         uv_inds[material_ID].push_back(make_int3( (int)uv_count, (int)uv_count + 2, (int)uv_count + 3));
         if (uv_v.empty()) {  //default (u,v)
@@ -13144,10 +13150,13 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
 
     for (int f = 0; f < faces.at(mat).size(); f++) {
 
-      if (uv_inds.at(mat).at(f).x < 0) {
+      if ( uv.size()==0 ) {
         objfstream << "f " << faces.at(mat).at(f).x << " "
                    << faces.at(mat).at(f).y << " " << faces.at(mat).at(f).z
                    << std::endl;
+      }else if (uv_inds.at(mat).at(f).x < 0) {
+        objfstream << "f " << faces.at(mat).at(f).x << "/1 " << faces.at(mat).at(f).y
+                   << "/1 " << faces.at(mat).at(f).z << "/1" << std::endl;
       } else {
         objfstream << "f " << faces.at(mat).at(f).x << "/"
                    << uv_inds.at(mat).at(f).x << " " << faces.at(mat).at(f).y
@@ -13167,15 +13176,19 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
     }else {
       std::string current_texture = materials.at(mat).texture;
       mtlfstream << "newmtl material" << mat << std::endl;
-      mtlfstream << "Ka 1.0 1.0 1.0" << std::endl;
-      mtlfstream << "Kd 1.0 1.0 1.0" << std::endl;
-      mtlfstream << "Ks 0.0 0.0 0.0" << std::endl;
-      mtlfstream << "illum 2 " << std::endl;
-      mtlfstream << "map_Ka " << current_texture << std::endl;
-      mtlfstream << "map_Kd " << current_texture << std::endl;
+      if( materials.at(mat).textureColorIsOverridden ) {
+        RGBcolor current_color = materials.at(mat).color;
+        mtlfstream << "Ka " << current_color.r << " " << current_color.g << " " << current_color.b << std::endl;
+        mtlfstream << "Kd " << current_color.r << " " << current_color.g << " " << current_color.b << std::endl;
+        mtlfstream << "Ks 0.0 0.0 0.0" << std::endl;
+      }else{
+        mtlfstream << "map_Ka " << current_texture << std::endl;
+        mtlfstream << "map_Kd " << current_texture << std::endl;
+      }
       if( materials.at(mat).textureHasTransparency ){
         mtlfstream << "map_d " << current_texture << std::endl;
       }
+      mtlfstream << "illum 2 " << std::endl;
     }
 
   }
@@ -13354,13 +13367,16 @@ void Context::colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, c
 
     assert(cmap_ind >= 0 && cmap_ind < Ncolors);
 
-    if (!texturefile.empty() && primitiveTextureHasTransparencyChannel(UUID)) { // primitive has texture with transparency channel
+    if ( !texturefile.empty() && primitiveTextureHasTransparencyChannel(UUID)) { // primitive has texture with transparency channel
 
-      if (cmap_texture_filenames.find(texturefile) == cmap_texture_filenames.end()) {
-        cmap_texture_filenames[texturefile] = generateTexturesFromColormap(texturefile, colormap_data);
-      }
+//      if (cmap_texture_filenames.find(texturefile) == cmap_texture_filenames.end()) {
+//        cmap_texture_filenames[texturefile] = generateTexturesFromColormap(texturefile, colormap_data);
+//      }
+//
+//      setPrimitiveTextureFile( UUID, cmap_texture_filenames.at(texturefile).at(cmap_ind));
 
-      setPrimitiveTextureFile( UUID, cmap_texture_filenames.at(texturefile).at(cmap_ind));
+      overridePrimitiveTextureColor(UUID);
+      setPrimitiveColor(UUID, colormap_data.at(cmap_ind));
 
     } else { // primitive does not have texture with transparency channel - assign constant color
 

@@ -5003,6 +5003,7 @@ public:
       std::string texture;
       uint materialID;
       bool textureHasTransparency = false;
+      bool textureColorIsOverridden = false;
 
       OBJmaterial( const RGBcolor &a_color, std::string a_texture, uint a_materialID ) : color{a_color}, texture{std::move(a_texture)}, materialID{a_materialID} {};
 
