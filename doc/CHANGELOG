@@ -1000,3 +1000,13 @@
 
 * Canopy Generator *
 - Draft model for common bean added. It is not documented yet, and bean pods are not yet supported.
+
+[1.2.46] 2022-10-07
+
+* Context *
+- All Compound Objects besides Tiles were not being properly read from XML files.
+- There was an error in the Context::writeJPEG() file, which caused garbage pixel values to be written.
+- Added explicit instantiation of template functions in global.cpp. Not having these could cause build errors with high compiler optimization enabled.
+
+* Canopy Generator *
+- Updates to bean model to speed up generation time.

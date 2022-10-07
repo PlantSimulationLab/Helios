@@ -3233,20 +3233,35 @@ Triangle::Triangle(  const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a
 
 }
 
+Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const char* a_texturefile, const std::vector<vec2>& a_uv, float solid_fraction, uint a_parent_objID, uint a_UUID ){
+
+  makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
+  color = make_RGBAcolor(RGB::red,1);
+  parent_object_ID = a_parent_objID;
+  UUID = a_UUID;
+  prim_type = PRIMITIVE_TYPE_TRIANGLE;
+
+  texturefile = a_texturefile;
+  uv = a_uv;
+  solid_fraction = solid_fraction;
+  texturecoloroverridden = false;
+
+}
+
 Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const char* a_texturefile, const std::vector<vec2>& a_uv, const std::map<std::string,Texture> &textures, uint a_parent_objID, uint a_UUID ){
 
-    makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
-    color = make_RGBAcolor(RGB::red,1);
-    parent_object_ID = a_parent_objID;
-    UUID = a_UUID;
-    prim_type = PRIMITIVE_TYPE_TRIANGLE;
+  makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
+  color = make_RGBAcolor(RGB::red,1);
+  parent_object_ID = a_parent_objID;
+  UUID = a_UUID;
+  prim_type = PRIMITIVE_TYPE_TRIANGLE;
 
-    texturefile = a_texturefile;
-    uv = a_uv;
-    solid_fraction = 1.f;
-    texturecoloroverridden = false;
+  texturefile = a_texturefile;
+  uv = a_uv;
+  solid_fraction = 1.f;
+  texturecoloroverridden = false;
 
-    this->calculateSolidFraction(textures);
+  this->calculateSolidFraction(textures);
 
 }
 
@@ -3641,7 +3656,7 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
 
     //texture must have type PNG or JPEG
     std::string fn = texture_file;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
+    if( fn.substr(fn.find_last_of('.') + 1) != "png" && fn.substr(fn.find_last_of('.') + 1) != "PNG" && fn.substr(fn.find_last_of('.') + 1) != "jpg" && fn.substr(fn.find_last_of('.') + 1) != "jpeg" && fn.substr(fn.find_last_of('.') + 1) != "JPG" && fn.substr(fn.find_last_of('.') + 1) != "JPEG" ){
         throw( std::runtime_error("ERROR (addTriangle): Texture file " + fn + " is not PNG or JPEG format.") );
     }
 
@@ -3838,7 +3853,7 @@ uint Context::copyPrimitive( uint UUID ){
         }else{
             std::string texture_file = p->getTextureFile();
             float solid_fraction = p->getArea()/calculateTriangleArea( vertices.at(0), vertices.at(1), vertices.at(2) );
-            tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), texture_file.c_str(), uv, textures, parentID, currentUUID ));
+            tri_new = (new Triangle( vertices.at(0), vertices.at(1), vertices.at(2), texture_file.c_str(), uv, solid_fraction, parentID, currentUUID ));
             tri_new->setSolidFraction(solid_fraction);
         }
         float transform[16];
@@ -9282,6 +9297,8 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
 void Context::loadOData( pugi::xml_node p, uint ID ){
 
+  assert( doesObjectExist(ID) );
+
     for (pugi::xml_node data = p.child("data_int"); data; data = data.next_sibling("data_int")){
 
         const char* data_str = data.child_value();
@@ -9563,6 +9580,8 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 }
 
 void Context::loadOsubPData( pugi::xml_node p, uint ID ){
+
+  assert( doesObjectExist(ID) );
 
     std::vector<uint> prim_UUIDs = getObjectPointer(ID)->getPrimitiveUUIDs();
 
@@ -10474,11 +10493,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
-
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
-            deletePrimitive(uuids_to_delete); // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives.
-            
+            deletePrimitive(uuids_to_delete); // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives
+//            if( !doesObjectExist(objID) ){ //if the above method deleted all primitives for this object, move on
+//              continue;
+//            }
         }
         
         // * Tile Sub-Patch Data * //
@@ -10576,8 +10596,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
-            deletePrimitive(getObjectPrimitiveUUIDs(ID));
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
+          getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          deletePrimitive(uuids_to_delete);
+//          if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
+//            continue;
+//          }
         }
         
         // * Sphere Sub-Triangle Data * //
@@ -10714,8 +10738,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
-            deletePrimitive(getObjectPrimitiveUUIDs(ID));
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
+          getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          deletePrimitive(uuids_to_delete);
+//            if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
+//              continue;
+//            }
         }
         
         // * Tube Sub-Triangle Data * //
@@ -10813,8 +10841,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
-            deletePrimitive(getObjectPrimitiveUUIDs(ID));
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
+          getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          deletePrimitive(uuids_to_delete);
+//            if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
+//              continue;
+//            }
         }
         
         // * Box Sub-Patch Data * //
@@ -10912,8 +10944,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
-            deletePrimitive(getObjectPrimitiveUUIDs(ID));
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
+          getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          deletePrimitive(uuids_to_delete);
+//            if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
+//              continue;
+//            }
         }
         
         // * Disk Sub-Triangle Data * //
@@ -11050,8 +11086,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         
         //if primitives exist that were assigned to this object, delete all primitives that were just created
         if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
-            deletePrimitive(getObjectPrimitiveUUIDs(ID));
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
+          getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+          deletePrimitive(uuids_to_delete);
+//          if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
+//            continue;
+//          }
         }
         
         // * Cone Sub-Triangle Data * //
@@ -13342,32 +13382,36 @@ void Context::colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, c
       std::cout << "WARNING (Context::colorPrimitiveDataPseudocolor): primitive for UUID " << std::to_string(UUID) << " does not exist. Skipping this primitive." << std::endl;
       continue;
     }
-    if( !doesPrimitiveDataExist(UUID,primitive_data.c_str()) ){
-      std::cout << "WARNING (Context::colorPrimitiveDataPseudocolor): primitive data " << primitive_data << " for UUID " << std::to_string(UUID) << " does not exist. Skipping this primitive." << std::endl;
-      continue;
-    }
-    if( getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_FLOAT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_INT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_UINT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_DOUBLE  ){
-      std::cout << "WARNING (Context::colorPrimitiveDataPseudocolor): Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive." << std::endl;
-      continue;
-    }
 
     float dataf=0;
-    if( getPrimitiveDataType(UUID,primitive_data.c_str())==HELIOS_TYPE_FLOAT ){
-      float data;
-      getPrimitiveData(UUID,primitive_data.c_str(),data);
-      dataf=data;
-    }else if( getPrimitiveDataType(UUID,primitive_data.c_str())==HELIOS_TYPE_DOUBLE ){
-      double data;
-      getPrimitiveData(UUID,primitive_data.c_str(),data);
-      dataf=float(data);
-    }else if( getPrimitiveDataType(UUID,primitive_data.c_str())==HELIOS_TYPE_INT ){
-      int data;
-      getPrimitiveData(UUID,primitive_data.c_str(),data);
-      dataf=float(data);
-    }else if( getPrimitiveDataType(UUID,primitive_data.c_str())==HELIOS_TYPE_UINT ) {
-      uint data;
-      getPrimitiveData(UUID, primitive_data.c_str(), data);
-      dataf = float(data);
+    if( doesPrimitiveDataExist(UUID,primitive_data.c_str()) ) {
+
+      if( getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_FLOAT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_INT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_UINT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_DOUBLE  ){
+        std::cout << "WARNING (Context::colorPrimitiveDataPseudocolor): Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive." << std::endl;
+        continue;
+      }
+
+      if (getPrimitiveDataType(UUID, primitive_data.c_str()) ==
+          HELIOS_TYPE_FLOAT) {
+        float data;
+        getPrimitiveData(UUID, primitive_data.c_str(), data);
+        dataf = data;
+      } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) ==
+                 HELIOS_TYPE_DOUBLE) {
+        double data;
+        getPrimitiveData(UUID, primitive_data.c_str(), data);
+        dataf = float(data);
+      } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) ==
+                 HELIOS_TYPE_INT) {
+        int data;
+        getPrimitiveData(UUID, primitive_data.c_str(), data);
+        dataf = float(data);
+      } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) ==
+                 HELIOS_TYPE_UINT) {
+        uint data;
+        getPrimitiveData(UUID, primitive_data.c_str(), data);
+        dataf = float(data);
+      }
     }
 
     if( data_min==9999999 && data_max==-9999999 ) {
@@ -13401,7 +13445,11 @@ void Context::colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, c
 
     int cmap_ind = round((pdata - data_min) / (data_max - data_min) * float(Ncolors - 1));
 
-    assert(cmap_ind >= 0 && cmap_ind < Ncolors);
+    if( cmap_ind<0 ){
+      cmap_ind=0;
+    }else if( cmap_ind>=Ncolors ){
+      cmap_ind=Ncolors-1;
+    }
 
     if ( !texturefile.empty() && primitiveTextureHasTransparencyChannel(UUID)) { // primitive has texture with transparency channel
 
@@ -13555,6 +13603,17 @@ std::vector<RGBcolor> Context::generateColormap( const std::string &colormap, ui
     clocs_c.resize(2);
     clocs_c.at(0) = 0.f;
     clocs_c.at(1) = 1.f;
+
+  }else if( colormap == "green" ) {
+
+    ctable_c.resize(2);
+    ctable_c.at(0) = RGB::black;
+    ctable_c.at(1) = RGB::green;
+
+    clocs_c.resize(2);
+    clocs_c.at(0) = 0.f;
+    clocs_c.at(1) = 1.f;
+
   }else{
     throw( std::runtime_error("ERROR (Context::generateColormapTextures): Unknown colormap "+colormap+".") );
   }

@@ -749,6 +749,11 @@ anytype helios::clamp( anytype value, anytype min, anytype max ){
   return value;
 }
 
+template float helios::clamp<float>(float,float,float);
+template double helios::clamp<double>(double,double,double);
+template int helios::clamp<int>(int,int,int);
+template uint helios::clamp<uint>(uint,uint,uint);
+
 float helios::mean( const std::vector<float>& vect ){
 
   if( vect.empty() ){
@@ -904,15 +909,27 @@ float helios::median( std::vector<float> vect ){
 }
 
 template <typename anytype>
-void resize_vector( std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny ){
+void helios::resize_vector( std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny ){
   vec.resize(Ny);
   for( int j=0; j<Ny; j++ ){
     vec.at(j).resize(Nx);
   }
 }
 
+template void helios::resize_vector<float>( std::vector<std::vector<float> > &, uint, uint );
+template void helios::resize_vector<double>( std::vector<std::vector<double> > &, uint, uint );
+template void helios::resize_vector<int>( std::vector<std::vector<int> > &, uint, uint );
+template void helios::resize_vector<uint>( std::vector<std::vector<uint> > &, uint, uint );
+template void helios::resize_vector<std::string>( std::vector<std::vector<std::string> > &, uint, uint );
+template void helios::resize_vector<helios::vec2>( std::vector<std::vector<helios::vec2> > &, uint, uint );
+template void helios::resize_vector<helios::vec3>( std::vector<std::vector<helios::vec3> > &, uint, uint );
+template void helios::resize_vector<helios::vec4>( std::vector<std::vector<helios::vec4> > &, uint, uint );
+template void helios::resize_vector<helios::int2>( std::vector<std::vector<helios::int2> > &, uint, uint );
+template void helios::resize_vector<helios::int3>( std::vector<std::vector<helios::int3> > &, uint, uint );
+template void helios::resize_vector<helios::int4>( std::vector<std::vector<helios::int4> > &, uint, uint );
+
 template <typename anytype>
-void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, int Nx, int Ny, int Nz ){
+void helios::resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, uint Nx, uint Ny, uint Nz ){
   vec.resize(Nz);
   for( int k=0; k<Nz; k++ ){
     vec.at(k).resize(Ny);
@@ -922,8 +939,20 @@ void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, int N
   }
 }
 
+template void helios::resize_vector<float>( std::vector<std::vector<std::vector<float> > > &, uint, uint, uint );
+template void helios::resize_vector<double>( std::vector<std::vector<std::vector<double> > > &, uint, uint, uint );
+template void helios::resize_vector<int>( std::vector<std::vector<std::vector<int> > > &, uint, uint, uint );
+template void helios::resize_vector<uint>( std::vector<std::vector<std::vector<uint> > > &, uint, uint, uint );
+template void helios::resize_vector<std::string>( std::vector<std::vector<std::vector<std::string> > > &, uint, uint, uint );
+template void helios::resize_vector<helios::vec2>( std::vector<std::vector<std::vector<helios::vec2> > > &, uint, uint, uint );
+template void helios::resize_vector<helios::vec3>( std::vector<std::vector<std::vector<helios::vec3> > > &, uint, uint, uint );
+template void helios::resize_vector<helios::vec4>( std::vector<std::vector<std::vector<helios::vec4> > > &, uint, uint, uint );
+template void helios::resize_vector<helios::int2>( std::vector<std::vector<std::vector<helios::int2> > > &, uint, uint, uint );
+template void helios::resize_vector<helios::int3>( std::vector<std::vector<std::vector<helios::int3> > > &, uint, uint, uint );
+template void helios::resize_vector<helios::int4>( std::vector<std::vector<std::vector<helios::int4> > > &, uint, uint, uint );
+
 template <typename anytype>
-void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, int Nx, int Ny, int Nz, int Nw ){
+void helios::resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, uint Nx, uint Ny, uint Nz, uint Nw ){
   vec.resize(Nw);
   for( int w=0; w<Nw; w++ ){
     vec.at(w).resize(Nz);
@@ -935,6 +964,18 @@ void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > >
     }
   }
 }
+
+template void helios::resize_vector<float>( std::vector<std::vector<std::vector<std::vector<float> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<double>( std::vector<std::vector<std::vector<std::vector<double> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<int>( std::vector<std::vector<std::vector<std::vector<int> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<uint>( std::vector<std::vector<std::vector<std::vector<uint> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<std::string>( std::vector<std::vector<std::vector<std::vector<std::string> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<helios::vec2>( std::vector<std::vector<std::vector<std::vector<helios::vec2> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<helios::vec3>( std::vector<std::vector<std::vector<std::vector<helios::vec3> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<helios::vec4>( std::vector<std::vector<std::vector<std::vector<helios::vec4> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<helios::int2>( std::vector<std::vector<std::vector<std::vector<helios::int2> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<helios::int3>( std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &, uint, uint, uint, uint );
+template void helios::resize_vector<helios::int4>( std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &, uint, uint, uint, uint );
 
 Date helios::CalendarDay( int Julian_day, int year ){
 
@@ -1346,10 +1387,10 @@ void helios::writePNG( const std::string &filename, uint width, uint height, con
   for( uint row=0; row<height; row++ ) {
     data.at(row).resize(4*width);
     for( uint col=0; col<width; col++ ){
-      data.at(row).at(4*col) = (unsigned char)round(pixel_data.at(row*width+col).r*255.f);
-      data.at(row).at(4*col+1) = (unsigned char)round(pixel_data.at(row*width+col).g*255.f);
-      data.at(row).at(4*col+2) = (unsigned char)round(pixel_data.at(row*width+col).b*255.f);
-      data.at(row).at(4*col+3) = (unsigned char)round(pixel_data.at(row*width+col).a*255.f);
+      data.at(row).at(4*col) = (unsigned char)round(clamp(pixel_data.at(row*width+col).r,0.f,1.f)*255.f);
+      data.at(row).at(4*col+1) = (unsigned char)round(clamp(pixel_data.at(row*width+col).g,0.f,1.f)*255.f);
+      data.at(row).at(4*col+2) = (unsigned char)round(clamp(pixel_data.at(row*width+col).b,0.f,1.f)*255.f);
+      data.at(row).at(4*col+3) = (unsigned char)round(clamp(pixel_data.at(row*width+col).a,0.f,1.f)*255.f);
     }
     row_pointers.at(row) = &data.at(row).at(0);
   }
@@ -1423,6 +1464,13 @@ void helios::readJPEG( const std::string &filename, uint &width, uint &height, s
 
 void helios::writeJPEG( const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data ) {
 
+    struct my_error_mgr {
+
+        struct jpeg_error_mgr pub;	/* "public" fields */
+
+        jmp_buf setjmp_buffer;	/* for return to caller */
+    };
+
     std::string filename = a_filename;
     auto file_extension = getFileExtension(filename);
     if ( file_extension != ".jpg" && file_extension != ".JPG" && file_extension != ".jpeg" && file_extension != ".JPEG" ) {
@@ -1438,13 +1486,17 @@ void helios::writeJPEG( const std::string &a_filename, uint width, uint height, 
 
     size_t ii = 0;
     for( size_t i=0; i<width*height; i++ ){
-        screen_shot_trans.at(ii) = (unsigned char)clamp(pixel_data.at(i).r,0.f,1.f)*255;
-        screen_shot_trans.at(ii+1) = (unsigned char)clamp(pixel_data.at(i).g,0.f,1.f)*255;
-        screen_shot_trans.at(ii+2) = (unsigned char)clamp(pixel_data.at(i).b,0.f,1.f)*255;
+        screen_shot_trans.at(ii) = (unsigned char)round(clamp(pixel_data.at(i).r,0.f,1.f)*255);
+        screen_shot_trans.at(ii+1) = (unsigned char)round(clamp(pixel_data.at(i).g,0.f,1.f)*255);
+        screen_shot_trans.at(ii+2) = (unsigned char)round(clamp(pixel_data.at(i).b,0.f,1.f)*255);
         ii+=3;
     }
 
     struct jpeg_compress_struct cinfo;
+
+    struct jpeg_error_mgr jerr;
+
+    cinfo.err = jpeg_std_error(&jerr);
 
     /* More stuff */
     FILE * outfile;		/* target file */

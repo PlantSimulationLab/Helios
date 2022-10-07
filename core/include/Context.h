@@ -1369,10 +1369,13 @@ public:
 class Triangle : public Primitive{
 public:
     
-    //! Triangle constructor
+    //! Triangle constructor - constant color
     Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const helios::RGBAcolor& color, uint parent_objID, uint UUID );
-    
-    //! Triangle constructor
+
+    //! Triangle constructor - texture map with known solid fraction
+    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint parent_objID, uint UUID );
+
+    //! Triangle constructor - texture map with solid fraction to be computed
     Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, const std::map<std::string,Texture> &textures, uint parent_objID, uint UUID );
     
     //! Triangle destructor

@@ -2641,7 +2641,6 @@ void CanopyGenerator::buildCanopy(const BeanParameters &params ){
     }
   }
 
-
   if( printmessages ){
     std::cout << "done." << std::endl;
   }

@@ -280,7 +280,7 @@ void resize_vector( std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny );
     \ingroup functions
 */
 template <typename anytype>
-void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, int Nx, int Ny, int Nz );
+void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, uint Nx, uint Ny, uint Nz );
 
 //! Resize 4D C++ vector
 /** \param[in] "vec" C++ vector
@@ -291,7 +291,7 @@ void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, int N
     \ingroup functions
 */
 template <typename anytype>
-void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, int Nx, int Ny, int Nz, int Nw );
+void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, uint Nx, uint Ny, uint Nz, uint Nw );
 
 //! Blend two RGB colors together
 /**

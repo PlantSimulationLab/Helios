@@ -267,10 +267,9 @@ uint CanopyGenerator::bean(const BeanParameters &params, const vec3 &origin ){
     std::vector<uint> branch_UUIDs;
     std::vector<std::vector<std::vector<uint> > > fruit_UUIDs;
 
-    std::vector<uint> leaf_prototype = leafPrototype( params, context );
+    std::vector<uint> leaf_prototype = leafPrototype(params, context);
 
     beanShoot( params, origin, make_SphericalCoord(0.5*M_PI,0), 1, leaf_UUIDs, branch_UUIDs, fruit_UUIDs, leaf_prototype, generator, context );
-
 
     UUID_leaf.push_back( leaf_UUIDs );
     UUID_branch.push_back( branch_UUIDs );

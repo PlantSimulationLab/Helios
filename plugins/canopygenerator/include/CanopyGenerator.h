@@ -1215,6 +1215,8 @@ uint grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec
   //! UUIDs for ground primitives
   std::vector<uint> UUID_ground;
 
+  std::vector<uint> leaf_prototype_global;
+
   float sampleLeafAngle( const std::vector<float> &leafAngleDist );
 
   float sampleLeafPDF( const char* distribution );
