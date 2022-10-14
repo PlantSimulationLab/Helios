@@ -1,0 +1,67 @@
+#!/bin/sh
+prefix=/usr/local
+exec_prefix=/usr/local/bin
+libdir=/usr/local/lib
+
+INCLUDES="-I${prefix}/include "
+LIBS="-L$libdir -llaszip"
+
+
+
+usage()
+{
+	cat <<EOF
+Usage: laszip-config [OPTIONS]
+Options:
+	[--libs]
+	[--cflags]
+	[--cxxflags]
+	[--defines]
+	[--includes]
+	[--version]
+EOF
+	exit $1
+}
+
+if test $# -eq 0; then
+	usage 1 1>&2
+fi
+
+case $1 in 
+  --libs) 
+    echo $LIBS
+    ;;
+
+  --prefix)
+    echo ${prefix}
+     ;;
+
+  --ldflags)
+    echo -L${libdir}
+    ;;
+
+  --defines)
+    echo  
+    ;;
+
+  --includes)
+    echo ${INCLUDES}
+    ;;
+
+  --cflags)
+    echo  
+    ;;
+
+  --cxxflags)
+    echo  
+    ;;
+    
+  --version)
+    echo 2.0.1
+    ;;
+
+  *)
+    usage 1 1>&2
+    ;;
+
+esac

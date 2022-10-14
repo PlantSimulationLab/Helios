@@ -1,0 +1,12 @@
+prefix=/usr/local
+exec_prefix=/usr/local
+libdir=/usr/local/
+includedir=/usr/local/
+
+Name: LASzip
+Description: Library (C/C++) and tools for the LAS LiDAR compression
+Requires: 
+Version: 2.0.1
+Libs: -L${libdir} -llaszip
+Cflags: -I${includedir}/laszip $CMAKE_CXX_FLAGS
+

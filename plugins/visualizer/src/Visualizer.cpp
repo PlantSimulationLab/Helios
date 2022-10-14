@@ -291,7 +291,7 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
         std::cerr << "ERROR (read_png_file): File " << filename << " could not be opened for reading" << std::endl;
         throw(1);
     }
-    fread(header, 1, 8, fp);
+    size_t sz = fread(header, 1, 8, fp);
     // if (png_sig_cmp(header, 0, 8)){
     //   std::cerr << "ERROR (read_png_file): File " << filename << " is not recognized as a PNG file." << std::endl;
     //   exit(EXIT_FAILURE);
