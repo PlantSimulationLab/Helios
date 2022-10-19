@@ -2727,3 +2727,14 @@ std::string helios::getFilePath( const std::string &filepath, bool trailingslash
     }
   }
 }
+
+//ERK
+std::vector<float> helios::importVectorFromFile(const std::string &filepath){
+    
+    std::ifstream stream(filepath.c_str());
+    std::istream_iterator<float> start(stream), end;
+    std::vector<float> vec(start, end);
+    std::cout << "Size of input vector = " << vec.size() << std::endl;
+    return vec;
+    
+}

@@ -702,6 +702,9 @@ void writePNG( const std::string &filename, uint width, uint height, const std::
     std::string getFilePath( const std::string &filepath, bool trailingslash = true );
 
     extern SphericalCoord nullrotation;
+    
+    //ERK
+    std::vector<float> importVectorFromFile(const std::string &filepath);
 
 }
 
