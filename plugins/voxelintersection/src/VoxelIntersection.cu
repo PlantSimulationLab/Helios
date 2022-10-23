@@ -240,7 +240,7 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
   for( size_t u = 0; u<UUIDs.size(); u++ ){
     size_t p = UUIDs[u];
 
-    PrimitiveType type = context->getPrimitivePointer(p)->getType();
+    PrimitiveType type = context->getPrimitiveType(p);
 
     if( type == PRIMITIVE_TYPE_VOXEL ){
       UUIDs_voxels.at(Nvoxels) = p;
@@ -278,7 +278,7 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
 
   //copy scan data into the host buffer
   for( std::size_t r=0; r<N; r++ ){
-    hit_xyz[r] = vec3tofloat3( context->getPrimitivePointer(UUIDs_prims.at(r))->getVertices().at(0) );
+    hit_xyz[r] = vec3tofloat3( context->getPrimitiveVertices(UUIDs_prims.at(r)).front() );
   }
 
   //copy from host to device memory

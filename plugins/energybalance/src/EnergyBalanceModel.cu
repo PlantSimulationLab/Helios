@@ -298,6 +298,9 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
                 if( L==0 ){
                     L = sqrt(context->getPrimitiveArea(p));
                 }
+            }else if( context->getPrimitiveParentObjectID(p)>0 ){
+              uint objID = context->getPrimitiveParentObjectID(p);
+              L = sqrt(context->getObjectArea(objID));
             }else{
                 L = sqrt(context->getPrimitiveArea(p));
             }

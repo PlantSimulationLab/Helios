@@ -159,11 +159,14 @@ void BLConductanceModel::run(const std::vector<uint> &UUIDs ){
     }
 
     float L;
-    if( context->doesPrimitiveDataExist( UUID, "object_length") ){
-      context->getPrimitiveData( UUID, "object_length",L);
-      if( L==0 ){
-	L = sqrt(context->getPrimitiveArea(UUID));
+    if( context->doesPrimitiveDataExist( UUID, "object_length") ) {
+      context->getPrimitiveData(UUID, "object_length", L);
+      if (L == 0) {
+        L = sqrt(context->getPrimitiveArea(UUID));
       }
+    }else if( context->getPrimitiveParentObjectID(UUID)>0 ){
+      uint objID = context->getPrimitiveParentObjectID(UUID);
+      L = sqrt(context->getObjectArea(objID));
     }else{
       L = sqrt(context->getPrimitiveArea(UUID));
     }

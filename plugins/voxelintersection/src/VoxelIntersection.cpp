@@ -1282,7 +1282,11 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         context->copyPrimitiveData(UUID, resulting_UUIDs.at(i));
         //BNB
         uint parentID = context->getPrimitiveParentObjectID(UUID);
-        context->setPrimitiveParentObjectID(resulting_UUIDs.at(i),parentID);
+        if( parentID>0 && context->getObjectType(parentID)==helios::OBJECT_TYPE_TILE ){
+          context->setPrimitiveParentObjectID(resulting_UUIDs.at(i),0);
+        }else {
+          context->setPrimitiveParentObjectID(resulting_UUIDs.at(i), parentID);
+        }
         if( context->isPrimitiveTextureColorOverridden(UUID) ){
             context->overridePrimitiveTextureColor(resulting_UUIDs.at(i));
         }

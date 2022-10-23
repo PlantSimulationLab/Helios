@@ -10024,7 +10024,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         throw( std::runtime_error("ERROR (loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags."));
     }
     
-    //if primitives are added that belong to an object, store there UUIDs here so that we can make sure their UUIDs are consistent
+    //if primitives are added that belong to an object, store their UUIDs here so that we can make sure their UUIDs are consistent
     std::map<uint,std::vector<uint> > object_prim_UUIDs;
     
     //-------------- TIME/DATE ---------------//
@@ -10179,8 +10179,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         if( objID>0 ) {
             object_prim_UUIDs[objID].push_back(ID);
         }
-        
-        UUID.push_back(ID);
+
+        if( objID==0 ) {
+          UUID.push_back(ID);
+        }
         
         // * Primitive Data * //
         
@@ -10307,7 +10309,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             object_prim_UUIDs[objID].push_back(ID);
         }
         
-        UUID.push_back(ID);
+        if( objID==0 ) {
+          UUID.push_back(ID);
+        }
         
         // * Primitive Data * //
         
@@ -10376,7 +10380,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
             object_prim_UUIDs[objID].push_back(ID);
         }
         
-        UUID.push_back(ID);
+        if( objID==0 ) {
+          UUID.push_back(ID);
+        }
         
         // * Primitive Data * //
         
@@ -10479,16 +10485,18 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
         //Create a dummy patch in order to get the center, size, and rotation based on transformation matrix
         Patch patch( make_RGBAcolor(0,0,0,0), 0, 0 );
         patch.setTransformationMatrix(transform);
+        SphericalCoord rotation = cart2sphere(patch.getNormal());
+        rotation.elevation = rotation.zenith;
         
         // * Add the Tile * //
         if (strcmp(texture_file.c_str(), "none") == 0) {
             if( strlen(color_str) == 0 ){
-                ID = addTileObject(patch.getCenter(), patch.getSize(), cart2sphere(patch.getNormal()), subdiv );
+                ID = addTileObject(patch.getCenter(), patch.getSize(), rotation, subdiv );
             }else {
-                ID = addTileObject(patch.getCenter(), patch.getSize(), cart2sphere(patch.getNormal()), subdiv, make_RGBcolor(color.r, color.g, color.b));
+                ID = addTileObject(patch.getCenter(), patch.getSize(), rotation, subdiv, make_RGBcolor(color.r, color.g, color.b));
             }
         } else {
-            ID = addTileObject(patch.getCenter(), patch.getSize(), cart2sphere(patch.getNormal()), subdiv, texture_file.c_str());
+            ID = addTileObject(patch.getCenter(), patch.getSize(), rotation, subdiv, texture_file.c_str());
         }
         
         //if primitives exist that were assigned to this object, delete all primitives that were just created
@@ -11746,6 +11754,11 @@ void Context::writeXML( const char* filename, bool quiet ) const{
 
         std::vector<std::string> pdata = prim->listPrimitiveData();
 
+        //if this primitive is a member of a compound object that is "complete", don't write it to XML
+        if( parent_objID>0 && areObjectPrimitivesComplete(parent_objID) ){
+          continue;
+        }
+
         if( prim->getType()==PRIMITIVE_TYPE_PATCH ){
             outfile << "   <patch>" << std::endl;
         }else if( prim->getType()==PRIMITIVE_TYPE_TRIANGLE ){
@@ -11770,7 +11783,7 @@ void Context::writeXML( const char* filename, bool quiet ) const{
         }
 
         //Patches
-        if( prim->getType()==PRIMITIVE_TYPE_PATCH ){
+        if( prim->getType()==PRIMITIVE_TYPE_PATCH  ){
 
             Patch* patch = getPatchPointer_private(p);
             float transform[16];

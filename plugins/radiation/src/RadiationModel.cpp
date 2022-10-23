@@ -1702,8 +1702,13 @@ void RadiationModel::setDiffuseRadiationExtinctionCoeff( const char* label, cons
 uint RadiationModel::addRadiationBand( const char* label ){
 
   if( strlen(label)>80 ){
-    std::cerr << "ERROR (addRadiationBand): Name of radiation band cannot exceed 80 characters." << std::endl;
+    std::cerr << "ERROR (RadiationModel::addRadiationBand): Name of radiation band cannot exceed 80 characters." << std::endl;
     exit(EXIT_FAILURE);
+  }
+
+  if( band_names.find(label)!=band_names.end() ){
+    std::cerr << "ERROR (RadiationModel::addRadiationBand): Radiation band " << label << " has already been added. Skipping this call to addRadiationBand()." << std::endl;
+    return band_names[label];
   }
   
   emission_flag.push_back(true);//by default, emission is run
@@ -3236,11 +3241,16 @@ void RadiationModel::runBand( const char* label ){
 	if( message_flag ){
 	  std::cout << "Performing primary direct radiation ray trace for band " << label << " (batch " << launch+1 << " of " << Nlaunches << ")..." << std::flush;
 	}
-	RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIRECT , launch_dim_dir.x, launch_dim_dir.y, launch_dim_dir.z ) );
-	if( message_flag ){
-	  std::cout << "done." << std::endl;
-	}
 
+	RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIRECT , launch_dim_dir.x, launch_dim_dir.y, launch_dim_dir.z ) );
+
+        if( message_flag ){
+          std::cout << "\r                                                                                 \r" << std::flush;
+        }
+      }
+
+      if( message_flag ){
+        std::cout << "Performing primary direct radiation ray trace for band " << label << "...done." << std::endl;
       }
 	
       if( scatteringDepth.at(band)==0 ){
@@ -3348,10 +3358,15 @@ void RadiationModel::runBand( const char* label ){
 	if( message_flag ){
 	  std::cout << "Performing primary diffuse radiation ray trace for band " << label << " (batch " << launch+1 << " of " << Nlaunches << ")..." << std::flush;
 	}
+
 	RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
-	if( message_flag ){
-	  std::cout << "done." << std::endl;
-	}
+
+        if( message_flag ){
+          std::cout << "\r                                                                                 \r" << std::flush;
+        }
+      }
+      if( message_flag ){
+        std::cout << "Performing primary diffuse radiation ray trace for band " << label << "...done." << std::endl;
       }
     }
     

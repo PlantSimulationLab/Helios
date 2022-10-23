@@ -1010,3 +1010,31 @@
 
 * Canopy Generator *
 - Updates to bean model to speed up generation time.
+
+[1.2.47] 2022-10-21
+
+* Context *
+- Error fixed in loadXML() where patches that are members of a tile objects were added twice to the output UUID vector in some cases.
+- Error fixed in loadXML() where the elevation angle of loaded tile objects was not correct.
+- Error fixed in writeXML() where primitives that were members of "complete" tile objects were getting written to the XML file, which could cause the member patches to be created twice in loadXML().
+
+* LiDAR, Aerial LiDAR, Energy Balance, Voxel Intersection, Radiation *
+- Added explicit setting of CUDA compiler optimization flag for Debug/Release build types.
+
+* Radiation *
+- Added check to addBand() function to prevent users from adding duplicate bands.
+- For each ray launch 'batch', the previous batch output message will be cleared so it will not continue printing a new line for each batch launch.
+
+* Energy Balance *
+- If no object length is specified via primitive data, the model will first check to see if the primitive is a member of an object, in which case it will use the object area to calculate the characteristic length for boundary-layer conductance calculations.
+
+* Boundary-Layer Conductance *
+- If no object length is specified via primitive data, the model will first check to see if the primitive is a member of an object, in which case it will use the object area to calculate the characteristic length for boundary-layer conductance calculations.
+
+* LiDAR *
+- Revised LiDAR self-test to use geometries read from file to achieve more consistent results.
+- laszip and libLAS libraries are included in the repository, but are not yet used.
+
+* Voxel Intersection *
+- Minor changes to avoid using primitive pointers directly.
+- Error fixed where sliced triangles that were previously members of a tile would retain the object ID of the previous tile (created triangles should not be a member of an object).
