@@ -12797,8 +12797,10 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
                     }
                 }
 
-                if( !digitf.empty() && !digitu.empty() ){
-                    f.push_back( std::stoi(digitf) );
+                if( !digitf.empty() ) {
+                  f.push_back(std::stoi(digitf));
+                }
+                if( !digitu.empty() ){
                     u.push_back( std::stoi(digitu) );
                 }
 
@@ -12817,19 +12819,23 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
       scl = make_vec3( scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin) );
     }else {
 
+      if( scl.x==0 && (scl.y!=0 || scl.z!=0) ) {
+        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for x-direction is zero. Setting scaling factor to 1"<< std::endl;
+      }
+      if( scl.y==0 && (scl.x!=0 || scl.z!=0) ) {
+        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for y-direction is zero. Setting scaling factor to 1" << std::endl;
+      }
+      if( scl.z==0 && (scl.y!=0 || scl.y!=0) ) {
+        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for z-direction is zero. Setting scaling factor to 1" << std::endl;
+      }
+
       if (scl.x == 0) {
-        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for x-direction is zero. Setting scaling factor to 1"
-                  << std::endl;
         scl.x = 1;
       }
       if (scl.y == 0) {
-        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for y-direction is zero. Setting scaling factor to 1"
-                  << std::endl;
         scl.y = 1;
       }
       if (scl.z == 0) {
-        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for z-direction is zero. Setting scaling factor to 1"
-                  << std::endl;
         scl.z = 1;
       }
 

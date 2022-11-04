@@ -41,7 +41,7 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
 
     //Latent heat flux
     float es = 611.f*exp(17.502f*(T-273.f)/((T-273.f)+240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in Kelvin, and result is in Pascals
-    float gM = 0.97f*gH*gS/(0.97f*gH+gS); //resistors in series
+    float gM = 1.08f*gH*gS/(1.08f*gH+gS);
     if( gH==0 && gS==0 ){//if somehow both go to zero, can get NaN
         gM = 0;
     }
@@ -278,6 +278,16 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
             pressure[u] = pressure_default;
         }
 
+        //Number of sides emitting radiation
+        Nsides[u] = 2; //default is 2
+        if( context->doesPrimitiveDataExist(p,"twosided_flag") && context->getPrimitiveDataType(p,"twosided_flag")==HELIOS_TYPE_UINT ){
+          uint flag;
+          context->getPrimitiveData(p,"twosided_flag",flag);
+          if( flag==0 ){
+            Nsides[u]=1;
+          }
+        }
+
         //Boundary-layer conductance to heat
         if( context->doesPrimitiveDataExist(p,"boundarylayer_conductance") && context->getPrimitiveDataType(p,"boundarylayer_conductance")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"boundarylayer_conductance",gH[u]);
@@ -305,7 +315,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
                 L = sqrt(context->getPrimitiveArea(p));
             }
 
-            gH[u]=0.135f*sqrt(U/L);
+            gH[u]=0.135f*sqrt(U/L)*float(Nsides[u]);
         }
 
         //Moisture conductance
@@ -320,16 +330,6 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
             context->getPrimitiveData(p,"other_surface_flux",Qother[u]);
         }else{
             Qother[u] = Qother_default;
-        }
-
-        //Number of sides emitting radiation
-        Nsides[u] = 2; //default is 2
-        if( context->doesPrimitiveDataExist(p,"twosided_flag") && context->getPrimitiveDataType(p,"twosided_flag")==HELIOS_TYPE_UINT ){
-            uint flag;
-            context->getPrimitiveData(p,"twosided_flag",flag);
-            if( flag==0 ){
-                Nsides[u]=1;
-            }
         }
 
         //Object heat capacity
@@ -382,7 +382,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         context->setPrimitiveData(p,"sensible_flux",QH);
 
         float es = 611.f*exp(17.502f*(T[u]-273.f)/((T[u]-273.f)+240.97f));
-        float gM = 0.97*gH[u]*gS[u]/(0.97*gH[u]+gS[u]);
+        float gM = 1.08f*gH[u]*gS[u]/(1.08f*gH[u]+gS[u]);
         float QL = 44000*gM*(es-ea[u])/pressure[u];
         context->setPrimitiveData(p,"latent_flux",QL);
 

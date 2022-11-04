@@ -1038,3 +1038,21 @@
 * Voxel Intersection *
 - Minor changes to avoid using primitive pointers directly.
 - Error fixed where sliced triangles that were previously members of a tile would retain the object ID of the previous tile (created triangles should not be a member of an object).
+
+[1.2.48] 2022-10-28
+
+*LiDAR*
+- Building with liblas and laszip libraries disabled for now, as this seemed to cause build errors on some systems.
+
+[1.2.49] 2022-XX-XX
+
+*Context*
+- Error corrected in loadOBJ() that would cause geometry to not be loaded of (u,v) coordinates are not supplied.
+- Error corrected in getFileExtension() that would cause a crash if the file has no extension.
+
+*Energy Balance*
+- Fixed error in conversion factor between conductance of heat to vapor in air - changed from 0.97 to 1.08.
+- Capability added to change the number of convective surfaces based on the value of primitive data ``twosided_flag".
+
+*Canopy Generator*
+- Issue fixed in bean.cpp that could cause node positions of NaN if leaflet_length was too short.

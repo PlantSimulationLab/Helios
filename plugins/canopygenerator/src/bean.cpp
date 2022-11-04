@@ -110,7 +110,7 @@ void beanLeaflet( const BeanParameters &params, const helios::vec3 base_position
     std::vector<float> radius;
     std::vector<RGBcolor> color;
 
-    int node_count = round( 2.f*length*params.shoot_subdivisions );
+    int node_count = std::ceil( 2.f*length*params.shoot_subdivisions )+1;
 
     vec3 dir = base_direction;
     dir.normalize();

@@ -409,7 +409,7 @@ public:
   double toc() const{
     return toc("");
   }
-  
+
   //! Stop timer and print elapsed time and a user-defined message
   /**
    * \note the timer print message can be turned off by passing the message argument  "mute"
@@ -446,7 +446,7 @@ void wait( float seconds );
  /** \param[in] "filename" Name of the PNG image file
   */
  bool PNGHasAlpha( const char* filename );
- 
+
  //! Function to read the alpha channel from a PNG image
  /** \param[in] "filename" Name of the PNG image file
        \return 2D mask, where false denotes no material
@@ -677,31 +677,67 @@ void writePNG( const std::string &filename, uint width, uint height, const std::
    */
   float fzero(float(*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100 );
 
-  //! Function to perform linear interpolation based on a vector of discrete (x,y) values
-    /**
-     * \param[in] "points" Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
-     * \param[in] "x" x value at which to interpolate. If x is less than the first x-value in points or greater than the last x-value in points, interp1 will respectively return the first or last y value.
-     * \return Value of y interpolated at location x.
-     */
-    float interp1( const std::vector<helios::vec2> &points, float x );
+//! Function to perform linear interpolation based on a vector of discrete (x,y) values
+/**
+ * \param[in] "points" Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
+ * \param[in] "x" x value at which to interpolate. If x is less than the first x-value in points or greater than the last x-value in points, interp1 will respectively return the first or last y value.
+ * \return Value of y interpolated at location x.
+ */
+  float interp1( const std::vector<helios::vec2> &points, float x );
 
     //! Function to calculate the distance between two points
     /**
-     * \param[in] "p1" first point (vec3)
-     * \param[in] "p2" second point (vec3)
-     * \return distance between p1 and p2 in three dimensions
-     */
+        * \param[in] "p1" first point (vec3)
+        * \param[in] "p2" second point (vec3)
+        * \return distance between p1 and p2 in three dimensions
+        */
     float point_distance( const helios::vec3 &p1 , const helios::vec3 &p2);
 
-    std::string getFileExtension( const std::string &filepath );
+//! Parse a file string to get the extension
+/**
+* Example: /path/to/file/filename.ext -> extension=".ext"
+* \param[in] "filepath" String containing file path and name
+* \return File extension contained in input string
+* \note If the string does not contain an extension, an empty string is returned
+ */
+std::string getFileExtension( const std::string &filepath );
 
-    std::string getFileStem( const std::string &filepath );
+//! Parse a file string to get the filename without extension
+/**
+* Example: /path/to/file/filename.ext -> stem="filename"
+* \param[in] "filepath" String containing file path and name
+* \return Filename without extension contained in input string
+* \note If the string does not contain a file name, an empty string is returned
+ */
+std::string getFileStem( const std::string &filepath );
 
-    std::string getFileName( const std::string &filepath );
+//! Parse a file string to get the filename including extension
+/**
+* Example: /path/to/file/filename.ext -> filename="filename.ext"
+* \param[in] "filepath" String containing file path and name
+* \return Filename including extension contained in input string
+* \note If the string does not contain a file name, an empty string is returned
+ */
+std::string getFileName( const std::string &filepath );
 
-    std::string getFilePath( const std::string &filepath, bool trailingslash = true );
+//! Parse a file string to get the path (i.e., portion of the string before the file name).
+/**
+* Example: /path/to/file/filename.ext -> path="/path/to/file/"
+* \param[in] "filepath" String containing file path and name
+* \return File path contained in input string
+* \note If the string does not contain a path, an empty string is returned
+ */
+std::string getFilePath( const std::string &filepath, bool trailingslash = true );
 
-    extern SphericalCoord nullrotation;
+//! Read values contained in a text file into a one-dimensional vector of floats
+/**
+* \param[in] "filepath" Path to text file
+* \return One-dimensional vector of floats contained in text file
+ */
+std::vector<float> importVectorFromFile(const std::string &filepath);
+
+
+extern SphericalCoord nullrotation;
 
 }
 

@@ -40,6 +40,8 @@ EnergyBalanceModel::EnergyBalanceModel( helios::Context* __context ){
 
   dt_default=0; //sec
 
+  n_transpire=1;
+
   message_flag = true; //print messages to screen by default
 
   //Copy pointer to the context

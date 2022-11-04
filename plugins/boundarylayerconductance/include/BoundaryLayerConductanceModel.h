@@ -77,7 +77,7 @@ private:
 
   bool message_flag;
 
-  float calculateBoundaryLayerConductance( const uint gH_model, const float U, const float L, const float inclination, float TL, float Ta );
+  float calculateBoundaryLayerConductance( uint gH_model, float U, float L, char Nsides, float inclination, float TL, float Ta );
 
   std::map<uint,uint> boundarylayer_model;
 

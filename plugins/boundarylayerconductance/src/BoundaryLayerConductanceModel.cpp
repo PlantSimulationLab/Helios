@@ -171,10 +171,20 @@ void BLConductanceModel::run(const std::vector<uint> &UUIDs ){
       L = sqrt(context->getPrimitiveArea(UUID));
     }
 
+    //Number of primitive faces
+    char Nsides = 2; //default is 2
+    if( context->doesPrimitiveDataExist(p,"twosided_flag") && context->getPrimitiveDataType(p,"twosided_flag")==HELIOS_TYPE_UINT ){
+      uint flag;
+      context->getPrimitiveData(p,"twosided_flag",flag);
+      if( flag==0 ){
+        Nsides=1;
+      }
+    }
+
     vec3 norm = context->getPrimitiveNormal(UUID);
     float inclination = cart2sphere( norm ).zenith;
 
-    float gH = calculateBoundaryLayerConductance( boundarylayer_model[UUIDs.at(p)], U, L, inclination, T, Ta );
+    float gH = calculateBoundaryLayerConductance( boundarylayer_model[UUIDs.at(p)], U, L, Nsides, inclination, T, Ta );
 
     context->setPrimitiveData( UUID, "boundarylayer_conductance", gH );
 
@@ -182,7 +192,7 @@ void BLConductanceModel::run(const std::vector<uint> &UUIDs ){
 
 }
 
-float BLConductanceModel::calculateBoundaryLayerConductance( const uint gH_model, const float U, const float L, const float inclination, float TL, float Ta ){
+float BLConductanceModel::calculateBoundaryLayerConductance( uint gH_model, float U, float L, char Nsides, float inclination, float TL, float Ta ){
 
   
   assert( gH_model<4 );
@@ -196,7 +206,7 @@ float BLConductanceModel::calculateBoundaryLayerConductance( const uint gH_model
   if( gH_model==0 ){ //Polhausen equation
     //This comes from the correlation by Polhausen - see Eq. XX of Campbell and Norman (1998). It assumes a flat plate parallel to the direction of the flow, which extends infinitely in the cross-stream direction and "L" in the streamwise direction. It also assumes that the air is at standard temperature and pressure, and flow is laminar, forced convection.
 
-    gH = 0.135f*sqrt(U/L);
+    gH = 0.135f*sqrt(U/L)*float(Nsides);
 
   }else if( gH_model==1 ){ //Inclined Plate
 

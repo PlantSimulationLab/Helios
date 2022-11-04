@@ -2667,6 +2667,14 @@ float helios::point_distance( const helios::vec3 &p1 , const helios::vec3 &p2){
 
 std::string helios::getFileExtension( const std::string &filepath ){
   std::string ext;
+
+  //no extension
+  if( filepath.find_last_of('.')>=filepath.size() ){
+    ext = filepath.substr(filepath.find_last_of('.'));
+  }else { // does not contain any .'s
+    return "";
+  }
+
   if( filepath.find_last_of('.') < filepath.size() ){
     ext = filepath.substr(filepath.find_last_of('.') );
   }
@@ -2726,4 +2734,18 @@ std::string helios::getFilePath( const std::string &filepath, bool trailingslash
       return filepath.substr(0, filepath.find_last_of('/'));
     }
   }
+}
+
+std::vector<float> helios::importVectorFromFile(const std::string &filepath){
+
+  std::ifstream stream(filepath.c_str());
+
+  if( !stream.is_open() ){
+    throw(std::runtime_error("ERROR (helios::importVectorFromFile): File " + filepath + " could not be opened for reading. Check that it exists and that you have permission to read it."));
+  }
+
+  std::istream_iterator<float> start(stream), end;
+  std::vector<float> vec(start, end);
+  return vec;
+
 }
