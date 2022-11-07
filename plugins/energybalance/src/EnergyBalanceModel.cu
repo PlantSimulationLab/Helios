@@ -246,15 +246,13 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
             To[u] = 300;
         }
 
-        //Net absorbed radiation
-        R[u] = Rn.at(u);
-
-        //Emissivity
-        eps[u] = emissivity.at(u);
-
         //Air temperature
         if( context->doesPrimitiveDataExist(p,"air_temperature") && context->getPrimitiveDataType(p,"air_temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_temperature",Ta[u]);
+            if( Ta[u]<250.f ){
+              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << Ta[u] << " given in 'air_temperature' primitive data is very small. Values should be given in units of Kelvin. Assuming default value of " << air_temperature_default << std::endl;
+              Ta[u] = air_temperature_default;
+            }
         }else{
             Ta[u] = air_temperature_default;
         }
@@ -263,6 +261,13 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         float hr;
         if( context->doesPrimitiveDataExist(p,"air_humidity") && context->getPrimitiveDataType(p,"air_humidity")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_humidity",hr);
+            if( hr>1.f ){
+              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << hr << " given in 'air_humidity' primitive data is large than 1. Values should be given as fractional values between 0 and 1. Assuming default value of " << air_humidity_default << std::endl;
+              hr = air_humidity_default;
+            }else if( hr<0.f ){
+              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << hr << " given in 'air_humidity' primitive data is less than 0. Values should be given as fractional values between 0 and 1. Assuming default value of " << air_humidity_default << std::endl;
+              hr = air_humidity_default;
+            }
         }else{
             hr = air_humidity_default;
         }
@@ -274,6 +279,10 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         //Air pressure
         if( context->doesPrimitiveDataExist(p,"air_pressure") && context->getPrimitiveDataType(p,"air_pressure")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_pressure",pressure[u]);
+            if( pressure[u]<10000.f ){
+              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << pressure[u] << " given in 'air_pressure' primitive data is very small. Values should be given in units of Pascals. Assuming default value of " << pressure_default << std::endl;
+              pressure[u] = pressure_default;
+            }
         }else{
             pressure[u] = pressure_default;
         }
@@ -338,6 +347,12 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         }else{
             heatcapacity[u] = heatcapacity_default;
         }
+
+        //Emissivity
+        eps[u] = emissivity.at(u);
+
+        //Net absorbed radiation
+        R[u] = Rn.at(u);
 
     }
 

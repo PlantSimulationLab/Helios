@@ -40,8 +40,6 @@ EnergyBalanceModel::EnergyBalanceModel( helios::Context* __context ){
 
   dt_default=0; //sec
 
-  n_transpire=1;
-
   message_flag = true; //print messages to screen by default
 
   //Copy pointer to the context
@@ -167,9 +165,9 @@ int EnergyBalanceModel::selfTest(){
 
   float sensible_flux, latent_flux, R, temperature;
 
-  float sensible_flux_exact = 48.8894;
-  float latent_flux_exact = 21.0678;
-  float temperature_exact = 329.3733;
+  float sensible_flux_exact = 48.7098;
+  float latent_flux_exact = 21.7644;
+  float temperature_exact = 329.309;
 
   context_3.getPrimitiveData( UUID_3, "sensible_flux", sensible_flux );
   context_3.getPrimitiveData( UUID_3, "latent_flux", latent_flux );
@@ -177,7 +175,6 @@ int EnergyBalanceModel::selfTest(){
 
   if( fabs(sensible_flux-sensible_flux_exact)/fabs(sensible_flux_exact)>err_tol || fabs(latent_flux-latent_flux_exact)/fabs(latent_flux_exact)>err_tol || fabs(temperature-temperature_exact)/fabs(temperature_exact)>err_tol ){
     std::cout << "failed temperature solver check #1." << std::endl;
-    std::cout << temperature << std::endl;
     return 1;
   }
 
@@ -191,9 +188,9 @@ int EnergyBalanceModel::selfTest(){
   context_3.getPrimitiveData( UUID_3, "latent_flux", latent_flux );
   context_3.getPrimitiveData( UUID_3, "temperature", temperature );
   
-  sensible_flux_exact = 89.3802;
-  latent_flux_exact = 19.8921;
-  temperature_exact = 324.4110;
+  sensible_flux_exact = 89.2217;
+  latent_flux_exact = 20.2213;
+  temperature_exact = 324.389;
       
   context_3.getPrimitiveData( UUID_3, "sensible_flux", sensible_flux );
   context_3.getPrimitiveData( UUID_3, "latent_flux", latent_flux );
@@ -214,9 +211,9 @@ int EnergyBalanceModel::selfTest(){
   context_3.getPrimitiveData( UUID_3, "latent_flux", latent_flux );
   context_3.getPrimitiveData( UUID_3, "temperature", temperature );
   
-  sensible_flux_exact = 61.7366f;
-  latent_flux_exact = 21.2700f;
-  temperature_exact = 327.7511f;
+  sensible_flux_exact = 61.5525f;
+  latent_flux_exact = 21.8290f;
+  temperature_exact = 327.704f;
       
   context_3.getPrimitiveData( UUID_3, "sensible_flux", sensible_flux );
   context_3.getPrimitiveData( UUID_3, "latent_flux", latent_flux );

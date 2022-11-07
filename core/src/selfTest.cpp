@@ -952,7 +952,7 @@ int Context::selfTest(){
     uint context_to_PrimitiveCount = context_to.getPrimitiveCount();
     uint context_to_ObjectCount = context_to.getObjectCount();
 
-    //////////////// getTileObjectAreaRatio
+    //------------ getTileObjectAreaRatio -------------//
 
     errtol = 1e-2;
     double err_1 = fabs(context_to.getTileObjectAreaRatio(to1) - 1.0);
@@ -976,7 +976,7 @@ int Context::selfTest(){
         error_count ++;
     }
 
-    ////////////////// setTileObjectSubdivisionCount
+    //----------- setTileObjectSubdivisionCount -------------//
 
     std::vector<uint> allObjectIDs_to = context_to.getAllObjectIDs();
     context_to.setTileObjectSubdivisionCount(allObjectIDs_to, make_int2(5,5));
@@ -1007,7 +1007,7 @@ int Context::selfTest(){
         error_count ++;
     }
 
-    ////////////////// writeXML & loadXML for compound objects
+    //------------ writeXML & loadXML for compound objects --------------//
 
     Context context_to2;
     context_to2.loadXML("xmltest_to.xml", true );
@@ -1100,6 +1100,65 @@ int Context::selfTest(){
     {
         std::cerr << "failed. Changing Object ID of one object primitive, deleting, and writing/loading did not result in correct number of primitives or objects (Case 3)" << std::endl;
         error_count ++;
+    }
+
+    //---------- file name/path parsing functions -------------//
+
+    std::string filename = "/path/to/.hidden/file/filename";
+
+    std::string ext = getFileExtension(filename);
+    std::string name = getFileName(filename);
+    std::string stem = getFileStem(filename);
+    std::string path = getFilePath(filename,true);
+
+    if( !ext.empty() || name!="filename" || stem!="filename" || path!="/path/to/.hidden/file/" ){
+      std::cerr << "failed: file path parsing functions were not correct." << std::endl;
+      error_count++;
+    }
+
+    filename = ".hidden/path/to/file/filename.ext";
+
+    ext = getFileExtension(filename);
+    name = getFileName(filename);
+    stem = getFileStem(filename);
+    path = getFilePath(filename,false);
+
+    if( ext!=".ext" || name!="filename.ext" || stem!="filename" || path!=".hidden/path/to/file" ){
+      std::cerr << "failed: file path parsing functions were not correct." << std::endl;
+      error_count++;
+    }
+
+    //---------- primitive data calculation functions -------------//
+
+    std::vector<uint> UUIDs_calcfuns;
+
+    for( uint i=0; i<5; i++ ){
+      UUIDs_calcfuns.push_back(context_test.addPatch());
+      context_test.setPrimitiveData(UUIDs_calcfuns.back(),"data_calcfuns",float(i+1));
+    }
+
+    float mean_calcfuns;
+    context_test.calculatePrimitiveDataMean( UUIDs_calcfuns, "data_calcfuns", mean_calcfuns );
+
+    if( mean_calcfuns!=3.f ){
+      std::cerr << "failed: calculatePrimitiveDataMean() did not produce correct mean value." << std::endl;
+      error_count++;
+    }
+
+    float awtmean_calcfuns;
+    context_test.calculatePrimitiveDataAreaWeightedMean( UUIDs_calcfuns, "data_calcfuns", awtmean_calcfuns );
+
+    if( awtmean_calcfuns!=3.f ){
+      std::cerr << "failed: calculatePrimitiveDataAreaWeightedMean() did not produce correct mean value." << std::endl;
+      error_count++;
+    }
+
+    float sum_calcfuns;
+    context_test.calculatePrimitiveDataSum( UUIDs_calcfuns, "data_calcfuns", sum_calcfuns );
+
+    if( sum_calcfuns!=15.f ){
+      std::cerr << "failed: calculatePrimitiveDataSum() did not produce correct sum value." << std::endl;
+      error_count++;
     }
     
 
