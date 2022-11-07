@@ -3190,7 +3190,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
     raydir.resize(Ntheta*Nphi);
   
     for (uint j=0; j<Nphi; j++ ){
-      float phi = phimax+float(j)*(phimax-phimin)/float(Nphi);
+      float phi = phimin+float(j)*(phimax-phimin)/float(Nphi);
       for (uint i=0; i<Ntheta; i++ ){        
 	float theta_z = thetamin+float(i)*(thetamax-thetamin)/float(Ntheta);
 	float theta_elev = 0.5f*M_PI-theta_z;

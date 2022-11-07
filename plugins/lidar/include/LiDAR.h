@@ -694,6 +694,30 @@ ection
   /** \param[in] "maxdistance" Maximum hit point distance from scanner */
   void distanceFilter( const float maxdistance );
   
+  //! overloaded version of xyzFilter that defaults to deleting points outside the provided bounding box
+  /** \param[in] "xmin" minimum x coordinate of bounding box
+   \param[in] "xmax" maximum x coordinate of bounding box
+   \param[in] "ymin" minimum y coordinate of bounding box
+   \param[in] "ymax" maximum y coordinate of bounding box
+   \param[in] "zmin" minimum z coordinate of bounding box
+   \param[in] "zmax" maximum z coordinate of bounding box
+   \note points outside the provided bounding box are deleted by default
+   */
+  void xyzFilter( const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax );
+  
+  //! Filter scan with a bounding box
+  /** \param[in] "xmin" minimum x coordinate of bounding box
+   \param[in] "xmax" maximum x coordinate of bounding box
+   \param[in] "ymin" minimum y coordinate of bounding box
+   \param[in] "ymax" maximum y coordinate of bounding box
+   \param[in] "zmin" minimum z coordinate of bounding box
+   \param[in] "zmax" maximum z coordinate of bounding box
+   \param[in] "deleteOutside" if true, deletes points outside the bounding box, if false deletes points inside the bounding box
+   \note points outside the provided bounding box are deleted
+   */
+  void xyzFilter( const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax, const bool deleteOutside );
+  
+  
   //! Filter scan by imposing a minimum reflectance value
   /** \param[in] "minreflectance" Miniimum hit point reflectance value
       \note If `reflectance' data was not provided for a hit point when calling \ref Scan::addHitPoint(), the point will not be filtered. 

@@ -1062,7 +1062,13 @@ void LiDARcloud::scalarFilter( const char* scalar_field, const float threshold, 
     
 }
 
-void LiDARcloud::xyzFilter( const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax ){
+void LiDARcloud::xyzFilter( const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax){
+    
+    xyzFilter(xmin, xmax, ymin, ymax, zmin, zmax, true);
+    
+}
+
+void LiDARcloud::xyzFilter( const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax, const bool deleteOutside){
     
     if(xmin > xmax || ymin > ymax || zmin > zmax)
     {
@@ -1071,14 +1077,27 @@ void LiDARcloud::xyzFilter( const float xmin, const float xmax, const float ymin
     
     std::size_t delete_count = 0;
     
-    for(int i = (getHitCount()-1); i>=0; i-- ){  
-        std::cout << i << std::endl;
-        vec3 xyz = getHitXYZ(i);
-        if( xyz.x < xmin || xyz.x > xmax || xyz.y < ymin || xyz.y > ymax || xyz.z < zmin || xyz.z > zmax ){
-            deleteHitPoint(i);
-            delete_count++;
-        }
+    if(deleteOutside)
+    {
+        for(int i = (getHitCount()-1); i>=0; i-- ){   
+            vec3 xyz = getHitXYZ(i);
+            
+            if( xyz.x < xmin || xyz.x > xmax || xyz.y < ymin || xyz.y > ymax || xyz.z < zmin || xyz.z > zmax ){
+                deleteHitPoint(i);
+                delete_count++;
+            }
+        }  
+    }else{
+        for(int i = (getHitCount()-1); i>=0; i-- ){   
+            vec3 xyz = getHitXYZ(i);
+            
+            if( xyz.x >= xmin && xyz.x < xmax && xyz.y > ymin && xyz.y < ymax && xyz.z > zmin && xyz.z < zmax ){
+                deleteHitPoint(i);
+                delete_count++;
+            }
+        }    
     }
+    
     
     if( printmessages ){
         std::cout << "Removed " << delete_count << " hit points based on provided bounding box." << std::endl;
