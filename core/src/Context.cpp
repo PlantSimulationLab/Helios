@@ -62,10 +62,7 @@ Texture::Texture( const char* texture_file ){
     //------ determine if transparency channel exists ---------//
 
     //check if texture file has extension ".png"
-    std::string ext;
-    for( uint i=filename.size()-4; i<filename.size(); i++ ){
-        ext.push_back(filename.at(i));
-    }
+    std::string ext = getFileExtension(filename);
     if( ext!=".png" ){
         hastransparencychannel = false;
     }else{
@@ -75,7 +72,7 @@ Texture::Texture( const char* texture_file ){
     //-------- load transparency channel (if exists) ------------//
 
     if( hastransparencychannel ){
-        transparencydata = readPNGAlpha( filename.c_str() );
+        transparencydata = readPNGAlpha( filename );
     }
 
     //-------- determine solid fraction --------------//
@@ -3549,11 +3546,12 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texture_file;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addPatch): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texture_file;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addPatch): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     addTexture( texture_file );
 
@@ -3583,11 +3581,12 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file, const helios::vec2& uv_center, const helios::vec2& uv_size ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texture_file;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addPatch): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texture_file;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addPatch): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     if( size.x==0 || size.y==0 ){
         throw( std::runtime_error("ERROR (addPatch): Size of patch must be greater than 0.") );
@@ -3654,11 +3653,12 @@ uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3&
 
 uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texture_file, const helios::vec2& uv0, const helios::vec2& uv1, const helios::vec2& uv2 ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texture_file;
-    if( fn.substr(fn.find_last_of('.') + 1) != "png" && fn.substr(fn.find_last_of('.') + 1) != "PNG" && fn.substr(fn.find_last_of('.') + 1) != "jpg" && fn.substr(fn.find_last_of('.') + 1) != "jpeg" && fn.substr(fn.find_last_of('.') + 1) != "JPG" && fn.substr(fn.find_last_of('.') + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addTriangle): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texture_file;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addTriangle): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     addTexture( texture_file );
 
@@ -3783,7 +3783,7 @@ void Context::deletePrimitive(uint UUID ){
         uint ObjID = prim->getParentObjectID();
         if( doesObjectExist(ObjID) ) {
             objects.at(ObjID)->deleteChildPrimitive(UUID);
-            if(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().size() == 0)
+            if(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().empty() )
             {
                 CompoundObject* obj = objects.at(ObjID);
                 delete obj;
@@ -7040,11 +7040,12 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 
 uint Context::addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addTileObject): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texturefile;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addTileObject): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     if( size.x==0 || size.y==0 ){
         throw( std::runtime_error("ERROR (addTileObject): Size of tile must be greater than 0."));
@@ -7275,11 +7276,12 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
 
 uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addTubeObject): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texturefile;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addTubeObject): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     const uint node_count = nodes.size();
 
@@ -7545,11 +7547,12 @@ uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &sub
 
 uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, const char* texturefile, bool reverse_normals ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addBoxObject): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texturefile;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addBoxObject): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     std::vector<uint> UUID;
 
@@ -7719,11 +7722,12 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texture_file;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addDiskObject): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texture_file;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addDiskObject): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     std::vector<uint> UUID;
     UUID.resize(Ndivs);
@@ -7898,11 +7902,12 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
 
 uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const char* texturefile ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addConeObject): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texturefile;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addConeObject): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     std::vector<helios::vec3> nodes{node0, node1};
     std::vector<float> radii{radius0, radius1};
@@ -8082,11 +8087,12 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
 
 std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radius, const char* texturefile ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addSphere): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texturefile;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addSphereObject): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     std::vector<uint> UUID;
 
@@ -8231,11 +8237,12 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
 std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addTile): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texturefile;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addTile): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     std::vector<uint> UUID;
 
@@ -8422,11 +8429,12 @@ std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, c
 
 std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addTube): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texturefile;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addTube): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     const uint node_count = nodes.size();
 
@@ -8650,11 +8658,12 @@ std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const in
 
 std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const char* texturefile, bool reverse_normals ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addBox): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texturefile;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addBox): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     std::vector<uint> UUID;
 
@@ -8782,11 +8791,12 @@ std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &s
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texture_file;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addDisk): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texture_file;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addDisk): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     std::vector<uint> UUIDs;
     UUIDs.resize(Ndivs);
@@ -8905,11 +8915,12 @@ std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &no
 
 std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const char* texturefile ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" && fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ){
-        throw( std::runtime_error("ERROR (addCone): Texture file " + fn + " is not PNG or JPEG format.") );
-    }
+  //texture must have type PNG or JPEG
+  std::string fn = texturefile;
+  std::string ext = getFileExtension(fn);
+  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+    throw( std::runtime_error("ERROR (Context::addCone): Texture file " + fn + " is not PNG or JPEG format.") );
+  }
 
     std::vector<helios::vec3> nodes{node0, node1};
     std::vector<float> radii{radius0, radius1};
@@ -9995,7 +10006,8 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     }
     
     std::string fn = filename;
-    if(fn.substr(fn.find_last_of(".") + 1) != "xml") {
+    std::string ext = getFileExtension(filename);
+    if( ext != ".xml" && ext != ".XML" ) {
         throw( std::runtime_error("failed.\n File " + fn + " is not XML format.") );
     }
     
@@ -11696,7 +11708,11 @@ void Context::writeDataToXMLstream( const char* data_group, const std::vector<st
 
 }
 
-void Context::writeXML( const char* filename, bool quiet ) const{
+void Context::writeXML( const char* filename, bool quiet ) const {
+  writeXML(filename, getAllUUIDs(), quiet);
+}
+
+void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bool quiet ) const{
 
     if( !quiet ) {
         std::cout << "Writing XML file " << filename << "..." << std::flush;
@@ -11740,9 +11756,9 @@ void Context::writeXML( const char* filename, bool quiet ) const{
 
     // -- primitives -- //
 
-    for(auto primitive : primitives){
+    for( uint UUID : UUIDs ){
 
-        uint p = primitive.first;
+        uint p = UUID;
 
         Primitive* prim = getPrimitivePointer_private(p);
 
@@ -12405,7 +12421,8 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
     std::cout << "Reading PLY file " << filename << "..." << std::flush;
 
     std::string fn = filename;
-    if( fn.substr(fn.find_last_of(".") + 1) != "ply" ) {
+    std::string ext = getFileExtension(filename);
+    if( ext != ".ply" && ext != ".PLY" ) {
         throw( std::runtime_error("ERROR (loadPLY): File " + fn + " is not PLY format.") );
     }
 
@@ -12691,7 +12708,8 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
   }
 
     std::string fn = filename;
-    if( fn.substr(fn.find_last_of(".") + 1) != "obj" ) {
+    std::string ext = getFileExtension(filename);
+    if( ext != ".obj" && ext != ".OBJ" ) {
         throw( std::runtime_error("ERROR (Context::loadOBJ): File " + fn + " is not OBJ format.") );
     }
 
@@ -12797,8 +12815,10 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
                     }
                 }
 
-                if( !digitf.empty() && !digitu.empty() ){
-                    f.push_back( std::stoi(digitf) );
+                if( !digitf.empty() ) {
+                  f.push_back(std::stoi(digitf));
+                }
+                if( !digitu.empty() ){
                     u.push_back( std::stoi(digitu) );
                 }
 
@@ -12817,19 +12837,23 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
       scl = make_vec3( scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin) );
     }else {
 
+      if( scl.x==0 && (scl.y!=0 || scl.z!=0) ) {
+        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for x-direction is zero. Setting scaling factor to 1"<< std::endl;
+      }
+      if( scl.y==0 && (scl.x!=0 || scl.z!=0) ) {
+        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for y-direction is zero. Setting scaling factor to 1" << std::endl;
+      }
+      if( scl.z==0 && (scl.y!=0 || scl.y!=0) ) {
+        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for z-direction is zero. Setting scaling factor to 1" << std::endl;
+      }
+
       if (scl.x == 0) {
-        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for x-direction is zero. Setting scaling factor to 1"
-                  << std::endl;
         scl.x = 1;
       }
       if (scl.y == 0) {
-        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for y-direction is zero. Setting scaling factor to 1"
-                  << std::endl;
         scl.y = 1;
       }
       if (scl.z == 0) {
-        std::cout << "WARNING (Context::loadOBJ): Scaling factor given for z-direction is zero. Setting scaling factor to 1"
-                  << std::endl;
         scl.z = 1;
       }
 
@@ -13647,12 +13671,10 @@ std::vector<std::string> Context::generateTexturesFromColormap( const std::strin
   tfile.close();
 
   // get file extension
-  std::string file_ext = texturefile.substr(texturefile.find_last_of(".") + 1);
+  std::string file_ext = getFileExtension(texturefile);
 
-  // get file base
-  std::string base_filename = texturefile.substr(texturefile.find_last_of("/\\") + 1);
-  std::string::size_type const p(base_filename.find_last_of('.'));
-  std::string file_base = base_filename.substr(0, p);
+  // get file base/stem
+  std::string file_base = getFileStem(texturefile);
 
   std::vector<RGBcolor> color_table;
   color_table.resize(Ncolors);
@@ -14995,4 +15017,337 @@ helios::vec3 Context::getConeObjectAxisUnitVector(uint &ObjID) const {
 
 float Context::getConeObjectLength(uint &ObjID) const {
     return getConeObjectPointer_private(ObjID)->getLength();
+}
+
+void Context::calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, float &mean ) const{
+  float value;
+  float sum = 0.f;
+  size_t count = 0;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_FLOAT ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      sum += value;
+      count++;
+    }
+
+  }
+
+  if( count==0 ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    mean = 0;
+  }else{
+    mean = sum/float(count);
+  }
+
+}
+
+void Context::calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, double &mean ) const{
+  double value;
+  double sum = 0.f;
+  size_t count = 0;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_DOUBLE ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      sum += value;
+      count++;
+    }
+
+  }
+
+  if( count==0 ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    mean = 0;
+  }else{
+    mean = sum/float(count);
+  }
+
+}
+
+void Context::calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &mean ) const{
+  vec2 value;
+  vec2 sum(0.f,0.f);
+  size_t count = 0;
+  for (uint UUID : UUIDs) {
+
+    if (doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC2 ) {
+      getPrimitiveData(UUID, label.c_str(), value);
+      sum = sum + value;
+      count++;
+    }
+  }
+
+  if (count == 0) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    mean = make_vec2(0,0);
+  } else {
+    mean = sum / float(count);
+  }
+}
+
+void Context::calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &mean ) const{
+  vec3 value;
+  vec3 sum(0.f,0.f,0.f);
+  size_t count = 0;
+  for (uint UUID : UUIDs) {
+
+    if (doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC3 ) {
+      getPrimitiveData(UUID, label.c_str(), value);
+      sum = sum + value;
+      count++;
+    }
+  }
+
+  if (count == 0) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    mean = make_vec3(0,0,0);
+  } else {
+    mean = sum / float(count);
+  }
+}
+
+void Context::calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &mean ) const{
+  vec4 value;
+  vec4 sum(0.f,0.f,0.f,0.f);
+  size_t count = 0;
+  for (uint UUID : UUIDs) {
+
+    if (doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC4 ) {
+      getPrimitiveData(UUID, label.c_str(), value);
+      sum = sum + value;
+      count++;
+    }
+  }
+
+  if (count == 0) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    mean = make_vec4(0,0,0,0);
+  } else {
+    mean = sum / float(count);
+  }
+}
+
+void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, float &awt_mean ) const{
+  float value, A;
+  float sum = 0.f;
+  float area = 0;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_FLOAT ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      A = getPrimitiveArea(UUID);
+      sum += value*A;
+      area += A;
+    }
+
+  }
+
+  if( area==0 ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    awt_mean = 0;
+  }else{
+    awt_mean = sum/area;
+  }
+}
+
+void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, double &awt_mean ) const{
+  double value;
+  float A;
+  double sum = 0.f;
+  double area = 0;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_DOUBLE ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      A = getPrimitiveArea(UUID);
+      sum += value*double(A);
+      area += A;
+    }
+
+  }
+
+  if( area==0 ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    awt_mean = 0;
+  }else{
+    awt_mean = sum/area;
+  }
+}
+
+void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &awt_mean ) const{
+  vec2 value;
+  float A;
+  vec2 sum(0.f,0.f);
+  float area = 0;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC2 ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      A = getPrimitiveArea(UUID);
+      sum = sum + (value*A);
+      area += A;
+    }
+
+  }
+
+  if( area==0 ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    awt_mean = make_vec2(0,0);
+  }else{
+    awt_mean = sum/area;
+  }
+}
+
+void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &awt_mean ) const{
+  vec3 value;
+  float A;
+  vec3 sum(0.f,0.f,0.f);
+  float area = 0;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC3 ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      A = getPrimitiveArea(UUID);
+      sum = sum + (value*A);
+      area += A;
+    }
+
+  }
+
+  if( area==0 ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    awt_mean = make_vec3(0,0,0);
+  }else{
+    awt_mean = sum/area;
+  }
+}
+
+void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &awt_mean ) const{
+  vec4 value;
+  float A;
+  vec4 sum(0.f,0.f,0.f,0.f);
+  float area = 0;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC4 ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      A = getPrimitiveArea(UUID);
+      sum = sum + (value*A);
+      area += A;
+    }
+
+  }
+
+  if( area==0 ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    awt_mean = make_vec4(0,0,0,0);
+  }else{
+    awt_mean = sum/area;
+  }
+}
+
+void Context::calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, float &sum ) const{
+
+  float value;
+  sum = 0.f;
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_FLOAT ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      sum += value;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
+}
+
+void Context::calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, double &sum ) const{
+
+  double value;
+  sum = 0.f;
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_DOUBLE ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      sum += value;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
+}
+
+void Context::calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &sum ) const{
+
+  vec2 value;
+  sum = make_vec2(0.f,0.f);
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC2 ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      sum = sum + value;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
+}
+
+void Context::calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &sum ) const{
+
+  vec3 value;
+  sum = make_vec3(0.f,0.f,0.f);
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC3 ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      sum = sum + value;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
+}
+
+void Context::calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &sum ) const{
+
+  vec4 value;
+  sum = make_vec4(0.f,0.f,0.f,0.F);
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC4 ){
+      getPrimitiveData(UUID,label.c_str(),value);
+      sum = sum + value;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
 }

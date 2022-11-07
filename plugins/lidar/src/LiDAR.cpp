@@ -993,77 +993,97 @@ void LiDARcloud::getGridBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax 
 }
 
 void LiDARcloud::distanceFilter( const float maxdistance ){
-
-  std::size_t delete_count = 0;
-  for( std::size_t i=0; i<hits.size(); i++ ){
-
-    vec3 xyz = getHitXYZ(i);
-
-    uint scanID = getHitScanID(i);
-
-    vec3 r = xyz-getScanOrigin(scanID);
-
-    if( r.magnitude()>maxdistance ){
-      deleteHitPoint(i);
-      delete_count++;
+    
+    std::size_t delete_count = 0;
+    for(int i = (getHitCount()-1); i>=0; i-- ){
+        
+        vec3 xyz = getHitXYZ(i);
+        uint scanID = getHitScanID(i);
+        vec3 r = xyz-getScanOrigin(scanID);
+        
+        if( r.magnitude()>maxdistance ){
+            deleteHitPoint(i);
+            delete_count++;
+        }
     }
-
-  }
-
-  if( printmessages ){
-    std::cout << "Removed " << delete_count << " hit points based on distance filter." << std::endl;
-  }
-
+    
+    if( printmessages ){
+        std::cout << "Removed " << delete_count << " hit points based on distance filter." << std::endl;
+    }
 }
 
 void LiDARcloud::reflectanceFilter( const float minreflectance ){
-
-  std::size_t delete_count = 0;
-  for( std::size_t r=0; r<getHitCount(); r++ ){
-    if( hits.at(r).data.find("reflectance") != hits.at(r).data.end() ){
-      double R = getHitData(r,"reflectance");
-      if( R<minreflectance ){
-	deleteHitPoint(r);
-	delete_count++;
-      }
+    
+    std::size_t delete_count = 0;
+    for(int r = (getHitCount()-1); r>=0; r-- ){  
+        if( hits.at(r).data.find("reflectance") != hits.at(r).data.end() ){
+            double R = getHitData(r,"reflectance");
+            if( R<minreflectance ){
+                deleteHitPoint(r);
+                delete_count++;
+            }
+        }
     }
-  }
-
-  if( printmessages ){
-    std::cout << "Removed " << delete_count << " hit points based on reflectance filter." << std::endl;
-  }
-
+    
+    if( printmessages ){
+        std::cout << "Removed " << delete_count << " hit points based on reflectance filter." << std::endl;
+    }
+    
 }
 
 void LiDARcloud::scalarFilter( const char* scalar_field, const float threshold, const char* comparator ){
-
-  std::size_t delete_count = 0;
-  for( std::size_t r=0; r<getHitCount(); r++ ){
-    if( hits.at(r).data.find(scalar_field) != hits.at(r).data.end() ){
-      double R = getHitData(r,scalar_field);
-      if( strcmp(comparator,"<")==0 ){
-	if( R<threshold ){
-	  deleteHitPoint(r);
-	  delete_count++;
-	}
-      }else if( strcmp(comparator,">")==0 ){
-	if( R>threshold ){
-	  deleteHitPoint(r);
-	  delete_count++;
-	}
-      }else if( strcmp(comparator,"=")==0 ){
-	if( R==threshold ){
-	  deleteHitPoint(r);
-	  delete_count++;
-	}
-      }
+    
+    std::size_t delete_count = 0;
+    for(int r = (getHitCount()-1); r>=0; r-- ){ 
+        if( hits.at(r).data.find(scalar_field) != hits.at(r).data.end() ){
+            double R = getHitData(r,scalar_field);
+            if( strcmp(comparator,"<")==0 ){
+                if( R<threshold ){
+                    deleteHitPoint(r);
+                    delete_count++;
+                }
+            }else if( strcmp(comparator,">")==0 ){
+                if( R>threshold ){
+                    deleteHitPoint(r);
+                    delete_count++;
+                }
+            }else if( strcmp(comparator,"=")==0 ){
+                if( R==threshold ){
+                    deleteHitPoint(r);
+                    delete_count++;
+                }
+            }
+        }
     }
-  }
+    
+    if( printmessages ){
+        std::cout << "Removed " << delete_count << " hit points based on scalar filter." << std::endl;
+    }
+    
+}
 
-  if( printmessages ){
-    std::cout << "Removed " << delete_count << " hit points based on scalar filter." << std::endl;
-  }
-
+void LiDARcloud::xyzFilter( const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax ){
+    
+    if(xmin > xmax || ymin > ymax || zmin > zmax)
+    {
+        std::cout << "WARNING: at least one minimum value provided is greater than one maximum value. " << std::endl; 
+    }
+    
+    std::size_t delete_count = 0;
+    
+    for(int i = (getHitCount()-1); i>=0; i-- ){  
+        std::cout << i << std::endl;
+        vec3 xyz = getHitXYZ(i);
+        if( xyz.x < xmin || xyz.x > xmax || xyz.y < ymin || xyz.y > ymax || xyz.z < zmin || xyz.z > zmax ){
+            deleteHitPoint(i);
+            delete_count++;
+        }
+    }
+    
+    if( printmessages ){
+        std::cout << "Removed " << delete_count << " hit points based on provided bounding box." << std::endl;
+    }
+    
 }
 
 // bool sortcol0( const std::vector<float>& v0, const std::vector<float>& v1 ){

@@ -4884,11 +4884,20 @@ public:
      */
     std::vector<std::string> getLoadedXMLFiles();
     
-    //! Write Context geometry and data to XML file
-    /** \param[in] "filename" name of XML file.
-     \ingroup context
+    //! Write Context geometry and data to XML file for all UUIDs in the context
+    /**
+     * \param[in] "filename" name of XML file.
+     * \param[in] "quiet" output messages are disabled if quiet is set to 'true' (default is quiet='false')
      */
     void writeXML( const char* filename, bool quiet = false ) const;
+
+    //! Write Context geometry and data to XML file for a subset of UUIDs in the context
+    /**
+     * \param[in] "filename" name of XML file.
+     * \param[in] "UUIDs" Universal unique identifiers of primitives that should be written to XML file.
+     * \param[in] "quiet" output messages are disabled if quiet is set to 'true' (default is quiet='false').
+     */
+    void writeXML( const char* filename, const std::vector<uint> &UUIDs, bool quiet = false ) const;
     
     //! Write primitive data to an ASCII text file for all primitives in the Context
     /**
@@ -5112,6 +5121,126 @@ public:
      \note If standard deviation is specified as negative, the absolute value is used.
      */
     float randn( float mean, float stddev );
+
+    //! Calculate mean of primitive data values (float) for a subset of primitives
+    /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "mean" Mean of primitive data
+     */
+     void calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, float &mean ) const;
+
+     //! Calculate mean of primitive data values (double) for a subset of primitives
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "mean" Mean of primitive data
+      */
+     void calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, double &mean ) const;
+
+     //! Calculate mean of primitive data values (vec2) for a subset of primitives
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "mean" Mean of primitive data
+      */
+     void calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &mean ) const;
+
+     //! Calculate mean of primitive data values (vec3) for a subset of primitives
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "mean" Mean of primitive data
+      */
+     void calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &mean ) const;
+
+     //! Calculate mean of primitive data values (vec4) for a subset of primitives
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "mean" Mean of primitive data
+      */
+     void calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &mean ) const;
+
+     //! Calculate mean of primitive data values (float) for a subset of primitives, where each value in the mean calculation is weighted by the primitive's one-sided surface area
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "awt_mean" Area-weighted mean of primitive data
+      */
+     void calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, float &awt_mean ) const;
+
+     //! Calculate mean of primitive data values (double) for a subset of primitives, where each value in the mean calculation is weighted by the primitive's one-sided surface area
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "awt_mean" Area-weighted mean of primitive data
+      */
+     void calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, double &awt_mean ) const;
+
+     //! Calculate mean of primitive data values (vec2) for a subset of primitives, where each value in the mean calculation is weighted by the primitive's one-sided surface area
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "awt_mean" Area-weighted mean of primitive data
+      */
+     void calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &awt_mean ) const;
+
+     //! Calculate mean of primitive data values (vec2) for a subset of primitives, where each value in the mean calculation is weighted by the primitive's one-sided surface area
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "awt_mean" Area-weighted mean of primitive data
+      */
+     void calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &awt_mean ) const;
+
+     //! Calculate mean of primitive data values (vec2) for a subset of primitives, where each value in the mean calculation is weighted by the primitive's one-sided surface area
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "awt_mean" Area-weighted mean of primitive data
+      */
+     void calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &awt_mean ) const;
+
+     //! Calculate sum of primitive data values (float) for a subset of primitives
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "sum" Sum of primitive data
+      */
+     void calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, float &sum ) const;
+
+     //! Calculate sum of primitive data values (double) for a subset of primitives
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "sum" Sum of primitive data
+      */
+     void calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, double &sum ) const;
+
+     //! Calculate sum of primitive data values (vec2) for a subset of primitives
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "sum" Sum of primitive data
+      */
+     void calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &sum ) const;
+
+     //! Calculate sum of primitive data values (vec3) for a subset of primitives
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "sum" Sum of primitive data
+      */
+     void calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &sum ) const;
+
+     //! Calculate sum of primitive data values (vec4) for a subset of primitives
+     /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" Primitive data label
+     * \param[out] "sum" Sum of primitive data
+      */
+     void calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &sum ) const;
     
 };
 

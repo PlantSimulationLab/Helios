@@ -41,7 +41,7 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
 
     //Latent heat flux
     float es = 611.f*exp(17.502f*(T-273.f)/((T-273.f)+240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in Kelvin, and result is in Pascals
-    float gM = 0.97f*gH*gS/(0.97f*gH+gS); //resistors in series
+    float gM = 1.08f*gH*gS/(1.08f*gH+gS);
     if( gH==0 && gS==0 ){//if somehow both go to zero, can get NaN
         gM = 0;
     }
@@ -246,15 +246,13 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
             To[u] = 300;
         }
 
-        //Net absorbed radiation
-        R[u] = Rn.at(u);
-
-        //Emissivity
-        eps[u] = emissivity.at(u);
-
         //Air temperature
         if( context->doesPrimitiveDataExist(p,"air_temperature") && context->getPrimitiveDataType(p,"air_temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_temperature",Ta[u]);
+            if( Ta[u]<250.f ){
+              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << Ta[u] << " given in 'air_temperature' primitive data is very small. Values should be given in units of Kelvin. Assuming default value of " << air_temperature_default << std::endl;
+              Ta[u] = air_temperature_default;
+            }
         }else{
             Ta[u] = air_temperature_default;
         }
@@ -263,6 +261,13 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         float hr;
         if( context->doesPrimitiveDataExist(p,"air_humidity") && context->getPrimitiveDataType(p,"air_humidity")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_humidity",hr);
+            if( hr>1.f ){
+              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << hr << " given in 'air_humidity' primitive data is large than 1. Values should be given as fractional values between 0 and 1. Assuming default value of " << air_humidity_default << std::endl;
+              hr = air_humidity_default;
+            }else if( hr<0.f ){
+              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << hr << " given in 'air_humidity' primitive data is less than 0. Values should be given as fractional values between 0 and 1. Assuming default value of " << air_humidity_default << std::endl;
+              hr = air_humidity_default;
+            }
         }else{
             hr = air_humidity_default;
         }
@@ -274,8 +279,22 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         //Air pressure
         if( context->doesPrimitiveDataExist(p,"air_pressure") && context->getPrimitiveDataType(p,"air_pressure")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_pressure",pressure[u]);
+            if( pressure[u]<10000.f ){
+              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << pressure[u] << " given in 'air_pressure' primitive data is very small. Values should be given in units of Pascals. Assuming default value of " << pressure_default << std::endl;
+              pressure[u] = pressure_default;
+            }
         }else{
             pressure[u] = pressure_default;
+        }
+
+        //Number of sides emitting radiation
+        Nsides[u] = 2; //default is 2
+        if( context->doesPrimitiveDataExist(p,"twosided_flag") && context->getPrimitiveDataType(p,"twosided_flag")==HELIOS_TYPE_UINT ){
+          uint flag;
+          context->getPrimitiveData(p,"twosided_flag",flag);
+          if( flag==0 ){
+            Nsides[u]=1;
+          }
         }
 
         //Boundary-layer conductance to heat
@@ -305,7 +324,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
                 L = sqrt(context->getPrimitiveArea(p));
             }
 
-            gH[u]=0.135f*sqrt(U/L);
+            gH[u]=0.135f*sqrt(U/L)*float(Nsides[u]);
         }
 
         //Moisture conductance
@@ -322,22 +341,18 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
             Qother[u] = Qother_default;
         }
 
-        //Number of sides emitting radiation
-        Nsides[u] = 2; //default is 2
-        if( context->doesPrimitiveDataExist(p,"twosided_flag") && context->getPrimitiveDataType(p,"twosided_flag")==HELIOS_TYPE_UINT ){
-            uint flag;
-            context->getPrimitiveData(p,"twosided_flag",flag);
-            if( flag==0 ){
-                Nsides[u]=1;
-            }
-        }
-
         //Object heat capacity
         if( context->doesPrimitiveDataExist(p,"heat_capacity") && context->getPrimitiveDataType(p,"heat_capacity")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"heat_capacity",heatcapacity[u]);
         }else{
             heatcapacity[u] = heatcapacity_default;
         }
+
+        //Emissivity
+        eps[u] = emissivity.at(u);
+
+        //Net absorbed radiation
+        R[u] = Rn.at(u);
 
     }
 
@@ -382,7 +397,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         context->setPrimitiveData(p,"sensible_flux",QH);
 
         float es = 611.f*exp(17.502f*(T[u]-273.f)/((T[u]-273.f)+240.97f));
-        float gM = 0.97*gH[u]*gS[u]/(0.97*gH[u]+gS[u]);
+        float gM = 1.08f*gH[u]*gS[u]/(1.08f*gH[u]+gS[u]);
         float QL = 44000*gM*(es-ea[u])/pressure[u];
         context->setPrimitiveData(p,"latent_flux",QL);
 

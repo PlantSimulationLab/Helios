@@ -3,7 +3,7 @@
 \_form#2=11x8:$\pi$
 \_form#3=36x12:$\theta=\pi$
 \_form#4=11x12:$L$
-\_form#5=102x29:$g_H = 0.135\sqrt{\frac{U}{L}}$
+\_form#5=116x29:$g_H = 0.135\sqrt{\frac{U}{L}}n_s$
 \_form#6=12x12:$U$
 \_form#7=20x11:$g_H$
 \_form#8=57x15:$\theta_L\leq 75^\circ$
@@ -53,8 +53,8 @@
 \_form#52=45x14:$g_S=0$
 \_form#53=56x12:$g_S\rightarrow\infty$
 \_form#54=48x14:$g_S\rightarrow 0$
-\_form#55=123x35:$g_M = \dfrac{0.97g_H g_S}{0.97g_H+g_S}$
-\_form#56=47x14:$0.97g_H$
+\_form#55=123x36:$g_M = \dfrac{(1.08g_H)g_S}{1.08g_H+g_S}$
+\_form#56=45x14:$1.08g_H$
 \_form#57=44x14:$t+\Delta t$
 \_form#58=608x38:\[ T_s(t+\Delta t) = T_s(t)+\left( R-\varepsilon\sigma T_s^4 - c_p g_H \left( T_s-T_a \right) - \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)-Q_{other} \right)\frac{\Delta t}{C_p}.\]
 \_form#59=18x15:$\mathrm{N}_{\theta}$

@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.47</span>
+   &#160;<span id="projectnumber">v1.2.49</span>
    </div>
   </td>
  </tr>
@@ -99,7 +99,7 @@ $(function() {
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    <span class="comment">//Latent heat flux</span></div>
 <div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    <span class="keywordtype">float</span> es = 611.f*exp(17.502f*(T-273.f)/((T-273.f)+240.97f)); <span class="comment">// This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in Kelvin, and result is in Pascals</span></div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    <span class="keywordtype">float</span> gM = 0.97f*gH*gS/(0.97f*gH+gS); <span class="comment">//resistors in series</span></div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    <span class="keywordtype">float</span> gM = 1.08f*gH*gS/(1.08f*gH+gS);</div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;    <span class="keywordflow">if</span>( gH==0 &amp;&amp; gS==0 ){<span class="comment">//if somehow both go to zero, can get NaN</span></div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;        gM = 0;</div>
 <div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;    }</div>
@@ -304,196 +304,211 @@ $(function() {
 <div class="line"><a name="l00246"></a><span class="lineno">  246</span>&#160;            To[u] = 300;</div>
 <div class="line"><a name="l00247"></a><span class="lineno">  247</span>&#160;        }</div>
 <div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160; </div>
-<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;        <span class="comment">//Net absorbed radiation</span></div>
-<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;        R[u] = Rn.at(u);</div>
-<div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160; </div>
-<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;        <span class="comment">//Emissivity</span></div>
-<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;        eps[u] = emissivity.at(u);</div>
-<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160; </div>
-<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160;        <span class="comment">//Air temperature</span></div>
-<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;air_temperature&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;air_temperature&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
-<div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;air_temperature&quot;</span>,Ta[u]);</div>
-<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;        }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;            Ta[u] = air_temperature_default;</div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;        }</div>
-<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160; </div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;        <span class="comment">//Air relative humidity</span></div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;        <span class="keywordtype">float</span> hr;</div>
-<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;air_humidity&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;air_humidity&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
-<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;air_humidity&quot;</span>,hr);</div>
-<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;        }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;            hr = air_humidity_default;</div>
-<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160;        }</div>
-<div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160; </div>
-<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;        <span class="comment">//Air vapor pressure</span></div>
-<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;        <span class="keywordtype">float</span> esat = 611.f*exp(17.502f*(Ta[u]-273.f)/((Ta[u]-273.f)+240.97f)); <span class="comment">// This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in degC, and result is in Pascals</span></div>
-<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;        ea[u] = hr*esat; <span class="comment">// Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)</span></div>
-<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160; </div>
-<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160;        <span class="comment">//Air pressure</span></div>
-<div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;air_pressure&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;air_pressure&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
-<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;air_pressure&quot;</span>,pressure[u]);</div>
-<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;        }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160;            pressure[u] = pressure_default;</div>
-<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;        }</div>
-<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160; </div>
-<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;        <span class="comment">//Boundary-layer conductance to heat</span></div>
-<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
-<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>,gH[u]);</div>
-<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;        }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160; </div>
-<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160;            <span class="comment">//Wind speed</span></div>
-<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;            <span class="keywordtype">float</span> U;</div>
-<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;            <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;wind_speed&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;wind_speed&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
-<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;                context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;wind_speed&quot;</span>,U);</div>
-<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;            }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;                U = wind_speed_default;</div>
-<div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160;            }</div>
-<div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160; </div>
-<div class="line"><a name="l00294"></a><span class="lineno">  294</span>&#160;            <span class="comment">//Characteristic size of primitive</span></div>
-<div class="line"><a name="l00295"></a><span class="lineno">  295</span>&#160;            <span class="keywordtype">float</span> L;</div>
-<div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;            <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;object_length&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;object_length&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
-<div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160;                context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;object_length&quot;</span>,L);</div>
-<div class="line"><a name="l00298"></a><span class="lineno">  298</span>&#160;                <span class="keywordflow">if</span>( L==0 ){</div>
-<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;                    L = sqrt(context-&gt;getPrimitiveArea(p));</div>
-<div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160;                }</div>
-<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;            }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( context-&gt;getPrimitiveParentObjectID(p)&gt;0 ){</div>
-<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160;              uint objID = context-&gt;getPrimitiveParentObjectID(p);</div>
-<div class="line"><a name="l00303"></a><span class="lineno">  303</span>&#160;              L = sqrt(context-&gt;getObjectArea(objID));</div>
-<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160;            }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;                L = sqrt(context-&gt;getPrimitiveArea(p));</div>
-<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;            }</div>
-<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160; </div>
-<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160;            gH[u]=0.135f*sqrt(U/L);</div>
-<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;        }</div>
-<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160; </div>
-<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160;        <span class="comment">//Moisture conductance</span></div>
-<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;moisture_conductance&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;moisture_conductance&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
-<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;moisture_conductance&quot;</span>,gS[u]);</div>
-<div class="line"><a name="l00314"></a><span class="lineno">  314</span>&#160;        }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l00315"></a><span class="lineno">  315</span>&#160;            gS[u] = gS_default;</div>
-<div class="line"><a name="l00316"></a><span class="lineno">  316</span>&#160;        }</div>
-<div class="line"><a name="l00317"></a><span class="lineno">  317</span>&#160; </div>
-<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160;        <span class="comment">//Other fluxes</span></div>
-<div class="line"><a name="l00319"></a><span class="lineno">  319</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;other_surface_flux&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;other_surface_flux&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
-<div class="line"><a name="l00320"></a><span class="lineno">  320</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;other_surface_flux&quot;</span>,Qother[u]);</div>
-<div class="line"><a name="l00321"></a><span class="lineno">  321</span>&#160;        }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;            Qother[u] = Qother_default;</div>
-<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160;        }</div>
-<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160; </div>
-<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;        <span class="comment">//Number of sides emitting radiation</span></div>
-<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160;        Nsides[u] = 2; <span class="comment">//default is 2</span></div>
-<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;twosided_flag&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;twosided_flag&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f">HELIOS_TYPE_UINT</a> ){</div>
-<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;            uint flag;</div>
-<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;twosided_flag&quot;</span>,flag);</div>
-<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;            <span class="keywordflow">if</span>( flag==0 ){</div>
-<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;                Nsides[u]=1;</div>
-<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;            }</div>
-<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;        }</div>
-<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160; </div>
-<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;        <span class="comment">//Object heat capacity</span></div>
-<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;heat_capacity&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;heat_capacity&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
-<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;heat_capacity&quot;</span>,heatcapacity[u]);</div>
-<div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;        }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;            heatcapacity[u] = heatcapacity_default;</div>
-<div class="line"><a name="l00340"></a><span class="lineno">  340</span>&#160;        }</div>
-<div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160; </div>
-<div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160;    }</div>
+<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;        <span class="comment">//Air temperature</span></div>
+<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;air_temperature&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;air_temperature&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
+<div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;air_temperature&quot;</span>,Ta[u]);</div>
+<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;            <span class="keywordflow">if</span>( Ta[u]&lt;250.f ){</div>
+<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;              std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING (EnergyBalanceModel::run): Value of &quot;</span> &lt;&lt; Ta[u] &lt;&lt; <span class="stringliteral">&quot; given in &#39;air_temperature&#39; primitive data is very small. Values should be given in units of Kelvin. Assuming default value of &quot;</span> &lt;&lt; air_temperature_default &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;              Ta[u] = air_temperature_default;</div>
+<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160;            }</div>
+<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;        }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;            Ta[u] = air_temperature_default;</div>
+<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;        }</div>
+<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160; </div>
+<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;        <span class="comment">//Air relative humidity</span></div>
+<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;        <span class="keywordtype">float</span> hr;</div>
+<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;air_humidity&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;air_humidity&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
+<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;air_humidity&quot;</span>,hr);</div>
+<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;            <span class="keywordflow">if</span>( hr&gt;1.f ){</div>
+<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;              std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING (EnergyBalanceModel::run): Value of &quot;</span> &lt;&lt; hr &lt;&lt; <span class="stringliteral">&quot; given in &#39;air_humidity&#39; primitive data is large than 1. Values should be given as fractional values between 0 and 1. Assuming default value of &quot;</span> &lt;&lt; air_humidity_default &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;              hr = air_humidity_default;</div>
+<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;            }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( hr&lt;0.f ){</div>
+<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160;              std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING (EnergyBalanceModel::run): Value of &quot;</span> &lt;&lt; hr &lt;&lt; <span class="stringliteral">&quot; given in &#39;air_humidity&#39; primitive data is less than 0. Values should be given as fractional values between 0 and 1. Assuming default value of &quot;</span> &lt;&lt; air_humidity_default &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;              hr = air_humidity_default;</div>
+<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;            }</div>
+<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;        }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;            hr = air_humidity_default;</div>
+<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;        }</div>
+<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160; </div>
+<div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;        <span class="comment">//Air vapor pressure</span></div>
+<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;        <span class="keywordtype">float</span> esat = 611.f*exp(17.502f*(Ta[u]-273.f)/((Ta[u]-273.f)+240.97f)); <span class="comment">// This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in degC, and result is in Pascals</span></div>
+<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;        ea[u] = hr*esat; <span class="comment">// Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)</span></div>
+<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160; </div>
+<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;        <span class="comment">//Air pressure</span></div>
+<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;air_pressure&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;air_pressure&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
+<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;air_pressure&quot;</span>,pressure[u]);</div>
+<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;            <span class="keywordflow">if</span>( pressure[u]&lt;10000.f ){</div>
+<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;              std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING (EnergyBalanceModel::run): Value of &quot;</span> &lt;&lt; pressure[u] &lt;&lt; <span class="stringliteral">&quot; given in &#39;air_pressure&#39; primitive data is very small. Values should be given in units of Pascals. Assuming default value of &quot;</span> &lt;&lt; pressure_default &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;              pressure[u] = pressure_default;</div>
+<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;            }</div>
+<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160;        }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;            pressure[u] = pressure_default;</div>
+<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;        }</div>
+<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160; </div>
+<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;        <span class="comment">//Number of sides emitting radiation</span></div>
+<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;        Nsides[u] = 2; <span class="comment">//default is 2</span></div>
+<div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;twosided_flag&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;twosided_flag&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f">HELIOS_TYPE_UINT</a> ){</div>
+<div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160;          uint flag;</div>
+<div class="line"><a name="l00294"></a><span class="lineno">  294</span>&#160;          context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;twosided_flag&quot;</span>,flag);</div>
+<div class="line"><a name="l00295"></a><span class="lineno">  295</span>&#160;          <span class="keywordflow">if</span>( flag==0 ){</div>
+<div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;            Nsides[u]=1;</div>
+<div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160;          }</div>
+<div class="line"><a name="l00298"></a><span class="lineno">  298</span>&#160;        }</div>
+<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160; </div>
+<div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160;        <span class="comment">//Boundary-layer conductance to heat</span></div>
+<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
+<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>,gH[u]);</div>
+<div class="line"><a name="l00303"></a><span class="lineno">  303</span>&#160;        }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160; </div>
+<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;            <span class="comment">//Wind speed</span></div>
+<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;            <span class="keywordtype">float</span> U;</div>
+<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160;            <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;wind_speed&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;wind_speed&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
+<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160;                context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;wind_speed&quot;</span>,U);</div>
+<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;            }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160;                U = wind_speed_default;</div>
+<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160;            }</div>
+<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160; </div>
+<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160;            <span class="comment">//Characteristic size of primitive</span></div>
+<div class="line"><a name="l00314"></a><span class="lineno">  314</span>&#160;            <span class="keywordtype">float</span> L;</div>
+<div class="line"><a name="l00315"></a><span class="lineno">  315</span>&#160;            <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;object_length&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;object_length&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
+<div class="line"><a name="l00316"></a><span class="lineno">  316</span>&#160;                context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;object_length&quot;</span>,L);</div>
+<div class="line"><a name="l00317"></a><span class="lineno">  317</span>&#160;                <span class="keywordflow">if</span>( L==0 ){</div>
+<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160;                    L = sqrt(context-&gt;getPrimitiveArea(p));</div>
+<div class="line"><a name="l00319"></a><span class="lineno">  319</span>&#160;                }</div>
+<div class="line"><a name="l00320"></a><span class="lineno">  320</span>&#160;            }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( context-&gt;getPrimitiveParentObjectID(p)&gt;0 ){</div>
+<div class="line"><a name="l00321"></a><span class="lineno">  321</span>&#160;              uint objID = context-&gt;getPrimitiveParentObjectID(p);</div>
+<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;              L = sqrt(context-&gt;getObjectArea(objID));</div>
+<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160;            }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160;                L = sqrt(context-&gt;getPrimitiveArea(p));</div>
+<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;            }</div>
+<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160; </div>
+<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;            gH[u]=0.135f*sqrt(U/L)*float(Nsides[u]);</div>
+<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;        }</div>
+<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160; </div>
+<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;        <span class="comment">//Moisture conductance</span></div>
+<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;moisture_conductance&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;moisture_conductance&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
+<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;moisture_conductance&quot;</span>,gS[u]);</div>
+<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;        }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;            gS[u] = gS_default;</div>
+<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;        }</div>
+<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160; </div>
+<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160;        <span class="comment">//Other fluxes</span></div>
+<div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;other_surface_flux&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;other_surface_flux&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
+<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;other_surface_flux&quot;</span>,Qother[u]);</div>
+<div class="line"><a name="l00340"></a><span class="lineno">  340</span>&#160;        }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160;            Qother[u] = Qother_default;</div>
+<div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160;        }</div>
 <div class="line"><a name="l00343"></a><span class="lineno">  343</span>&#160; </div>
-<div class="line"><a name="l00344"></a><span class="lineno">  344</span>&#160;    <span class="comment">//To,R,Qother,eps,U,L,Ta,ea,pressure,gS,Nsides</span></div>
-<div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_To, To, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_R, R, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_Qother, Qother, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_eps, eps, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_Ta, Ta, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_ea, ea, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_pressure, pressure, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_gH, gH, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_gS, gS, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_Nsides, Nsides, Nprimitives*<span class="keyword">sizeof</span>(uint), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_heatcapacity, heatcapacity, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00344"></a><span class="lineno">  344</span>&#160;        <span class="comment">//Object heat capacity</span></div>
+<div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160;        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;heat_capacity&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;heat_capacity&quot;</span>)==<a class="code" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> ){</div>
+<div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160;            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;heat_capacity&quot;</span>,heatcapacity[u]);</div>
+<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;        }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;            heatcapacity[u] = heatcapacity_default;</div>
+<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;        }</div>
+<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160; </div>
+<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;        <span class="comment">//Emissivity</span></div>
+<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;        eps[u] = emissivity.at(u);</div>
+<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160; </div>
+<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;        <span class="comment">//Net absorbed radiation</span></div>
+<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;        R[u] = Rn.at(u);</div>
 <div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160; </div>
-<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;    <span class="keywordtype">float</span>* T = (<span class="keywordtype">float</span>*)malloc( Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>) );</div>
-<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160;    <span class="keywordtype">float</span>* d_T;</div>
-<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;    CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_T, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)) );</div>
-<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160; </div>
-<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;    <span class="comment">//launch kernel</span></div>
-<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;    dim3 dimBlock( 64, 1 );</div>
-<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;    dim3 dimGrid( ceil(Nprimitives/64.f) );</div>
-<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160; </div>
-<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;    solveEnergyBalance &lt;&lt;&lt; dimGrid, dimBlock &gt;&gt;&gt;(Nprimitives,d_To,d_R,d_Qother,d_eps,d_Ta,d_ea,d_pressure,d_gH,d_gS,d_Nsides,d_T,d_heatcapacity,dt);</div>
-<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160; </div>
-<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;    CUDA_CHECK_ERROR( cudaPeekAtLastError() );</div>
-<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;    CUDA_CHECK_ERROR( cudaDeviceSynchronize() );</div>
-<div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160; </div>
-<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(T, d_T, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyDeviceToHost) );</div>
+<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;    }</div>
+<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160; </div>
+<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;    <span class="comment">//To,R,Qother,eps,U,L,Ta,ea,pressure,gS,Nsides</span></div>
+<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_To, To, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_R, R, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_Qother, Qother, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_eps, eps, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_Ta, Ta, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_ea, ea, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_pressure, pressure, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_gH, gH, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_gS, gS, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_Nsides, Nsides, Nprimitives*<span class="keyword">sizeof</span>(uint), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(d_heatcapacity, heatcapacity, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
 <div class="line"><a name="l00371"></a><span class="lineno">  371</span>&#160; </div>
-<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;    <span class="keywordflow">for</span>( uint u=0; u&lt;Nprimitives; u++ ){</div>
-<div class="line"><a name="l00373"></a><span class="lineno">  373</span>&#160;        <span class="keywordtype">size_t</span> p = UUIDs.at(u);</div>
-<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160; </div>
-<div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160;        <span class="keywordflow">if</span>( T[u]!=T[u] ){</div>
-<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160;            T[u] = temperature_default;</div>
-<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;        }</div>
-<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160; </div>
-<div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160;        context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;temperature&quot;</span>,T[u]);</div>
-<div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160; </div>
-<div class="line"><a name="l00381"></a><span class="lineno">  381</span>&#160;        <span class="keywordtype">float</span> QH = 29.25*gH[u]*(T[u]-Ta[u]);</div>
-<div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160;        context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;sensible_flux&quot;</span>,QH);</div>
-<div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160; </div>
-<div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160;        <span class="keywordtype">float</span> es = 611.f*exp(17.502f*(T[u]-273.f)/((T[u]-273.f)+240.97f));</div>
-<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;        <span class="keywordtype">float</span> gM = 0.97*gH[u]*gS[u]/(0.97*gH[u]+gS[u]);</div>
-<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;        <span class="keywordtype">float</span> QL = 44000*gM*(es-ea[u])/pressure[u];</div>
-<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;        context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;latent_flux&quot;</span>,QL);</div>
-<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160; </div>
-<div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160;        <span class="keywordtype">float</span> storage=0.f;</div>
-<div class="line"><a name="l00390"></a><span class="lineno">  390</span>&#160;        <span class="keywordflow">if</span> ( dt&gt;0){</div>
-<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160;            storage=heatcapacity[u]*(T[u]-To[u])/dt;</div>
+<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;    <span class="keywordtype">float</span>* T = (<span class="keywordtype">float</span>*)malloc( Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>) );</div>
+<div class="line"><a name="l00373"></a><span class="lineno">  373</span>&#160;    <span class="keywordtype">float</span>* d_T;</div>
+<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160;    CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_T, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)) );</div>
+<div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160; </div>
+<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160;    <span class="comment">//launch kernel</span></div>
+<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;    dim3 dimBlock( 64, 1 );</div>
+<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;    dim3 dimGrid( ceil(Nprimitives/64.f) );</div>
+<div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160; </div>
+<div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160;    solveEnergyBalance &lt;&lt;&lt; dimGrid, dimBlock &gt;&gt;&gt;(Nprimitives,d_To,d_R,d_Qother,d_eps,d_Ta,d_ea,d_pressure,d_gH,d_gS,d_Nsides,d_T,d_heatcapacity,dt);</div>
+<div class="line"><a name="l00381"></a><span class="lineno">  381</span>&#160; </div>
+<div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160;    CUDA_CHECK_ERROR( cudaPeekAtLastError() );</div>
+<div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160;    CUDA_CHECK_ERROR( cudaDeviceSynchronize() );</div>
+<div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160; </div>
+<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;    CUDA_CHECK_ERROR( cudaMemcpy(T, d_T, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyDeviceToHost) );</div>
+<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160; </div>
+<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;    <span class="keywordflow">for</span>( uint u=0; u&lt;Nprimitives; u++ ){</div>
+<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160;        <span class="keywordtype">size_t</span> p = UUIDs.at(u);</div>
+<div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160; </div>
+<div class="line"><a name="l00390"></a><span class="lineno">  390</span>&#160;        <span class="keywordflow">if</span>( T[u]!=T[u] ){</div>
+<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160;            T[u] = temperature_default;</div>
 <div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;        }</div>
-<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;        context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;storage_flux&quot;</span>, storage);</div>
-<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160; </div>
-<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;        <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;output_prim_data.size(); i++ ){</div>
-<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;            <span class="keywordflow">if</span>( output_prim_data.at(i) == <span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span> ){</div>
-<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;                context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>,gH[u]);</div>
-<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;            }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( output_prim_data.at(i) == <span class="stringliteral">&quot;vapor_pressure_deficit&quot;</span> ){</div>
-<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;                <span class="keywordtype">float</span> vpd = (es-ea[u])/pressure[u];</div>
-<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;                context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;vapor_pressure_deficit&quot;</span>,vpd);</div>
-<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;            }</div>
-<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;        }</div>
+<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160; </div>
+<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;        context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;temperature&quot;</span>,T[u]);</div>
+<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160; </div>
+<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;        <span class="keywordtype">float</span> QH = 29.25*gH[u]*(T[u]-Ta[u]);</div>
+<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;        context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;sensible_flux&quot;</span>,QH);</div>
+<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160; </div>
+<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;        <span class="keywordtype">float</span> es = 611.f*exp(17.502f*(T[u]-273.f)/((T[u]-273.f)+240.97f));</div>
+<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;        <span class="keywordtype">float</span> gM = 1.08f*gH[u]*gS[u]/(1.08f*gH[u]+gS[u]);</div>
+<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;        <span class="keywordtype">float</span> QL = 44000*gM*(es-ea[u])/pressure[u];</div>
+<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;        context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;latent_flux&quot;</span>,QL);</div>
 <div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160; </div>
-<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;    }</div>
-<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160; </div>
-<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;    free( To );</div>
-<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;    free( R );</div>
-<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;    free( Qother );</div>
-<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;    free( eps );</div>
-<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;    free( Ta );</div>
-<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;    free( ea );</div>
-<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;    free( pressure );</div>
-<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;    free( gH );</div>
-<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;    free( gS );</div>
-<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;    free( Nsides );</div>
-<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;    free( T );</div>
-<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;    free( heatcapacity );</div>
+<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;        <span class="keywordtype">float</span> storage=0.f;</div>
+<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;        <span class="keywordflow">if</span> ( dt&gt;0){</div>
+<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;            storage=heatcapacity[u]*(T[u]-To[u])/dt;</div>
+<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;        }</div>
+<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;        context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;storage_flux&quot;</span>, storage);</div>
+<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160; </div>
+<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;        <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;output_prim_data.size(); i++ ){</div>
+<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;            <span class="keywordflow">if</span>( output_prim_data.at(i) == <span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span> ){</div>
+<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;                context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>,gH[u]);</div>
+<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;            }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( output_prim_data.at(i) == <span class="stringliteral">&quot;vapor_pressure_deficit&quot;</span> ){</div>
+<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;                <span class="keywordtype">float</span> vpd = (es-ea[u])/pressure[u];</div>
+<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;                context-&gt;setPrimitiveData(p,<span class="stringliteral">&quot;vapor_pressure_deficit&quot;</span>,vpd);</div>
+<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;            }</div>
+<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;        }</div>
 <div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160; </div>
-<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_To) );</div>
-<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_R) );</div>
-<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_Qother) );</div>
-<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_eps) );</div>
-<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_Ta) );</div>
-<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_ea) );</div>
-<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_pressure) );</div>
-<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_gH) );</div>
-<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_gS) );</div>
-<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_Nsides) );</div>
-<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_T) );</div>
-<div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_heatcapacity) );</div>
-<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160; </div>
-<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;    <span class="keywordflow">if</span>( message_flag ){</div>
-<div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160;        std::cout &lt;&lt; <span class="stringliteral">&quot;done.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00434"></a><span class="lineno">  434</span>&#160;    }</div>
-<div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160; </div>
-<div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160;}</div>
-<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160; </div>
-<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160; </div>
+<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;    }</div>
+<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160; </div>
+<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;    free( To );</div>
+<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;    free( R );</div>
+<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160;    free( Qother );</div>
+<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;    free( eps );</div>
+<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;    free( Ta );</div>
+<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;    free( ea );</div>
+<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;    free( pressure );</div>
+<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;    free( gH );</div>
+<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;    free( gS );</div>
+<div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160;    free( Nsides );</div>
+<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160;    free( T );</div>
+<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;    free( heatcapacity );</div>
+<div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160; </div>
+<div class="line"><a name="l00434"></a><span class="lineno">  434</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_To) );</div>
+<div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_R) );</div>
+<div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_Qother) );</div>
+<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_eps) );</div>
+<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_Ta) );</div>
+<div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_ea) );</div>
+<div class="line"><a name="l00440"></a><span class="lineno">  440</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_pressure) );</div>
+<div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_gH) );</div>
+<div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_gS) );</div>
+<div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_Nsides) );</div>
+<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_T) );</div>
+<div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_heatcapacity) );</div>
+<div class="line"><a name="l00446"></a><span class="lineno">  446</span>&#160; </div>
+<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160;    <span class="keywordflow">if</span>( message_flag ){</div>
+<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160;        std::cout &lt;&lt; <span class="stringliteral">&quot;done.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00449"></a><span class="lineno">  449</span>&#160;    }</div>
+<div class="line"><a name="l00450"></a><span class="lineno">  450</span>&#160; </div>
+<div class="line"><a name="l00451"></a><span class="lineno">  451</span>&#160;}</div>
+<div class="line"><a name="l00452"></a><span class="lineno">  452</span>&#160; </div>
+<div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160; </div>
 <div class="ttc" id="a_context_8h_html_a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f"><div class="ttname"><a href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f">helios::HELIOS_TYPE_UINT</a></div><div class="ttdeci">@ HELIOS_TYPE_UINT</div><div class="ttdoc">unsigned integer data type</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l00048">Context.h:48</a></div></div>
 <div class="ttc" id="a_context_8h_html_a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0"><div class="ttname"><a href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">helios::HELIOS_TYPE_FLOAT</a></div><div class="ttdeci">@ HELIOS_TYPE_FLOAT</div><div class="ttdoc">floating point data taype</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l00050">Context.h:50</a></div></div>
 <div class="ttc" id="a_energy_balance_model_8h_html"><div class="ttname"><a href="_energy_balance_model_8h.html">EnergyBalanceModel.h</a></div></div>

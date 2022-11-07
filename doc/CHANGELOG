@@ -1038,3 +1038,33 @@
 * Voxel Intersection *
 - Minor changes to avoid using primitive pointers directly.
 - Error fixed where sliced triangles that were previously members of a tile would retain the object ID of the previous tile (created triangles should not be a member of an object).
+
+[1.2.48] 2022-10-28
+
+*LiDAR*
+- Building with liblas and laszip libraries disabled for now, as this seemed to cause build errors on some systems.
+
+[1.2.49] 2022-11-07
+
+*Context*
+- Error corrected in Context::loadOBJ() that would cause geometry to not be loaded of (u,v) coordinates are not supplied.
+- Error corrected in helios::getFileExtension() that would cause a crash if the file has no extension.
+- Added helios::importVectorFromFile() function to read values from a text file into a 1D float vector.
+- Added Context::calculatePrimitiveDataMean() functions to calculate average of primitive data values.
+- Added Context::calculatePrimitiveDataAreaWeightedMean() functions to calculate area-weighted average of primitive data values.
+- Added Context::calculatePrimitiveDataSum() functions to calculate sum of primitive data values.
+- Changed all file extension checking to use new, more robust helios::getFileExtension() function.
+- self-tests added for primitive data calculation functions and file extension parsing functions.
+- Added overloaded version of Context::writeXML() that can export a subset of primitives based on a UUID vector.
+
+*Energy Balance*
+- Added checks when loading primitive data to issue a warning if values are out of the expected range of possibilities.
+- Fixed error in conversion factor between conductance of heat to vapor in air - changed from 0.97 to 1.08.
+- Capability added to change the number of convective surfaces based on the value of primitive data ``twosided_flag".
+
+*Canopy Generator*
+- Issue fixed in bean.cpp that could cause node positions of NaN if leaflet_length was too short.
+
+* LiDAR *
+- Fixed bug in distanceFilter, reflectanceFilter, and scalarFilter, which caused them not to apply filtering.
+- Added xyzFilter() function to filter out points outside of a specified bounding.

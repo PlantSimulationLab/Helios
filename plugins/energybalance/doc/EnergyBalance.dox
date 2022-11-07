@@ -100,7 +100,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <tr><td>air_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air relative humidity outside of surface boundary layer. <td>N/A <td>0.5
  <tr><td>air_pressure <td>Pascals <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Atmospheric pressure. <td>N/A <td>101,000 Pa
  <tr><td>heat_capacity <td> J/m<sup>2</sup>/<sup>o</sup>C <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Heat capacity of object. <td>N/A <td>0
- <tr><td>other_surface_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Other surface energy fluxes. <td>N/A <td>0  </table>	
+ <tr><td>other_surface_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Other surface energy fluxes. <td>N/A <td>0
+ <tr><td>twosided_flag <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces with energy transfer (must be 1 or 2). <td>N/A <td>2  </table>
  
  \subsection EBOutputData Default Output Primitive Data
  
@@ -142,13 +143,13 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  The primitive boundary-layer conductance can either be set using the \ref BLConductanceModel plug-in, or using the default model which is the Polhausen equation. Note also that custom conductance values can also be provided by setting the value of primitive data labeled `boundarylayer_conductance', which overrides the computed model value.
 
-      It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.
+ It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.
 
  The default boundary-layer conductance is calculated as
 
- \f$g_H = 0.135\sqrt{\frac{U}{L}}\f$,
+ \f$g_H = 0.135\sqrt{\frac{U}{L}}n_s\f$,
 
- where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive.
+ where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. $n_s$ is the number of primitive faces, which is determined by the value of primitive data ``twosided-flag" (twosided_flag=0 is single-sided and $n_s=1$, twosided_flag=1 is two-sided and $n_s=2$).
 
  \subsection EBgm Moisture Conductance
 
@@ -164,9 +165,9 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
   Once the water vapor has diffused to the surface, the rate of transfer is then determined by the surface boundary-layer conductance. The sub-surface conductance and boundary-layer conductance act in serial, and can be combined to yield an overall moisture conductance between the sub-surface air spaces and the outside of the boundary layer according to
 
-  \f$g_M = \dfrac{0.97g_H g_S}{0.97g_H+g_S}\f$,
+  \f$g_M = \dfrac{(1.08g_H)g_S}{1.08g_H+g_S}\f$,
 
-  where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$0.97g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity of water vapor and heat.
+  where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity of water vapor and heat.
 
  \subsection EBRun Running the Steady-State Model
 

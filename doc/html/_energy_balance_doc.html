@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.47</span>
+   &#160;<span id="projectnumber">v1.2.49</span>
    </div>
   </td>
  </tr>
@@ -215,9 +215,9 @@ Input Primitive Data</h2>
 <td>heat_capacity </td><td>J/m<sup>2</sup>/<sup>o</sup>C </td><td> <font face="courier" color="green">float</font> </td><td>Heat capacity of object. </td><td>N/A </td><td>0 </td></tr>
 <tr>
 <td>other_surface_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Other surface energy fluxes. </td><td>N/A </td><td>0 </td></tr>
+<tr>
+<td>twosided_flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Number of primitive faces with energy transfer (must be 1 or 2). </td><td>N/A </td><td>2 </td></tr>
 </table>
-<p><br  />
-</p>
 <h2><a class="anchor" id="EBOutputData"></a>
 Default Output Primitive Data</h2>
 <table class="doxtable">
@@ -257,10 +257,11 @@ Input Radiative Bands</h2>
   energybalance.addRadiationBand("NIR");
   energybalance.addRadiationBand("LW");</code></pre></div><h2><a class="anchor" id="EBblc"></a>
 Boundary-layer Conductance Model</h2>
-<p>The primitive boundary-layer conductance can either be set using the <a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in, or using the default model which is the Polhausen equation. Note also that custom conductance values can also be provided by setting the value of primitive data labeled &lsquo;boundarylayer_conductance&rsquo;, which overrides the computed model value. </p><pre class="fragment"> It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.
-</pre><p> The default boundary-layer conductance is calculated as</p>
-<p><img class="formulaInl" alt="$g_H = 0.135\sqrt{\frac{U}{L}}$" src="form_5.png" width="102" height="29"/>,</p>
-<p>where <img class="formulaInl" alt="$U$" src="form_6.png" width="12" height="12"/> is the wind speed just outside of the primitive boundary-layer, and <img class="formulaInl" alt="$L$" src="form_4.png" width="11" height="12"/> is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, <img class="formulaInl" alt="$L$" src="form_4.png" width="11" height="12"/> could be assumed to be the length of the primitive.</p>
+<p>The primitive boundary-layer conductance can either be set using the <a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in, or using the default model which is the Polhausen equation. Note also that custom conductance values can also be provided by setting the value of primitive data labeled &lsquo;boundarylayer_conductance&rsquo;, which overrides the computed model value.</p>
+<p>It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.</p>
+<p>The default boundary-layer conductance is calculated as</p>
+<p><img class="formulaInl" alt="$g_H = 0.135\sqrt{\frac{U}{L}}n_s$" src="form_5.png" width="116" height="29"/>,</p>
+<p>where <img class="formulaInl" alt="$U$" src="form_6.png" width="12" height="12"/> is the wind speed just outside of the primitive boundary-layer, and <img class="formulaInl" alt="$L$" src="form_4.png" width="11" height="12"/> is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, <img class="formulaInl" alt="$L$" src="form_4.png" width="11" height="12"/> could be assumed to be the length of the primitive. $n_s$ is the number of primitive faces, which is determined by the value of primitive data ``twosided-flag" (twosided_flag=0 is single-sided and $n_s=1$, twosided_flag=1 is two-sided and $n_s=2$).</p>
 <h2><a class="anchor" id="EBgm"></a>
 Moisture Conductance</h2>
 <p>For surfaces that are not completely dry or completely saturated with water, availability of water at the surface determines the rate of moisture transfer from the surface. This is represented by the surface moisture conductance <img class="formulaInl" alt="$g_S$" src="form_41.png" width="17" height="11"/>, and corresponds to the conductance between the sub-surface air spaces and the surface.</p>
@@ -269,8 +270,8 @@ Moisture Conductance</h2>
 <p>For leaves, <img class="formulaInl" alt="$g_S$" src="form_41.png" width="17" height="11"/> corresponds to the conductance to water vapor between the intercellular (sub-stomatal) air spaces and the surface of the leaf, which we call the stomatal conductance. When stomata are closed, <img class="formulaInl" alt="$g_S\rightarrow 0$" src="form_54.png" width="48" height="14"/>, as water transfer is restricted by the stomata.</p>
 <p>For the soil surface, the physical interpretation of <img class="formulaInl" alt="$g_S$" src="form_41.png" width="17" height="11"/> is slightly less intuitive, and corresponds to the rate at which water vapor can diffuse from just below the soil to the surface. This is impacted by the soil texture, and the "tortuosity" of the path water vapor must take through the soil, among other factors.</p>
 <p>Once the water vapor has diffused to the surface, the rate of transfer is then determined by the surface boundary-layer conductance. The sub-surface conductance and boundary-layer conductance act in serial, and can be combined to yield an overall moisture conductance between the sub-surface air spaces and the outside of the boundary layer according to</p>
-<p><img class="formulaInl" alt="$g_M = \dfrac{0.97g_H g_S}{0.97g_H+g_S}$" src="form_55.png" width="123" height="35"/>,</p>
-<p>where <img class="formulaInl" alt="$g_H$" src="form_7.png" width="20" height="11"/> is the boundary-layer conductance to heat, and <img class="formulaInl" alt="$0.97g_H$" src="form_56.png" width="47" height="14"/> gives the boundary-layer conductance to moisture considering the differences in diffusivity of water vapor and heat.</p>
+<p><img class="formulaInl" alt="$g_M = \dfrac{(1.08g_H)g_S}{1.08g_H+g_S}$" src="form_55.png" width="123" height="36"/>,</p>
+<p>where <img class="formulaInl" alt="$g_H$" src="form_7.png" width="20" height="11"/> is the boundary-layer conductance to heat, and <img class="formulaInl" alt="$1.08g_H$" src="form_56.png" width="45" height="14"/> gives the boundary-layer conductance to moisture considering the differences in diffusivity of water vapor and heat.</p>
 <h2><a class="anchor" id="EBRun"></a>
 Running the Steady-State Model</h2>
 <p>The model is run assuming steady-state conditions (heat storage term is zero) using the <a class="el" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a">EnergyBalanceModel::run()</a> function, which will run the model for all primitives in the Context if no argument is given, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.</p>
