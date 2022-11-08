@@ -732,18 +732,6 @@ ection
   */
   void scalarFilter( const char* scalar_field, const float threshold, const char* comparator );
 
-  //! Filter scan with a bounding box
-  /** \param[in] "xmin" minimum x coordinate of bounding box
-   \param[in] "xmax" maximum x coordinate of bounding box
-   \param[in] "ymin" minimum y coordinate of bounding box
-   \param[in] "ymax" maximum y coordinate of bounding box
-   \param[in] "zmin" minimum z coordinate of bounding box
-   \param[in] "zmax" maximum z coordinate of bounding box
-   \note points outside the provided bounding box are deleted
-   */
-  void xyzFilter( const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax );
-  
-  
   //! Filter full-waveform data according to the maximum scalar value along each pulse. Any scalar value can be used, provided it is a column in the ASCII hit point data file. The resulting point cloud will have only one hit point per laser pulse.
   /* \param[in] "scalar" Name of hit point scalar data in the ASCII hit data file. 
      \note This function is only applicable for full-waveform data and requires that the scalar field "timestamp" is provided in the ASCII hit point data file.
