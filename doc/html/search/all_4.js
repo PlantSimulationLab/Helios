@@ -26,7 +26,7 @@ var searchData=
   ['disk_185',['Disk',['../classhelios_1_1_disk.html#a5d06d1da043ccb610e07bdd0e592c148',1,'helios::Disk::Disk()'],['../classhelios_1_1_disk.html',1,'helios::Disk']]],
   ['disk_5fbounds_186',['disk_bounds',['../primitive_intersection_8cu.html#aab2e16ff4d5a4bca2d90c49f777500e9',1,'primitiveIntersection.cu']]],
   ['disk_5fintersect_187',['disk_intersect',['../primitive_intersection_8cu.html#a45dc4da4927abe579fd24be608e4cd75',1,'primitiveIntersection.cu']]],
-  ['distancefilter_188',['distanceFilter',['../class_aerial_li_d_a_rcloud.html#acc26240eea9ec98c6b354041cd9b9efc',1,'AerialLiDARcloud::distanceFilter()'],['../class_li_d_a_rcloud.html#a9f56f3f5420d1d912356299e1cf91efd',1,'LiDARcloud::distanceFilter()']]],
+  ['distancefilter_188',['distanceFilter',['../class_aerial_li_d_a_rcloud.html#acc26240eea9ec98c6b354041cd9b9efc',1,'AerialLiDARcloud::distanceFilter()'],['../class_li_d_a_rcloud.html#af21b843806f22fb9bc80e7ef370aee1d',1,'LiDARcloud::distanceFilter()']]],
   ['doesglobaldataexist_189',['doesGlobalDataExist',['../classhelios_1_1_context.html#a65ad9cb057b0cb2be3ef2734847608cc',1,'helios::Context']]],
   ['doeshitdataexist_190',['doesHitDataExist',['../class_aerial_li_d_a_rcloud.html#a9b5aa652c94d4dee19a4f956a62f2ab1',1,'AerialLiDARcloud::doesHitDataExist()'],['../class_li_d_a_rcloud.html#a52938795d12a60a6883d83cc84dd85c1',1,'LiDARcloud::doesHitDataExist()']]],
   ['doesobjectcontainprimitive_191',['doesObjectContainPrimitive',['../classhelios_1_1_compound_object.html#ae06ed1275c9ba5ed5ed59b08bdfd1216',1,'helios::CompoundObject::doesObjectContainPrimitive()'],['../classhelios_1_1_context.html#a60b571dd1cfd525caedcfd725162721e',1,'helios::Context::doesObjectContainPrimitive(uint ObjID, uint UUID)']]],

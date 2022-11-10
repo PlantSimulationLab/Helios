@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.49</span>
+   &#160;<span id="projectnumber">v1.2.50</span>
    </div>
   </td>
  </tr>
@@ -68,8 +68,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#func-members">Functions</a> &#124;
-<a href="#var-members">Variables</a>  </div>
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">LiDAR.cpp File Reference</div>  </div>
 </div><!--header-->
@@ -80,24 +79,12 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a4150efb9fe7379e0969934a6a5541882"><td class="memItemLeft" align="right" valign="top"><a id="a4150efb9fe7379e0969934a6a5541882"></a>
-&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD void <a class="el" href="class_li_d_a_rcloud.html#a5a1f5639a29af3fc6d19ff6bfb0902e3">LiDARcloud::xyzFilter</a>(const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax){=======void <a class="el" href="class_li_d_a_rcloud.html#a5a1f5639a29af3fc6d19ff6bfb0902e3">LiDARcloud::xyzFilter</a>(const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax){ xyzFilter(xmin, xmax, ymin, ymax, zmin, zmax, true);} void <a class="el" href="class_li_d_a_rcloud.html#a5a1f5639a29af3fc6d19ff6bfb0902e3">LiDARcloud::xyzFilter</a>(const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax, const bool deleteOutside){ &gt;&gt;&gt;&gt;&gt;&gt; lidar_fixes&#160;</td><td class="memItemRight" valign="bottom"><b>if</b> (xmin &gt; xmax||ymin &gt; ymax||zmin &gt; zmax)</td></tr>
-<tr class="separator:a4150efb9fe7379e0969934a6a5541882"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8c1156dbdeafe5778b758cb1aa00331a"><td class="memItemLeft" align="right" valign="top"><a id="a8c1156dbdeafe5778b758cb1aa00331a"></a>
-&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD for(int i=(getHitCount() -1);i &gt;=0;i--){ std::cout&lt;&lt; i&lt;&lt; std::endl;<a class="el" href="structhelios_1_1vec3.html">vec3</a> xyz=getHitXYZ(i);if(xyz.x&lt; xmin||xyz.x &gt; xmax||xyz.y&lt; ymin||xyz.y &gt; ymax||xyz.z&lt; zmin||xyz.z &gt; zmax){ deleteHitPoint(i);delete_count++;} }=======if(deleteOutside) { for(int i=(getHitCount() -1);i &gt;=0;i--){ <a class="el" href="structhelios_1_1vec3.html">vec3</a> xyz=getHitXYZ(i);if(xyz.x&lt; xmin||xyz.x &gt; xmax||xyz.y&lt; ymin||xyz.y &gt; ymax||xyz.z&lt; zmin||xyz.z &gt; zmax){ deleteHitPoint(i);delete_count++;} } }else{ for(int i=(getHitCount() -1);i &gt;=0;i--){ <a class="el" href="structhelios_1_1vec3.html">vec3</a> xyz=getHitXYZ(i);if(xyz.x &gt;=xmin &amp;&amp;xyz.x&lt; xmax &amp;&amp;xyz.y &gt; ymin &amp;&amp;xyz.y&lt; ymax &amp;&amp;xyz.z &gt; zmin &amp;&amp;xyz.z&lt; zmax){ deleteHitPoint(i);delete_count++;} } } &gt;&gt;&gt;&gt;&gt;&gt;&gt; lidar_fixes&#160;</td><td class="memItemRight" valign="bottom"><b>if</b> (printmessages)</td></tr>
-<tr class="separator:a8c1156dbdeafe5778b758cb1aa00331a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6c7a94e2ebc56d85d3f2c5c97beb8139"><td class="memItemLeft" align="right" valign="top"><a id="a6c7a94e2ebc56d85d3f2c5c97beb8139"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>sortcol0</b> (const std::vector&lt; double &gt; &amp;v0, const std::vector&lt; double &gt; &amp;v1)</td></tr>
 <tr class="separator:a6c7a94e2ebc56d85d3f2c5c97beb8139"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a55bce5487b6c63360338db32924dad3a"><td class="memItemLeft" align="right" valign="top"><a id="a55bce5487b6c63360338db32924dad3a"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>sortcol1</b> (const std::vector&lt; double &gt; &amp;v0, const std::vector&lt; double &gt; &amp;v1)</td></tr>
 <tr class="separator:a55bce5487b6c63360338db32924dad3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
-Variables</h2></td></tr>
-<tr class="memitem:a37f2954d0d17874377b119bf71a77a1d"><td class="memItemLeft" align="right" valign="top"><a id="a37f2954d0d17874377b119bf71a77a1d"></a>
-std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>delete_count</b> = 0</td></tr>
-<tr class="separator:a37f2954d0d17874377b119bf71a77a1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Primary source file for LiDAR plug-in. </p><dl class="section author"><dt>Author</dt><dd>Brian Bailey</dd></dl>

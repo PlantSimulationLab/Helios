@@ -691,35 +691,53 @@ ection
   // --------- POINT FILTERING ----------- //
 
   //! Filter scan by imposing a maximum distance from the scanner
-  /** \param[in] "maxdistance" Maximum hit point distance from scanner */
-  void distanceFilter( const float maxdistance );
+  /**
+   * \param[in] "maxdistance" Maximum hit point distance from scanner
+   */
+  void distanceFilter( float maxdistance );
   
-  //! Filter scan by imposing a minimum reflectance value
-  /** \param[in] "minreflectance" Miniimum hit point reflectance value
-      \note If `reflectance' data was not provided for a hit point when calling \ref Scan::addHitPoint(), the point will not be filtered. 
-  */
-  void reflectanceFilter( const float minreflectance );
-
-  //! Filter hit points based on a scalar field given by a column in the ASCII data
-  /** \param[in] "scalar_field" Name of a scalar field defined in the ASCII point cloud data (e.g., "reflectance")
-      \param[in] "threshold" Value for filter threshold
-      \param[in] "comparator" Points will be filtered if "scalar (comparator) threshold", where (comparator) is one of ">", "<", or "="
-      \note As an example, imagine we wanted to remove all hit points where the reflectance is less than -10. In this case we would call scalarFilter( "reflectance", -10, "<" );
-  */
-  void scalarFilter( const char* scalar_field, const float threshold, const char* comparator );
+  //! overloaded version of xyzFilter that defaults to deleting points outside the provided bounding box
+  /**
+   * \param[in] "xmin" minimum x coordinate of bounding box
+   * \param[in] "xmax" maximum x coordinate of bounding box
+   * \param[in] "ymin" minimum y coordinate of bounding box
+   * \param[in] "ymax" maximum y coordinate of bounding box
+   * \param[in] "zmin" minimum z coordinate of bounding box
+   * \param[in] "zmax" maximum z coordinate of bounding box
+   * \note points outside the provided bounding box are deleted by default
+   */
+  void xyzFilter( float xmin, float xmax, float ymin, float ymax, float zmin, float zmax );
 
   //! Filter scan with a bounding box
-  /** \param[in] "xmin" minimum x coordinate of bounding box
-   \param[in] "xmax" maximum x coordinate of bounding box
-   \param[in] "ymin" minimum y coordinate of bounding box
-   \param[in] "ymax" maximum y coordinate of bounding box
-   \param[in] "zmin" minimum z coordinate of bounding box
-   \param[in] "zmax" maximum z coordinate of bounding box
-   \note points outside the provided bounding box are deleted
+  /**
+   * \param[in] "xmin" minimum x coordinate of bounding box
+   * \param[in] "xmax" maximum x coordinate of bounding box
+   * \param[in] "ymin" minimum y coordinate of bounding box
+   * \param[in] "ymax" maximum y coordinate of bounding box
+   * \param[in] "zmin" minimum z coordinate of bounding box
+   * \param[in] "zmax" maximum z coordinate of bounding box
+   * \param[in] "deleteOutside" if true, deletes points outside the bounding box, if false deletes points inside the bounding box
+   * \note points outside the provided bounding box are deleted
    */
-  void xyzFilter( const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax );
-  
-  
+  void xyzFilter( float xmin, float xmax, float ymin, float ymax, float zmin, float zmax, bool deleteOutside );
+
+
+  //! Filter scan by imposing a minimum reflectance value
+  /**
+   * \param[in] "minreflectance" Miniimum hit point reflectance value
+   * \note If `reflectance' data was not provided for a hit point when calling \ref Scan::addHitPoint(), the point will not be filtered.
+  */
+  void reflectanceFilter( float minreflectance );
+
+  //! Filter hit points based on a scalar field given by a column in the ASCII data
+  /**
+   * \param[in] "scalar_field" Name of a scalar field defined in the ASCII point cloud data (e.g., "reflectance")
+   * \param[in] "threshold" Value for filter threshold
+   * \param[in] "comparator" Points will be filtered if "scalar (comparator) threshold", where (comparator) is one of ">", "<", or "="
+   * \note As an example, imagine we wanted to remove all hit points where the reflectance is less than -10. In this case we would call scalarFilter( "reflectance", -10, "<" );
+  */
+  void scalarFilter( const char* scalar_field, float threshold, const char* comparator );
+
   //! Filter full-waveform data according to the maximum scalar value along each pulse. Any scalar value can be used, provided it is a column in the ASCII hit point data file. The resulting point cloud will have only one hit point per laser pulse.
   /* \param[in] "scalar" Name of hit point scalar data in the ASCII hit data file. 
      \note This function is only applicable for full-waveform data and requires that the scalar field "timestamp" is provided in the ASCII hit point data file.

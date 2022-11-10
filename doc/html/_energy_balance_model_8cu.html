@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.49</span>
+   &#160;<span id="projectnumber">v1.2.50</span>
    </div>
   </td>
  </tr>
@@ -90,12 +90,12 @@ Functions</h2></td></tr>
 <tr class="memitem:ab3e90881a2476fd461eb2bcfcaa7cf63"><td class="memItemLeft" align="right" valign="top"><a id="ab3e90881a2476fd461eb2bcfcaa7cf63"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>gpuAssert</b> (cudaError_t code, const char *file, int line, bool abort=true)</td></tr>
 <tr class="separator:ab3e90881a2476fd461eb2bcfcaa7cf63"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abff5a393a98da61e7e48464f643aedfb"><td class="memItemLeft" align="right" valign="top"><a id="abff5a393a98da61e7e48464f643aedfb"></a>
-__device__ float&#160;</td><td class="memItemRight" valign="bottom"><b>evaluateEnergyBalance</b> (float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, float heatcapacity, float dt, float Tprev)</td></tr>
-<tr class="separator:abff5a393a98da61e7e48464f643aedfb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a69511a022d50de8d105ca07e1bf70ffb"><td class="memItemLeft" align="right" valign="top"><a id="a69511a022d50de8d105ca07e1bf70ffb"></a>
-__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>solveEnergyBalance</b> (uint Nprimitives, float *To, float *R, float *Qother, float *eps, float *Ta, float *ea, float *pressure, float *gH, float *gS, uint *Nsides, float *TL, float *heatcapacity, float dt)</td></tr>
-<tr class="separator:a69511a022d50de8d105ca07e1bf70ffb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a84c39821a0ec3c77642bbf4a2331bbb8"><td class="memItemLeft" align="right" valign="top"><a id="a84c39821a0ec3c77642bbf4a2331bbb8"></a>
+__device__ float&#160;</td><td class="memItemRight" valign="bottom"><b>evaluateEnergyBalance</b> (float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, char Ntranspire, float heatcapacity, float dt, float Tprev)</td></tr>
+<tr class="separator:a84c39821a0ec3c77642bbf4a2331bbb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bf4c460fcbdbb323fa2b8ccabebed64"><td class="memItemLeft" align="right" valign="top"><a id="a8bf4c460fcbdbb323fa2b8ccabebed64"></a>
+__global__ void&#160;</td><td class="memItemRight" valign="bottom"><b>solveEnergyBalance</b> (uint Nprimitives, float *To, float *R, float *Qother, float *eps, float *Ta, float *ea, float *pressure, float *gH, float *gS, uint *Nsides, char *Ntranspire, float *TL, float *heatcapacity, float dt)</td></tr>
+<tr class="separator:a8bf4c460fcbdbb323fa2b8ccabebed64"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Energy balance model plugin declarations (CUDA kernels). </p><dl class="section author"><dt>Author</dt><dd>Brian Bailey</dd></dl>

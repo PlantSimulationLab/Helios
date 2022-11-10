@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.49</span>
+   &#160;<span id="projectnumber">v1.2.50</span>
    </div>
   </td>
  </tr>
@@ -284,24 +284,21 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a041ac4ba388c407a35b7f895029038e6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a041ac4ba388c407a35b7f895029038e6">getGridBoundingBox</a> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;boxmin, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;boxmax) const</td></tr>
 <tr class="memdesc:a041ac4ba388c407a35b7f895029038e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Form an axis-aligned bounding box for all grid cells in the point cloud.  <a href="class_li_d_a_rcloud.html#a041ac4ba388c407a35b7f895029038e6">More...</a><br /></td></tr>
 <tr class="separator:a041ac4ba388c407a35b7f895029038e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9f56f3f5420d1d912356299e1cf91efd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a9f56f3f5420d1d912356299e1cf91efd">distanceFilter</a> (const float maxdistance)</td></tr>
-<tr class="memdesc:a9f56f3f5420d1d912356299e1cf91efd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter scan by imposing a maximum distance from the scanner.  <a href="class_li_d_a_rcloud.html#a9f56f3f5420d1d912356299e1cf91efd">More...</a><br /></td></tr>
-<tr class="separator:a9f56f3f5420d1d912356299e1cf91efd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5a1f5639a29af3fc6d19ff6bfb0902e3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a5a1f5639a29af3fc6d19ff6bfb0902e3">xyzFilter</a> (const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax)</td></tr>
-<tr class="memdesc:a5a1f5639a29af3fc6d19ff6bfb0902e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">overloaded version of xyzFilter that defaults to deleting points outside the provided bounding box  <a href="class_li_d_a_rcloud.html#a5a1f5639a29af3fc6d19ff6bfb0902e3">More...</a><br /></td></tr>
-<tr class="separator:a5a1f5639a29af3fc6d19ff6bfb0902e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0e99210e85e7b744bb0f14bce8ef1584"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a0e99210e85e7b744bb0f14bce8ef1584">xyzFilter</a> (const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax, const bool deleteOutside)</td></tr>
-<tr class="memdesc:a0e99210e85e7b744bb0f14bce8ef1584"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter scan with a bounding box.  <a href="class_li_d_a_rcloud.html#a0e99210e85e7b744bb0f14bce8ef1584">More...</a><br /></td></tr>
-<tr class="separator:a0e99210e85e7b744bb0f14bce8ef1584"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a63dcec72cc4174c527e88f2ea85b591b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a63dcec72cc4174c527e88f2ea85b591b">reflectanceFilter</a> (const float minreflectance)</td></tr>
-<tr class="memdesc:a63dcec72cc4174c527e88f2ea85b591b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter scan by imposing a minimum reflectance value.  <a href="class_li_d_a_rcloud.html#a63dcec72cc4174c527e88f2ea85b591b">More...</a><br /></td></tr>
-<tr class="separator:a63dcec72cc4174c527e88f2ea85b591b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e3794b05383a67d7d1b94aa23bb2d66"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a7e3794b05383a67d7d1b94aa23bb2d66">scalarFilter</a> (const char *scalar_field, const float threshold, const char *comparator)</td></tr>
-<tr class="memdesc:a7e3794b05383a67d7d1b94aa23bb2d66"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter hit points based on a scalar field given by a column in the ASCII data.  <a href="class_li_d_a_rcloud.html#a7e3794b05383a67d7d1b94aa23bb2d66">More...</a><br /></td></tr>
-<tr class="separator:a7e3794b05383a67d7d1b94aa23bb2d66"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5a1f5639a29af3fc6d19ff6bfb0902e3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a5a1f5639a29af3fc6d19ff6bfb0902e3">xyzFilter</a> (const float xmin, const float xmax, const float ymin, const float ymax, const float zmin, const float zmax)</td></tr>
-<tr class="memdesc:a5a1f5639a29af3fc6d19ff6bfb0902e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter scan with a bounding box.  <a href="class_li_d_a_rcloud.html#a5a1f5639a29af3fc6d19ff6bfb0902e3">More...</a><br /></td></tr>
-<tr class="separator:a5a1f5639a29af3fc6d19ff6bfb0902e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af21b843806f22fb9bc80e7ef370aee1d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#af21b843806f22fb9bc80e7ef370aee1d">distanceFilter</a> (float maxdistance)</td></tr>
+<tr class="memdesc:af21b843806f22fb9bc80e7ef370aee1d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter scan by imposing a maximum distance from the scanner.  <a href="class_li_d_a_rcloud.html#af21b843806f22fb9bc80e7ef370aee1d">More...</a><br /></td></tr>
+<tr class="separator:af21b843806f22fb9bc80e7ef370aee1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac17ca020e2f2fd4f1ce91ef5101353d0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#ac17ca020e2f2fd4f1ce91ef5101353d0">xyzFilter</a> (float xmin, float xmax, float ymin, float ymax, float zmin, float zmax)</td></tr>
+<tr class="memdesc:ac17ca020e2f2fd4f1ce91ef5101353d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">overloaded version of xyzFilter that defaults to deleting points outside the provided bounding box  <a href="class_li_d_a_rcloud.html#ac17ca020e2f2fd4f1ce91ef5101353d0">More...</a><br /></td></tr>
+<tr class="separator:ac17ca020e2f2fd4f1ce91ef5101353d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a56ee72fba222c399c256adf577ae860d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a56ee72fba222c399c256adf577ae860d">xyzFilter</a> (float xmin, float xmax, float ymin, float ymax, float zmin, float zmax, bool deleteOutside)</td></tr>
+<tr class="memdesc:a56ee72fba222c399c256adf577ae860d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter scan with a bounding box.  <a href="class_li_d_a_rcloud.html#a56ee72fba222c399c256adf577ae860d">More...</a><br /></td></tr>
+<tr class="separator:a56ee72fba222c399c256adf577ae860d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf2d9ef2301fd7fdee97e2adc0947dd3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#adf2d9ef2301fd7fdee97e2adc0947dd3">reflectanceFilter</a> (float minreflectance)</td></tr>
+<tr class="memdesc:adf2d9ef2301fd7fdee97e2adc0947dd3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter scan by imposing a minimum reflectance value.  <a href="class_li_d_a_rcloud.html#adf2d9ef2301fd7fdee97e2adc0947dd3">More...</a><br /></td></tr>
+<tr class="separator:adf2d9ef2301fd7fdee97e2adc0947dd3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa2ea59f063b3c951a1e58af9e4ddfd7e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#aa2ea59f063b3c951a1e58af9e4ddfd7e">scalarFilter</a> (const char *scalar_field, float threshold, const char *comparator)</td></tr>
+<tr class="memdesc:aa2ea59f063b3c951a1e58af9e4ddfd7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter hit points based on a scalar field given by a column in the ASCII data.  <a href="class_li_d_a_rcloud.html#aa2ea59f063b3c951a1e58af9e4ddfd7e">More...</a><br /></td></tr>
+<tr class="separator:aa2ea59f063b3c951a1e58af9e4ddfd7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa5c2bd82b67b3e84069090d75ed2973d"><td class="memItemLeft" align="right" valign="top"><a id="aa5c2bd82b67b3e84069090d75ed2973d"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#aa5c2bd82b67b3e84069090d75ed2973d">maxPulseFilter</a> (const char *scalar)</td></tr>
 <tr class="memdesc:aa5c2bd82b67b3e84069090d75ed2973d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter full-waveform data according to the maximum scalar value along each pulse. Any scalar value can be used, provided it is a column in the ASCII hit point data file. The resulting point cloud will have only one hit point per laser pulse. <br /></td></tr>
@@ -541,7 +538,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01561">1561</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01544">1544</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -587,7 +584,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01557">1557</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01540">1540</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1179,7 +1176,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <p>Add triangle geometry to Helios context. </p>
 <p>\parameter[in] "context" Pointer to Helios context </p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01534">1534</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01517">1517</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1502,7 +1499,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01613">1613</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01596">1596</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1668,8 +1665,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 
 </div>
 </div>
-<a id="a9f56f3f5420d1d912356299e1cf91efd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9f56f3f5420d1d912356299e1cf91efd">&#9670;&nbsp;</a></span>distanceFilter()</h2>
+<a id="af21b843806f22fb9bc80e7ef370aee1d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af21b843806f22fb9bc80e7ef370aee1d">&#9670;&nbsp;</a></span>distanceFilter()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1677,7 +1674,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
         <tr>
           <td class="memname">void LiDARcloud::distanceFilter </td>
           <td>(</td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>maxdistance</em></td><td>)</td>
           <td></td>
         </tr>
@@ -2066,7 +2063,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01569">1569</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01552">1552</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2094,7 +2091,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01580">1580</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01563">1563</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2122,7 +2119,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01729">1729</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01712">1712</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2150,7 +2147,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01696">1696</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01679">1679</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2178,7 +2175,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01707">1707</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01690">1690</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2206,7 +2203,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01602">1602</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01585">1585</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2234,7 +2231,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01591">1591</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01574">1574</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2902,7 +2899,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01845">1845</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01828">1828</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2962,7 +2959,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01849">1849</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01832">1832</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3033,8 +3030,8 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 
 </div>
 </div>
-<a id="a63dcec72cc4174c527e88f2ea85b591b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a63dcec72cc4174c527e88f2ea85b591b">&#9670;&nbsp;</a></span>reflectanceFilter()</h2>
+<a id="adf2d9ef2301fd7fdee97e2adc0947dd3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adf2d9ef2301fd7fdee97e2adc0947dd3">&#9670;&nbsp;</a></span>reflectanceFilter()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3042,7 +3039,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
         <tr>
           <td class="memname">void LiDARcloud::reflectanceFilter </td>
           <td>(</td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>minreflectance</em></td><td>)</td>
           <td></td>
         </tr>
@@ -3062,8 +3059,8 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 
 </div>
 </div>
-<a id="a7e3794b05383a67d7d1b94aa23bb2d66"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7e3794b05383a67d7d1b94aa23bb2d66">&#9670;&nbsp;</a></span>scalarFilter()</h2>
+<a id="aa2ea59f063b3c951a1e58af9e4ddfd7e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa2ea59f063b3c951a1e58af9e4ddfd7e">&#9670;&nbsp;</a></span>scalarFilter()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3077,7 +3074,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>threshold</em>, </td>
         </tr>
         <tr>
@@ -3144,7 +3141,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01719">1719</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01702">1702</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3183,7 +3180,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01686">1686</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01669">1669</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3516,7 +3513,7 @@ Calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01357">1357</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01340">1340</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3573,8 +3570,8 @@ Calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0
 
 </div>
 </div>
-<a id="a5a1f5639a29af3fc6d19ff6bfb0902e3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5a1f5639a29af3fc6d19ff6bfb0902e3">&#9670;&nbsp;</a></span>xyzFilter() <span class="overload">[1/3]</span></h2>
+<a id="ac17ca020e2f2fd4f1ce91ef5101353d0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac17ca020e2f2fd4f1ce91ef5101353d0">&#9670;&nbsp;</a></span>xyzFilter() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3582,37 +3579,37 @@ Calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0
         <tr>
           <td class="memname">void LiDARcloud::xyzFilter </td>
           <td>(</td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>xmin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>xmax</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>ymin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>ymax</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>zmin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>zmax</em>&#160;</td>
         </tr>
         <tr>
@@ -3637,10 +3634,12 @@ Calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0
 </dl>
 <dl class="section note"><dt>Note</dt><dd>points outside the provided bounding box are deleted by default </dd></dl>
 
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01065">1065</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+
 </div>
 </div>
-<a id="a5a1f5639a29af3fc6d19ff6bfb0902e3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5a1f5639a29af3fc6d19ff6bfb0902e3">&#9670;&nbsp;</a></span>xyzFilter() <span class="overload">[2/3]</span></h2>
+<a id="a56ee72fba222c399c256adf577ae860d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a56ee72fba222c399c256adf577ae860d">&#9670;&nbsp;</a></span>xyzFilter() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3648,109 +3647,43 @@ Calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0
         <tr>
           <td class="memname">void LiDARcloud::xyzFilter </td>
           <td>(</td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>xmin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>xmax</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>ymin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>ymax</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>zmin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>zmax</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Filter scan with a bounding box. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">xmin</td><td>minimum x coordinate of bounding box </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">xmax</td><td>maximum x coordinate of bounding box </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">ymin</td><td>minimum y coordinate of bounding box </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">ymax</td><td>maximum y coordinate of bounding box </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">zmin</td><td>minimum z coordinate of bounding box </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">zmax</td><td>maximum z coordinate of bounding box </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section note"><dt>Note</dt><dd>points outside the provided bounding box are deleted </dd></dl>
-
-</div>
-</div>
-<a id="a0e99210e85e7b744bb0f14bce8ef1584"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0e99210e85e7b744bb0f14bce8ef1584">&#9670;&nbsp;</a></span>xyzFilter() <span class="overload">[3/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void LiDARcloud::xyzFilter </td>
-          <td>(</td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>xmin</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>xmax</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>ymin</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>ymax</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>zmin</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const float&#160;</td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>zmax</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const bool&#160;</td>
+          <td class="paramtype">bool&#160;</td>
           <td class="paramname"><em>deleteOutside</em>&#160;</td>
         </tr>
         <tr>
@@ -3775,6 +3708,8 @@ Calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>points outside the provided bounding box are deleted </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01071">1071</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>

@@ -302,6 +302,17 @@ The spherical sun source is defined in a similar manner as the collimated radiat
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>radiationmodel.enforcePeriodicBoundary("xy"); //enforce periodic boundaries in horizontal</code></pre></div>
 
+ Note that it is very important that no primitives extend laterally beyond the ground surface, otherwise the periodic boundary will lie beyond the lateral extent of the ground and there will potentially be ambient radiation that enters the domain from below. If there is a chance that primitives may laterally extend beyond the ground, it is recommended to use the \ref Context::cropDomain() function to crop the domain in the horizontal to the size of the ground.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code> vec2 ground_size(10,10);  //lateral size of the ground
+ vec3 ground_center(0,0,0);  //position of the ground center
+ context.addPatch( ground_center, ground_size );  //ground patch
+
+ context.cropDomainX( ground_center.x + make_vec2(-0.5*ground_size.x,0.5*ground_size.x) );
+ context.cropDomainY( ground_center.y + make_vec2(-0.5*ground_size.y,0.5*ground_size.y) );</code></pre></div>
+
+
  \subsection RadRun Running Simulations
 
  Before simulations are run, we must update the context geometry within the radiation model using the \ref RadiationModel::updateGeometry() "updateGeometry()" command.  The geometry update can be somewhat costly, so it should only be done whenever geometry changes.
@@ -311,7 +322,7 @@ The spherical sun source is defined in a similar manner as the collimated radiat
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code> radiationmodel.updateGeometry(); //build the context geometry in the radiation model
 
-  radiationmodel.runBand("PAR"); //run the model for the 'PAR' band</code></pre></div>
+ radiationmodel.runBand("PAR"); //run the model for the 'PAR' band</code></pre></div>
 
  The model will create several primitive data in the context with values set using simulation results (see Sect. "Output Primitive Data" above).
 
