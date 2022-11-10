@@ -3245,7 +3245,7 @@ void RadiationModel::runBand( const char* label ){
 	RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIRECT , launch_dim_dir.x, launch_dim_dir.y, launch_dim_dir.z ) );
 
         if( message_flag ){
-          std::cout << "\r                                                                                 \r" << std::flush;
+          std::cout << "\r                                                                                             \r" << std::flush;
         }
       }
 
@@ -3362,7 +3362,7 @@ void RadiationModel::runBand( const char* label ){
 	RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
 
         if( message_flag ){
-          std::cout << "\r                                                                                 \r" << std::flush;
+          std::cout << "\r                                                                                             \r" << std::flush;
         }
       }
       if( message_flag ){

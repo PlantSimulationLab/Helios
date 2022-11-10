@@ -81,7 +81,14 @@
 \_form#80=9x12:$J$
 \_form#81=110x36:\[J=\dfrac{\alpha J_{max} Q}{\alpha Q + J_{max}}.\]
 \_form#82=144x17:$A=0.75g_M\left(C_{a}-C_i\right)$
-\_form#83=326x129:\begin{align*} \Gamma^* &= \mathrm{exp}\left(19.02-37.83/(RT_s)\right),\\ K_{c} &= \mathrm{exp}\left(38.05-79.43/(RT_s)\right),\\ K_{o} &= \mathrm{exp}\left(20.30-36.38/(RT_s)\right),\\ R_{d} &= R_{d,25}\,\mathrm{exp}\left(18.72-46.39/(RT_s)\right),\\ V_{cmax} &= V_{cmax,25}\,\mathrm{exp}\left(26.35-65.33/(RT_s)\right),\\ J_{cmax} &= J_{max,25}\,\mathrm{exp}\left(C_{Jmax}-\Delta H_{a,Jmax}/(RT_s)\right), \end{align*}
+\_form#83=326x129:\begin{align*}
+ \Gamma^* &= \mathrm{exp}\left(19.02-37.83/(RT_s)\right),\\
+ K_{c} &= \mathrm{exp}\left(38.05-79.43/(RT_s)\right),\\
+ K_{o} &= \mathrm{exp}\left(20.30-36.38/(RT_s)\right),\\
+ R_{d} &= R_{d,25}\,\mathrm{exp}\left(18.72-46.39/(RT_s)\right),\\
+ V_{cmax} &= V_{cmax,25}\,\mathrm{exp}\left(26.35-65.33/(RT_s)\right),\\
+ J_{cmax} &= J_{max,25}\,\mathrm{exp}\left(C_{Jmax}-\Delta H_{a,Jmax}/(RT_s)\right),
+ \end{align*}
 \_form#84=6x6:$^\circ$
 \_form#85=17x15:$C_{a}$
 \_form#86=53x17:$V_{cmax,25}$

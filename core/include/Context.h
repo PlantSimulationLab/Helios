@@ -5241,6 +5241,13 @@ public:
      * \param[out] "sum" Sum of primitive data
       */
      void calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &sum ) const;
+
+     //! Sum the one-sided surface area of a group of primitives
+     /**
+      * \param[in] "UUIDs" Universal unique identifiers of primitives
+      * \return Sum of primitive area
+      */
+      float sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const;
     
 };
 

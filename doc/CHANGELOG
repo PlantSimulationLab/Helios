@@ -1068,3 +1068,23 @@
 * LiDAR *
 - Fixed bug in distanceFilter, reflectanceFilter, and scalarFilter, which caused them not to apply filtering.
 - Added xyzFilter() function to filter out points outside of a specified bounding.
+
+[1.2.50] 2022-11-10
+
+*Context*
+- Added check to primitive data calculation functions to make sure that primitives referenced in UUID vector exist.
+- Added function to sum surface area of a set of UUIDs (see sumPrimitiveSurfaceArea()).
+- Fixed issue with Context::writeOBJ() where it was not writing primitive data values to the optional *.dat file in the correct order.
+- Context::writeOBJ() no longer writes "map_Ks" texture files.
+
+*Radiation*
+- Print messages for iterative launches were not clearing the previous line. More spaces were added.
+
+*Energy Balance*
+- Added option to set the number of transpiring primitive surfaces to account for the fact that you may have a two-sided primitive but with only one side transpiring.
+
+*LiDAR*
+- Fixed error introduced in last commit in LiDAR.h causing build failure
+- Modified xyzFilter() function to add option for filtering out points within the provided box
+- Added overloaded xyzFilter() function that defaults to filtering out points outside of the provided box
+- Fixed bug impacting the azimuthal angle range in syntheticScan() function
