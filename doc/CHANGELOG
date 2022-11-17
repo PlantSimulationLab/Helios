@@ -1088,3 +1088,25 @@
 - Modified xyzFilter() function to add option for filtering out points within the provided box
 - Added overloaded xyzFilter() function that defaults to filtering out points outside of the provided box
 - Fixed bug impacting the azimuthal angle range in syntheticScan() function
+
+[1.2.51] 2022-11-17
+
+*PLY Models*
+- All chess piece models except King.ply deleted from Git repo. These were also removed from the samples/visualizer main.cpp file.
+
+*Tutorials*
+- Tutorials #8, #10, and #11 added in samples/ folder and in documentation.
+
+*Context*
+- calculatePrimitiveDataAreaWeightedSum() functions added.
+- Modified Context::getPrimitiveBoundingBox() to be more robust when you only have 1 primitive in the UUID vector.
+- Gave calls to 'fread' function in global.cpp a result assignment to get rid of compiler warnings.
+
+*Energy Balance*
+- Error introduced in last version causing src/EnergyBalance.cu not to build.
+
+*Aerial LiDAR, LiDAR, Energy Balance, Radiation, Voxel Intersection*
+- Option in CMakeList.txt CUDA-based plug-ins added to build for GPU architectures of 3.5 or greater (--gpu-architecture=compute_35 -Wno-deprecated-gpu-targets).
+
+*Radiation*
+- Fixed an issue with ray generation that caused self-test #8b to fail. This was causing radiative fluxes to be accumulated only in the first sub-patch of a tile object.

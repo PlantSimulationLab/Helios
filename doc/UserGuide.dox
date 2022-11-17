@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.2.50
+/*! \mainpage Helios Documentation v1.2.51
 
   \image html Helios_logo.png
 
@@ -173,7 +173,7 @@
 
   \subsection SetupPCMSVC Install Microsoft Visual Studio C++ compiler tools
 
-  Download and install Microsoft Visual Studio Community 2019. The latest version (2022) is not yet compatible with NVIDIA CUDA, so you'll need to download the older version which requires an extra step. The link to download older versions is here: <a href="https://visualstudio.microsoft.com/vs/older-downloads/">https://visualstudio.microsoft.com/vs/older-downloads/</a>. It will require that you <a href="https://visualstudio.microsoft.com/dev-essentials/">join the free Dev Essentials program</a> in order to access the old downloads. Once you have reached the downloads page, Download Visual Studio Community 2019. 
+  Download and install Microsoft Visual Studio Community 2022 if your GPU has compute capability of 5 or higher. You can look up your GPU's compute capability here. If your compute capability is less than 5, you'll need to download Visual Studio Community 2019 and CUDA 10.2 to ensure compatability. The link to download older versions of Visual Studio is here: <a href="https://visualstudio.microsoft.com/vs/older-downloads/">https://visualstudio.microsoft.com/vs/older-downloads/</a>. It will require that you <a href="https://visualstudio.microsoft.com/dev-essentials/">join the free Dev Essentials program</a> in order to access the old downloads. Once you have reached the downloads page, Download Visual Studio Community 2019. For more information on choosing your compiler version, consult \ref chooseCUDA "this page".
 
   Once you have successfully downloaded the EXE install file, you can run it to perform the install. The important step is to be sure to install the optional packages for C++ Desktop Development. The figure below shows the check box to enable. When the installer finishes, there is no need to actually open Visual Studio, and you can move on to the next step.
 
@@ -199,7 +199,7 @@
 
   \subsection SetupPCCUDA Setting up NVIDIA CUDA
 
-  The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. Currently, Visual Studio 2019 is compatible with CUDA 10.1 or higher, but you can also check the installation guide in the documentation for the specific CUDA version you want to install. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a>. Download the base CUDA Toolkit installer for your Windows OS. Installing from the "exe (network)" type will result in a smaller file being downloaded. Click through the installer and accept all the default options. By default, it should have installed to "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\", where v1X.X is the version that you installed. You can verify this installation location using the file browser.
+  The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a> (note that if you installed Visual Studio 2019 instead of 2022, you'll need to install CUDA 10.2 instead of the latest version). Download the base CUDA Toolkit installer for your Windows OS. Installing from the "exe (network)" type will result in a smaller file being downloaded. Click through the installer and accept all the default options. By default, it should have installed to "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\", where v1X.X is the version that you installed. You can verify this installation location using the file browser.
 
   In order to use CUDA within CLion, you need to tell it where to find the CUDA toolkit. To do this, open up the settings in CLion, and go to "Build, Execution, Deployment" and then to CMake. Click the icon next to the "Environment" field to edit environmental variables. Find the variable named "Path", and double click to edit it. At the end of the list of directories, add the path to the CUDA bin folder, i.e., "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\bin;". Make sure there is a semicolon before and after the path, and that you replace the v1X.X with your actual CUDA version. It is important to hit the return key, which should cause the Path variable list to turn blue. When you hit OK, the Path variable should be listed under the Environment field.
 
@@ -1850,7 +1850,7 @@ Picking the right version of the NVIDIA CUDA driver can be the most difficult pa
 
 There are three main considerations when choosing your CUDA version:
 
-1. GPU compute capability: The compute capability of your GPU is essentially an identifier corresponding to the architecture generation. Older GPUs will have a lower compute capability. You can look up your GPU's compute capability <a href="https://developer.nvidia.com/cuda-gpus">here</a>.
+1. GPU compute capability: The compute capability of your GPU is essentially an identifier corresponding to the architecture generation. Older GPUs will have a lower compute capability. You can look up your GPU's compute capability <a href="https://developer.nvidia.com/cuda-gpus">here</a>. You need a compute capability of 3.5 or higher to build Helios.
 2. C++ compiler version: Only a certain range of compiler versions are supported for a given CUDA version. The procedure for looking up your compiler version is different for different operating systems, and is described below.
 
 The system requirements for any CUDA version can be found in the release notes, which is both packaged with the CUDA toolkit and can be found on the page where you download CUDA.
@@ -1859,9 +1859,9 @@ The table below gives recommendations for Windows and Linux Systems based on you
 
 <table>
     <tr><th>Operating System</th><th>Compute capability</th><th>Recomm. Compiler</th><th>Recomm. CUDA</th><th>Use legacy OptiX?</th></tr>
-    <tr><td rowspan="2">Windows</td><td>3.0-3.5</td><td rowspan="2">Visual Studio 2019</td><td>10.2</td><td>Yes</td></tr>
-    <tr>                                                             <td>5.0+</td><td>Latest</td><td>No</td></tr>
-    <tr><td rowspan="2">Linux</td><td>3.0-3.5</td><td>gcc/g++ 6.0-8.0</td><td>10.2</td><td>Yes</td></tr>
+    <tr><td rowspan="2">Windows</td><td>3.5</td><td>Visual Studio 2019</td><td>10.2</td><td>Yes</td></tr>
+    <tr>                            <td>5.0+</td><td>Visual Studio 2022</td><td>Latest</td><td>No</td></tr>
+    <tr><td rowspan="2">Linux</td><td>3.5</td><td>gcc/g++ 6.0-8.0</td><td>10.2</td><td>Yes</td></tr>
     <tr>                          <td>5.0+</td><td>gcc/g++ 7.0-11.0</td><td>Latest</td><td>No</td></tr>
 </table>
 

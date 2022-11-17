@@ -40,15 +40,6 @@ int main(){
 
   context.addPatch( make_vec3(0,0,-0.005), make_vec2(9.1,9.1), make_SphericalCoord(0.f,0), make_RGBcolor(0.2,0.2,0.2) );
 
-  //Black pieces
-  context.loadPLY("../../../PLY/rook.ply",make_vec3(0,0,0),0.7, make_RGBcolor(0.2,0.2,0.2) );
-  context.loadPLY("../../../PLY/pawn.ply",make_vec3(1,0,0),0.7, make_RGBcolor(0.2,0.2,0.2) );
-  context.loadPLY("../../../PLY/king.ply",make_vec3(-2,2,0),1.2, make_RGBcolor(0.2,0.2,0.2) );
-  context.loadPLY("../../../PLY/queen.ply",make_vec3(1,2,0),1.2, make_RGBcolor(0.2,0.2,0.2) );
-
-  //White pieces
-  context.loadPLY("../../../PLY/pawn.ply",make_vec3(-1,-3,0),0.7, RGB::white );
-  context.loadPLY("../../../PLY/bishop.ply",make_vec3(-3,-1,0),1, RGB::white );
   context.loadPLY("../../../PLY/king.ply",make_vec3(3,1,0),1.2, RGB::white );
 
   SphericalCoord sun_dir;

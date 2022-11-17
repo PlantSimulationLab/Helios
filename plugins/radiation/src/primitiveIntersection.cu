@@ -111,7 +111,7 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 	uint ID = objectID[U];
 	
 	if( maskID[ID]==-1 ){ //no texture transparency
-	  if( rtPotentialIntersection( t ) ) {
+ 	  if( rtPotentialIntersection( t ) ) {
 	    UUID = patch_UUID[objID];
 	    rtReportIntersection(0);
 	  }	  

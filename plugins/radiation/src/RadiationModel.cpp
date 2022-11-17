@@ -745,7 +745,7 @@ int RadiationModel::selfTest( void ){
   context_8.deletePrimitive(UUID1);
 
   uint objID_8 = context_8.addTileObject( p1, sz, make_SphericalCoord(0,0), make_int2(5,4), "lib/images/disk_texture.png" );
-  std::vector<uint> UUIDs1 = context_8.getObjectPointer(objID_8)->getPrimitiveUUIDs();
+  std::vector<uint> UUIDs1 = context_8.getObjectPrimitiveUUIDs(objID_8);
 
   radiation.updateGeometry();
 
@@ -767,7 +767,15 @@ int RadiationModel::selfTest( void ){
   }
   F1 = F1/A;
 
-  if( fabs(F0-(1.f-0.25f*M_PI))>error_threshold || fabs(F1-1.f)>error_threshold ){
+  for( uint p=0; p<UUIDs1.size(); p++ ){
+    float R;
+    context_8.getPrimitiveData( UUIDs1.at(p), "radiation_flux_SW", R );
+    if( fabs(R-1.f)>error_threshold ){
+      failure_8=true;
+    }
+  }
+
+  if( fabs(F0-(1.f-0.25f*M_PI))>error_threshold || fabs(F1-1.f)>error_threshold || failure_8 ){
     std::cout << "failed." << std::endl;
     std::cerr << "Test failed for texture-mapped patch (b)." << std::endl;
     failure_8 = true;

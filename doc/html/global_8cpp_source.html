@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.50</span>
+   &#160;<span id="projectnumber">v1.2.51</span>
    </div>
   </td>
  </tr>
@@ -1181,7 +1181,7 @@ $(function() {
 <div class="line"><a name="l01123"></a><span class="lineno"> 1123</span>&#160;  <span class="keywordflow">if</span> (!fp){</div>
 <div class="line"><a name="l01124"></a><span class="lineno"> 1124</span>&#160;      <span class="keywordflow">throw</span>(std::runtime_error(<span class="stringliteral">&quot;ERROR (PNGHasAlpha): File &quot;</span> + std::string(filename) + <span class="stringliteral">&quot; could not be opened for reading. The file either does not exist or you do not have permission to read it.&quot;</span>));</div>
 <div class="line"><a name="l01125"></a><span class="lineno"> 1125</span>&#160;  }</div>
-<div class="line"><a name="l01126"></a><span class="lineno"> 1126</span>&#160;  fread(header, 1, 8, fp);</div>
+<div class="line"><a name="l01126"></a><span class="lineno"> 1126</span>&#160;  <span class="keywordtype">size_t</span> result=fread(header, 1, 8, fp);</div>
 <div class="line"><a name="l01127"></a><span class="lineno"> 1127</span>&#160;  </div>
 <div class="line"><a name="l01128"></a><span class="lineno"> 1128</span>&#160;  <span class="comment">/* initialize stuff */</span></div>
 <div class="line"><a name="l01129"></a><span class="lineno"> 1129</span>&#160;  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, <span class="keyword">nullptr</span>, <span class="keyword">nullptr</span>, <span class="keyword">nullptr</span>);</div>
@@ -1237,7 +1237,7 @@ $(function() {
 <div class="line"><a name="l01179"></a><span class="lineno"> 1179</span>&#160;  <span class="keywordflow">if</span> (!fp){</div>
 <div class="line"><a name="l01180"></a><span class="lineno"> 1180</span>&#160;      <span class="keywordflow">throw</span>(std::runtime_error(<span class="stringliteral">&quot;ERROR (readPNGAlpha): File &quot;</span> + std::string(filename) + <span class="stringliteral">&quot; could not be opened for reading.&quot;</span>));</div>
 <div class="line"><a name="l01181"></a><span class="lineno"> 1181</span>&#160;  }</div>
-<div class="line"><a name="l01182"></a><span class="lineno"> 1182</span>&#160;  fread(header, 1, 8, fp);</div>
+<div class="line"><a name="l01182"></a><span class="lineno"> 1182</span>&#160;  <span class="keywordtype">size_t</span> result=fread(header, 1, 8, fp);</div>
 <div class="line"><a name="l01183"></a><span class="lineno"> 1183</span>&#160;  <span class="comment">// if (png_sig_cmp(header, 0, 8)){</span></div>
 <div class="line"><a name="l01184"></a><span class="lineno"> 1184</span>&#160;  <span class="comment">//   std::cerr &lt;&lt; &quot;ERROR (read_png_alpha): File &quot; &lt;&lt; filename &lt;&lt; &quot; is not recognized as a PNG file.&quot; &lt;&lt; std::endl;</span></div>
 <div class="line"><a name="l01185"></a><span class="lineno"> 1185</span>&#160;  <span class="comment">//   exit(EXIT_FAILURE);</span></div>
@@ -1333,7 +1333,7 @@ $(function() {
 <div class="line"><a name="l01275"></a><span class="lineno"> 1275</span>&#160;  <span class="keywordflow">if</span> (!fp){</div>
 <div class="line"><a name="l01276"></a><span class="lineno"> 1276</span>&#160;    <span class="keywordflow">throw</span>(std::runtime_error(<span class="stringliteral">&quot;ERROR (readPNG): File &quot;</span> + filename + <span class="stringliteral">&quot;could not be opened for reading.&quot;</span>));</div>
 <div class="line"><a name="l01277"></a><span class="lineno"> 1277</span>&#160;   }</div>
-<div class="line"><a name="l01278"></a><span class="lineno"> 1278</span>&#160;  fread(header, 1, 8, fp);</div>
+<div class="line"><a name="l01278"></a><span class="lineno"> 1278</span>&#160;   <span class="keywordtype">size_t</span> result=fread(header, 1, 8, fp);</div>
 <div class="line"><a name="l01279"></a><span class="lineno"> 1279</span>&#160; </div>
 <div class="line"><a name="l01280"></a><span class="lineno"> 1280</span>&#160;  <span class="comment">/* initialize stuff */</span></div>
 <div class="line"><a name="l01281"></a><span class="lineno"> 1281</span>&#160;  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, <span class="keyword">nullptr</span>, <span class="keyword">nullptr</span>, <span class="keyword">nullptr</span>);</div>

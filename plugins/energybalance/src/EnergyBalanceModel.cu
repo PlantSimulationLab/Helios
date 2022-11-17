@@ -415,7 +415,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         context->setPrimitiveData(p,"sensible_flux",QH);
 
         float es = 611.f*exp(17.502f*(T[u]-273.f)/((T[u]-273.f)+240.97f));
-        float gM = float(Ntranspire)*1.08f*(gH[u]/float(Nsides))*gS[u]/(1.08f*(gH[u]/float(Nsides))+gS[u]);
+        float gM = float(Ntranspire[u])*1.08f*(gH[u]/float(Nsides[u]))*gS[u]/(1.08f*(gH[u]/float(Nsides[u]))+gS[u]);
         float QL = 44000*gM*(es-ea[u])/pressure[u];
         context->setPrimitiveData(p,"latent_flux",QL);
 

@@ -5242,6 +5242,46 @@ public:
       */
      void calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &sum ) const;
 
+  //! Calculate sum of primitive data values (float) for a subset of primitives, where each value in the sum calculation is weighted by the primitive's one-sided surface area
+  /**
+  * \param[in] "UUIDs" Universal unique identifiers of primitives
+  * \param[in] "label" Primitive data label
+  * \param[out] "awt_sum" Sum of primitive data
+   */
+  void calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, float &awt_sum ) const;
+
+  //! Calculate sum of primitive data values (double) for a subset of primitives, where each value in the sum calculation is weighted by the primitive's one-sided surface area
+  /**
+  * \param[in] "UUIDs" Universal unique identifiers of primitives
+  * \param[in] "label" Primitive data label
+  * \param[out] "awt_sum" Sum of primitive data
+   */
+  void calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, double &sum ) const;
+
+  //! Calculate sum of primitive data values (vec2) for a subset of primitives, where each value in the sum calculation is weighted by the primitive's one-sided surface area
+  /**
+  * \param[in] "UUIDs" Universal unique identifiers of primitives
+  * \param[in] "label" Primitive data label
+  * \param[out] "awt_sum" Sum of primitive data
+   */
+  void calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &sum ) const;
+
+  //! Calculate sum of primitive data values (vec3) for a subset of primitives, where each value in the sum calculation is weighted by the primitive's one-sided surface area
+  /**
+  * \param[in] "UUIDs" Universal unique identifiers of primitives
+  * \param[in] "label" Primitive data label
+  * \param[out] "awt_sum" Sum of primitive data
+   */
+  void calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &sum ) const;
+
+  //! Calculate sum of primitive data values (vec4) for a subset of primitives, where each value in the sum calculation is weighted by the primitive's one-sided surface area
+  /**
+  * \param[in] "UUIDs" Universal unique identifiers of primitives
+  * \param[in] "label" Primitive data label
+  * \param[out] "awt_sum" Sum of primitive data
+   */
+  void calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &sum ) const;
+
      //! Sum the one-sided surface area of a group of primitives
      /**
       * \param[in] "UUIDs" Universal unique identifiers of primitives

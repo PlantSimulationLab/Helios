@@ -19,8 +19,12 @@
 
   \section VisualizerTuts Visualizer Plug-In
   - \subpage visualizer_basics "Tutorial 7: Visualizer Basics"
-  - Tutorial 8: Visualizing Variable and Primitive Data
+  - \subpage visualizer_pdata "Tutorial 8: Visualizing Variable and Primitive Data"
   - Tutorial 9: Customizing %Visualizer Configuration
+
+  \section RadiationTuts Radiation Model Plug-In
+  - \subpage radiation_basics "Tutorial 10: Radiation model basics - tree light interception"
+  - \subpage radiation_BeersLaw "Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy"
 
 */
 
@@ -668,6 +672,445 @@
      
      vis.plotInteractive(); //open an interactive graphics window
    
+  }</code></pre></div>
+
+*/
+
+##################### TUTORIAL 8 #####################
+
+/*! \page visualizer_pdata Tutorial 8: Visualizing primitive data values
+
+ This tutorial will illustrate how to use the Helios visualizer to visualize primitive data based on a pseudocolor mapping. The code below gives a main.cpp file that loads in a 3D model, sets primitive data for each primitive in the model, and creates a pseudocolor mapping to visualize the primitive data distribution.
+
+ \subsection Tutorial8_geom Model geometry
+
+ The first step is to declare the Context class in the usual way, then add some geometry to the Context. In this case, we'll load in a 3D model of the well-known <a href="https://en.wikipedia.org/wiki/Stanford_bunny">Stanford Bunny</a> from a <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY file</a>. This file is located in the "PLY" directory found in the base Helios code directory. It is important to either give an absolute path to this file, or a path relative to the build directory. Since this tutorial is build in the directory "Helios/samples/tutorial8/build", the relative path to the PLY file is "../../../PLY/StanfordBunny.ply".
+
+ We can then use the \ref helios::Context::loadPLY() function to load the model. In addition to the relative file path, we need to specify the base (x,y,z) position to place the model, the height to which we want to scale the model, a spherical rotation (if applicable) and the default color of the model primitives. In the example below, we'll place the model at the position (0,0,0), scale it to a height of 2, apply no rotation, and assign a default color of black. Note that if you specify a scaling factor of 0, no scaling will be applied. This function returns a vector of UUIDs, one for each primitive loaded in the model.
+
+ Next, we will specify some primitive data that we'll visualize later. We will create a primitive data called "height" that corresponds to the z-coordinate of each primitive in the 3D model. To do this, we first loop over the UUID vector returned from the \ref helios::Context::loadPLY() function we called previously. For each UUID, we get the vertices of the corresponding primitive. The Stanford Bunny model contains only triangles, so the \ref helios::Context::getPrimitiveVertices() function returns a 3-element vector of vec3's, with each index of the vector corresponding to each of the 3 (x,y,z) vertex coordinates. As a simple approximation, we'll use only the first vertex in the triangle to determine the height of the primitive. Thus, we can index the vertex vector at element 0 to get the (x,y,z) coordinate of the first vertex. Getting the .z member of the vertex coordinate (which has type vec3) gets us the z-coordinate or height.
+
+ Once we have the height of the primitive, we can create and set primitive data called "height" (or whatever name you choose) using the \ref helios::Context::setPrimitiveData().
+
+ \subsection Tutorial8_vis Visualization
+
+ Finally, we just need to visualize the result. We set up the Visualizer in a similar way as before, but if we add a call to \ref Visualizer::colorContextPrimitivesByData(), it will color the primitives based on a pseudocolor mapping of primitive data values. This means that it will map the data values to colors in a colormap (array of colors) to determine its color. The argument to this function is the name of the primitive data created previously. If the primitive data does not exist for one or more primitives, they will be assigned a value of 0. You can also call this function with an optional argument of a UUID vector, which will only perform the pseudocolor mapping for the primitives referenced in the UUID vector.
+
+ Details of the colormap and colorbar can be modified through a number of functions. Here' we've changed the colormap from the default of "HOT" to "PARULA". Available colormaps are listed in the \ref VisualizerDoc "Visualizer documentation page", as well as how to make custom colormaps. We've also added a title to the colorbar.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+
+  int main(){
+
+   Context context;   //Declare the "Context" class
+
+   \c// Load 3D model "Stanford Bunny" with a base position of (0,0,0) and scaled to a height of 2
+   std::vector<uint> UUIDs = context.loadPLY( "../../../PLY/StanfordBunny.ply", make_vec3(0,0,0), 2, nullrotation, RGB::black );
+
+   \c// Assign primitive data called "height" which gives the primitive z-coordinate
+   for( uint UUID : UUIDs ){ //looping over primitive UUIDs
+     std::vector<vec3> vertices = context.getPrimitiveVertices(UUID);  //get a vector containing the (x,y,z) position of each primitive vertex
+     vec3 vertex = vertices.at(0);  //get the first vertex
+     float z = vertex.z;   //get the vertex z-coordinate
+     context.setPrimitiveData(UUID,"height",z);  //set this primitive's primitive data "height" equal to the value of "z"
+   }
+
+   \c// Visualize the result
+   %Visualizer visualizer(800);
+
+   visualizer.buildContextGeometry(&context);
+
+   visualizer.colorContextPrimitivesByData( "height" ); //color primitives based on a pseudocolor mapping of primitive data "height"
+
+   visualizer.setColormap( Visualizer::COLORMAP_PARULA );  //change the colormap to "parula"
+   visualizer.setColorbarTitle("Height" ); //give our colorbar a title
+
+   visualizer.plotInteractive();
+
+   return 0;
+  }</code></pre></div>
+
+ The code above should produce the visualization shown below. You can rotate the view using the arrow keys on your keyboard to better view the model.
+
+ \image html images/Tutorial8_bunny.png
+
+*/
+
+##################### TUTORIAL 9 #####################
+
+<!--
+/*! \page visualizer_custom Tutorial 9: Customizing visualizations
+
+
+*/
+-->
+
+##################### TUTORIAL 10 #####################
+
+/*! \page radiation_basics Tutorial 10: Radiation model basics - tree light interception
+
+ This tutorial will illustrate how to simulate and calculate photosynthetically active radiation (PAR) interception of a tree canopy using the radiation model plug-in.
+
+ \subsection Tutorial10_geom 1. Model geometry creation
+
+ The first step is to declare the Context class in the usual way, then add some geometry to the Context. In this case, we'll load in a 3D model of a tree from a <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY file</a>. This file is located in the "PLY" directory found in the base Helios code directory. It is important to either give an absolute path to this file, or a path relative to the build directory. Since this tutorial is build in the directory "Helios/samples/tutorial10/build", the relative path to the PLY file is "../../../PLY/Tree.ply".
+
+ We can then use the \ref helios::Context::loadPLY() function to load the model. In addition to the relative file path, we need to specify the base (x,y,z) position to place the model, the height to which we want to scale the model, a spherical rotation (if applicable) and the default color of the model primitives. In the example below, we'll place the model at the position (0,0,0), scale it to a height of 5, apply no rotation, and assign a default color of black. Note that if you specify a scaling factor of 0, no scaling will be applied. This function returns a vector of UUIDs, one for each primitive loaded in the model.
+
+ Next, we'll add a ground surface consisting of tiled patches. The ground will be centered at the point (0,0,0), and be divided into 50x50 patch tiles with total size of plant_spacing x row_spacing. The \ref helios::Context::addTile() function returns a vector of UUIDs, one UUID for each patch primitive in the tile.
+
+\subsection Tutorial10_rad 2. Radiation model set-up
+
+ We can then declare and initialize the \ref RadiationModel class. It's constructor takes a pointer to the \ref Context as an argument, so that it can get model geometry and data, and write calculated values to primitive data.
+
+ We'll then add a "sun sphere" radiation source in the model using \ref RadiationModel::addSunSphereRadiationSource(). This creates a spherical radiation source with size and distance of the sun, and thus includes penumbral effects. This function with no arguments sets the sun position as vertical, but we'll pass it a \ref helios::SphericalCoord that sets the sun elevation at 60 degrees and azimuth at 45 degrees. The function returns a uint value that gives an ID of the source that we'll use to reference it later.
+
+ The \ref RadiationModel::addRadiationBand() function is then used to add a radiation band called "PAR". We can call the band anything we want, this is simply a label we'll use to refer to it later. We want to disable primitive emission for this band, since terrestrial objects don't emit radiation in the PAR band. We then set the flux of the radiation source (sun) to a value of 500 W/m<sup>2</sup>, and set the diffuse (ambient) flux to be 50 W/m<sup>2</sup>. By default, it is assume that diffuse radiation is isotropic, but this can be changed using the \ref RadiationModel::setDiffuseRadiationExtinctionCoeff() function (see \ref RadiationDoc "documentation" for details). For this exercise, we will assume that leaves and branches absorb all incoming PAR (default behavior), so we don't need to turn on scattering.
+
+ By default, primitives absorb and emit radiation from both sides. This is the behavior we want for leaves, but for the ground, we don't want it to receive diffuse radiation from below. We can set the primitive data "twosided_flag" to a value of 0 to disable radiation absorption and emission from the back face. Note that "twosided_flag" needs to have a type of uint, as specified in the \ref RadiationDoc "radiation model documentation".
+
+ A periodic lateral boundary will allow for simulation of an infinitely repeating canopy of trees. This is enabled using the \ref RadiationModel::enforcePeriodicBoundary() with the argument "xy". This function will determine a bounding box for all primitives, and create a periodic boundary at the box face(s). If the domain has a ground surface, it is very important that no primitives extend past the ground. Otherwise, the domain bounding box will extend past the ground surface, and there will effectively be a gap between the ground and the periodic boundary. If there is a chance that you might have primitives extending past the ground, you can use the \ref helios::Context::cropDomain() function to crop the lateral domain extent to that of the ground surface. Example code for doing this is provided in the radiation model documentation (see \ref RadPeriodic).
+
+ The final step before running the model is always to update geometry in the radiation model based on geometry currently in the Context. The \ref RadiationModel::updateGeometry() function should be called any time the Context geometry or primitive data relevant to the radiation model are changed.
+
+ \subsection Tutorial10_run 3. Run the model and calculate PAR interception
+
+ Radiation model calculations are performed when the \ref RadiationModel::runBand() function is called. This function should be called for every radiation band that was created. Absorbed radiation fluxes for each primitive and each band are calculated and written to the primitive data "radiation_flux_[*]", where [*] is the name of the radiation band that you chose.
+
+ To calculate the fraction of PAR intercepted by the canopy, we can sum the total energy absorbed by the canopy and divide it by the sum of the total energy absorbed by the canopy and ground. The radiation model calculates radiative fluxes in W/m<sup>2</sup>, so we need to multiply by the primitive surface area to get energy rate in Watts (i.e., the sum of absorbed fluxes should be area-weighted). There are a number of functions in the Context for aggregating primitive data values, including the \ref helios::Context::calculatePrimitiveDataAreaWeightedSum(). The arguments to this function are a vector of UUIDs for primitives to include in the sum, the label of primitive data, and the variable in which to store the result. The type of the result variable should match the type of the primitive data.
+
+ The fraction of PAR intercepted by the canopy is the area-weighted sum of PAR fluxes for the canopy divided by the area-weighted sum of ground plus canopy fluxes. We then print the result to the standard output.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "Visualizer.h"
+ #include "RadiationModel.h"
+
+ using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+
+ int main(){
+
+   \c// *** 1. Model geometry creation *** //
+
+   float row_spacing = 5;    //spacing between tree rows
+   float plant_spacing = 3;  //spacing between trees within a row
+
+   %Context context;   //Declare the "Context" class
+
+   \c// Load 3D model "Tree.ply" with a base position of (0,0,0) and scaled to a height of 5
+   std::vector<uint> UUIDs_tree = context.loadPLY( "../../../PLY/Tree.ply", make_vec3(0,0,0), 5, nullrotation, RGB::black );
+
+   \c// Add a ground surface with a center position of (0,0,0) and size of row_spacing x plant_spacing
+   std::vector<uint> UUIDs_ground = context.addTile(make_vec3(0, 0, 0), make_vec2(row_spacing, plant_spacing), nullrotation, make_int2(50, 50));
+
+   \c// *** 2. Radiation model set-up *** //
+
+   \c// Declare and initialize the radiation model class
+   %RadiationModel radiation(&context);
+
+   \c// Add a sun radiation source with elevation angle of 60 degrees and an azimuth of 45 degrees (note that we need to convert to radians)
+   uint sourceID = radiation.addSunSphereRadiationSource( make_SphericalCoord( deg2rad(60), deg2rad(45) ));
+
+   \c// Add a shortwave radiation band called "PAR" (you can call it anything you want, just be consistent)
+   radiation.addRadiationBand("PAR");
+   radiation.disableEmission("PAR");   //turn off emission, no emission of primitives in solar bands
+   radiation.setSourceFlux( sourceID, "PAR", 500.f );   //set solar flux perpendicular to sun direction of 500 W/m^2
+   radiation.setDiffuseRadiationFlux("PAR", 50.f);   //set diffuse (ambient) solar radiation flux of 50 W/m^2
+
+   \c// We only want the ground to absorb radiation from the top. If we left the default "twosided_flag=1", our ground would absorb diffuse radiation from below
+   context.setPrimitiveData(UUIDs_ground, "twosided_flag", uint(0));
+
+   radiation.enforcePeriodicBoundary("xy");  //Use periodic lateral boundaries so we have repeating trees
+
+   radiation.updateGeometry(); //tell the radiation model to load all the geometry in the Context
+
+   \c// *** 3. Run the model and calculate PAR interception *** //
+
+   radiation.runBand("PAR"); //run the radiation calculations for this band
+
+   \c// Calculate PAR interception
+   float PAR_tree;
+   context.calculatePrimitiveDataAreaWeightedSum( UUIDs_tree, "radiation_flux_PAR", PAR_tree ); //sum up absorbed PAR flux for each tree primitive and weight by primitive surface area.
+   float PAR_ground;
+   context.calculatePrimitiveDataAreaWeightedSum( UUIDs_ground, "radiation_flux_PAR", PAR_ground );  //sum up absorbed PAR flux for each ground primitive and weight by primitive surface area.
+
+   float fPAR = PAR_tree/(PAR_tree+PAR_ground);
+
+   std::cout << "Fraction of intercepted PAR is " << fPAR << std::endl;
+
+   return 0;
+
+ }</code></pre></div>
+
+ It is generally a good idea to visualize the result to verify that the distribution of values generally makes sense. Code is provided below that can be added to this sample code to visualize the absorbed PAR flux distribution.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  %Visualizer visualizer(800);
+
+  visualizer.buildContextGeometry(&context);
+
+  visualizer.colorContextPrimitivesByData( "radiation_flux_PAR" ); //color primitives based on a pseudocolor mapping of primitive data "radiation_flux_PAR" (this is the output primitive data from the radiation model)
+
+  visualizer.setColorbarTitle("PAR flux [W/m^2]" ); //give our colorbar a title
+
+  visualizer.plotInteractive();
+ </code></pre></div>
+
+ <br>
+
+ \image html Tutorial10_treePAR.png
+
+*/
+
+##################### TUTORIAL 11 #####################
+
+/*! \page radiation_BeersLaw Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy
+
+ In this tutorial, we will consider radiation transfer in a homogeneous, horizontally infinite canopy. This canonical canopy case will allow for comparison against theoretical values computed from Beer's law. Our goal will be to simulate the fraction of photosynthetically active radiation (PAR) absorbed by the canopy and the fraction of sunlit/shaded leaf area, and compare the 3D simulated values against Beer's law. This tutorial will integrate the \ref CanopyGeneratorDoc "Canopy Generator" plug-in to create the canopy geometry, and the \ref VoxelIntersectionDoc "Voxel Intersection" plug-in to slice leaves that lie on the canopy boundary.
+
+ \subsection tutorial11_theory 0. Theory
+
+ Beer's law describes the probability that a collimated bean of radiation propagating through a homogeneous medium of particulates is intercepted. For a canopy of leaves, Beer's law can be written as
+
+ \f[\dfrac{R}{R_0}=\left[1-\mathrm{exp}\left(-\dfrac{G\,LAI}{\mathrm{cos}\,\theta_s}\right)\right],\f]
+
+ where \f$R\f$ is the average radiation flux absorbed by the canopy, \f$R_0\f$ is the above-canopy radiation flux on a horizontal surface, \f$R/R_0\f$ is the fraction of absorbed radiation, \f$G\f$ is the fraction of leaf area projected in the direction of the sun, \f$LAI\f$ is the one-sided canopy leaf area per unit ground area, and \f$\theta_s\f$ is the solar zenith angle. The following are the assumptions used to derive this equation: 1) the leaf dimension is "much" smaller than the depth of the canopy layer, 2) the leaf angle distribution is azimuthally isotropic, 3) leaf position is spatially uniform, 4) the canopy extends infinitely in the lateral directions, 5) solar radiation is collimated (i.e., beams are parallel), and 6) leaves absorb all incident radiation.
+
+ Operating under similar assumptions, Beer's law can be integrated to determine the fraction of sunlit leaf area
+
+ \f[f_{sun}=\dfrac{\mathrm{cos}\,\theta_s}{G\,LAI}\left[1-\mathrm{exp}\left(-\dfrac{G\,LAI}{\mathrm{cos}\,\theta_s}\right)\right].\f]
+
+ \subsection tutorial11_geom 1. Model geometry creation
+
+ We will use the \ref CanopyGeneratorDoc "Canopy Generator" plug-in to create a canopy that matches the assumptions inherent in Beer's law described above. This will be a homogeneous canopy with azimuthally isotropic leaf angle distribution that extends infinitely in the horizontal (via applying periodic boundary conditions).
+
+ We start by defining a few variables that will be used later, including parameters specifying the canopy geometry. We'll use a spherical leaf angle distribution, although others are available (also uniform, planophile, erectophile, plagiophile, extremophile). The canopy has an LAI of 1.5 and a height of 1 m. The canopy extends 3x3 m<sup>2</sup> in the horizontal (but will be infinitely extended through periodic boundaries).
+
+ The Context is declared in the usual way. The \ref CanopyGenerator class is then declared and initialized by passing a pointer to the Context. It's job is to add canopy geometry to the Context. The CanopyGenerator::HomogeneousCanopyParameters structure is declared, which is what is used to set the canopy variables. The leaf_angle_distribution, canopy_extent, canopy_height, and leaf_area_index are straight-forward and set based on the variables we declared above (reference the \ref CGenHomogeneous "canopy generator documentation" for the list and meaning of all possible variables).
+
+ The variables "buffer" and "leaf_subdivisions" are both important and less intuitive. We don't want the canopy to extend further than the horizontal extent we've specified (or the ground). This can be dealt with in two ways. One is to add a "buffer" of a half leaf width from the canopy boundaries such that no leaves lie on the boundaries. This is not ideal because it will result in a canopy that is not perfectly periodic. Alternatively, we could add no buffer and crop the canopy exactly to the canopy boundaries, which is what we'll do below. In that case, specify the buffer as "none".
+
+ The "leaf_subdivisions" variable specifies how many sub-patches (rectangles) should be used to represent each leaf. This does not matter much for computing total canopy absorbed radiation, but it is important to have adequate leaf sub-patch resolution to accurately compute the fraction of sunlit leaf area since we need to resolve shadows on leaves. See the references <a href="https://doi.org/10.1029/2020JG005796">Kent and Bailey (2021)</a> and <a href="https://doi.org/10.1093/insilicoplants/diab023">Bailey and Kent (2021)</a> for a detailed investigation. We'll use 5x5=25 sub-patches as a compromise.
+
+ The canopy is built using the \ref CanopyGenerator::buildCanopy() function, which takes the parameter structure we created earlier. UUIDs of leaf primitives in the canopy can be queried using the \ref CanopyGenerator::getLeafUUIDs() function, which we'll store for use in the next step.
+
+ \subsection tutorial11_slice 2. Slicing and cropping primitives on the boundaries
+
+ As introduced above, we have not applied a "buffer" at the canopy boundaries, and thus we have some primitives that extend beyond the intended boundaries. We'll use the \ref VoxelIntersectionDoc "Voxel Intersection" plug-in to crop leaves to the exact location of the boundary, and then use the \ref helios::Context::cropDomain() function to remove remaining leaf segments beyond the boundaries.
+
+ The VoxelIntersection class is declared and initialized in a similar way as other plug-ins by passing a pointer to the Context. It's job will be to slice any primitives lying on the canopy boundaries, which creates two or more triangle primitives with a break along the slicing plane. Two variables are defined that give the (x,y,z) coordinates of the canopy center location and the width of the canopy in the x-, y-, and z-directions:
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> vec3 slice_box_center(0,0,0.5f*canopy_height);
+  vec3 slice_box_size(canopy_extent.x,canopy_extent.y,canopy_height);</code></pre></div>
+
+ By default, the canopy is centered at the location (0, 0, 0.5*canopy_height), and as we specified before the dimensions of the canopy are (canopy_extent.x, canopy_extent.y, canopy_height).
+
+ The slicing is performed using the function \ref VoxelIntersection::slicePrimitivesUsingGrid(). This function has the potential to slice based on a sub-divided voxelized grid, but since we only want to slice on the boundaries we'll specify the grid subdivisions as (1, 1, 1) (i.e., not subdivided).
+
+ The \ref helios::Context::cropDomain() function is then used to crop the domain to the canopy boundaries, which will remove leaf segments outside of the specified boundaries. Some of the primitives the Canopy Generator created may no longer exist if the were sliced and/or cropped, and thus the "UUIDs_leaves" contains UUIDs referencing primitives that no longer exist. We can use the helios::Context::getAllUUIDs() function to get all the UUIDs currently in the Context, which at this point only contains leaves.
+
+ Finally, we add a ground surface using the helios::Context::addTile() function. For this particular tutorial, a ground is not explicitly needed because we have no diffuse/scattered radiation that could emanate from below.
+
+ \subsection tutorial11_rad 3. Radiation model set-up
+
+ The set-up of the radiation model is very similar to the \ref radiation_basics "previous tutorial", except for two main differences: 1) we add a collimated radiation source rather than a "sun sphere" to match the assumptions of Beer's law, 2) the solar flux is set to a normalize value of 1.0 since we only compute absorption fractions. A variable defining the sun direction was defined at the beginning of the main() function, which is used to set the direction of the collimated source. It is important to note that the solar flux value of 1.0 that we set for the source is the flux perpendicular to the sun direction, and needs to be multiplied by the cosine of the solar zenith angle to get the flux on a horizontal surface.
+
+ \subsection tutorial11_run 4. Run model and process results
+
+ Radiation model calculations are performed when the \ref RadiationModel::runBand() function is called.
+
+ \subsubsection tutorial11_G 4a. Calculate G(theta)
+
+ In order to apply Beer's law, we need to calculate the G-function (fraction of leaf area projected in the direction of the sun). In this example, we used a spherical leaf angle distribution, in which case G = 0.5 regardless of sun direction. However, if a different leaf angle distribution was used, G would vary with sun angle. Either way, it is a good exercise to calculate this important parameter.
+
+ The G-function is simply the average dot product (absolute value) between the leaf normal and the sun direction. In this example, each leaf element has the same area, but in general this may not be the case, and the average should be area-weighted to avoid biasing toward small primitives. Functions are available to perform each of the necessary operations: a) the \ref helios::Context::getPrimitiveNormal() function returns a unit vector pointing in the direction of the primitive normal, b) the \ref helios::Context::getPrimitiveArea() function returns the primitive surface area, and c) the '*' operator when applied to two vec3's will calculate the dot product.
+
+ Calculation of the G-function based on the 3D geometry can be written as
+
+ \f[G = \sum\limits_i |\vec{n}_i \cdot \vec{n}_s |A_i/\sum\limits_i A_i,\f]
+
+ where \f$\vec{n}_i\f$ is the normal of the i<sup>th</sup> leaf primitive (unit length), \f$\vec{n}_s\f$ is a unit vector pointing in the direction of the sun, and \f$A_i\f$ is the area of the i<sup>th</sup> leaf primitive.
+
+ \subsubsection tutorial11_abs 4b. Calculate radiation flux absorbed by the canopy on a ground area basis
+
+ Beer's law gives the radiation flux absorbed by the canopy on a ground area basis, so we will need to calculate this flux based on the 3D model result. It is important to note that the 3D model gives fluxes on a leaf area basis, which can be converted to ground area basis by multiplying the LAI.
+
+ The flux absorbed by the canopy \f$R\f$ is simply the area-weighted average leaf PAR flux multiplied by the LAI, which can be written as
+
+ \f[R = LAI\sum\limits_i R_i A_i / \sum\limits_i A_i,\f]
+
+ where \f$R_i\f$ is the absorbed PAR flux of the i<sup>th</sup> leaf primitive. The \ref helios::Context::calculatePrimitiveDataAreaWeightedMean() function can be used to easily calculate the area-weighted average of the primitive data "radiation_flux_PAR".
+
+ \subsubsection tutorial11_absBeer 4c. Calculate the theoretical absorbed PAR flux using Beer's law
+
+ The theoretical absorbed PAR flux can be calculated by substituting appropriate values into the equation for Beer's law given above. One important thing to remember is that the radiation flux specified in Helios is the flux on the surface perpendicular to the sun direction, whereas the source flux specified in Beer's law is the flux on a horizontal surface. Thus, the source flux specified in Helios needs to be multiplied by \f$\mathrm{cos}\,\theta_s\f$ to get the flux on a horizontal surface. The \ref helios::cart2sphere() function is used to convert our Cartesian vector specifying the sun direction into a spherical coordinate, from which we can get the zenith angle.
+
+ \subsubsection tutorial11_fsun 4d. Calculate the sunlit leaf area fraction from the simulation
+
+ In order to calculate the fraction of sunlit leaf area for the canopy, we need to determine whether each leaf element is sunlit or shaded. This is tricky because 1) the fully sunlit PAR flux for a given leaf depends on its angle relative to the sun, and 2) many leaves will neither be 100% sunlit or 100% shaded, but somewhere in between. To deal with the first issue, we first calculate what the fully sunlit flux should be for each leaf based on its angle, which is
+
+ \f[R_{sun} = R_{source}|\vec{n} \cdot \vec{n}_s|,\f]
+
+ where \f$R_{source}\f$ is the PAR flux on a plane perpendicular to the sun, and other symbols are as defined above. We then define a "sunlit" leaf as a leaf whose actual absorbed flux is greater than 50% of \f$R_{sun}\f$. We then identify which leaves are "sunlit" according to this definition, and sum their areas. The fraction of sunlit leaf area is then the area of sunlit leaves divided by the total leaf area.
+
+ \subsubsection tutorial11_fsunBeer 4e. Calculate the theoretical sunlit area fraction
+
+ Calculation of the theoretical fraction of sunlit leaf area is simply a matter of plugging values into the equation for \f$f_{sun}\f$ above.
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> #include "RadiationModel.h"
+  #include "CanopyGenerator.h"
+  #include "VoxelIntersection.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+
+  int main(){
+
+     \c// !!!!!!!!! Inputs for this example study !!!!!!!!! //
+
+     vec3 sun_direction(1,0,1);                              //Cartesian unit vector pointing in the direction of (toward) the sun
+     sun_direction.normalize();
+
+     std::string leaf_angle_dist = "spherical";              //name of leaf angle distribution for the canopy - (spherical, uniform, planophile, erectophile, plagiophile, extremophile)
+
+     float LAI = 1.5f;                                       //one-sided leaf area index of the canopy
+
+     vec2 canopy_extent(3,3);                                //dimension of the canopy in the x- and y-directions (horizontal)
+     float canopy_height = 1.f;                              //vertical dimension of the canopy
+
+     \c// *** 1. Model geometry creation *** //
+
+     Context context;                                        //declare the Context class
+
+     %CanopyGenerator cgen(&context);                        //declare the Canopy Generator class and pass it the Context so it can add geometry
+
+     %HomogeneousCanopyParameters params;                    //structure containing parameters for homogeneous canopy
+     params.buffer = "none";                                 //no buffer on the canopy edges - we will slice along border
+     params.leaf_angle_distribution = leaf_angle_dist;       //set the leaf angle distribution based on the variable we set above
+     params.canopy_extent = canopy_extent;                   //set the lateral canopy extent based on the variable we set above
+     params.canopy_height = canopy_height;                   //set the canopy height based on the variable we set above
+     params.leaf_area_index = LAI;                           //set the canopy LAI based on the variable we set above
+
+     params.leaf_subdivisions = make_int2(5,5);              //set the number of subdivisions per leaf to be 5x5=25 primitives
+
+     cgen.buildCanopy(params);                               //build the homogeneous canopy
+
+     std::vector<uint> UUIDs_leaves = cgen.getLeafUUIDs();   //get UUIDs for all leaves in the canopy
+
+     \c// *** 2. Slicing and cropping primitives on the boundaries *** //
+
+     \c// slice and primitives that lie on the canopy boundaries (imagine taking a knife and perfectly cutting along the edges of the canopy)
+     %VoxelIntersection vslice(&context);
+
+     \c// define variables that give the center (x,y,z) coordinate of the canopy and the overall canopy dimensions
+     vec3 slice_box_center(0,0,0.5f*canopy_height);
+     vec3 slice_box_size(canopy_extent.x,canopy_extent.y,canopy_height);
+
+     \c// do the slicing
+     vslice.slicePrimitivesUsingGrid( UUIDs_leaves, slice_box_center, slice_box_size, make_int3(1,1,1) );
+
+     \c// delete any leaf slices that fall outside of the slicing volume
+     context.cropDomain( make_vec2(-0.5f*canopy_extent.x,0.5f*canopy_extent.x), make_vec2(-0.5f*canopy_extent.y,0.5f*canopy_extent.y), make_vec2(0,canopy_height) );
+
+     \c// our UUID vector now contains some primitives that have been deleted. We can just get all the primitives currently in the Context and store them in a vector
+     UUIDs_leaves = context.getAllUUIDs();
+
+     \c//make a ground
+     std::vector<uint> UUIDs_ground = context.addTile(make_vec3(0, 0, 0), canopy_extent, nullrotation,make_int2(10, 10));
+
+     \c// *** 3. Radiation model set-up *** //
+
+     %RadiationModel radiation(&context);                      //declare and initialize the radiation model class
+
+     \c// add a sun source. We'll assume collimated radiation since that is what is assumed in Beer's law
+     uint sourceID = radiation.addCollimatedRadiationSource( sun_direction );
+
+     \c// set up the PAR band. We'll use separate direct and diffuse bands to keep them separate for post-processing (normally you would combine them)
+     radiation.addRadiationBand("PAR");
+     radiation.disableEmission("PAR");
+     radiation.setSourceFlux(sourceID, "PAR", 1.f);  //set a flux of 1.0 W/m^2 to simplify calculations
+     radiation.setDiffuseRadiationFlux("PAR", 0.f);      //no diffuse radiation this band
+
+     radiation.enforcePeriodicBoundary("xy");      //use periodic boundary conditions in the horizontal to simulate an infinite canopy
+
+     context.setPrimitiveData(UUIDs_ground, "twosided_flag",uint(0)); //only want ground to intercept/emit radiation from the top
+
+     radiation.updateGeometry();                            //update the geometry in the radiation model
+
+     \c// 4. Run model and process results //
+
+     \c//Run the radiation model calculations
+     radiation.runBand("PAR");
+
+     \c// 4a. Calculate G(theta)
+     float Gtheta = 0;
+     float area_total = 0;
+     for( auto UUID : UUIDs_leaves ){
+       vec3 normal = context.getPrimitiveNormal(UUID);
+       float area = context.getPrimitiveArea(UUID);
+       Gtheta += std::abs( sun_direction*normal )*area;
+       area_total += area;
+     }
+     Gtheta = Gtheta/area_total;  //normalize
+
+     std::cout << "G(theta) = " << Gtheta << std::endl;
+
+     \c// 4b. Calculate radiation flux absorbed by the canopy on a ground area basis - this will end up just being the area-weighted average PAR flux multiplied by LAI.
+
+     float PAR_abs_dir;
+     context.calculatePrimitiveDataAreaWeightedMean( UUIDs_leaves, "radiation_flux_PAR", PAR_abs_dir ); //recall that the output primitive data from the radiation model has the form "radiation_flux_[*band_name*]"
+     PAR_abs_dir = PAR_abs_dir*LAI; //converts between leaf area basis to ground area basis
+
+     \c// 4c. Calculate the theoretical absorbed PAR flux using Beer's law
+
+     float theta_s = cart2sphere(sun_direction).zenith;  //calculate the solar zenith angle
+
+     float R0 = cos(theta_s); //PAR flux on horizontal surface
+     float intercepted_theoretical_direct = R0*(1.f-exp(-Gtheta*LAI/cos(theta_s)));  //Beer's law
+
+     std::cout << "Calculated interception: " << PAR_abs_dir << std::endl;
+     std::cout << "Theoretical interception: " << intercepted_theoretical_direct << std::endl;
+     std::cout << "Error of interception: " << std::abs(PAR_abs_dir-intercepted_theoretical_direct)/intercepted_theoretical_direct*100.f << " %" << std::endl;
+
+     \c// 4d. Calculate the sunlit leaf area fraction from the simulation
+
+     float sunlit_area = 0;
+     float total_area = 0;
+     for( auto UUID : UUIDs_leaves ){ //looping over all leaf elements
+
+       vec3 normal = context.getPrimitiveNormal(UUID);
+
+       float PARmax = std::abs( normal*sun_direction );  //this is the PAR flux of a leaf with the same normal that is fully sunlit
+
+       float PAR;
+       context.getPrimitiveData( UUID, "radiation_flux_PAR", PAR ); //get this leaf's PAR flux
+
+       float fsun_leaf = PAR/PARmax;  //PAR flux as a fraction of the fully sunlit flux
+
+       float area = context.getPrimitiveArea(UUID);
+
+       if( fsun_leaf>0.5 ){ //if fsun is greater than 0.5, we'll call this leaf "sunlit"
+         sunlit_area += area;
+       }
+       total_area += area;
+
+     }
+
+     float fsun = sunlit_area/total_area;
+
+     \c// 4e. Calculate the theoretical sunlit area fraction
+
+     float fsun_theoretical = cos(theta_s)/(Gtheta*LAI)*(1-exp(-Gtheta*LAI/cos(theta_s)));
+
+     std::cout << "Calculated sunlit fraction: " << fsun << std::endl;
+     std::cout << "Theoretical sunlit fraction: " << fsun_theoretical << std::endl;
+     std::cout << "Error of sunlit fraction: " << std::abs(fsun-fsun_theoretical)/fsun_theoretical*100.f << " %" << std::endl;
+
+     return 0;
+
   }</code></pre></div>
 
 */

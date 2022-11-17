@@ -102,7 +102,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <tr><td>heat_capacity <td> J/m<sup>2</sup>/<sup>o</sup>C <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Heat capacity of object. <td>N/A <td>0
  <tr><td>other_surface_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Other surface energy fluxes. <td>N/A <td>0
  <tr><td>twosided_flag <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces with energy transfer (must be 1 or 2). <td>N/A <td>2
- <tr><td>evaporating_faces <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces from which water is evaporating (must be 1 or 2). <td>N/A <td>1  </table>
+ <tr><td>evaporating_faces <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces from which water is evaporating (must be 1 or 2). Note: if "twosided_flag" is equal to 1, the number of evaporating faces will be automatically set to 1.<td>N/A <td>1  </table>
  
  \subsection EBOutputData Default Output Primitive Data
  
@@ -166,22 +166,24 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
    Once the water vapor has diffused to the surface, the rate of transfer is then determined by the surface boundary-layer conductance. The sub-surface conductance and boundary-layer conductance act in serial, and can be combined to yield an overall moisture conductance between the sub-surface air spaces and the outside of the boundary layer according to
 
-     \f$g_M = n_e\dfrac{(1.08g_H/n_s)g_S}{1.08g_H/n_s+g_S}\f$,
+   \f$g_M = n_e\dfrac{(1.08g_H/n_s)g_S}{1.08g_H/n_s+g_S}\f$,
 
-     where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat. \f$n_e\f$ is the number of evaporating surfaces of the primitive (either 1 or 2), which is set by the primitive data value ``evaporating faces". For leaves, \f$n_e=1\f$ corresponds to hypostomatous leaves (stomata on one side), and \f$n_e=2\f$ to amphistomatous leaves (stomata on both sides).
+   where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat. \f$n_e\f$ is the number of evaporating surfaces of the primitive (either 1 or 2), which is set by the primitive data value ``evaporating faces". For leaves, \f$n_e=1\f$ corresponds to hypostomatous leaves (stomata on one side), and \f$n_e=2\f$ to amphistomatous leaves (stomata on both sides).
 
-     \subsection EBRun Running the Steady-State Model
+   It is important to note that if \f$n_s=1\f$, then the value of \f$n_e\f$ will be overridden and also set to 1.
 
-      The model is run assuming steady-state conditions (heat storage term is zero) using the \ref EnergyBalanceModel::run() function, which will run the model for all primitives in the Context if no argument is given, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.
+   \subsection EBRun Running the Steady-State Model
 
-      <table>
+   The model is run assuming steady-state conditions (heat storage term is zero) using the \ref EnergyBalanceModel::run() function, which will run the model for all primitives in the Context if no argument is given, or will run the model for a subset of primitives if a vector of UUIDs is given as the argument.
+
+   <table>
       <caption>Functions to run the steady-state energy balance model.</caption>
       <tr><th>Model Run Function <th>Description
       <tr><td>\ref EnergyBalanceModel::run( void ) <td>Run the model for all primitives in the Context.
       <tr><td>\ref EnergyBalanceModel::run( std::vector<uint> UUIDs ) <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs.
-      </table>
+   </table>
 
-      <p> <br><br> </p>
+   <p> <br><br> </p>
 
    <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
    <pre><code> #include "EnergyBalanceModel.h"

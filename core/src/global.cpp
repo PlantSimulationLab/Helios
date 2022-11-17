@@ -1123,7 +1123,7 @@ bool helios::PNGHasAlpha( const char* filename ){
   if (!fp){
       throw(std::runtime_error("ERROR (PNGHasAlpha): File " + std::string(filename) + " could not be opened for reading. The file either does not exist or you do not have permission to read it."));
   }
-  fread(header, 1, 8, fp);
+  size_t result=fread(header, 1, 8, fp);
   
   /* initialize stuff */
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
@@ -1179,7 +1179,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
   if (!fp){
       throw(std::runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading."));
   }
-  fread(header, 1, 8, fp);
+  size_t result=fread(header, 1, 8, fp);
   // if (png_sig_cmp(header, 0, 8)){
   //   std::cerr << "ERROR (read_png_alpha): File " << filename << " is not recognized as a PNG file." << std::endl;
   //   exit(EXIT_FAILURE);
@@ -1275,7 +1275,7 @@ void helios::readPNG( const std::string &filename, uint & width, uint & height, 
   if (!fp){
     throw(std::runtime_error("ERROR (readPNG): File " + filename + "could not be opened for reading."));
    }
-  fread(header, 1, 8, fp);
+   size_t result=fread(header, 1, 8, fp);
 
   /* initialize stuff */
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);

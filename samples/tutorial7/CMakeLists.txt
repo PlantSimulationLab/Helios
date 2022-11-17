@@ -6,7 +6,7 @@
 set( BASE_DIRECTORY "../.." )
 
 #define the name of the executable to be created
-set( EXECUTABLE_NAME "tutorial8" )
+set( EXECUTABLE_NAME "tutorial7" )
 
 #provide name of source file(s) (separate multiple file names with semicolon)
 set( SOURCE_FILES "main.cpp" )

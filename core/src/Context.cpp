@@ -13892,11 +13892,12 @@ void Context::getPrimitiveBoundingBox( uint UUID, vec3 &min_corner, vec3 &max_co
 
 void Context::getPrimitiveBoundingBox( const std::vector<uint> &UUIDs, vec3 &min_corner, vec3 &max_corner ) const{
 
+
     uint p=0;
     for( uint UUID : UUIDs ){
 
         if ( !doesPrimitiveExist(UUID) ){
-            throw( std::runtime_error("ERROR (getPrimitiveBoundingBox): Primitive with UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+            throw( std::runtime_error("ERROR (Context::getPrimitiveBoundingBox): Primitive with UUID of " + std::to_string(UUID) + " does not exist in the Context."));
         }
 
         const std::vector<vec3> &vertices = getPrimitiveVertices(UUID);
@@ -13904,8 +13905,6 @@ void Context::getPrimitiveBoundingBox( const std::vector<uint> &UUIDs, vec3 &min
         if( p==0 ){
             min_corner = vertices.front();
             max_corner = min_corner;
-            p++;
-            continue;
         }
 
         for ( const vec3 &vert : vertices ){
@@ -15340,7 +15339,7 @@ void Context::calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const s
 void Context::calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &sum ) const{
 
   vec4 value;
-  sum = make_vec4(0.f,0.f,0.f,0.F);
+  sum = make_vec4(0.f,0.f,0.f,0.f);
   bool added_to_sum = false;
   for( uint UUID : UUIDs ){
 
@@ -15354,6 +15353,116 @@ void Context::calculatePrimitiveDataSum( const std::vector<uint> &UUIDs, const s
 
   if( !added_to_sum ) {
     std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
+}
+
+void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, float &awt_sum ) const{
+
+  float value;
+  awt_sum = 0.f;
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_FLOAT ){
+      float area = getPrimitiveArea(UUID);
+      getPrimitiveData(UUID,label.c_str(),value);
+      awt_sum += value*area;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
+}
+
+void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, double &awt_sum ) const{
+
+  double value;
+  awt_sum = 0.f;
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_DOUBLE ){
+      float area = getPrimitiveArea(UUID);
+      getPrimitiveData(UUID,label.c_str(),value);
+      awt_sum += value*area;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
+}
+
+void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &awt_sum ) const{
+
+  vec2 value;
+  awt_sum = make_vec2(0.f,0.f);
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC2 ){
+      float area = getPrimitiveArea(UUID);
+      getPrimitiveData(UUID,label.c_str(),value);
+      awt_sum = awt_sum + value*area;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
+}
+
+void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &awt_sum ) const{
+
+  vec3 value;
+  awt_sum = make_vec3(0.f,0.f,0.f);
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC3 ){
+      float area = getPrimitiveArea(UUID);
+      getPrimitiveData(UUID,label.c_str(),value);
+      awt_sum = awt_sum + value*area;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+  }
+
+}
+
+void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &awt_sum ) const{
+
+  vec4 value;
+  awt_sum = make_vec4(0.f,0.f,0.f,0.F);
+  bool added_to_sum = false;
+  for( uint UUID : UUIDs ){
+
+    if( doesPrimitiveExist(UUID)  && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC4 ){
+      float area = getPrimitiveArea(UUID);
+      getPrimitiveData(UUID,label.c_str(),value);
+      awt_sum = awt_sum + value*area;
+      added_to_sum = true;
+    }
+
+  }
+
+  if( !added_to_sum ) {
+    std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
   }
 
 }

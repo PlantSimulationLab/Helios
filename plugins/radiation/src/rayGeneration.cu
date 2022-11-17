@@ -77,33 +77,38 @@ RT_PROGRAM void direct_raygen()
 
     uint objID = launch_offset+launch_index.z;
 
+    uint pID = primitiveID[objID];
+    uint ptype = primitive_type[objID];
+    int puvID = uvID[objID];
+
     float3 sp;
-    float r, p;
 
     float3 normal;
 
     //transformation matrix
-    float m[16];
+    float m_trans[16];
     for( uint i=0; i<16; i++ ){
-        m[i] = transform_matrix[ optix::make_uint2(i,objID) ];
+        m_trans[i] = transform_matrix[ optix::make_uint2(i,objID) ];
     }
 
     //looping over sub-patches
-    for( size_t jj=0; jj<object_subdivisions[objID].y; jj++ ){
-        for( size_t ii=0; ii<object_subdivisions[objID].x; ii++ ){
+    int NX = object_subdivisions[objID].x;
+    int NY = object_subdivisions[objID].y;
+    for( int jj=0; jj<NY; jj++ ){
+      for( int ii=0; ii<NX; ii++ ){
 
-            uint UUID = primitiveID[objID] + jj*object_subdivisions[objID].x + ii;
+            uint origin_UUID = pID + jj*NX + ii;
 
             //two random samples [0,1]
             float Rx = rnd(prd.seed);
             float Ry = rnd(prd.seed);
 
-            if( primitive_type[objID] == 0 || primitive_type[objID] == 3 ){ //Patch or Tile
+            if( ptype == 0 || ptype == 3 ){ //Patch or Tile
 
                 uint Nx = launch_dim.x;
                 uint Ny = launch_dim.y;
-                float dx = 1.f/float(object_subdivisions[objID].x);
-                float dy = 1.f/float(object_subdivisions[objID].y);
+                float dx = 1.f/float(NX);
+                float dy = 1.f/float(NY);
 
                 // Map sample to rectangle [-0.5,0.5] [-0.5,0.5]
                 sp.x = -0.5f + ii*dx + float(launch_index.x)*dx/float(Nx) + Rx*dx/float(Nx);
@@ -111,7 +116,7 @@ RT_PROGRAM void direct_raygen()
                 sp.z = 0.f;
 
                 int ID = maskID[objID];
-                if( ID>=0 && primitive_area[UUID]>0 ){//has texture transparency
+                if( ID>=0 && primitive_area[origin_UUID]>0 ){//has texture transparency
 
                     int2 sz = masksize[ID];
                     uint3 ind;
@@ -122,13 +127,13 @@ RT_PROGRAM void direct_raygen()
                         count ++;
 
                         float2 uv = make_float2( sp.x+0.5f, 1.f-sp.y-0.5f );
-                        if( uvID[objID]==-1 ){//does not have custom (u,v) coordinates
+                        if( puvID==-1 ){//does not have custom (u,v) coordinates
                             ind = make_uint3( roundf(float(sz.x-1)*uv.x), roundf(float(sz.y-1)*uv.y), ID );
                         }else{//has custom (u,v) coordinates
-                            float2 uvmin = uvdata[ make_uint2(3,uvID[objID]) ];
+                            float2 uvmin = uvdata[ make_uint2(3,puvID) ];
                             float2 duv;
-                            duv.x = uvdata[ make_uint2(1,uvID[objID]) ].x - uvdata[ make_uint2(0,uvID[objID]) ].x;
-                            duv.y = uvdata[ make_uint2(1,uvID[objID]) ].y - uvdata[ make_uint2(2,uvID[objID]) ].y;
+                            duv.x = uvdata[ make_uint2(1,puvID) ].x - uvdata[ make_uint2(0,puvID) ].x;
+                            duv.y = uvdata[ make_uint2(1,puvID) ].y - uvdata[ make_uint2(2,puvID) ].y;
                             ind = make_uint3( roundf(float(sz.x-1)*(uvmin.x+uv.x*duv.x)), roundf(float(sz.y-1)*(uvmin.y+uv.y*duv.y)), ID );
                         }
                         solid = maskdata[ind];
@@ -144,9 +149,9 @@ RT_PROGRAM void direct_raygen()
                 }
 
                 //calculate rectangle normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m,make_float3(1,0,0));
-                float3 v2 = d_transformPoint(m,make_float3(0,1,0));
+                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
+                float3 v1 = d_transformPoint(m_trans,make_float3(1,0,0));
+                float3 v2 = d_transformPoint(m_trans,make_float3(0,1,0));
 
                 normal = normalize(cross(v1-v0,v2-v0));
 
@@ -163,16 +168,20 @@ RT_PROGRAM void direct_raygen()
                 sp.z = 0;
 
                 //calculate triangle normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m,make_float3(0,1,0));
-                float3 v2 = d_transformPoint(m,make_float3(1,1,0));
+                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
+                float3 v1 = d_transformPoint(m_trans,make_float3(0,1,0));
+                float3 v2 = d_transformPoint(m_trans,make_float3(1,1,0));
 
                 normal = normalize(cross(v1-v0,v2-v1));
 
                 int ID = maskID[objID];
-                if( ID>=0 && primitive_area[UUID]>0 ){//has texture transparency
+                if( ID>=0 && primitive_area[origin_UUID]>0 ){//has texture transparency
 
                     int2 sz = masksize[ID];
+
+                    float2 uv0 = uvdata[ make_uint2(0,puvID) ];
+                    float2 uv1 = uvdata[ make_uint2(1,puvID) ];
+                    float2 uv2 = uvdata[ make_uint2(2,puvID) ];
 
                     float a = v0.x - v1.x, b = v0.x - v2.x, d = v0.x;
                     float e = v0.y - v1.y, f = v0.y - v2.y,  h = v0.y;
@@ -183,7 +192,7 @@ RT_PROGRAM void direct_raygen()
                     while( !solid ){
                         count ++;
 
-                        float3 R = d_transformPoint(m,sp);
+                        float3 R = d_transformPoint(m_trans,sp);
 
                         float c = R.x, g = R.y, k = R.z;
 
@@ -198,10 +207,6 @@ RT_PROGRAM void direct_raygen()
                         float r = r = e * l - h * i;
                         float e2 = a * n + d * q + c * r;
                         float gamma = e2 * inv_denom;
-
-                        float2 uv0 = uvdata[ make_uint2(0,uvID[objID]) ];
-                        float2 uv1 = uvdata[ make_uint2(1,uvID[objID]) ];
-                        float2 uv2 = uvdata[ make_uint2(2,uvID[objID]) ];
 
                         float2 uv = uv0 + beta*(uv1-uv0) + gamma*(uv2-uv0);
 
@@ -234,6 +239,8 @@ RT_PROGRAM void direct_raygen()
                 sp.x = -1.f + 2.f*Rx;
                 sp.y = -1.f + 2.f*Ry;
 
+                float r, p;
+
                 if( sp.x>-sp.y) {
                     if( sp.x > sp.y ){
                         r = sp.x;
@@ -263,9 +270,9 @@ RT_PROGRAM void direct_raygen()
                 sp.z = 0.f;
 
                 //calculate disk normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m,make_float3(1,0,0));
-                float3 v2 = d_transformPoint(m,make_float3(0,1,0));
+                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
+                float3 v1 = d_transformPoint(m_trans,make_float3(1,0,0));
+                float3 v2 = d_transformPoint(m_trans,make_float3(0,1,0));
 
                 normal = normalize(cross(v1-v0,v2-v0));
 
@@ -277,7 +284,7 @@ RT_PROGRAM void direct_raygen()
 
             //translate the ray to the location of the primitive
 
-            float3 ray_origin = d_transformPoint(m,sp);
+            float3 ray_origin = d_transformPoint(m_trans,sp);
 
             //Send a ray toward each source
             for( int rr=0; rr<Nsources; rr++ ){
@@ -317,7 +324,9 @@ RT_PROGRAM void direct_raygen()
 
                 optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, direct_ray_type, 1e-4, ray_magnitude);
 
-                prd.origin_UUID = UUID;
+//                prd.origin_UUID = primitiveID[objID] + jj*NX + ii;
+                prd.origin_UUID = origin_UUID;
+
                 prd.periodic_depth = 0;
 
                 if( dot( ray_direction, normal )>0 ){
@@ -345,46 +354,52 @@ RT_PROGRAM void diffuse_raygen(){
 
     uint objID = launch_offset+launch_index.z;
 
+    uint pID = primitiveID[objID];
+    uint ptype = primitive_type[objID];
+    int puvID = uvID[objID];
+
     //transformation matrix
-    float m[16];
+    float m_trans[16];
     for( uint i=0; i<16; i++ ){
-        m[i] = transform_matrix[ optix::make_uint2(i,objID) ];
+        m_trans[i] = transform_matrix[ optix::make_uint2(i,objID) ];
     }
 
     float3 sp, normal;
     float area;
 
     //looping over sub-patches
-    for( size_t jj=0; jj<object_subdivisions[objID].y; jj++ ){
-        for( size_t ii=0; ii<object_subdivisions[objID].x; ii++ ){
+    int NX = object_subdivisions[objID].x;
+    int NY = object_subdivisions[objID].y;
+    for( int jj=0; jj<NY; jj++ ){
+      for( int ii=0; ii<NX; ii++ ){
 
-            uint UUID = primitiveID[objID] + jj*object_subdivisions[objID].x + ii;
+            uint UUID = pID + jj*NX + ii;
 
             //two random samples [0,1]
             float Rx = rnd(prd.seed);
             float Ry = rnd(prd.seed);
 
-            if( primitive_type[objID]>4 ){
+            if( ptype>4 ){
                 printf("objID = %d\n",objID);
                 printf("Invalid primitive type in diffuse ray launch.\n");
             }
 
-            if( primitive_type[objID] == 0 || primitive_type[objID] == 3 ){ //Patch or Tile
+            if( ptype == 0 || ptype == 3 ){ //Patch or Tile
 
                 //calculate rectangle normal vector (world coordinates)
                 float3 s0 = make_float3(0,0,0);
                 float3 s1 = make_float3(1,0,0);
                 float3 s2 = make_float3(0,1,0);
-                s0 = d_transformPoint(m,s0);
-                s1 = d_transformPoint(m,s1);
-                s2 = d_transformPoint(m,s2);
+                s0 = d_transformPoint(m_trans,s0);
+                s1 = d_transformPoint(m_trans,s1);
+                s2 = d_transformPoint(m_trans,s2);
                 area = primitive_area[UUID];
 
                 normal = normalize(cross(s1-s0,s2-s0));
 
                 // Map sample to rectangle [-0.5,0.5] [-0.5,0.5]
-                sp.x = -0.5f + (ii+Rx)/float(object_subdivisions[objID].x);
-                sp.y = -0.5f + (jj+Ry)/float(object_subdivisions[objID].y);
+                sp.x = -0.5f + (ii+Rx)/float(NX);
+                sp.y = -0.5f + (jj+Ry)/float(NY);
                 sp.z = 0.f;
 
                 int ID = maskID[objID];
@@ -399,13 +414,13 @@ RT_PROGRAM void diffuse_raygen(){
                         count++;
 
                         float2 uv = make_float2( sp.x+0.5f, 1.f-sp.y-0.5f );
-                        if( uvID[objID]==-1 ){//does not have custom (u,v) coordinates
+                        if( puvID==-1 ){//does not have custom (u,v) coordinates
                             ind = make_uint3( roundf(float(sz.x-1)*uv.x), roundf(float(sz.y-1)*uv.y), ID );
                         }else{//has custom (u,v) coordinates
-                            float2 uvmin = uvdata[ make_uint2(3,uvID[objID]) ];
+                            float2 uvmin = uvdata[ make_uint2(3,puvID) ];
                             float2 duv;
-                            duv.x = uvdata[ make_uint2(1,uvID[objID]) ].x - uvdata[ make_uint2(0,uvID[objID]) ].x;
-                            duv.y = uvdata[ make_uint2(1,uvID[objID]) ].y - uvdata[ make_uint2(2,uvID[objID]) ].y;
+                            duv.x = uvdata[ make_uint2(1,puvID) ].x - uvdata[ make_uint2(0,puvID) ].x;
+                            duv.y = uvdata[ make_uint2(1,puvID) ].y - uvdata[ make_uint2(2,puvID) ].y;
                             ind = make_uint3( roundf(float(sz.x-1)*(uvmin.x+uv.x*duv.x)), roundf(float(sz.y-1)*(uvmin.y+uv.y*duv.y)), ID );
                         }
                         solid = maskdata[ind];
@@ -413,8 +428,8 @@ RT_PROGRAM void diffuse_raygen(){
                             if( count>10 ){
                                 break;
                             }
-                            sp.x = -0.5f + (ii+rnd(prd.seed))/float(object_subdivisions[objID].x);
-                            sp.y = -0.5f + (jj+rnd(prd.seed))/float(object_subdivisions[objID].y);
+                            sp.x = -0.5f + (ii+rnd(prd.seed))/float(NX);
+                            sp.y = -0.5f + (jj+rnd(prd.seed))/float(NY);
                         }
                     }
 
@@ -436,9 +451,9 @@ RT_PROGRAM void diffuse_raygen(){
                 area = primitive_area[UUID];
 
                 //calculate triangle normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m,make_float3(0,1,0));
-                float3 v2 = d_transformPoint(m,make_float3(1,1,0));
+                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
+                float3 v1 = d_transformPoint(m_trans,make_float3(0,1,0));
+                float3 v2 = d_transformPoint(m_trans,make_float3(1,1,0));
 
                 normal = normalize(cross(v1-v0,v2-v1));
 
@@ -446,6 +461,10 @@ RT_PROGRAM void diffuse_raygen(){
                 if( ID>=0 ){//has texture transparency
 
                     int2 sz = masksize[ID];
+
+                    float2 uv0 = uvdata[ make_uint2(0,puvID) ];
+                    float2 uv1 = uvdata[ make_uint2(1,puvID) ];
+                    float2 uv2 = uvdata[ make_uint2(2,puvID) ];
 
                     float a = v0.x - v1.x, b = v0.x - v2.x, d = v0.x;
                     float e = v0.y - v1.y, f = v0.y - v2.y,  h = v0.y;
@@ -456,7 +475,7 @@ RT_PROGRAM void diffuse_raygen(){
                     while( !solid ){
                         count++;
 
-                        float3 R = d_transformPoint(m,sp);
+                        float3 R = d_transformPoint(m_trans,sp);
 
                         float c = R.x, g = R.y, k = R.z;
 
@@ -471,10 +490,6 @@ RT_PROGRAM void diffuse_raygen(){
                         float r = r = e * l - h * i;
                         float e2 = a * n + d * q + c * r;
                         float gamma = e2 * inv_denom;
-
-                        float2 uv0 = uvdata[ make_uint2(0,uvID[objID]) ];
-                        float2 uv1 = uvdata[ make_uint2(1,uvID[objID]) ];
-                        float2 uv2 = uvdata[ make_uint2(2,uvID[objID]) ];
 
                         float2 uv = uv0 + beta*(uv1-uv0) + gamma*(uv2-uv0);
 
@@ -499,7 +514,7 @@ RT_PROGRAM void diffuse_raygen(){
                     }
                 }
 
-            }else if( primitive_type[objID] == 2 ){ //Disk
+            }else if( ptype == 2 ){ //Disk
 
                 // Map Sample to disk - from Suffern (2007) "Ray tracing fom the ground up" Chap. 6
 
@@ -539,9 +554,9 @@ RT_PROGRAM void diffuse_raygen(){
                 area = primitive_area[UUID];
 
                 //calculate disk normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m,make_float3(1,0,0));
-                float3 v2 = d_transformPoint(m,make_float3(0,1,0));
+                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
+                float3 v1 = d_transformPoint(m_trans,make_float3(1,0,0));
+                float3 v2 = d_transformPoint(m_trans,make_float3(0,1,0));
                 normal = normalize(cross(v1-v0,v2-v0));
 
             }else if( primitive_type[objID] == 4 ){ //Voxel
@@ -577,7 +592,7 @@ RT_PROGRAM void diffuse_raygen(){
             float3 ray_origin;
             optix::Ray ray;
 
-            if( primitive_type[objID]==4 ){ //voxel
+            if( ptype==4 ){ //voxel
 
                 prd.strength = 0.5f/float(dimx);
                 prd.area = 0.1;
@@ -585,19 +600,13 @@ RT_PROGRAM void diffuse_raygen(){
                 prd.face = 0;
                 prd.periodic_depth = 0;
 
-                ray_origin = d_transformPoint(m,sp);
+                ray_origin = d_transformPoint(m_trans,sp);
 
                 ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
                 rtTrace( top_object, ray, prd);
 
                 ray = optix::make_Ray(ray_origin, -ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
                 rtTrace( top_object, ray, prd);
-
-                if( UUID==0 ){
-                    //rtPrintf("%f,%f,%f;\n",ray_origin.x,ray_origin.y,ray_origin.z);
-                    //rtPrintf("%f,%f,%f;\n",ray_direction.x,ray_direction.y,ray_direction.z);
-                    //rtPrintf("normal: (%f,%f,%f)\n",normal.x,normal.y,normal.z);
-                }
 
             }else{ //not a voxel
 
@@ -610,7 +619,7 @@ RT_PROGRAM void diffuse_raygen(){
                 prd.periodic_depth = 0;
 
                 // ---- "top" surface launch -------
-                ray_origin = d_transformPoint(m,sp);
+                ray_origin = d_transformPoint(m_trans,sp);
                 ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
 
                 prd.face = 1;

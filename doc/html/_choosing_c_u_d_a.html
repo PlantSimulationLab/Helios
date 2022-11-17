@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.50</span>
+   &#160;<span id="projectnumber">v1.2.51</span>
    </div>
   </td>
  </tr>
@@ -72,7 +72,7 @@ $(function() {
 CUDA Version</h1>
 <p>There are three main considerations when choosing your CUDA version:</p>
 <ol type="1">
-<li>GPU compute capability: The compute capability of your GPU is essentially an identifier corresponding to the architecture generation. Older GPUs will have a lower compute capability. You can look up your GPU's compute capability <a href="https://developer.nvidia.com/cuda-gpus">here</a>.</li>
+<li>GPU compute capability: The compute capability of your GPU is essentially an identifier corresponding to the architecture generation. Older GPUs will have a lower compute capability. You can look up your GPU's compute capability <a href="https://developer.nvidia.com/cuda-gpus">here</a>. You need a compute capability of 3.5 or higher to build Helios.</li>
 <li>C++ compiler version: Only a certain range of compiler versions are supported for a given CUDA version. The procedure for looking up your compiler version is different for different operating systems, and is described below.</li>
 </ol>
 <p>The system requirements for any CUDA version can be found in the release notes, which is both packaged with the CUDA toolkit and can be found on the page where you download CUDA.</p>
@@ -81,11 +81,11 @@ CUDA Version</h1>
 <tr>
 <th>Operating System</th><th>Compute capability</th><th>Recomm. Compiler</th><th>Recomm. CUDA</th><th>Use legacy OptiX? </th></tr>
 <tr>
-<td rowspan="2">Windows</td><td>3.0-3.5</td><td rowspan="2">Visual Studio 2019</td><td>10.2</td><td>Yes </td></tr>
+<td rowspan="2">Windows</td><td>3.5</td><td>Visual Studio 2019</td><td>10.2</td><td>Yes </td></tr>
 <tr>
-<td>5.0+</td><td>Latest</td><td>No </td></tr>
+<td>5.0+</td><td>Visual Studio 2022</td><td>Latest</td><td>No </td></tr>
 <tr>
-<td rowspan="2">Linux</td><td>3.0-3.5</td><td>gcc/g++ 6.0-8.0</td><td>10.2</td><td>Yes </td></tr>
+<td rowspan="2">Linux</td><td>3.5</td><td>gcc/g++ 6.0-8.0</td><td>10.2</td><td>Yes </td></tr>
 <tr>
 <td>5.0+</td><td>gcc/g++ 7.0-11.0</td><td>Latest</td><td>No </td></tr>
 </table>
