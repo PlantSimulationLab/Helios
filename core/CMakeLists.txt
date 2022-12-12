@@ -11,23 +11,20 @@ endif()
 add_library( helios STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/Context.cpp;${CMAKE_CURRENT_SOURCE_DIR}/src/global.cpp;${CMAKE_CURRENT_SOURCE_DIR}/src/selfTest.cpp;${CMAKE_CURRENT_SOURCE_DIR}/src/pugixml.cpp )
 
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib")
-add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib" "${CMAKE_BINARY_DIR}/lib" )
+add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib" "${CMAKE_BINARY_DIR}/lib/zlib" )
 target_link_libraries( zlibstatic )
 
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/libpng")
-add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/libpng" "${CMAKE_BINARY_DIR}/lib" )
+add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/libpng" "${CMAKE_BINARY_DIR}/lib/libpng" )
 add_dependencies( png_static zlibstatic )
 
 target_link_libraries( helios png_static )
-#target_link_libraries( helios_module png_static )
-#target_link_libraries( helios_shared png_static )
 
-message("bin dir ${CMAKE_BINARY_DIR}")
-include_directories("lib/libjpeg-9a")
-include_directories("${CMAKE_BINARY_DIR}/lib/lib/libjpeg-9a")
-add_subdirectory("lib/libjpeg-9a")
+include_directories("${CMAKE_BINARY_DIR}/lib/libjpeg-9a;${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a")
+add_subdirectory("lib/libjpeg-9a" "${CMAKE_BINARY_DIR}/lib/libjpeg-9a" )
 target_link_libraries( helios jpeg )
 
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/images" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
+file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/models" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 
 set( PLUGIN_INCLUDE_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/include; PARENT_SCOPE )

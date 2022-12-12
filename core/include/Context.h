@@ -4921,10 +4921,11 @@ public:
      * \param[in] "filename" name of ply file.
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
+     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). It is assumed by default that the y-axis is upward ("YUP"), which is common in computer graphics applications.
+     * \param[in] "silent" If set to true, output messaged will be disabled.
      * \note Assumes default color of blue if no colors are specified in the .ply file
-     * \ingroup context
      */
-    std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height );
+    std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const std::string &upaxis="YUP", bool silent=false );
     
     //! Load geometry contained in a Stanford polygon file (.ply)
     /**
@@ -4932,10 +4933,11 @@ public:
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift).
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "rotation" Spherical rotation of PLY object about origin
+     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). It is assumed by default that the y-axis is upward ("YUP"), which is common in computer graphics applications.
+     * \param[in] "silent" If set to true, output messaged will be disabled
      * \note Assumes default color of blue if no colors are specified in the .ply file
-     * \ingroup context
      */
-    std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation );
+    std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const std::string &upaxis="YUP", bool silent=false );
     
     //! Load geometry contained in a Stanford polygon file (.ply)
     /**
@@ -4943,9 +4945,10 @@ public:
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     * \ingroup context
+     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). It is assumed by default that the y-axis is upward ("YUP"), which is common in computer graphics applications.
+     * \param[in] "silent" If set to true, output messaged will be disabled
      */
-    std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color );
+    std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
     
     //! Load geometry contained in a Stanford polygon file (.ply)
     /**
@@ -4954,9 +4957,10 @@ public:
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     * \ingroup context
+     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). It is assumed by default that the y-axis is upward ("YUP"), which is common in computer graphics applications.
+     * \param[in] "silent" If set to true, output messaged will be disabled
      */
-    std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color );
+    std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
     
     //! Write geometry in the Context to a Stanford polygon file (.ply)
     /**
@@ -5287,7 +5291,62 @@ public:
       * \param[in] "UUIDs" Universal unique identifiers of primitives
       * \return Sum of primitive area
       */
-      float sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const;
+  float sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const;
+
+  //! Filter a set of primitives based on their primitive data and a condition and float value
+  /**
+   * \param[in] "UUIDs" Universal unique identifiers of primitives to be considered.
+   * \param[in] "primitive_data_label" Name of primitive data.
+   * \param[in] "filter_value" Value to use as filter.
+   * \param[in] "comparator" Operator to use for filter comparison. Valid comparators are '==', '>', '\<', '>=','\<='.
+   * \return Set of UUIDs for primitives with primitive data meeting the condition of 'primitive_data' 'comparator' 'filter_value'.
+   * \note If primitive data does not exist, or primitive data does not have type of 'float', the primitive is excluded.
+   */
+  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, float filter_value, const std::string &comparator );
+
+  //! Filter a set of primitives based on their primitive data and a condition and double value
+  /**
+   * \param[in] "UUIDs" Universal unique identifiers of primitives to be considered.
+   * \param[in] "primitive_data_label" Name of primitive data.
+   * \param[in] "filter_value" Value to use as filter.
+   * \param[in] "comparator" Operator to use for filter comparison. Valid comparators are '==', '>', '\<', '>=','\<='.
+   * \return Set of UUIDs for primitives with primitive data meeting the condition of 'primitive_data' 'comparator' 'filter_value'.
+   * \note If primitive data does not exist, or primitive data does not have type of 'double', the primitive is excluded.
+   */
+  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, double filter_value, const std::string &comparator );
+
+
+  //! Filter a set of primitives based on their primitive data and a condition and int value
+  /**
+   * \param[in] "UUIDs" Universal unique identifiers of primitives to be considered.
+   * \param[in] "primitive_data_label" Name of primitive data.
+   * \param[in] "filter_value" Value to use as filter.
+   * \param[in] "comparator" Operator to use for filter comparison. Valid comparators are '==', '>', '\<', '>=','\<='.
+   * \return Set of UUIDs for primitives with primitive data meeting the condition of 'primitive_data' 'comparator' 'filter_value'.
+   * \note If primitive data does not exist, or primitive data does not have type of 'int', the primitive is excluded.
+   */
+  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, int filter_value, const std::string &comparator );
+
+  //! Filter a set of primitives based on their primitive data and a condition and uint value
+  /**
+   * \param[in] "UUIDs" Universal unique identifiers of primitives to be considered.
+   * \param[in] "primitive_data_label" Name of primitive data.
+   * \param[in] "filter_value" Value to use as filter.
+   * \param[in] "comparator" Operator to use for filter comparison. Valid comparators are '==', '>', '\<', '>=','\<='.
+   * \return Set of UUIDs for primitives with primitive data meeting the condition of 'primitive_data' 'comparator' 'filter_value'.
+   * \note If primitive data does not exist, or primitive data does not have type of 'uint', the primitive is excluded.
+   */
+  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, uint filter_value, const std::string &comparator );
+
+  //! Get set of primitives whose primitive data matches a given string
+  /**
+   * \param[in] "UUIDs" Universal unique identifiers of primitives to be considered.
+   * \param[in] "primitive_data_label" Name of primitive data.
+   * \param[in] "filter_value" String to use as filter.
+   * \return Set of UUIDs for primitives with primitive data matching the string 'filter_value'.
+   * \note If primitive data does not exist, or primitive data does not have type of 'std::string', the primitive is excluded.
+   */
+  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, const std::string &filter_value );
     
 };
 

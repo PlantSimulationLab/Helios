@@ -730,7 +730,7 @@ helios::int3 AerialLiDARcloud::gridindex2ijk( const int index ) const{
   }else{
 
     int k=floor(double(index)/double(gridresolution.x)/double(gridresolution.y));
-    int j=floor((double(index)-double(k)*double(gridresolution.x)*double(gridresolution.y))/double(gridresolution.y));
+    int j=floor((double(index)-double(k)*double(gridresolution.x)*double(gridresolution.y))/double(gridresolution.x));
     int i=index-k*gridresolution.x*gridresolution.y-j*gridresolution.x;
 
     if( i>=0 && i<gridresolution.x && j>=0 && j<gridresolution.y && k>=0 && k<gridresolution.z ){

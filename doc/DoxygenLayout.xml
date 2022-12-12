@@ -6,10 +6,9 @@
     <tab type="usergroup" visible="yes" title="User's Guide" intro="">
       <tab type="user" visible="yes" url="@ref Overview" title="Overview"/>
       <tab type="user" visible="yes" url="@ref DependentSoftware" title="Dependent Packages"/>
-      <tab type="user" visible="yes" url="@ref Tutorials" title="Tutorials"/>
       <tab type="user" visible="yes" url="@ref API" title="Using the Helios API"/>
       <tab type="user" visible="yes" url="@ref IO" title="File I/O"/>
-      <tab type="user" visible="yes" url="@ref Plugins" title="Writing Plugins"/>
+      <tab type="user" visible="yes" url="@ref Tutorials" title="Tutorials"/>
       </tab>
     <tab type="usergroup" visible="yes" url="@ref PlugIns" title="Plug-ins" intro=""/>
     <tab type="pages" visible="yes" title="" intro=""/>

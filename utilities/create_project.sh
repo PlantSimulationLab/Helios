@@ -67,19 +67,7 @@ else
     echo -e '" )\n\n' >> CMakeLists.txt
 fi
 
-cat "${UTILPATH}/CMakeLists_main_v1.6" >> CMakeLists.txt
-
-#echo -e '#-------- MAIN CODE (Dont Modify) ---------#\ncmake_minimum_required(VERSION 2.4)\nproject(helios)' >> CMakeLists.txt
-#
-#echo -e 'SET(CMAKE_CXX_COMPILER_ID "GNU")\nSET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11")\nSET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )' >> CMakeLists.txt
-#
-#echo -e 'if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)\nset(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")\nendif()' >> CMakeLists.txt
-#
-#echo -e 'set( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib )\nadd_executable( ${EXECUTABLE_NAME} ${SOURCE_FILES} )\nadd_subdirectory( ${BASE_DIRECTORY}/core "lib" )\ntarget_link_libraries( ${EXECUTABLE_NAME} helios)' >> CMakeLists.txt
-#
-#echo -e 'LIST(LENGTH PLUGINS PLUGIN_COUNT)\nmessage("-- Loading ${PLUGIN_COUNT} plug-ins")\nforeach(PLUGIN ${PLUGINS})\n\tmessage("-- loading plug-in ${PLUGIN}")\n\tif( ${PLUGIN} STREQUAL ${EXECUTABLE_NAME} )\n\t\tmessage( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )\n\tendif()\n\tadd_subdirectory( ${BASE_DIRECTORY}/plugins/${PLUGIN} "plugins/${PLUGIN}" )\n\ttarget_link_libraries( ${EXECUTABLE_NAME} ${PLUGIN} )\nendforeach(PLUGIN)' >> CMakeLists.txt
-#
-#echo -e 'include_directories( "${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIRECTORY}" )\n' >> CMakeLists.txt
+echo -e '#-------- DO NOT MODIFY ---------#\ninclude( "${BASE_DIRECTORY}/core/CMake_project.txt" )\n' >> CMakeLists.txt
 
 #----- build the main.cpp file ------#
 

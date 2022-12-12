@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.51</span>
+   &#160;<span id="projectnumber">v1.2.52</span>
    </div>
   </td>
  </tr>
@@ -143,8 +143,8 @@ Main and auxiliary .cpp files</h2>
 <p>Projects using the Helios API must have a file containing a main() program, and can have any number of complimentary routines and files. Generally, the file containing the main program will include the <a class="el" href="_context_8h.html">Context.h</a> header file, and declare the Context class (see Sect. <a class="el" href="_a_p_i.html#ContextSect">Context</a> below).</p>
 <h2><a class="anchor" id="CMake"></a>
 CMakeLists.txt File</h2>
-<p>Projects that use the Helios API are typically built using a CMakeLists.txt file. A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below. Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference). The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in).</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> # Helios standard CMakeLists.txt file version 1.4
+<p>Projects that use the Helios API are typically built using a CMakeLists.txt file. A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below. Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference). The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> # Helios standard CMakeLists.txt file version 1.7
   #-------- USER INPUTS ---------#
 
   #provide the path to Helios base directory, either as an absolut path or a path relative to the location of this file
@@ -159,41 +159,8 @@ CMakeLists.txt File</h2>
   #specify which plug-ins to use (separate plug-in names with semicolon)
   set( PLUGINS "visualizer" )
 
-  #-------- MAIN CODE (Don't Modify) ---------#
-
-  cmake_minimum_required(VERSION 2.4)
-  project(helios)
-  if ( WIN32 )
-      SET(CMAKE_C_COMPILER_ID "MSVC")
-      SET(CMAKE_CXX_COMPILER_ID "MSVC")
-      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
-  else()
-      SET(CMAKE_C_COMPILER_ID "GNU")
-      SET(CMAKE_CXX_COMPILER_ID "GNU")
-      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-      if( CMAKE_BUILD_TYPE STREQUAL Debug )
-          SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )
-          SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-      endif()
-  endif()
-  if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
-      set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
-  endif()
-  set( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib )
-  add_executable( ${EXECUTABLE_NAME} ${SOURCE_FILES} )
-  add_subdirectory( ${BASE_DIRECTORY}/core "lib" )
-  target_link_libraries( ${EXECUTABLE_NAME} helios)
-  LIST(LENGTH PLUGINS PLUGIN_COUNT)
-  message("-- Loading ${PLUGIN_COUNT} plug-ins")
-  foreach(PLUGIN ${PLUGINS})
-       message("-- loading plug-in ${PLUGIN}")
-       if( ${PLUGIN} STREQUAL ${EXECUTABLE_NAME} )
-        message( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )
-      endif()
-      add_subdirectory( ${BASE_DIRECTORY}/plugins/${PLUGIN} "plugins/${PLUGIN}" )
-      target_link_libraries( ${EXECUTABLE_NAME} ${PLUGIN} )
-  endforeach(PLUGIN)
-  include_directories( "${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIRECTORY}" )
+  #-------- DO NOT MODIFY ---------#
+  include( "${BASE_DIRECTORY}/core/CMake_project.txt" )
   </code></pre></div><p>The easiest way to compile the code is by using an IDE such as CLion, which is described in detail on the page <a class="el" href="_c_lion_i_d_e.html">Using the CLion IDE with Helios</a>.</p>
 <p>To build the code from the command line based on the CMakeLists.txt file, which creates a makefile, simply run the command 'cmake', followed by the path to the CMakeLists.txt file. If, as in the examples above, you are currently in the build directory and your CMakeLists.txt file is located one directory up, the CMake build is accomplished through:</p>
 <div style="padding:12px;background-color:#D0D0D0 ;line-height:1.4;"> <code> $ cmake .. </code> </div><p>The code can then be compiled by issuing the 'make' command from the build directory, which will produce an executable in the build directory.</p>
@@ -355,7 +322,7 @@ R-G-B(-A) color vectors</h2>
 </table>
 <p>Note that the above colors can be directly passed to <a class="el" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor</a> to specify an alpha (transparency) value:</p>
 <div style="padding:2px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><div class="fragment"><div class="line">RGBAcolor red_trans = <a class="code" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor</a>( RGB::red, 0.5 );</div>
-<div class="ttc" id="agroup__vectors_html_gacc4916e29a0757214b7c558c6e5f7cd3"><div class="ttname"><a href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">helios::make_RGBAcolor</a></div><div class="ttdeci">RGBAcolor make_RGBAcolor(float r, float g, float b, float a)</div><div class="ttdoc">Make an RGBAcolor vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01044">helios_vector_types.h:1044</a></div></div>
+<div class="ttc" id="agroup__vectors_html_gacc4916e29a0757214b7c558c6e5f7cd3"><div class="ttname"><a href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">helios::make_RGBAcolor</a></div><div class="ttdeci">RGBAcolor make_RGBAcolor(float r, float g, float b, float a)</div><div class="ttdoc">Make an RGBAcolor vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01052">helios_vector_types.h:1052</a></div></div>
 </div><!-- fragment --></pre> </div><h1><a class="anchor" id="Coord"></a>
 Coordinate System</h1>
 <p>Helios uses a right-handed Cartesian coordinate system. (x,y,z) coordinates are typically specified using the 'vec3' data structure (see <a class="el" href="_a_p_i.html#VecTypes">Vector Types</a>). <br  />
@@ -457,7 +424,7 @@ Patch geometric primitive.</div></div>
 <div class="line"> vec2 size = <a class="code" href="group__vectors.html#ga34e381a53377fbe8682d89d8a9c24cc5">make_vec2</a>(1,1);</div>
 <div class="line"> SphericalCoord rotation = <a class="code" href="helios__vector__types_8h.html#a3251464aab839c05b993a999226bb2a1">make_SphericalCoord</a>(0.25*M_PI,0.5*M_PI);</div>
 <div class="line"> context.addPatch( center, size, rotation );</div>
-<div class="ttc" id="ahelios__vector__types_8h_html_a3251464aab839c05b993a999226bb2a1"><div class="ttname"><a href="helios__vector__types_8h.html#a3251464aab839c05b993a999226bb2a1">helios::make_SphericalCoord</a></div><div class="ttdeci">SphericalCoord make_SphericalCoord(float a_elevation, float a_azimuth)</div><div class="ttdoc">Make a SphericalCoord by specifying elevation and azimuth.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01374">helios_vector_types.h:1374</a></div></div>
+<div class="ttc" id="ahelios__vector__types_8h_html_a3251464aab839c05b993a999226bb2a1"><div class="ttname"><a href="helios__vector__types_8h.html#a3251464aab839c05b993a999226bb2a1">helios::make_SphericalCoord</a></div><div class="ttdeci">SphericalCoord make_SphericalCoord(float a_elevation, float a_azimuth)</div><div class="ttdoc">Make a SphericalCoord by specifying elevation and azimuth.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01386">helios_vector_types.h:1386</a></div></div>
 </div><!-- fragment --></pre> </div><p>This will first rotate the patch by 0.25 <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/> rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/> rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
 <h3><a class="anchor" id="AddingTriangle"></a>
 Adding Triangles</h3>
@@ -1243,8 +1210,8 @@ Data Timeseries</h2>
 <div class="line">   }</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="agroup__vectors_html_ga7a29e9916b97d9f7533e87e7125e5b66"><div class="ttname"><a href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66">helios::make_Time</a></div><div class="ttdeci">Time make_Time(int hour, int minute)</div><div class="ttdoc">Make a Time vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01299">helios_vector_types.h:1299</a></div></div>
-<div class="ttc" id="agroup__vectors_html_gad4c811a7a39319de43f58c93e14ecda6"><div class="ttname"><a href="group__vectors.html#gad4c811a7a39319de43f58c93e14ecda6">helios::make_Date</a></div><div class="ttdeci">Date make_Date(int day, int month, int year)</div><div class="ttdoc">Make a Date vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01126">helios_vector_types.h:1126</a></div></div>
+<div class="ttc" id="agroup__vectors_html_ga7a29e9916b97d9f7533e87e7125e5b66"><div class="ttname"><a href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66">helios::make_Time</a></div><div class="ttdeci">Time make_Time(int hour, int minute)</div><div class="ttdoc">Make a Time vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01311">helios_vector_types.h:1311</a></div></div>
+<div class="ttc" id="agroup__vectors_html_gad4c811a7a39319de43f58c93e14ecda6"><div class="ttname"><a href="group__vectors.html#gad4c811a7a39319de43f58c93e14ecda6">helios::make_Date</a></div><div class="ttdeci">Date make_Date(int day, int month, int year)</div><div class="ttdoc">Make a Date vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01138">helios_vector_types.h:1138</a></div></div>
 </div><!-- fragment --></pre> </div><p>Typically, data is not entered manually, but rather through an XML file (see Reading XML Files for information).</p>
 <p>It is often necessary to get the number of data points in a given timeseries, which can be accomplished with the command:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><div class="fragment"><div class="line">uint N = context.getTimeseriesLength( <span class="stringliteral">&quot;temperature&quot;</span> );</div>

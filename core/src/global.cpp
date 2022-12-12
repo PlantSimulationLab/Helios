@@ -704,6 +704,65 @@ RGBAcolor helios::string2RGBcolor( const char* str ){
 
 }
 
+bool helios::parse_float( const std::string &input_string, float &converted_float ){
+
+  try {
+    size_t read= 0;
+    converted_float = std::stof(input_string, &read);
+    if (input_string.size() != read)
+      return false;
+  } catch (std::invalid_argument) {
+    return false;
+  }
+  return true;
+
+}
+
+bool helios::parse_double( const std::string &input_string, double &converted_double ){
+
+  try {
+    size_t read= 0;
+    converted_double = std::stod(input_string, &read);
+    if (input_string.size() != read)
+      return false;
+  } catch (std::invalid_argument) {
+    return false;
+  }
+  return true;
+
+}
+
+bool helios::parse_int( const std::string &input_string, int &converted_int ){
+
+  try {
+    size_t read= 0;
+    converted_int = std::stoi(input_string, &read);
+    if (input_string.size() != read)
+      return false;
+  } catch (std::invalid_argument) {
+    return false;
+  }
+  return true;
+
+}
+
+bool helios::parse_uint( const std::string &input_string, uint &converted_uint ){
+
+  try {
+    size_t read= 0;
+    int converted_int = std::stoi(input_string, &read);
+    if (input_string.size() != read || converted_int<0) {
+      return false;
+    }else{
+      converted_uint = (uint)converted_int;
+    }
+  } catch (std::invalid_argument) {
+    return false;
+  }
+  return true;
+
+}
+
 
 std::string helios::deblank(const char* input)
 {

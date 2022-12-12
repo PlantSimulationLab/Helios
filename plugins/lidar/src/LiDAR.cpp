@@ -19,23 +19,45 @@
 using namespace std;
 using namespace helios;
 
-ScanMetadata::ScanMetadata( const helios::vec3 __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax, const float __exitDiameter, const float __beamDivergence, const std::vector<std::string> __columnFormat ){
+ScanMetadata::ScanMetadata(){
 
-  //Copy arguments into structure variables
-  origin = __origin;
-  Ntheta = __Ntheta;
-  thetaMin = __thetaMin;
-  thetaMax = __thetaMax;
-  Nphi = __Nphi;
-  phiMin = __phiMin;
-  phiMax = __phiMax;
-  exitDiameter = __exitDiameter;
-  beamDivergence = __beamDivergence;
-  columnFormat = __columnFormat;
+  origin = make_vec3(0,0,0);
+  Ntheta = 100;
+  thetaMin = 0;
+  thetaMax = M_PI;
+  Nphi = 200;
+  phiMin = 0;
+  phiMax = 2.f*M_PI;
+  exitDiameter = 0;
+  beamDivergence = 0;
+  columnFormat = {"x","y","z"};
+
+  Nhits = 0;
+  data_file = "";
 
 }
 
-helios::SphericalCoord ScanMetadata::rc2direction( const uint row, const uint column ) const{
+ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence,
+                           const vector<string> &a_columnFormat){
+
+  //Copy arguments into structure variables
+  origin = a_origin;
+  Ntheta = a_Ntheta;
+  thetaMin = a_thetaMin;
+  thetaMax = a_thetaMax;
+  Nphi = a_Nphi;
+  phiMin = a_phiMin;
+  phiMax = a_phiMax;
+  exitDiameter = a_exitDiameter;
+  beamDivergence = a_beamDivergence;
+  columnFormat = a_columnFormat;
+
+  Nhits = 0;
+  data_file = "";
+
+}
+
+helios::SphericalCoord ScanMetadata::rc2direction(uint row, uint column ) const{
 
   float zenith = thetaMin + (thetaMax-thetaMin)/float(Ntheta)*float(row);
   float elevation = 0.5f*M_PI - zenith;
@@ -44,13 +66,13 @@ helios::SphericalCoord ScanMetadata::rc2direction( const uint row, const uint co
 
 };
 
-helios::int2 ScanMetadata::direction2rc( const helios::SphericalCoord direction ) const{
+helios::int2 ScanMetadata::direction2rc(const SphericalCoord &direction ) const{
 
   float theta = direction.zenith;
   float phi = direction.azimuth;
 
-  int row = round((theta-thetaMin)/(thetaMax-thetaMin)*float(Ntheta));
-  int column = round(fabs(phi-phiMin)/(phiMax-phiMin)*float(Nphi));
+  int row = std::lround((theta-thetaMin)/(thetaMax-thetaMin)*float(Ntheta));
+  int column = std::lround(fabs(phi-phiMin)/(phiMax-phiMin)*float(Nphi));
 
   if( row==-1 ){
     row = 0;
@@ -70,8 +92,7 @@ helios::int2 ScanMetadata::direction2rc( const helios::SphericalCoord direction 
 
 };
 
-
-LiDARcloud::LiDARcloud(){
+LiDARcloud::LiDARcloud() {
 
   Nhits=0;
   hitgridcellcomputed = false;
@@ -82,17 +103,17 @@ LiDARcloud::LiDARcloud(){
 
 LiDARcloud::~LiDARcloud( void )= default;
 
-void LiDARcloud::disableMessages(){
+void LiDARcloud::disableMessages() {
   printmessages = false;
 }
 
-void LiDARcloud::enableMessages(){
+void LiDARcloud::enableMessages() {
   printmessages = true;
 }
 
-void LiDARcloud::validateRayDirections(){
+void LiDARcloud::validateRayDirections() {
 
-  for( uint s=0; s<getScanCount(); s++ ){
+  for( uint s=0; s< getScanCount(); s++ ){
 
     for( int j=0; j<getScanSizePhi(s); j++ ){
       for( int i=0; i<getScanSizeTheta(s); i++ ){
@@ -117,11 +138,11 @@ void LiDARcloud::validateRayDirections(){
 
 }
 
-uint LiDARcloud::getScanCount( void ){
+uint LiDARcloud::getScanCount() {
   return scans.size();
 }
 
-void LiDARcloud::addScan( ScanMetadata newscan ){
+void LiDARcloud::addScan( ScanMetadata &newscan ){
 
     float epsilon = 1e-5;
 
@@ -150,7 +171,7 @@ void LiDARcloud::addScan( ScanMetadata newscan ){
   scans.push_back(newscan);
 }
 
-void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction ){
+void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const SphericalCoord &direction ){
 
   //default color
   RGBcolor color = make_RGBcolor(1,0,0);
@@ -162,7 +183,9 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 
 }
 
-void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const std::map<std::string, double> data ){
+void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz,
+                             const SphericalCoord &direction,
+                             const map<string, double> &data ){
 
   //default color
   RGBcolor color = make_RGBcolor(1,0,0);
@@ -171,7 +194,9 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 
 }
 
-void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const helios::RGBcolor color ){
+void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz,
+                             const SphericalCoord &direction,
+                             const RGBcolor &color ){
 
   //empty data
   std::map<std::string, double> data;
@@ -180,7 +205,10 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 
 }
 
-void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::SphericalCoord direction, const helios::RGBcolor color, const std::map<std::string, double> data ){
+void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz,
+                             const SphericalCoord &direction,
+                             const RGBcolor &color,
+                             const map<string, double> &data ){
 
   //error checking
   if( scanID>=scans.size() ){
@@ -197,7 +225,9 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 
 }
 
-void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const helios::int2 row_column, const helios::RGBcolor color, const std::map<std::string, double> data ){
+void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz,
+                             const int2 &row_column, const RGBcolor &color,
+                             const map<string, double> &data ){
 
   ScanMetadata scan = scans.at(scanID);
   SphericalCoord direction = scan.rc2direction( row_column.x, row_column.y );
@@ -208,7 +238,7 @@ void LiDARcloud::addHitPoint( const uint scanID, const helios::vec3 xyz, const h
 
 }
 
-void LiDARcloud::deleteHitPoint( const uint index ){
+void LiDARcloud::deleteHitPoint(uint index ){
 
   if( index>=hits.size() ){
     cerr << "WARNING (deleteHitPoint): Hit point #" << index << " cannot be deleted from the scan because there have only been " << hits.size() << " hit points added." << endl;
@@ -225,11 +255,11 @@ void LiDARcloud::deleteHitPoint( const uint index ){
 
 }
 
-uint LiDARcloud::getHitCount( void ) const{
+uint LiDARcloud::getHitCount() const{
   return hits.size();
 }
 
-helios::vec3 LiDARcloud::getScanOrigin( const uint scanID ) const{
+helios::vec3 LiDARcloud::getScanOrigin(uint scanID ) const{
   if( scanID>=scans.size() ){
     cerr << "ERROR (getScanOrigin): Cannot get origin of scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
     exit(EXIT_FAILURE);
@@ -237,7 +267,7 @@ helios::vec3 LiDARcloud::getScanOrigin( const uint scanID ) const{
   return scans.at(scanID).origin;
 }
 
-uint LiDARcloud::getScanSizeTheta( const uint scanID ) const{
+uint LiDARcloud::getScanSizeTheta(uint scanID ) const{
   if( scanID>=scans.size() ){
     cerr << "ERROR (getScanSizeTheta): Cannot get theta size for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
     exit(EXIT_FAILURE);
@@ -245,7 +275,7 @@ uint LiDARcloud::getScanSizeTheta( const uint scanID ) const{
   return scans.at(scanID).Ntheta;
 }
 
-uint LiDARcloud::getScanSizePhi( const uint scanID ) const{
+uint LiDARcloud::getScanSizePhi(uint scanID ) const{
   if( scanID>=scans.size() ){
     cerr << "ERROR (getScanSizePhi): Cannot get phi size for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
     exit(EXIT_FAILURE);
@@ -253,7 +283,7 @@ uint LiDARcloud::getScanSizePhi( const uint scanID ) const{
   return scans.at(scanID).Nphi;
 }
 
-helios::vec2 LiDARcloud::getScanRangeTheta( const uint scanID ) const{
+helios::vec2 LiDARcloud::getScanRangeTheta(uint scanID ) const{
   if( scanID>=scans.size() ){
     cerr << "ERROR (getScanRangeTheta): Cannot get theta range for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
     exit(EXIT_FAILURE);
@@ -261,7 +291,7 @@ helios::vec2 LiDARcloud::getScanRangeTheta( const uint scanID ) const{
   return helios::make_vec2(scans.at(scanID).thetaMin,scans.at(scanID).thetaMax);
 }
 
-helios::vec2 LiDARcloud::getScanRangePhi( const uint scanID ) const{
+helios::vec2 LiDARcloud::getScanRangePhi(uint scanID ) const{
   if( scanID>=scans.size() ){
     cerr << "ERROR (getScanRangePhi): Cannot get phi range for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
     exit(EXIT_FAILURE);
@@ -269,7 +299,7 @@ helios::vec2 LiDARcloud::getScanRangePhi( const uint scanID ) const{
   return helios::make_vec2(scans.at(scanID).phiMin,scans.at(scanID).phiMax);
 }
 
-float LiDARcloud::getScanBeamExitDiameter( const uint scanID ) const{
+float LiDARcloud::getScanBeamExitDiameter(uint scanID ) const{
   if( scanID>=scans.size() ){
     cerr << "ERROR (getScanBeamExitDiameter): Cannot get exit diameter for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
     exit(EXIT_FAILURE);
@@ -277,7 +307,7 @@ float LiDARcloud::getScanBeamExitDiameter( const uint scanID ) const{
   return scans.at(scanID).exitDiameter;
 }
 
-float LiDARcloud::getScanBeamDivergence( const uint scanID ) const{
+float LiDARcloud::getScanBeamDivergence(uint scanID ) const{
   if( scanID>=scans.size() ){
     cerr << "ERROR (getScanBeamDivergence): Cannot get beam divergence for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
     exit(EXIT_FAILURE);
@@ -285,7 +315,7 @@ float LiDARcloud::getScanBeamDivergence( const uint scanID ) const{
   return scans.at(scanID).beamDivergence;
 }
 
-std::vector<std::string> LiDARcloud::getScanColumnFormat( const uint scanID ) const{
+std::vector<std::string> LiDARcloud::getScanColumnFormat(uint scanID ) const{
   if( scanID>=scans.size() ){
     cerr << "ERROR (getScanColumnFormat): Cannot get column format for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
     exit(EXIT_FAILURE);
@@ -304,7 +334,7 @@ helios::vec3 LiDARcloud::getHitXYZ( const uint index ) const{
 
 }
 
-helios::SphericalCoord LiDARcloud::getHitRaydir( const uint index ) const{
+helios::SphericalCoord LiDARcloud::getHitRaydir(uint index ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitRaydir): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -318,7 +348,7 @@ helios::SphericalCoord LiDARcloud::getHitRaydir( const uint index ) const{
 
 }
 
-void LiDARcloud::setHitData( const uint index, const char* label, const double value ){
+void LiDARcloud::setHitData(uint index, const char* label, double value ){
 
   if( index>=hits.size() ){
     cerr << "ERROR (setHitScalarData): Hit point index out of bounds. Tried to set hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -329,7 +359,7 @@ void LiDARcloud::setHitData( const uint index, const char* label, const double v
 
 }
 
-double LiDARcloud::getHitData( const uint index, const char* label ) const{
+double LiDARcloud::getHitData(uint index, const char* label ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitData): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -346,7 +376,7 @@ double LiDARcloud::getHitData( const uint index, const char* label ) const{
 
 }
 
-bool LiDARcloud::doesHitDataExist( const uint index, const char* label ) const{
+bool LiDARcloud::doesHitDataExist(uint index, const char* label ) const{
 
   if( index>=hits.size() ){
     return false;
@@ -361,7 +391,7 @@ bool LiDARcloud::doesHitDataExist( const uint index, const char* label ) const{
 
 }
 
-RGBcolor LiDARcloud::getHitColor( const uint index ) const{
+RGBcolor LiDARcloud::getHitColor(uint index ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitColor): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -372,7 +402,7 @@ RGBcolor LiDARcloud::getHitColor( const uint index ) const{
 
 }
 
-int LiDARcloud::getHitScanID( const uint index ) const{
+int LiDARcloud::getHitScanID(uint index ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitColor): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -383,7 +413,7 @@ int LiDARcloud::getHitScanID( const uint index ) const{
 
 }
 
-int LiDARcloud::getHitIndex( const uint scanID, const uint row, const uint column ) const{
+int LiDARcloud::getHitIndex(uint scanID, uint row, uint column ) const{
 
   if( scanID>=scans.size() ){
     cerr << "ERROR (deleteHitPoint): Hit point cannot be deleted from scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
@@ -400,7 +430,7 @@ int LiDARcloud::getHitIndex( const uint scanID, const uint row, const uint colum
   return hit_tables.at(scanID).get(row,column);
 }
 
-int LiDARcloud::getHitGridCell( const uint index ) const{
+int LiDARcloud::getHitGridCell(uint index ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitGridCell): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -414,7 +444,7 @@ int LiDARcloud::getHitGridCell( const uint index ) const{
 
 }
 
-void LiDARcloud::setHitGridCell( const uint index, const int cell ){
+void LiDARcloud::setHitGridCell(uint index, int cell ){
 
   if( index>=hits.size() ){
     cerr << "ERROR (setHitGridCell): Hit point index out of bounds. Tried to set hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -425,49 +455,83 @@ void LiDARcloud::setHitGridCell( const uint index, const int cell ){
 
 }
 
-void LiDARcloud::coordinateShift( const helios::vec3 shift ){
+void LiDARcloud::coordinateShift(const vec3 &shift ){
 
-  for( uint s=0; s<scans.size(); s++ ){
-    scans.at(s).origin = scans.at(s).origin + shift;
+  for( auto & scan : scans){
+    scan.origin = scan.origin + shift;
   }
 
-  for( uint r=0; r<hits.size(); r++ ){
-    hits.at(r).position = hits.at(r).position + shift;
-  }
-
-}
-
-void LiDARcloud::coordinateRotation( const SphericalCoord rotation ){
-
-  for( uint s=0; s<scans.size(); s++ ){
-    scans.at(s).origin = rotatePoint(scans.at(s).origin,rotation);
-  }
-
-  for( uint r=0; r<hits.size(); r++ ){
-    hits.at(r).position = rotatePoint(hits.at(r).position,rotation);
-    hits.at(r).direction = cart2sphere(hits.at(r).position - scans.at( hits.at(r).scanID ).origin);
+  for( auto & hit : hits){
+    hit.position = hit.position + shift;
   }
 
 }
 
-void LiDARcloud::coordinateRotation( const float rotation, const helios::vec3 line_base, const helios::vec3 line_direction ){
+void LiDARcloud::coordinateShift( uint scanID, const vec3 &shift ){
 
-  for( uint s=0; s<scans.size(); s++ ){
-    scans.at(s).origin = rotatePointAboutLine(scans.at(s).origin,line_base,line_direction,rotation);
+  if( scanID >= scans.size() ) {
+    throw( std::runtime_error("ERROR (LiDARcloud::coordinateShift): Cannot apply coordinate shift to scan " + std::to_string(scanID) + " because it does not exist." ) );
   }
 
-  for( uint r=0; r<hits.size(); r++ ){
-    hits.at(r).position = rotatePointAboutLine(hits.at(r).position,line_base,line_direction,rotation);
-    hits.at(r).direction = cart2sphere(hits.at(r).position - scans.at( hits.at(r).scanID ).origin);
+  scans.at(scanID).origin = scans.at(scanID).origin + shift;
+
+  for( auto & hit : hits){
+    if( hit.scanID == scanID ) {
+      hit.position = hit.position + shift;
+    }
   }
 
 }
 
-uint LiDARcloud::getTriangleCount( void ) const{
+void LiDARcloud::coordinateRotation(const SphericalCoord &rotation ){
+
+  for( auto & scan : scans){
+    scan.origin = rotatePoint(scan.origin,rotation);
+  }
+
+  for( auto & hit : hits){
+    hit.position = rotatePoint(hit.position,rotation);
+    hit.direction = cart2sphere(hit.position - scans.at( hit.scanID ).origin);
+  }
+
+}
+
+void LiDARcloud::coordinateRotation( uint scanID, const SphericalCoord &rotation ){
+
+  if( scanID >= scans.size() ) {
+    throw( std::runtime_error("ERROR (LiDARcloud::coordinateRotation): Cannot apply rotation to scan " + std::to_string(scanID) + " because it does not exist." ) );
+  }
+
+  scans.at(scanID).origin = rotatePoint(scans.at(scanID).origin,rotation);
+
+  for( auto & hit : hits){
+    if( hit.scanID == scanID ) {
+      hit.position = rotatePoint(hit.position, rotation);
+      hit.direction = cart2sphere(hit.position - scans.at(scanID).origin);
+    }
+  }
+
+}
+
+void LiDARcloud::coordinateRotation( float rotation, const vec3 &line_base,
+                                    const vec3 &line_direction ){
+
+  for( auto & scan : scans){
+    scan.origin = rotatePointAboutLine(scan.origin,line_base,line_direction,rotation);
+  }
+
+  for( auto & hit : hits){
+    hit.position = rotatePointAboutLine(hit.position,line_base,line_direction,rotation);
+    hit.direction = cart2sphere(hit.position - scans.at( hit.scanID ).origin);
+  }
+
+}
+
+uint LiDARcloud::getTriangleCount() const{
   return triangles.size();
 }
 
-Triangulation LiDARcloud::getTriangle( const uint index ) const{
+Triangulation LiDARcloud::getTriangle(uint index ) const{
   if( index>=triangles.size() ){
     cerr << "ERROR (getTriangle): Triangle index out of bounds. Tried to get triangle #" << index << " but point cloud only has " << triangles.size() << " triangles." << endl;
     exit(EXIT_FAILURE);
@@ -477,11 +541,12 @@ Triangulation LiDARcloud::getTriangle( const uint index ) const{
 
 }
 
-void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsize ) const{
+void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer,
+                                     uint pointsize ) const{
   addHitsToVisualizer( visualizer, pointsize, "" );
 }
 
-void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsize, const char* color_value ) const{
+void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, uint pointsize, const char* color_value ) const{
 
   if( printmessages && scans.size()==0 ){
     std::cout << "WARNING (addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
@@ -495,7 +560,7 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
     minval = 0;
     maxval = getGridCellCount()-1;
   }else if( strcmp(color_value,"")!=0 ){
-    for( uint i=0; i<getHitCount(); i++ ){
+    for( uint i=0; i< getHitCount(); i++ ){
       if( doesHitDataExist(i,color_value) ){
 	float data = float(getHitData(i,color_value));
 	if( data<minval ){
@@ -514,7 +579,7 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsi
     cmap.setRange(minval,maxval);
   }
 
-  for( uint i=0; i<getHitCount(); i++ ){
+  for( uint i=0; i< getHitCount(); i++ ){
 
     if( strcmp(color_value,"")==0 ){
       color = getHitColor(i);
@@ -613,7 +678,8 @@ void LiDARcloud::addTrianglesToVisualizer( Visualizer* visualizer ) const{
 
 }
 
-void LiDARcloud::addTrianglesToVisualizer( Visualizer* visualizer, const uint gridcell ) const{
+void LiDARcloud::addTrianglesToVisualizer( Visualizer* visualizer,
+                                          uint gridcell ) const{
 
   if( printmessages && scans.size()==0 ){
     std::cout << "WARNING (addTrianglesToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
@@ -632,9 +698,9 @@ void LiDARcloud::addTrianglesToVisualizer( Visualizer* visualizer, const uint gr
 
 }
 
-void LiDARcloud::addGrid(helios::vec3 gcenter, helios::vec3 gsize, helios::int3 ndiv, float rotation)
+void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv, float rotation)
 {
-    if( gsize.x<=0 || gsize.y<=0 || gsize.z<=0 ){
+    if(size.x<=0 || size.y<=0 || size.z<=0 ){
         cerr << "failed.\nERROR (addGrid): The gridcell size must be positive." << endl;
         exit(EXIT_FAILURE);
     }
@@ -645,26 +711,26 @@ void LiDARcloud::addGrid(helios::vec3 gcenter, helios::vec3 gsize, helios::int3 
     }
 
     //add cells to grid
-    vec3 gsubsize = make_vec3(float(gsize.x)/float(ndiv.x),float(gsize.y)/float(ndiv.y),float(gsize.z)/float(ndiv.z));
+    vec3 gsubsize = make_vec3(float(size.x)/float(ndiv.x),float(size.y)/float(ndiv.y),float(size.z)/float(ndiv.z));
 
     float x, y, z;
     uint count = 0;
     for( int k=0; k<ndiv.z; k++ ){
-        z = -0.5f*float(gsize.z) + (float(k)+0.5f)*float(gsubsize.z);
+        z = -0.5f*float(size.z) + (float(k)+0.5f)*float(gsubsize.z);
         for( int j=0; j<ndiv.y; j++ ){
-            y = -0.5f*float(gsize.y) + (float(j)+0.5f)*float(gsubsize.y);
+            y = -0.5f*float(size.y) + (float(j)+0.5f)*float(gsubsize.y);
             for( int i=0; i<ndiv.x; i++ ){
-                x = -0.5f*float(gsize.x) + (float(i)+0.5f)*float(gsubsize.x);
+                x = -0.5f*float(size.x) + (float(i)+0.5f)*float(gsubsize.x);
 
                 vec3 subcenter = make_vec3(x,y,z);
 
                 vec3 subcenter_rot = rotatePoint(subcenter, make_SphericalCoord(0,rotation*M_PI/180.f) );
 
                 if( printmessages ){
-                    cout << "Adding grid cell #" << count << " with center " << subcenter_rot.x+gcenter.x << "," << subcenter_rot.y+gcenter.y << "," << subcenter.z+gcenter.z << " and size " << gsubsize.x << " x " << gsubsize.y << " x " << gsubsize.z << endl;
+                    cout << "Adding grid cell #" << count << " with center " << subcenter_rot.x+ center.x << "," << subcenter_rot.y+ center.y << "," << subcenter.z+ center.z << " and size " << gsubsize.x << " x " << gsubsize.y << " x " << gsubsize.z << endl;
                 }
 
-                addGridCell( subcenter+gcenter, gcenter, gsubsize, gsize, rotation*M_PI/180.f, make_int3(i,j,k), ndiv );
+                addGridCell( subcenter+ center, center, gsubsize, size, rotation*M_PI/180.f, make_int3(i,j,k), ndiv );
 
                 count++;
 
@@ -783,7 +849,7 @@ void LiDARcloud::addTrunkReconstructionToVisualizer( Visualizer* visualizer ) co
 
 }
 
-void LiDARcloud::addTrunkReconstructionToVisualizer( Visualizer* visualizer, const helios::RGBcolor trunk_color ) const{
+void LiDARcloud::addTrunkReconstructionToVisualizer( Visualizer* visualizer, const RGBcolor &trunk_color ) const{
 
   size_t Ngroups = reconstructed_trunk_triangles.size();
 
@@ -807,7 +873,8 @@ std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context )
   return addLeafReconstructionToContext( context, helios::make_int2(1,1) );
 }
 
-std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context, const helios::int2 subpatches ) const{
+std::vector<uint> LiDARcloud::addLeafReconstructionToContext( Context* context,
+                                           const int2 &subpatches ) const{
 
   std::vector<uint> UUIDs;
 
@@ -995,7 +1062,7 @@ void LiDARcloud::getGridBoundingBox( helios::vec3& boxmin, helios::vec3& boxmax 
 void LiDARcloud::distanceFilter( const float maxdistance ){
     
     std::size_t delete_count = 0;
-    for(int i = (getHitCount()-1); i>=0; i-- ){
+    for(int i = (getHitCount() -1); i>=0; i-- ){
         
         vec3 xyz = getHitXYZ(i);
         uint scanID = getHitScanID(i);
@@ -1015,7 +1082,7 @@ void LiDARcloud::distanceFilter( const float maxdistance ){
 void LiDARcloud::reflectanceFilter( const float minreflectance ){
     
     std::size_t delete_count = 0;
-    for(int r = (getHitCount()-1); r>=0; r-- ){  
+    for(int r = (getHitCount() -1); r>=0; r-- ){
         if( hits.at(r).data.find("reflectance") != hits.at(r).data.end() ){
             double R = getHitData(r,"reflectance");
             if( R<minreflectance ){
@@ -1034,7 +1101,7 @@ void LiDARcloud::reflectanceFilter( const float minreflectance ){
 void LiDARcloud::scalarFilter( const char* scalar_field, const float threshold, const char* comparator ){
     
     std::size_t delete_count = 0;
-    for(int r = (getHitCount()-1); r>=0; r-- ){ 
+    for(int r = (getHitCount() -1); r>=0; r-- ){
         if( hits.at(r).data.find(scalar_field) != hits.at(r).data.end() ){
             double R = getHitData(r,scalar_field);
             if( strcmp(comparator,"<")==0 ){
@@ -1079,7 +1146,7 @@ void LiDARcloud::xyzFilter( const float xmin, const float xmax, const float ymin
     
     if(deleteOutside)
     {
-        for(int i = (getHitCount()-1); i>=0; i-- ){
+        for(int i = (getHitCount() -1); i>=0; i-- ){
             vec3 xyz = getHitXYZ(i);
 
             if( xyz.x < xmin || xyz.x > xmax || xyz.y < ymin || xyz.y > ymax || xyz.z < zmin || xyz.z > zmax ){
@@ -1088,7 +1155,7 @@ void LiDARcloud::xyzFilter( const float xmin, const float xmax, const float ymin
             }
         }
     }else{
-        for(int i = (getHitCount()-1); i>=0; i-- ){
+        for(int i = (getHitCount() -1); i>=0; i-- ){
             vec3 xyz = getHitXYZ(i);
 
             if( xyz.x >= xmin && xyz.x < xmax && xyz.y > ymin && xyz.y < ymax && xyz.z > zmin && xyz.z < zmax ){
@@ -1131,7 +1198,7 @@ void LiDARcloud::maxPulseFilter( const char* scalar ){
   timestamps.resize(getHitCount());
 
   std::size_t delete_count = 0;
-  for( std::size_t r=0; r<getHitCount(); r++ ){
+  for( std::size_t r=0; r< getHitCount(); r++ ){
 
     if( !doesHitDataExist(r,"timestamp") ){
       std::cout << "ERROR (maxPulseFilter): Hit point " << r << " does not have scalar data ""timestamp""." << std::endl;
@@ -1197,7 +1264,7 @@ void LiDARcloud::minPulseFilter( const char* scalar ){
   timestamps.resize(getHitCount());
 
   std::size_t delete_count = 0;
-  for( std::size_t r=0; r<getHitCount(); r++ ){
+  for( std::size_t r=0; r< getHitCount(); r++ ){
 
     if( !doesHitDataExist(r,"timestamp") ){
       std::cout << "ERROR (minPulseFilter): Hit point " << r << " does not have scalar data ""timestamp""." << std::endl;
@@ -1253,7 +1320,7 @@ void LiDARcloud::minPulseFilter( const char* scalar ){
 
 }
 
-void LiDARcloud::firstHitFilter( void ){
+void LiDARcloud::firstHitFilter() {
 
   if( printmessages ){
     std::cout << "Filtering point cloud to only first hits per pulse..." << std::flush;
@@ -1293,7 +1360,7 @@ void LiDARcloud::firstHitFilter( void ){
 
 }
 
-void LiDARcloud::lastHitFilter( void ){
+void LiDARcloud::lastHitFilter() {
 
   if( printmessages ){
     std::cout << "Filtering point cloud to only last hits per pulse..." << std::flush;
@@ -1337,12 +1404,12 @@ void LiDARcloud::lastHitFilter( void ){
 
 }
 
-void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_ratio ){
+void LiDARcloud::triangulateHitPoints( float Lmax, float max_aspect_ratio ){
 
-  if( printmessages && getScanCount()==0 ){
+  if( printmessages && getScanCount() ==0 ){
     cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
     return;
-  }else if( printmessages && getHitCount()==0 ){
+  }else if( printmessages && getHitCount() ==0 ){
     cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
     return;
   }
@@ -1353,14 +1420,14 @@ void LiDARcloud::triangulateHitPoints( const float Lmax, const float max_aspect_
 
   int Ntriangles=0;
 
-  for( uint s=0; s<getScanCount(); s++ ){
+  for( uint s=0; s< getScanCount(); s++ ){
 
     std::vector<int> Delaunay_inds;
 
     std::vector<Shx> pts, pts_copy;
 
     int count = 0;
-    for( int r=0; r<getHitCount(); r++ ){
+    for( int r=0; r< getHitCount(); r++ ){
 
       if( getHitScanID(r)==s && getHitGridCell(r)>=0 ){
 
@@ -1523,7 +1590,7 @@ void LiDARcloud::addTrianglesToContext( Context* context ) const{
     return;
   }
 
-  for( std::size_t i=0; i<getTriangleCount(); i++ ){
+  for( std::size_t i=0; i< getTriangleCount(); i++ ){
 
     Triangulation tri = getTriangle(i);
 
@@ -1537,11 +1604,13 @@ uint LiDARcloud::getGridCellCount( void ) const{
   return grid_cells.size();
 }
 
-void LiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 size, const float rotation ){
+void LiDARcloud::addGridCell(const vec3 &center, const vec3 &size, float rotation ){
   addGridCell(center,center,size,size,rotation,make_int3(1,1,1), make_int3(1,1,1));
 }
 
-void LiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 global_anchor, const helios::vec3 size, const helios::vec3 global_size, const float rotation, const helios::int3 global_ijk, const helios::int3 global_count ){
+void LiDARcloud::addGridCell(const vec3 &center, const vec3 &global_anchor,
+                             const vec3 &size, const vec3 &global_size, float rotation, const int3 &global_ijk,
+                             const int3 &global_count ){
 
   GridCell newcell( center, global_anchor, size, global_size, rotation, global_ijk, global_count );
 
@@ -1549,7 +1618,7 @@ void LiDARcloud::addGridCell( const helios::vec3 center, const helios::vec3 glob
 
 }
 
-helios::vec3 LiDARcloud::getCellCenter( const uint index ) const{
+helios::vec3 LiDARcloud::getCellCenter(uint index ) const{
 
   if( index>=getGridCellCount() ){
     cout << "ERROR (getCellCenter): grid cell index out of range.  Requested center of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
@@ -1560,7 +1629,7 @@ helios::vec3 LiDARcloud::getCellCenter( const uint index ) const{
 
 }
 
-helios::vec3 LiDARcloud::getCellGlobalAnchor( const uint index ) const{
+helios::vec3 LiDARcloud::getCellGlobalAnchor(uint index ) const{
 
   if( index>=getGridCellCount() ){
     cout << "ERROR (getCellGlobalAnchor): grid cell index out of range.  Requested anchor of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
@@ -1571,7 +1640,7 @@ helios::vec3 LiDARcloud::getCellGlobalAnchor( const uint index ) const{
 
 }
 
-helios::vec3 LiDARcloud::getCellSize( const uint index ) const{
+helios::vec3 LiDARcloud::getCellSize(uint index ) const{
 
   if( index>=getGridCellCount() ){
     cout << "ERROR (getCellCenter): grid cell index out of range.  Requested size of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
@@ -1582,7 +1651,7 @@ helios::vec3 LiDARcloud::getCellSize( const uint index ) const{
 
 }
 
-float LiDARcloud::getCellRotation( const uint index ) const{
+float LiDARcloud::getCellRotation(uint index ) const{
 
   if( index>=getGridCellCount() ){
     cout << "ERROR (getCellRotation): grid cell index out of range.  Requested rotation of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
@@ -1666,7 +1735,7 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( helios::Context* contex
 
 }
 
-void LiDARcloud::setCellLeafArea( const float area, const uint index ){
+void LiDARcloud::setCellLeafArea( float area, uint index ){
 
   if( index>getGridCellCount() ){
     cout << "ERROR (setCellLeafArea): grid cell index out of range." << endl;
@@ -1676,7 +1745,7 @@ void LiDARcloud::setCellLeafArea( const float area, const uint index ){
 
 }
 
-float LiDARcloud::getCellLeafArea( const uint index ) const{
+float LiDARcloud::getCellLeafArea(uint index ) const{
 
   if( index>=getGridCellCount() ){
     cout << "ERROR (getCellLeafArea): grid cell index out of range. Requested leaf area of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
@@ -1687,7 +1756,7 @@ float LiDARcloud::getCellLeafArea( const uint index ) const{
 
 }
 
-float LiDARcloud::getCellLeafAreaDensity( const uint index ) const{
+float LiDARcloud::getCellLeafAreaDensity(uint index ) const{
 
   if( index>=getGridCellCount() ){
     cout << "ERROR (getCellLeafAreaDensity): grid cell index out of range. Requested leaf area density of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
@@ -1699,7 +1768,7 @@ float LiDARcloud::getCellLeafAreaDensity( const uint index ) const{
 
 }
 
-void LiDARcloud::setCellGtheta( const float Gtheta, const uint index ){
+void LiDARcloud::setCellGtheta( float Gtheta, uint index ){
 
   if( index>getGridCellCount() ){
     cout << "ERROR (setCellGtheta): grid cell index out of range." << endl;
@@ -1709,7 +1778,7 @@ void LiDARcloud::setCellGtheta( const float Gtheta, const uint index ){
 
 }
 
-float LiDARcloud::getCellGtheta( const uint index ) const{
+float LiDARcloud::getCellGtheta(uint index ) const{
 
   if( index>=getGridCellCount() ){
     cout << "ERROR (getCellGtheta): grid cell index out of range. Requested leaf area of cell #" << index << " but there are only " << getGridCellCount() << " cells in the grid." << endl;
@@ -1720,7 +1789,7 @@ float LiDARcloud::getCellGtheta( const uint index ) const{
 
 }
 
-void LiDARcloud::leafReconstructionFloodfill( void ){
+void LiDARcloud::leafReconstructionFloodfill() {
 
   size_t group_count = 0;
   int current_group = 0;
@@ -1729,7 +1798,7 @@ void LiDARcloud::leafReconstructionFloodfill( void ){
   nodes.resize(getHitCount());
 
   size_t Ntri = 0;
-  for( size_t t=0; t<getTriangleCount(); t++ ){
+  for( size_t t=0; t< getTriangleCount(); t++ ){
 
     Triangulation tri = getTriangle(t);
 
@@ -1780,9 +1849,9 @@ void LiDARcloud::leafReconstructionFloodfill( void ){
 
 }
 
-void LiDARcloud::floodfill( size_t t, std::vector<Triangulation> &t_triangles, std::vector<int> &fill_flag, std::vector<std::vector<int> > &nodes, const int tag, const int depth, const int maxdepth ){
+void LiDARcloud::floodfill( size_t t, std::vector<Triangulation> &cloud_triangles, std::vector<int> &fill_flag, std::vector<std::vector<int> > &nodes, int tag, int depth, int maxdepth ){
 
-  Triangulation tri = t_triangles.at(t);
+  Triangulation tri = cloud_triangles.at(t);
 
   int verts[3] = {tri.ID0, tri.ID1, tri.ID2};
 
@@ -1808,7 +1877,7 @@ void LiDARcloud::floodfill( size_t t, std::vector<Triangulation> &t_triangles, s
   	  fill_flag.at(index) = tag;
 
   	  if( depth<maxdepth ){
-  	    floodfill( index, t_triangles, fill_flag, nodes, tag, depth+1, maxdepth );
+  	    floodfill( index, cloud_triangles, fill_flag, nodes, tag, depth+1, maxdepth );
   	  }
 
   	}
@@ -1825,11 +1894,11 @@ void LiDARcloud::floodfill( size_t t, std::vector<Triangulation> &t_triangles, s
 
 }
 
-void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_area, const float maximum_leaf_group_area, const float leaf_aspect_ratio, const char* mask_file ){
+void LiDARcloud::leafReconstructionAlphaMask( float minimum_leaf_group_area, float maximum_leaf_group_area, float leaf_aspect_ratio, const char* mask_file ){
   leafReconstructionAlphaMask( minimum_leaf_group_area, maximum_leaf_group_area, leaf_aspect_ratio, -1.f, mask_file );
 }
 
-void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_area, const float maximum_leaf_group_area, const float leaf_aspect_ratio, const float leaf_length_constant, const char* mask_file ){
+void LiDARcloud::leafReconstructionAlphaMask( float minimum_leaf_group_area, float maximum_leaf_group_area, float leaf_aspect_ratio, float leaf_length_constant, const char* mask_file ){
 
   if( printmessages ){
     cout << "Performing alphamask leaf reconstruction..." << flush;
@@ -1984,7 +2053,8 @@ void LiDARcloud::leafReconstructionAlphaMask( const float minimum_leaf_group_are
 }
 
 
-void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, const float leaf_aspect_ratio, const float solidfraction, const std::vector<bool> group_filter_flag ){
+void LiDARcloud::backfillLeavesAlphaMask(
+    const vector<float> &leaf_size, float leaf_aspect_ratio, float solidfraction, const vector<bool> &group_filter_flag ){
 
   if( printmessages ){
     cout << "Backfilling leaves..." << endl;
@@ -2036,7 +2106,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 	cout << "WARNING: skipping volume #" << v << " because it has no measured leaf area." << endl;
       }
       continue;
-    }else if( getTriangleCount()==0 ){
+    }else if(getTriangleCount() ==0 ){
       if( printmessages ){
 	cout << "WARNING: skipping volume #" << v << " because it has no triangles." << endl;
       }
@@ -2046,7 +2116,7 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
       std::vector<SphericalCoord> tri_rots;
 
       size_t Ntri = 0;
-      for( size_t t=0; t<getTriangleCount(); t++ ){
+      for( size_t t=0; t< getTriangleCount(); t++ ){
 	Triangulation tri = getTriangle(t);
 	if( tri.gridcell == v ){
 	  helios::vec3 normal = cross( tri.vertex1-tri.vertex0, tri.vertex2-tri.vertex0 );
@@ -2172,7 +2242,8 @@ void LiDARcloud::backfillLeavesAlphaMask( const std::vector<float> leaf_size, co
 
 }
 
-void LiDARcloud::calculateLeafAngleCDF( const uint Nbins, std::vector<std::vector<float> > &CDF_theta, std::vector<std::vector<float> > &CDF_phi ){
+void LiDARcloud::calculateLeafAngleCDF(
+    uint Nbins, std::vector<std::vector<float> > &CDF_theta, std::vector<std::vector<float> > &CDF_phi ){
 
   uint Ncells = getGridCellCount();
 

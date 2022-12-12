@@ -19,7 +19,7 @@ GNU General Public License for more details.
 using namespace std;
 using namespace helios;
 
-int LiDARcloud::selfTest(){
+int LiDARcloud::selfTest() {
 
   std::cout << "Running LiDAR self-test..." << std::endl;;
 
@@ -176,7 +176,7 @@ int LiDARcloud::selfTest(){
 
   Context context_4;
 
-  context_4.loadOBJ("plugins/lidar/xml/AlmondWP.obj",make_vec3(0,0,0),6.,make_SphericalCoord(0,0),RGB::red);
+  context_4.loadOBJ("plugins/lidar/xml/AlmondWP.obj",make_vec3(0,0,0),6.,make_SphericalCoord(0,0),RGB::red,true);
 
   LiDARcloud synthetic_4;
   synthetic_4.disableMessages();

@@ -909,9 +909,9 @@ void Visualizer::printWindow( void ){
     if( context!=nullptr ){//context has been given to visualizer via buildContextGeometry()
         Date date = context->getDate();
         Time time = context->getTime();
-        sprintf(outfile,"%02d-%02d-%4d_%02d-%02d-%02d_frame%d.jpg",date.day,date.month,date.year,time.hour,time.minute,time.second,frame_counter);
+        std::snprintf(outfile,100,"%02d-%02d-%4d_%02d-%02d-%02d_frame%d.jpg",date.day,date.month,date.year,time.hour,time.minute,time.second,frame_counter);
     }else{
-        sprintf(outfile,"frame%d.jpg",frame_counter);
+        std::snprintf(outfile,100,"frame%d.jpg",frame_counter);
     }
     frame_counter++;
 
@@ -2371,7 +2371,7 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
 
     //Load the font
     char font[100];
-    sprintf(font,"plugins/visualizer/fonts/%s.ttf",fontname);
+    std::snprintf(font,100,"plugins/visualizer/fonts/%s.ttf",fontname);
     if(FT_New_Face(ft, font, 0, &face)!=0) {
         fprintf(stderr, "Could not open font `%s'\n",fontname);
         throw(1);
@@ -2381,8 +2381,8 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
     FT_Set_Pixel_Sizes(face, 0, fontsize);
 
     //x- and y- size of a pixel in [0,1] normalized coordinates
-    float sx=1.0/float(Wdisplay);
-    float sy=1.0/float(Hdisplay);
+    float sx=1.f/float(Wdisplay);
+    float sy=1.f/float(Hdisplay);
 
     FT_GlyphSlot gg = face->glyph;  //FreeType glyph for font `fontname' and size `fontsize'
 
@@ -2540,27 +2540,27 @@ void Visualizer::addColorbarByCenter( const char* title, const vec2 size, const 
 
         int d1, d2;
         if( std::fabs(floor(value)-value)<1e-4 ){ //value is an integer
-            sprintf(precision,"%%d");
-            sprintf(textstr,precision,int(floor(value)));
+            std::snprintf(precision,10,"%%d");
+            std::snprintf(textstr,10,precision,int(floor(value)));
         }else if( value!=0.f ){ //value needs decimal formatting
             d1 = floor(log10(std::fabs(value)));
             d2= -d1+1;
             if(d2<1){
                 d2=1;
             }
-            sprintf(precision,"%%%d.%df",std::abs(d1)+1,d2);
-            sprintf(textstr,precision,value);
+            std::snprintf(precision,10,"%%%d.%df",abs(d1)+1,d2);
+            std::snprintf(textstr,10,precision,value);
         }
 
         // tick labels
-        addTextboxByCenter( textstr, make_vec3(x,center.y-0.4*size.y,center.z), make_SphericalCoord(0,0), font_color, colorbar_fontsize, "OpenSans-Regular", COORDINATES_WINDOW_NORMALIZED );
+        addTextboxByCenter( textstr, make_vec3(x,center.y-0.4f*size.y,center.z), make_SphericalCoord(0,0), font_color, colorbar_fontsize, "OpenSans-Regular", COORDINATES_WINDOW_NORMALIZED );
 
         if(i>0 && i<Nticks-1){
-            ticks[0] = make_vec3( x, center.y-0.25*size.y, center.z-0.001 );
-            ticks[1] = make_vec3( x, center.y-0.25*size.y+0.05*size.y, center.z-0.001 );
+            ticks[0] = make_vec3( x, center.y-0.25f*size.y, center.z-0.001f );
+            ticks[1] = make_vec3( x, center.y-0.25f*size.y+0.05f*size.y, center.z-0.001f );
             addLine(ticks[0],ticks[1],make_RGBcolor(0.25,0.25,0.25),1,COORDINATES_WINDOW_NORMALIZED);
-            ticks[0] = make_vec3( x, center.y+0.25*size.y, center.z-0.001 );
-            ticks[1] = make_vec3( x, center.y+0.25*size.y-0.05*size.y, center.z-0.001 );
+            ticks[0] = make_vec3( x, center.y+0.25f*size.y, center.z-0.001f );
+            ticks[1] = make_vec3( x, center.y+0.25f*size.y-0.05f*size.y, center.z-0.001f );
             addLine(ticks[0],ticks[1], make_RGBcolor(0.25,0.25,0.25),1,COORDINATES_WINDOW_NORMALIZED);
         }
 

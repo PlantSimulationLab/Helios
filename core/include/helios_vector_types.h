@@ -864,7 +864,9 @@ public:
     return os << "helios::RGBcolor<" << c.r << ", " << c.g << ", " << c.b << ">";
   }
 
-  bool operator==( const RGBcolor &c );
+  bool operator==( const RGBcolor &c ) const;
+
+  bool operator!=( const RGBcolor &c ) const;
 
 private:
   //! Clamp float to range of 0 to 1.
@@ -901,8 +903,12 @@ inline RGBcolor make_RGBcolor( float r, float g, float b ){
 */
 RGBcolor blend( RGBcolor color0, RGBcolor color1, float weight );
 
-inline bool RGBcolor::operator==( const RGBcolor &c ){
+inline bool RGBcolor::operator==( const RGBcolor &c ) const{
   return c.r==r && c.g==g && c.b==b;
+}
+
+inline bool RGBcolor::operator!=( const RGBcolor &c ) const{
+  return c.r!=r || c.g!=g || c.b!=b;
 }
 
 namespace RGB{
@@ -1013,7 +1019,9 @@ public:
     return os << "helios::RGBAcolor<" << c.r << ", " << c.g << ", " << c.b << ", " << c.a << ">";
   }
 
-  bool operator==( const RGBAcolor &c );
+  bool operator==( const RGBAcolor &c ) const;
+
+  bool operator!=( const RGBAcolor &c ) const;
 
 private:
   //! Clamp float to range of 0 to 1.
@@ -1061,8 +1069,12 @@ inline RGBAcolor make_RGBAcolor( RGBcolor color, float a ){
 */
 RGBAcolor blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight );
 
-inline bool RGBAcolor::operator==( const RGBAcolor &c ){
+inline bool RGBAcolor::operator==( const RGBAcolor &c ) const{
   return c.r==r && c.g==g && c.b==b && c.a==a;
+}
+
+inline bool RGBAcolor::operator!=( const RGBAcolor &c ) const{
+  return c.r!=r || c.g!=g || c.b!=b || c.a!=a;
 }
 
 //! Date vector

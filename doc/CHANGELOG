@@ -1110,3 +1110,36 @@
 
 *Radiation*
 - Fixed an issue with ray generation that caused self-test #8b to fail. This was causing radiative fluxes to be accumulated only in the first sub-patch of a tile object.
+
+[1.2.52] 2022-XX-XX
+
+* General *
+- Tutorial 2 and 5 were modified to be able to run as part of the standard set of tests in utilities/run_samples.sh
+- The standard project CMakeLists.txt file has been changed to remove all non-user-defined code. Instead, this was moved to a separate file core/CMake_project.txt, which is reference from the project CMakeLists.txt file. Old project CMakeLists.txt files should still work.
+- Sample project CMakeList.txt files updated to reflect new format.
+- utilities/run_samples.sh script updated to be able to only run test cases that do not require a GPU
+
+*Context*
+- Modifications made to core/CMakeLists.txt and core/lib/libpng/CMakeLists.txt to clean up dependent library build structure and avoid potential circular dependencies.
+- Updated pugixml library to use snprintf instead of deprecated sprintf.
+- Functions added to global.cpp to perform checking of string to value conversions (see parse_float(), parse_double(), parse_int(), parse_uint()).
+- Optional arguments added to loadPLY() function to specify up-direction and to silence output messages.
+- Overall cleaning up of loadPLY() code, including checks of file parsing.
+- loadOBJ() now supports object groups in .obj files.
+- Self-test for loadOBJ() added. This included adding a sample model file in core/lib/models. The core/CMakeLists.txt file was modified to copy this model into the project build directory.
+- Functions added to filter primitives based on their primitive data values (see filterPrimitivesByData() functions).
+- Added != operators for RGBcolor and RGBAcolor.
+
+*Aerial LiDAR*
+- Error corrected in gridindex2ijk() function that would cause an error if the grid size in the x and y directions are not the same.
+
+*LiDAR*
+- When a synthetic scan is being run, it now checks for primitive data "reflectivity_lidar" for calculation of the reflected intensity.
+- Reading of point cloud input data files was moved to a separate function loadASCIIFile().
+- Some overall cleaning up of LiDAR code.
+
+*Visualizer*
+- Updated to use snprintf instead of deprecated sprintf.
+
+*Radiation*
+- Overloaded version of setSourcePosition() added to accept a spherical coordinate instead of Cartesian vec3.

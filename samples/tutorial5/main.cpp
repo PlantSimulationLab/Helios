@@ -15,6 +15,6 @@ int main(){
      
   context.setPrimitiveData(UUIDs.at(0),"my_data",10.0); //add primitive data called my_data to only the first primitive with a value of 10
 
-  return 1;
+  return 0;
 
 }

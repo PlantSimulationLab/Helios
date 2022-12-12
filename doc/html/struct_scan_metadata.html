@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.51</span>
+   &#160;<span id="projectnumber">v1.2.52</span>
    </div>
   </td>
  </tr>
@@ -78,15 +78,19 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a38c6cc44b76e4b75b5f511e4ba3fccb7"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a38c6cc44b76e4b75b5f511e4ba3fccb7">ScanMetadata</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> __origin, const uint __Ntheta, const float __thetaMin, const float __thetaMax, const uint __Nphi, const float __phiMin, const float __phiMax, const float __exitDiameter, const float __beamDivergence, const std::vector&lt; std::string &gt; __columnFormat)</td></tr>
-<tr class="memdesc:a38c6cc44b76e4b75b5f511e4ba3fccb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a LiDAR scan data structure.  <a href="struct_scan_metadata.html#a38c6cc44b76e4b75b5f511e4ba3fccb7">More...</a><br /></td></tr>
-<tr class="separator:a38c6cc44b76e4b75b5f511e4ba3fccb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1ac75dd11e32061c999525651160b519"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a1ac75dd11e32061c999525651160b519">rc2direction</a> (const uint row, const uint column) const</td></tr>
-<tr class="memdesc:a1ac75dd11e32061c999525651160b519"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert the (row,column) of hit point in a scan to a direction vector.  <a href="struct_scan_metadata.html#a1ac75dd11e32061c999525651160b519">More...</a><br /></td></tr>
-<tr class="separator:a1ac75dd11e32061c999525651160b519"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0eb70c4b0c8aa41d0d25093b381edd49"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int2.html">helios::int2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a0eb70c4b0c8aa41d0d25093b381edd49">direction2rc</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> direction) const</td></tr>
-<tr class="memdesc:a0eb70c4b0c8aa41d0d25093b381edd49"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert the scan ray direction into (row,column) table index.  <a href="struct_scan_metadata.html#a0eb70c4b0c8aa41d0d25093b381edd49">More...</a><br /></td></tr>
-<tr class="separator:a0eb70c4b0c8aa41d0d25093b381edd49"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f625c96f54068fb8de34b528e7f770d"><td class="memItemLeft" align="right" valign="top"><a id="a2f625c96f54068fb8de34b528e7f770d"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a2f625c96f54068fb8de34b528e7f770d">ScanMetadata</a> ()</td></tr>
+<tr class="memdesc:a2f625c96f54068fb8de34b528e7f770d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default LiDAR scan data structure. <br /></td></tr>
+<tr class="separator:a2f625c96f54068fb8de34b528e7f770d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a6aa59ee9ecf89c9c6a2ae3a734c5ccd4">ScanMetadata</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, const std::vector&lt; std::string &gt; &amp;a_columnFormat)</td></tr>
+<tr class="memdesc:a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a LiDAR scan data structure.  <a href="struct_scan_metadata.html#a6aa59ee9ecf89c9c6a2ae3a734c5ccd4">More...</a><br /></td></tr>
+<tr class="separator:a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae28f6042e5eae2adaaacbeaaa6109a8c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#ae28f6042e5eae2adaaacbeaaa6109a8c">rc2direction</a> (uint row, uint column) const</td></tr>
+<tr class="memdesc:ae28f6042e5eae2adaaacbeaaa6109a8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert the (row,column) of hit point in a scan to a direction vector.  <a href="struct_scan_metadata.html#ae28f6042e5eae2adaaacbeaaa6109a8c">More...</a><br /></td></tr>
+<tr class="separator:ae28f6042e5eae2adaaacbeaaa6109a8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aab2db5e4c22f1eb7979294a7f8993611"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int2.html">helios::int2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#aab2db5e4c22f1eb7979294a7f8993611">direction2rc</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> &amp;direction) const</td></tr>
+<tr class="memdesc:aab2db5e4c22f1eb7979294a7f8993611"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert the scan ray direction into (row,column) table index.  <a href="struct_scan_metadata.html#aab2db5e4c22f1eb7979294a7f8993611">More...</a><br /></td></tr>
+<tr class="separator:aab2db5e4c22f1eb7979294a7f8993611"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -94,6 +98,10 @@ Data Fields</h2></td></tr>
 uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a41835673b243a8a5757de3922d8c7880">Nhits</a></td></tr>
 <tr class="memdesc:a41835673b243a8a5757de3922d8c7880"><td class="mdescLeft">&#160;</td><td class="mdescRight">Total number of hits in the scan. <br /></td></tr>
 <tr class="separator:a41835673b243a8a5757de3922d8c7880"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9314565da4824fbee86ced28382cc1dc"><td class="memItemLeft" align="right" valign="top"><a id="a9314565da4824fbee86ced28382cc1dc"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a9314565da4824fbee86ced28382cc1dc">data_file</a></td></tr>
+<tr class="memdesc:a9314565da4824fbee86ced28382cc1dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">File containing hit point data. <br /></td></tr>
+<tr class="separator:a9314565da4824fbee86ced28382cc1dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8432ab0ab545a0027bb47ce84f0a6704"><td class="memItemLeft" align="right" valign="top"><a id="a8432ab0ab545a0027bb47ce84f0a6704"></a>
 uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a8432ab0ab545a0027bb47ce84f0a6704">Ntheta</a></td></tr>
 <tr class="memdesc:a8432ab0ab545a0027bb47ce84f0a6704"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of zenithal angles in scan (rows) <br /></td></tr>
@@ -110,12 +118,10 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 <tr class="memdesc:a8d9273e0fccbfc20916c284ab6c573ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of azimuthal angles in scan (columns) <br /></td></tr>
 <tr class="separator:a8d9273e0fccbfc20916c284ab6c573ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a019acfcaf7a3ba3fe062af1a59c24513"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a019acfcaf7a3ba3fe062af1a59c24513">phiMin</a></td></tr>
-<tr class="memdesc:a019acfcaf7a3ba3fe062af1a59c24513"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimum zenithal angle of scan in radians <br  />
-  <a href="struct_scan_metadata.html#a019acfcaf7a3ba3fe062af1a59c24513">More...</a><br /></td></tr>
+<tr class="memdesc:a019acfcaf7a3ba3fe062af1a59c24513"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimum azimuthal angle of scan in radians.  <a href="struct_scan_metadata.html#a019acfcaf7a3ba3fe062af1a59c24513">More...</a><br /></td></tr>
 <tr class="separator:a019acfcaf7a3ba3fe062af1a59c24513"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a29f41bdfbec57a32c60755944b4c0a7f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a29f41bdfbec57a32c60755944b4c0a7f">phiMax</a></td></tr>
-<tr class="memdesc:a29f41bdfbec57a32c60755944b4c0a7f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum zenithal angle of scan in radians <br  />
-  <a href="struct_scan_metadata.html#a29f41bdfbec57a32c60755944b4c0a7f">More...</a><br /></td></tr>
+<tr class="memdesc:a29f41bdfbec57a32c60755944b4c0a7f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum azimuthal angle of scan in radians.  <a href="struct_scan_metadata.html#a29f41bdfbec57a32c60755944b4c0a7f">More...</a><br /></td></tr>
 <tr class="separator:a29f41bdfbec57a32c60755944b4c0a7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a200bf65b728866855ace6456365d66a3"><td class="memItemLeft" align="right" valign="top"><a id="a200bf65b728866855ace6456365d66a3"></a>
 <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a200bf65b728866855ace6456365d66a3">origin</a></td></tr>
@@ -129,7 +135,7 @@ uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="stru
 <tr class="separator:acec69b1556a96236c0702f03b231d008"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:accc2b308821e99b3e9aeed5d0a797130"><td class="memItemLeft" align="right" valign="top"><a id="accc2b308821e99b3e9aeed5d0a797130"></a>
 std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#accc2b308821e99b3e9aeed5d0a797130">columnFormat</a></td></tr>
-<tr class="memdesc:accc2b308821e99b3e9aeed5d0a797130"><td class="mdescLeft">&#160;</td><td class="mdescRight">Vector of strings specifying the columns of the scan ASCII file for intput/output. <br /></td></tr>
+<tr class="memdesc:accc2b308821e99b3e9aeed5d0a797130"><td class="mdescLeft">&#160;</td><td class="mdescRight">Vector of strings specifying the columns of the scan ASCII file for input/output. <br /></td></tr>
 <tr class="separator:accc2b308821e99b3e9aeed5d0a797130"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -138,8 +144,8 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00196">196</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a38c6cc44b76e4b75b5f511e4ba3fccb7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a38c6cc44b76e4b75b5f511e4ba3fccb7">&#9670;&nbsp;</a></span>ScanMetadata()</h2>
+<a id="a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6aa59ee9ecf89c9c6a2ae3a734c5ccd4">&#9670;&nbsp;</a></span>ScanMetadata()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -147,62 +153,62 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
         <tr>
           <td class="memname">ScanMetadata::ScanMetadata </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td>
-          <td class="paramname"><em>__origin</em>, </td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;&#160;</td>
+          <td class="paramname"><em>a_origin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const uint&#160;</td>
-          <td class="paramname"><em>__Ntheta</em>, </td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>a_Ntheta</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>__thetaMin</em>, </td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a_thetaMin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>__thetaMax</em>, </td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a_thetaMax</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const uint&#160;</td>
-          <td class="paramname"><em>__Nphi</em>, </td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>a_Nphi</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>__phiMin</em>, </td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a_phiMin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>__phiMax</em>, </td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a_phiMax</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>__exitDiameter</em>, </td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a_exitDiameter</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const float&#160;</td>
-          <td class="paramname"><em>__beamDivergence</em>, </td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a_beamDivergence</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::vector&lt; std::string &gt;&#160;</td>
-          <td class="paramname"><em>__columnFormat</em>&#160;</td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;&#160;</td>
+          <td class="paramname"><em>a_columnFormat</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -217,22 +223,20 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">origin</td><td>(x,y,z) position of the scanner </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">Ntheta</td><td>Number of scan points in the theta (zenithal) direction </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">thetamin</td><td>Minimum scan angle in the theta (zenithal) direction </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">thetamax</td><td>Maximum scan angle in the theta (zenithal) direction </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">thetamin</td><td>Minimum scan angle in the theta (zenithal) direction in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">thetamax</td><td>Maximum scan angle in the theta (zenithal) direction in radians </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">Nphi</td><td>Number of scan points in the phi (azimuthal) direction </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">phimin</td><td>Minimum scan angle in the phi (azimuthal) direction </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">phimax</td><td>Maximum scan angle in the phi (azimuthal) direction </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">phimin</td><td>Minimum scan angle in the phi (azimuthal) direction in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">phimax</td><td>Maximum scan angle in the phi (azimuthal) direction in radians </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00022">22</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
-
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a0eb70c4b0c8aa41d0d25093b381edd49"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0eb70c4b0c8aa41d0d25093b381edd49">&#9670;&nbsp;</a></span>direction2rc()</h2>
+<a id="aab2db5e4c22f1eb7979294a7f8993611"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aab2db5e4c22f1eb7979294a7f8993611">&#9670;&nbsp;</a></span>direction2rc()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -240,7 +244,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1int2.html">helios::int2</a> ScanMetadata::direction2rc </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a>&#160;</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> &amp;&#160;</td>
           <td class="paramname"><em>direction</em></td><td>)</td>
           <td> const</td>
         </tr>
@@ -256,12 +260,12 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>(row,column) table index for the given hit point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00047">47</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00069">69</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a1ac75dd11e32061c999525651160b519"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1ac75dd11e32061c999525651160b519">&#9670;&nbsp;</a></span>rc2direction()</h2>
+<a id="ae28f6042e5eae2adaaacbeaaa6109a8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae28f6042e5eae2adaaacbeaaa6109a8c">&#9670;&nbsp;</a></span>rc2direction()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -269,13 +273,13 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> ScanMetadata::rc2direction </td>
           <td>(</td>
-          <td class="paramtype">const uint&#160;</td>
+          <td class="paramtype">uint&#160;</td>
           <td class="paramname"><em>row</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const uint&#160;</td>
+          <td class="paramtype">uint&#160;</td>
           <td class="paramname"><em>column</em>&#160;</td>
         </tr>
         <tr>
@@ -296,7 +300,7 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Spherical vector corresponding to the ray direction for the given hit point. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00038">38</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00060">60</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -314,9 +318,9 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 </div><div class="memdoc">
 
 <p>Divergence angle of the laser beam in radians. </p>
-<dl class="section note"><dt>Note</dt><dd>This is not needed for discrete return instruments. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This is not needed for discrete return instruments, and is only used for synthetic scan generation. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00252">252</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00273">273</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>
@@ -333,9 +337,9 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 </div><div class="memdoc">
 
 <p>Diameter of laser pulse at exit from the scanner. </p>
-<dl class="section note"><dt>Note</dt><dd>This is not needed for discrete return instruments. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This is not needed for discrete return instruments, and is only used for synthetic scan generation. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00248">248</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00267">267</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>
@@ -351,11 +355,10 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
       </table>
 </div><div class="memdoc">
 
-<p>Maximum zenithal angle of scan in radians <br  />
- </p>
-<dl class="section note"><dt>Note</dt><dd>Zenithal angles start at 0 (x=+,y=0) to <img class="formulaInl" alt="$\frac{1}{2}\pi$" src="form_91.png" width="18" height="20"/> (x=0,y=+) through <img class="formulaInl" alt="$2\pi$" src="form_92.png" width="17" height="11"/>. </dd></dl>
+<p>Maximum azimuthal angle of scan in radians. </p>
+<dl class="section note"><dt>Note</dt><dd>Azimuthal angles start at 0 (x=+,y=0) to 2pi (x=0,y=+) through 2pi. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00241">241</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00258">258</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>
@@ -371,11 +374,10 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
       </table>
 </div><div class="memdoc">
 
-<p>Minimum zenithal angle of scan in radians <br  />
- </p>
-<dl class="section note"><dt>Note</dt><dd>Zenithal angles start at 0 (x=+,y=0) to <img class="formulaInl" alt="$\frac{1}{2}\pi$" src="form_91.png" width="18" height="20"/> (x=0,y=+) through <img class="formulaInl" alt="$2\pi$" src="form_92.png" width="17" height="11"/>. </dd></dl>
+<p>Minimum azimuthal angle of scan in radians. </p>
+<dl class="section note"><dt>Note</dt><dd>Azimuthal angles start at 0 (x=+,y=0) to 2pi (x=0,y=+) through 2pi. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00238">238</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00253">253</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>
@@ -392,9 +394,9 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 </div><div class="memdoc">
 
 <p>Maximum zenithal angle of scan in radians. </p>
-<dl class="section note"><dt>Note</dt><dd>Zenithal angles range from <img class="formulaInl" alt="$-\frac{1}{2}\pi$" src="form_89.png" width="30" height="20"/> (downward) to <img class="formulaInl" alt="$+\frac{1}{2}\pi$" src="form_90.png" width="30" height="20"/> (upward). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Zenithal angles range from 0 (upward) to pi (downward). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00232">232</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00245">245</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>
@@ -412,9 +414,9 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 
 <p>Minimum zenithal angle of scan in radians <br  />
  </p>
-<dl class="section note"><dt>Note</dt><dd>Zenithal angles range from <img class="formulaInl" alt="$-\frac{1}{2}\pi$" src="form_89.png" width="30" height="20"/> (downward) to <img class="formulaInl" alt="$+\frac{1}{2}\pi$" src="form_90.png" width="30" height="20"/> (upward). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Zenithal angles range from -pi/2 (downward) to +pi/2 (upward). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00229">229</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00240">240</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 
 </div>
 </div>

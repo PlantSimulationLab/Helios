@@ -12404,26 +12404,32 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
     }
 }
 
-std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height ){
-    return loadPLY( filename, origin, height, make_SphericalCoord(0,0), make_RGBcolor(0,0,1) );
+std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const std::string &upaxis, bool silent ){
+    return loadPLY( filename, origin, height, make_SphericalCoord(0,0), make_RGBcolor(0,0,1), upaxis, silent );
 }
 
-std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation ){
-    return loadPLY( filename, origin, height, rotation, make_RGBcolor(0,0,1) );
+std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const std::string &upaxis, bool silent ){
+    return loadPLY( filename, origin, height, rotation, make_RGBcolor(0,0,1), upaxis, silent );
 }
 
-std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color ){
-    return loadPLY( filename, origin, height, make_SphericalCoord(0,0), default_color );
+std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color, const std::string &upaxis, bool silent ){
+    return loadPLY( filename, origin, height, make_SphericalCoord(0,0), default_color, upaxis, silent );
 }
 
-std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color ){
+std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const std::string &upaxis, bool silent ){
 
+  if( !silent ) {
     std::cout << "Reading PLY file " << filename << "..." << std::flush;
+  }
 
     std::string fn = filename;
     std::string ext = getFileExtension(filename);
     if( ext != ".ply" && ext != ".PLY" ) {
-        throw( std::runtime_error("ERROR (loadPLY): File " + fn + " is not PLY format.") );
+      throw( std::runtime_error("ERROR (Context::loadPLY): File " + fn + " is not PLY format.") );
+    }
+
+    if( upaxis!="XUP" && upaxis!="YUP" && upaxis!="ZUP" ){
+      throw( std::runtime_error("ERROR (Context::loadPLY): " + upaxis + " is not a valid up-axis. Please specify a value of XUP, YUP, or ZUP.") );
     }
 
     std::string line, prop;
@@ -12441,51 +12447,58 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
     inputPly.open(filename);
 
     if (!inputPly.is_open()) {
-        throw( std::runtime_error("Couldn't open " + std::string(filename) ));
+        throw( std::runtime_error("ERROR (Context::loadPLY): Couldn't open " + std::string(filename) ));
     }
 
     //--- read header info -----//
 
     //first line should always be 'ply'
     inputPly>>line;
-    if( strcmp("ply",line.c_str())!=0 ){
-        throw( std::runtime_error("ERROR (loadPLY): " + std::string(filename) + " is not a PLY file."));
+    if( "ply"!=line ){
+        throw( std::runtime_error("ERROR (Context::loadPLY): " + std::string(filename) + " is not a PLY file."));
     }
 
     //read format
     inputPly>>line;
-    if( strcmp("format",line.c_str())!=0 ){
-        throw( std::runtime_error("ERROR (loadPLY): could not determine data format of " + std::string(filename) ));
+    if( "format"!=line ){
+        throw( std::runtime_error("ERROR (Context::loadPLY): could not determine data format of " + std::string(filename) ));
     }
 
     inputPly>>line;
-    if( strcmp("ascii",line.c_str())!=0 ){
-        throw( std::runtime_error("ERROR (loadPLY): Only ASCII data types are supported."));
+    if( "ascii"!=line ){
+        throw( std::runtime_error("ERROR (Context::loadPLY): Only ASCII data types are supported."));
     }
 
-    while(strcmp("end_header",line.c_str())!=0){
+    std::string temp_string;
+
+    while( "end_header"!=line ){
 
         inputPly>>line;
 
-        if( strcmp("comment",line.c_str())==0 ){
+        if( "comment"==line ){
             getline(inputPly, line);
         }
-        else if( strcmp("element",line.c_str())==0 ){
+        else if( "element"==line ){
 
             inputPly>>line;
 
-            if( strcmp("vertex",line.c_str())==0 ){
-                inputPly>>vertexCount;
-            }else if( strcmp("face",line.c_str())==0 ){
-                inputPly>>faceCount;
+            if( "vertex"==line ){
+              inputPly>>temp_string;
+              if( !parse_uint(temp_string,vertexCount) ){
+                throw( std::runtime_error("ERROR (Context::loadPLY): PLY file read failed. Vertex count value should be a non-negative integer.") );
+              }
+            }else if( "face"==line ){
+//              inputPly>>temp_string;
+              if( !parse_uint(temp_string,faceCount) ){
+                throw( std::runtime_error("ERROR (Context::loadPLY): PLY file read failed. Face count value should be a non-negative integer.") );
+              }
             }
 
-
-        }else if( strcmp("property",line.c_str())==0 ){
+        }else if( "property"==line ){
 
             inputPly>>line; //type
 
-            if( strcmp("list",line.c_str())!=0 ){
+            if( "list"!=line ){
 
                 inputPly>>prop; //value
                 properties.push_back(prop);
@@ -12494,15 +12507,16 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
 
         }
 
-
     }
 
-    for(auto & propertie : properties){
-        if( strcmp(propertie.c_str(),"red")==0 ){
+    for(auto & property : properties){
+        if( property=="red" ){
             ifColor = true;
         }
     }
-    std::cout<< "forming " << faceCount << " triangles..." << std::flush;
+    if( !silent ) {
+      std::cout << "forming " << faceCount << " triangles..." << std::flush;
+    }
 
     vertices.resize(vertexCount);
     colors.resize(vertexCount);
@@ -12513,27 +12527,71 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
 
     for( uint row=0; row<vertexCount; row++ ){
 
-        for(auto & propertie : properties){
-            if( strcmp(propertie.c_str(),"x")==0 ){ //Note: permuting x,y,z to match our coordinate system (z-vertical instead of y-vertical)
-                inputPly >> vertices.at(row).y;
-            }else if( strcmp(propertie.c_str(),"y")==0 ){
-                inputPly >> vertices.at(row).z;
-            }else if( strcmp(propertie.c_str(),"z")==0 ){
-                inputPly >> vertices.at(row).x;
-            }else if( strcmp(propertie.c_str(),"red")==0 ){
-                inputPly >> colors.at(row).r;
-                colors.at(row).r /= 255.f;
-            }else if( strcmp(propertie.c_str(),"green")==0 ){
-                inputPly >> colors.at(row).g;
-                colors.at(row).g /= 255.f;
-            }else if( strcmp(propertie.c_str(),"blue")==0 ){
-                inputPly >> colors.at(row).b;
-                colors.at(row).b /= 255.f;
-                // }else if( strcmp(properties.at(i).c_str(),"alpha")==0 ){
-                // 	inputPly >> colors.at(row).a;
+        for(auto & property : properties){
+            if( property=="x" ){
+              inputPly >> temp_string;
+              float x;
+              if( !parse_float(temp_string,x) ){
+                throw( std::runtime_error("ERROR (Context::loadPLY): X value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+              }
+              if( upaxis=="XUP"){
+                vertices.at(row).z = x;
+              }else if( upaxis=="YUP" ){
+                vertices.at(row).y = x;
+              }else if( upaxis=="ZUP" ){
+                vertices.at(row).x = x;
+              }
+            }else if( property=="y" ){
+              inputPly >> temp_string;
+              float y;
+              if( !parse_float(temp_string,y) ){
+                throw( std::runtime_error("ERROR (Context::loadPLY): Y value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+              }
+              if( upaxis=="XUP"){
+                vertices.at(row).x = y;
+              }else if( upaxis=="YUP" ){
+                vertices.at(row).z = y;
+              }else if( upaxis=="ZUP" ){
+                vertices.at(row).y = y;
+              }
+            }else if( property=="z" ){
+              inputPly >> temp_string;
+              float z;
+              if( !parse_float(temp_string,z) ){
+                throw( std::runtime_error("ERROR (Context::loadPLY): Z value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+              }
+              if( upaxis=="XUP"){
+                vertices.at(row).y = z;
+              }else if( upaxis=="YUP" ){
+                vertices.at(row).x = z;
+              }else if( upaxis=="ZUP" ){
+                vertices.at(row).z = z;
+              }
+            }else if( property=="red" ){
+              inputPly >> temp_string;
+              if( !parse_float(temp_string,colors.at(row).r) ){
+                throw( std::runtime_error("ERROR (Context::loadPLY): red color value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+              }
+              colors.at(row).r /= 255.f;
+            }else if( property=="green" ){
+              inputPly >> temp_string;
+              if( !parse_float(temp_string,colors.at(row).g) ){
+                throw( std::runtime_error("ERROR (Context::loadPLY): green color value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+              }
+              colors.at(row).g /= 255.f;
+            }else if( property=="blue" ){
+              inputPly >> temp_string;
+              if( !parse_float(temp_string,colors.at(row).b) ){
+                throw( std::runtime_error("ERROR (Context::loadPLY): blue color value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+              }
+              colors.at(row).b /= 255.f;
             }else{
                 inputPly >> line;
             }
+        }
+
+        if( inputPly.eof() ){
+          throw( std::runtime_error("ERROR (Context::loadPLY): Read past end of file while reading vertices. Vertex count specified in header may be incorrect."));
         }
 
     }
@@ -12584,16 +12642,23 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
 
     //--- read faces ----//
 
-    uint v, ID;
+    uint v,ID;
     std::vector<uint> UUID;
     for( uint row=0; row<faceCount; row++ ){
 
-        inputPly >> v;
+      inputPly >> temp_string;
+
+      if( !parse_uint(temp_string,v) ){
+        throw( std::runtime_error("ERROR (Context::loadPLY): Vertex count for face " + std::to_string(row) + " should be a non-negative integer."));
+      }
 
         faces.at(row).resize(v);
 
         for( uint i=0; i<v; i++ ){
-            inputPly >> faces.at(row).at(i);
+          inputPly >> temp_string;
+          if( !parse_int(temp_string,faces.at(row).at(i)) ){
+            throw( std::runtime_error("ERROR (Context::loadPLY): Vertex index for face " + std::to_string(row) + " is invalid and could not be read."));
+          }
         }
 
         //Add triangles to context
@@ -12621,9 +12686,15 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
 
         }
 
+        if( inputPly.eof() ){
+          throw( std::runtime_error("ERROR (Context::loadPLY): Read past end of file while reading faces. Face count specified in header may be incorrect."));
+        }
+
     }
 
-    std::cout << "done." << std::endl;
+    if( !silent ) {
+      std::cout << "done." << std::endl;
+    }
 
     return UUID;
 
@@ -12720,6 +12791,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
     std::string line, prop;
 
     std::vector<vec3> vertices;
+    std::vector<std::string> objects;
     std::vector<vec2> texture_uv;
     std::map<std::string,std::vector<std::vector<int> > > face_inds, texture_inds;
 
@@ -12743,27 +12815,34 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
     float boxmax = -100000;
 
     std::string current_material = "none";
+    std::string current_object = "none";
 
     while( inputOBJ.good() ){
 
         inputOBJ>>line;
 
         // ------- COMMENTS --------- //
-        if( strcmp("#",line.c_str())==0 ){
+        if( line=="#" ){
             getline(inputOBJ, line);
 
             // ------- MATERIAL LIBRARY ------- //
-        }else if( strcmp("mtllib",line.c_str())==0 ){
+        }else if( line=="mtllib" ){
             getline(inputOBJ, line);
-            std::string material_file = deblank(line.c_str());
+            std::string material_file = deblank(line);
             materials = loadMTL( filebase, material_file );
 
+            // ------- OBJECT ------- //
+        }else if( line=="o" ){
+          getline(inputOBJ, line);
+          current_object = deblank(line);
+
             // ------- VERTICES --------- //
-        }else if( strcmp("v",line.c_str())==0 ){
+        }else if( line=="v" ){
             getline(inputOBJ, line);
             //parse vertices into points
             vec3 verts(string2vec3(line.c_str()));
             vertices.emplace_back(verts);
+            objects.emplace_back(current_object);
 
             if(verts.z < boxmin ){
                 boxmin = verts.z;
@@ -12773,19 +12852,19 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
             }
 
             // ------- TEXTURE COORDINATES --------- //
-        }else if( strcmp("vt",line.c_str())==0 ){
+        }else if( line=="vt" ){
             getline(inputOBJ, line);
             //parse coordinates into uv
             vec2 uv(string2vec2(line.c_str()));
             texture_uv.emplace_back(uv);
 
             // ------- MATERIALS --------- //
-        }else if( strcmp("usemtl",line.c_str())==0 ){
+        }else if( line=="usemtl" ){
             getline(inputOBJ, line);
-            current_material = line;
+            current_material = deblank(line);
 
             // ------- FACES --------- //
-        }else if( strcmp("f",line.c_str())==0 ){
+        }else if( line=="f" ){
             getline(inputOBJ, line);
             //parse face vertices
             std::istringstream stream(line);
@@ -12903,8 +12982,6 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
 
                         ID = addTriangle( origin+v0*scl.x, origin+v1*scl.y, origin+v2*scl.z, texture.c_str(), texture_uv.at(iuv0), texture_uv.at(iuv1), texture_uv.at(iuv2) );
 
-//                        vec3 normal = getPrimitivePointer_private(ID)->getNormal();
-
                         if( textureColorIsOverridden ){
                           setPrimitiveColor( ID, color );
                           overridePrimitiveTextureColor( ID );
@@ -12913,6 +12990,12 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
                     }
                 }else{
                     ID = addTriangle( origin+v0*scl.x, origin+v1*scl.y, origin+v2*scl.z, color );
+                }
+
+                std::string object = objects.at(face_inds.at(materialname).at(i).at(0)-1);
+
+                if( object!="none" && doesPrimitiveExist(ID) ){
+                  setPrimitiveData(ID,"object_label",object);
                 }
 
                 UUID.push_back(ID);
@@ -12970,7 +13053,7 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
             inputMTL>>line;
         }else if( line=="newmtl" ){ //material library
             getline(inputMTL, line);
-            std::string material_name = line;
+            std::string material_name = deblank(line);
             OBJmaterial mat(RGB::red,"",0);
             materials.emplace( std::make_pair(material_name,mat) );
 
@@ -15486,5 +15569,156 @@ float Context::sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const{
   }
 
   return area;
+
+}
+
+std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, float filter_value, const std::string &comparator ){
+
+  if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+    throw( std::runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.") );
+  }
+
+  std::vector<uint> UUIDs_out = UUIDs;
+  for( int p=UUIDs.size()-1; p>=0; p-- ){
+    uint UUID = UUIDs_out.at(p);
+    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_FLOAT ){
+      float data;
+      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+      if( comparator=="==" && data==filter_value ){
+        continue;
+      }else if ( comparator==">" && data>filter_value ) {
+        continue;
+      }else if ( comparator=="<" && data<filter_value ){
+        continue;
+      }else if ( comparator==">=" && data>=filter_value ){
+        continue;
+      }else if ( comparator=="<=" && data<=filter_value ){
+        continue;
+      }
+
+      std::swap( UUIDs_out.at(p),UUIDs_out.back() );
+      UUIDs_out.pop_back();
+    }
+  }
+
+  return UUIDs_out;
+
+}
+
+std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, double filter_value, const std::string &comparator ){
+
+  if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+    throw( std::runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.") );
+  }
+
+  std::vector<uint> UUIDs_out = UUIDs;
+  for( int p=UUIDs.size()-1; p>=0; p-- ){
+    uint UUID = UUIDs_out.at(p);
+    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_DOUBLE ){
+      double data;
+      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+      if( comparator=="==" && data==filter_value ){
+        continue;
+      }else if ( comparator==">" && data>filter_value ) {
+        continue;
+      }else if ( comparator=="<" && data<filter_value ){
+        continue;
+      }else if ( comparator==">=" && data>=filter_value ){
+        continue;
+      }else if ( comparator=="<=" && data<=filter_value ){
+        continue;
+      }
+
+      std::swap( UUIDs_out.at(p),UUIDs_out.back() );
+      UUIDs_out.pop_back();
+    }
+  }
+
+  return UUIDs_out;
+
+}
+
+std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, int filter_value, const std::string &comparator ){
+
+  if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+    throw( std::runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.") );
+  }
+
+  std::vector<uint> UUIDs_out = UUIDs;
+  for( int p=UUIDs.size()-1; p>=0; p-- ){
+    uint UUID = UUIDs_out.at(p);
+    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_INT ){
+      int data;
+      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+      if( comparator=="==" && data==filter_value ){
+        continue;
+      }else if ( comparator==">" && data>filter_value ) {
+        continue;
+      }else if ( comparator=="<" && data<filter_value ){
+        continue;
+      }else if ( comparator==">=" && data>=filter_value ){
+        continue;
+      }else if ( comparator=="<=" && data<=filter_value ){
+        continue;
+      }
+
+      std::swap( UUIDs_out.at(p),UUIDs_out.back() );
+      UUIDs_out.pop_back();
+    }
+  }
+
+  return UUIDs_out;
+
+}
+
+std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, uint filter_value, const std::string &comparator ){
+
+  if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+    throw( std::runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.") );
+  }
+
+  std::vector<uint> UUIDs_out = UUIDs;
+  for( int p=UUIDs.size()-1; p>=0; p-- ){
+    uint UUID = UUIDs_out.at(p);
+    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_UINT ){
+      uint data;
+      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+      if( comparator=="==" && data==filter_value ){
+        continue;
+      }else if ( comparator==">" && data>filter_value ) {
+        continue;
+      }else if ( comparator=="<" && data<filter_value ){
+        continue;
+      }else if ( comparator==">=" && data>=filter_value ){
+        continue;
+      }else if ( comparator=="<=" && data<=filter_value ){
+        continue;
+      }
+
+      std::swap( UUIDs_out.at(p),UUIDs_out.back() );
+      UUIDs_out.pop_back();
+    }
+  }
+
+  return UUIDs_out;
+
+}
+
+std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, const std::string &filter_value ){
+
+  std::vector<uint> UUIDs_out = UUIDs;
+  for( int p=UUIDs.size()-1; p>=0; p-- ){
+    uint UUID = UUIDs_out.at(p);
+    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_STRING ){
+      std::string data;
+      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+      if( data!=filter_value ) {
+        std::swap(UUIDs_out.at(p), UUIDs_out.back());
+        UUIDs_out.pop_back();
+      }
+    }
+  }
+
+  return UUIDs_out;
 
 }

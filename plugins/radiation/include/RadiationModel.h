@@ -145,9 +145,17 @@ class RadiationModel{
   */
   void setSourceFlux( const uint ID, const char* band_label, const float flux );
 
-  //! Set the position/direction of radiation source
-  /** \param[in] "ID" Identifier of radiation source
-      \param[in] "position" If point source - (x,y,z) position of the radiation source. If collimated source - (nx,ny,nz) unit vector pointing toward the source.
+  //! Set the position/direction of radiation source based on a spherical coordinate
+  /**
+   * \param[in] "ID" Identifier of radiation source
+   * \param[in] "position" If point source - (distance,elevation,azimuth) position of the radiation source. If collimated source - radius of spherical coordinate is ignored.
+   */
+  void setSourcePosition( const uint ID, const helios::SphericalCoord position );
+
+  //! Set the position/direction of radiation source based on a Cartesian (x,y,z) vector
+  /**
+   * \param[in] "ID" Identifier of radiation source
+   * \param[in] "position" If point source - (x,y,z) position of the radiation source. If collimated source - (nx,ny,nz) unit vector pointing toward the source.
    */
   void setSourcePosition( const uint ID, const helios::vec3 position );
 

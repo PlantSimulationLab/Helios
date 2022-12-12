@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.51</span>
+   &#160;<span id="projectnumber">v1.2.52</span>
    </div>
   </td>
  </tr>
@@ -194,6 +194,18 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="glob
 <a class="el" href="structhelios_1_1int4.html">int4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga4aa73326d27fdaba24fac984db5b8009">helios::string2int4</a> (const char *str)</td></tr>
 <tr class="memdesc:ga4aa73326d27fdaba24fac984db5b8009"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> vector. <br /></td></tr>
 <tr class="separator:ga4aa73326d27fdaba24fac984db5b8009"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a162c3d8c139c75bac9607b512768b937"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a162c3d8c139c75bac9607b512768b937">helios::parse_float</a> (const std::string &amp;input_string, float &amp;converted_float)</td></tr>
+<tr class="memdesc:a162c3d8c139c75bac9607b512768b937"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into a float with error checking.  <a href="global_8h.html#a162c3d8c139c75bac9607b512768b937">More...</a><br /></td></tr>
+<tr class="separator:a162c3d8c139c75bac9607b512768b937"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0209e53a2bdd31c9977de93b27e968b6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a0209e53a2bdd31c9977de93b27e968b6">helios::parse_double</a> (const std::string &amp;input_string, double &amp;converted_double)</td></tr>
+<tr class="memdesc:a0209e53a2bdd31c9977de93b27e968b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into a double with error checking.  <a href="global_8h.html#a0209e53a2bdd31c9977de93b27e968b6">More...</a><br /></td></tr>
+<tr class="separator:a0209e53a2bdd31c9977de93b27e968b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b9de37fd00d939cb9e049a9002e8db0"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a6b9de37fd00d939cb9e049a9002e8db0">helios::parse_int</a> (const std::string &amp;input_string, int &amp;converted_int)</td></tr>
+<tr class="memdesc:a6b9de37fd00d939cb9e049a9002e8db0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an integer with error checking.  <a href="global_8h.html#a6b9de37fd00d939cb9e049a9002e8db0">More...</a><br /></td></tr>
+<tr class="separator:a6b9de37fd00d939cb9e049a9002e8db0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a51430e9e359c2aad9d22d41650b2221a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a51430e9e359c2aad9d22d41650b2221a">helios::parse_uint</a> (const std::string &amp;input_string, uint &amp;converted_uint)</td></tr>
+<tr class="memdesc:a51430e9e359c2aad9d22d41650b2221a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an unsigned integer with error checking.  <a href="global_8h.html#a51430e9e359c2aad9d22d41650b2221a">More...</a><br /></td></tr>
+<tr class="separator:a51430e9e359c2aad9d22d41650b2221a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8180158609698aae15da7574b085b817"><td class="memItemLeft" align="right" valign="top">
 <a class="el" href="structhelios_1_1_r_g_b_acolor.html">RGBAcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga8180158609698aae15da7574b085b817">helios::string2RGBcolor</a> (const char *str)</td></tr>
 <tr class="memdesc:ga8180158609698aae15da7574b085b817"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an <a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">RGBcolor</a> vector. <br /></td></tr>
@@ -662,7 +674,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>int3, with int3::x = day, int3::y = month, int3::z = year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a7a889dd38f803c031f3e2ce6936b1cdc">JulianDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00980">980</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01039">1039</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -757,7 +769,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02570">2570</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02629">2629</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -787,7 +799,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain an extension, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02668">2668</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02727">2727</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -817,7 +829,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename including extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02705">2705</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02764">2764</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -857,7 +869,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File path contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a path, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02716">2716</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02775">2775</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -887,7 +899,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename without extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02690">2690</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02749">2749</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -916,7 +928,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>One-dimensional vector of floats contained in text file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02734">2734</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02793">2793</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -956,7 +968,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of y interpolated at location x. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02615">2615</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02674">2674</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1004,7 +1016,167 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a35cf3fa6f900627c962472dd550e3d39">CalendarDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01023">1023</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01082">1082</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0209e53a2bdd31c9977de93b27e968b6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0209e53a2bdd31c9977de93b27e968b6">&#9670;&nbsp;</a></span>parse_double()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::parse_double </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>input_string</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double &amp;&#160;</td>
+          <td class="paramname"><em>converted_double</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Convert a string into a double with error checking. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">input_string</td><td>String to be converted to numerical value </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">converted_double</td><td>Output numerical value converted from input string </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00721">721</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a162c3d8c139c75bac9607b512768b937"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a162c3d8c139c75bac9607b512768b937">&#9670;&nbsp;</a></span>parse_float()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::parse_float </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>input_string</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float &amp;&#160;</td>
+          <td class="paramname"><em>converted_float</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Convert a string into a float with error checking. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">input_string</td><td>String to be converted to numerical value </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">converted_float</td><td>Output numerical value converted from input string </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00707">707</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a6b9de37fd00d939cb9e049a9002e8db0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b9de37fd00d939cb9e049a9002e8db0">&#9670;&nbsp;</a></span>parse_int()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::parse_int </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>input_string</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&#160;</td>
+          <td class="paramname"><em>converted_int</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Convert a string into an integer with error checking. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">input_string</td><td>String to be converted to numerical value </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">converted_int</td><td>Output numerical value converted from input string </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00735">735</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a51430e9e359c2aad9d22d41650b2221a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a51430e9e359c2aad9d22d41650b2221a">&#9670;&nbsp;</a></span>parse_uint()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::parse_uint </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>input_string</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint &amp;&#160;</td>
+          <td class="paramname"><em>converted_uint</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Convert a string into an unsigned integer with error checking. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">input_string</td><td>String to be converted to numerical value </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">converted_uint</td><td>Output numerical value converted from input string </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00749">749</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1032,7 +1204,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01107">1107</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01166">1166</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1072,7 +1244,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>distance between p1 and p2 in three dimensions </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02664">2664</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02723">2723</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1125,7 +1297,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01406">1406</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01465">1465</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1178,7 +1350,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01254">1254</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01313">1313</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1207,7 +1379,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>2D mask, where false denotes no material </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01159">1159</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01218">1218</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1351,7 +1523,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Interpolated (x,y,z) Cartesian point. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02365">2365</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02424">2424</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1404,7 +1576,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01465">1465</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01524">1524</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1457,7 +1629,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01339">1339</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01398">1398</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1496,7 +1668,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02405">2405</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02464">2464</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1535,7 +1707,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02420">2420</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02479">2479</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1574,7 +1746,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02495">2495</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02554">2554</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1613,7 +1785,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02510">2510</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02569">2569</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1652,7 +1824,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02525">2525</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02584">2584</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1691,7 +1863,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02540">2540</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02599">2599</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1730,7 +1902,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02555">2555</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02614">2614</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1769,7 +1941,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02435">2435</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02494">2494</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1808,7 +1980,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02450">2450</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02509">2509</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1847,7 +2019,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02465">2465</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02524">2524</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1886,7 +2058,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02480">2480</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02539">2539</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

@@ -266,7 +266,7 @@ bool LIDAR_CUDA::sortcol1( const std::vector<double>& v0, const std::vector<doub
   return v0.at(1)<v1.at(1);
 }
 
-void LiDARcloud::calculateHitGridCellGPU( void ){
+void LiDARcloud::calculateHitGridCellGPU() {
 
   if( printmessages ){
     std::cout << "Grouping hit points by grid cell..." << std::flush;
@@ -286,7 +286,7 @@ void LiDARcloud::calculateHitGridCellGPU( void ){
   CUDA_CHECK_ERROR( cudaMalloc((void**)&d_hit_xyz,N*sizeof(float3)) ); //allocate device memory
 
   //copy scan data into the host buffer
-  for( std::size_t r=0; r<getHitCount(); r++ ){
+  for( std::size_t r=0; r< getHitCount(); r++ ){
     hit_xyz[r] = vec3tofloat3(getHitXYZ(r));
   }
 
@@ -359,7 +359,7 @@ void LiDARcloud::calculateHitGridCellGPU( void ){
   
   CUDA_CHECK_ERROR( cudaMemcpy(hit_vol, d_hit_vol, total_hits*sizeof(int), cudaMemcpyDeviceToHost) );
 
-  for( std::size_t r=0; r<getHitCount(); r++ ){
+  for( std::size_t r=0; r< getHitCount(); r++ ){
     setHitGridCell( r, hit_vol[r] );
   }
 
@@ -380,7 +380,7 @@ void LiDARcloud::calculateHitGridCellGPU( void ){
     
 }
 
-void LiDARcloud::sourcesInsideGridCellGPU( void ){
+void LiDARcloud::sourcesInsideGridCellGPU() {
 
   if( printmessages ){
     std::cout << "Checking that scan origins are not inside grid cells..." << std::flush;
@@ -490,16 +490,16 @@ void LiDARcloud::sourcesInsideGridCellGPU( void ){
     
 }
 
-std::vector<helios::vec3> LiDARcloud::gapfillMisses( const int scan ){
+std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source){
 
-  helios::vec3 origin = getScanOrigin(scan);
+  helios::vec3 origin = getScanOrigin(source);
   std::vector<helios::vec3> xyz_filled;
 
   // Populating a hit table for each scan:
   // Column 0 - hit index; Column 1 - timestamp; Column 2 - ray zenith; Column 3 - ray azimuth
   std::vector<std::vector<double> > hit_table;
-  for( size_t r=0; r<getHitCount(); r++ ){
-    if( getHitScanID(r)==scan ){
+  for( size_t r=0; r< getHitCount(); r++ ){
+    if( getHitScanID(r)== source){
       
       helios::SphericalCoord raydir = getHitRaydir(r);
 
@@ -690,8 +690,8 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses( const int scan ){
 
   }
 
-  /// /extrapolate missing points
-  helios::vec2 theta_range = getScanRangeTheta(scan);
+  // extrapolate missing points
+  helios::vec2 theta_range = getScanRangeTheta(source);
   
   for( int j=0; j<hit_table2D.size(); j++ ){
 
@@ -756,13 +756,12 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses( const int scan ){
   return xyz_filled;
     
 }
-  
 
-void LiDARcloud::calculateLeafAreaGPU( void ){
+void LiDARcloud::calculateLeafAreaGPU() {
   calculateLeafAreaGPU( 1 );
 }
 
-void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
+void LiDARcloud::calculateLeafAreaGPU( int min_voxel_hits){
 
   if( printmessages ){
     std::cout << "Calculating leaf area..." << std::endl;
@@ -941,7 +940,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
     std::vector<helios::vec3> this_scan_xyz;
     std::vector<float> this_scan_weight;
 
-    for( size_t r=0; r<getHitCount(); r++ ){
+    for( size_t r=0; r< getHitCount(); r++ ){
       if( getHitScanID(r)==s ){
 	this_scan_xyz.push_back( getHitXYZ(r) );
 
@@ -1025,7 +1024,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
   //----------- Calculate number of hits in voxels -------------- //
 
   //figure out hits for all scans
-  for( size_t r=0; r<getHitCount(); r++ ){
+  for( size_t r=0; r< getHitCount(); r++ ){
     if( getHitGridCell(r)>=0 ){
       helios::vec3 direction = getHitXYZ(r)-getScanOrigin(getHitScanID(r));
       direction.normalize();
@@ -1119,9 +1118,9 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
       }
       setCellLeafArea(0,v);
       continue;
-    }else if( hit_inside_agg[v]<minVoxelHits ){
+    }else if( hit_inside_agg[v]< min_voxel_hits){
       if( printmessages ){
-	std::cout << "Not enough hits in voxel: " << hit_inside_agg[v] << " < " << minVoxelHits << std::endl;
+	std::cout << "Not enough hits in voxel: " << hit_inside_agg[v] << " < " << min_voxel_hits << std::endl;
       }
       setCellLeafArea(0,v);
       continue;
@@ -1221,7 +1220,7 @@ void LiDARcloud::calculateLeafAreaGPU( const int minVoxelHits ){
     
 }
 
-void LiDARcloud::calculateLeafAreaGPU_testing( const int minVoxelHits ){
+void LiDARcloud::calculateLeafAreaGPU_testing( int min_voxel_hits){
 
   if( printmessages ){
     std::cout << "Calculating leaf area..." << std::endl;
@@ -1262,7 +1261,7 @@ void LiDARcloud::calculateLeafAreaGPU_testing( const int minVoxelHits ){
 
     std::vector<helios::vec3> this_scan_xyz;
 
-    for( size_t r=0; r<getHitCount(); r++ ){
+    for( size_t r=0; r< getHitCount(); r++ ){
       if( getHitScanID(r)==s ){
 	this_scan_xyz.push_back( getHitXYZ(r) );
       }
@@ -1360,7 +1359,7 @@ void LiDARcloud::calculateLeafAreaGPU_testing( const int minVoxelHits ){
   //----------- Calculate number of hits in voxels -------------- //
 
   //figure out hits for all scans
-  for( size_t r=0; r<getHitCount(); r++ ){
+  for( size_t r=0; r< getHitCount(); r++ ){
     if( getHitGridCell(r)>=0 ){
       helios::vec3 direction = getHitXYZ(r)-getScanOrigin(getHitScanID(r));
       direction.normalize();
@@ -1451,9 +1450,9 @@ void LiDARcloud::calculateLeafAreaGPU_testing( const int minVoxelHits ){
       // }
       setCellLeafArea(0,v);
       continue;
-    }else if( hit_inside_agg[v]<minVoxelHits ){
+    }else if( hit_inside_agg[v]< min_voxel_hits){
       if( printmessages ){
-	std::cout << "Not enough hits in voxel: " << hit_inside_agg[v] << " < " << minVoxelHits << std::endl;
+	std::cout << "Not enough hits in voxel: " << hit_inside_agg[v] << " < " << min_voxel_hits << std::endl;
       }
       setCellLeafArea(0,v);
       continue;
@@ -1570,7 +1569,7 @@ void LiDARcloud::calculateLeafAreaGPU_synthetic( helios::Context* context, bool 
     }
     
     if( !hitgridcellcomputed ){
-        calculateHitGridCellGPU();
+      calculateHitGridCellGPU();
     }
     
     const uint Nscans = getScanCount();
@@ -1632,7 +1631,7 @@ void LiDARcloud::calculateLeafAreaGPU_synthetic( helios::Context* context, bool 
         //only work with hitpoints assoicated with current scan
         std::vector<helios::vec3> this_scan_xyz;
         std::vector<uint> this_scan_index;
-        for( size_t r=0; r<getHitCount(); r++ ){
+        for( size_t r=0; r< getHitCount(); r++ ){
             if( getHitScanID(r)==s ){
                 this_scan_xyz.push_back( getHitXYZ(r) );
                 this_scan_index.push_back(r);
@@ -2013,7 +2012,7 @@ void LiDARcloud::calculateLeafAreaGPU_synthetic( helios::Context* context, bool 
     //----------- Calculate number of hits in voxels -------------- //
     
     //figure out hits for all scans
-    for( size_t r=0; r<getHitCount(); r++ ){
+    for( size_t r=0; r< getHitCount(); r++ ){
         if( getHitGridCell(r)>=0 ){
             helios::vec3 direction = getHitXYZ(r)-getScanOrigin(getHitScanID(r));
             direction.normalize();
@@ -2186,7 +2185,8 @@ void LiDARcloud::calculateLeafAreaGPU_synthetic( helios::Context* context, bool 
     
 }
 
-std::vector<float> LiDARcloud::LAD_inversion(std::vector<float> P, std::vector<float> Gtheta, std::vector<std::vector<float>> dr_array, bool fillAnalytic){
+std::vector<float> LiDARcloud::LAD_inversion(std::vector<float> &P, std::vector<float> &Gtheta,
+                          std::vector<std::vector<float>> &dr_array, bool fillAnalytic){
     
     float etol = 5e-5;
     uint maxiter = 100;
@@ -2670,7 +2670,8 @@ __global__ void LIDAR_CUDA::intersectGridcell_synthetic( const size_t Nhitsbb, c
     
 }
 
-void LiDARcloud::trunkReconstruction( const helios::vec3 box_center, const helios::vec3 box_size, const float Lmax, const float max_aspect_ratio ){
+void LiDARcloud::trunkReconstruction(const helios::vec3 &box_center,
+                                     const helios::vec3 &box_size, float Lmax, float max_aspect_ratio ){
 
   if( printmessages ){
     std::cout << "Performing trunk reconstruction..." << std::flush;
@@ -2735,7 +2736,7 @@ void LiDARcloud::trunkReconstruction( const helios::vec3 box_center, const helio
 
   // ------ Triangulate trunk points -------- //
 
-  for( uint s=0; s<getScanCount(); s++ ){
+  for( uint s=0; s< getScanCount(); s++ ){
     
     std::vector<int> Delaunay_inds;
 
@@ -2928,15 +2929,15 @@ void LiDARcloud::syntheticScan( helios::Context* context ){
   syntheticScan( context, 1, 0, false, false );
 }
 
-void LiDARcloud::syntheticScan( helios::Context* context, const bool scan_grid_only, const bool record_misses ){
+void LiDARcloud::syntheticScan( helios::Context* context, bool scan_grid_only, bool record_misses ){
   syntheticScan( context, 1, 0, scan_grid_only, record_misses );
 }
 
-void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pulse, const float pulse_distance_threshold ){
+void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, float pulse_distance_threshold ){
   syntheticScan( context, rays_per_pulse, pulse_distance_threshold, false, false );
 }
 
-void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pulse, const float pulse_distance_threshold, const bool scan_grid_only, const bool record_misses ){
+void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, float pulse_distance_threshold, bool scan_grid_only, bool record_misses ){
 
   int Npulse;
   if( rays_per_pulse<1 ){
@@ -2953,7 +2954,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
     }
   }
 
-  if( getScanCount()==0 ){
+  if(getScanCount() ==0 ){
     std::cout << "WARNING (syntheticScan): No scans added to the point cloud. Exiting.." << std::endl;
     return;
   }
@@ -3170,7 +3171,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
   CUDA_CHECK_ERROR( cudaMalloc((void**)&d_masksize, Ntextures * sizeof(int2)) ); //allocate device memory
   CUDA_CHECK_ERROR( cudaMemcpy(d_masksize, masksize, Ntextures * sizeof(int2), cudaMemcpyHostToDevice) );
 
-  for( int s=0; s<getScanCount(); s++ ){
+  for( int s=0; s< getScanCount(); s++ ){
 
     float3 scan_origin = vec3tofloat3(getScanOrigin(s));
 
@@ -3282,7 +3283,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
     }
     CUDA_CHECK_ERROR( cudaMemcpy(d_hit_fnorm, hit_fnorm, N*Npulse*sizeof(float), cudaMemcpyHostToDevice) );
 
-    //Dot product of primitive normal and ray direction (for calculating intensity)
+    //ID of intersected primitive
     int* d_hit_ID;
     CUDA_CHECK_ERROR( cudaMalloc((void**)&d_hit_ID,N*Npulse*sizeof(int)) ); //allocate device memory
     int* hit_ID = (int*)malloc(N*Npulse * sizeof(int)); //allocate host memory
@@ -3379,7 +3380,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
 	  }else{
 	    
 	    count++;
-        t0=t_pulse.at(hit).at(0);
+            t0=t_pulse.at(hit).at(0);
 	    d+=t_pulse.at(hit).at(0);
 	    f+=t_pulse.at(hit).at(1);
             
@@ -3414,13 +3415,20 @@ void LiDARcloud::syntheticScan( helios::Context* context, const int rays_per_pul
 	
 	if( UUID>=0 && context->doesPrimitiveExist(uint(UUID)) ){
 	  
-	  color = context->getPrimitiveColor(UUID);
+	  color = context->getPrimitiveColor(uint(UUID));
 	  
 	  if( context->doesPrimitiveDataExist(uint(UUID),"object_label") && context->getPrimitiveDataType(uint(UUID),"object_label")==helios::HELIOS_TYPE_INT ){
 	    int label;
 	    context->getPrimitiveData(uint(UUID),"object_label",label);
 	    data["object_label"] = double(label);
 	  }
+
+          if( context->doesPrimitiveDataExist(uint(UUID),"reflectivity_lidar") && context->getPrimitiveDataType(uint(UUID),"reflectivity_lidar")==helios::HELIOS_TYPE_FLOAT ){
+            float rho;
+            context->getPrimitiveData(uint(UUID),"reflectivity_lidar",rho);
+            data.at("intensity")*=rho;
+          }
+
 	}
 
     	helios::vec3 dir = helios::make_vec3(direction[r].x,direction[r].y,direction[r].z);

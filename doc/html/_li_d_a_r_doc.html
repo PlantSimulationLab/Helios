@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.51</span>
+   &#160;<span id="projectnumber">v1.2.52</span>
    </div>
   </td>
  </tr>
@@ -76,6 +76,7 @@ $(function() {
 <li class="level1"><a href="#LiDARintro">Introduction</a></li>
 <li class="level1"><a href="#LiDARdepends">Dependencies</a></li>
 <li class="level1"><a href="#LiDARConstructor">Class Constructor</a></li>
+<li class="level1"><a href="#LiDARInputData">Input Primitive Data</a></li>
 <li class="level1"><a href="#LiDARbg">Background information</a><ul><li class="level2"><a href="#LiDARcoord">Coordinates and scan pattern</a></li>
 <li class="level2"><a href="#LiDARreturn">Difference between discrete-return and full-waveform LiDAR data</a></li>
 <li class="level2"><a href="#ScanMetadata">Scan metadata</a></li>
@@ -155,12 +156,20 @@ Class Constructor</h1>
 <td><a class="el" href="class_li_d_a_rcloud.html">LiDARcloud( void )</a> </td></tr>
 </table>
 <p>The <a class="el" href="class_li_d_a_rcloud.html">LiDARcloud</a> class contains point cloud data, and is used to perform processing operations on the data. The class constructor does not take any arguments.</p>
+<h1><a class="anchor" id="LiDARInputData"></a>
+Input Primitive Data</h1>
+<table class="doxtable">
+<tr>
+<th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value </th></tr>
+<tr>
+<td>reflectivity_lidar</td><td><img class="formulaInl" alt="$\rho_l$" src="form_83.png" width="12" height="11"/></td><td>unitless</td><td> <font face="courier" color="green">float</font></td><td>Primitive reflectivity in the waveband of the laser. This is used to calculate the return intensity in synthetic scans.</td><td>N/A</td><td>1.0 </td></tr>
+</table>
 <h1><a class="anchor" id="LiDARbg"></a>
 Background information</h1>
 <h2><a class="anchor" id="LiDARcoord"></a>
 Coordinates and scan pattern</h2>
 <p>The algorithms associated with the LiDAR plug-in work with data obtained from a rectangular scan pattern. In this scan pattern, points are sampled at equally spaced intervals in both the zenithal ( <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/>) and azimuthal ( <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/>) directions. At a given azimuthal angle, some range of zenithal angles are consecutively scanned, which represents a "scan line". Each scan line starts at some zenithal angle <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>min</sub> and ends at some zenithal angle <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>max</sub>. After recording a scan line at the first azimuthal angle <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>min</sub>, the scanner incrementally moves to the next adjacent azimuthal scan direction and records the next scan line until it reaches the azimuthal angle <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>max</sub>.</p>
-<p>The number of zenithal points within each scan line is given by <img class="formulaInl" alt="$\mathrm{N}_{\theta}$" src="form_83.png" width="18" height="15"/>, and the total number of scan lines (i.e., number of individual azimuthal directions) is is given by <img class="formulaInl" alt="$\mathrm{N}_{\varphi}$" src="form_84.png" width="20" height="17"/>.</p>
+<p>The number of zenithal points within each scan line is given by <img class="formulaInl" alt="$\mathrm{N}_{\theta}$" src="form_84.png" width="18" height="15"/>, and the total number of scan lines (i.e., number of individual azimuthal directions) is is given by <img class="formulaInl" alt="$\mathrm{N}_{\varphi}$" src="form_85.png" width="20" height="17"/>.</p>
 <p>Angles are typically specified as degrees. Distance units are arbitrary, but must be used consistently.</p>
 <div class="image">
 <img src="CoordinateSystem.jpeg" alt=""/>
@@ -217,7 +226,7 @@ Scan metadata</h2>
 <h2><a class="anchor" id="AddHits"></a>
 Hit point data</h2>
 <p>In addition to scan metadata, the data collected by the scan itself must also be added to the plug-in. This can be achieved by either reading data from an ASCII text file, or performing a synthetic scan. At a minimum, point cloud data consists of the Cartesian (x,y,z) coordinates of each hit in the scan. Additionally, hit points may also have an associated r-g-b color value, or some other scalar data value such as intensity or temperature.</p>
-<p>For the processing algorithms to work, the scan direction associated with each hit point must also be known. This can be specified directly as a ( <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/>, <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/>) spherical coordinate, or using the row (i.e., index in the scanline: 1... <img class="formulaInl" alt="$\mathrm{N}_\theta$" src="form_85.png" width="18" height="15"/>) and column (i.e., scanline index: 1... <img class="formulaInl" alt="$\mathrm{N}_\varphi$" src="form_86.png" width="20" height="17"/>). Otherwise, it will calculate the scan direction by drawing a line between the scan origin position and the hit point.</p>
+<p>For the processing algorithms to work, the scan direction associated with each hit point must also be known. This can be specified directly as a ( <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/>, <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/>) spherical coordinate, or using the row (i.e., index in the scanline: 1... <img class="formulaInl" alt="$\mathrm{N}_\theta$" src="form_86.png" width="18" height="15"/>) and column (i.e., scanline index: 1... <img class="formulaInl" alt="$\mathrm{N}_\varphi$" src="form_87.png" width="20" height="17"/>). Otherwise, it will calculate the scan direction by drawing a line between the scan origin position and the hit point.</p>
 <p>For full-waveform data, additional information is needed about the hit points. Specifically, the total number of hit points along the pulse. IfThe index can start at 0 or 1 for the first hit along the pulse, it just should be consistent for all points.</p>
 <h1><a class="anchor" id="ScanIO"></a>
 Loading scan data from file</h1>
@@ -324,8 +333,8 @@ Processing LiDAR data</h1>
 <h2><a class="anchor" id="LiDARtri"></a>
 Hit point triangulation</h2>
 <p>A triangulation between adjacent points is typically required for any of the available data processing algorithms. In the triangulation, adjacent hit points are connected to form a mesh of triangular solid surfaces. The algorithm for performing this triangulation is described in detail in <a href="dx.doi.org/doi:10.1016/j.rse.2017.03.011">Bailey and Mahaffee (2017a)</a>.</p>
-<p>There are two possible options to be specified when performing the triangulation. A required option is <img class="formulaInl" alt="$L_{max}$" src="form_87.png" width="33" height="15"/>, which is the maximum allowable length of a triangle side. This parameter prevents triangles from connecting adjacent leaves (i.e., we only want triangles to be formed with neighboring points on the same leaf). Typically we want <img class="formulaInl" alt="$L_{max}$" src="form_87.png" width="33" height="15"/> to be much larger than the spacing between adjacent hit points, and much smaller than the characteristic length of a leaf. For example, <a href="dx.doi.org/doi:10.1016/j.rse.2017.03.011">Bailey and Mahaffee (2017a)</a> used 5cm for a cottonwood tree.</p>
-<p>Another optional parameter is the maximum allowable aspect ratio of a triangle, which is the ratio of the length of the longest triangle side to the shortest triangle side. This has a similar effect as the <img class="formulaInl" alt="$L_{max}$" src="form_87.png" width="33" height="15"/> parameter, and works better in some cases.</p>
+<p>There are two possible options to be specified when performing the triangulation. A required option is <img class="formulaInl" alt="$L_{max}$" src="form_88.png" width="33" height="15"/>, which is the maximum allowable length of a triangle side. This parameter prevents triangles from connecting adjacent leaves (i.e., we only want triangles to be formed with neighboring points on the same leaf). Typically we want <img class="formulaInl" alt="$L_{max}$" src="form_88.png" width="33" height="15"/> to be much larger than the spacing between adjacent hit points, and much smaller than the characteristic length of a leaf. For example, <a href="dx.doi.org/doi:10.1016/j.rse.2017.03.011">Bailey and Mahaffee (2017a)</a> used 5cm for a cottonwood tree.</p>
+<p>Another optional parameter is the maximum allowable aspect ratio of a triangle, which is the ratio of the length of the longest triangle side to the shortest triangle side. This has a similar effect as the <img class="formulaInl" alt="$L_{max}$" src="form_88.png" width="33" height="15"/> parameter, and works better in some cases.</p>
 <p>The following code sample illustrates how to perform a triangulation.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
   #include "LiDAR.h"
@@ -343,7 +352,7 @@ Hit point triangulation</h2>
   }</code></pre></div><h2><a class="anchor" id="LiDARleafarea"></a>
 Calculating leaf area for each grid cell</h2>
 <p>Using the triangulation and defined grid cells, the plug-in can calculate the leaf area (and leaf area density) for each grid cell. The algorithm for calculating leaf area is described in detail in <a href="dx.doi.org/doi:10.1088/1361-6501/aa5cfd">Bailey and Mahaffee (2017b)</a>.</p>
-<p>Performing the calculations is simple and requires no inputs, which is illustrated with the following code sample. Note that the leaf area calculation requires that the triangulation has been performed beforehand. If no triangulation is available, the plug-in will assume a uniformly distributed leaf angle orientation ( <img class="formulaInl" alt="$G=0.5$" src="form_88.png" width="51" height="12"/>). The leaf area calculation also requires that at least one grid cell was defined.</p>
+<p>Performing the calculations is simple and requires no inputs, which is illustrated with the following code sample. Note that the leaf area calculation requires that the triangulation has been performed beforehand. If no triangulation is available, the plug-in will assume a uniformly distributed leaf angle orientation ( <img class="formulaInl" alt="$G=0.5$" src="form_89.png" width="51" height="12"/>). The leaf area calculation also requires that at least one grid cell was defined.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
   #include "LiDAR.h"
 
@@ -396,7 +405,7 @@ Generating Synthetic (Simulated) LiDAR Data</h1>
 XML parameter file</h2>
 <p>To generate synthetic discrete-return LiDAR data, first add all desired model geometry to the Context. Then declare an instance of the <a class="el" href="class_li_d_a_rcloud.html">LiDARcloud</a> class as above, and load an XML file containing the scan parameters. As in the case of importing a real point cloud dataset, the XML file must specify the scan origin and the scan resolution at a minimum (see above). However, in the case of synthetic data generation, you will not specify a filename to read containing point cloud data, as this data will be generated by the simulation. You can optionally specify the ASCII_format tag, which will determine which additional data fields should be recorded for each hit point. Valid hit point data fields are listed above in <a class="el" href="_li_d_a_r_doc.html#ScanIO">Loading scan data from file</a>.</p>
 <p>If no ASCII_format tag is provided in the XML file, the default is to record the (x,y,z) position of the hit point. If the function <a class="el" href="class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322">LiDARcloud::exportPointCloud()</a> is called, it will export the simulated point cloud according to the provided ASCII_format tag (or the default if not provided).</p>
-<p>Note that you can add multipe &lt;scan&gt;&lt;/scan&gt; blocks in a single XML file to perform multiple scans.</p>
+<p>Note that you can add multiple &lt;scan&gt;&lt;/scan&gt; blocks in a single XML file to perform multiple scans.</p>
 <h2><a class="anchor" id="LiDARsynthdiscrete"></a>
 Synthetic discrete-return data</h2>
 <p>Once the <a class="el" href="class_li_d_a_rcloud.html">LiDARcloud</a> has been declared, and an XML file containing the scan parameters has been read, a discrete-return synthetic scan can be perfomed by calling LiDARcloud::syntheticScan( helios::Context*, const char* ). This version (i.e., without the optional rays_per_pulse and pulse_distance_threshold arguments) will perform a discrete-return synthetic scan.</p>
@@ -523,11 +532,11 @@ Writing results to file</h1>
 <tr>
 <td><a class="el" href="class_li_d_a_rcloud.html#ad030fdddcfa669d6af513eb66a9cbd1a">LiDARcloud::exportTriangleNormals( const char* filename )</a> </td><td>Write the unit normal vectors [nx ny nz] of all triangles formed from triangulation. </td></tr>
 <tr>
-<td><a class="el" href="class_li_d_a_rcloud.html#a945639fca5f157ed82847f18134fc4ed">LiDARcloud::exportTriangleNormals( const char* filename, const int gridcell )</a> </td><td>Write the unit normal vectors of triangles formed from triangulation that reside in a specified grid cell. </td></tr>
+<td><a class="el" href="class_li_d_a_rcloud.html#aa8376ce652d2e95e886d4d60d321c274">LiDARcloud::exportTriangleNormals( const char* filename, const int gridcell )</a> </td><td>Write the unit normal vectors of triangles formed from triangulation that reside in a specified grid cell. </td></tr>
 <tr>
 <td><a class="el" href="class_li_d_a_rcloud.html#a416638f486c4fd2572a9589b69605fe7">LiDARcloud::exportTriangleAreas( const char* filename )</a> </td><td>Write the areas of all triangles formed from triangulation. </td></tr>
 <tr>
-<td><a class="el" href="class_li_d_a_rcloud.html#ac9f19878711a4cd53d05e4f4cda60372">LiDARcloud::exportTriangleAreas( const char* filename, const int gridcell )</a> </td><td>Write the areas of triangles formed from triangulation that reside in a specified grid cell. </td></tr>
+<td><a class="el" href="class_li_d_a_rcloud.html#adb93e3a16abc8100b2e5dac956c6cc3e">LiDARcloud::exportTriangleAreas( const char* filename, const int gridcell )</a> </td><td>Write the areas of triangles formed from triangulation that reside in a specified grid cell. </td></tr>
 <tr>
 <td><a class="el" href="class_li_d_a_rcloud.html#a8e8bd43bf3b2c107994fee402c41240f">LiDARcloud::exportLeafAreas( const char* filename )</a> </td><td>Write the leaf area contained within each voxel. Each line of the output file corresponds to the total leaf area within each voxel. </td></tr>
 <tr>

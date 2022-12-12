@@ -188,6 +188,38 @@ int3 string2int3( const char* str );
 /** \ingroup functions */
 int4 string2int4( const char* str );
 
+//! Convert a string into a float with error checking
+/**
+ * \param[in] "input_string" String to be converted to numerical value
+ * \param[out] "converted_float" Output numerical value converted from input string
+ * \return True if conversion was successful, false if unsuccessful
+ */
+bool parse_float( const std::string &input_string, float &converted_float );
+
+//! Convert a string into a double with error checking
+/**
+ * \param[in] "input_string" String to be converted to numerical value
+ * \param[out] "converted_double" Output numerical value converted from input string
+ * \return True if conversion was successful, false if unsuccessful
+ */
+bool parse_double( const std::string &input_string, double &converted_double );
+
+//! Convert a string into an integer with error checking
+/**
+ * \param[in] "input_string" String to be converted to numerical value
+ * \param[out] "converted_int" Output numerical value converted from input string
+ * \return True if conversion was successful, false if unsuccessful
+ */
+bool parse_int( const std::string &input_string, int &converted_int );
+
+//! Convert a string into an unsigned integer with error checking
+/**
+ * \param[in] "input_string" String to be converted to numerical value
+ * \param[out] "converted_uint" Output numerical value converted from input string
+ * \return True if conversion was successful, false if unsuccessful
+ */
+bool parse_uint( const std::string &input_string, uint &converted_uint );
+
 //! Convert a space-delimited string into an RGBcolor vector
 /** \ingroup functions */
 RGBAcolor string2RGBcolor( const char* str );

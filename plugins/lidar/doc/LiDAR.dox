@@ -55,6 +55,13 @@
 
  The \ref LiDARcloud class contains point cloud data, and is used to perform processing operations on the data. The class constructor does not take any arguments.
 
+ \section LiDARInputData Input Primitive Data
+
+ <table>
+  <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value</th></tr>
+  <tr><td>reflectivity_lidar</td><td>\f$\rho_l\f$</td><td>unitless</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Primitive reflectivity in the waveband of the laser. This is used to calculate the return intensity in synthetic scans.</td><td>N/A</td><td>1.0</td></tr>
+ </table>
+
  \section LiDARbg Background information
   
  \subsection LiDARcoord Coordinates and scan pattern
@@ -397,7 +404,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   If no ASCII_format tag is provided in the XML file, the default is to record the (x,y,z) position of the hit point. If the function \ref LiDARcloud::exportPointCloud() is called, it will export the simulated point cloud according to the provided ASCII_format tag (or the default if not provided).
 
-  Note that you can add multipe \<scan></scan> blocks in a single XML file to perform multiple scans.
+  Note that you can add multiple \<scan></scan> blocks in a single XML file to perform multiple scans.
   
   \subsection LiDARsynthdiscrete Synthetic discrete-return data
 

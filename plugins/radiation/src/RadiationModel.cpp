@@ -1880,6 +1880,10 @@ void RadiationModel::setSourceFlux( const uint ID, const char* band_label, const
 
 }
 
+void RadiationModel::setSourcePosition( const uint ID, const helios::SphericalCoord position ){
+  setSourcePosition(ID,sphere2cart(position));
+}
+
 void RadiationModel::setSourcePosition( const uint ID, const helios::vec3 position ){
 
   if( ID>=source_positions.size() ){

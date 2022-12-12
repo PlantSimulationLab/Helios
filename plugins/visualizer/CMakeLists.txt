@@ -22,7 +22,7 @@ target_link_libraries( visualizer glew_s )
 
 #jpeg (built with the Helios core)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../core/lib/libjpeg-9a")
-include_directories("${CMAKE_BINARY_DIR}/lib/lib/libjpeg-9a")
+include_directories("${CMAKE_BINARY_DIR}/lib/libjpeg-9a")
 target_link_libraries( visualizer jpeg )
 add_dependencies( visualizer jpeg )
 

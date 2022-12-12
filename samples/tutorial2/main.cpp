@@ -13,14 +13,10 @@ int main(){
   
   UUID = context.addPatch( position, size ); //this will assign the UUID for this patch to the UUID variable
 
-  vec3 position_shift(1,0,0); //we are going to translate the patch 1 unit in the x-direction
-     
-  context->translatePrimitive( UUID, position_shift ); //apply the translation
-
-  //Visualizer code
-  Visualizer vis(800);
-  vis.buildContextGeometry(&context);
-  vis.plotInteractive();
+  //Visualizer code -- uncomment out this code below, it is commented to allow it to run as part of automated tests
+//  Visualizer vis(800);
+//  vis.buildContextGeometry(&context);
+//  vis.plotInteractive();
 
   return 0;
 

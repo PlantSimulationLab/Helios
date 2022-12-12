@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.51</span>
+   &#160;<span id="projectnumber">v1.2.52</span>
    </div>
   </td>
  </tr>
@@ -177,7 +177,8 @@ Reading PLY (Stanford Polygon) Files</h2>
 
      context.loadPLY( "file.ply", origin, scale, rotation, color );
 
- }</code></pre> </div><p>There are other forms of the loadPLY command that allow for translation, rotation, and scaling of the entire PLY model.</p>
+ }</code></pre> </div><p>There are other forms of the loadPLY function that allow for translation, rotation, and scaling of the entire PLY model.</p>
+<p>Different applications may utilize different coordinate axes in .ply files. In computer graphics applications, it is common to define the y-axis as the up direction. Helios uses a z-up coordinate system. By default <a class="el" href="classhelios_1_1_context.html#a99cda26e82d56d9241b10346ce097010">helios::Context::loadPLY()</a> assumes that the coordinate system used when creating the .ply file is y-up. There is an optional argument <a class="el" href="classhelios_1_1_context.html#a99cda26e82d56d9241b10346ce097010">helios::Context::loadPLY()</a> that can allow you to easily define the up-axis.</p>
 <p>The Blender software package (<a href="https://www.blender.org">www.blender.org</a>) can easily modify and convert most polygon file formats to .ply format. <a class="el" href="_convert_p_l_y.html">This page</a> gives a tutorial on how to perform such conversions using Blender.</p>
 <h2><a class="anchor" id="OBJread"></a>
 Reading OBJ (Wavefront) Files</h2>
@@ -186,6 +187,7 @@ Reading OBJ (Wavefront) Files</h2>
 <li>Geometric vertex coordinates (x,y,z)</li>
 <li>Vertex texture coordinates (u,v)</li>
 <li>Texture map image files (.jpg, .png) associated with materials</li>
+<li>Object groups. When the 'o groupname' is added before a set of vertices, primitive data called 'object_group' is written for the resulting set of primitives.</li>
 </ul>
 <p>Wavefront files are loaded via the Context::loadOBJ() command, which takes the name of an .obj file. If the file defines materials and lists an associated material (.mtl) file, the code looks in one of two places for the file. First, if an absolute or relative path is given for the .mtl file name, the file is simply loaded from that location. If only a file name is given for the .mtl file, the directory where the original .obj file was found is searched for the .mtl file.</p>
 <p>All aspects of material files are not supported. Helios simply searches for the "Kd" texture map, and uses that to color the primitives.</p>

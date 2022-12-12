@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.51</span>
+   &#160;<span id="projectnumber">v1.2.52</span>
    </div>
   </td>
  </tr>
@@ -140,8 +140,11 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a9c9b1bb67e2e7cfd6434e8a8ecaea470"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a9c9b1bb67e2e7cfd6434e8a8ecaea470">setSourceFlux</a> (const uint ID, const char *band_label, const float flux)</td></tr>
 <tr class="memdesc:a9c9b1bb67e2e7cfd6434e8a8ecaea470"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the flux of radiation source for this band.  <a href="class_radiation_model.html#a9c9b1bb67e2e7cfd6434e8a8ecaea470">More...</a><br /></td></tr>
 <tr class="separator:a9c9b1bb67e2e7cfd6434e8a8ecaea470"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5301f0247074ac03780a5872d4dee2c7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a5301f0247074ac03780a5872d4dee2c7">setSourcePosition</a> (const uint ID, const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> position)</td></tr>
+<tr class="memdesc:a5301f0247074ac03780a5872d4dee2c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the position/direction of radiation source based on a spherical coordinate.  <a href="class_radiation_model.html#a5301f0247074ac03780a5872d4dee2c7">More...</a><br /></td></tr>
+<tr class="separator:a5301f0247074ac03780a5872d4dee2c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa9131abd1d0adc29833e98f9a28598f0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#aa9131abd1d0adc29833e98f9a28598f0">setSourcePosition</a> (const uint ID, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> position)</td></tr>
-<tr class="memdesc:aa9131abd1d0adc29833e98f9a28598f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the position/direction of radiation source.  <a href="class_radiation_model.html#aa9131abd1d0adc29833e98f9a28598f0">More...</a><br /></td></tr>
+<tr class="memdesc:aa9131abd1d0adc29833e98f9a28598f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the position/direction of radiation source based on a Cartesian (x,y,z) vector.  <a href="class_radiation_model.html#aa9131abd1d0adc29833e98f9a28598f0">More...</a><br /></td></tr>
 <tr class="separator:aa9131abd1d0adc29833e98f9a28598f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa99c8ff0ef01da7fd63fbd14d015c5fd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#aa99c8ff0ef01da7fd63fbd14d015c5fd">setScatteringDepth</a> (const char *label, uint depth)</td></tr>
 <tr class="memdesc:aa99c8ff0ef01da7fd63fbd14d015c5fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the number of scattering iterations for a certain band.  <a href="class_radiation_model.html#aa99c8ff0ef01da7fd63fbd14d015c5fd">More...</a><br /></td></tr>
@@ -454,7 +457,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Projected area fraction G(theta) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04817">4817</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04821">4821</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -533,7 +536,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01920">1920</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01924">1924</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -802,7 +805,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01909">1909</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01913">1913</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -841,7 +844,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01898">1898</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01902">1902</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -891,8 +894,47 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 
 </div>
 </div>
+<a id="a5301f0247074ac03780a5872d4dee2c7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5301f0247074ac03780a5872d4dee2c7">&#9670;&nbsp;</a></span>setSourcePosition() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationModel::setSourcePosition </td>
+          <td>(</td>
+          <td class="paramtype">const uint&#160;</td>
+          <td class="paramname"><em>ID</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a>&#160;</td>
+          <td class="paramname"><em>position</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the position/direction of radiation source based on a spherical coordinate. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ID</td><td>Identifier of radiation source </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">position</td><td>If point source - (distance,elevation,azimuth) position of the radiation source. If collimated source - radius of spherical coordinate is ignored. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01883">1883</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
 <a id="aa9131abd1d0adc29833e98f9a28598f0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa9131abd1d0adc29833e98f9a28598f0">&#9670;&nbsp;</a></span>setSourcePosition()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aa9131abd1d0adc29833e98f9a28598f0">&#9670;&nbsp;</a></span>setSourcePosition() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -917,7 +959,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
       </table>
 </div><div class="memdoc">
 
-<p>Set the position/direction of radiation source. </p>
+<p>Set the position/direction of radiation source based on a Cartesian (x,y,z) vector. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">ID</td><td>Identifier of radiation source </td></tr>
@@ -926,7 +968,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01883">1883</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01887">1887</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -955,7 +997,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </dl>
 <dl class="section note"><dt>Note</dt><dd><a class="el" href="class_radiation_model.html#a0f55795694c31a0568e606c73f9d945a">updateGeometry()</a> must be called before simulation can be run </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02471">2471</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02475">2475</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -978,7 +1020,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <p>Adds all geometric primitives from the Context to OptiX. </p>
 <p>This function should be called anytime Context geometry is created or modified </p><dl class="section note"><dt>Note</dt><dd><a class="el" href="class_radiation_model.html#a0f55795694c31a0568e606c73f9d945a">updateGeometry()</a> must be called before simulation can be run </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02467">2467</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02471">2471</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>

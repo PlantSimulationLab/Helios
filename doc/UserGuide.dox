@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.2.51
+/*! \mainpage Helios Documentation v1.2.52
 
   \image html Helios_logo.png
 
@@ -338,10 +338,10 @@
     
   \subsection CMake CMakeLists.txt File
   
-  Projects that use the Helios API are typically built using a CMakeLists.txt file.  A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in).
+  Projects that use the Helios API are typically built using a CMakeLists.txt file.  A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.
 
   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-    <pre><code> # Helios standard CMakeLists.txt file version 1.4
+    <pre><code> # Helios standard CMakeLists.txt file version 1.7
   #-------- USER INPUTS ---------#
 
   #provide the path to Helios base directory, either as an absolut path or a path relative to the location of this file
@@ -356,41 +356,8 @@
   #specify which plug-ins to use (separate plug-in names with semicolon)
   set( PLUGINS "visualizer" )
 
-  #-------- MAIN CODE (Don't Modify) ---------#
-
-  cmake_minimum_required(VERSION 2.4)
-  project(helios)
-  if ( WIN32 )
-      SET(CMAKE_C_COMPILER_ID "MSVC")
-      SET(CMAKE_CXX_COMPILER_ID "MSVC")
-      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
-  else()
-      SET(CMAKE_C_COMPILER_ID "GNU")
-      SET(CMAKE_CXX_COMPILER_ID "GNU")
-      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-      if( CMAKE_BUILD_TYPE STREQUAL Debug )
-          SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )
-          SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-      endif()
-  endif()
-  if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
-      set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
-  endif()
-  set( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib )
-  add_executable( ${EXECUTABLE_NAME} ${SOURCE_FILES} )
-  add_subdirectory( ${BASE_DIRECTORY}/core "lib" )
-  target_link_libraries( ${EXECUTABLE_NAME} helios)
-  LIST(LENGTH PLUGINS PLUGIN_COUNT)
-  message("-- Loading ${PLUGIN_COUNT} plug-ins")
-  foreach(PLUGIN ${PLUGINS})
-       message("-- loading plug-in ${PLUGIN}")
-       if( ${PLUGIN} STREQUAL ${EXECUTABLE_NAME} )
-	    message( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )
-      endif()
-      add_subdirectory( ${BASE_DIRECTORY}/plugins/${PLUGIN} "plugins/${PLUGIN}" )
-      target_link_libraries( ${EXECUTABLE_NAME} ${PLUGIN} )
-  endforeach(PLUGIN)
-  include_directories( "${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIRECTORY}" )
+  #-------- DO NOT MODIFY ---------#
+  include( "${BASE_DIRECTORY}/core/CMake_project.txt" )
   </code></pre></div>
 
   The easiest way to compile the code is by using an IDE such as CLion, which is described in detail on the page \ref CLionIDE "Using the CLion IDE with Helios".
@@ -1624,7 +1591,9 @@
    }</code></pre>
   </div>
 
-  There are other forms of the loadPLY command that allow for translation, rotation, and scaling of the entire PLY model.
+  There are other forms of the loadPLY function that allow for translation, rotation, and scaling of the entire PLY model.
+
+  Different applications may utilize different coordinate axes in .ply files. In computer graphics applications, it is common to define the y-axis as the up direction. Helios uses a z-up coordinate system. By default \ref helios::Context::loadPLY() assumes that the coordinate system used when creating the .ply file is y-up. There is an optional argument \ref helios::Context::loadPLY() that can allow you to easily define the up-axis.
 
   The Blender software package (<a href="https://www.blender.org">www.blender.org</a>) can easily modify and convert most polygon file formats to .ply format.  \ref ConvertPLY "This page" gives a tutorial on how to perform such conversions using Blender.
 
@@ -1635,6 +1604,7 @@
   - Geometric vertex coordinates (x,y,z)
   - Vertex texture coordinates (u,v)
   - Texture map image files (.jpg, .png) associated with materials
+  - Object groups. When the 'o groupname' is added before a set of vertices, primitive data called 'object_group' is written for the resulting set of primitives.
 
   Wavefront files are loaded via the \ref Context::loadOBJ() command, which takes the name of an .obj file.  If the file defines materials and lists an associated material (.mtl) file, the code looks in one of two places for the file.  First, if an absolute or relative path is given for the .mtl file name, the file is simply loaded from that location.  If only a file name is given for the .mtl file, the directory where the original .obj file was found is searched for the .mtl file.
 

@@ -4522,7 +4522,7 @@ PUGI__NS_BEGIN
 	PUGI__FN bool set_value_convert(String& dest, Header& header, uintptr_t header_mask, float value)
 	{
 		char buf[128];
-		sprintf(buf, "%.9g", value);
+		std::snprintf(buf, 127, "%.9g", value);
 
 		return set_value_ascii(dest, header, header_mask, buf);
 	}
@@ -4531,7 +4531,7 @@ PUGI__NS_BEGIN
 	PUGI__FN bool set_value_convert(String& dest, Header& header, uintptr_t header_mask, double value)
 	{
 		char buf[128];
-		sprintf(buf, "%.17g", value);
+		std::snprintf(buf, 127, "%.17g", value);
 
 		return set_value_ascii(dest, header, header_mask, buf);
 	}
@@ -7911,7 +7911,7 @@ PUGI__NS_BEGIN
 	PUGI__FN void convert_number_to_mantissa_exponent(double value, char* buffer, size_t buffer_size, char** out_mantissa, int* out_exponent)
 	{
 		// get a scientific notation value with IEEE DBL_DIG decimals
-		sprintf(buffer, "%.*e", DBL_DIG, value);
+		std::snprintf(buffer, 127, "%.*e", DBL_DIG, value);
 		assert(strlen(buffer) < buffer_size);
 		(void)!buffer_size;
 

@@ -24,7 +24,7 @@ void LiDARcloud::loadXML( const char* filename ){
   loadXML( filename, false );
 }
 
-void LiDARcloud::loadXML( const char* filename, const bool load_grid_only ){
+void LiDARcloud::loadXML( const char* filename, bool load_grid_only ){
 
   if( printmessages ){
     cout << "Reading XML file: " << filename << "..." << flush;
@@ -63,7 +63,7 @@ void LiDARcloud::loadXML( const char* filename, const bool load_grid_only ){
   //-------------- Scans ---------------//
 
   uint scan_count = 0; //counter variable for scans
-  uint total_hits = 0;
+  size_t total_hits = 0;
 
   if(load_grid_only == false){
 
@@ -232,7 +232,7 @@ void LiDARcloud::loadXML( const char* filename, const bool load_grid_only ){
       
       addScan( scan );
       
-      uint scanID = getScanCount()-1;
+      uint scanID = getScanCount() -1;
       
       // ----- ASCII data file name ------//
       std::string data_filename = deblank(s.child_value("filename"));
@@ -255,108 +255,19 @@ void LiDARcloud::loadXML( const char* filename, const bool load_grid_only ){
 	  }
 	  f.close();
 	}
+
+        scan.data_file = str; //set the data file for the scan
 	
 	//add hit points to scan if data file was given
     
-	ifstream datafile(str); //open the file
-  
-	if(!datafile.is_open()){ //check that file exists
-	  cout << "failed." << endl;
-	  cerr << "ERROR (loadXML): data file does not exist." << endl;
-	  exit(EXIT_FAILURE);
-	}
-	
-	vec3 temp_xyz;
-	SphericalCoord temp_direction;
-	RGBcolor temp_rgb;
-	float temp_row, temp_column;
-	double temp_data;
-	std::map<std::string, double> data;
-	int direction_flag = 0;
+	total_hits += loadASCIIFile( scanID, scan );
 
-	vector<unsigned int> row, column;
-	std::size_t hit_count = 0;
-	while ( datafile.good() ){ //loop through file to read scan data
-	  
-	  hit_count++;
-	  
-	  temp_xyz = make_vec3(-9999,-9999,-9999);
-	  temp_rgb = make_RGBcolor(1,0,0); //default color: red
-	  temp_row = -1;
-	  temp_column = -1;
-	  temp_direction = make_SphericalCoord(-9999,-9999);
-	  
-	  for( uint i=0; i<column_format.size(); i++ ){
-	    if( column_format.at(i).compare("row")==0 ){
-	      datafile >> temp_row;
-	    }else if( column_format.at(i).compare("column")==0 ){
-	      datafile >> temp_column;
-	    }else if( column_format.at(i).compare("zenith")==0 ){
-	      datafile >> temp_direction.zenith;
-	    }else if( column_format.at(i).compare("azimuth")==0 ){
-	      datafile >> temp_direction.azimuth;
-	    }else if( column_format.at(i).compare("zenith_rad")==0 ){
-	      datafile >> temp_direction.zenith;
-	      temp_direction.zenith *= 180.f/M_PI;
-	    }else if( column_format.at(i).compare("azimuth_rad")==0 ){
-	      datafile >> temp_direction.azimuth;
-	      temp_direction.azimuth *= 180.f/M_PI;
-	    }else if( column_format.at(i).compare("x")==0 ){
-	      datafile >> temp_xyz.x;
-	    }else if( column_format.at(i).compare("y")==0 ){
-	      datafile >> temp_xyz.y;
-	    }else if( column_format.at(i).compare("z")==0 ){
-	      datafile >> temp_xyz.z;
-	    }else if( column_format.at(i).compare("r")==0 ){
-	      datafile >> temp_rgb.r;
-	    }else if( column_format.at(i).compare("g")==0 ){
-	      datafile >> temp_rgb.g;
-	    }else if( column_format.at(i).compare("b")==0 ){
-	      datafile >> temp_rgb.b;
-	    }else if( column_format.at(i).compare("r255")==0 ){
-	      datafile >> temp_rgb.r;
-	      temp_rgb.r/=255.f;
-	    }else if( column_format.at(i).compare("g255")==0 ){
-	      datafile >> temp_rgb.g;
-	      temp_rgb.g/=255.f;
-	    }else if( column_format.at(i).compare("b255")==0 ){
-	      datafile >> temp_rgb.b;
-	      temp_rgb.b/=255.f;
-	    }else{ //assume that rest is data
-	      datafile >> temp_data;
-	      data[ column_format.at(i) ] = temp_data;
-	    }
-	  }
-	  
-	  if( !datafile.good() ){//if the whole line was not read successfully, stop
-	    if( hit_count==1 ){
-	      std::cerr << "WARNING: Something is likely wrong with the data file " << filename << ". Check that the format is consisten with that specified in the XML metadata file." << std::endl;
-	    }
-	    break;
-	  }
-	
-	  // -- Checks to make sure everything was specified correctly -- //
-
-	  //hit point
-	  if( temp_xyz.x==-9999 ){
-	    std::cerr << "ERROR (loadXML): x-coordinate not specified for hit point #" << hit_count-1 << " of scan #" << scan_count << std::endl;
-	    exit(EXIT_FAILURE);
-	  }else if( temp_xyz.y==-9999 ){
-	    std::cerr << "ERROR (loadXML): t-coordinate not specified for hit point #" << hit_count-1 << " of scan #" << scan_count << std::endl;
-	    exit(EXIT_FAILURE);
-	  }else if( temp_xyz.z==-9999 ){
-	    std::cerr << "ERROR (loadXML): z-coordinate not specified for hit point #" << hit_count-1 << " of scan #" << scan_count << std::endl;
-	    exit(EXIT_FAILURE);
-	  }
-
-	  //add hit point to the scan
-	  addHitPoint( scanID, temp_xyz, temp_direction, temp_rgb, data );
-
-	  total_hits ++;
-      
-	}
-    
-	datafile.close();
+        if( translation.magnitude()>0.f ){
+          coordinateShift( scanID, translation );
+        }
+        if( rotation_sphere.elevation>0.f && rotation_sphere.azimuth>0.f ){
+          coordinateRotation( scanID, rotation_sphere );
+        }
 
       }
       
@@ -490,6 +401,107 @@ void LiDARcloud::loadXML( const char* filename, const bool load_grid_only ){
     
 }
 
+size_t LiDARcloud::loadASCIIFile( uint scanID, ScanMetadata &scandata ){
+
+  ifstream datafile(scandata.data_file); //open the file
+
+  if(!datafile.is_open()){ //check that file exists
+    throw( std::runtime_error("ERROR (LiDARcloud::loadASCIIFile): ASCII data file '" + scandata.data_file + "' does not exist.") );
+  }
+
+  vec3 temp_xyz;
+  SphericalCoord temp_direction;
+  RGBcolor temp_rgb;
+  float temp_row, temp_column;
+  double temp_data;
+  std::map<std::string, double> data;
+
+  vector<unsigned int> row, column;
+  std::size_t hit_count = 0;
+  while ( datafile.good() ){ //loop through file to read scan data
+
+    temp_xyz = make_vec3(-9999,-9999,-9999);
+    temp_rgb = make_RGBcolor(1,0,0); //default color: red
+    temp_row = -1;
+    temp_column = -1;
+    temp_direction = make_SphericalCoord(-9999,-9999);
+
+    for( uint i=0; i<scandata.columnFormat.size(); i++ ){
+      if( scandata.columnFormat.at(i) == "row" ){
+        datafile >> temp_row;
+      }else if( scandata.columnFormat.at(i) == "column" ){
+        datafile >> temp_column;
+      }else if( scandata.columnFormat.at(i) == "zenith" ){
+        datafile >> temp_direction.zenith;
+      }else if( scandata.columnFormat.at(i) == "azimuth" ){
+        datafile >> temp_direction.azimuth;
+      }else if( scandata.columnFormat.at(i) == "zenith_rad" ){
+        datafile >> temp_direction.zenith;
+        temp_direction.zenith = deg2rad(temp_direction.zenith);
+      }else if( scandata.columnFormat.at(i) == "azimuth_rad" ){
+        datafile >> temp_direction.azimuth;
+        temp_direction.azimuth = deg2rad(temp_direction.azimuth);
+      }else if( scandata.columnFormat.at(i) == "x" ){
+        datafile >> temp_xyz.x;
+      }else if( scandata.columnFormat.at(i) == "y" ){
+        datafile >> temp_xyz.y;
+      }else if( scandata.columnFormat.at(i) == "z" ){
+        datafile >> temp_xyz.z;
+      }else if( scandata.columnFormat.at(i) == "r" ){
+        datafile >> temp_rgb.r;
+      }else if( scandata.columnFormat.at(i) == "g" ){
+        datafile >> temp_rgb.g;
+      }else if( scandata.columnFormat.at(i) == "b" ){
+        datafile >> temp_rgb.b;
+      }else if( scandata.columnFormat.at(i) == "r255" ){
+        datafile >> temp_rgb.r;
+        temp_rgb.r/=255.f;
+      }else if( scandata.columnFormat.at(i) == "g255" ){
+        datafile >> temp_rgb.g;
+        temp_rgb.g/=255.f;
+      }else if( scandata.columnFormat.at(i) == "b255" ){
+        datafile >> temp_rgb.b;
+        temp_rgb.b/=255.f;
+      }else{ //assume that rest is data
+        datafile >> temp_data;
+        data[ scandata.columnFormat.at(i) ] = temp_data;
+      }
+    }
+
+    if( !datafile.good() ){//if the whole line was not read successfully, stop
+      if( hit_count==0 ){
+        std::cerr << "WARNING: Something is likely wrong with the data file " << scandata.data_file << ". Check that the format is consistent with that specified in the XML metadata file." << std::endl;
+      }
+      break;
+    }
+
+    // -- Checks to make sure everything was specified correctly -- //
+
+    //hit point
+    if( temp_xyz.x==-9999 ){
+      throw( std::runtime_error("ERROR (LiDARcloud::loadASCIIFile): x-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID) ) );
+    }else if( temp_xyz.y==-9999 ){
+      throw( std::runtime_error("ERROR (LiDARcloud::loadASCIIFile): y-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID) ) );
+    }else if( temp_xyz.z==-9999 ){
+      throw( std::runtime_error("ERROR (LiDARcloud::loadASCIIFile): z-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID) ) );
+    }
+
+    //add hit point to the scan
+    addHitPoint( scanID, temp_xyz, temp_direction, temp_rgb, data );
+
+    hit_count++;
+
+  }
+
+  datafile.close();
+
+  scandata.Nhits = hit_count;
+
+  return hit_count;
+
+
+}
+
 void LiDARcloud::exportTriangleNormals( const char* filename ){
 
   ofstream file;
@@ -515,7 +527,7 @@ void LiDARcloud::exportTriangleNormals( const char* filename ){
   
 }
 
-void LiDARcloud::exportTriangleNormals( const char* filename, const int gridcell ){
+void LiDARcloud::exportTriangleNormals( const char* filename, int gridcell ){
 
   ofstream file;
 
@@ -563,7 +575,7 @@ void LiDARcloud::exportTriangleAreas( const char* filename ){
   
 }
 
-void LiDARcloud::exportTriangleAreas( const char* filename, const int gridcell ){
+void LiDARcloud::exportTriangleAreas( const char* filename, int gridcell ){
 
   ofstream file;
 
@@ -635,11 +647,11 @@ void LiDARcloud::exportGtheta( const char* filename ){
 
 void LiDARcloud::exportPointCloud( const char* filename ){
   
-  if( getScanCount()==1 ){
+  if(getScanCount() ==1 ){
     exportPointCloud( filename, 0 );
   }else{
 
-    for( int i=0; i<getScanCount(); i++ ){
+    for( int i=0; i< getScanCount(); i++ ){
 
       std::string filename_a = filename;
       char scan[20];
@@ -661,9 +673,9 @@ void LiDARcloud::exportPointCloud( const char* filename ){
 }
 
 
-void LiDARcloud::exportPointCloud( const char* filename, const uint scanID ){
+void LiDARcloud::exportPointCloud( const char* filename, uint scanID ){
 
-  if( scanID>getScanCount() ){
+  if( scanID> getScanCount()){
     std::cerr << "ERROR (LiDARcloud::exportPointCloud): Cannot export scan " << scanID << " because this scan does not exist." << std::endl;
     throw 1;
   }
@@ -673,7 +685,7 @@ void LiDARcloud::exportPointCloud( const char* filename, const uint scanID ){
   file.open(filename);
 
   std::vector<std::string> hit_data;
-  for( int r=0; r<getHitCount(); r++ ){
+  for( int r=0; r< getHitCount(); r++ ){
     std::map<std::string,double> data = hits.at(r).data;
     for( std::map<std::string,double>::iterator iter=data.begin(); iter!=data.end(); ++iter ){
       std::vector<std::string>::iterator it = find(hit_data.begin(),hit_data.end(),iter->first);
@@ -691,7 +703,7 @@ void LiDARcloud::exportPointCloud( const char* filename, const uint scanID ){
     ASCII_format.push_back("z");
   }
 
-  for( int r=0; r<getHitCount(); r++ ){
+  for( int r=0; r< getHitCount(); r++ ){
 
     if( getHitScanID(r) != scanID ){
       continue;

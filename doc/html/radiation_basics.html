@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.51</span>
+   &#160;<span id="projectnumber">v1.2.52</span>
    </div>
   </td>
  </tr>
@@ -75,7 +75,7 @@ $(function() {
 <h2><a class="anchor" id="Tutorial10_geom"></a>
 1. Model geometry creation</h2>
 <p>The first step is to declare the Context class in the usual way, then add some geometry to the Context. In this case, we'll load in a 3D model of a tree from a <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY file</a>. This file is located in the "PLY" directory found in the base Helios code directory. It is important to either give an absolute path to this file, or a path relative to the build directory. Since this tutorial is build in the directory "Helios/samples/tutorial10/build", the relative path to the PLY file is "../../../PLY/Tree.ply".</p>
-<p>We can then use the <a class="el" href="classhelios_1_1_context.html#a80d8d41aecfef365ba40f650cdbac1ba">helios::Context::loadPLY()</a> function to load the model. In addition to the relative file path, we need to specify the base (x,y,z) position to place the model, the height to which we want to scale the model, a spherical rotation (if applicable) and the default color of the model primitives. In the example below, we'll place the model at the position (0,0,0), scale it to a height of 5, apply no rotation, and assign a default color of black. Note that if you specify a scaling factor of 0, no scaling will be applied. This function returns a vector of UUIDs, one for each primitive loaded in the model.</p>
+<p>We can then use the <a class="el" href="classhelios_1_1_context.html#a99cda26e82d56d9241b10346ce097010">helios::Context::loadPLY()</a> function to load the model. In addition to the relative file path, we need to specify the base (x,y,z) position to place the model, the height to which we want to scale the model, a spherical rotation (if applicable) and the default color of the model primitives. In the example below, we'll place the model at the position (0,0,0), scale it to a height of 5, apply no rotation, and assign a default color of black. Note that if you specify a scaling factor of 0, no scaling will be applied. This function returns a vector of UUIDs, one for each primitive loaded in the model.</p>
 <p>Next, we'll add a ground surface consisting of tiled patches. The ground will be centered at the point (0,0,0), and be divided into 50x50 patch tiles with total size of plant_spacing x row_spacing. The <a class="el" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b">helios::Context::addTile()</a> function returns a vector of UUIDs, one UUID for each patch primitive in the tile.</p>
 <h2><a class="anchor" id="Tutorial10_rad"></a>
 2. Radiation model set-up</h2>

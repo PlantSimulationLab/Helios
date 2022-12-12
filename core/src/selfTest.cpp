@@ -453,6 +453,34 @@ int Context::selfTest(){
         std::cout << data_return << std::endl;
     }
 
+    //primitive data filters
+
+    std::vector<uint> UUIDs_multi, UUIDs_filter;
+    UUIDs_multi.push_back( context_test.addPatch() );
+    context_test.setPrimitiveData( UUIDs_multi.back(), "some_data_float", 4.f );
+    context_test.setPrimitiveData( UUIDs_multi.back(), "some_data_string", "cat" );
+    UUIDs_multi.push_back( context_test.addPatch() );
+    context_test.setPrimitiveData( UUIDs_multi.back(), "some_data_float", 3.f );
+    context_test.setPrimitiveData( UUIDs_multi.back(), "some_data_string", "cat" );
+    UUIDs_multi.push_back( context_test.addPatch() );
+    context_test.setPrimitiveData( UUIDs_multi.back(), "some_data_float", 2.f );
+    context_test.setPrimitiveData( UUIDs_multi.back(), "some_data_string", "dog" );
+    UUIDs_multi.push_back( context_test.addPatch() );
+    context_test.setPrimitiveData( UUIDs_multi.back(), "some_data_float", 1.f );
+    context_test.setPrimitiveData( UUIDs_multi.back(), "some_data_string", "dog" );
+
+    UUIDs_filter = context_test.filterPrimitivesByData( UUIDs_multi, "some_data_float", 2.f, "<=" );
+    if( UUIDs_filter.size()!=2 || std::find(UUIDs_filter.begin(),UUIDs_filter.end(),UUIDs_multi.at(2))==UUIDs_filter.end() || std::find(UUIDs_filter.begin(),UUIDs_filter.end(),UUIDs_multi.at(3))==UUIDs_filter.end() ){
+      error_count ++;
+      std::cerr << "failed: primitive data filter for floats was not correct." << std::endl;
+    }
+
+    UUIDs_filter = context_test.filterPrimitivesByData( UUIDs_multi, "some_data_string", "cat" );
+    if( UUIDs_filter.size()!=2 || std::find(UUIDs_filter.begin(),UUIDs_filter.end(),UUIDs_multi.at(0))==UUIDs_filter.end() || std::find(UUIDs_filter.begin(),UUIDs_filter.end(),UUIDs_multi.at(1))==UUIDs_filter.end() ){
+      error_count ++;
+      std::cerr << "failed: primitive data filter for strings was not correct." << std::endl;
+    }
+
     //------- Textures --------- //
 
     vec2 sizep = make_vec2(2,3);
@@ -1160,7 +1188,27 @@ int Context::selfTest(){
       std::cerr << "failed: calculatePrimitiveDataSum() did not produce correct sum value." << std::endl;
       error_count++;
     }
-    
+
+    //------- OBJ File Read --------//
+
+    std::vector<uint> OBJ_UUIDs = context_test.loadOBJ( "lib/models/obj_object_test.obj", make_vec3(0,0,0), 0, nullrotation, RGB::blue );
+
+    std::vector<uint> UUIDs_patch = context_test.filterPrimitivesByData( OBJ_UUIDs, "object_label", "patch" );
+    std::vector<uint> UUIDs_tri = context_test.filterPrimitivesByData( OBJ_UUIDs, "object_label", "triangles" );
+
+    if( UUIDs_patch.size()!=2 || UUIDs_tri.size()!=2 ){
+      std::cerr << "failed: loadOBJ() did not properly assign object groups to elements." << std::endl;
+      error_count++;
+    }else{
+      RGBcolor patch_color_0 = context_test.getPrimitiveColor( UUIDs_patch.at(0) );
+      RGBcolor patch_color_1 = context_test.getPrimitiveColor( UUIDs_patch.at(1) );
+      RGBcolor triangle_color_0 = context_test.getPrimitiveColor( UUIDs_tri.at(0) );
+      RGBcolor triangle_color_1 = context_test.getPrimitiveColor( UUIDs_tri.at(1) );
+      if( patch_color_0!=RGB::red || patch_color_1!=RGB::red || triangle_color_0!=RGB::lime || triangle_color_1!=RGB::lime ){
+        std::cerr << "failed: loadOBJ() did not properly assign object groups and/or materials to elements." << std::endl;
+        error_count++;
+      }
+    }
 
     //-------------------------------------------//
 

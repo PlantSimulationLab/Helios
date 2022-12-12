@@ -180,7 +180,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
       <caption>Functions to run the steady-state energy balance model.</caption>
       <tr><th>Model Run Function <th>Description
       <tr><td>\ref EnergyBalanceModel::run( void ) <td>Run the model for all primitives in the Context.
-      <tr><td>\ref EnergyBalanceModel::run( std::vector<uint> UUIDs ) <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs.
+      <tr><td>\ref EnergyBalanceModel::run( const std::vector<uint> &UUIDs ) <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs.
    </table>
 
    <p> <br><br> </p>
@@ -221,7 +221,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <caption>Functions to run the unsteady energy balance model.</caption>
  <tr><th>Model Run Function <th>Description
  <tr><td>\ref EnergyBalanceModel::run( float dt ) <td>Run the model for all primitives in the Context and advance in time by dt seconds.
- <tr><td>\ref EnergyBalanceModel::run( std::vector<uint> UUIDs, float dt ) <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt seconds.
+ <tr><td>\ref EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ) <td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt seconds.
  </table>
 
  Note that you can run the steady-state model for some primitives but run the unsteady model for others simply by changing the value of the heat capacity primitive data. This is illustrated in the code example below.

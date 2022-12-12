@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.51</span>
+   &#160;<span id="projectnumber">v1.2.52</span>
    </div>
   </td>
  </tr>
@@ -285,7 +285,7 @@ Running the Steady-State Model</h2>
 <tr>
 <td><a class="el" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a">EnergyBalanceModel::run( void )</a> </td><td>Run the model for all primitives in the Context. </td></tr>
 <tr>
-<td>EnergyBalanceModel::run( std::vector&lt;uint&gt; UUIDs ) </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs. </td></tr>
+<td><a class="el" href="class_energy_balance_model.html#a2053c71e6ae107ba6ba612c56b245cf4">EnergyBalanceModel::run( const std::vector&lt;uint&gt; &amp;UUIDs )</a> </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs. </td></tr>
 </table>
 <p><br  />
 <br  />
@@ -324,7 +324,7 @@ Unsteady model with heat storage</h3>
 <tr>
 <td><a class="el" href="class_energy_balance_model.html#a5048dec148d795d76d10d331bdb35156">EnergyBalanceModel::run( float dt )</a> </td><td>Run the model for all primitives in the Context and advance in time by dt seconds. </td></tr>
 <tr>
-<td>EnergyBalanceModel::run( std::vector&lt;uint&gt; UUIDs, float dt ) </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt seconds. </td></tr>
+<td><a class="el" href="class_energy_balance_model.html#a4accc5ed86460c662db1352ef1857e0c">EnergyBalanceModel::run( const std::vector&lt;uint&gt; &amp;UUIDs, float dt )</a> </td><td>Run the model for a select set of primitives in the Context, which are specified by a vector of their UUIDs, and advance in time by dt seconds. </td></tr>
 </table>
 <p>Note that you can run the steady-state model for some primitives but run the unsteady model for others simply by changing the value of the heat capacity primitive data. This is illustrated in the code example below.</p>
 <p><br  />
