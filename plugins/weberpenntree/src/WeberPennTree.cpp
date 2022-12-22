@@ -58,15 +58,15 @@ int WeberPennTree::selfTest( void ){
   trees.push_back("Peach");
   trees.push_back("Pistachio");
   trees.push_back("Walnut");
-  
-  Context context_1;
-
-  WeberPennTree weberpenntree_1( &context_1 );
-
-  weberpenntree_1.setBranchRecursionLevel(1);
-  weberpenntree_1.setLeafSubdivisions( make_int2(3,3) );
 
   for( int i=0; i<trees.size(); i++ ){
+
+    Context context_1;
+
+    WeberPennTree weberpenntree_1( &context_1 );
+
+    weberpenntree_1.setBranchRecursionLevel(1);
+    weberpenntree_1.setLeafSubdivisions( make_int2(3,3) );
 
     vec3 origin(i*spacing,0,0);
     

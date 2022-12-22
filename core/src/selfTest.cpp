@@ -1191,7 +1191,7 @@ int Context::selfTest(){
 
     //------- OBJ File Read --------//
 
-    std::vector<uint> OBJ_UUIDs = context_test.loadOBJ( "lib/models/obj_object_test.obj", make_vec3(0,0,0), 0, nullrotation, RGB::blue );
+    std::vector<uint> OBJ_UUIDs = context_test.loadOBJ( "lib/models/obj_object_test.obj", make_vec3(0,0,0), 0, nullrotation, RGB::blue, true );
 
     std::vector<uint> UUIDs_patch = context_test.filterPrimitivesByData( OBJ_UUIDs, "object_label", "patch" );
     std::vector<uint> UUIDs_tri = context_test.filterPrimitivesByData( OBJ_UUIDs, "object_label", "triangles" );

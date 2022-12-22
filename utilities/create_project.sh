@@ -38,6 +38,8 @@ fi
 
 echo -e '# Helios standard CMakeLists.txt file version 1.6\n' > CMakeLists.txt
 
+echo -e 'cmake_minimum_required(VERSION 3.0)\nproject(helios)\n\n' > CMakeLists.txt
+
 echo -e '#-------- USER INPUTS ---------#\n' >> CMakeLists.txt
 
 echo -e '#provide the path to Helios base directory, either as an absolute path or a path relative to the location of this file\nset( BASE_DIRECTORY "../.." )\n'  >> CMakeLists.txt

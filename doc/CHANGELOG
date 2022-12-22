@@ -1111,7 +1111,7 @@
 *Radiation*
 - Fixed an issue with ray generation that caused self-test #8b to fail. This was causing radiative fluxes to be accumulated only in the first sub-patch of a tile object.
 
-[1.2.52] 2022-XX-XX
+[1.2.52] 2022-12-12
 
 * General *
 - Tutorial 2 and 5 were modified to be able to run as part of the standard set of tests in utilities/run_samples.sh
@@ -1143,3 +1143,25 @@
 
 *Radiation*
 - Overloaded version of setSourcePosition() added to accept a spherical coordinate instead of Cartesian vec3.
+
+[1.2.53] 2022-12-22
+
+*General*
+- Added GitHub Actions workflows to automatically run utilities/run_samples.sh on push or pull requests.
+- Fixed issue on Windows in core/lib/libpng/CMakeLists.txt file where it could not find the zlib dll.
+- Fixed issue on Windows in project CMakeLists.txt files that would cause a build error because 'cmake_minimum_required' was not specified directly.
+- Modified core/CMake_project.txt file to be sure that it puts .dll's in the lib directory and not in a sub-directory based on the build type
+- utilities/run_samples.sh script modified such that it can take an argument '--visbuildonly' to skip runs for visualizer-based projects, and so that this script now works on Windows
+
+*Context*
+- All Context functions/methods related to file I/O were moved from Context.cpp to a separate Context_fileIO.cpp file.
+- String conversion when parsing text files has been improved to check for errors in the conversion using 'parse_[*]()' functions.
+
+*LiDAR*
+- Documentation edited to correct minor error related to azimuth rotation reference coordinate system.
+
+*Visualizer*
+- Modified CMakeLists.txt to only copy glfw3.dll file if it exists (Windows only).
+
+*Weber-Penn Tree*
+- selfTest() routine modified to not build all trees at the same time in order to save memory.

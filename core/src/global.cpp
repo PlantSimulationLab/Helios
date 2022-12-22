@@ -589,7 +589,9 @@ vec2 helios::string2vec2( const char* str ){
     if( c==2 ){
       break;
     }
-    o[c] = stof(tmp);
+    if( !parse_float( tmp, o[c] ) ){
+      o[c] = 99999;
+    }
     c++;
   }
   return make_vec2( o[0], o[1] );
@@ -607,7 +609,9 @@ vec3 helios::string2vec3( const char* str ){
     if( c==3 ){
       break;
     }
-    o[c] = stof(tmp);
+    if( !parse_float( tmp, o[c] ) ){
+      o[c] = 99999;
+    }
     c++;
   }
   return make_vec3( o[0], o[1], o[2] );
@@ -625,7 +629,9 @@ vec4 helios::string2vec4( const char* str ){
     if( c==4 ){
       break;
     }
-    o[c] = stof(tmp);
+    if( !parse_float( tmp, o[c] ) ){
+      o[c] = 99999;
+    }
     c++;
   }
   return make_vec4( o[0], o[1], o[2], o[3] );
@@ -643,7 +649,9 @@ int2 helios::string2int2( const char* str ){
     if( c==2 ){
       break;
     }
-    o[c] = stoi(tmp);
+    if( !parse_int( tmp, o[c] ) ){
+      o[c] = 99999;
+    }
     c++;
   }
   return make_int2( o[0], o[1] );
@@ -661,7 +669,9 @@ int3 helios::string2int3( const char* str ){
     if( c==3 ){
       break;
     }
-    o[c] = stoi(tmp);
+    if( !parse_int( tmp, o[c] ) ){
+      o[c] = 99999;
+    }
     c++;
   }
   return make_int3( o[0], o[1], o[2] );
@@ -679,7 +689,9 @@ int4 helios::string2int4( const char* str ){
     if( c==4 ){
       break;
     }
-    o[c] = stoi(tmp);
+    if( !parse_int( tmp, o[c] ) ){
+      o[c] = 99999;
+    }
     c++;
   }
   return make_int4( o[0], o[1], o[2], o[3] );
@@ -697,7 +709,9 @@ RGBAcolor helios::string2RGBcolor( const char* str ){
     if( c==4 ){
       break;
     }
-    o[c] = stof(tmp);
+    if( !parse_float( tmp, o[c] ) ){
+      o[c] = 0;
+    }
     c++;
   }
   return make_RGBAcolor( o[0], o[1], o[2], o[3] );
@@ -711,7 +725,7 @@ bool helios::parse_float( const std::string &input_string, float &converted_floa
     converted_float = std::stof(input_string, &read);
     if (input_string.size() != read)
       return false;
-  } catch (std::invalid_argument) {
+  } catch ( std::invalid_argument& e ) {
     return false;
   }
   return true;
@@ -725,7 +739,7 @@ bool helios::parse_double( const std::string &input_string, double &converted_do
     converted_double = std::stod(input_string, &read);
     if (input_string.size() != read)
       return false;
-  } catch (std::invalid_argument) {
+  } catch (std::invalid_argument& e) {
     return false;
   }
   return true;
@@ -739,7 +753,7 @@ bool helios::parse_int( const std::string &input_string, int &converted_int ){
     converted_int = std::stoi(input_string, &read);
     if (input_string.size() != read)
       return false;
-  } catch (std::invalid_argument) {
+  } catch (std::invalid_argument& e) {
     return false;
   }
   return true;
@@ -756,7 +770,7 @@ bool helios::parse_uint( const std::string &input_string, uint &converted_uint )
     }else{
       converted_uint = (uint)converted_int;
     }
-  } catch (std::invalid_argument) {
+  } catch (std::invalid_argument& e) {
     return false;
   }
   return true;
@@ -2469,7 +2483,9 @@ float helios::XMLloadfloat( pugi::xml_node node, const char* field ){
   if( strlen(field_str)==0 ){
     value = 99999;
   }else{
-    value = std::stof( field_str ); //note: pugi loads xml data as a character.  need to separate it into float
+    if( !parse_float( field_str, value ) ){
+      value = 99999;
+    }
   }
   
   return value;
@@ -2484,7 +2500,9 @@ int helios::XMLloadint( pugi::xml_node node, const char* field ){
   if( strlen(field_str)==0 ){
     value = 99999;
   }else{
-    value = std::stoi( field_str ); //note: pugi loads xml data as a character.  need to separate it into int
+    if( !parse_int( field_str, value ) ){
+      value = 99999;
+    }
   }
   
   return value;
