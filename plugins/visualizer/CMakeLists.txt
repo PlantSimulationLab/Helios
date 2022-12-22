@@ -36,7 +36,9 @@ include_directories("lib/glfw-3.3.2/include")
 add_subdirectory("lib/glfw-3.3.2")
 target_link_libraries( visualizer glfw )
 if( WIN32 )
-	add_custom_command( TARGET visualizer POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/lib/glfw3.dll" "${CMAKE_BINARY_DIR}/" )
+	if( EXISTS "${CMAKE_BINARY_DIR}/lib/glfw3.dll" )
+		add_custom_command( TARGET visualizer POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/lib/glfw3.dll" "${CMAKE_BINARY_DIR}/" )
+	endif()
 endif()
 
 #glm

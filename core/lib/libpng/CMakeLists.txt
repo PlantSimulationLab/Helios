@@ -50,7 +50,7 @@ if( APPLE )
     set( ZLIB_LIBRARY ${CMAKE_BINARY_DIR}/lib/libz.a )#BNB 12/6/2022
 endif( APPLE )
 if( WIN32 )
-  set( ZLIB_LIBRARY ${PROJECT_BINARY_DIR}/zlibstatic.lib )#BNB 10/2/2021
+  set( ZLIB_LIBRARY ${CMAKE_BINARY_DIR}/lib/zlibstatic.lib )#BNB 10/2/2021
 endif( WIN32 )
 include_directories(${ZLIB_INCLUDE_DIR})
 

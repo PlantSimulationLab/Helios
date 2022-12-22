@@ -1,4 +1,7 @@
 # Helios standard CMakeLists.txt file version 1.7
+cmake_minimum_required(VERSION 3.0)
+project(helios)
+
 #-------- USER INPUTS ---------#
 
 #provide the path to Helios base directory, either as an absolut path or a path relative to the location of this file

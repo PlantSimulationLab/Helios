@@ -1,4 +1,6 @@
-# Helios standard CMakeLists.txt file version 1.6
+# Helios standard CMakeLists.txt file version 1.7
+cmake_minimum_required(VERSION 3.0)
+project(helios)
 
 #-------- USER INPUTS ---------#
 
