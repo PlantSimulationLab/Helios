@@ -3534,7 +3534,7 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
           throw( std::runtime_error("ERROR (Context::loadPLY): PLY file read failed. Vertex count value should be a non-negative integer.") );
         }
       }else if( "face"==line ){
-        //              inputPly>>temp_string;
+        inputPly>>temp_string;
         if( !parse_uint(temp_string,faceCount) ){
           throw( std::runtime_error("ERROR (Context::loadPLY): PLY file read failed. Face count value should be a non-negative integer.") );
         }

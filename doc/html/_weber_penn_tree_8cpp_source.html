@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.53</span>
+   &#160;<span id="projectnumber">v1.2.54</span>
    </div>
   </td>
  </tr>
@@ -116,15 +116,15 @@ $(function() {
 <div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  trees.push_back(<span class="stringliteral">&quot;Peach&quot;</span>);</div>
 <div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  trees.push_back(<span class="stringliteral">&quot;Pistachio&quot;</span>);</div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  trees.push_back(<span class="stringliteral">&quot;Walnut&quot;</span>);</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  </div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <a class="code" href="classhelios_1_1_context.html">Context</a> context_1;</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160; </div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;trees.size(); i++ ){</div>
 <div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  <a class="code" href="class_weber_penn_tree.html">WeberPennTree</a> weberpenntree_1( &amp;context_1 );</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    <a class="code" href="classhelios_1_1_context.html">Context</a> context_1;</div>
 <div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  weberpenntree_1.<a class="code" href="class_weber_penn_tree.html#a7aee9ed5ca2f7696179029b0c3ec5522">setBranchRecursionLevel</a>(1);</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  weberpenntree_1.<a class="code" href="class_weber_penn_tree.html#a085a56d129e306469147762509fa7378">setLeafSubdivisions</a>( <a class="code" href="group__vectors.html#ga05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>(3,3) );</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160; </div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;trees.size(); i++ ){</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    <a class="code" href="class_weber_penn_tree.html">WeberPennTree</a> weberpenntree_1( &amp;context_1 );</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;    weberpenntree_1.<a class="code" href="class_weber_penn_tree.html#a7aee9ed5ca2f7696179029b0c3ec5522">setBranchRecursionLevel</a>(1);</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    weberpenntree_1.<a class="code" href="class_weber_penn_tree.html#a085a56d129e306469147762509fa7378">setLeafSubdivisions</a>( <a class="code" href="group__vectors.html#ga05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>(3,3) );</div>
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;    <a class="code" href="structhelios_1_1vec3.html">vec3</a> origin(i*spacing,0,0);</div>
 <div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    </div>

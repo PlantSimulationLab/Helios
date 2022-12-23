@@ -1165,3 +1165,13 @@
 
 *Weber-Penn Tree*
 - selfTest() routine modified to not build all trees at the same time in order to save memory.
+
+[1.2.54] 2022-12-23
+
+*General*
+- Added 'cmake_minimum_required' at the beginning of all project CMakeLists.txt files for all platforms, as well as 'project(helios)'.
+- Suppressed many of the compiler warnings that occur on Windows.
+
+*Context*
+- Fixed an error in Context::loadPLY() introduced in version 1.2.52 that caused PLY models to not be read correctly.
+

@@ -36,9 +36,9 @@ fi
 
 #----- build the CMakeLists.txt file ------#
 
-echo -e '# Helios standard CMakeLists.txt file version 1.6\n' > CMakeLists.txt
+echo -e '# Helios standard CMakeLists.txt file version 1.8' > CMakeLists.txt
 
-echo -e 'cmake_minimum_required(VERSION 3.0)\nproject(helios)\n\n' > CMakeLists.txt
+echo -e 'if ( WIN32 )\n    cmake_minimum_required(VERSION 3.15)\nelse()\n    cmake_minimum_required(VERSION 2.5)\nendif()\nproject(helios)\n' >> CMakeLists.txt
 
 echo -e '#-------- USER INPUTS ---------#\n' >> CMakeLists.txt
 

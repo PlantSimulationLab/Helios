@@ -1,5 +1,9 @@
-# Helios standard CMakeLists.txt file version 1.7
-cmake_minimum_required(VERSION 3.0)
+# Helios standard CMakeLists.txt file version 1.8
+if ( WIN32 )
+    cmake_minimum_required(VERSION 3.15)
+else()
+    cmake_minimum_required(VERSION 2.5)
+endif()
 project(helios)
 
 #-------- USER INPUTS ---------#

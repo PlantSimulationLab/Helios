@@ -123,8 +123,6 @@ fi
 
 for i in "${SAMPLES[@]}"; do
 
-  ERROR_CASE=0
-
   if [ ! -e "${i}" ]; then
     echo "Sample ${i} does not exist."
     exit 1
@@ -146,7 +144,7 @@ for i in "${SAMPLES[@]}"; do
     echo -e "\r\x1B[32mBuilding sample ${i}...done.\x1B[39m"
   else
     echo -e "\r\x1B[31mBuilding sample ${i}...failed.\x1B[39m"
-    ERROR_CASE=1
+    ERROR_COUNT=$((ERROR_COUNT + 1))
     rm -rf "$i"/build/*
     cd ../..
     continue
@@ -161,14 +159,14 @@ for i in "${SAMPLES[@]}"; do
       echo -e "\r\x1B[32mCompiling sample ${i}...done.\x1B[39m"
     else
       echo -e "\r\x1B[31mCompiling sample ${i}...failed.\x1B[39m"
-      ERROR_CASE=1
+      ERROR_COUNT=$((ERROR_COUNT + 1))
       rm -rf "$i"/build/*
       cd ../..
       continue
     fi
   else
     echo -e "\r\x1B[31mCompiling sample ${i}...failed.\x1B[39m"
-    ERROR_CASE=1
+    ERROR_COUNT=$((ERROR_COUNT + 1))
     rm -rf "$i"/build/*
     cd ../..
     continue
@@ -194,7 +192,7 @@ for i in "${SAMPLES[@]}"; do
     echo -e "\r\x1B[32mRunning sample ${i}...passed.\x1B[39m"
   else
     echo -e "\r\x1B[31mRunning sample ${i}...failed.\x1B[39m"
-    ERROR_CASE=1
+    ERROR_COUNT=$((ERROR_COUNT + 1))
     rm -rf "$i"/build/*
     cd ../..
     continue
@@ -203,10 +201,6 @@ for i in "${SAMPLES[@]}"; do
   rm -rf *
 
   cd ../..
-
-  if ((ERROR_CASE == 1)); then
-    ERROR_COUNT=$((ERROR_COUNT + 1))
-  fi
 
 done
 

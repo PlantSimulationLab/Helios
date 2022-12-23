@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.53</span>
+   &#160;<span id="projectnumber">v1.2.54</span>
    </div>
   </td>
  </tr>
@@ -1249,7 +1249,7 @@ $(function() {
 <div class="line"><a name="l01191"></a><span class="lineno"> 1191</span>&#160; </div>
 <div class="line"><a name="l01192"></a><span class="lineno"> 1192</span>&#160;    <span class="comment">//------- OBJ File Read --------//</span></div>
 <div class="line"><a name="l01193"></a><span class="lineno"> 1193</span>&#160; </div>
-<div class="line"><a name="l01194"></a><span class="lineno"> 1194</span>&#160;    std::vector&lt;uint&gt; OBJ_UUIDs = context_test.<a class="code" href="classhelios_1_1_context.html#a90fd1a67dd60550207b1f29bfcd385ca">loadOBJ</a>( <span class="stringliteral">&quot;lib/models/obj_object_test.obj&quot;</span>, <a class="code" href="helios__vector__types_8h.html#a35b1ff50d62c80cf63426e25ee814ca9">make_vec3</a>(0,0,0), 0, nullrotation, RGB::blue );</div>
+<div class="line"><a name="l01194"></a><span class="lineno"> 1194</span>&#160;    std::vector&lt;uint&gt; OBJ_UUIDs = context_test.<a class="code" href="classhelios_1_1_context.html#a90fd1a67dd60550207b1f29bfcd385ca">loadOBJ</a>( <span class="stringliteral">&quot;lib/models/obj_object_test.obj&quot;</span>, <a class="code" href="helios__vector__types_8h.html#a35b1ff50d62c80cf63426e25ee814ca9">make_vec3</a>(0,0,0), 0, nullrotation, RGB::blue, <span class="keyword">true</span> );</div>
 <div class="line"><a name="l01195"></a><span class="lineno"> 1195</span>&#160; </div>
 <div class="line"><a name="l01196"></a><span class="lineno"> 1196</span>&#160;    std::vector&lt;uint&gt; UUIDs_patch = context_test.<a class="code" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7">filterPrimitivesByData</a>( OBJ_UUIDs, <span class="stringliteral">&quot;object_label&quot;</span>, <span class="stringliteral">&quot;patch&quot;</span> );</div>
 <div class="line"><a name="l01197"></a><span class="lineno"> 1197</span>&#160;    std::vector&lt;uint&gt; UUIDs_tri = context_test.<a class="code" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7">filterPrimitivesByData</a>( OBJ_UUIDs, <span class="stringliteral">&quot;object_label&quot;</span>, <span class="stringliteral">&quot;triangles&quot;</span> );</div>

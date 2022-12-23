@@ -637,6 +637,7 @@ int CanopyGenerator::selfTest(){
     CanopyGenerator canopygenerator_2(&context_test);
     canopygenerator_2.disableMessages();
     VSPGrapevineParameters params_2;
+    params_2.grape_radius = 0;
     canopygenerator_2.buildCanopy(params_2);
     context_test.deletePrimitive(context_test.getAllUUIDs());
 
@@ -647,6 +648,7 @@ int CanopyGenerator::selfTest(){
     CanopyGenerator canopygenerator_3(&context_test);
     canopygenerator_3.disableMessages();
     SplitGrapevineParameters params_3;
+    params_3.grape_radius = 0;
     canopygenerator_3.buildCanopy(params_3);
     context_test.deletePrimitive(context_test.getAllUUIDs());
 
@@ -657,6 +659,7 @@ int CanopyGenerator::selfTest(){
     CanopyGenerator canopygenerator_4(&context_test);
     canopygenerator_4.disableMessages();
     UnilateralGrapevineParameters params_4;
+    params_4.grape_radius = 0;
     canopygenerator_4.buildCanopy(params_4);
     context_test.deletePrimitive(context_test.getAllUUIDs());
 
@@ -667,6 +670,7 @@ int CanopyGenerator::selfTest(){
     CanopyGenerator canopygenerator_5(&context_test);
     canopygenerator_5.disableMessages();
     GobletGrapevineParameters params_5;
+    params_5.grape_radius = 0;
     canopygenerator_5.buildCanopy(params_5);
     context_test.deletePrimitive(context_test.getAllUUIDs());
 
@@ -682,11 +686,12 @@ int CanopyGenerator::selfTest(){
 
     std::cout << "done." << std::endl;
 
-    std::cout << "Generating default walnut tree canopy..." << std::flush;
+    std::cout << "Generating default walnut tree canopy (minus nuts)..." << std::flush;
 
     CanopyGenerator canopygenerator_8(&context_test);
     canopygenerator_8.disableMessages();
     WalnutCanopyParameters params_8;
+    params_8.fruit_radius = 0.f;
     canopygenerator_8.buildCanopy(params_8);
     context_test.deletePrimitive(context_test.getAllUUIDs());
 
