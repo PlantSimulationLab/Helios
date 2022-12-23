@@ -1,5 +1,5 @@
 # Helios standard CMakeLists.txt file version 1.7
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.15)
 project(helios)
 
 #-------- USER INPUTS ---------#
