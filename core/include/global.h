@@ -224,14 +224,17 @@ bool parse_uint( const std::string &input_string, uint &converted_uint );
 /** \ingroup functions */
 RGBAcolor string2RGBcolor( const char* str );
 
-//! Remove whitespace from character array
+//! Remove all whitespace from character array
 /** \ingroup functions */
-    std::string deblank(const char* input);
+std::string deblank(const char* input);
 
-
-//! Remove whitespace from a string
+//! Remove all whitespace from a string
 /** \ingroup functions */
 std::string deblank(const std::string &input);
+
+//! Remove leading and trailing whitespace from a string
+/** \ingroup functions */
+std::string trim_whitespace(const std::string &input);
 
 //! Clamp value to be within some specified bounds
 /** \param[in] "value" Value to be clamped

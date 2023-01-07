@@ -921,6 +921,13 @@ int Context::selfTest(){
     context_io.addTimeseriesData( "ts_io", T0_io, date_io, time0_io );
     context_io.addTimeseriesData( "ts_io", T1_io, date_io, time1_io );
 
+    context_io.addTileObject(p_io,size_io,nullrotation,make_int2(3,2),"lib/images/disk_texture.png");
+    context_io.addSphereObject( 8, p_io, 5 );
+    context_io.addDiskObject( 8, p_io, size_io );
+    context_io.addConeObject( 8, make_vec3(1,1,3), make_vec3(1,1,5), 3, 3 );
+    context_io.addBoxObject( p_io, make_vec3(3,2,1), make_int3(3,3,3), RGB::red );
+    context_io.addTubeObject( 8, {make_vec3(1,1,3), make_vec3(1,1,5)}, {3, 3} );
+
     context_io.writeXML( "xmltest_io.xml", true );
 
     Context context_oi;

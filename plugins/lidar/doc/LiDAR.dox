@@ -505,7 +505,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
       
   }</code></pre></div>
 
-  Synthetic hit points can be labeled based on the primitive they intersect based on the value of the primitive data "object_label". Primitive groups can be labeled in any way by setting a common value for the "object_label" primitive data. In order to enable synthetic data labeling, the column "object_label" must be included within the <ASCII_format> tag in the scan XML file. The object_label value for each hit point will be recorded and a column will be written if the point cloud is exported to file.
+  Synthetic hit points can be labeled based on the primitive they intersect based on the value of the primitive data "object_label" of type 'int'. Primitive groups can be labeled in any way by setting a common integer value for the "object_label" primitive data. In order to enable synthetic data labeling, the column "object_label" must be included within the <ASCII_format> tag in the scan XML file. The object_label value for each hit point will be recorded and a column will be written if the point cloud is exported to file.
 
   \section LiDARvis Visualizing results
 

@@ -52,7 +52,8 @@ std::vector<std::vector<uint> > CanopyGenerator::addGrapeCluster( vec3 position,
             xgrape.y = position.y+RB*cos(theta)+unif_distribution(generator)*0.25f*grape_rad;
             xgrape.z = z+unif_distribution(generator)*0.25f*grape_rad;
 
-            std::vector<uint> U=context->addSphere( fmax(2.f,float(grape_subdiv)), xgrape, grape_rad, grape_color );
+            uint objID=context->addSphereObject( fmax(2.f,float(grape_subdiv)), xgrape, grape_rad, grape_color );
+            std::vector<uint> U = context->getObjectPrimitiveUUIDs(objID);
             UUID.push_back(U);
 
             theta=theta+dtheta;
@@ -178,7 +179,8 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
         pos_main.at(i) = pos_main.at(i) + origin;
     }
 
-    UUID_trunk_plant = context->addTube(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
+    uint objID = context->addTubeObject(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
+    UUID_trunk_plant = context->getObjectPrimitiveUUIDs(objID);
     if( enable_element_labels ) {
         context->setPrimitiveData(UUID_trunk_plant, "element_label", "trunk");
     }
@@ -214,7 +216,8 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
         tmp.at(i) = pos_cordw.at(i) + origin;
     }
 
-    UUID_branch_plant = context->addTube(params.wood_subdivisions,tmp,rad_cordw,params.wood_texture_file.c_str() );
+    objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_cordw,params.wood_texture_file.c_str() );
+    UUID_branch_plant = context->getObjectPrimitiveUUIDs(objID);
 
     //East Cordon
     std::vector<float> rad_corde;
@@ -236,7 +239,8 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
         tmp.at(i) = pos_corde.at(i) + origin;
     }
 
-    U = context->addTube(params.wood_subdivisions,tmp,rad_corde,params.wood_texture_file.c_str() );
+    objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_corde,params.wood_texture_file.c_str() );
+    U = context->getObjectPrimitiveUUIDs(objID);
     UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
 
     if( enable_element_labels ) { //note: only need to set label once because the UUID vector contains both cordons
@@ -334,7 +338,8 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
                 tmp.at(i) = pos_pshoot.at(i) + origin;
             }
 
-            U = context->addTube(params.wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
+            objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
+            U = context->getObjectPrimitiveUUIDs(objID);
             UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
             if( enable_element_labels ) {
                 context->setPrimitiveData( U, "element_label", "cane");
@@ -383,17 +388,8 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
 
                 vec3 position = origin+pos_leaf+leaf_offset;
 
-                /*
-                uint ID = context->copyObject(ID0);
-                context->getTileObjectPointer(ID)->scale(make_vec3(lsize,lsize,1));
-                context->getObjectPointer(ID)->rotate(-Rtheta,"y");
-                  context->getObjectPointer(ID)->rotate(Rphi,"z");
-                  context->getObjectPointer(ID)->translate(position);
-
-                  UUID_leaf_plant.push_back( context->getObjectPointer(ID)->getPrimitiveUUIDs() );
-                */
-
                 std::vector<uint> UUID_leaf = context->copyPrimitive( leaf_ptype );
+                context->addPolymeshObject( UUID_leaf );
                 context->scalePrimitive( UUID_leaf, make_vec3(lsize,lsize,lsize));
                 context->rotatePrimitive( UUID_leaf, -Rtheta,"y");
                 context->rotatePrimitive( UUID_leaf, Rphi,"z");
@@ -457,7 +453,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
         pos_main.at(i) = pos_main.at(i) + origin;
     }
 
-    UUID_trunk_plant = context->addTube(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
+    uint objID = context->addTubeObject(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
+    UUID_trunk_plant = context->getObjectPrimitiveUUIDs(objID);
 
     //------ crown -------//
 
@@ -484,7 +481,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
         pos_crownw.at(i) = pos_crownw.at(i) + origin;
     }
 
-    U = context->addTube(params.wood_subdivisions,pos_crownw,rad_crown, params.wood_texture_file.c_str() );
+    objID = context->addTubeObject(params.wood_subdivisions,pos_crownw,rad_crown, params.wood_texture_file.c_str() );
+    U = context->getObjectPrimitiveUUIDs(objID);
     UUID_trunk_plant.insert( UUID_trunk_plant.end(), U.begin(), U.end() );
 
     std::vector<vec3> pos_crowne;
@@ -498,7 +496,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
         pos_crowne.at(i) = pos_crowne.at(i) + origin;
     }
 
-    U = context->addTube(params.wood_subdivisions,pos_crowne,rad_crown, params.wood_texture_file.c_str() );
+    objID = context->addTubeObject(params.wood_subdivisions,pos_crowne,rad_crown, params.wood_texture_file.c_str() );
+    U = context->getObjectPrimitiveUUIDs(objID);
     UUID_trunk_plant.insert( UUID_trunk_plant.end(), U.begin(), U.end() );
 
     //---- Cordons -----//
@@ -528,7 +527,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
         tmp.at(i) = pos_cordnw.at(i) + origin;
     }
 
-    UUID_branch_plant = context->addTube(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    UUID_branch_plant = context->getObjectPrimitiveUUIDs(objID);
 
     std::vector<vec3> pos_cordsw;
     pos_cordsw.push_back(make_vec3(0.7f*0.5f*params.cordon_spacing*cost,0.7f*0.5f*params.cordon_spacing*sint,0.99f*params.cordon_height));
@@ -544,7 +544,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
         tmp.at(i) = pos_cordsw.at(i) + origin;
     }
 
-    U = context->addTube(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    U = context->getObjectPrimitiveUUIDs(objID);
     UUID_branch_plant.insert( UUID_branch_plant.end(), U.begin(), U.end() );
 
     //East Cordon
@@ -562,7 +563,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
         tmp.at(i) = pos_cordne.at(i) + origin;
     }
 
-    U = context->addTube(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    U = context->getObjectPrimitiveUUIDs(objID);
     UUID_branch_plant.insert( UUID_branch_plant.end(), U.begin(), U.end() );
 
     std::vector<vec3> pos_cordse;
@@ -579,7 +581,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
         tmp.at(i) = pos_cordse.at(i) + origin;
     }
 
-    U = context->addTube(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    U = context->getObjectPrimitiveUUIDs(objID);
     UUID_branch_plant.insert( UUID_branch_plant.end(), U.begin(), U.end() );
 
     //------- primary shoots ---------//
@@ -666,7 +669,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
                     tmp.at(i) = pos_pshoot.at(i) + origin;
                 }
 
-                U = context->addTube(params.wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
+                objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
+                U = context->getObjectPrimitiveUUIDs(objID);
                 UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
 
                 //grape clusters
@@ -778,7 +782,8 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
         pos_main.at(i) = pos_main.at(i) + origin;
     }
 
-    UUID_trunk_plant = context->addTube(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
+    uint objID = context->addTubeObject(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
+    UUID_trunk_plant = context->getObjectPrimitiveUUIDs(objID);
 
     //---- Cordons -----//
 
@@ -808,7 +813,8 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
         tmp.at(i) = pos_cord.at(i) + origin;
     }
 
-    UUID_branch_plant = context->addTube(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_cord,params.wood_texture_file.c_str() );
+    UUID_branch_plant = context->getObjectPrimitiveUUIDs(objID);
 
     //------- primary shoots ---------//
 
@@ -861,7 +867,8 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
             tmp.at(i) = pos_pshoot.at(i) + origin;
         }
 
-        U = context->addTube(params.wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
+        objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
+        U = context->getObjectPrimitiveUUIDs(objID);
         UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
 
         //grape clusters
@@ -967,7 +974,8 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
         pos_main.at(i) = pos_main.at(i) + origin;
     }
 
-    UUID_trunk_plant = context->addTube(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
+    uint objID = context->addTubeObject(params.wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
+    UUID_trunk_plant = context->getObjectPrimitiveUUIDs(objID);
 
     //------- primary shoots ---------//
 
@@ -1013,7 +1021,8 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
                 tmp.at(i) = pos_pshoot.at(i) + origin;
             }
 
-            U = context->addTube(params.wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
+            objID = context->addTubeObject(params.wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
+            U = context->getObjectPrimitiveUUIDs(objID);
             UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
 
             //grape clusters

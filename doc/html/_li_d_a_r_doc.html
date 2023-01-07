@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.54</span>
+   &#160;<span id="projectnumber">v1.2.55</span>
    </div>
   </td>
  </tr>
@@ -485,7 +485,7 @@ Synthetic waveform data</h2>
 
      pointcloud.exportPointCloud( "/path/to/file.xyz" );  //write to ASCII file
 
-  }</code></pre></div><p>Synthetic hit points can be labeled based on the primitive they intersect based on the value of the primitive data "object_label". Primitive groups can be labeled in any way by setting a common value for the "object_label" primitive data. In order to enable synthetic data labeling, the column "object_label" must be included within the &lt;ASCII_format&gt; tag in the scan XML file. The object_label value for each hit point will be recorded and a column will be written if the point cloud is exported to file.</p>
+  }</code></pre></div><p>Synthetic hit points can be labeled based on the primitive they intersect based on the value of the primitive data "object_label" of type 'int'. Primitive groups can be labeled in any way by setting a common integer value for the "object_label" primitive data. In order to enable synthetic data labeling, the column "object_label" must be included within the &lt;ASCII_format&gt; tag in the scan XML file. The object_label value for each hit point will be recorded and a column will be written if the point cloud is exported to file.</p>
 <h1><a class="anchor" id="LiDARvis"></a>
 Visualizing results</h1>
 <p>Results can be visualized using the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> plug-in for Helios. There are two possible means for doing so. First, is to add the relevant geometry to the Context, then visualize primitives in the Context using the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>. This works for the triangulation and plant reconstructions, but cannot be used to visualize just the point cloud since there is no "point" primitive in the Context. The next section describes how to accomplish this.</p>

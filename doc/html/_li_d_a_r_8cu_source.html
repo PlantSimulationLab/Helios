@@ -23,7 +23,7 @@
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">.
-   &#160;<span id="projectnumber">v1.2.54</span>
+   &#160;<span id="projectnumber">v1.2.55</span>
    </div>
   </td>
  </tr>
@@ -3412,426 +3412,425 @@ $(function() {
 <div class="line"><a name="l03369"></a><span class="lineno"> 3369</span>&#160;        std::vector&lt;float&gt; v{d/float(count), f/float(Npulse), float(count), t_pulse.at(hit-1).at(2)}; <span class="comment">//included the ray count here</span></div>
 <div class="line"><a name="l03370"></a><span class="lineno"> 3370</span>&#160;        <span class="comment">//Note: the last index of t_pulse (.at(2)) is the object identifier. We don&#39;t want object identifiers to be averaged, so we&#39;ll assign the hit identifier based on the last ray in the group</span></div>
 <div class="line"><a name="l03371"></a><span class="lineno"> 3371</span>&#160;        t_hit.push_back( v );</div>
-<div class="line"><a name="l03372"></a><span class="lineno"> 3372</span>&#160;            </div>
-<div class="line"><a name="l03373"></a><span class="lineno"> 3373</span>&#160;        Nhits++;</div>
-<div class="line"><a name="l03374"></a><span class="lineno"> 3374</span>&#160;        count=1;</div>
-<div class="line"><a name="l03375"></a><span class="lineno"> 3375</span>&#160;        d=t_pulse.at(hit).at(0);</div>
-<div class="line"><a name="l03376"></a><span class="lineno"> 3376</span>&#160;        t0=t_pulse.at(hit).at(0);</div>
-<div class="line"><a name="l03377"></a><span class="lineno"> 3377</span>&#160;        f=t_pulse.at(hit).at(1);</div>
-<div class="line"><a name="l03378"></a><span class="lineno"> 3378</span>&#160;            </div>
-<div class="line"><a name="l03379"></a><span class="lineno"> 3379</span>&#160;       <span class="comment">// or else the current ray is less than pulse threshold and is part of current hitpoint; add it to the current hit point and continue on</span></div>
-<div class="line"><a name="l03380"></a><span class="lineno"> 3380</span>&#160;      }<span class="keywordflow">else</span>{</div>
-<div class="line"><a name="l03381"></a><span class="lineno"> 3381</span>&#160;        </div>
-<div class="line"><a name="l03382"></a><span class="lineno"> 3382</span>&#160;        count++;</div>
-<div class="line"><a name="l03383"></a><span class="lineno"> 3383</span>&#160;            t0=t_pulse.at(hit).at(0);</div>
-<div class="line"><a name="l03384"></a><span class="lineno"> 3384</span>&#160;        d+=t_pulse.at(hit).at(0);</div>
-<div class="line"><a name="l03385"></a><span class="lineno"> 3385</span>&#160;        f+=t_pulse.at(hit).at(1);</div>
-<div class="line"><a name="l03386"></a><span class="lineno"> 3386</span>&#160;            </div>
-<div class="line"><a name="l03387"></a><span class="lineno"> 3387</span>&#160;      }</div>
-<div class="line"><a name="l03388"></a><span class="lineno"> 3388</span>&#160;          </div>
-<div class="line"><a name="l03389"></a><span class="lineno"> 3389</span>&#160;    }</div>
-<div class="line"><a name="l03390"></a><span class="lineno"> 3390</span>&#160; </div>
-<div class="line"><a name="l03391"></a><span class="lineno"> 3391</span>&#160;      }</div>
-<div class="line"><a name="l03392"></a><span class="lineno"> 3392</span>&#160; </div>
-<div class="line"><a name="l03393"></a><span class="lineno"> 3393</span>&#160;      <span class="keywordtype">float</span> average=0;</div>
-<div class="line"><a name="l03394"></a><span class="lineno"> 3394</span>&#160;      <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> hit=0; hit&lt;t_hit.size(); hit++ ){</div>
-<div class="line"><a name="l03395"></a><span class="lineno"> 3395</span>&#160;    average+=t_hit.at(hit).at(0)/float(t_hit.size());</div>
-<div class="line"><a name="l03396"></a><span class="lineno"> 3396</span>&#160;      }</div>
-<div class="line"><a name="l03397"></a><span class="lineno"> 3397</span>&#160; </div>
-<div class="line"><a name="l03398"></a><span class="lineno"> 3398</span>&#160;      <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> hit=0; hit&lt;t_hit.size(); hit++ ){</div>
-<div class="line"><a name="l03399"></a><span class="lineno"> 3399</span>&#160;    </div>
-<div class="line"><a name="l03400"></a><span class="lineno"> 3400</span>&#160;        std::map&lt;std::string,double&gt; data;</div>
-<div class="line"><a name="l03401"></a><span class="lineno"> 3401</span>&#160;        data[<span class="stringliteral">&quot;target_index&quot;</span>] = hit;</div>
-<div class="line"><a name="l03402"></a><span class="lineno"> 3402</span>&#160;        data[<span class="stringliteral">&quot;target_count&quot;</span>] = t_hit.size();</div>
-<div class="line"><a name="l03403"></a><span class="lineno"> 3403</span>&#160;    data[<span class="stringliteral">&quot;deviation&quot;</span>] = fabs(t_hit.at(hit).at(0)-average);</div>
-<div class="line"><a name="l03404"></a><span class="lineno"> 3404</span>&#160;    data[<span class="stringliteral">&quot;timestamp&quot;</span>] = r;</div>
-<div class="line"><a name="l03405"></a><span class="lineno"> 3405</span>&#160;    data[<span class="stringliteral">&quot;intensity&quot;</span>] = t_hit.at(hit).at(1);</div>
-<div class="line"><a name="l03406"></a><span class="lineno"> 3406</span>&#160;    data[<span class="stringliteral">&quot;distance&quot;</span>] = t_hit.at(hit).at(0);</div>
-<div class="line"><a name="l03407"></a><span class="lineno"> 3407</span>&#160;    data[<span class="stringliteral">&quot;nRaysHit&quot;</span>] = t_hit.at(hit).at(2);</div>
-<div class="line"><a name="l03408"></a><span class="lineno"> 3408</span>&#160; </div>
-<div class="line"><a name="l03409"></a><span class="lineno"> 3409</span>&#160;    <span class="keywordtype">float</span> UUID = t_hit.at(hit).at(3);</div>
-<div class="line"><a name="l03410"></a><span class="lineno"> 3410</span>&#160;    <span class="keywordflow">if</span>( UUID&gt;=0 &amp;&amp; UUID&lt;ID_mapping.size() ){</div>
-<div class="line"><a name="l03411"></a><span class="lineno"> 3411</span>&#160;      UUID = ID_mapping.at(<span class="keywordtype">int</span>(t_hit.at(hit).at(3)));</div>
-<div class="line"><a name="l03412"></a><span class="lineno"> 3412</span>&#160;    }</div>
-<div class="line"><a name="l03413"></a><span class="lineno"> 3413</span>&#160; </div>
-<div class="line"><a name="l03414"></a><span class="lineno"> 3414</span>&#160;    <a class="code" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> color = helios::RGB::red;</div>
-<div class="line"><a name="l03415"></a><span class="lineno"> 3415</span>&#160;    </div>
-<div class="line"><a name="l03416"></a><span class="lineno"> 3416</span>&#160;    <span class="keywordflow">if</span>( UUID&gt;=0 &amp;&amp; context-&gt;<a class="code" href="classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66">doesPrimitiveExist</a>(uint(UUID)) ){</div>
-<div class="line"><a name="l03417"></a><span class="lineno"> 3417</span>&#160;      </div>
-<div class="line"><a name="l03418"></a><span class="lineno"> 3418</span>&#160;      color = context-&gt;<a class="code" href="classhelios_1_1_context.html#a1223205f1080b0b7024b8f97950779b8">getPrimitiveColor</a>(uint(UUID));</div>
-<div class="line"><a name="l03419"></a><span class="lineno"> 3419</span>&#160;      </div>
-<div class="line"><a name="l03420"></a><span class="lineno"> 3420</span>&#160;      <span class="keywordflow">if</span>( context-&gt;<a class="code" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">doesPrimitiveDataExist</a>(uint(UUID),<span class="stringliteral">&quot;object_label&quot;</span>) &amp;&amp; context-&gt;<a class="code" href="classhelios_1_1_context.html#a9c894ecd12e0d893c53ffcfa9e90c0b6">getPrimitiveDataType</a>(uint(UUID),<span class="stringliteral">&quot;object_label&quot;</span>)==helios::HELIOS_TYPE_INT ){</div>
-<div class="line"><a name="l03421"></a><span class="lineno"> 3421</span>&#160;        <span class="keywordtype">int</span> label;</div>
-<div class="line"><a name="l03422"></a><span class="lineno"> 3422</span>&#160;        context-&gt;<a class="code" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a>(uint(UUID),<span class="stringliteral">&quot;object_label&quot;</span>,label);</div>
-<div class="line"><a name="l03423"></a><span class="lineno"> 3423</span>&#160;        data[<span class="stringliteral">&quot;object_label&quot;</span>] = double(label);</div>
-<div class="line"><a name="l03424"></a><span class="lineno"> 3424</span>&#160;      }</div>
-<div class="line"><a name="l03425"></a><span class="lineno"> 3425</span>&#160; </div>
-<div class="line"><a name="l03426"></a><span class="lineno"> 3426</span>&#160;          <span class="keywordflow">if</span>( context-&gt;<a class="code" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">doesPrimitiveDataExist</a>(uint(UUID),<span class="stringliteral">&quot;reflectivity_lidar&quot;</span>) &amp;&amp; context-&gt;<a class="code" href="classhelios_1_1_context.html#a9c894ecd12e0d893c53ffcfa9e90c0b6">getPrimitiveDataType</a>(uint(UUID),<span class="stringliteral">&quot;reflectivity_lidar&quot;</span>)==helios::HELIOS_TYPE_FLOAT ){</div>
-<div class="line"><a name="l03427"></a><span class="lineno"> 3427</span>&#160;            <span class="keywordtype">float</span> rho;</div>
-<div class="line"><a name="l03428"></a><span class="lineno"> 3428</span>&#160;            context-&gt;<a class="code" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a>(uint(UUID),<span class="stringliteral">&quot;reflectivity_lidar&quot;</span>,rho);</div>
-<div class="line"><a name="l03429"></a><span class="lineno"> 3429</span>&#160;            data.at(<span class="stringliteral">&quot;intensity&quot;</span>)*=rho;</div>
-<div class="line"><a name="l03430"></a><span class="lineno"> 3430</span>&#160;          }</div>
-<div class="line"><a name="l03431"></a><span class="lineno"> 3431</span>&#160; </div>
-<div class="line"><a name="l03432"></a><span class="lineno"> 3432</span>&#160;    }</div>
-<div class="line"><a name="l03433"></a><span class="lineno"> 3433</span>&#160; </div>
-<div class="line"><a name="l03434"></a><span class="lineno"> 3434</span>&#160;        <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> dir = helios::make_vec3(direction[r].x,direction[r].y,direction[r].z);</div>
-<div class="line"><a name="l03435"></a><span class="lineno"> 3435</span>&#160;        <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> origin = helios::make_vec3(scan_origin.x,scan_origin.y,scan_origin.z);</div>
-<div class="line"><a name="l03436"></a><span class="lineno"> 3436</span>&#160;        <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> p = origin+dir*t_hit.at(hit).at(0);</div>
-<div class="line"><a name="l03437"></a><span class="lineno"> 3437</span>&#160;        addHitPoint( s, p, helios::cart2sphere(dir), color, data );</div>
-<div class="line"><a name="l03438"></a><span class="lineno"> 3438</span>&#160; </div>
-<div class="line"><a name="l03439"></a><span class="lineno"> 3439</span>&#160;    Nhits++;</div>
-<div class="line"><a name="l03440"></a><span class="lineno"> 3440</span>&#160;      }</div>
-<div class="line"><a name="l03441"></a><span class="lineno"> 3441</span>&#160; </div>
-<div class="line"><a name="l03442"></a><span class="lineno"> 3442</span>&#160;    }</div>
-<div class="line"><a name="l03443"></a><span class="lineno"> 3443</span>&#160; </div>
-<div class="line"><a name="l03444"></a><span class="lineno"> 3444</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_hit_t) );</div>
-<div class="line"><a name="l03445"></a><span class="lineno"> 3445</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_hit_fnorm) );</div>
-<div class="line"><a name="l03446"></a><span class="lineno"> 3446</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_hit_ID) );</div>
-<div class="line"><a name="l03447"></a><span class="lineno"> 3447</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_raydir) );</div>
-<div class="line"><a name="l03448"></a><span class="lineno"> 3448</span>&#160;    free(hit_xyz);</div>
-<div class="line"><a name="l03449"></a><span class="lineno"> 3449</span>&#160;    free(direction);</div>
-<div class="line"><a name="l03450"></a><span class="lineno"> 3450</span>&#160;    free(hit_t);</div>
-<div class="line"><a name="l03451"></a><span class="lineno"> 3451</span>&#160;    free(hit_fnorm);</div>
-<div class="line"><a name="l03452"></a><span class="lineno"> 3452</span>&#160;    free(hit_ID);</div>
-<div class="line"><a name="l03453"></a><span class="lineno"> 3453</span>&#160; </div>
-<div class="line"><a name="l03454"></a><span class="lineno"> 3454</span>&#160;    <span class="keywordflow">if</span>( printmessages ){</div>
-<div class="line"><a name="l03455"></a><span class="lineno"> 3455</span>&#160;      std::cout &lt;&lt; <span class="stringliteral">&quot;Created synthetic scan #&quot;</span> &lt;&lt; s &lt;&lt; <span class="stringliteral">&quot; with &quot;</span> &lt;&lt; Nhits &lt;&lt; <span class="stringliteral">&quot; hit points.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a name="l03456"></a><span class="lineno"> 3456</span>&#160;    }</div>
-<div class="line"><a name="l03457"></a><span class="lineno"> 3457</span>&#160;    </div>
-<div class="line"><a name="l03458"></a><span class="lineno"> 3458</span>&#160;  }</div>
-<div class="line"><a name="l03459"></a><span class="lineno"> 3459</span>&#160; </div>
-<div class="line"><a name="l03460"></a><span class="lineno"> 3460</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_patch_vertex) );</div>
-<div class="line"><a name="l03461"></a><span class="lineno"> 3461</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_patch_textureID) );</div>
-<div class="line"><a name="l03462"></a><span class="lineno"> 3462</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_patch_uv) );</div>
-<div class="line"><a name="l03463"></a><span class="lineno"> 3463</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_tri_vertex) );</div>
-<div class="line"><a name="l03464"></a><span class="lineno"> 3464</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_tri_textureID) );</div>
-<div class="line"><a name="l03465"></a><span class="lineno"> 3465</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_tri_uv) );</div>
-<div class="line"><a name="l03466"></a><span class="lineno"> 3466</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_maskdata) );</div>
-<div class="line"><a name="l03467"></a><span class="lineno"> 3467</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_masksize) );</div>
-<div class="line"><a name="l03468"></a><span class="lineno"> 3468</span>&#160;  free(patch_vertex);</div>
-<div class="line"><a name="l03469"></a><span class="lineno"> 3469</span>&#160;  free(patch_textureID);</div>
-<div class="line"><a name="l03470"></a><span class="lineno"> 3470</span>&#160;  free(patch_uv);</div>
-<div class="line"><a name="l03471"></a><span class="lineno"> 3471</span>&#160;  free(tri_vertex);</div>
-<div class="line"><a name="l03472"></a><span class="lineno"> 3472</span>&#160;  free(tri_textureID);</div>
-<div class="line"><a name="l03473"></a><span class="lineno"> 3473</span>&#160;  free(tri_uv);</div>
-<div class="line"><a name="l03474"></a><span class="lineno"> 3474</span>&#160;  free(maskdata);</div>
-<div class="line"><a name="l03475"></a><span class="lineno"> 3475</span>&#160;  free(masksize);</div>
-<div class="line"><a name="l03476"></a><span class="lineno"> 3476</span>&#160; </div>
-<div class="line"><a name="l03477"></a><span class="lineno"> 3477</span>&#160;  <span class="keywordflow">if</span>( printmessages ){</div>
-<div class="line"><a name="l03478"></a><span class="lineno"> 3478</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;done.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a name="l03479"></a><span class="lineno"> 3479</span>&#160;  }</div>
-<div class="line"><a name="l03480"></a><span class="lineno"> 3480</span>&#160;  </div>
-<div class="line"><a name="l03481"></a><span class="lineno"> 3481</span>&#160;}</div>
-<div class="line"><a name="l03482"></a><span class="lineno"> 3482</span>&#160; </div>
-<div class="line"><a name="l03483"></a><span class="lineno"><a class="line" href="class_li_d_a_rcloud.html#a22f9c93700be5e5a808b97ecca6752fe"> 3483</a></span>&#160;std::vector&lt;float&gt; <a class="code" href="class_li_d_a_rcloud.html#a22f9c93700be5e5a808b97ecca6752fe">LiDARcloud::calculateSyntheticLeafArea</a>( <a class="code" href="classhelios_1_1_context.html">helios::Context</a>* context ){</div>
-<div class="line"><a name="l03484"></a><span class="lineno"> 3484</span>&#160; </div>
-<div class="line"><a name="l03485"></a><span class="lineno"> 3485</span>&#160;  float3* d_prim_xyz;</div>
-<div class="line"><a name="l03486"></a><span class="lineno"> 3486</span>&#160; </div>
-<div class="line"><a name="l03487"></a><span class="lineno"> 3487</span>&#160;  std::vector&lt;uint&gt; UUIDs_all = context-&gt;<a class="code" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb">getAllUUIDs</a>();</div>
-<div class="line"><a name="l03488"></a><span class="lineno"> 3488</span>&#160; </div>
-<div class="line"><a name="l03489"></a><span class="lineno"> 3489</span>&#160;  <span class="keyword">const</span> uint N = UUIDs_all.size();</div>
-<div class="line"><a name="l03490"></a><span class="lineno"> 3490</span>&#160;  </div>
-<div class="line"><a name="l03491"></a><span class="lineno"> 3491</span>&#160;  float3* prim_xyz = (float3*)malloc(N * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
-<div class="line"><a name="l03492"></a><span class="lineno"> 3492</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_prim_xyz,N*<span class="keyword">sizeof</span>(float3)) ); <span class="comment">//allocate device memory</span></div>
-<div class="line"><a name="l03493"></a><span class="lineno"> 3493</span>&#160; </div>
-<div class="line"><a name="l03494"></a><span class="lineno"> 3494</span>&#160;  <span class="comment">//copy scan data into the host buffer</span></div>
-<div class="line"><a name="l03495"></a><span class="lineno"> 3495</span>&#160;  <span class="keywordflow">for</span>( std::size_t p=0; p&lt;N; p++ ){</div>
-<div class="line"><a name="l03496"></a><span class="lineno"> 3496</span>&#160;    std::vector&lt;helios::vec3&gt; verts = context-&gt;<a class="code" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">getPrimitiveVertices</a>(UUIDs_all.at(p));</div>
-<div class="line"><a name="l03497"></a><span class="lineno"> 3497</span>&#160;    prim_xyz[p] = vec3tofloat3( verts.at(0) );</div>
-<div class="line"><a name="l03498"></a><span class="lineno"> 3498</span>&#160;  }</div>
-<div class="line"><a name="l03499"></a><span class="lineno"> 3499</span>&#160; </div>
-<div class="line"><a name="l03500"></a><span class="lineno"> 3500</span>&#160;  <span class="comment">//copy from host to device memory</span></div>
-<div class="line"><a name="l03501"></a><span class="lineno"> 3501</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_prim_xyz, prim_xyz, N*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l03502"></a><span class="lineno"> 3502</span>&#160; </div>
-<div class="line"><a name="l03503"></a><span class="lineno"> 3503</span>&#160;  <span class="comment">// ---- Grid Cells ---- //</span></div>
-<div class="line"><a name="l03504"></a><span class="lineno"> 3504</span>&#160; </div>
-<div class="line"><a name="l03506"></a><span class="lineno"> 3506</span>&#160;  float3* d_grid_center;</div>
-<div class="line"><a name="l03507"></a><span class="lineno"> 3507</span>&#160; </div>
-<div class="line"><a name="l03509"></a><span class="lineno"> 3509</span>&#160;  float3* d_grid_anchor;</div>
-<div class="line"><a name="l03510"></a><span class="lineno"> 3510</span>&#160; </div>
-<div class="line"><a name="l03512"></a><span class="lineno"> 3512</span>&#160;  float3* d_grid_size;</div>
-<div class="line"><a name="l03513"></a><span class="lineno"> 3513</span>&#160; </div>
-<div class="line"><a name="l03515"></a><span class="lineno"> 3515</span>&#160;  <span class="keywordtype">float</span>* d_grid_rotation;</div>
-<div class="line"><a name="l03516"></a><span class="lineno"> 3516</span>&#160; </div>
-<div class="line"><a name="l03517"></a><span class="lineno"> 3517</span>&#160;  <span class="keyword">const</span> uint Ncells = getGridCellCount();</div>
-<div class="line"><a name="l03518"></a><span class="lineno"> 3518</span>&#160; </div>
-<div class="line"><a name="l03519"></a><span class="lineno"> 3519</span>&#160;  float3* center = (float3*)malloc(Ncells * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
-<div class="line"><a name="l03520"></a><span class="lineno"> 3520</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_grid_center,Ncells*<span class="keyword">sizeof</span>(float3)) ); <span class="comment">//allocate device memory</span></div>
-<div class="line"><a name="l03521"></a><span class="lineno"> 3521</span>&#160; </div>
-<div class="line"><a name="l03522"></a><span class="lineno"> 3522</span>&#160;  float3* anchor = (float3*)malloc(Ncells * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
-<div class="line"><a name="l03523"></a><span class="lineno"> 3523</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_grid_anchor,Ncells*<span class="keyword">sizeof</span>(float3)) ); <span class="comment">//allocate device memory</span></div>
-<div class="line"><a name="l03524"></a><span class="lineno"> 3524</span>&#160; </div>
-<div class="line"><a name="l03525"></a><span class="lineno"> 3525</span>&#160;  float3* size = (float3*)malloc(Ncells * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
-<div class="line"><a name="l03526"></a><span class="lineno"> 3526</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_grid_size,Ncells*<span class="keyword">sizeof</span>(float3)) ); <span class="comment">//allocate device memory</span></div>
-<div class="line"><a name="l03527"></a><span class="lineno"> 3527</span>&#160; </div>
-<div class="line"><a name="l03528"></a><span class="lineno"> 3528</span>&#160;  <span class="keywordtype">float</span>* rotation = (<span class="keywordtype">float</span>*)malloc(Ncells * <span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)); <span class="comment">//allocate host memory</span></div>
-<div class="line"><a name="l03529"></a><span class="lineno"> 3529</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_grid_rotation,Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)) ); <span class="comment">//allocate device memory</span></div>
-<div class="line"><a name="l03530"></a><span class="lineno"> 3530</span>&#160;  </div>
-<div class="line"><a name="l03531"></a><span class="lineno"> 3531</span>&#160;  <span class="comment">//copy grid data into the host buffer</span></div>
-<div class="line"><a name="l03532"></a><span class="lineno"> 3532</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> c=0; c&lt;Ncells; c++ ){</div>
-<div class="line"><a name="l03533"></a><span class="lineno"> 3533</span>&#160;    center[c] = vec3tofloat3(getCellCenter(c));</div>
-<div class="line"><a name="l03534"></a><span class="lineno"> 3534</span>&#160;    anchor[c] = vec3tofloat3(getCellGlobalAnchor(c));</div>
-<div class="line"><a name="l03535"></a><span class="lineno"> 3535</span>&#160;    size[c] = vec3tofloat3(getCellSize(c));</div>
-<div class="line"><a name="l03536"></a><span class="lineno"> 3536</span>&#160;    rotation[c] = getCellRotation(c);</div>
-<div class="line"><a name="l03537"></a><span class="lineno"> 3537</span>&#160;  }</div>
-<div class="line"><a name="l03538"></a><span class="lineno"> 3538</span>&#160; </div>
-<div class="line"><a name="l03539"></a><span class="lineno"> 3539</span>&#160;  <span class="comment">//copy from host to device memory</span></div>
-<div class="line"><a name="l03540"></a><span class="lineno"> 3540</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_center, center, Ncells*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l03541"></a><span class="lineno"> 3541</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_anchor, anchor, Ncells*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l03542"></a><span class="lineno"> 3542</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_size, size, Ncells*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l03543"></a><span class="lineno"> 3543</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_rotation, rotation, Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a name="l03544"></a><span class="lineno"> 3544</span>&#160; </div>
-<div class="line"><a name="l03545"></a><span class="lineno"> 3545</span>&#160;  free(prim_xyz);</div>
-<div class="line"><a name="l03546"></a><span class="lineno"> 3546</span>&#160;  free(center);</div>
-<div class="line"><a name="l03547"></a><span class="lineno"> 3547</span>&#160;  free(anchor);</div>
-<div class="line"><a name="l03548"></a><span class="lineno"> 3548</span>&#160;  free(size);</div>
-<div class="line"><a name="l03549"></a><span class="lineno"> 3549</span>&#160;  free(rotation);</div>
-<div class="line"><a name="l03550"></a><span class="lineno"> 3550</span>&#160; </div>
-<div class="line"><a name="l03551"></a><span class="lineno"> 3551</span>&#160;  <span class="comment">// Result buffer</span></div>
-<div class="line"><a name="l03552"></a><span class="lineno"> 3552</span>&#160;  <span class="keywordtype">int</span>* prim_vol = (<span class="keywordtype">int</span>*)malloc(N * <span class="keyword">sizeof</span>(<span class="keywordtype">int</span>));</div>
-<div class="line"><a name="l03553"></a><span class="lineno"> 3553</span>&#160;  <span class="keywordtype">int</span>* d_prim_vol;</div>
-<div class="line"><a name="l03554"></a><span class="lineno"> 3554</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc(&amp;d_prim_vol,N*<span class="keyword">sizeof</span>(<span class="keywordtype">int</span>)) );</div>
-<div class="line"><a name="l03555"></a><span class="lineno"> 3555</span>&#160; </div>
-<div class="line"><a name="l03556"></a><span class="lineno"> 3556</span>&#160;  dim3 dimBlock( 64, 1 );</div>
-<div class="line"><a name="l03557"></a><span class="lineno"> 3557</span>&#160;  dim3 dimGrid( ceil(N/64.f) );</div>
-<div class="line"><a name="l03558"></a><span class="lineno"> 3558</span>&#160;  insideVolume &lt;&lt;&lt; dimGrid, dimBlock &gt;&gt;&gt;( N, d_prim_xyz, getGridCellCount(), d_grid_size, d_grid_center, d_grid_anchor, d_grid_rotation, d_prim_vol );</div>
-<div class="line"><a name="l03559"></a><span class="lineno"> 3559</span>&#160; </div>
-<div class="line"><a name="l03560"></a><span class="lineno"> 3560</span>&#160;  CUDA_CHECK_ERROR( cudaPeekAtLastError() );</div>
-<div class="line"><a name="l03561"></a><span class="lineno"> 3561</span>&#160;  CUDA_CHECK_ERROR( cudaDeviceSynchronize() );</div>
-<div class="line"><a name="l03562"></a><span class="lineno"> 3562</span>&#160;  </div>
-<div class="line"><a name="l03563"></a><span class="lineno"> 3563</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(prim_vol, d_prim_vol, N*<span class="keyword">sizeof</span>(<span class="keywordtype">int</span>), cudaMemcpyDeviceToHost) );</div>
-<div class="line"><a name="l03564"></a><span class="lineno"> 3564</span>&#160; </div>
-<div class="line"><a name="l03565"></a><span class="lineno"> 3565</span>&#160;  std::vector&lt;float&gt; total_area;</div>
-<div class="line"><a name="l03566"></a><span class="lineno"> 3566</span>&#160;  total_area.resize(Ncells,0.f);</div>
-<div class="line"><a name="l03567"></a><span class="lineno"> 3567</span>&#160;  <span class="keywordflow">for</span>( std::size_t p=0; p&lt;N; p++ ){</div>
-<div class="line"><a name="l03568"></a><span class="lineno"> 3568</span>&#160;    <span class="keywordflow">if</span>( prim_vol[p]&gt;=0 ){</div>
-<div class="line"><a name="l03569"></a><span class="lineno"> 3569</span>&#160;      uint gridcell = prim_vol[p];</div>
-<div class="line"><a name="l03570"></a><span class="lineno"> 3570</span>&#160;      total_area.at(gridcell) += context-&gt;<a class="code" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">getPrimitiveArea</a>(UUIDs_all.at(p));</div>
-<div class="line"><a name="l03571"></a><span class="lineno"> 3571</span>&#160;      context-&gt;<a class="code" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>(UUIDs_all.at(p),<span class="stringliteral">&quot;gridCell&quot;</span>,helios::HELIOS_TYPE_UINT,1,&amp;gridcell);</div>
-<div class="line"><a name="l03572"></a><span class="lineno"> 3572</span>&#160;    }</div>
-<div class="line"><a name="l03573"></a><span class="lineno"> 3573</span>&#160;  }</div>
-<div class="line"><a name="l03574"></a><span class="lineno"> 3574</span>&#160; </div>
-<div class="line"><a name="l03575"></a><span class="lineno"> 3575</span>&#160;  std::vector&lt;float&gt; output_LeafArea;</div>
-<div class="line"><a name="l03576"></a><span class="lineno"> 3576</span>&#160;  output_LeafArea.resize(Ncells,0.f);</div>
-<div class="line"><a name="l03577"></a><span class="lineno"> 3577</span>&#160; </div>
-<div class="line"><a name="l03578"></a><span class="lineno"> 3578</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> v=0; v&lt;Ncells; v++ ){</div>
-<div class="line"><a name="l03579"></a><span class="lineno"> 3579</span>&#160;    output_LeafArea.at(v) =  total_area.at(v);</div>
-<div class="line"><a name="l03580"></a><span class="lineno"> 3580</span>&#160;    <span class="keywordflow">if</span>( context-&gt;<a class="code" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">doesPrimitiveDataExist</a>(UUIDs_all.at(v), <span class="stringliteral">&quot;gridCell&quot;</span>) ){</div>
-<div class="line"><a name="l03581"></a><span class="lineno"> 3581</span>&#160;      context-&gt;<a class="code" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>(UUIDs_all.at(v),<span class="stringliteral">&quot;synthetic_leaf_area&quot;</span>,total_area.at(v));</div>
-<div class="line"><a name="l03582"></a><span class="lineno"> 3582</span>&#160;    }</div>
-<div class="line"><a name="l03583"></a><span class="lineno"> 3583</span>&#160;  }</div>
-<div class="line"><a name="l03584"></a><span class="lineno"> 3584</span>&#160;  </div>
-<div class="line"><a name="l03585"></a><span class="lineno"> 3585</span>&#160;  free(prim_vol);</div>
-<div class="line"><a name="l03586"></a><span class="lineno"> 3586</span>&#160; </div>
-<div class="line"><a name="l03587"></a><span class="lineno"> 3587</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_prim_vol) );</div>
-<div class="line"><a name="l03588"></a><span class="lineno"> 3588</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_prim_xyz) );</div>
-<div class="line"><a name="l03589"></a><span class="lineno"> 3589</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_grid_center) );</div>
-<div class="line"><a name="l03590"></a><span class="lineno"> 3590</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_grid_anchor) );</div>
-<div class="line"><a name="l03591"></a><span class="lineno"> 3591</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_grid_size) );</div>
-<div class="line"><a name="l03592"></a><span class="lineno"> 3592</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_grid_rotation) );</div>
-<div class="line"><a name="l03593"></a><span class="lineno"> 3593</span>&#160; </div>
-<div class="line"><a name="l03594"></a><span class="lineno"> 3594</span>&#160;  <span class="keywordflow">return</span> output_LeafArea;</div>
-<div class="line"><a name="l03595"></a><span class="lineno"> 3595</span>&#160; </div>
-<div class="line"><a name="l03596"></a><span class="lineno"> 3596</span>&#160;}</div>
-<div class="line"><a name="l03597"></a><span class="lineno"> 3597</span>&#160; </div>
-<div class="line"><a name="l03598"></a><span class="lineno"> 3598</span>&#160;__global__ <span class="keywordtype">void</span> LIDAR_CUDA::intersectPatches( <span class="keyword">const</span> <span class="keywordtype">size_t</span> Npulse, <span class="keyword">const</span> <span class="keywordtype">int</span> rays_per_pulse, <span class="keyword">const</span> float3 origin, float3* d_raydir, <span class="keyword">const</span> <span class="keywordtype">float</span> exit_diameter, <span class="keyword">const</span> <span class="keywordtype">float</span> beam_divergence,<span class="keyword">const</span> <span class="keywordtype">int</span> Npatches, float3* d_patch_vertex, <span class="keywordtype">int</span>* d_patch_textureID, <span class="keyword">const</span> <span class="keywordtype">int</span> Ntextures, int2* d_masksize, int2 masksize_max, <span class="keywordtype">bool</span>* d_maskdata, float2* d_patch_uv, <span class="keywordtype">float</span>* d_hit_t, <span class="keywordtype">float</span>* d_hit_fnorm, <span class="keywordtype">int</span>* d_hit_ID ){</div>
-<div class="line"><a name="l03599"></a><span class="lineno"> 3599</span>&#160; </div>
-<div class="line"><a name="l03600"></a><span class="lineno"> 3600</span>&#160;  <span class="keywordtype">int</span> idx = blockIdx.x*blockDim.x+threadIdx.x;</div>
-<div class="line"><a name="l03601"></a><span class="lineno"> 3601</span>&#160; </div>
-<div class="line"><a name="l03602"></a><span class="lineno"> 3602</span>&#160;  <span class="keywordtype">int</span> subpulse = blockIdx.y*blockDim.y+threadIdx.y;</div>
-<div class="line"><a name="l03603"></a><span class="lineno"> 3603</span>&#160; </div>
-<div class="line"><a name="l03604"></a><span class="lineno"> 3604</span>&#160;  <span class="keywordflow">if</span>( idx&gt;=Npulse || subpulse&gt;=rays_per_pulse ){</div>
-<div class="line"><a name="l03605"></a><span class="lineno"> 3605</span>&#160;    <span class="keywordflow">return</span>;</div>
-<div class="line"><a name="l03606"></a><span class="lineno"> 3606</span>&#160;  }</div>
-<div class="line"><a name="l03607"></a><span class="lineno"> 3607</span>&#160; </div>
-<div class="line"><a name="l03608"></a><span class="lineno"> 3608</span>&#160;  <span class="keywordtype">int</span> i_global = idx*rays_per_pulse+subpulse;</div>
-<div class="line"><a name="l03609"></a><span class="lineno"> 3609</span>&#160; </div>
-<div class="line"><a name="l03610"></a><span class="lineno"> 3610</span>&#160;  uint seed = tea&lt;16&gt;(subpulse,i_global);</div>
-<div class="line"><a name="l03611"></a><span class="lineno"> 3611</span>&#160; </div>
-<div class="line"><a name="l03612"></a><span class="lineno"> 3612</span>&#160;  float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );</div>
-<div class="line"><a name="l03613"></a><span class="lineno"> 3613</span>&#160;  </div>
-<div class="line"><a name="l03614"></a><span class="lineno"> 3614</span>&#160;  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );</div>
-<div class="line"><a name="l03615"></a><span class="lineno"> 3615</span>&#160; </div>
-<div class="line"><a name="l03616"></a><span class="lineno"> 3616</span>&#160;  <span class="keywordtype">float</span> zenith = <a class="code" href="global_8h.html#a9f732ec5c2153020247c879034f81432">acos_safe</a>( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
-<div class="line"><a name="l03617"></a><span class="lineno"> 3617</span>&#160;  <span class="keywordtype">float</span> azimuth = <a class="code" href="group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54">atan2_2pi</a>( d_raydir[idx].x, d_raydir[idx].y );</div>
-<div class="line"><a name="l03618"></a><span class="lineno"> 3618</span>&#160;  raydir = <a class="code" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( raydir, zenith, 0.5*M_PI-azimuth );</div>
-<div class="line"><a name="l03619"></a><span class="lineno"> 3619</span>&#160; </div>
-<div class="line"><a name="l03620"></a><span class="lineno"> 3620</span>&#160;  float3 disk_pt3 = <a class="code" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
-<div class="line"><a name="l03621"></a><span class="lineno"> 3621</span>&#160; </div>
-<div class="line"><a name="l03622"></a><span class="lineno"> 3622</span>&#160;  <span class="keywordtype">float</span> tmin = d_hit_t[i_global];</div>
-<div class="line"><a name="l03623"></a><span class="lineno"> 3623</span>&#160;  <span class="keywordtype">float</span> nmin = d_hit_fnorm[i_global];</div>
-<div class="line"><a name="l03624"></a><span class="lineno"> 3624</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> p=0; p&lt;Npatches; p++ ){</div>
-<div class="line"><a name="l03625"></a><span class="lineno"> 3625</span>&#160; </div>
-<div class="line"><a name="l03626"></a><span class="lineno"> 3626</span>&#160;    float3 v0 = d_patch_vertex[4*p];</div>
-<div class="line"><a name="l03627"></a><span class="lineno"> 3627</span>&#160;    float3 v1 = d_patch_vertex[4*p+1];</div>
-<div class="line"><a name="l03628"></a><span class="lineno"> 3628</span>&#160;    float3 v2 = d_patch_vertex[4*p+2];</div>
-<div class="line"><a name="l03629"></a><span class="lineno"> 3629</span>&#160;    float3 v3 = d_patch_vertex[4*p+3];</div>
-<div class="line"><a name="l03630"></a><span class="lineno"> 3630</span>&#160; </div>
-<div class="line"><a name="l03631"></a><span class="lineno"> 3631</span>&#160;    float3 anchor = v0;</div>
-<div class="line"><a name="l03632"></a><span class="lineno"> 3632</span>&#160;    float3 normal = normalize( cross( v1-v0, v2-v0 ) );</div>
-<div class="line"><a name="l03633"></a><span class="lineno"> 3633</span>&#160; </div>
-<div class="line"><a name="l03634"></a><span class="lineno"> 3634</span>&#160;    float3 a = v1-v0;</div>
-<div class="line"><a name="l03635"></a><span class="lineno"> 3635</span>&#160;    float3 b = v3-v0;</div>
-<div class="line"><a name="l03636"></a><span class="lineno"> 3636</span>&#160;    </div>
-<div class="line"><a name="l03637"></a><span class="lineno"> 3637</span>&#160;    <span class="keywordtype">float</span> t = ((anchor - origin - disk_pt3)*normal) / (raydir*normal); </div>
-<div class="line"><a name="l03638"></a><span class="lineno"> 3638</span>&#160;    </div>
-<div class="line"><a name="l03639"></a><span class="lineno"> 3639</span>&#160;    <span class="keywordflow">if</span>( t==t &amp;&amp; t&gt;1e-8 &amp;&amp; t&lt;tmin ){</div>
-<div class="line"><a name="l03640"></a><span class="lineno"> 3640</span>&#160;            </div>
-<div class="line"><a name="l03641"></a><span class="lineno"> 3641</span>&#160;      float3 point = origin + disk_pt3 + raydir * t;</div>
-<div class="line"><a name="l03642"></a><span class="lineno"> 3642</span>&#160;      float3 d = point - anchor;</div>
-<div class="line"><a name="l03643"></a><span class="lineno"> 3643</span>&#160;      </div>
-<div class="line"><a name="l03644"></a><span class="lineno"> 3644</span>&#160;      <span class="keywordtype">float</span> ddota = d*a;</div>
-<div class="line"><a name="l03645"></a><span class="lineno"> 3645</span>&#160;      </div>
-<div class="line"><a name="l03646"></a><span class="lineno"> 3646</span>&#160;      <span class="keywordflow">if</span> (ddota &gt; 0.0 &amp;&amp; ddota &lt; a*a ){</div>
-<div class="line"><a name="l03647"></a><span class="lineno"> 3647</span>&#160;    </div>
-<div class="line"><a name="l03648"></a><span class="lineno"> 3648</span>&#160;    <span class="keywordtype">float</span> ddotb = d*b;</div>
-<div class="line"><a name="l03649"></a><span class="lineno"> 3649</span>&#160; </div>
-<div class="line"><a name="l03650"></a><span class="lineno"> 3650</span>&#160;    <span class="keywordflow">if</span> (ddotb &gt; 0.0 &amp;&amp; ddotb &lt; b*b ){</div>
-<div class="line"><a name="l03651"></a><span class="lineno"> 3651</span>&#160; </div>
-<div class="line"><a name="l03652"></a><span class="lineno"> 3652</span>&#160;      <span class="keywordflow">if</span>( d_patch_textureID[p]&lt;0 ){<span class="comment">//no texture mask</span></div>
-<div class="line"><a name="l03653"></a><span class="lineno"> 3653</span>&#160;        </div>
-<div class="line"><a name="l03654"></a><span class="lineno"> 3654</span>&#160;        tmin = t;</div>
-<div class="line"><a name="l03655"></a><span class="lineno"> 3655</span>&#160;        nmin = fabs(normal*raydir);</div>
-<div class="line"><a name="l03656"></a><span class="lineno"> 3656</span>&#160;        d_hit_ID[i_global] = p; </div>
-<div class="line"><a name="l03657"></a><span class="lineno"> 3657</span>&#160; </div>
-<div class="line"><a name="l03658"></a><span class="lineno"> 3658</span>&#160;      }<span class="keywordflow">else</span>{ <span class="comment">//has texture mask</span></div>
-<div class="line"><a name="l03659"></a><span class="lineno"> 3659</span>&#160; </div>
-<div class="line"><a name="l03660"></a><span class="lineno"> 3660</span>&#160;        <span class="keywordtype">float</span> amag = magnitude(a);</div>
-<div class="line"><a name="l03661"></a><span class="lineno"> 3661</span>&#160;        <span class="keywordtype">float</span> bmag = magnitude(b);</div>
-<div class="line"><a name="l03662"></a><span class="lineno"> 3662</span>&#160;        float2 uv = make_float2( 1.f-ddota/amag/amag, ddotb/bmag/bmag );</div>
-<div class="line"><a name="l03663"></a><span class="lineno"> 3663</span>&#160;        <span class="keywordtype">int</span> ID = d_patch_textureID[p];</div>
-<div class="line"><a name="l03664"></a><span class="lineno"> 3664</span>&#160;        int2 sz = d_masksize[ID];</div>
-<div class="line"><a name="l03665"></a><span class="lineno"> 3665</span>&#160; </div>
-<div class="line"><a name="l03666"></a><span class="lineno"> 3666</span>&#160;        float2 uvmin = d_patch_uv[2*p];</div>
-<div class="line"><a name="l03667"></a><span class="lineno"> 3667</span>&#160;        float2 duv;</div>
-<div class="line"><a name="l03668"></a><span class="lineno"> 3668</span>&#160;        duv.x = d_patch_uv[ 2*p+1 ].x - d_patch_uv[ 2*p ].x;</div>
-<div class="line"><a name="l03669"></a><span class="lineno"> 3669</span>&#160;        duv.y = d_patch_uv[ 2*p+1 ].y - d_patch_uv[ 2*p ].y;</div>
-<div class="line"><a name="l03670"></a><span class="lineno"> 3670</span>&#160;        int2 ind = <a class="code" href="group__vectors.html#ga05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>( roundf(<span class="keywordtype">float</span>(sz.x-1)*(uvmin.x+fabs(uv.x)*duv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*(uvmin.y+fabs(uv.y)*duv.y)) );</div>
-<div class="line"><a name="l03671"></a><span class="lineno"> 3671</span>&#160;        assert( ind.x&gt;=0 &amp;&amp; ind.x&lt;sz.x &amp;&amp; ind.y&gt;=0 &amp;&amp; ind.y&lt;sz.y );</div>
-<div class="line"><a name="l03672"></a><span class="lineno"> 3672</span>&#160; </div>
-<div class="line"><a name="l03673"></a><span class="lineno"> 3673</span>&#160;        <span class="keywordflow">if</span>( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){</div>
-<div class="line"><a name="l03674"></a><span class="lineno"> 3674</span>&#160; </div>
-<div class="line"><a name="l03675"></a><span class="lineno"> 3675</span>&#160;          tmin = t;</div>
-<div class="line"><a name="l03676"></a><span class="lineno"> 3676</span>&#160;          nmin = fabs(normal*raydir);</div>
-<div class="line"><a name="l03677"></a><span class="lineno"> 3677</span>&#160;          d_hit_ID[i_global] = p; </div>
-<div class="line"><a name="l03678"></a><span class="lineno"> 3678</span>&#160;        </div>
-<div class="line"><a name="l03679"></a><span class="lineno"> 3679</span>&#160;        }</div>
-<div class="line"><a name="l03680"></a><span class="lineno"> 3680</span>&#160;        </div>
-<div class="line"><a name="l03681"></a><span class="lineno"> 3681</span>&#160;      }</div>
-<div class="line"><a name="l03682"></a><span class="lineno"> 3682</span>&#160;        </div>
-<div class="line"><a name="l03683"></a><span class="lineno"> 3683</span>&#160;    }       </div>
-<div class="line"><a name="l03684"></a><span class="lineno"> 3684</span>&#160;    </div>
-<div class="line"><a name="l03685"></a><span class="lineno"> 3685</span>&#160;      }</div>
-<div class="line"><a name="l03686"></a><span class="lineno"> 3686</span>&#160;    }</div>
-<div class="line"><a name="l03687"></a><span class="lineno"> 3687</span>&#160;  }</div>
-<div class="line"><a name="l03688"></a><span class="lineno"> 3688</span>&#160; </div>
-<div class="line"><a name="l03689"></a><span class="lineno"> 3689</span>&#160;  d_hit_t[i_global] = tmin;</div>
-<div class="line"><a name="l03690"></a><span class="lineno"> 3690</span>&#160; </div>
-<div class="line"><a name="l03691"></a><span class="lineno"> 3691</span>&#160;  d_hit_fnorm[i_global] = nmin;</div>
-<div class="line"><a name="l03692"></a><span class="lineno"> 3692</span>&#160;  </div>
-<div class="line"><a name="l03693"></a><span class="lineno"> 3693</span>&#160;}</div>
-<div class="line"><a name="l03694"></a><span class="lineno"> 3694</span>&#160; </div>
-<div class="line"><a name="l03695"></a><span class="lineno"> 3695</span>&#160;__global__ <span class="keywordtype">void</span> LIDAR_CUDA::intersectTriangles( <span class="keyword">const</span> <span class="keywordtype">size_t</span> Npulse, <span class="keyword">const</span> <span class="keywordtype">int</span> rays_per_pulse, <span class="keyword">const</span> float3 origin, float3* d_raydir, <span class="keyword">const</span> <span class="keywordtype">float</span> exit_diameter, <span class="keyword">const</span> <span class="keywordtype">float</span> beam_divergence, <span class="keyword">const</span> <span class="keywordtype">int</span> Ntriangles, <span class="keyword">const</span> <span class="keywordtype">int</span> Npatches, float3* d_tri_vertex, <span class="keywordtype">int</span>* d_tri_textureID, <span class="keyword">const</span> <span class="keywordtype">int</span> Ntextures, int2* d_masksize, <span class="keyword">const</span> int2 masksize_max, <span class="keywordtype">bool</span>* d_maskdata, float2* d_tri_uv, <span class="keywordtype">float</span>* d_hit_t, <span class="keywordtype">float</span>* d_hit_fnorm, <span class="keywordtype">int</span>* d_hit_ID ){</div>
-<div class="line"><a name="l03696"></a><span class="lineno"> 3696</span>&#160; </div>
-<div class="line"><a name="l03697"></a><span class="lineno"> 3697</span>&#160;  <span class="keywordtype">int</span> idx = blockIdx.x*blockDim.x+threadIdx.x;</div>
-<div class="line"><a name="l03698"></a><span class="lineno"> 3698</span>&#160; </div>
-<div class="line"><a name="l03699"></a><span class="lineno"> 3699</span>&#160;  <span class="keywordtype">int</span> subpulse = blockIdx.y*blockDim.y+threadIdx.y;</div>
-<div class="line"><a name="l03700"></a><span class="lineno"> 3700</span>&#160; </div>
-<div class="line"><a name="l03701"></a><span class="lineno"> 3701</span>&#160;  <span class="keywordflow">if</span>( idx&gt;=Npulse || subpulse&gt;=rays_per_pulse ){</div>
-<div class="line"><a name="l03702"></a><span class="lineno"> 3702</span>&#160;    <span class="keywordflow">return</span>;</div>
-<div class="line"><a name="l03703"></a><span class="lineno"> 3703</span>&#160;  }</div>
-<div class="line"><a name="l03704"></a><span class="lineno"> 3704</span>&#160; </div>
-<div class="line"><a name="l03705"></a><span class="lineno"> 3705</span>&#160;  <span class="keywordtype">int</span> i_global = idx*rays_per_pulse+subpulse;</div>
-<div class="line"><a name="l03706"></a><span class="lineno"> 3706</span>&#160; </div>
-<div class="line"><a name="l03707"></a><span class="lineno"> 3707</span>&#160;  uint seed = tea&lt;16&gt;(subpulse,i_global);</div>
-<div class="line"><a name="l03708"></a><span class="lineno"> 3708</span>&#160; </div>
-<div class="line"><a name="l03709"></a><span class="lineno"> 3709</span>&#160;  float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );</div>
-<div class="line"><a name="l03710"></a><span class="lineno"> 3710</span>&#160;  </div>
-<div class="line"><a name="l03711"></a><span class="lineno"> 3711</span>&#160;  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );</div>
-<div class="line"><a name="l03712"></a><span class="lineno"> 3712</span>&#160; </div>
-<div class="line"><a name="l03713"></a><span class="lineno"> 3713</span>&#160;  <span class="keywordtype">float</span> zenith = <a class="code" href="global_8h.html#a9f732ec5c2153020247c879034f81432">acos_safe</a>( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
-<div class="line"><a name="l03714"></a><span class="lineno"> 3714</span>&#160;  <span class="keywordtype">float</span> azimuth = <a class="code" href="group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54">atan2_2pi</a>( d_raydir[idx].x, d_raydir[idx].y );</div>
-<div class="line"><a name="l03715"></a><span class="lineno"> 3715</span>&#160;  raydir = <a class="code" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( raydir, zenith, 0.5*M_PI-azimuth );</div>
-<div class="line"><a name="l03716"></a><span class="lineno"> 3716</span>&#160; </div>
-<div class="line"><a name="l03717"></a><span class="lineno"> 3717</span>&#160;  float3 disk_pt3 = <a class="code" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
-<div class="line"><a name="l03718"></a><span class="lineno"> 3718</span>&#160; </div>
-<div class="line"><a name="l03719"></a><span class="lineno"> 3719</span>&#160;  <span class="keywordtype">float</span> tmin = d_hit_t[i_global];</div>
-<div class="line"><a name="l03720"></a><span class="lineno"> 3720</span>&#160;  <span class="keywordtype">float</span> nmin = d_hit_fnorm[i_global];</div>
-<div class="line"><a name="l03721"></a><span class="lineno"> 3721</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> tri=0; tri&lt;Ntriangles; tri++ ){</div>
-<div class="line"><a name="l03722"></a><span class="lineno"> 3722</span>&#160; </div>
-<div class="line"><a name="l03723"></a><span class="lineno"> 3723</span>&#160;    float3 v0 = d_tri_vertex[3*tri];</div>
-<div class="line"><a name="l03724"></a><span class="lineno"> 3724</span>&#160;    float3 v1 = d_tri_vertex[3*tri+1];</div>
-<div class="line"><a name="l03725"></a><span class="lineno"> 3725</span>&#160;    float3 v2 = d_tri_vertex[3*tri+2];</div>
-<div class="line"><a name="l03726"></a><span class="lineno"> 3726</span>&#160; </div>
-<div class="line"><a name="l03727"></a><span class="lineno"> 3727</span>&#160;    <span class="keywordtype">float</span> a = v0.x - v1.x, b = v0.x - v2.x, c = raydir.x, d = v0.x - origin.x - disk_pt3.x; </div>
-<div class="line"><a name="l03728"></a><span class="lineno"> 3728</span>&#160;    <span class="keywordtype">float</span> e = v0.y - v1.y, f = v0.y - v2.y, g = raydir.y, h = v0.y - origin.y - disk_pt3.y;</div>
-<div class="line"><a name="l03729"></a><span class="lineno"> 3729</span>&#160;    <span class="keywordtype">float</span> i = v0.z - v1.z, j = v0.z - v2.z, k = raydir.z, l = v0.z - origin.z - disk_pt3.z;</div>
-<div class="line"><a name="l03730"></a><span class="lineno"> 3730</span>&#160;        </div>
-<div class="line"><a name="l03731"></a><span class="lineno"> 3731</span>&#160;    <span class="keywordtype">float</span> m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;</div>
-<div class="line"><a name="l03732"></a><span class="lineno"> 3732</span>&#160;    <span class="keywordtype">float</span> q = g * i - e * k, s = e * j - f * i;</div>
-<div class="line"><a name="l03733"></a><span class="lineno"> 3733</span>&#160;  </div>
-<div class="line"><a name="l03734"></a><span class="lineno"> 3734</span>&#160;    <span class="keywordtype">float</span> inv_denom  = 1.f / (a * m + b * q + c * s);</div>
-<div class="line"><a name="l03735"></a><span class="lineno"> 3735</span>&#160;  </div>
-<div class="line"><a name="l03736"></a><span class="lineno"> 3736</span>&#160;    <span class="keywordtype">float</span> e1 = d * m - b * n - c * p;</div>
-<div class="line"><a name="l03737"></a><span class="lineno"> 3737</span>&#160;    <span class="keywordtype">float</span> beta = e1 * inv_denom;</div>
-<div class="line"><a name="l03738"></a><span class="lineno"> 3738</span>&#160;  </div>
-<div class="line"><a name="l03739"></a><span class="lineno"> 3739</span>&#160;    <span class="keywordflow">if</span> (beta &gt; 0.0){</div>
-<div class="line"><a name="l03740"></a><span class="lineno"> 3740</span>&#160;      </div>
-<div class="line"><a name="l03741"></a><span class="lineno"> 3741</span>&#160;      <span class="keywordtype">float</span> r = r = e * l - h * i;</div>
-<div class="line"><a name="l03742"></a><span class="lineno"> 3742</span>&#160;      <span class="keywordtype">float</span> e2 = a * n + d * q + c * r;</div>
-<div class="line"><a name="l03743"></a><span class="lineno"> 3743</span>&#160;      <span class="keywordtype">float</span> gamma = e2 * inv_denom;</div>
-<div class="line"><a name="l03744"></a><span class="lineno"> 3744</span>&#160;      </div>
-<div class="line"><a name="l03745"></a><span class="lineno"> 3745</span>&#160;      <span class="keywordflow">if</span> (gamma &gt; 0.0 &amp;&amp; beta + gamma &lt; 1.0 ){</div>
-<div class="line"><a name="l03746"></a><span class="lineno"> 3746</span>&#160;    </div>
-<div class="line"><a name="l03747"></a><span class="lineno"> 3747</span>&#160;    <span class="keywordtype">float</span> e3 = a * p - b * r + d * s;</div>
-<div class="line"><a name="l03748"></a><span class="lineno"> 3748</span>&#160;    <span class="keywordtype">float</span> t = e3 * inv_denom;</div>
-<div class="line"><a name="l03749"></a><span class="lineno"> 3749</span>&#160; </div>
-<div class="line"><a name="l03750"></a><span class="lineno"> 3750</span>&#160;    <span class="keywordflow">if</span>( t&gt;1e-6 &amp;&amp; t&lt;tmin ){</div>
-<div class="line"><a name="l03751"></a><span class="lineno"> 3751</span>&#160; </div>
-<div class="line"><a name="l03752"></a><span class="lineno"> 3752</span>&#160;      <span class="keywordflow">if</span>( d_tri_textureID[tri]&lt;0 ){<span class="comment">//no texture mask      </span></div>
-<div class="line"><a name="l03753"></a><span class="lineno"> 3753</span>&#160;        tmin = t;</div>
-<div class="line"><a name="l03754"></a><span class="lineno"> 3754</span>&#160;        float3 normal = normalize( cross( v1-v0, v2-v0 ) );</div>
-<div class="line"><a name="l03755"></a><span class="lineno"> 3755</span>&#160;        nmin = fabs(normal*raydir);</div>
-<div class="line"><a name="l03756"></a><span class="lineno"> 3756</span>&#160;        d_hit_ID[i_global] = Npatches+tri; </div>
-<div class="line"><a name="l03757"></a><span class="lineno"> 3757</span>&#160;      }<span class="keywordflow">else</span>{<span class="comment">//has texture mask</span></div>
-<div class="line"><a name="l03758"></a><span class="lineno"> 3758</span>&#160; </div>
-<div class="line"><a name="l03759"></a><span class="lineno"> 3759</span>&#160;      <span class="keywordtype">int</span> ID = d_tri_textureID[tri];</div>
-<div class="line"><a name="l03760"></a><span class="lineno"> 3760</span>&#160;      int2 sz = d_masksize[ID];</div>
-<div class="line"><a name="l03761"></a><span class="lineno"> 3761</span>&#160;      </div>
-<div class="line"><a name="l03762"></a><span class="lineno"> 3762</span>&#160;      float2 uv0 = d_tri_uv[tri*3];</div>
-<div class="line"><a name="l03763"></a><span class="lineno"> 3763</span>&#160;      float2 uv1 = d_tri_uv[tri*3+1];</div>
-<div class="line"><a name="l03764"></a><span class="lineno"> 3764</span>&#160;      float2 uv2 = d_tri_uv[tri*3+2];</div>
-<div class="line"><a name="l03765"></a><span class="lineno"> 3765</span>&#160; </div>
-<div class="line"><a name="l03766"></a><span class="lineno"> 3766</span>&#160;        float2 uv;</div>
-<div class="line"><a name="l03767"></a><span class="lineno"> 3767</span>&#160;        uv.x = (uv0.x + beta*(uv1.x-uv0.x) + gamma*(uv2.x-uv0.x));</div>
-<div class="line"><a name="l03768"></a><span class="lineno"> 3768</span>&#160;        uv.y = (uv0.y + beta*(uv1.y-uv0.y) + gamma*(uv2.y-uv0.y));</div>
-<div class="line"><a name="l03769"></a><span class="lineno"> 3769</span>&#160; </div>
-<div class="line"><a name="l03770"></a><span class="lineno"> 3770</span>&#160;        uint2 ind = make_uint2( roundf(<span class="keywordtype">float</span>(sz.x-1)*fabs(uv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*fabs(uv.y)) );</div>
-<div class="line"><a name="l03771"></a><span class="lineno"> 3771</span>&#160;        assert( ind.x&lt;sz.x &amp;&amp; ind.y&lt;sz.y );</div>
-<div class="line"><a name="l03772"></a><span class="lineno"> 3772</span>&#160; </div>
-<div class="line"><a name="l03773"></a><span class="lineno"> 3773</span>&#160;        <span class="keywordflow">if</span>( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){</div>
-<div class="line"><a name="l03774"></a><span class="lineno"> 3774</span>&#160;          tmin = t;</div>
-<div class="line"><a name="l03775"></a><span class="lineno"> 3775</span>&#160;          float3 normal = normalize( cross( v1-v0, v2-v0 ) );</div>
-<div class="line"><a name="l03776"></a><span class="lineno"> 3776</span>&#160;          nmin = fabs(normal*raydir);</div>
-<div class="line"><a name="l03777"></a><span class="lineno"> 3777</span>&#160;          d_hit_ID[i_global] = Npatches+tri; </div>
-<div class="line"><a name="l03778"></a><span class="lineno"> 3778</span>&#160;        }</div>
+<div class="line"><a name="l03372"></a><span class="lineno"> 3372</span>&#160; </div>
+<div class="line"><a name="l03373"></a><span class="lineno"> 3373</span>&#160;        count=1;</div>
+<div class="line"><a name="l03374"></a><span class="lineno"> 3374</span>&#160;        d=t_pulse.at(hit).at(0);</div>
+<div class="line"><a name="l03375"></a><span class="lineno"> 3375</span>&#160;        t0=t_pulse.at(hit).at(0);</div>
+<div class="line"><a name="l03376"></a><span class="lineno"> 3376</span>&#160;        f=t_pulse.at(hit).at(1);</div>
+<div class="line"><a name="l03377"></a><span class="lineno"> 3377</span>&#160;            </div>
+<div class="line"><a name="l03378"></a><span class="lineno"> 3378</span>&#160;       <span class="comment">// or else the current ray is less than pulse threshold and is part of current hitpoint; add it to the current hit point and continue on</span></div>
+<div class="line"><a name="l03379"></a><span class="lineno"> 3379</span>&#160;      }<span class="keywordflow">else</span>{</div>
+<div class="line"><a name="l03380"></a><span class="lineno"> 3380</span>&#160;        </div>
+<div class="line"><a name="l03381"></a><span class="lineno"> 3381</span>&#160;        count++;</div>
+<div class="line"><a name="l03382"></a><span class="lineno"> 3382</span>&#160;            t0=t_pulse.at(hit).at(0);</div>
+<div class="line"><a name="l03383"></a><span class="lineno"> 3383</span>&#160;        d+=t_pulse.at(hit).at(0);</div>
+<div class="line"><a name="l03384"></a><span class="lineno"> 3384</span>&#160;        f+=t_pulse.at(hit).at(1);</div>
+<div class="line"><a name="l03385"></a><span class="lineno"> 3385</span>&#160;            </div>
+<div class="line"><a name="l03386"></a><span class="lineno"> 3386</span>&#160;      }</div>
+<div class="line"><a name="l03387"></a><span class="lineno"> 3387</span>&#160;          </div>
+<div class="line"><a name="l03388"></a><span class="lineno"> 3388</span>&#160;    }</div>
+<div class="line"><a name="l03389"></a><span class="lineno"> 3389</span>&#160; </div>
+<div class="line"><a name="l03390"></a><span class="lineno"> 3390</span>&#160;      }</div>
+<div class="line"><a name="l03391"></a><span class="lineno"> 3391</span>&#160; </div>
+<div class="line"><a name="l03392"></a><span class="lineno"> 3392</span>&#160;      <span class="keywordtype">float</span> average=0;</div>
+<div class="line"><a name="l03393"></a><span class="lineno"> 3393</span>&#160;      <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> hit=0; hit&lt;t_hit.size(); hit++ ){</div>
+<div class="line"><a name="l03394"></a><span class="lineno"> 3394</span>&#160;    average+=t_hit.at(hit).at(0)/float(t_hit.size());</div>
+<div class="line"><a name="l03395"></a><span class="lineno"> 3395</span>&#160;      }</div>
+<div class="line"><a name="l03396"></a><span class="lineno"> 3396</span>&#160; </div>
+<div class="line"><a name="l03397"></a><span class="lineno"> 3397</span>&#160;      <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> hit=0; hit&lt;t_hit.size(); hit++ ){</div>
+<div class="line"><a name="l03398"></a><span class="lineno"> 3398</span>&#160;    </div>
+<div class="line"><a name="l03399"></a><span class="lineno"> 3399</span>&#160;        std::map&lt;std::string,double&gt; data;</div>
+<div class="line"><a name="l03400"></a><span class="lineno"> 3400</span>&#160;        data[<span class="stringliteral">&quot;target_index&quot;</span>] = hit;</div>
+<div class="line"><a name="l03401"></a><span class="lineno"> 3401</span>&#160;        data[<span class="stringliteral">&quot;target_count&quot;</span>] = t_hit.size();</div>
+<div class="line"><a name="l03402"></a><span class="lineno"> 3402</span>&#160;    data[<span class="stringliteral">&quot;deviation&quot;</span>] = fabs(t_hit.at(hit).at(0)-average);</div>
+<div class="line"><a name="l03403"></a><span class="lineno"> 3403</span>&#160;    data[<span class="stringliteral">&quot;timestamp&quot;</span>] = r;</div>
+<div class="line"><a name="l03404"></a><span class="lineno"> 3404</span>&#160;    data[<span class="stringliteral">&quot;intensity&quot;</span>] = t_hit.at(hit).at(1);</div>
+<div class="line"><a name="l03405"></a><span class="lineno"> 3405</span>&#160;    data[<span class="stringliteral">&quot;distance&quot;</span>] = t_hit.at(hit).at(0);</div>
+<div class="line"><a name="l03406"></a><span class="lineno"> 3406</span>&#160;    data[<span class="stringliteral">&quot;nRaysHit&quot;</span>] = t_hit.at(hit).at(2);</div>
+<div class="line"><a name="l03407"></a><span class="lineno"> 3407</span>&#160; </div>
+<div class="line"><a name="l03408"></a><span class="lineno"> 3408</span>&#160;    <span class="keywordtype">float</span> UUID = t_hit.at(hit).at(3);</div>
+<div class="line"><a name="l03409"></a><span class="lineno"> 3409</span>&#160;    <span class="keywordflow">if</span>( UUID&gt;=0 &amp;&amp; UUID&lt;ID_mapping.size() ){</div>
+<div class="line"><a name="l03410"></a><span class="lineno"> 3410</span>&#160;      UUID = ID_mapping.at(<span class="keywordtype">int</span>(t_hit.at(hit).at(3)));</div>
+<div class="line"><a name="l03411"></a><span class="lineno"> 3411</span>&#160;    }</div>
+<div class="line"><a name="l03412"></a><span class="lineno"> 3412</span>&#160; </div>
+<div class="line"><a name="l03413"></a><span class="lineno"> 3413</span>&#160;    <a class="code" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> color = helios::RGB::red;</div>
+<div class="line"><a name="l03414"></a><span class="lineno"> 3414</span>&#160;    </div>
+<div class="line"><a name="l03415"></a><span class="lineno"> 3415</span>&#160;    <span class="keywordflow">if</span>( UUID&gt;=0 &amp;&amp; context-&gt;<a class="code" href="classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66">doesPrimitiveExist</a>(uint(UUID)) ){</div>
+<div class="line"><a name="l03416"></a><span class="lineno"> 3416</span>&#160;      </div>
+<div class="line"><a name="l03417"></a><span class="lineno"> 3417</span>&#160;      color = context-&gt;<a class="code" href="classhelios_1_1_context.html#a1223205f1080b0b7024b8f97950779b8">getPrimitiveColor</a>(uint(UUID));</div>
+<div class="line"><a name="l03418"></a><span class="lineno"> 3418</span>&#160;      </div>
+<div class="line"><a name="l03419"></a><span class="lineno"> 3419</span>&#160;      <span class="keywordflow">if</span>( context-&gt;<a class="code" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">doesPrimitiveDataExist</a>(uint(UUID),<span class="stringliteral">&quot;object_label&quot;</span>) &amp;&amp; context-&gt;<a class="code" href="classhelios_1_1_context.html#a9c894ecd12e0d893c53ffcfa9e90c0b6">getPrimitiveDataType</a>(uint(UUID),<span class="stringliteral">&quot;object_label&quot;</span>)==helios::HELIOS_TYPE_INT ){</div>
+<div class="line"><a name="l03420"></a><span class="lineno"> 3420</span>&#160;        <span class="keywordtype">int</span> label;</div>
+<div class="line"><a name="l03421"></a><span class="lineno"> 3421</span>&#160;        context-&gt;<a class="code" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a>(uint(UUID),<span class="stringliteral">&quot;object_label&quot;</span>,label);</div>
+<div class="line"><a name="l03422"></a><span class="lineno"> 3422</span>&#160;        data[<span class="stringliteral">&quot;object_label&quot;</span>] = double(label);</div>
+<div class="line"><a name="l03423"></a><span class="lineno"> 3423</span>&#160;      }</div>
+<div class="line"><a name="l03424"></a><span class="lineno"> 3424</span>&#160; </div>
+<div class="line"><a name="l03425"></a><span class="lineno"> 3425</span>&#160;          <span class="keywordflow">if</span>( context-&gt;<a class="code" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">doesPrimitiveDataExist</a>(uint(UUID),<span class="stringliteral">&quot;reflectivity_lidar&quot;</span>) &amp;&amp; context-&gt;<a class="code" href="classhelios_1_1_context.html#a9c894ecd12e0d893c53ffcfa9e90c0b6">getPrimitiveDataType</a>(uint(UUID),<span class="stringliteral">&quot;reflectivity_lidar&quot;</span>)==helios::HELIOS_TYPE_FLOAT ){</div>
+<div class="line"><a name="l03426"></a><span class="lineno"> 3426</span>&#160;            <span class="keywordtype">float</span> rho;</div>
+<div class="line"><a name="l03427"></a><span class="lineno"> 3427</span>&#160;            context-&gt;<a class="code" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a>(uint(UUID),<span class="stringliteral">&quot;reflectivity_lidar&quot;</span>,rho);</div>
+<div class="line"><a name="l03428"></a><span class="lineno"> 3428</span>&#160;            data.at(<span class="stringliteral">&quot;intensity&quot;</span>)*=rho;</div>
+<div class="line"><a name="l03429"></a><span class="lineno"> 3429</span>&#160;          }</div>
+<div class="line"><a name="l03430"></a><span class="lineno"> 3430</span>&#160; </div>
+<div class="line"><a name="l03431"></a><span class="lineno"> 3431</span>&#160;    }</div>
+<div class="line"><a name="l03432"></a><span class="lineno"> 3432</span>&#160; </div>
+<div class="line"><a name="l03433"></a><span class="lineno"> 3433</span>&#160;        <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> dir = helios::make_vec3(direction[r].x,direction[r].y,direction[r].z);</div>
+<div class="line"><a name="l03434"></a><span class="lineno"> 3434</span>&#160;        <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> origin = helios::make_vec3(scan_origin.x,scan_origin.y,scan_origin.z);</div>
+<div class="line"><a name="l03435"></a><span class="lineno"> 3435</span>&#160;        <a class="code" href="structhelios_1_1vec3.html">helios::vec3</a> p = origin+dir*t_hit.at(hit).at(0);</div>
+<div class="line"><a name="l03436"></a><span class="lineno"> 3436</span>&#160;        addHitPoint( s, p, helios::cart2sphere(dir), color, data );</div>
+<div class="line"><a name="l03437"></a><span class="lineno"> 3437</span>&#160; </div>
+<div class="line"><a name="l03438"></a><span class="lineno"> 3438</span>&#160;    Nhits++;</div>
+<div class="line"><a name="l03439"></a><span class="lineno"> 3439</span>&#160;      }</div>
+<div class="line"><a name="l03440"></a><span class="lineno"> 3440</span>&#160; </div>
+<div class="line"><a name="l03441"></a><span class="lineno"> 3441</span>&#160;    }</div>
+<div class="line"><a name="l03442"></a><span class="lineno"> 3442</span>&#160; </div>
+<div class="line"><a name="l03443"></a><span class="lineno"> 3443</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_hit_t) );</div>
+<div class="line"><a name="l03444"></a><span class="lineno"> 3444</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_hit_fnorm) );</div>
+<div class="line"><a name="l03445"></a><span class="lineno"> 3445</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_hit_ID) );</div>
+<div class="line"><a name="l03446"></a><span class="lineno"> 3446</span>&#160;    CUDA_CHECK_ERROR( cudaFree(d_raydir) );</div>
+<div class="line"><a name="l03447"></a><span class="lineno"> 3447</span>&#160;    free(hit_xyz);</div>
+<div class="line"><a name="l03448"></a><span class="lineno"> 3448</span>&#160;    free(direction);</div>
+<div class="line"><a name="l03449"></a><span class="lineno"> 3449</span>&#160;    free(hit_t);</div>
+<div class="line"><a name="l03450"></a><span class="lineno"> 3450</span>&#160;    free(hit_fnorm);</div>
+<div class="line"><a name="l03451"></a><span class="lineno"> 3451</span>&#160;    free(hit_ID);</div>
+<div class="line"><a name="l03452"></a><span class="lineno"> 3452</span>&#160; </div>
+<div class="line"><a name="l03453"></a><span class="lineno"> 3453</span>&#160;    <span class="keywordflow">if</span>( printmessages ){</div>
+<div class="line"><a name="l03454"></a><span class="lineno"> 3454</span>&#160;      std::cout &lt;&lt; <span class="stringliteral">&quot;Created synthetic scan #&quot;</span> &lt;&lt; s &lt;&lt; <span class="stringliteral">&quot; with &quot;</span> &lt;&lt; Nhits &lt;&lt; <span class="stringliteral">&quot; hit points.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a name="l03455"></a><span class="lineno"> 3455</span>&#160;    }</div>
+<div class="line"><a name="l03456"></a><span class="lineno"> 3456</span>&#160;    </div>
+<div class="line"><a name="l03457"></a><span class="lineno"> 3457</span>&#160;  }</div>
+<div class="line"><a name="l03458"></a><span class="lineno"> 3458</span>&#160; </div>
+<div class="line"><a name="l03459"></a><span class="lineno"> 3459</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_patch_vertex) );</div>
+<div class="line"><a name="l03460"></a><span class="lineno"> 3460</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_patch_textureID) );</div>
+<div class="line"><a name="l03461"></a><span class="lineno"> 3461</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_patch_uv) );</div>
+<div class="line"><a name="l03462"></a><span class="lineno"> 3462</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_tri_vertex) );</div>
+<div class="line"><a name="l03463"></a><span class="lineno"> 3463</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_tri_textureID) );</div>
+<div class="line"><a name="l03464"></a><span class="lineno"> 3464</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_tri_uv) );</div>
+<div class="line"><a name="l03465"></a><span class="lineno"> 3465</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_maskdata) );</div>
+<div class="line"><a name="l03466"></a><span class="lineno"> 3466</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_masksize) );</div>
+<div class="line"><a name="l03467"></a><span class="lineno"> 3467</span>&#160;  free(patch_vertex);</div>
+<div class="line"><a name="l03468"></a><span class="lineno"> 3468</span>&#160;  free(patch_textureID);</div>
+<div class="line"><a name="l03469"></a><span class="lineno"> 3469</span>&#160;  free(patch_uv);</div>
+<div class="line"><a name="l03470"></a><span class="lineno"> 3470</span>&#160;  free(tri_vertex);</div>
+<div class="line"><a name="l03471"></a><span class="lineno"> 3471</span>&#160;  free(tri_textureID);</div>
+<div class="line"><a name="l03472"></a><span class="lineno"> 3472</span>&#160;  free(tri_uv);</div>
+<div class="line"><a name="l03473"></a><span class="lineno"> 3473</span>&#160;  free(maskdata);</div>
+<div class="line"><a name="l03474"></a><span class="lineno"> 3474</span>&#160;  free(masksize);</div>
+<div class="line"><a name="l03475"></a><span class="lineno"> 3475</span>&#160; </div>
+<div class="line"><a name="l03476"></a><span class="lineno"> 3476</span>&#160;  <span class="keywordflow">if</span>( printmessages ){</div>
+<div class="line"><a name="l03477"></a><span class="lineno"> 3477</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;done.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a name="l03478"></a><span class="lineno"> 3478</span>&#160;  }</div>
+<div class="line"><a name="l03479"></a><span class="lineno"> 3479</span>&#160;  </div>
+<div class="line"><a name="l03480"></a><span class="lineno"> 3480</span>&#160;}</div>
+<div class="line"><a name="l03481"></a><span class="lineno"> 3481</span>&#160; </div>
+<div class="line"><a name="l03482"></a><span class="lineno"><a class="line" href="class_li_d_a_rcloud.html#a22f9c93700be5e5a808b97ecca6752fe"> 3482</a></span>&#160;std::vector&lt;float&gt; <a class="code" href="class_li_d_a_rcloud.html#a22f9c93700be5e5a808b97ecca6752fe">LiDARcloud::calculateSyntheticLeafArea</a>( <a class="code" href="classhelios_1_1_context.html">helios::Context</a>* context ){</div>
+<div class="line"><a name="l03483"></a><span class="lineno"> 3483</span>&#160; </div>
+<div class="line"><a name="l03484"></a><span class="lineno"> 3484</span>&#160;  float3* d_prim_xyz;</div>
+<div class="line"><a name="l03485"></a><span class="lineno"> 3485</span>&#160; </div>
+<div class="line"><a name="l03486"></a><span class="lineno"> 3486</span>&#160;  std::vector&lt;uint&gt; UUIDs_all = context-&gt;<a class="code" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb">getAllUUIDs</a>();</div>
+<div class="line"><a name="l03487"></a><span class="lineno"> 3487</span>&#160; </div>
+<div class="line"><a name="l03488"></a><span class="lineno"> 3488</span>&#160;  <span class="keyword">const</span> uint N = UUIDs_all.size();</div>
+<div class="line"><a name="l03489"></a><span class="lineno"> 3489</span>&#160;  </div>
+<div class="line"><a name="l03490"></a><span class="lineno"> 3490</span>&#160;  float3* prim_xyz = (float3*)malloc(N * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
+<div class="line"><a name="l03491"></a><span class="lineno"> 3491</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_prim_xyz,N*<span class="keyword">sizeof</span>(float3)) ); <span class="comment">//allocate device memory</span></div>
+<div class="line"><a name="l03492"></a><span class="lineno"> 3492</span>&#160; </div>
+<div class="line"><a name="l03493"></a><span class="lineno"> 3493</span>&#160;  <span class="comment">//copy scan data into the host buffer</span></div>
+<div class="line"><a name="l03494"></a><span class="lineno"> 3494</span>&#160;  <span class="keywordflow">for</span>( std::size_t p=0; p&lt;N; p++ ){</div>
+<div class="line"><a name="l03495"></a><span class="lineno"> 3495</span>&#160;    std::vector&lt;helios::vec3&gt; verts = context-&gt;<a class="code" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">getPrimitiveVertices</a>(UUIDs_all.at(p));</div>
+<div class="line"><a name="l03496"></a><span class="lineno"> 3496</span>&#160;    prim_xyz[p] = vec3tofloat3( verts.at(0) );</div>
+<div class="line"><a name="l03497"></a><span class="lineno"> 3497</span>&#160;  }</div>
+<div class="line"><a name="l03498"></a><span class="lineno"> 3498</span>&#160; </div>
+<div class="line"><a name="l03499"></a><span class="lineno"> 3499</span>&#160;  <span class="comment">//copy from host to device memory</span></div>
+<div class="line"><a name="l03500"></a><span class="lineno"> 3500</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_prim_xyz, prim_xyz, N*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l03501"></a><span class="lineno"> 3501</span>&#160; </div>
+<div class="line"><a name="l03502"></a><span class="lineno"> 3502</span>&#160;  <span class="comment">// ---- Grid Cells ---- //</span></div>
+<div class="line"><a name="l03503"></a><span class="lineno"> 3503</span>&#160; </div>
+<div class="line"><a name="l03505"></a><span class="lineno"> 3505</span>&#160;  float3* d_grid_center;</div>
+<div class="line"><a name="l03506"></a><span class="lineno"> 3506</span>&#160; </div>
+<div class="line"><a name="l03508"></a><span class="lineno"> 3508</span>&#160;  float3* d_grid_anchor;</div>
+<div class="line"><a name="l03509"></a><span class="lineno"> 3509</span>&#160; </div>
+<div class="line"><a name="l03511"></a><span class="lineno"> 3511</span>&#160;  float3* d_grid_size;</div>
+<div class="line"><a name="l03512"></a><span class="lineno"> 3512</span>&#160; </div>
+<div class="line"><a name="l03514"></a><span class="lineno"> 3514</span>&#160;  <span class="keywordtype">float</span>* d_grid_rotation;</div>
+<div class="line"><a name="l03515"></a><span class="lineno"> 3515</span>&#160; </div>
+<div class="line"><a name="l03516"></a><span class="lineno"> 3516</span>&#160;  <span class="keyword">const</span> uint Ncells = getGridCellCount();</div>
+<div class="line"><a name="l03517"></a><span class="lineno"> 3517</span>&#160; </div>
+<div class="line"><a name="l03518"></a><span class="lineno"> 3518</span>&#160;  float3* center = (float3*)malloc(Ncells * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
+<div class="line"><a name="l03519"></a><span class="lineno"> 3519</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_grid_center,Ncells*<span class="keyword">sizeof</span>(float3)) ); <span class="comment">//allocate device memory</span></div>
+<div class="line"><a name="l03520"></a><span class="lineno"> 3520</span>&#160; </div>
+<div class="line"><a name="l03521"></a><span class="lineno"> 3521</span>&#160;  float3* anchor = (float3*)malloc(Ncells * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
+<div class="line"><a name="l03522"></a><span class="lineno"> 3522</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_grid_anchor,Ncells*<span class="keyword">sizeof</span>(float3)) ); <span class="comment">//allocate device memory</span></div>
+<div class="line"><a name="l03523"></a><span class="lineno"> 3523</span>&#160; </div>
+<div class="line"><a name="l03524"></a><span class="lineno"> 3524</span>&#160;  float3* size = (float3*)malloc(Ncells * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
+<div class="line"><a name="l03525"></a><span class="lineno"> 3525</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_grid_size,Ncells*<span class="keyword">sizeof</span>(float3)) ); <span class="comment">//allocate device memory</span></div>
+<div class="line"><a name="l03526"></a><span class="lineno"> 3526</span>&#160; </div>
+<div class="line"><a name="l03527"></a><span class="lineno"> 3527</span>&#160;  <span class="keywordtype">float</span>* rotation = (<span class="keywordtype">float</span>*)malloc(Ncells * <span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)); <span class="comment">//allocate host memory</span></div>
+<div class="line"><a name="l03528"></a><span class="lineno"> 3528</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_grid_rotation,Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)) ); <span class="comment">//allocate device memory</span></div>
+<div class="line"><a name="l03529"></a><span class="lineno"> 3529</span>&#160;  </div>
+<div class="line"><a name="l03530"></a><span class="lineno"> 3530</span>&#160;  <span class="comment">//copy grid data into the host buffer</span></div>
+<div class="line"><a name="l03531"></a><span class="lineno"> 3531</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> c=0; c&lt;Ncells; c++ ){</div>
+<div class="line"><a name="l03532"></a><span class="lineno"> 3532</span>&#160;    center[c] = vec3tofloat3(getCellCenter(c));</div>
+<div class="line"><a name="l03533"></a><span class="lineno"> 3533</span>&#160;    anchor[c] = vec3tofloat3(getCellGlobalAnchor(c));</div>
+<div class="line"><a name="l03534"></a><span class="lineno"> 3534</span>&#160;    size[c] = vec3tofloat3(getCellSize(c));</div>
+<div class="line"><a name="l03535"></a><span class="lineno"> 3535</span>&#160;    rotation[c] = getCellRotation(c);</div>
+<div class="line"><a name="l03536"></a><span class="lineno"> 3536</span>&#160;  }</div>
+<div class="line"><a name="l03537"></a><span class="lineno"> 3537</span>&#160; </div>
+<div class="line"><a name="l03538"></a><span class="lineno"> 3538</span>&#160;  <span class="comment">//copy from host to device memory</span></div>
+<div class="line"><a name="l03539"></a><span class="lineno"> 3539</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_center, center, Ncells*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l03540"></a><span class="lineno"> 3540</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_anchor, anchor, Ncells*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l03541"></a><span class="lineno"> 3541</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_size, size, Ncells*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l03542"></a><span class="lineno"> 3542</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(d_grid_rotation, rotation, Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a name="l03543"></a><span class="lineno"> 3543</span>&#160; </div>
+<div class="line"><a name="l03544"></a><span class="lineno"> 3544</span>&#160;  free(prim_xyz);</div>
+<div class="line"><a name="l03545"></a><span class="lineno"> 3545</span>&#160;  free(center);</div>
+<div class="line"><a name="l03546"></a><span class="lineno"> 3546</span>&#160;  free(anchor);</div>
+<div class="line"><a name="l03547"></a><span class="lineno"> 3547</span>&#160;  free(size);</div>
+<div class="line"><a name="l03548"></a><span class="lineno"> 3548</span>&#160;  free(rotation);</div>
+<div class="line"><a name="l03549"></a><span class="lineno"> 3549</span>&#160; </div>
+<div class="line"><a name="l03550"></a><span class="lineno"> 3550</span>&#160;  <span class="comment">// Result buffer</span></div>
+<div class="line"><a name="l03551"></a><span class="lineno"> 3551</span>&#160;  <span class="keywordtype">int</span>* prim_vol = (<span class="keywordtype">int</span>*)malloc(N * <span class="keyword">sizeof</span>(<span class="keywordtype">int</span>));</div>
+<div class="line"><a name="l03552"></a><span class="lineno"> 3552</span>&#160;  <span class="keywordtype">int</span>* d_prim_vol;</div>
+<div class="line"><a name="l03553"></a><span class="lineno"> 3553</span>&#160;  CUDA_CHECK_ERROR( cudaMalloc(&amp;d_prim_vol,N*<span class="keyword">sizeof</span>(<span class="keywordtype">int</span>)) );</div>
+<div class="line"><a name="l03554"></a><span class="lineno"> 3554</span>&#160; </div>
+<div class="line"><a name="l03555"></a><span class="lineno"> 3555</span>&#160;  dim3 dimBlock( 64, 1 );</div>
+<div class="line"><a name="l03556"></a><span class="lineno"> 3556</span>&#160;  dim3 dimGrid( ceil(N/64.f) );</div>
+<div class="line"><a name="l03557"></a><span class="lineno"> 3557</span>&#160;  insideVolume &lt;&lt;&lt; dimGrid, dimBlock &gt;&gt;&gt;( N, d_prim_xyz, getGridCellCount(), d_grid_size, d_grid_center, d_grid_anchor, d_grid_rotation, d_prim_vol );</div>
+<div class="line"><a name="l03558"></a><span class="lineno"> 3558</span>&#160; </div>
+<div class="line"><a name="l03559"></a><span class="lineno"> 3559</span>&#160;  CUDA_CHECK_ERROR( cudaPeekAtLastError() );</div>
+<div class="line"><a name="l03560"></a><span class="lineno"> 3560</span>&#160;  CUDA_CHECK_ERROR( cudaDeviceSynchronize() );</div>
+<div class="line"><a name="l03561"></a><span class="lineno"> 3561</span>&#160;  </div>
+<div class="line"><a name="l03562"></a><span class="lineno"> 3562</span>&#160;  CUDA_CHECK_ERROR( cudaMemcpy(prim_vol, d_prim_vol, N*<span class="keyword">sizeof</span>(<span class="keywordtype">int</span>), cudaMemcpyDeviceToHost) );</div>
+<div class="line"><a name="l03563"></a><span class="lineno"> 3563</span>&#160; </div>
+<div class="line"><a name="l03564"></a><span class="lineno"> 3564</span>&#160;  std::vector&lt;float&gt; total_area;</div>
+<div class="line"><a name="l03565"></a><span class="lineno"> 3565</span>&#160;  total_area.resize(Ncells,0.f);</div>
+<div class="line"><a name="l03566"></a><span class="lineno"> 3566</span>&#160;  <span class="keywordflow">for</span>( std::size_t p=0; p&lt;N; p++ ){</div>
+<div class="line"><a name="l03567"></a><span class="lineno"> 3567</span>&#160;    <span class="keywordflow">if</span>( prim_vol[p]&gt;=0 ){</div>
+<div class="line"><a name="l03568"></a><span class="lineno"> 3568</span>&#160;      uint gridcell = prim_vol[p];</div>
+<div class="line"><a name="l03569"></a><span class="lineno"> 3569</span>&#160;      total_area.at(gridcell) += context-&gt;<a class="code" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">getPrimitiveArea</a>(UUIDs_all.at(p));</div>
+<div class="line"><a name="l03570"></a><span class="lineno"> 3570</span>&#160;      context-&gt;<a class="code" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>(UUIDs_all.at(p),<span class="stringliteral">&quot;gridCell&quot;</span>,helios::HELIOS_TYPE_UINT,1,&amp;gridcell);</div>
+<div class="line"><a name="l03571"></a><span class="lineno"> 3571</span>&#160;    }</div>
+<div class="line"><a name="l03572"></a><span class="lineno"> 3572</span>&#160;  }</div>
+<div class="line"><a name="l03573"></a><span class="lineno"> 3573</span>&#160; </div>
+<div class="line"><a name="l03574"></a><span class="lineno"> 3574</span>&#160;  std::vector&lt;float&gt; output_LeafArea;</div>
+<div class="line"><a name="l03575"></a><span class="lineno"> 3575</span>&#160;  output_LeafArea.resize(Ncells,0.f);</div>
+<div class="line"><a name="l03576"></a><span class="lineno"> 3576</span>&#160; </div>
+<div class="line"><a name="l03577"></a><span class="lineno"> 3577</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> v=0; v&lt;Ncells; v++ ){</div>
+<div class="line"><a name="l03578"></a><span class="lineno"> 3578</span>&#160;    output_LeafArea.at(v) =  total_area.at(v);</div>
+<div class="line"><a name="l03579"></a><span class="lineno"> 3579</span>&#160;    <span class="keywordflow">if</span>( context-&gt;<a class="code" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">doesPrimitiveDataExist</a>(UUIDs_all.at(v), <span class="stringliteral">&quot;gridCell&quot;</span>) ){</div>
+<div class="line"><a name="l03580"></a><span class="lineno"> 3580</span>&#160;      context-&gt;<a class="code" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>(UUIDs_all.at(v),<span class="stringliteral">&quot;synthetic_leaf_area&quot;</span>,total_area.at(v));</div>
+<div class="line"><a name="l03581"></a><span class="lineno"> 3581</span>&#160;    }</div>
+<div class="line"><a name="l03582"></a><span class="lineno"> 3582</span>&#160;  }</div>
+<div class="line"><a name="l03583"></a><span class="lineno"> 3583</span>&#160;  </div>
+<div class="line"><a name="l03584"></a><span class="lineno"> 3584</span>&#160;  free(prim_vol);</div>
+<div class="line"><a name="l03585"></a><span class="lineno"> 3585</span>&#160; </div>
+<div class="line"><a name="l03586"></a><span class="lineno"> 3586</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_prim_vol) );</div>
+<div class="line"><a name="l03587"></a><span class="lineno"> 3587</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_prim_xyz) );</div>
+<div class="line"><a name="l03588"></a><span class="lineno"> 3588</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_grid_center) );</div>
+<div class="line"><a name="l03589"></a><span class="lineno"> 3589</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_grid_anchor) );</div>
+<div class="line"><a name="l03590"></a><span class="lineno"> 3590</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_grid_size) );</div>
+<div class="line"><a name="l03591"></a><span class="lineno"> 3591</span>&#160;  CUDA_CHECK_ERROR( cudaFree(d_grid_rotation) );</div>
+<div class="line"><a name="l03592"></a><span class="lineno"> 3592</span>&#160; </div>
+<div class="line"><a name="l03593"></a><span class="lineno"> 3593</span>&#160;  <span class="keywordflow">return</span> output_LeafArea;</div>
+<div class="line"><a name="l03594"></a><span class="lineno"> 3594</span>&#160; </div>
+<div class="line"><a name="l03595"></a><span class="lineno"> 3595</span>&#160;}</div>
+<div class="line"><a name="l03596"></a><span class="lineno"> 3596</span>&#160; </div>
+<div class="line"><a name="l03597"></a><span class="lineno"> 3597</span>&#160;__global__ <span class="keywordtype">void</span> LIDAR_CUDA::intersectPatches( <span class="keyword">const</span> <span class="keywordtype">size_t</span> Npulse, <span class="keyword">const</span> <span class="keywordtype">int</span> rays_per_pulse, <span class="keyword">const</span> float3 origin, float3* d_raydir, <span class="keyword">const</span> <span class="keywordtype">float</span> exit_diameter, <span class="keyword">const</span> <span class="keywordtype">float</span> beam_divergence,<span class="keyword">const</span> <span class="keywordtype">int</span> Npatches, float3* d_patch_vertex, <span class="keywordtype">int</span>* d_patch_textureID, <span class="keyword">const</span> <span class="keywordtype">int</span> Ntextures, int2* d_masksize, int2 masksize_max, <span class="keywordtype">bool</span>* d_maskdata, float2* d_patch_uv, <span class="keywordtype">float</span>* d_hit_t, <span class="keywordtype">float</span>* d_hit_fnorm, <span class="keywordtype">int</span>* d_hit_ID ){</div>
+<div class="line"><a name="l03598"></a><span class="lineno"> 3598</span>&#160; </div>
+<div class="line"><a name="l03599"></a><span class="lineno"> 3599</span>&#160;  <span class="keywordtype">int</span> idx = blockIdx.x*blockDim.x+threadIdx.x;</div>
+<div class="line"><a name="l03600"></a><span class="lineno"> 3600</span>&#160; </div>
+<div class="line"><a name="l03601"></a><span class="lineno"> 3601</span>&#160;  <span class="keywordtype">int</span> subpulse = blockIdx.y*blockDim.y+threadIdx.y;</div>
+<div class="line"><a name="l03602"></a><span class="lineno"> 3602</span>&#160; </div>
+<div class="line"><a name="l03603"></a><span class="lineno"> 3603</span>&#160;  <span class="keywordflow">if</span>( idx&gt;=Npulse || subpulse&gt;=rays_per_pulse ){</div>
+<div class="line"><a name="l03604"></a><span class="lineno"> 3604</span>&#160;    <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l03605"></a><span class="lineno"> 3605</span>&#160;  }</div>
+<div class="line"><a name="l03606"></a><span class="lineno"> 3606</span>&#160; </div>
+<div class="line"><a name="l03607"></a><span class="lineno"> 3607</span>&#160;  <span class="keywordtype">int</span> i_global = idx*rays_per_pulse+subpulse;</div>
+<div class="line"><a name="l03608"></a><span class="lineno"> 3608</span>&#160; </div>
+<div class="line"><a name="l03609"></a><span class="lineno"> 3609</span>&#160;  uint seed = tea&lt;16&gt;(subpulse,i_global);</div>
+<div class="line"><a name="l03610"></a><span class="lineno"> 3610</span>&#160; </div>
+<div class="line"><a name="l03611"></a><span class="lineno"> 3611</span>&#160;  float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );</div>
+<div class="line"><a name="l03612"></a><span class="lineno"> 3612</span>&#160;  </div>
+<div class="line"><a name="l03613"></a><span class="lineno"> 3613</span>&#160;  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );</div>
+<div class="line"><a name="l03614"></a><span class="lineno"> 3614</span>&#160; </div>
+<div class="line"><a name="l03615"></a><span class="lineno"> 3615</span>&#160;  <span class="keywordtype">float</span> zenith = <a class="code" href="global_8h.html#a9f732ec5c2153020247c879034f81432">acos_safe</a>( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
+<div class="line"><a name="l03616"></a><span class="lineno"> 3616</span>&#160;  <span class="keywordtype">float</span> azimuth = <a class="code" href="group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54">atan2_2pi</a>( d_raydir[idx].x, d_raydir[idx].y );</div>
+<div class="line"><a name="l03617"></a><span class="lineno"> 3617</span>&#160;  raydir = <a class="code" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( raydir, zenith, 0.5*M_PI-azimuth );</div>
+<div class="line"><a name="l03618"></a><span class="lineno"> 3618</span>&#160; </div>
+<div class="line"><a name="l03619"></a><span class="lineno"> 3619</span>&#160;  float3 disk_pt3 = <a class="code" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
+<div class="line"><a name="l03620"></a><span class="lineno"> 3620</span>&#160; </div>
+<div class="line"><a name="l03621"></a><span class="lineno"> 3621</span>&#160;  <span class="keywordtype">float</span> tmin = d_hit_t[i_global];</div>
+<div class="line"><a name="l03622"></a><span class="lineno"> 3622</span>&#160;  <span class="keywordtype">float</span> nmin = d_hit_fnorm[i_global];</div>
+<div class="line"><a name="l03623"></a><span class="lineno"> 3623</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> p=0; p&lt;Npatches; p++ ){</div>
+<div class="line"><a name="l03624"></a><span class="lineno"> 3624</span>&#160; </div>
+<div class="line"><a name="l03625"></a><span class="lineno"> 3625</span>&#160;    float3 v0 = d_patch_vertex[4*p];</div>
+<div class="line"><a name="l03626"></a><span class="lineno"> 3626</span>&#160;    float3 v1 = d_patch_vertex[4*p+1];</div>
+<div class="line"><a name="l03627"></a><span class="lineno"> 3627</span>&#160;    float3 v2 = d_patch_vertex[4*p+2];</div>
+<div class="line"><a name="l03628"></a><span class="lineno"> 3628</span>&#160;    float3 v3 = d_patch_vertex[4*p+3];</div>
+<div class="line"><a name="l03629"></a><span class="lineno"> 3629</span>&#160; </div>
+<div class="line"><a name="l03630"></a><span class="lineno"> 3630</span>&#160;    float3 anchor = v0;</div>
+<div class="line"><a name="l03631"></a><span class="lineno"> 3631</span>&#160;    float3 normal = normalize( cross( v1-v0, v2-v0 ) );</div>
+<div class="line"><a name="l03632"></a><span class="lineno"> 3632</span>&#160; </div>
+<div class="line"><a name="l03633"></a><span class="lineno"> 3633</span>&#160;    float3 a = v1-v0;</div>
+<div class="line"><a name="l03634"></a><span class="lineno"> 3634</span>&#160;    float3 b = v3-v0;</div>
+<div class="line"><a name="l03635"></a><span class="lineno"> 3635</span>&#160;    </div>
+<div class="line"><a name="l03636"></a><span class="lineno"> 3636</span>&#160;    <span class="keywordtype">float</span> t = ((anchor - origin - disk_pt3)*normal) / (raydir*normal); </div>
+<div class="line"><a name="l03637"></a><span class="lineno"> 3637</span>&#160;    </div>
+<div class="line"><a name="l03638"></a><span class="lineno"> 3638</span>&#160;    <span class="keywordflow">if</span>( t==t &amp;&amp; t&gt;1e-8 &amp;&amp; t&lt;tmin ){</div>
+<div class="line"><a name="l03639"></a><span class="lineno"> 3639</span>&#160;            </div>
+<div class="line"><a name="l03640"></a><span class="lineno"> 3640</span>&#160;      float3 point = origin + disk_pt3 + raydir * t;</div>
+<div class="line"><a name="l03641"></a><span class="lineno"> 3641</span>&#160;      float3 d = point - anchor;</div>
+<div class="line"><a name="l03642"></a><span class="lineno"> 3642</span>&#160;      </div>
+<div class="line"><a name="l03643"></a><span class="lineno"> 3643</span>&#160;      <span class="keywordtype">float</span> ddota = d*a;</div>
+<div class="line"><a name="l03644"></a><span class="lineno"> 3644</span>&#160;      </div>
+<div class="line"><a name="l03645"></a><span class="lineno"> 3645</span>&#160;      <span class="keywordflow">if</span> (ddota &gt; 0.0 &amp;&amp; ddota &lt; a*a ){</div>
+<div class="line"><a name="l03646"></a><span class="lineno"> 3646</span>&#160;    </div>
+<div class="line"><a name="l03647"></a><span class="lineno"> 3647</span>&#160;    <span class="keywordtype">float</span> ddotb = d*b;</div>
+<div class="line"><a name="l03648"></a><span class="lineno"> 3648</span>&#160; </div>
+<div class="line"><a name="l03649"></a><span class="lineno"> 3649</span>&#160;    <span class="keywordflow">if</span> (ddotb &gt; 0.0 &amp;&amp; ddotb &lt; b*b ){</div>
+<div class="line"><a name="l03650"></a><span class="lineno"> 3650</span>&#160; </div>
+<div class="line"><a name="l03651"></a><span class="lineno"> 3651</span>&#160;      <span class="keywordflow">if</span>( d_patch_textureID[p]&lt;0 ){<span class="comment">//no texture mask</span></div>
+<div class="line"><a name="l03652"></a><span class="lineno"> 3652</span>&#160;        </div>
+<div class="line"><a name="l03653"></a><span class="lineno"> 3653</span>&#160;        tmin = t;</div>
+<div class="line"><a name="l03654"></a><span class="lineno"> 3654</span>&#160;        nmin = fabs(normal*raydir);</div>
+<div class="line"><a name="l03655"></a><span class="lineno"> 3655</span>&#160;        d_hit_ID[i_global] = p; </div>
+<div class="line"><a name="l03656"></a><span class="lineno"> 3656</span>&#160; </div>
+<div class="line"><a name="l03657"></a><span class="lineno"> 3657</span>&#160;      }<span class="keywordflow">else</span>{ <span class="comment">//has texture mask</span></div>
+<div class="line"><a name="l03658"></a><span class="lineno"> 3658</span>&#160; </div>
+<div class="line"><a name="l03659"></a><span class="lineno"> 3659</span>&#160;        <span class="keywordtype">float</span> amag = magnitude(a);</div>
+<div class="line"><a name="l03660"></a><span class="lineno"> 3660</span>&#160;        <span class="keywordtype">float</span> bmag = magnitude(b);</div>
+<div class="line"><a name="l03661"></a><span class="lineno"> 3661</span>&#160;        float2 uv = make_float2( 1.f-ddota/amag/amag, ddotb/bmag/bmag );</div>
+<div class="line"><a name="l03662"></a><span class="lineno"> 3662</span>&#160;        <span class="keywordtype">int</span> ID = d_patch_textureID[p];</div>
+<div class="line"><a name="l03663"></a><span class="lineno"> 3663</span>&#160;        int2 sz = d_masksize[ID];</div>
+<div class="line"><a name="l03664"></a><span class="lineno"> 3664</span>&#160; </div>
+<div class="line"><a name="l03665"></a><span class="lineno"> 3665</span>&#160;        float2 uvmin = d_patch_uv[2*p];</div>
+<div class="line"><a name="l03666"></a><span class="lineno"> 3666</span>&#160;        float2 duv;</div>
+<div class="line"><a name="l03667"></a><span class="lineno"> 3667</span>&#160;        duv.x = d_patch_uv[ 2*p+1 ].x - d_patch_uv[ 2*p ].x;</div>
+<div class="line"><a name="l03668"></a><span class="lineno"> 3668</span>&#160;        duv.y = d_patch_uv[ 2*p+1 ].y - d_patch_uv[ 2*p ].y;</div>
+<div class="line"><a name="l03669"></a><span class="lineno"> 3669</span>&#160;        int2 ind = <a class="code" href="group__vectors.html#ga05ad3ecab7f008a6b1ee04b35f227115">make_int2</a>( roundf(<span class="keywordtype">float</span>(sz.x-1)*(uvmin.x+fabs(uv.x)*duv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*(uvmin.y+fabs(uv.y)*duv.y)) );</div>
+<div class="line"><a name="l03670"></a><span class="lineno"> 3670</span>&#160;        assert( ind.x&gt;=0 &amp;&amp; ind.x&lt;sz.x &amp;&amp; ind.y&gt;=0 &amp;&amp; ind.y&lt;sz.y );</div>
+<div class="line"><a name="l03671"></a><span class="lineno"> 3671</span>&#160; </div>
+<div class="line"><a name="l03672"></a><span class="lineno"> 3672</span>&#160;        <span class="keywordflow">if</span>( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){</div>
+<div class="line"><a name="l03673"></a><span class="lineno"> 3673</span>&#160; </div>
+<div class="line"><a name="l03674"></a><span class="lineno"> 3674</span>&#160;          tmin = t;</div>
+<div class="line"><a name="l03675"></a><span class="lineno"> 3675</span>&#160;          nmin = fabs(normal*raydir);</div>
+<div class="line"><a name="l03676"></a><span class="lineno"> 3676</span>&#160;          d_hit_ID[i_global] = p; </div>
+<div class="line"><a name="l03677"></a><span class="lineno"> 3677</span>&#160;        </div>
+<div class="line"><a name="l03678"></a><span class="lineno"> 3678</span>&#160;        }</div>
+<div class="line"><a name="l03679"></a><span class="lineno"> 3679</span>&#160;        </div>
+<div class="line"><a name="l03680"></a><span class="lineno"> 3680</span>&#160;      }</div>
+<div class="line"><a name="l03681"></a><span class="lineno"> 3681</span>&#160;        </div>
+<div class="line"><a name="l03682"></a><span class="lineno"> 3682</span>&#160;    }       </div>
+<div class="line"><a name="l03683"></a><span class="lineno"> 3683</span>&#160;    </div>
+<div class="line"><a name="l03684"></a><span class="lineno"> 3684</span>&#160;      }</div>
+<div class="line"><a name="l03685"></a><span class="lineno"> 3685</span>&#160;    }</div>
+<div class="line"><a name="l03686"></a><span class="lineno"> 3686</span>&#160;  }</div>
+<div class="line"><a name="l03687"></a><span class="lineno"> 3687</span>&#160; </div>
+<div class="line"><a name="l03688"></a><span class="lineno"> 3688</span>&#160;  d_hit_t[i_global] = tmin;</div>
+<div class="line"><a name="l03689"></a><span class="lineno"> 3689</span>&#160; </div>
+<div class="line"><a name="l03690"></a><span class="lineno"> 3690</span>&#160;  d_hit_fnorm[i_global] = nmin;</div>
+<div class="line"><a name="l03691"></a><span class="lineno"> 3691</span>&#160;  </div>
+<div class="line"><a name="l03692"></a><span class="lineno"> 3692</span>&#160;}</div>
+<div class="line"><a name="l03693"></a><span class="lineno"> 3693</span>&#160; </div>
+<div class="line"><a name="l03694"></a><span class="lineno"> 3694</span>&#160;__global__ <span class="keywordtype">void</span> LIDAR_CUDA::intersectTriangles( <span class="keyword">const</span> <span class="keywordtype">size_t</span> Npulse, <span class="keyword">const</span> <span class="keywordtype">int</span> rays_per_pulse, <span class="keyword">const</span> float3 origin, float3* d_raydir, <span class="keyword">const</span> <span class="keywordtype">float</span> exit_diameter, <span class="keyword">const</span> <span class="keywordtype">float</span> beam_divergence, <span class="keyword">const</span> <span class="keywordtype">int</span> Ntriangles, <span class="keyword">const</span> <span class="keywordtype">int</span> Npatches, float3* d_tri_vertex, <span class="keywordtype">int</span>* d_tri_textureID, <span class="keyword">const</span> <span class="keywordtype">int</span> Ntextures, int2* d_masksize, <span class="keyword">const</span> int2 masksize_max, <span class="keywordtype">bool</span>* d_maskdata, float2* d_tri_uv, <span class="keywordtype">float</span>* d_hit_t, <span class="keywordtype">float</span>* d_hit_fnorm, <span class="keywordtype">int</span>* d_hit_ID ){</div>
+<div class="line"><a name="l03695"></a><span class="lineno"> 3695</span>&#160; </div>
+<div class="line"><a name="l03696"></a><span class="lineno"> 3696</span>&#160;  <span class="keywordtype">int</span> idx = blockIdx.x*blockDim.x+threadIdx.x;</div>
+<div class="line"><a name="l03697"></a><span class="lineno"> 3697</span>&#160; </div>
+<div class="line"><a name="l03698"></a><span class="lineno"> 3698</span>&#160;  <span class="keywordtype">int</span> subpulse = blockIdx.y*blockDim.y+threadIdx.y;</div>
+<div class="line"><a name="l03699"></a><span class="lineno"> 3699</span>&#160; </div>
+<div class="line"><a name="l03700"></a><span class="lineno"> 3700</span>&#160;  <span class="keywordflow">if</span>( idx&gt;=Npulse || subpulse&gt;=rays_per_pulse ){</div>
+<div class="line"><a name="l03701"></a><span class="lineno"> 3701</span>&#160;    <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l03702"></a><span class="lineno"> 3702</span>&#160;  }</div>
+<div class="line"><a name="l03703"></a><span class="lineno"> 3703</span>&#160; </div>
+<div class="line"><a name="l03704"></a><span class="lineno"> 3704</span>&#160;  <span class="keywordtype">int</span> i_global = idx*rays_per_pulse+subpulse;</div>
+<div class="line"><a name="l03705"></a><span class="lineno"> 3705</span>&#160; </div>
+<div class="line"><a name="l03706"></a><span class="lineno"> 3706</span>&#160;  uint seed = tea&lt;16&gt;(subpulse,i_global);</div>
+<div class="line"><a name="l03707"></a><span class="lineno"> 3707</span>&#160; </div>
+<div class="line"><a name="l03708"></a><span class="lineno"> 3708</span>&#160;  float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );</div>
+<div class="line"><a name="l03709"></a><span class="lineno"> 3709</span>&#160;  </div>
+<div class="line"><a name="l03710"></a><span class="lineno"> 3710</span>&#160;  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );</div>
+<div class="line"><a name="l03711"></a><span class="lineno"> 3711</span>&#160; </div>
+<div class="line"><a name="l03712"></a><span class="lineno"> 3712</span>&#160;  <span class="keywordtype">float</span> zenith = <a class="code" href="global_8h.html#a9f732ec5c2153020247c879034f81432">acos_safe</a>( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
+<div class="line"><a name="l03713"></a><span class="lineno"> 3713</span>&#160;  <span class="keywordtype">float</span> azimuth = <a class="code" href="group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54">atan2_2pi</a>( d_raydir[idx].x, d_raydir[idx].y );</div>
+<div class="line"><a name="l03714"></a><span class="lineno"> 3714</span>&#160;  raydir = <a class="code" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( raydir, zenith, 0.5*M_PI-azimuth );</div>
+<div class="line"><a name="l03715"></a><span class="lineno"> 3715</span>&#160; </div>
+<div class="line"><a name="l03716"></a><span class="lineno"> 3716</span>&#160;  float3 disk_pt3 = <a class="code" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
+<div class="line"><a name="l03717"></a><span class="lineno"> 3717</span>&#160; </div>
+<div class="line"><a name="l03718"></a><span class="lineno"> 3718</span>&#160;  <span class="keywordtype">float</span> tmin = d_hit_t[i_global];</div>
+<div class="line"><a name="l03719"></a><span class="lineno"> 3719</span>&#160;  <span class="keywordtype">float</span> nmin = d_hit_fnorm[i_global];</div>
+<div class="line"><a name="l03720"></a><span class="lineno"> 3720</span>&#160;  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> tri=0; tri&lt;Ntriangles; tri++ ){</div>
+<div class="line"><a name="l03721"></a><span class="lineno"> 3721</span>&#160; </div>
+<div class="line"><a name="l03722"></a><span class="lineno"> 3722</span>&#160;    float3 v0 = d_tri_vertex[3*tri];</div>
+<div class="line"><a name="l03723"></a><span class="lineno"> 3723</span>&#160;    float3 v1 = d_tri_vertex[3*tri+1];</div>
+<div class="line"><a name="l03724"></a><span class="lineno"> 3724</span>&#160;    float3 v2 = d_tri_vertex[3*tri+2];</div>
+<div class="line"><a name="l03725"></a><span class="lineno"> 3725</span>&#160; </div>
+<div class="line"><a name="l03726"></a><span class="lineno"> 3726</span>&#160;    <span class="keywordtype">float</span> a = v0.x - v1.x, b = v0.x - v2.x, c = raydir.x, d = v0.x - origin.x - disk_pt3.x; </div>
+<div class="line"><a name="l03727"></a><span class="lineno"> 3727</span>&#160;    <span class="keywordtype">float</span> e = v0.y - v1.y, f = v0.y - v2.y, g = raydir.y, h = v0.y - origin.y - disk_pt3.y;</div>
+<div class="line"><a name="l03728"></a><span class="lineno"> 3728</span>&#160;    <span class="keywordtype">float</span> i = v0.z - v1.z, j = v0.z - v2.z, k = raydir.z, l = v0.z - origin.z - disk_pt3.z;</div>
+<div class="line"><a name="l03729"></a><span class="lineno"> 3729</span>&#160;        </div>
+<div class="line"><a name="l03730"></a><span class="lineno"> 3730</span>&#160;    <span class="keywordtype">float</span> m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;</div>
+<div class="line"><a name="l03731"></a><span class="lineno"> 3731</span>&#160;    <span class="keywordtype">float</span> q = g * i - e * k, s = e * j - f * i;</div>
+<div class="line"><a name="l03732"></a><span class="lineno"> 3732</span>&#160;  </div>
+<div class="line"><a name="l03733"></a><span class="lineno"> 3733</span>&#160;    <span class="keywordtype">float</span> inv_denom  = 1.f / (a * m + b * q + c * s);</div>
+<div class="line"><a name="l03734"></a><span class="lineno"> 3734</span>&#160;  </div>
+<div class="line"><a name="l03735"></a><span class="lineno"> 3735</span>&#160;    <span class="keywordtype">float</span> e1 = d * m - b * n - c * p;</div>
+<div class="line"><a name="l03736"></a><span class="lineno"> 3736</span>&#160;    <span class="keywordtype">float</span> beta = e1 * inv_denom;</div>
+<div class="line"><a name="l03737"></a><span class="lineno"> 3737</span>&#160;  </div>
+<div class="line"><a name="l03738"></a><span class="lineno"> 3738</span>&#160;    <span class="keywordflow">if</span> (beta &gt; 0.0){</div>
+<div class="line"><a name="l03739"></a><span class="lineno"> 3739</span>&#160;      </div>
+<div class="line"><a name="l03740"></a><span class="lineno"> 3740</span>&#160;      <span class="keywordtype">float</span> r = r = e * l - h * i;</div>
+<div class="line"><a name="l03741"></a><span class="lineno"> 3741</span>&#160;      <span class="keywordtype">float</span> e2 = a * n + d * q + c * r;</div>
+<div class="line"><a name="l03742"></a><span class="lineno"> 3742</span>&#160;      <span class="keywordtype">float</span> gamma = e2 * inv_denom;</div>
+<div class="line"><a name="l03743"></a><span class="lineno"> 3743</span>&#160;      </div>
+<div class="line"><a name="l03744"></a><span class="lineno"> 3744</span>&#160;      <span class="keywordflow">if</span> (gamma &gt; 0.0 &amp;&amp; beta + gamma &lt; 1.0 ){</div>
+<div class="line"><a name="l03745"></a><span class="lineno"> 3745</span>&#160;    </div>
+<div class="line"><a name="l03746"></a><span class="lineno"> 3746</span>&#160;    <span class="keywordtype">float</span> e3 = a * p - b * r + d * s;</div>
+<div class="line"><a name="l03747"></a><span class="lineno"> 3747</span>&#160;    <span class="keywordtype">float</span> t = e3 * inv_denom;</div>
+<div class="line"><a name="l03748"></a><span class="lineno"> 3748</span>&#160; </div>
+<div class="line"><a name="l03749"></a><span class="lineno"> 3749</span>&#160;    <span class="keywordflow">if</span>( t&gt;1e-6 &amp;&amp; t&lt;tmin ){</div>
+<div class="line"><a name="l03750"></a><span class="lineno"> 3750</span>&#160; </div>
+<div class="line"><a name="l03751"></a><span class="lineno"> 3751</span>&#160;      <span class="keywordflow">if</span>( d_tri_textureID[tri]&lt;0 ){<span class="comment">//no texture mask      </span></div>
+<div class="line"><a name="l03752"></a><span class="lineno"> 3752</span>&#160;        tmin = t;</div>
+<div class="line"><a name="l03753"></a><span class="lineno"> 3753</span>&#160;        float3 normal = normalize( cross( v1-v0, v2-v0 ) );</div>
+<div class="line"><a name="l03754"></a><span class="lineno"> 3754</span>&#160;        nmin = fabs(normal*raydir);</div>
+<div class="line"><a name="l03755"></a><span class="lineno"> 3755</span>&#160;        d_hit_ID[i_global] = Npatches+tri; </div>
+<div class="line"><a name="l03756"></a><span class="lineno"> 3756</span>&#160;      }<span class="keywordflow">else</span>{<span class="comment">//has texture mask</span></div>
+<div class="line"><a name="l03757"></a><span class="lineno"> 3757</span>&#160; </div>
+<div class="line"><a name="l03758"></a><span class="lineno"> 3758</span>&#160;      <span class="keywordtype">int</span> ID = d_tri_textureID[tri];</div>
+<div class="line"><a name="l03759"></a><span class="lineno"> 3759</span>&#160;      int2 sz = d_masksize[ID];</div>
+<div class="line"><a name="l03760"></a><span class="lineno"> 3760</span>&#160;      </div>
+<div class="line"><a name="l03761"></a><span class="lineno"> 3761</span>&#160;      float2 uv0 = d_tri_uv[tri*3];</div>
+<div class="line"><a name="l03762"></a><span class="lineno"> 3762</span>&#160;      float2 uv1 = d_tri_uv[tri*3+1];</div>
+<div class="line"><a name="l03763"></a><span class="lineno"> 3763</span>&#160;      float2 uv2 = d_tri_uv[tri*3+2];</div>
+<div class="line"><a name="l03764"></a><span class="lineno"> 3764</span>&#160; </div>
+<div class="line"><a name="l03765"></a><span class="lineno"> 3765</span>&#160;        float2 uv;</div>
+<div class="line"><a name="l03766"></a><span class="lineno"> 3766</span>&#160;        uv.x = (uv0.x + beta*(uv1.x-uv0.x) + gamma*(uv2.x-uv0.x));</div>
+<div class="line"><a name="l03767"></a><span class="lineno"> 3767</span>&#160;        uv.y = (uv0.y + beta*(uv1.y-uv0.y) + gamma*(uv2.y-uv0.y));</div>
+<div class="line"><a name="l03768"></a><span class="lineno"> 3768</span>&#160; </div>
+<div class="line"><a name="l03769"></a><span class="lineno"> 3769</span>&#160;        uint2 ind = make_uint2( roundf(<span class="keywordtype">float</span>(sz.x-1)*fabs(uv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*fabs(uv.y)) );</div>
+<div class="line"><a name="l03770"></a><span class="lineno"> 3770</span>&#160;        assert( ind.x&lt;sz.x &amp;&amp; ind.y&lt;sz.y );</div>
+<div class="line"><a name="l03771"></a><span class="lineno"> 3771</span>&#160; </div>
+<div class="line"><a name="l03772"></a><span class="lineno"> 3772</span>&#160;        <span class="keywordflow">if</span>( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){</div>
+<div class="line"><a name="l03773"></a><span class="lineno"> 3773</span>&#160;          tmin = t;</div>
+<div class="line"><a name="l03774"></a><span class="lineno"> 3774</span>&#160;          float3 normal = normalize( cross( v1-v0, v2-v0 ) );</div>
+<div class="line"><a name="l03775"></a><span class="lineno"> 3775</span>&#160;          nmin = fabs(normal*raydir);</div>
+<div class="line"><a name="l03776"></a><span class="lineno"> 3776</span>&#160;          d_hit_ID[i_global] = Npatches+tri; </div>
+<div class="line"><a name="l03777"></a><span class="lineno"> 3777</span>&#160;        }</div>
+<div class="line"><a name="l03778"></a><span class="lineno"> 3778</span>&#160;        </div>
 <div class="line"><a name="l03779"></a><span class="lineno"> 3779</span>&#160;        </div>
-<div class="line"><a name="l03780"></a><span class="lineno"> 3780</span>&#160;        </div>
-<div class="line"><a name="l03781"></a><span class="lineno"> 3781</span>&#160;      }</div>
-<div class="line"><a name="l03782"></a><span class="lineno"> 3782</span>&#160;    }</div>
-<div class="line"><a name="l03783"></a><span class="lineno"> 3783</span>&#160;      </div>
-<div class="line"><a name="l03784"></a><span class="lineno"> 3784</span>&#160;      }</div>
-<div class="line"><a name="l03785"></a><span class="lineno"> 3785</span>&#160;    }</div>
-<div class="line"><a name="l03786"></a><span class="lineno"> 3786</span>&#160;  }</div>
-<div class="line"><a name="l03787"></a><span class="lineno"> 3787</span>&#160; </div>
-<div class="line"><a name="l03788"></a><span class="lineno"> 3788</span>&#160;  d_hit_t[i_global] = tmin;</div>
-<div class="line"><a name="l03789"></a><span class="lineno"> 3789</span>&#160; </div>
-<div class="line"><a name="l03790"></a><span class="lineno"> 3790</span>&#160;  d_hit_fnorm[i_global] = nmin;</div>
-<div class="line"><a name="l03791"></a><span class="lineno"> 3791</span>&#160;  </div>
-<div class="line"><a name="l03792"></a><span class="lineno"> 3792</span>&#160;}</div>
+<div class="line"><a name="l03780"></a><span class="lineno"> 3780</span>&#160;      }</div>
+<div class="line"><a name="l03781"></a><span class="lineno"> 3781</span>&#160;    }</div>
+<div class="line"><a name="l03782"></a><span class="lineno"> 3782</span>&#160;      </div>
+<div class="line"><a name="l03783"></a><span class="lineno"> 3783</span>&#160;      }</div>
+<div class="line"><a name="l03784"></a><span class="lineno"> 3784</span>&#160;    }</div>
+<div class="line"><a name="l03785"></a><span class="lineno"> 3785</span>&#160;  }</div>
+<div class="line"><a name="l03786"></a><span class="lineno"> 3786</span>&#160; </div>
+<div class="line"><a name="l03787"></a><span class="lineno"> 3787</span>&#160;  d_hit_t[i_global] = tmin;</div>
+<div class="line"><a name="l03788"></a><span class="lineno"> 3788</span>&#160; </div>
+<div class="line"><a name="l03789"></a><span class="lineno"> 3789</span>&#160;  d_hit_fnorm[i_global] = nmin;</div>
+<div class="line"><a name="l03790"></a><span class="lineno"> 3790</span>&#160;  </div>
+<div class="line"><a name="l03791"></a><span class="lineno"> 3791</span>&#160;}</div>
 <div class="ttc" id="a_li_d_a_r_8h_html"><div class="ttname"><a href="_li_d_a_r_8h.html">LiDAR.h</a></div></div>
 <div class="ttc" id="a_ray_tracing_8cu_8h_html_af48d117e18e1319cd61b4af9ef999b01"><div class="ttname"><a href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a></div><div class="ttdeci">__device__ float3 d_rotatePoint(const float3 &amp;position, const float &amp;theta, const float &amp;phi)</div><div class="ttdef"><b>Definition:</b> <a href="_ray_tracing_8cu_8h_source.html#l00084">RayTracing.cu.h:84</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a22f9c93700be5e5a808b97ecca6752fe"><div class="ttname"><a href="class_li_d_a_rcloud.html#a22f9c93700be5e5a808b97ecca6752fe">LiDARcloud::calculateSyntheticLeafArea</a></div><div class="ttdeci">std::vector&lt; float &gt; calculateSyntheticLeafArea(helios::Context *context)</div><div class="ttdoc">Calculate the surface area of all primitives in the context.</div><div class="ttdef"><b>Definition:</b> <a href="_li_d_a_r_8cu_source.html#l03483">LiDAR.cu:3483</a></div></div>
+<div class="ttc" id="aclass_li_d_a_rcloud_html_a22f9c93700be5e5a808b97ecca6752fe"><div class="ttname"><a href="class_li_d_a_rcloud.html#a22f9c93700be5e5a808b97ecca6752fe">LiDARcloud::calculateSyntheticLeafArea</a></div><div class="ttdeci">std::vector&lt; float &gt; calculateSyntheticLeafArea(helios::Context *context)</div><div class="ttdoc">Calculate the surface area of all primitives in the context.</div><div class="ttdef"><b>Definition:</b> <a href="_li_d_a_r_8cu_source.html#l03482">LiDAR.cu:3482</a></div></div>
 <div class="ttc" id="aclass_li_d_a_rcloud_html_a544384a19e7d060c85eb5a8daa1aeef4"><div class="ttname"><a href="class_li_d_a_rcloud.html#a544384a19e7d060c85eb5a8daa1aeef4">LiDARcloud::gapfillMisses</a></div><div class="ttdeci">std::vector&lt; helios::vec3 &gt; gapfillMisses(uint scanID)</div><div class="ttdoc">For scans that are missing points (e.g., sky points), this function will attempt to fill in missing p...</div><div class="ttdef"><b>Definition:</b> <a href="_li_d_a_r_8cu_source.html#l00493">LiDAR.cu:493</a></div></div>
 <div class="ttc" id="aclass_li_d_a_rcloud_html_aa6640bd0d26f6cd8e5b8225fe14eaa4d"><div class="ttname"><a href="class_li_d_a_rcloud.html#aa6640bd0d26f6cd8e5b8225fe14eaa4d">LiDARcloud::calculateLeafAreaGPU_testing</a></div><div class="ttdeci">void calculateLeafAreaGPU_testing(int min_voxel_hits)</div><div class="ttdoc">Calculate the leaf area for each grid volume.</div><div class="ttdef"><b>Definition:</b> <a href="_li_d_a_r_8cu_source.html#l01223">LiDAR.cu:1223</a></div></div>
 <div class="ttc" id="aclass_li_d_a_rcloud_html_aa7d6abb997267bce460c48cf02dc3545"><div class="ttname"><a href="class_li_d_a_rcloud.html#aa7d6abb997267bce460c48cf02dc3545">LiDARcloud::trunkReconstruction</a></div><div class="ttdeci">void trunkReconstruction(const helios::vec3 &amp;box_center, const helios::vec3 &amp;box_size, float Lmax, float max_aspect_ratio)</div><div class="ttdoc">Reconstruct the trunk of the tree. In order to do this, you must specify the center and size of a rec...</div><div class="ttdef"><b>Definition:</b> <a href="_li_d_a_r_8cu_source.html#l02673">LiDAR.cu:2673</a></div></div>
@@ -3839,27 +3838,27 @@ $(function() {
 <div class="ttc" id="aclass_li_d_a_rcloud_html_ab16514fff6766e89b91409077daf35fc"><div class="ttname"><a href="class_li_d_a_rcloud.html#ab16514fff6766e89b91409077daf35fc">LiDARcloud::calculateHitGridCellGPU</a></div><div class="ttdeci">void calculateHitGridCellGPU()</div><div class="ttdoc">Determine the grid cell in which each hit point resides for the whole point cloud - GPU accelerated v...</div><div class="ttdef"><b>Definition:</b> <a href="_li_d_a_r_8cu_source.html#l00269">LiDAR.cu:269</a></div></div>
 <div class="ttc" id="aclass_li_d_a_rcloud_html_ac6824b871a54f9a25c0c6d1725cb4ee0"><div class="ttname"><a href="class_li_d_a_rcloud.html#ac6824b871a54f9a25c0c6d1725cb4ee0">LiDARcloud::calculateLeafAreaGPU_synthetic</a></div><div class="ttdeci">void calculateLeafAreaGPU_synthetic(helios::Context *context, bool beamoutput, bool fillAnalytic)</div><div class="ttdoc">Calculate the leaf area for each grid volume in a synthetic scan using several different method for e...</div><div class="ttdef"><b>Definition:</b> <a href="_li_d_a_r_8cu_source.html#l01555">LiDAR.cu:1555</a></div></div>
 <div class="ttc" id="aclass_li_d_a_rcloud_html_aff9aeedaa500516d1c227e5161fb599a"><div class="ttname"><a href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">LiDARcloud::calculateLeafAreaGPU</a></div><div class="ttdeci">void calculateLeafAreaGPU()</div><div class="ttdoc">Calculate the leaf area for each grid volume.</div><div class="ttdef"><b>Definition:</b> <a href="_li_d_a_r_8cu_source.html#l00760">LiDAR.cu:760</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01532">Context.h:1532</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a1223205f1080b0b7024b8f97950779b8"><div class="ttname"><a href="classhelios_1_1_context.html#a1223205f1080b0b7024b8f97950779b8">helios::Context::getPrimitiveColor</a></div><div class="ttdeci">helios::RGBcolor getPrimitiveColor(uint UUID) const</div><div class="ttdoc">Function to return the diffuse color of a Primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l09494">Context.cpp:9494</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a1dafe58b3251d2ef9d09112258b2e85d"><div class="ttname"><a href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">helios::Context::getPrimitiveArea</a></div><div class="ttdeci">float getPrimitiveArea(uint UUID) const</div><div class="ttdoc">Function to return the surface area of a Primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l09420">Context.cpp:9420</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a2144eea981e4030c973287ce2c38315e"><div class="ttname"><a href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">helios::Context::getPrimitiveData</a></div><div class="ttdeci">void getPrimitiveData(uint UUID, const char *label, int &amp;data) const</div><div class="ttdoc">Get data associated with a primitive element.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01817">Context.cpp:1817</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a4fffad72d1ebb517d9c41837e448d4f5"><div class="ttname"><a href="classhelios_1_1_context.html#a4fffad72d1ebb517d9c41837e448d4f5">helios::Context::getPrimitiveTextureFile</a></div><div class="ttdeci">std::string getPrimitiveTextureFile(uint UUID) const</div><div class="ttdoc">Get the path to texture map file for primitive. If primitive does not have a texture map,...</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l09526">Context.cpp:9526</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a5702f94aaba15bf6757aeb4d72d7774d"><div class="ttname"><a href="classhelios_1_1_context.html#a5702f94aaba15bf6757aeb4d72d7774d">helios::Context::getPrimitiveTextureUV</a></div><div class="ttdeci">std::vector&lt; vec2 &gt; getPrimitiveTextureUV(uint UUID) const</div><div class="ttdoc">Get u-v texture coordinates at primitive vertices.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l09542">Context.cpp:9542</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a5e10a8afe134f4a55f65c81a9398c69c"><div class="ttname"><a href="classhelios_1_1_context.html#a5e10a8afe134f4a55f65c81a9398c69c">helios::Context::primitiveTextureHasTransparencyChannel</a></div><div class="ttdeci">bool primitiveTextureHasTransparencyChannel(uint UUID) const</div><div class="ttdoc">Check if primitive texture map has a transparency channel.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l09546">Context.cpp:9546</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a67bfd66f0a445f6485f1099f9eadc949"><div class="ttname"><a href="classhelios_1_1_context.html#a67bfd66f0a445f6485f1099f9eadc949">helios::Context::getPrimitiveType</a></div><div class="ttdeci">PrimitiveType getPrimitiveType(uint UUID) const</div><div class="ttdoc">Function to get the Primitive type.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l09351">Context.cpp:9351</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a780d83edd66f25cd38b5059359b48a7b"><div class="ttname"><a href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">helios::Context::doesPrimitiveDataExist</a></div><div class="ttdeci">bool doesPrimitiveDataExist(uint UUID, const char *label) const</div><div class="ttdoc">Check if primitive data 'label' exists.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01985">Context.cpp:1985</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a7fec62cbf2c2d56603b2750cbb4a4d9f"><div class="ttname"><a href="classhelios_1_1_context.html#a7fec62cbf2c2d56603b2750cbb4a4d9f">helios::Context::getPrimitiveTextureSize</a></div><div class="ttdeci">helios::int2 getPrimitiveTextureSize(uint UUID) const</div><div class="ttdoc">Get the size (number of pixels) of primitive texture map image.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l09534">Context.cpp:9534</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a8690412a63d1eff69e679e48d03c9838"><div class="ttname"><a href="classhelios_1_1_context.html#a8690412a63d1eff69e679e48d03c9838">helios::Context::getDomainBoundingBox</a></div><div class="ttdeci">void getDomainBoundingBox(helios::vec2 &amp;xbounds, helios::vec2 &amp;ybounds, helios::vec2 &amp;zbounds) const</div><div class="ttdoc">Get a box that bounds all primitives in the domain.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l04278">Context.cpp:4278</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a98516632daccf958cca6b5b6582310bb"><div class="ttname"><a href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb">helios::Context::getAllUUIDs</a></div><div class="ttdeci">std::vector&lt; uint &gt; getAllUUIDs() const</div><div class="ttdoc">Get all primitive UUIDs currently in the Context.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l04070">Context.cpp:4070</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a98ad773979fff9efda47b44d71ac8e06"><div class="ttname"><a href="classhelios_1_1_context.html#a98ad773979fff9efda47b44d71ac8e06">helios::Context::getPrimitiveTextureTransparencyData</a></div><div class="ttdeci">const std::vector&lt; std::vector&lt; bool &gt; &gt; * getPrimitiveTextureTransparencyData(uint UUID) const</div><div class="ttdoc">Get the transparency channel pixel data from primitive texture map. If transparency channel does not ...</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l09554">Context.cpp:9554</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a9c894ecd12e0d893c53ffcfa9e90c0b6"><div class="ttname"><a href="classhelios_1_1_context.html#a9c894ecd12e0d893c53ffcfa9e90c0b6">helios::Context::getPrimitiveDataType</a></div><div class="ttdeci">HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const</div><div class="ttdoc">Get the Helios data type of primitive data.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01971">Context.cpp:1971</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_ac7677094a3bbcb62506ce461d982af1d"><div class="ttname"><a href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">helios::Context::setPrimitiveData</a></div><div class="ttdeci">void setPrimitiveData(const uint &amp;UUID, const char *label, const int &amp;data)</div><div class="ttdoc">Add data value (int) associated with a primitive element.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01471">Context.cpp:1471</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_acf4a7fa9ba97f03d0a9218e5c4b7bc66"><div class="ttname"><a href="classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66">helios::Context::doesPrimitiveExist</a></div><div class="ttdeci">bool doesPrimitiveExist(uint UUID) const</div><div class="ttdoc">Check if primitive exists for a given UUID.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l03961">Context.cpp:3961</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_ae8542fd1452150d3302675a0a3d991ed"><div class="ttname"><a href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">helios::Context::getPrimitiveVertices</a></div><div class="ttdeci">std::vector&lt; helios::vec3 &gt; getPrimitiveVertices(uint UUID) const</div><div class="ttdoc">Function to return the (x,y,z) coordinates of the vertices of a Primitve.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l09489">Context.cpp:9489</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01713">Context.h:1713</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a1223205f1080b0b7024b8f97950779b8"><div class="ttname"><a href="classhelios_1_1_context.html#a1223205f1080b0b7024b8f97950779b8">helios::Context::getPrimitiveColor</a></div><div class="ttdeci">helios::RGBcolor getPrimitiveColor(uint UUID) const</div><div class="ttdoc">Function to return the diffuse color of a Primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l06412">Context.cpp:6412</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a1dafe58b3251d2ef9d09112258b2e85d"><div class="ttname"><a href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">helios::Context::getPrimitiveArea</a></div><div class="ttdeci">float getPrimitiveArea(uint UUID) const</div><div class="ttdoc">Function to return the surface area of a Primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l06338">Context.cpp:6338</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a2144eea981e4030c973287ce2c38315e"><div class="ttname"><a href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">helios::Context::getPrimitiveData</a></div><div class="ttdeci">void getPrimitiveData(uint UUID, const char *label, int &amp;data) const</div><div class="ttdoc">Get data associated with a primitive element.</div><div class="ttdef"><b>Definition:</b> <a href="_context__data_8cpp_source.html#l01057">Context_data.cpp:1057</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a4fffad72d1ebb517d9c41837e448d4f5"><div class="ttname"><a href="classhelios_1_1_context.html#a4fffad72d1ebb517d9c41837e448d4f5">helios::Context::getPrimitiveTextureFile</a></div><div class="ttdeci">std::string getPrimitiveTextureFile(uint UUID) const</div><div class="ttdoc">Get the path to texture map file for primitive. If primitive does not have a texture map,...</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l06444">Context.cpp:6444</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a5702f94aaba15bf6757aeb4d72d7774d"><div class="ttname"><a href="classhelios_1_1_context.html#a5702f94aaba15bf6757aeb4d72d7774d">helios::Context::getPrimitiveTextureUV</a></div><div class="ttdeci">std::vector&lt; vec2 &gt; getPrimitiveTextureUV(uint UUID) const</div><div class="ttdoc">Get u-v texture coordinates at primitive vertices.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l06460">Context.cpp:6460</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a5e10a8afe134f4a55f65c81a9398c69c"><div class="ttname"><a href="classhelios_1_1_context.html#a5e10a8afe134f4a55f65c81a9398c69c">helios::Context::primitiveTextureHasTransparencyChannel</a></div><div class="ttdeci">bool primitiveTextureHasTransparencyChannel(uint UUID) const</div><div class="ttdoc">Check if primitive texture map has a transparency channel.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l06464">Context.cpp:6464</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a67bfd66f0a445f6485f1099f9eadc949"><div class="ttname"><a href="classhelios_1_1_context.html#a67bfd66f0a445f6485f1099f9eadc949">helios::Context::getPrimitiveType</a></div><div class="ttdeci">PrimitiveType getPrimitiveType(uint UUID) const</div><div class="ttdoc">Function to get the Primitive type.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l06269">Context.cpp:6269</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a780d83edd66f25cd38b5059359b48a7b"><div class="ttname"><a href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">helios::Context::doesPrimitiveDataExist</a></div><div class="ttdeci">bool doesPrimitiveDataExist(uint UUID, const char *label) const</div><div class="ttdoc">Check if primitive data 'label' exists.</div><div class="ttdef"><b>Definition:</b> <a href="_context__data_8cpp_source.html#l01225">Context_data.cpp:1225</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a7fec62cbf2c2d56603b2750cbb4a4d9f"><div class="ttname"><a href="classhelios_1_1_context.html#a7fec62cbf2c2d56603b2750cbb4a4d9f">helios::Context::getPrimitiveTextureSize</a></div><div class="ttdeci">helios::int2 getPrimitiveTextureSize(uint UUID) const</div><div class="ttdoc">Get the size (number of pixels) of primitive texture map image.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l06452">Context.cpp:6452</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a8690412a63d1eff69e679e48d03c9838"><div class="ttname"><a href="classhelios_1_1_context.html#a8690412a63d1eff69e679e48d03c9838">helios::Context::getDomainBoundingBox</a></div><div class="ttdeci">void getDomainBoundingBox(helios::vec2 &amp;xbounds, helios::vec2 &amp;ybounds, helios::vec2 &amp;zbounds) const</div><div class="ttdoc">Get a box that bounds all primitives in the domain.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01840">Context.cpp:1840</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a98516632daccf958cca6b5b6582310bb"><div class="ttname"><a href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb">helios::Context::getAllUUIDs</a></div><div class="ttdeci">std::vector&lt; uint &gt; getAllUUIDs() const</div><div class="ttdoc">Get all primitive UUIDs currently in the Context.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01632">Context.cpp:1632</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a98ad773979fff9efda47b44d71ac8e06"><div class="ttname"><a href="classhelios_1_1_context.html#a98ad773979fff9efda47b44d71ac8e06">helios::Context::getPrimitiveTextureTransparencyData</a></div><div class="ttdeci">const std::vector&lt; std::vector&lt; bool &gt; &gt; * getPrimitiveTextureTransparencyData(uint UUID) const</div><div class="ttdoc">Get the transparency channel pixel data from primitive texture map. If transparency channel does not ...</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l06472">Context.cpp:6472</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a9c894ecd12e0d893c53ffcfa9e90c0b6"><div class="ttname"><a href="classhelios_1_1_context.html#a9c894ecd12e0d893c53ffcfa9e90c0b6">helios::Context::getPrimitiveDataType</a></div><div class="ttdeci">HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const</div><div class="ttdoc">Get the Helios data type of primitive data.</div><div class="ttdef"><b>Definition:</b> <a href="_context__data_8cpp_source.html#l01211">Context_data.cpp:1211</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_ac7677094a3bbcb62506ce461d982af1d"><div class="ttname"><a href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">helios::Context::setPrimitiveData</a></div><div class="ttdeci">void setPrimitiveData(const uint &amp;UUID, const char *label, const int &amp;data)</div><div class="ttdoc">Add data value (int) associated with a primitive element.</div><div class="ttdef"><b>Definition:</b> <a href="_context__data_8cpp_source.html#l00711">Context_data.cpp:711</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_acf4a7fa9ba97f03d0a9218e5c4b7bc66"><div class="ttname"><a href="classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66">helios::Context::doesPrimitiveExist</a></div><div class="ttdeci">bool doesPrimitiveExist(uint UUID) const</div><div class="ttdoc">Check if primitive exists for a given UUID.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01523">Context.cpp:1523</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_ae8542fd1452150d3302675a0a3d991ed"><div class="ttname"><a href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">helios::Context::getPrimitiveVertices</a></div><div class="ttdeci">std::vector&lt; helios::vec3 &gt; getPrimitiveVertices(uint UUID) const</div><div class="ttdoc">Function to return the (x,y,z) coordinates of the vertices of a Primitve.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l06407">Context.cpp:6407</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a9f732ec5c2153020247c879034f81432"><div class="ttname"><a href="global_8h.html#a9f732ec5c2153020247c879034f81432">helios::acos_safe</a></div><div class="ttdeci">float acos_safe(float x)</div><div class="ttdoc">arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00205">global.cpp:205</a></div></div>
 <div class="ttc" id="agroup__functions_html_ga06cb0bc53a3903c6c487dd524bc2315e"><div class="ttname"><a href="group__functions.html#ga06cb0bc53a3903c6c487dd524bc2315e">helios::randu</a></div><div class="ttdeci">float randu()</div><div class="ttdoc">Random number from a uniform distribution between 0 and 1.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00187">global.cpp:187</a></div></div>
-<div class="ttc" id="agroup__functions_html_ga522f5d4232ccb2c899ff620eafc744b5"><div class="ttname"><a href="group__functions.html#ga522f5d4232ccb2c899ff620eafc744b5">helios::min</a></div><div class="ttdeci">float min(const std::vector&lt; float &gt; &amp;vect)</div><div class="ttdoc">Minimum value of a vector of floats.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00846">global.cpp:846</a></div></div>
-<div class="ttc" id="agroup__functions_html_gadfcde1fcf4db2a62012ed5ddf43c943d"><div class="ttname"><a href="group__functions.html#gadfcde1fcf4db2a62012ed5ddf43c943d">helios::mean</a></div><div class="ttdeci">float mean(const std::vector&lt; float &gt; &amp;vect)</div><div class="ttdoc">Mean value of a vector of floats.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00830">global.cpp:830</a></div></div>
+<div class="ttc" id="agroup__functions_html_ga522f5d4232ccb2c899ff620eafc744b5"><div class="ttname"><a href="group__functions.html#ga522f5d4232ccb2c899ff620eafc744b5">helios::min</a></div><div class="ttdeci">float min(const std::vector&lt; float &gt; &amp;vect)</div><div class="ttdoc">Minimum value of a vector of floats.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00854">global.cpp:854</a></div></div>
+<div class="ttc" id="agroup__functions_html_gadfcde1fcf4db2a62012ed5ddf43c943d"><div class="ttname"><a href="group__functions.html#gadfcde1fcf4db2a62012ed5ddf43c943d">helios::mean</a></div><div class="ttdeci">float mean(const std::vector&lt; float &gt; &amp;vect)</div><div class="ttdoc">Mean value of a vector of floats.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00838">global.cpp:838</a></div></div>
 <div class="ttc" id="agroup__functions_html_gaf4680ffb7d739bfa527e5b64fe624c54"><div class="ttname"><a href="group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54">helios::atan2_2pi</a></div><div class="ttdeci">float atan2_2pi(const float &amp;y, const float &amp;x)</div><div class="ttdoc">Four quadrant arc tangent between 0 and 2*pi.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00527">global.cpp:527</a></div></div>
 <div class="ttc" id="agroup__vectors_html_ga05ad3ecab7f008a6b1ee04b35f227115"><div class="ttname"><a href="group__vectors.html#ga05ad3ecab7f008a6b1ee04b35f227115">helios::make_int2</a></div><div class="ttdeci">int2 make_int2(int X, int Y)</div><div class="ttdoc">Make an int2 vector from two ints.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00096">helios_vector_types.h:96</a></div></div>
 <div class="ttc" id="agroup__vectors_html_gae5b981fa224fe6f30b850467ec655c0b"><div class="ttname"><a href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">helios::make_RGBcolor</a></div><div class="ttdeci">RGBcolor make_RGBcolor(float r, float g, float b)</div><div class="ttdoc">Make an RGBcolor vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00895">helios_vector_types.h:895</a></div></div>

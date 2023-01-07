@@ -373,8 +373,9 @@ class LiDARcloud{
   //! Add a LiDAR scan to the point cloud
   /**
    * \param[in] "newscan" LiDAR scan data structure
+   * \return ID for scan that was created
    */
-  void addScan(ScanMetadata &newscan );
+  uint addScan(ScanMetadata &newscan );
     
   //! Specify a scan point as a hit by providing the (x,y,z) coordinates and scan ray direction
   /**

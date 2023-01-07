@@ -1175,3 +1175,20 @@
 *Context*
 - Fixed an error in Context::loadPLY() introduced in version 1.2.52 that caused PLY models to not be read correctly.
 
+[1.2.55] 2022-01-06
+
+*General*
+- The CMakeLists.txt for tutorial1 was not updated to be consistent with all the rest.
+
+*Context*
+- All declarations related to primitive, object, and global data were moved from core/src/Context.cpp to core/src/Context_data.cpp
+- Parsing of XML files has been re-written to use functions from a new XMLparser class.
+- Error fixed in "parse_[*]" functions that would cause an error if strings have whitespace.
+
+*LiDAR*
+- LiDARcloud::addScan() now returns a uint corresponding to the scanID.
+- Number of hit points in output message after synthetic scan did not match the actual number of hit points generated.
+- Scan azimuth range is no longer truncated to be less than 2*pi (it will only issue a warning if >4*pi).
+
+*Canopy Generator*
+- All primitives in the grapevine and bean models now belong to compound objects.

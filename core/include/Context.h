@@ -635,7 +635,7 @@ public:
     /**
      * \param[in] "subdiv" Number of subdivisions in zenithal and azimuthal directions.
      */
-    void setSubdivisionCount( const uint subdiv );
+    void setSubdivisionCount(uint subdiv );
     
     //! Function to scale the dimensions of a Compound Object
     /**
@@ -1526,6 +1526,187 @@ public:
     
 };
 
+class XMLparser{
+public:
+
+  //! Parse vector data of type 'float' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_float( const pugi::xml_node &node_data, std::vector<float> &data );
+
+  //! Parse vector data of type 'double' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_double( const pugi::xml_node &node_data, std::vector<double> &data );
+
+  //! Parse vector data of type 'int' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_int( const pugi::xml_node &node_data, std::vector<int> &data );
+
+  //! Parse vector data of type 'uint' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_uint( const pugi::xml_node &node_data, std::vector<uint> &data );
+
+  //! Parse vector data of type 'string' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_string( const pugi::xml_node &node_data, std::vector<std::string> &data );
+
+  //! Parse vector data of type 'vec2' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_vec2( const pugi::xml_node &node_data, std::vector<vec2> &data );
+
+  //! Parse vector data of type 'vec3' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_vec3( const pugi::xml_node &node_data, std::vector<vec3> &data );
+
+  //! Parse vector data of type 'vac4' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_vec4( const pugi::xml_node &node_data, std::vector<vec4> &data );
+
+  //! Parse vector data of type 'int2' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_int2( const pugi::xml_node &node_data, std::vector<int2> &data );
+
+  //! Parse vector data of type 'int3' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_int3( const pugi::xml_node &node_data, std::vector<int3> &data );
+
+  //! Parse vector data of type 'int4' within an XML tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "data" Vector data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_data_int4( const pugi::xml_node &node_data, std::vector<int4> &data );
+
+  //! Parse the value within an <objID> (object ID) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "objID" Object ID value parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_objID( const pugi::xml_node &node, uint &objID );
+
+  //! Parse the value within a <transform> (transformation matrix) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "transform" Transformation matrix data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly, 3 if data was parsed successfully but tag did not contain 16 values.
+   */
+  static int parse_transform( const pugi::xml_node &node, float (&transform)[16] );
+
+  //! Parse the value within an <texture> (path to image texture) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "texture" Path to image texture file parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty.
+   */
+  static int parse_texture( const pugi::xml_node &node, std::string &texture );
+
+  //! Parse the value within a <textureUV> (texture coordinates) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "textureUV" (u,v) texture coordinate data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_textureUV( const pugi::xml_node &node, std::vector<vec2> &uvs );
+
+  //! Parse the value within a <solid_fraction> (primitive solid fraction) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "solid_fraction" Primitive solid fraction value parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_solid_fraction( const pugi::xml_node &node, float &solid_fraction );
+
+  //! Parse the value within a <vertices> (primitive vertex coordinates) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "vertices" (x,y,z) primitive vertex data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_vertices( const pugi::xml_node &node, std::vector<float> &vertices );
+
+  //! Parse the value within a <subdivisions> (object sub-primitive resolution) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "subdivisions" Scalar (uint) subdivisions value parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_subdivisions( const pugi::xml_node &node, uint &subdivisions );
+
+  //! Parse the value within a <subdivisions> (object sub-primitive resolution) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "subdivisions" 2D (vec2) subdivisions parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_subdivisions( const pugi::xml_node &node, int2 &subdivisions );
+
+  //! Parse the value within a <subdivisions> (object sub-primitive resolution) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "subdivisions" 3D (vec3) subdivisions parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_subdivisions( const pugi::xml_node &node, int3 &subdivisions );
+
+  //! Parse the value within a <nodes> (coordinates defining nodes of a tube or cone) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "nodes" Vector of node coordinate data parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_nodes( const pugi::xml_node &node, std::vector<vec3> &nodes );
+
+  //! Parse the value within a <radius> (radius at nodes of a tube or cone) tag
+  /**
+   * \param[in] "node_data" PUGI XML node for tag containing vector data
+   * \param[out] "radius" Vector of radii at nodes parsed from XML node
+   * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
+   */
+  static int parse_radius( const pugi::xml_node &node, std::vector<float> &radius );
+
+};
+
 //! Stores the state associated with simulation
 /** The Context provides an interface to global information about the application environment.   It allows access to application-level operations such as adding geometry, running models, and visualization. After creation, the Context must first be initialized via a call to initializeContext(), after which geometry and models can be added and simulated.  
  */
@@ -1659,9 +1840,6 @@ private:
      \sa setTime(), getTime()
      */
     helios::Time sim_time;
-    
-    //! Radius of a sphere centered at (0,0) that bounds all objects in domain.
-    float scene_radius;
     
     //! Random number generation engine
     std::minstd_rand0 generator;

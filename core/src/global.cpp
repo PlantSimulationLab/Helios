@@ -722,8 +722,9 @@ bool helios::parse_float( const std::string &input_string, float &converted_floa
 
   try {
     size_t read= 0;
-    converted_float = std::stof(input_string, &read);
-    if (input_string.size() != read)
+    std::string str = trim_whitespace(input_string);
+    converted_float = std::stof(str, &read);
+    if (str.size() != read)
       return false;
   } catch ( std::invalid_argument& e ) {
     return false;
@@ -736,8 +737,9 @@ bool helios::parse_double( const std::string &input_string, double &converted_do
 
   try {
     size_t read= 0;
-    converted_double = std::stod(input_string, &read);
-    if (input_string.size() != read)
+    std::string str = trim_whitespace(input_string);
+    converted_double = std::stod(str, &read);
+    if (str.size() != read)
       return false;
   } catch (std::invalid_argument& e) {
     return false;
@@ -750,8 +752,9 @@ bool helios::parse_int( const std::string &input_string, int &converted_int ){
 
   try {
     size_t read= 0;
-    converted_int = std::stoi(input_string, &read);
-    if (input_string.size() != read)
+    std::string str = trim_whitespace(input_string);
+    converted_int = std::stoi(str, &read);
+    if (str.size() != read)
       return false;
   } catch (std::invalid_argument& e) {
     return false;
@@ -764,8 +767,9 @@ bool helios::parse_uint( const std::string &input_string, uint &converted_uint )
 
   try {
     size_t read= 0;
-    int converted_int = std::stoi(input_string, &read);
-    if (input_string.size() != read || converted_int<0) {
+    std::string str = trim_whitespace(input_string);
+    int converted_int = std::stoi(str, &read);
+    if (str.size() != read || converted_int<0) {
       return false;
     }else{
       converted_uint = (uint)converted_int;
@@ -797,6 +801,10 @@ std::string helios::deblank(const char* input)
 }
 
 std::string helios::deblank(const std::string &input){
+  return deblank(input.c_str());
+}
+
+std::string helios::trim_whitespace(const std::string &input){
 
   const std::string WHITESPACE = " \n\r\t\f\v";
 

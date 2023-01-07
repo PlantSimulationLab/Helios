@@ -18,21 +18,511 @@ GNU General Public License for more details.
 
 using namespace helios;
 
+int XMLparser::parse_data_float( const pugi::xml_node &node_data, std::vector<float> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::string tmp_s;
+    float tmp_f;
+    while (data_stream >> tmp_s) {
+      if (parse_float(tmp_s, tmp_f)) {
+        data.push_back(tmp_f);
+      } else {
+        return 2;
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_double( const pugi::xml_node &node_data, std::vector<double> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::string tmp_s;
+    double tmp_f;
+    while (data_stream >> tmp_s) {
+      if (parse_double(tmp_s, tmp_f)) {
+        data.push_back(tmp_f);
+      } else {
+        return 2;
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_int( const pugi::xml_node &node_data, std::vector<int> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::string tmp_s;
+    int tmp_f;
+    while (data_stream >> tmp_s) {
+      if (parse_int(tmp_s, tmp_f)) {
+        data.push_back(tmp_f);
+      } else {
+        return 2;
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_uint( const pugi::xml_node &node_data, std::vector<uint> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::string tmp_s;
+    uint tmp_f;
+    while (data_stream >> tmp_s) {
+      if (parse_uint(tmp_s, tmp_f)) {
+        data.push_back(tmp_f);
+      } else {
+        return 2;
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_string( const pugi::xml_node &node_data, std::vector<std::string> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::string tmp_s;
+    while (data_stream >> tmp_s) {
+      data.push_back(tmp_s);
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_vec2( const pugi::xml_node &node_data, std::vector<vec2> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::vector<std::string> tmp_s(2);
+    vec2 tmp;
+    while (data_stream >> tmp_s[0]) {
+      data_stream >> tmp_s[1];
+      if (!parse_float(tmp_s[0], tmp.x) || !parse_float(tmp_s[1], tmp.y)) {
+        return 2;
+      } else {
+        data.push_back(tmp);
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_vec3( const pugi::xml_node &node_data, std::vector<vec3> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::vector<std::string> tmp_s(3);
+    vec3 tmp;
+    while (data_stream >> tmp_s[0]) {
+      data_stream >> tmp_s[1];
+      data_stream >> tmp_s[2];
+      if (!parse_float(tmp_s[0], tmp.x) || !parse_float(tmp_s[1], tmp.y) ||
+          !parse_float(tmp_s[2], tmp.z)) {
+        return 2;
+      } else {
+        data.push_back(tmp);
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_vec4( const pugi::xml_node &node_data, std::vector<vec4> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::vector<std::string> tmp_s(4);
+    vec4 tmp;
+    while (data_stream >> tmp_s[0]) {
+      data_stream >> tmp_s[1];
+      data_stream >> tmp_s[2];
+      data_stream >> tmp_s[3];
+      if (!parse_float(tmp_s[0], tmp.x) || !parse_float(tmp_s[1], tmp.y) || !parse_float(tmp_s[2], tmp.z) || !parse_float(tmp_s[3], tmp.w) ) {
+        return 2;
+      } else {
+        data.push_back(tmp);
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_int2( const pugi::xml_node &node_data, std::vector<int2> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::vector<std::string> tmp_s(2);
+    int2 tmp;
+    while (data_stream >> tmp_s[0]) {
+      data_stream >> tmp_s[1];
+      if (!parse_int(tmp_s[0], tmp.x) || !parse_int(tmp_s[1], tmp.y)) {
+        return 2;
+      } else {
+        data.push_back(tmp);
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_int3( const pugi::xml_node &node_data, std::vector<int3> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::vector<std::string> tmp_s(3);
+    int3 tmp;
+    while (data_stream >> tmp_s[0]) {
+      data_stream >> tmp_s[1];
+      data_stream >> tmp_s[2];
+      if (!parse_int(tmp_s[0], tmp.x) || !parse_int(tmp_s[1], tmp.y) || !parse_int(tmp_s[2], tmp.z)) {
+        return 2;
+      } else {
+        data.push_back(tmp);
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_data_int4( const pugi::xml_node &node_data, std::vector<int4> &data ){
+
+  std::string data_str = node_data.child_value();
+  data.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::vector<std::string> tmp_s(4);
+    int4 tmp;
+    while (data_stream >> tmp_s[0]) {
+      data_stream >> tmp_s[1];
+      data_stream >> tmp_s[2];
+      data_stream >> tmp_s[3];
+      if (!parse_int(tmp_s[0], tmp.x) || !parse_int(tmp_s[1], tmp.y) || !parse_int(tmp_s[2], tmp.z) || !parse_int(tmp_s[3], tmp.w) ) {
+        return 2;
+      } else {
+        data.push_back(tmp);
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_objID( const pugi::xml_node &node, uint &objID ){
+
+  pugi::xml_node objID_node = node.child("objID");
+  std::string oid = trim_whitespace(objID_node.child_value());
+  objID = 0;
+  if( !oid.empty() ){
+    if( !parse_uint( oid, objID ) ){
+      return 2;
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_transform( const pugi::xml_node &node, float (&transform)[16] ){
+
+  pugi::xml_node transform_node = node.child("transform");
+
+  std::string transform_str = transform_node.child_value();
+  if( transform_str.empty() ){
+    makeIdentityMatrix(transform);
+    return 1;
+  }else{
+    std::istringstream stream(transform_str);
+    std::string tmp_s;
+    float tmp;
+    int i=0;
+    while( stream >> tmp_s ){
+      if( parse_float(tmp_s,tmp) ) {
+        transform[i] = tmp;
+        i++;
+      }else{
+        return 2;
+      }
+    }
+    if( i!=16 ){
+      return 3;
+    }
+  }
+  return 0;
+
+}
+
+int XMLparser::parse_texture( const pugi::xml_node &node, std::string &texture ){
+
+  pugi::xml_node texture_node = node.child("texture");
+  std::string texfile = trim_whitespace(texture_node.child_value());
+  if( texfile.empty() ){
+    texture = "none";
+    return 1;
+  }else{
+    texture = texfile;
+    return 0;
+  }
+
+}
+
+int XMLparser::parse_textureUV( const pugi::xml_node &node, std::vector<vec2> &uvs ){
+
+  pugi::xml_node uv_node = node.child("textureUV");
+  std::string texUV = uv_node.child_value();
+  if( !texUV.empty() ){
+    std::istringstream uv_stream(texUV);
+    std::vector<std::string> tmp_s(2);
+    vec2 tmp;
+    while (uv_stream >> tmp_s[0]) {
+      uv_stream >> tmp_s[1];
+      if (!parse_float(tmp_s[0], tmp.x) || !parse_float(tmp_s[1], tmp.y)) {
+        return 2;
+      } else {
+        uvs.push_back(tmp);
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_solid_fraction( const pugi::xml_node &node, float &solid_fraction ){
+
+  pugi::xml_node sfrac_node = node.child("solid_fraction");
+  std::string sfrac = trim_whitespace(sfrac_node.child_value());
+  if( !sfrac.empty() ){
+    if( !parse_float( sfrac, solid_fraction ) ){
+      return 2;
+    }
+  }else{
+    return 1;
+  }
+  return 0;
+
+}
+
+int XMLparser::parse_vertices( const pugi::xml_node &node, std::vector<float> &vertices ){
+
+  vertices.resize(12);
+
+  pugi::xml_node vertices_node = node.child("vertices");
+
+  std::string vertices_str = vertices_node.child_value();
+  if( !vertices_str.empty() ){
+    std::istringstream stream(vertices_str);
+    std::string tmp_s;
+    float tmp;
+    int i=0;
+    while( stream >> tmp_s ){
+      if( i>11 ) {
+        return 3;
+      }else if ( parse_float(tmp_s,tmp) ) {
+        vertices.at(i) = tmp;
+        i++;
+      }else{
+        return 2;
+      }
+    }
+    vertices.resize(i);
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_subdivisions( const pugi::xml_node &node, uint &subdivisions ){
+
+  pugi::xml_node subdiv_node = node.child("subdivisions");
+  std::string subdiv = trim_whitespace(subdiv_node.child_value());
+  if( !subdiv.empty() ){
+    if( !parse_uint( subdiv, subdivisions ) ){
+      return 2;
+    }
+  }else{
+    return 1;
+  }
+  return 0;
+
+}
+
+int XMLparser::parse_subdivisions( const pugi::xml_node &node, int2 &subdivisions ){
+
+  pugi::xml_node subdiv_node = node.child("subdivisions");
+  std::string subdiv = trim_whitespace(subdiv_node.child_value());
+  if( !subdiv.empty() ){
+    std::istringstream data_stream(subdiv);
+    std::vector<std::string> tmp_s(2);
+    data_stream >> tmp_s[0];
+    data_stream >> tmp_s[1];
+    if (!parse_int(tmp_s[0], subdivisions.x) || !parse_int(tmp_s[1], subdivisions.y)) {
+      return 2;
+    }
+  }else{
+    return 1;
+  }
+    return 0;
+
+}
+
+int XMLparser::parse_subdivisions( const pugi::xml_node &node, int3 &subdivisions ){
+
+  pugi::xml_node subdiv_node = node.child("subdivisions");
+  std::string subdiv = trim_whitespace(subdiv_node.child_value());
+  if( !subdiv.empty() ){
+    std::istringstream data_stream(subdiv);
+    std::vector<std::string> tmp_s(3);
+    data_stream >> tmp_s[0];
+    data_stream >> tmp_s[1];
+    data_stream >> tmp_s[2];
+    if (!parse_int(tmp_s[0], subdivisions.x) || !parse_int(tmp_s[1], subdivisions.y) || !parse_int(tmp_s[2], subdivisions.z) ) {
+      return 2;
+    }
+  }else{
+    return 1;
+  }
+  return 0;
+
+}
+
+int XMLparser::parse_nodes( const pugi::xml_node &node, std::vector<vec3> &nodes ){
+
+  pugi::xml_node node_data = node.child("nodes");
+  std::string data_str = node_data.child_value();
+  nodes.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::vector<std::string> tmp_s(3);
+    vec3 tmp;
+    while (data_stream >> tmp_s[0]) {
+      data_stream >> tmp_s[1];
+      data_stream >> tmp_s[2];
+      if (!parse_float(tmp_s[0], tmp.x) || !parse_float(tmp_s[1], tmp.y) || !parse_float(tmp_s[2], tmp.z)) {
+        return 2;
+      } else {
+        nodes.push_back(tmp);
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
+int XMLparser::parse_radius( const pugi::xml_node &node, std::vector<float> &radius ){
+
+  pugi::xml_node node_data = node.child("radius");
+  std::string data_str = node_data.child_value();
+  radius.resize(0);
+  if( !data_str.empty() ) {
+    std::istringstream data_stream(data_str);
+    std::string tmp_s;
+    float tmp_f;
+    while (data_stream >> tmp_s) {
+      if (parse_float(tmp_s, tmp_f)) {
+        radius.push_back(tmp_f);
+      } else {
+        return 2;
+      }
+    }
+  }else{
+    return 1;
+  }
+
+  return 0;
+
+}
+
 void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_int"); data; data = data.next_sibling("data_int")){
 
-    const char* data_str = data.child_value();
-    std::vector<int> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      int tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int> datav;
+    if( XMLparser::parse_data_int(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -44,17 +534,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_uint"); data; data = data.next_sibling("data_uint")){
 
-    const char* data_str = data.child_value();
-    std::vector<uint> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      uint tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<uint> datav;
+    if( XMLparser::parse_data_uint(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_uint> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -66,17 +551,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_float"); data; data = data.next_sibling("data_float")){
 
-    const char* data_str = data.child_value();
-    std::vector<float> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      float tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<float> datav;
+    if( XMLparser::parse_data_float(data,datav)!=0  || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_float> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -88,17 +568,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_double"); data; data = data.next_sibling("data_double")){
 
-    const char* data_str = data.child_value();
-    std::vector<double> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      double tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<double> datav;
+    if( XMLparser::parse_data_double(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_double> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -110,23 +585,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_vec2"); data; data = data.next_sibling("data_vec2")){
 
-    const char* data_str = data.child_value();
-    std::vector<vec2> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<float> tmp;
-      tmp.resize(2);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==2 ){
-          datav.push_back(make_vec2(tmp.at(0),tmp.at(1)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<vec2> datav;
+    if( XMLparser::parse_data_vec2(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_vec2> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -138,23 +602,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_vec3"); data; data = data.next_sibling("data_vec3")){
 
-    const char* data_str = data.child_value();
-    std::vector<vec3> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<float> tmp;
-      tmp.resize(3);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==3 ){
-          datav.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<vec3> datav;
+    if( XMLparser::parse_data_vec3(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_vec3> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -166,23 +619,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_vec4"); data; data = data.next_sibling("data_vec4")){
 
-    const char* data_str = data.child_value();
-    std::vector<vec4> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<float> tmp;
-      tmp.resize(4);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==4 ){
-          datav.push_back(make_vec4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<vec4> datav;
+    if( XMLparser::parse_data_vec4(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_vec4> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -194,23 +636,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_int2"); data; data = data.next_sibling("data_int2")){
 
-    const char* data_str = data.child_value();
-    std::vector<int2> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<int> tmp;
-      tmp.resize(2);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==2 ){
-          datav.push_back(make_int2(tmp.at(0),tmp.at(1)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int2> datav;
+    if( XMLparser::parse_data_int2(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int2> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -222,23 +653,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_int3"); data; data = data.next_sibling("data_int3")){
 
-    const char* data_str = data.child_value();
-    std::vector<int3> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<int> tmp;
-      tmp.resize(3);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==3 ){
-          datav.push_back(make_int3(tmp.at(0),tmp.at(1),tmp.at(2)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int3> datav;
+    if( XMLparser::parse_data_int3(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int3> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -250,23 +670,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_int4"); data; data = data.next_sibling("data_int4")){
 
-    const char* data_str = data.child_value();
-    std::vector<int4> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<int> tmp;
-      tmp.resize(4);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==4 ){
-          datav.push_back(make_int4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int4> datav;
+    if( XMLparser::parse_data_int4(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int4> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -278,17 +687,12 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
   for (pugi::xml_node data = p.child("data_string"); data; data = data.next_sibling("data_string")){
 
-    const char* data_str = data.child_value();
-    std::vector<std::string> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::string tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<std::string> datav;
+    if( XMLparser::parse_data_string(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_string> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setPrimitiveData(UUID,label,datav.front());
@@ -306,17 +710,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_int"); data; data = data.next_sibling("data_int")){
 
-    const char* data_str = data.child_value();
-    std::vector<int> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      int tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int> datav;
+    if( XMLparser::parse_data_int(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_int> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -328,17 +727,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_uint"); data; data = data.next_sibling("data_uint")){
 
-    const char* data_str = data.child_value();
-    std::vector<uint> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      uint tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<uint> datav;
+    if( XMLparser::parse_data_uint(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_uint> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -350,17 +744,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_float"); data; data = data.next_sibling("data_float")){
 
-    const char* data_str = data.child_value();
-    std::vector<float> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      float tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<float> datav;
+    if( XMLparser::parse_data_float(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_float> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -372,17 +761,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_double"); data; data = data.next_sibling("data_double")){
 
-    const char* data_str = data.child_value();
-    std::vector<double> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      double tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<double> datav;
+    if( XMLparser::parse_data_double(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_double> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -394,23 +778,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_vec2"); data; data = data.next_sibling("data_vec2")){
 
-    const char* data_str = data.child_value();
-    std::vector<vec2> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<float> tmp;
-      tmp.resize(2);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==2 ){
-          datav.push_back(make_vec2(tmp.at(0),tmp.at(1)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<vec2> datav;
+    if( XMLparser::parse_data_vec2(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_vec2> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -422,23 +795,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_vec3"); data; data = data.next_sibling("data_vec3")){
 
-    const char* data_str = data.child_value();
-    std::vector<vec3> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<float> tmp;
-      tmp.resize(3);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==3 ){
-          datav.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<vec3> datav;
+    if( XMLparser::parse_data_vec3(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_vec3> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -450,23 +812,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_vec4"); data; data = data.next_sibling("data_vec4")){
 
-    const char* data_str = data.child_value();
-    std::vector<vec4> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<float> tmp;
-      tmp.resize(4);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==4 ){
-          datav.push_back(make_vec4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<vec4> datav;
+    if( XMLparser::parse_data_vec4(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_vec4> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -478,23 +829,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_int2"); data; data = data.next_sibling("data_int2")){
 
-    const char* data_str = data.child_value();
-    std::vector<int2> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<int> tmp;
-      tmp.resize(2);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==2 ){
-          datav.push_back(make_int2(tmp.at(0),tmp.at(1)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int2> datav;
+    if( XMLparser::parse_data_int2(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_int2> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -506,23 +846,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_int3"); data; data = data.next_sibling("data_int3")){
 
-    const char* data_str = data.child_value();
-    std::vector<int3> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<int> tmp;
-      tmp.resize(3);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==3 ){
-          datav.push_back(make_int3(tmp.at(0),tmp.at(1),tmp.at(2)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int3> datav;
+    if( XMLparser::parse_data_int3(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_int3> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -534,23 +863,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_int4"); data; data = data.next_sibling("data_int4")){
 
-    const char* data_str = data.child_value();
-    std::vector<int4> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<int> tmp;
-      tmp.resize(4);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==4 ){
-          datav.push_back(make_int4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int4> datav;
+    if( XMLparser::parse_data_int4(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_int4> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -562,17 +880,12 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
   for (pugi::xml_node data = p.child("data_string"); data; data = data.next_sibling("data_string")){
 
-    const char* data_str = data.child_value();
-    std::vector<std::string> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::string tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<std::string> datav;
+    if( XMLparser::parse_data_string(data,datav)!=0 || datav.empty() ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_string> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setObjectData(ID,label,datav.front());
@@ -604,14 +917,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<int> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        int tmp;
-        while (data_stream >> tmp) {
-          datav.push_back(tmp);
-        }
+      if( XMLparser::parse_data_int(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -637,14 +945,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<uint> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        uint tmp;
-        while (data_stream >> tmp) {
-          datav.push_back(tmp);
-        }
+      if( XMLparser::parse_data_uint(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_uint> with label " + std::string(label) + " contained invalid data."));
       }
 
       if (doesPrimitiveExist(prim_UUIDs.at(u))) {
@@ -670,14 +973,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<float> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        float tmp;
-        while (data_stream >> tmp) {
-          datav.push_back(tmp);
-        }
+      if( XMLparser::parse_data_float(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_float> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -703,14 +1001,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<double> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        double tmp;
-        while (data_stream >> tmp) {
-          datav.push_back(tmp);
-        }
+      if( XMLparser::parse_data_double(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_double> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -736,20 +1029,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<vec2> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        std::vector<float> tmp;
-        tmp.resize(2);
-        int c = 0;
-        while( data_stream >> tmp.at(c) ){
-          c++;
-          if( c==2 ){
-            datav.push_back(make_vec2(tmp.at(0),tmp.at(1)));
-            c=0;
-          }
-        }
+      if( XMLparser::parse_data_vec2(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec2> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -775,20 +1057,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<vec3> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        std::vector<float> tmp;
-        tmp.resize(3);
-        int c = 0;
-        while( data_stream >> tmp.at(c) ){
-          c++;
-          if( c==3 ){
-            datav.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
-            c=0;
-          }
-        }
+      if( XMLparser::parse_data_vec3(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec3> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -814,20 +1085,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<vec4> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        std::vector<float> tmp;
-        tmp.resize(4);
-        int c = 0;
-        while( data_stream >> tmp.at(c) ){
-          c++;
-          if( c==4 ){
-            datav.push_back(make_vec4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
-            c=0;
-          }
-        }
+      if( XMLparser::parse_data_vec4(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec4> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -853,20 +1113,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<int2> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        std::vector<int> tmp;
-        tmp.resize(2);
-        int c = 0;
-        while( data_stream >> tmp.at(c) ){
-          c++;
-          if( c==2 ){
-            datav.push_back(make_int2(tmp.at(0),tmp.at(1)));
-            c=0;
-          }
-        }
+      if( XMLparser::parse_data_int2(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int2> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -892,20 +1141,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<int3> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        std::vector<int> tmp;
-        tmp.resize(3);
-        int c = 0;
-        while( data_stream >> tmp.at(c) ){
-          c++;
-          if( c==3 ){
-            datav.push_back(make_int3(tmp.at(0),tmp.at(1),tmp.at(2)));
-            c=0;
-          }
-        }
+      if( XMLparser::parse_data_int3(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int3> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -931,20 +1169,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<int4> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        std::vector<int> tmp;
-        tmp.resize(4);
-        int c = 0;
-        while( data_stream >> tmp.at(c) ){
-          c++;
-          if( c==4 ){
-            datav.push_back(make_int4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
-            c=0;
-          }
-        }
+      if( XMLparser::parse_data_int4(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int4> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -970,14 +1197,9 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
         break;
       }
 
-      const char *data_str = data.child_value();
       std::vector<std::string> datav;
-      if (strlen(data_str) > 0) {
-        std::istringstream data_stream(data_str);
-        std::string tmp;
-        while( data_stream >> tmp ){
-          datav.push_back(tmp);
-        }
+      if( XMLparser::parse_data_string(data,datav)!=0 || datav.empty() ){
+        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_string> with label " + std::string(label) + " contained invalid data."));
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1014,11 +1236,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   pugi::xml_document xmldoc;
 
   //load file
-  pugi::xml_parse_result result = xmldoc.load_file(filename);
+  pugi::xml_parse_result load_result = xmldoc.load_file(filename);
 
   //error checking
-  if (!result){
-    throw( std::runtime_error("failed.\n XML [" + std::string(filename) + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + result.description() + "\nError offset: " + std::to_string(result.offset) + " (error at [..." + (filename + result.offset) + "]\n"));
+  if (!load_result){
+    throw( std::runtime_error("failed.\n XML [" + std::string(filename) + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() + "\nError offset: " + std::to_string(load_result.offset) + " (error at [..." + (filename + load_result.offset) + "]\n"));
   }
 
   pugi::xml_node helios = xmldoc.child("helios");
@@ -1093,82 +1315,34 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   for (pugi::xml_node p = helios.child("patch"); p; p = p.next_sibling("patch")){
 
     // * Patch Object ID * //
-    uint objID = 0;
-    pugi::xml_node objID_node = p.child("objID");
-    std::string oid = deblank(objID_node.child_value());
-    if( !oid.empty() ){
-      if( !parse_uint( oid, objID ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'patch' block must be a non-negative integer value."));
-      }
+    uint objID=0;
+    if( XMLparser::parse_objID(p,objID)>1 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'patch' block must be a non-negative integer value."));
     }
 
     // * Patch Transformation Matrix * //
     float transform[16];
-    pugi::xml_node transform_node = p.child("transform");
-
-    const char* transform_str = transform_node.child_value();
-    if( strlen(transform_str)==0 ){
-      makeIdentityMatrix(transform);
-    }else{
-      std::istringstream stream(transform_str);
-      float tmp;
-      int i=0;
-      while( stream >> tmp ){
-        transform[i] = tmp;
-        i++;
-      }
-      if( i!=16 ){
-        if( !quiet ) {
-          std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-        }
-        makeIdentityMatrix(transform);
-      }
+    int result = XMLparser::parse_transform(p,transform);
+    if( result==3 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Patch <transform> node contains less than 16 data values.") );
+    }else if( result==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Patch <transform> node contains invalid data.") );
     }
 
     // * Patch Texture * //
     std::string texture_file;
-    pugi::xml_node texture_node = p.child("texture");
-    std::string texfile = deblank(texture_node.child_value());
-    if( texfile.empty() ){
-      texture_file = "none";
-    }else{
-      texture_file = texfile;
-    }
+    XMLparser::parse_texture(p,texture_file);
 
     // * Patch Texture (u,v) Coordinates * //
     std::vector<vec2> uv;
-    pugi::xml_node uv_node = p.child("textureUV");
-    const char* texUV = uv_node.child_value();
-    if( strlen(texUV)>0 ){
-      std::istringstream uv_stream(texUV);
-      std::vector<float> tmp;
-      tmp.resize(2);
-      int c = 0;
-      while( uv_stream >> tmp.at(c) ){
-        c++;
-        if( c==2 ){
-          uv.push_back(make_vec2(tmp.at(0),tmp.at(1)));
-          c=0;
-        }
-      }
-      if( c!=0 ){
-        std::cerr << "WARNING (loadXML): textureUV for patch does not contain an even number of elements. Skipping..." << std::endl;
-        uv.resize(0);
-      }
-      if( uv.size()!=4 ){
-        std::cerr << "WARNING (loadXML): textureUV for patch does not contain four pairs of (u,v) coordinates. Skipping..." << std::endl;
-        uv.resize(0);
-      }
+    if( XMLparser::parse_textureUV(p,uv)==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): (u,v) coordinates given in 'patch' block contain invalid data."));
     }
 
     // * Patch Solid Fraction * //
     float solid_fraction = 1;
-    pugi::xml_node sfrac_node = p.child("solid_fraction");
-    std::string sfrac = deblank(sfrac_node.child_value());
-    if( !sfrac.empty() ){
-      if( !parse_float( sfrac, solid_fraction ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Solid fraction given in 'patch' block must be a float value."));
-      }
+    if( XMLparser::parse_solid_fraction(p,solid_fraction)==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Solid fraction given in 'patch' block contains invalid data."));
     }
 
     // * Patch Diffuse Colors * //
@@ -1224,82 +1398,34 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   for (pugi::xml_node tri = helios.child("triangle"); tri; tri = tri.next_sibling("triangle")){
 
     // * Triangle Object ID * //
-    uint objID = 0;
-    pugi::xml_node objID_node = tri.child("objID");
-    std::string oid = deblank(objID_node.child_value());
-    if( !oid.empty() ){
-      if( !parse_uint( oid, objID ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'triangle' block must be a non-negative integer value."));
-      }
+    uint objID=0;
+    if( XMLparser::parse_objID(tri,objID)>1 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'triangle' block must be a non-negative integer value."));
     }
 
     // * Triangle Transformation Matrix * //
     float transform[16];
-    pugi::xml_node transform_node = tri.child("transform");
-
-    const char* transform_str = transform_node.child_value();
-    if( strlen(transform_str)==0 ){
-      makeIdentityMatrix(transform);
-    }else{
-      std::istringstream stream(transform_str);
-      float tmp;
-      int i=0;
-      while( stream >> tmp ){
-        transform[i] = tmp;
-        i++;
-      }
-      if( i!=16 ){
-        if( !quiet ) {
-          std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-        }
-        makeIdentityMatrix(transform);
-      }
+    int result = XMLparser::parse_transform(tri,transform);
+    if( result==3 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Triangle <transform> node contains less than 16 data values.") );
+    }else if( result==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Triangle <transform> node contains invalid data.") );
     }
 
     // * Triangle Texture * //
     std::string texture_file;
-    pugi::xml_node texture_node = tri.child("texture");
-    std::string texfile = deblank(texture_node.child_value());
-    if( texfile.empty() ){
-      texture_file = "none";
-    }else{
-      texture_file = texfile;
-    }
+    XMLparser::parse_texture(tri,texture_file);
 
     // * Triangle Texture (u,v) Coordinates * //
     std::vector<vec2> uv;
-    pugi::xml_node uv_node = tri.child("textureUV");
-    const char* texUV = uv_node.child_value();
-    if( strlen(texUV)>0 ){
-      std::istringstream uv_stream(texUV);
-      std::vector<float> tmp;
-      tmp.resize(2);
-      int c = 0;
-      while( uv_stream >> tmp.at(c) ){
-        c++;
-        if( c==2 ){
-          uv.push_back(make_vec2(tmp.at(0),tmp.at(1)));
-          c=0;
-        }
-      }
-      if( c!=0 ){
-        std::cerr << "WARNING (loadXML): textureUV for patch does not contain an even number of elements. Skipping..." << std::endl;
-        uv.resize(0);
-      }
-      if( uv.size()!=3 ){
-        std::cerr << "WARNING (loadXML): textureUV for triangle does not contain three pairs of (u,v) coordinates. Skipping..." << std::endl;
-        uv.resize(0);
-      }
+    if( XMLparser::parse_textureUV(tri,uv)==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): (u,v) coordinates given in 'triangle' block contain invalid data."));
     }
 
     // * Triangle Solid Fraction * //
     float solid_fraction = 1;
-    pugi::xml_node sfrac_node = tri.child("solid_fraction");
-    std::string sfrac = deblank(sfrac_node.child_value());
-    if( !sfrac.empty() ){
-      if( !parse_float( sfrac, solid_fraction ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Solid fraction given in 'triangle' block must be a float value."));
-      }
+    if( XMLparser::parse_solid_fraction(tri,solid_fraction)==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Solid fraction given in 'triangle' block contains invalid data."));
     }
 
     // * Triangle Diffuse Colors * //
@@ -1355,46 +1481,24 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   for (pugi::xml_node p = helios.child("voxel"); p; p = p.next_sibling("voxel")){
 
     // * Voxel Object ID * //
-    uint objID = 0;
-    pugi::xml_node objID_node = p.child("objID");
-    std::string oid = deblank(objID_node.child_value());
-    if( !oid.empty() ){
-      if( !parse_uint( oid, objID ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'voxel' block must be a non-negative integer value."));
-      }
+    uint objID=0;
+    if( XMLparser::parse_objID(p,objID)>1 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'voxel' block must be a non-negative integer value."));
     }
 
     // * Voxel Transformation Matrix * //
     float transform[16];
-    pugi::xml_node transform_node = p.child("transform");
-
-    const char* transform_str = transform_node.child_value();
-    if( strlen(transform_str)==0 ){
-      makeIdentityMatrix(transform);
-    }else{
-      std::istringstream stream(transform_str);
-      float tmp;
-      int i=0;
-      while( stream >> tmp ){
-        transform[i] = tmp;
-        i++;
-      }
-      if( i!=16 ){
-        if( !quiet ) {
-          std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-        }
-        makeIdentityMatrix(transform);
-      }
+    int result = XMLparser::parse_transform(p,transform);
+    if( result==3 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Voxel <transform> node contains less than 16 data values.") );
+    }else if( result==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Voxel <transform> node contains invalid data.") );
     }
 
     // * Voxel Solid Fraction * //
     float solid_fraction = 1;
-    pugi::xml_node sfrac_node = p.child("solid_fraction");
-    std::string sfrac = deblank(sfrac_node.child_value());
-    if( !sfrac.empty() ){
-      if( !parse_float( sfrac, solid_fraction ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Solid fraction given in 'voxel' block must be a float value."));
-      }
+    if( XMLparser::parse_solid_fraction(p,solid_fraction)==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Solid fraction given in 'voxel' block contains invalid data."));
     }
 
     // * Voxel Diffuse Colors * //
@@ -1432,72 +1536,28 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   for (pugi::xml_node p = helios.child("tile"); p; p = p.next_sibling("tile")) {
 
     // * Tile Object ID * //
-    pugi::xml_node objID_node = p.child("objID");
-    std::string oid = deblank(objID_node.child_value());
-    uint objID = 0;
-    if( !oid.empty() ){
-      if( !parse_uint( oid, objID ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tile' block must be a non-negative integer value."));
-      }
+    uint objID=0;
+    if( XMLparser::parse_objID(p,objID)>1 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tile' block must be a non-negative integer value."));
     }
 
     // * Tile Transformation Matrix * //
     float transform[16];
-    pugi::xml_node transform_node = p.child("transform");
-
-    const char *transform_str = transform_node.child_value();
-    if (strlen(transform_str) == 0) {
-      makeIdentityMatrix(transform);
-    } else {
-      std::istringstream stream(transform_str);
-      float tmp;
-      int i = 0;
-      while (stream >> tmp) {
-        transform[i] = tmp;
-        i++;
-      }
-      if (i != 16) {
-        if( !quiet ) {
-          std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-        }
-        makeIdentityMatrix(transform);
-      }
+    int result = XMLparser::parse_transform(p,transform);
+    if( result==3 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Tile <transform> node contains less than 16 data values.") );
+    }else if( result==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Tile <transform> node contains invalid data.") );
     }
 
     // * Tile Texture * //
     std::string texture_file;
-    pugi::xml_node texture_node = p.child("texture");
-    std::string texfile = deblank(texture_node.child_value());
-    if (texfile.empty()) {
-      texture_file = "none";
-    } else {
-      texture_file = texfile;
-    }
+    XMLparser::parse_texture(p,texture_file);
 
     // * Tile Texture (u,v) Coordinates * //
     std::vector<vec2> uv;
-    pugi::xml_node uv_node = p.child("textureUV");
-    const char *texUV = uv_node.child_value();
-    if (strlen(texUV) > 0) {
-      std::istringstream uv_stream(texUV);
-      std::vector<float> tmp;
-      tmp.resize(2);
-      int c = 0;
-      while (uv_stream >> tmp.at(c)) {
-        c++;
-        if (c == 2) {
-          uv.push_back(make_vec2(tmp.at(0), tmp.at(1)));
-          c = 0;
-        }
-      }
-      if (c != 0) {
-        std::cerr << "WARNING (loadXML): textureUV for tile does not contain an even number of elements. Skipping..." << std::endl;
-        uv.resize(0);
-      }
-      if (uv.size() != 4) {
-        std::cerr << "WARNING (loadXML): textureUV for tile does not contain four pairs of (u,v) coordinates. Skipping..." << std::endl;
-        uv.resize(0);
-      }
+    if( XMLparser::parse_textureUV(p,uv)==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): (u,v) coordinates given in 'tile' block contain invalid data."));
     }
 
     // * Tile Diffuse Colors * //
@@ -1511,13 +1571,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     // * Tile Subdivisions * //
     int2 subdiv;
-    pugi::xml_node subdiv_node = p.child("subdivisions");
-    const char* subdiv_str = subdiv_node.child_value();
-    if (strlen(subdiv_str) == 0) {
-      std::cerr << "WARNING (loadXML): Number of subdivisions for tile was not provided. Assuming 1x1." << std::endl;
+    int result_subdiv = XMLparser::parse_subdivisions(p,subdiv);
+    if ( result_subdiv==1 ) {
+      std::cerr << "WARNING (Context::loadXML): Number of subdivisions for tile was not provided. Assuming 1x1." << std::endl;
       subdiv = make_int2(1,1);
-    } else {
-      subdiv = string2int2(subdiv_str);
+    } else if( result_subdiv==2 ) {
+      throw( std::runtime_error("ERROR (Context::loadXML): Tile <subdivisions> node contains invalid data. ") );
     }
 
     //Create a dummy patch in order to get the center, size, and rotation based on transformation matrix
@@ -1564,47 +1623,23 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   for (pugi::xml_node p = helios.child("sphere"); p; p = p.next_sibling("sphere")) {
 
     // * Sphere Object ID * //
-    pugi::xml_node objID_node = p.child("objID");
-    std::string oid = deblank(objID_node.child_value());
-    uint objID = 0;
-    if( !oid.empty() ){
-      if( !parse_uint( oid, objID ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'sphere' block must be a non-negative integer value."));
-      }
+    uint objID=0;
+    if( XMLparser::parse_objID(p,objID)>1 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'sphere' block must be a non-negative integer value."));
     }
 
     // * Sphere Transformation Matrix * //
     float transform[16];
-    pugi::xml_node transform_node = p.child("transform");
-
-    const char *transform_str = transform_node.child_value();
-    if (strlen(transform_str) == 0) {
-      makeIdentityMatrix(transform);
-    } else {
-      std::istringstream stream(transform_str);
-      float tmp;
-      int i = 0;
-      while (stream >> tmp) {
-        transform[i] = tmp;
-        i++;
-      }
-      if (i != 16) {
-        if( !quiet ) {
-          std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-        }
-        makeIdentityMatrix(transform);
-      }
+    int result = XMLparser::parse_transform(p,transform);
+    if( result==3 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Sphere <transform> node contains less than 16 data values.") );
+    }else if( result==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Sphere <transform> node contains invalid data.") );
     }
 
     // * Sphere Texture * //
     std::string texture_file;
-    pugi::xml_node texture_node = p.child("texture");
-    std::string texfile = deblank(texture_node.child_value());
-    if (texfile.empty()) {
-      texture_file = "none";
-    } else {
-      texture_file = texfile;
-    }
+    XMLparser::parse_texture(p,texture_file);
 
     // * Sphere Diffuse Colors * //
     RGBAcolor color;
@@ -1617,15 +1652,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     // * Sphere Subdivisions * //
     uint subdiv;
-    pugi::xml_node subdiv_node = p.child("subdivisions");
-    const char* subdiv_str = subdiv_node.child_value();
-    if (strlen(subdiv_str) == 0) {
-      std::cerr << "WARNING (loadXML): Number of subdivisions for sphere was not provided. Assuming 5." << std::endl;
+    int result_subdiv = XMLparser::parse_subdivisions(p,subdiv);
+    if ( result_subdiv==1 ) {
+      std::cerr << "WARNING (Context::loadXML): Number of subdivisions for sphere was not provided. Assuming 1x1." << std::endl;
       subdiv = 5;
-    } else {
-      if( !parse_uint( subdiv_str, subdiv ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Subdivisions given in 'sphere' block must be a non-negative integer value."));
-      }
+    } else if( result_subdiv==2 ) {
+      throw( std::runtime_error("ERROR (Context::loadXML): Sphere <subdivisions> node contains invalid data. ") );
     }
 
     //Create a dummy sphere in order to get the center and radius based on transformation matrix
@@ -1671,94 +1703,46 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   for (pugi::xml_node p = helios.child("tube"); p; p = p.next_sibling("tube")) {
 
     // * Tube Object ID * //
-    pugi::xml_node objID_node = p.child("objID");
-    std::string oid = deblank(objID_node.child_value());
-    uint objID = 0;
-    if( !oid.empty() ){
-      if( !parse_uint( oid, objID ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tube' block must be a non-negative integer value."));
-      }
+    uint objID=0;
+    if( XMLparser::parse_objID(p,objID)>1 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tube' block must be a non-negative integer value."));
     }
 
     // * Tube Transformation Matrix * //
     float transform[16];
-    pugi::xml_node transform_node = p.child("transform");
-
-    const char *transform_str = transform_node.child_value();
-    if (strlen(transform_str) == 0) {
-      makeIdentityMatrix(transform);
-    } else {
-      std::istringstream stream(transform_str);
-      float tmp;
-      int i = 0;
-      while (stream >> tmp) {
-        transform[i] = tmp;
-        i++;
-      }
-      if (i != 16) {
-        if( !quiet ) {
-          std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-        }
-        makeIdentityMatrix(transform);
-      }
+    int result = XMLparser::parse_transform(p,transform);
+    if( result==3 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Tube <transform> node contains less than 16 data values.") );
+    }else if( result==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Tube <transform> node contains invalid data.") );
     }
 
     // * Tube Texture * //
     std::string texture_file;
-    pugi::xml_node texture_node = p.child("texture");
-    std::string texfile = deblank(texture_node.child_value());
-    if (texfile.empty()) {
-      texture_file = "none";
-    } else {
-      texture_file = texfile;
-    }
+    XMLparser::parse_texture(p,texture_file);
 
     // * Tube Subdivisions * //
     uint subdiv;
-    pugi::xml_node subdiv_node = p.child("subdivisions");
-    const char* subdiv_str = subdiv_node.child_value();
-    if (strlen(subdiv_str) == 0) {
-      std::cerr << "WARNING (loadXML): Number of subdivisions for tube was not provided. Assuming 5." << std::endl;
+    int result_subdiv = XMLparser::parse_subdivisions(p,subdiv);
+    if ( result_subdiv==1 ) {
+      std::cerr << "WARNING (Context::loadXML): Number of subdivisions for tube was not provided. Assuming 1x1." << std::endl;
       subdiv = 5;
-    } else {
-      if( !parse_uint( subdiv_str, subdiv ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Subdivisions given in 'tube' block must be a non-negative integer value."));
-      }
+    } else if( result_subdiv==2 ) {
+      throw( std::runtime_error("ERROR (Context::loadXML): Tube <subdivisions> node contains invalid data. ") );
     }
 
     // * Tube Nodes * //
-
-    pugi::xml_node nodes_node = p.child("nodes");
-    const char* nodes_str = nodes_node.child_value();
-
     std::vector<vec3> nodes;
-    if (strlen(nodes_str) > 0) {
-      std::istringstream data_stream(nodes_str);
-      std::vector<float> tmp;
-      tmp.resize(3);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==3 ){
-          nodes.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
-          c=0;
-        }
-      }
+    pugi::xml_node nodes_node = p.child("nodes");
+    if( XMLparser::parse_data_vec3(nodes_node,nodes)!=0 || nodes.size()<2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Tube <nodes> node contains invalid data. ") );
     }
 
     // * Tube Radius * //
-
-    pugi::xml_node radii_node = p.child("radius");
-    const char* radii_str = radii_node.child_value();
-
     std::vector<float> radii;
-    if (strlen(radii_str) > 0) {
-      std::istringstream data_stream(radii_str);
-      float tmp;
-      int c = 0;
-      while( data_stream >> tmp ){
-        radii.push_back(tmp);
-      }
+    pugi::xml_node radii_node = p.child("radius");
+    if( XMLparser::parse_data_float(radii_node,radii)!=0 || radii.size()<2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Tube <radius> node contains invalid data. ") );
     }
 
     // * Tube Color * //
@@ -1817,47 +1801,23 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   for (pugi::xml_node p = helios.child("box"); p; p = p.next_sibling("box")) {
 
     // * Box Object ID * //
-    pugi::xml_node objID_node = p.child("objID");
-    std::string oid = deblank(objID_node.child_value());
-    uint objID = 0;
-    if( !oid.empty() ){
-      if( !parse_uint( oid, objID ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'box' block must be a non-negative integer value."));
-      }
+    uint objID=0;
+    if( XMLparser::parse_objID(p,objID)>1 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'box' block must be a non-negative integer value."));
     }
 
     // * Box Transformation Matrix * //
     float transform[16];
-    pugi::xml_node transform_node = p.child("transform");
-
-    const char *transform_str = transform_node.child_value();
-    if (strlen(transform_str) == 0) {
-      makeIdentityMatrix(transform);
-    } else {
-      std::istringstream stream(transform_str);
-      float tmp;
-      int i = 0;
-      while (stream >> tmp) {
-        transform[i] = tmp;
-        i++;
-      }
-      if (i != 16) {
-        if( !quiet ) {
-          std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-        }
-        makeIdentityMatrix(transform);
-      }
+    int result = XMLparser::parse_transform(p,transform);
+    if( result==3 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Box <transform> node contains less than 16 data values.") );
+    }else if( result==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Box <transform> node contains invalid data.") );
     }
 
     // * Box Texture * //
     std::string texture_file;
-    pugi::xml_node texture_node = p.child("texture");
-    std::string texfile = deblank(texture_node.child_value());
-    if (texfile.empty()) {
-      texture_file = "none";
-    } else {
-      texture_file = texfile;
-    }
+    XMLparser::parse_texture(p,texture_file);
 
     // * Box Diffuse Colors * //
     RGBAcolor color;
@@ -1870,13 +1830,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     // * Box Subdivisions * //
     int3 subdiv;
-    pugi::xml_node subdiv_node = p.child("subdivisions");
-    const char* subdiv_str = subdiv_node.child_value();
-    if (strlen(subdiv_str) == 0) {
-      std::cerr << "WARNING (loadXML): Number of subdivisions for box was not provided. Assuming 1." << std::endl;
+    int result_subdiv = XMLparser::parse_subdivisions(p,subdiv);
+    if ( result_subdiv==1 ) {
+      std::cerr << "WARNING (Context::loadXML): Number of subdivisions for box was not provided. Assuming 1x1." << std::endl;
       subdiv = make_int3(1,1,1);
-    } else {
-      subdiv = string2int3(subdiv_str);
+    } else if( result_subdiv==2 ) {
+      throw( std::runtime_error("ERROR (Context::loadXML): Box <subdivisions> node contains invalid data. ") );
     }
 
     //Create a dummy box in order to get the center and size based on transformation matrix
@@ -1922,47 +1881,23 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   for (pugi::xml_node p = helios.child("disk"); p; p = p.next_sibling("disk")) {
 
     // * Disk Object ID * //
-    pugi::xml_node objID_node = p.child("objID");
-    std::string oid = deblank(objID_node.child_value());
-    uint objID = 0;
-    if( !oid.empty() ){
-      if( !parse_uint( oid, objID ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'disk' block must be a non-negative integer value."));
-      }
+    uint objID=0;
+    if( XMLparser::parse_objID(p,objID)>1 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'disk' block must be a non-negative integer value."));
     }
 
     // * Disk Transformation Matrix * //
     float transform[16];
-    pugi::xml_node transform_node = p.child("transform");
-
-    const char *transform_str = transform_node.child_value();
-    if (strlen(transform_str) == 0) {
-      makeIdentityMatrix(transform);
-    } else {
-      std::istringstream stream(transform_str);
-      float tmp;
-      int i = 0;
-      while (stream >> tmp) {
-        transform[i] = tmp;
-        i++;
-      }
-      if (i != 16) {
-        if( !quiet ) {
-          std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-        }
-        makeIdentityMatrix(transform);
-      }
+    int result = XMLparser::parse_transform(p,transform);
+    if( result==3 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Disk <transform> node contains less than 16 data values.") );
+    }else if( result==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Disk <transform> node contains invalid data.") );
     }
 
     // * Disk Texture * //
     std::string texture_file;
-    pugi::xml_node texture_node = p.child("texture");
-    std::string texfile = deblank(texture_node.child_value());
-    if (texfile.empty()) {
-      texture_file = "none";
-    } else {
-      texture_file = texfile;
-    }
+    XMLparser::parse_texture(p,texture_file);
 
     // * Disk Diffuse Colors * //
     RGBAcolor color;
@@ -1975,15 +1910,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     // * Disk Subdivisions * //
     uint subdiv;
-    pugi::xml_node subdiv_node = p.child("subdivisions");
-    const char* subdiv_str = subdiv_node.child_value();
-    if (strlen(subdiv_str) == 0) {
-      std::cerr << "WARNING (loadXML): Number of subdivisions for disk was not provided. Assuming 5." << std::endl;
+    int result_subdiv = XMLparser::parse_subdivisions(p,subdiv);
+    if ( result_subdiv==1 ) {
+      std::cerr << "WARNING (Context::loadXML): Number of subdivisions for disk was not provided. Assuming 1x1." << std::endl;
       subdiv = 5;
-    } else {
-      if( !parse_uint( subdiv_str, subdiv ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Subdivisions given in 'disk' block must be a non-negative integer value."));
-      }
+    } else if( result_subdiv==2 ) {
+      throw( std::runtime_error("ERROR (Context::loadXML): Disk <subdivisions> node contains invalid data. ") );
     }
 
     //Create a dummy disk in order to get the center and size based on transformation matrix
@@ -2029,47 +1961,23 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   for (pugi::xml_node p = helios.child("cone"); p; p = p.next_sibling("cone")) {
 
     // * Cone Object ID * //
-    pugi::xml_node objID_node = p.child("objID");
-    std::string oid = deblank(objID_node.child_value());
-    uint objID = 0;
-    if( !oid.empty() ){
-      if( !parse_uint( oid, objID ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'cone' block must be a non-negative integer value."));
-      }
+    uint objID=0;
+    if( XMLparser::parse_objID(p,objID)>1 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'cone' block must be a non-negative integer value."));
     }
 
     // * Cone Transformation Matrix * //
     float transform[16];
-    pugi::xml_node transform_node = p.child("transform");
-
-    const char *transform_str = transform_node.child_value();
-    if (strlen(transform_str) == 0) {
-      makeIdentityMatrix(transform);
-    } else {
-      std::istringstream stream(transform_str);
-      float tmp;
-      int i = 0;
-      while (stream >> tmp) {
-        transform[i] = tmp;
-        i++;
-      }
-      if (i != 16) {
-        if( !quiet ) {
-          std::cout << "WARNING (Context::loadXML): Transformation matrix does not have 16 elements. Assuming identity matrix." << std::endl;
-        }
-        makeIdentityMatrix(transform);
-      }
+    int result = XMLparser::parse_transform(p,transform);
+    if( result==3 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Cone <transform> node contains less than 16 data values.") );
+    }else if( result==2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Cone <transform> node contains invalid data.") );
     }
 
     // * Cone Texture * //
     std::string texture_file;
-    pugi::xml_node texture_node = p.child("texture");
-    std::string texfile = deblank(texture_node.child_value());
-    if (texfile.empty()) {
-      texture_file = "none";
-    } else {
-      texture_file = texfile;
-    }
+    XMLparser::parse_texture(p,texture_file);
 
     // * Cone Diffuse Colors * //
     RGBAcolor color;
@@ -2082,61 +1990,26 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     // * Cone Subdivisions * //
     uint subdiv;
-    pugi::xml_node subdiv_node = p.child("subdivisions");
-    const char* subdiv_str = subdiv_node.child_value();
-    if (strlen(subdiv_str) == 0) {
-      std::cerr << "WARNING (loadXML): Number of subdivisions for cone was not provided. Assuming 5." << std::endl;
+    int result_subdiv = XMLparser::parse_subdivisions(p,subdiv);
+    if ( result_subdiv==1 ) {
+      std::cerr << "WARNING (Context::loadXML): Number of subdivisions for cone was not provided. Assuming 1x1." << std::endl;
       subdiv = 5;
-    } else {
-      if( !parse_uint( subdiv_str, subdiv ) ){
-        throw( std::runtime_error("ERROR (Context::loadXML): Subdivisions given in 'cone' block must be a non-negative integer value."));
-      }
+    } else if( result_subdiv==2 ) {
+      throw( std::runtime_error("ERROR (Context::loadXML): Cone <subdivisions> node contains invalid data. ") );
     }
 
     // * Cone Nodes * //
-
-    pugi::xml_node nodes_node = p.child("nodes");
-    const char* nodes_str = nodes_node.child_value();
-
     std::vector<vec3> nodes;
-    if (strlen(nodes_str) > 0) {
-      std::istringstream data_stream(nodes_str);
-      std::vector<float> tmp;
-      tmp.resize(3);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==3 ){
-          nodes.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
-          break;
-        }
-      }
-      if( c!=3 ){
-        throw(std::runtime_error("ERROR (loadXML): Loading of cone failed. Cone end nodes must be specified as pairs of 3 x,y,z coordinates."));
-      }
-      c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==3 ){
-          nodes.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
-          break;
-        }
-      }
-      if( c!=3 ){
-        throw(std::runtime_error("ERROR (loadXML): Loading of cone failed. Cone end nodes must be specified as pairs of 3 x,y,z coordinates."));
-      }
+    pugi::xml_node nodes_node = p.child("nodes");
+    if( XMLparser::parse_data_vec3(nodes_node,nodes)!=0 || nodes.size()!=2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Cone <nodes> node contains invalid data. ") );
     }
 
     // * Cone Radius * //
-
+    std::vector<float> radii;
     pugi::xml_node radii_node = p.child("radius");
-    const char* radii_str = radii_node.child_value();
-
-    std::vector<float> radii(2);
-    if (strlen(radii_str) > 0) {
-      std::istringstream data_stream(radii_str);
-      data_stream >> radii.at(0);
-      data_stream >> radii.at(1);
+    if( XMLparser::parse_data_float(radii_node,radii)!=0 || radii.size()!=2 ){
+      throw( std::runtime_error("ERROR (Context::loadXML): Cone <radius> node contains invalid data. ") );
     }
 
     // * Add the Cone * //
@@ -2175,17 +2048,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_int"); data; data = data.next_sibling("globaldata_int")){
 
-    const char* data_str = data.child_value();
-    std::vector<int> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      int tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int> datav;
+    if( XMLparser::parse_data_int(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2197,17 +2065,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_uint"); data; data = data.next_sibling("globaldata_uint")){
 
-    const char* data_str = data.child_value();
-    std::vector<uint> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      uint tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<uint> datav;
+    if( XMLparser::parse_data_uint(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_uint> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2219,17 +2082,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_float"); data; data = data.next_sibling("globaldata_float")){
 
-    const char* data_str = data.child_value();
-    std::vector<float> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      float tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<float> datav;
+    if( XMLparser::parse_data_float(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_float> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2241,17 +2099,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_double"); data; data = data.next_sibling("globaldata_double")){
 
-    const char* data_str = data.child_value();
-    std::vector<double> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      double tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<double> datav;
+    if( XMLparser::parse_data_double(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_double> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2263,23 +2116,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_vec2"); data; data = data.next_sibling("globaldata_vec2")){
 
-    const char* data_str = data.child_value();
-    std::vector<vec2> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<float> tmp;
-      tmp.resize(2);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==2 ){
-          datav.push_back(make_vec2(tmp.at(0),tmp.at(1)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<vec2> datav;
+    if( XMLparser::parse_data_vec2(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_vec2> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2291,23 +2133,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_vec3"); data; data = data.next_sibling("globaldata_vec3")){
 
-    const char* data_str = data.child_value();
-    std::vector<vec3> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<float> tmp;
-      tmp.resize(3);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==3 ){
-          datav.push_back(make_vec3(tmp.at(0),tmp.at(1),tmp.at(2)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<vec3> datav;
+    if( XMLparser::parse_data_vec3(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_vec3> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2319,23 +2150,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_vec4"); data; data = data.next_sibling("globaldata_vec4")){
 
-    const char* data_str = data.child_value();
-    std::vector<vec4> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<float> tmp;
-      tmp.resize(4);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==4 ){
-          datav.push_back(make_vec4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<vec4> datav;
+    if( XMLparser::parse_data_vec4(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_vec4> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2347,23 +2167,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_int2"); data; data = data.next_sibling("globaldata_int2")){
 
-    const char* data_str = data.child_value();
-    std::vector<int2> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<int> tmp;
-      tmp.resize(2);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==2 ){
-          datav.push_back(make_int2(tmp.at(0),tmp.at(1)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int2> datav;
+    if( XMLparser::parse_data_int2(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int2> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2375,23 +2184,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_int3"); data; data = data.next_sibling("globaldata_int3")){
 
-    const char* data_str = data.child_value();
-    std::vector<int3> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<int> tmp;
-      tmp.resize(3);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==3 ){
-          datav.push_back(make_int3(tmp.at(0),tmp.at(1),tmp.at(2)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int3> datav;
+    if( XMLparser::parse_data_int3(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int3> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2403,23 +2201,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_int4"); data; data = data.next_sibling("globaldata_int4")){
 
-    const char* data_str = data.child_value();
-    std::vector<int4> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::vector<int> tmp;
-      tmp.resize(4);
-      int c = 0;
-      while( data_stream >> tmp.at(c) ){
-        c++;
-        if( c==4 ){
-          datav.push_back(make_int4(tmp.at(0),tmp.at(1),tmp.at(2),tmp.at(3)));
-          c=0;
-        }
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<int4> datav;
+    if( XMLparser::parse_data_int4(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int4> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -2431,17 +2218,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   for (pugi::xml_node data = helios.child("globaldata_string"); data; data = data.next_sibling("globaldata_string")){
 
-    const char* data_str = data.child_value();
-    std::vector<std::string> datav;
-    if( strlen(data_str)>0 ){
-      std::istringstream data_stream(data_str);
-      std::string tmp;
-      while( data_stream >> tmp ){
-        datav.push_back(tmp);
-      }
-    }
-
     const char* label = data.attribute("label").value();
+
+    std::vector<std::string> datav;
+    if( XMLparser::parse_data_string(data,datav)!=0 ){
+      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_string> with label " + std::string(label) + " contained invalid data."));
+    }
 
     if( datav.size()==1 ){
       setGlobalData(label,datav.front());
@@ -3877,13 +3659,13 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
       // ------- MATERIAL LIBRARY ------- //
     }else if( line=="mtllib" ){
       getline(inputOBJ, line);
-      std::string material_file = deblank(line);
+      std::string material_file = trim_whitespace(line);
       materials = loadMTL( filebase, material_file );
 
       // ------- OBJECT ------- //
     }else if( line=="o" ){
       getline(inputOBJ, line);
-      current_object = deblank(line);
+      current_object = trim_whitespace(line);
 
       // ------- VERTICES --------- //
     }else if( line=="v" ){
@@ -3910,7 +3692,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
       // ------- MATERIALS --------- //
     }else if( line=="usemtl" ){
       getline(inputOBJ, line);
-      current_material = deblank(line);
+      current_material = trim_whitespace(line);
 
       // ------- FACES --------- //
     }else if( line=="f" ){
@@ -4110,7 +3892,7 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
       inputMTL>>line;
     }else if( line=="newmtl" ){ //material library
       getline(inputMTL, line);
-      std::string material_name = deblank(line);
+      std::string material_name = trim_whitespace(line);
       OBJmaterial mat(RGB::red,"",0);
       materials.emplace( std::make_pair(material_name,mat) );
 
@@ -4125,7 +3907,7 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
         }else if( line=="map_Kd" || line=="map_d" ){
           std::string maptype = line;
           getline(inputMTL, line);
-          line = deblank(line);
+          line = trim_whitespace(line);
           std::istringstream stream(line);
           std::string tmp;
           while( stream.good() ){
@@ -4164,7 +3946,7 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
 
         }else if( line=="Kd" ){
           getline(inputMTL, line);
-          std::string color_str = deblank(line );
+          std::string color_str = trim_whitespace(line );
           RGBAcolor color = string2RGBcolor(color_str.c_str());
           materials.at(material_name).color = make_RGBcolor(color.r,color.g,color.b);
         }else{

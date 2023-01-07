@@ -3369,8 +3369,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
 	    std::vector<float> v{d/float(count), f/float(Npulse), float(count), t_pulse.at(hit-1).at(2)}; //included the ray count here
 	    //Note: the last index of t_pulse (.at(2)) is the object identifier. We don't want object identifiers to be averaged, so we'll assign the hit identifier based on the last ray in the group
 	    t_hit.push_back( v );
-            
-	    Nhits++;
+
 	    count=1;
 	    d=t_pulse.at(hit).at(0);
 	    t0=t_pulse.at(hit).at(0);

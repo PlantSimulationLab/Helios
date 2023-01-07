@@ -71,8 +71,8 @@ helios::int2 ScanMetadata::direction2rc(const SphericalCoord &direction ) const{
   float theta = direction.zenith;
   float phi = direction.azimuth;
 
-  int row = std::lround((theta-thetaMin)/(thetaMax-thetaMin)*float(Ntheta));
-  int column = std::lround(fabs(phi-phiMin)/(phiMax-phiMin)*float(Nphi));
+  int row = std::round((theta-thetaMin)/(thetaMax-thetaMin)*float(Ntheta));
+  int column = std::round(fabs(phi-phiMin)/(phiMax-phiMin)*float(Nphi));
 
   if( row==-1 ){
     row = 0;
@@ -142,7 +142,7 @@ uint LiDARcloud::getScanCount() {
   return scans.size();
 }
 
-void LiDARcloud::addScan( ScanMetadata &newscan ){
+uint LiDARcloud::addScan(ScanMetadata &newscan ){
 
     float epsilon = 1e-5;
 
@@ -158,9 +158,8 @@ void LiDARcloud::addScan( ScanMetadata &newscan ){
         std::cerr << "WARNING (LiDARcloud::addScan): Specified scan maximum zenith angle of " << newscan.thetaMax << " is greater than pi. Truncating to pi. Did you mistakenly use degrees instead of radians?" << std::endl;
         newscan.thetaMax = M_PI;
     }
-    if( newscan.phiMax>2.f*M_PI+epsilon ){
-        std::cerr << "WARNING (LiDARcloud::addScan): Specified scan maximum azimuth angle of " << newscan.phiMax << " is greater than 2pi. Truncating to 2pi. Did you mistakenly use degrees instead of radians?" << std::endl;
-        newscan.phiMax = 2.f*M_PI;
+    if( newscan.phiMax>4.f*M_PI+epsilon ){
+        std::cerr << "WARNING (LiDARcloud::addScan): Specified scan maximum azimuth angle of " << newscan.phiMax << " is greater than 2pi. Did you mistakenly use degrees instead of radians?" << std::endl;
     }
 
   //initialize the hit table to `-1' (all misses)
@@ -168,7 +167,10 @@ void LiDARcloud::addScan( ScanMetadata &newscan ){
   table.resize(newscan.Ntheta,newscan.Nphi,-1);
   hit_tables.push_back( table );
 
-  scans.push_back(newscan);
+  scans.emplace_back(newscan);
+
+  return scans.size()-1;
+
 }
 
 void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const SphericalCoord &direction ){
