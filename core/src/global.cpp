@@ -1229,6 +1229,8 @@ bool helios::PNGHasAlpha( const char* filename ){
 
   Nchannels = png_get_channels(png_ptr, info_ptr);
 
+  png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+
   if( Nchannels==4 ){
     return true;
   }else{
@@ -1326,7 +1328,11 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
     }
   }
 
-  free(row_pointers);
+  for(y = 0;y<height;y++)
+    png_free (png_ptr,row_pointers[y]);
+  png_free (png_ptr, row_pointers);
+  png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+
 
   return mask;
   
@@ -1413,7 +1419,11 @@ void helios::readPNG( const std::string &filename, uint & width, uint & height, 
     }
   }
 
-  free(row_pointers);
+  for(y = 0;y<height;y++)
+    png_free (png_ptr,row_pointers[y]);
+  png_free (png_ptr, row_pointers);
+  png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+
 
 }
 

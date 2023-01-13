@@ -1192,3 +1192,11 @@
 
 *Canopy Generator*
 - All primitives in the grapevine and bean models now belong to compound objects.
+
+[1.2.56] 2022-XX-XX
+
+*Context*
+- There were some minor memory leaks associated with the PNG texture/image reading/writing. These were generally very small leaks.
+
+*Visualizer*
+- There were some minor memory leaks associated with the PNG texture/image reading/writing. These were generally very small leaks.
