@@ -354,7 +354,10 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
         }
     }
 
-    free(row_pointers);
+    for(y = 0;y<height;y++)
+      png_free (png_ptr,row_pointers[y]);
+    png_free (png_ptr, row_pointers);
+    png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
 
 }
 

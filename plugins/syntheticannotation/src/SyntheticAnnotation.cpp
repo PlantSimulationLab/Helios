@@ -417,12 +417,10 @@ void SyntheticAnnotation::render( const char* outputdir ) {
     std::vector<uint> pixels;
     pixels.resize(framebufferH * framebufferW * 3);
 
-    std::vector<int> ID;
+    vis.buildContextGeometry(context);
+    vis.hideWatermark();
 
     for( int view=0; view<camera_position.size(); view++ ) {
-
-        vis.buildContextGeometry(context);// Move here because it is changed in semantic segmentation
-        vis.hideWatermark();// Move here because it is changed in semantic segmentation
 
         vis.setCameraPosition(camera_position.at(view), camera_lookat.at(view));
 
@@ -436,8 +434,8 @@ void SyntheticAnnotation::render( const char* outputdir ) {
         for (int j = framebufferH; j > 0; j--) {
             for (int i = 0; i < framebufferW; i++) {
 
-                ID.push_back(rgb2int(make_RGBcolor(pixels[t] / 255.f, pixels[t + 1] / 255.f, pixels[t + 2] / 255.f)));
-                file << ID.back() << " " << std::flush;
+                uint ID = rgb2int(make_RGBcolor(pixels[t] / 255.f, pixels[t + 1] / 255.f, pixels[t + 2] / 255.f));
+                file << ID << " " << std::flush;
 
                 t += 3;
 
