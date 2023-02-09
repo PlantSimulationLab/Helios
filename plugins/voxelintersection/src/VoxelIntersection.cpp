@@ -654,80 +654,84 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         
     }
     
-    //vector UUIDs that will be output
-    std::vector<uint> resulting_UUIDs;
-    
-    // the primitive did not intersect with the voxel face
-    if(slice_points.size() == 0){
-        resulting_UUIDs.push_back(UUID);
-        return resulting_UUIDs;
-    }
-    
-    // the primitive intersected with the face at a single point (a corner) - no slicing needed
-    if(slice_points.size() == 1){
-        resulting_UUIDs.push_back(UUID);
-        if(printmessages){
-            std::cout << "the primitive intersected with the face at a single point (a corner) - no slicing needed" << std::endl;
-        }
-        return resulting_UUIDs;
-    }
-    
-    // the primitive intersected with the face along an edge - no need to slice
-    if(slice_points_edge_ID.at(0) == slice_points_edge_ID.at(1)){
-        resulting_UUIDs.push_back(UUID);
-        if(printmessages){
-            std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
-        }
-        return resulting_UUIDs;
-    }
-    
     float absTol = pow(10, -6);
     float relTol = pow(10, -20);
     
     uint initial_slice_points_size = slice_points.size();
     
+    //vector UUIDs that will be output
+    std::vector<uint> resulting_UUIDs;
     
-    if(primitive_vertices.size() == 4)
-    {
-        if((approxSame(slice_points.at(0), primitive_vertices.at(0), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(1), absTol))  ||
-           (approxSame(slice_points.at(0), primitive_vertices.at(1), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(0), absTol)) ||
-           (approxSame(slice_points.at(0), primitive_vertices.at(1), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(2), absTol)) ||
-           (approxSame(slice_points.at(0), primitive_vertices.at(2), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(1), absTol)) ||
-           (approxSame(slice_points.at(0), primitive_vertices.at(2), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(3), absTol)) ||
-           (approxSame(slice_points.at(0), primitive_vertices.at(3), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(2), absTol)) ||
-           (approxSame(slice_points.at(0), primitive_vertices.at(3), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(0), absTol)) ||
-           (approxSame(slice_points.at(0), primitive_vertices.at(0), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(3), absTol)) )
+    // the primitive did not intersect with the voxel face
+    if(initial_slice_points_size == 0){
+        resulting_UUIDs.push_back(UUID);
+        return resulting_UUIDs;
+        
+    }else if(initial_slice_points_size == 1){
+        // the primitive intersected with the face at a single point (a corner) - no slicing needed
+        resulting_UUIDs.push_back(UUID);
+        if(printmessages){
+            std::cout << "the primitive intersected with the face at a single point (a corner) - no slicing needed" << std::endl;
+        }
+        return resulting_UUIDs;
+    }else if(initial_slice_points_size == 2){
+        
+        // This is the usual case
+        // just check to see if the two slice points are approximately at two vertices for edge cases here
+        
+        // the primitive intersected with the face along an edge - no need to slice
+        if(slice_points_edge_ID.at(0) == slice_points_edge_ID.at(1)){
+            resulting_UUIDs.push_back(UUID);
+            if(printmessages){
+                std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
+            }
+            return resulting_UUIDs;
+        }
+        
+
+        
+        if(primitive_vertices.size() == 4)
         {
-            if(printmessages){
-                std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
+            if((approxSame(slice_points.at(0), primitive_vertices.at(0), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(1), absTol))  ||
+               (approxSame(slice_points.at(0), primitive_vertices.at(1), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(0), absTol)) ||
+               (approxSame(slice_points.at(0), primitive_vertices.at(1), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(2), absTol)) ||
+               (approxSame(slice_points.at(0), primitive_vertices.at(2), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(1), absTol)) ||
+               (approxSame(slice_points.at(0), primitive_vertices.at(2), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(3), absTol)) ||
+               (approxSame(slice_points.at(0), primitive_vertices.at(3), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(2), absTol)) ||
+               (approxSame(slice_points.at(0), primitive_vertices.at(3), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(0), absTol)) ||
+               (approxSame(slice_points.at(0), primitive_vertices.at(0), absTol) && approxSame(slice_points.at(1), primitive_vertices.at(3), absTol)) )
+            {
+                if(printmessages){
+                    std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
+                }
+                resulting_UUIDs.push_back(UUID);
+                return resulting_UUIDs;
             }
-            resulting_UUIDs.push_back(UUID);
-            return resulting_UUIDs;
+            
+        }else if(primitive_vertices.size() == 3){
+            
+            if((approxSame(slice_points.at(0), primitive_vertices.at(0), absTol) || approxSame(slice_points.at(0), primitive_vertices.at(1), absTol) ||
+               approxSame(slice_points.at(0), primitive_vertices.at(2), absTol)) &&
+               (approxSame(slice_points.at(1), primitive_vertices.at(0), absTol) || approxSame(slice_points.at(1), primitive_vertices.at(1), absTol) ||
+               approxSame(slice_points.at(1), primitive_vertices.at(2), absTol))){
+                resulting_UUIDs.push_back(UUID);
+                if(printmessages){
+                    std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
+                }
+                return resulting_UUIDs;
+            }
         }
         
-    }else if(primitive_vertices.size() == 3){
         
-        if((approxSame(slice_points.at(0), primitive_vertices.at(0), absTol) || approxSame(slice_points.at(0), primitive_vertices.at(1), absTol) ||
-           approxSame(slice_points.at(0), primitive_vertices.at(2), absTol)) &&
-           (approxSame(slice_points.at(1), primitive_vertices.at(0), absTol) || approxSame(slice_points.at(1), primitive_vertices.at(1), absTol) ||
-           approxSame(slice_points.at(1), primitive_vertices.at(2), absTol))){
-            resulting_UUIDs.push_back(UUID);
-            if(printmessages){
-                std::cout << "the primitive intersected with the face along an edge - no need to slice" << std::endl;
-            }
-            return resulting_UUIDs;
-        }
-    }
-    
-    //ERK
-    //if there are >= 3 slice points, this probably means that two of the points are very close to each other,
-    // at or approximately at one of the primitive's vertices
-    // in this case, if the primitive is a triangle, then it should be sliced into two triangles, not the usual three
-    // in case the primitive is a patch, then it should be sliced into 3 triangles if this occurs at only one vertex, 
-    // or if the voxel face splits the patch diagonally, then only 2 triangles should be produced instead of the usual four
-    
-    if(initial_slice_points_size == 3)
-    {
+    }else if(initial_slice_points_size == 3){
+        
+        //ERK
+        //if there are >= 3 slice points, this probably means that two of the points are very close to each other,
+        // at or approximately at one of the primitive's vertices
+        // in this case, if the primitive is a triangle, then it should be sliced into two triangles, not the usual three
+        // in case the primitive is a patch, then it should be sliced into 3 triangles if this occurs at only one vertex, 
+        // or if the voxel face splits the patch diagonally, then only 2 triangles should be produced instead of the usual four
+        
         vec3 non_vertex_slice_point;
         uint non_vertex_slice_edge_ID;
         vec3 vertex_slice_point;
@@ -758,7 +762,9 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         slice_points.at(0) = non_vertex_slice_point;
         slice_points_edge_ID.at(0) = non_vertex_slice_edge_ID;
         slice_points.at(1) = vertex_slice_point;
-        
+    }else{
+        std::cerr << "ERROR (slicePrimitive): > 3 slice points (case not handled yet)" << std::endl;
+        throw(1);
     }
     
     //determine which side of the plane vertex 0 is on and use that to determine the sign of the buffer to add to the face coordinate
@@ -1020,7 +1026,6 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             // split into three triangles (usual case) 
             if(initial_slice_points_size == 2)
             {
-                
                 for(uint i=0;i<slice_points.size();i++)
                 {
                     //vectors to hold point coordinates and uv coordinates for the points on the current point's edge
@@ -1049,8 +1054,24 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                         point_1uv = v_uv.at(0);
                     }
                     
-                    // vertex for non-vertex slice point
-                    ip_uv.at(i) =  interpolate_texture_UV_to_slice_point(point_0, point_0uv, point_1, point_1uv, slice_points.at(0));
+                    // // vertex for non-vertex slice point
+                    // std::cout << "UUID = " << UUID << ", primitive_vertices.size() = " << primitive_vertices.size() << " , initial_slice_points_size = " <<   initial_slice_points_size << std::endl;
+                    // 
+                    // if(UUID == uint(1228154))
+                    // {
+                    //     context->printPrimitiveInfo(UUID);
+                    //     
+                    //     std::cout << "slice_points: " << std::endl;
+                    //         std::cout << slice_points.at(i) << ", edge_ID = " << slice_points_edge_ID.at(i) << ", point_0 = " << point_0 << " , point_1 = " << point_1 << std::endl;
+                    //      
+                    //      std::cout << "Primitive verticies : " << std::endl;
+                    //      std::cout << primitive_vertices.at(0) << std::endl;
+                    //      std::cout << primitive_vertices.at(1) << std::endl;
+                    //      std::cout << primitive_vertices.at(2) << std::endl;   
+                    // }
+                        
+                    ip_uv.at(i) =  interpolate_texture_UV_to_slice_point(point_0, point_0uv, point_1, point_1uv, slice_points.at(i));
+                    // ip_uv.at(i) =  interpolate_texture_UV_to_slice_point(point_0, point_0uv, point_1, point_1uv, slice_points.at(0));
                     
                     if(ip_uv.at(0).x < 0 || ip_uv.at(0).x > 1 || ip_uv.at(0).y < 0 || ip_uv.at(0).y > 1)
                     {
@@ -1336,9 +1357,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             }else if(initial_slice_points_size == 4){
                 
             }
-            
-        }else 
-            
+    }
     }
     
     // copy over primitive data to the new triangles
@@ -1661,6 +1680,9 @@ helios::vec2 VoxelIntersection::interpolate_texture_UV_to_slice_point(helios::ve
     float Duv = sqrtf(powf(uv2.x - uv1.x, 2.0) + powf(uv2.y - uv1.y, 2.0) ); // distance between edge vertex uv coordinates
     float Dxyzs = sqrtf(powf(ps.x - p1.x, 2.0) + powf(ps.y - p1.y, 2.0)  + powf(ps.z - p1.z, 2.0) ); // distance between slice point and first vertex xyz coordinates
     
+
+    
+    
     std::cout << "Dxyz = " << Dxyz << ", Duv = " << Duv << ", Dxyzs = " << Dxyzs << std::endl;
     std::cout << "f = " << (Dxyzs/Dxyz) << std::endl;
     std::cout << "f*Duv = " << Duv*(Dxyzs/Dxyz) << std::endl;
@@ -1668,6 +1690,17 @@ helios::vec2 VoxelIntersection::interpolate_texture_UV_to_slice_point(helios::ve
     std::cout << "xs = " << ps.x << " , ys = " << ps.y << ", zs = " << ps.z << std::endl;
     std::cout << "x1 = " << p1.x << " , y1 = " << p1.y << ", z1 = " << p1.z << std::endl;
     std::cout << "x2 = " << p2.x << " , y2 = " << p2.y << ", z2 = " << p2.z << std::endl;
+    
+    float F = (Dxyzs/Dxyz);
+    if(F > 1.0)
+    {
+        std::cerr << "ERROR (interpolate_texture_UV_to_slice_point): slice point is not between the two end points" << std::endl;
+        throw(1);
+    }
+    
+    
+    
+    
     //if the u coordinates of the two vertices are the same
     if(uv2.x == uv1.x)
     {
@@ -1684,7 +1717,7 @@ helios::vec2 VoxelIntersection::interpolate_texture_UV_to_slice_point(helios::ve
         float offset = uv1.y - slope*uv1.x;
         
         // coefficients of the quadratic equation for the u coordinate of the slice point
-        float a = slope + 1.0;
+        float a = powf(slope, 2.0) + 1.0;
         float b = -2.0*uv1.x + 2.0*slope*offset - 2.0*slope*uv1.y;
         float c = ( powf(uv1.x, 2.0) + powf(offset, 2.0) - 2.0*offset*uv1.y + powf(uv1.y, 2.0) ) - powf( (Dxyzs/Dxyz)*Duv, 2.0);
         
