@@ -656,13 +656,14 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         
     }
     
+
+    // can be 0, 1, 2, 3, or 4 (0 and 2 are most common)
+    uint initial_slice_points_size = slice_points.size();
+    // std::cout << "initial_slice_points_size = " << initial_slice_points_size << std::endl;
+
     float absTol = pow(10, -6);
     float relTol = pow(10, -20);
     
-    // can be 0, 1, 2, 3, or 4 (0 and 2 are most common)
-    uint initial_slice_points_size = slice_points.size();
-
-
     
     // the primitive did not intersect with the voxel face
     if(initial_slice_points_size == 0){
@@ -722,6 +723,22 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             }
         }
         
+
+        // now that edge cases are taken care of,
+        // for each slice point, if it is approximately the same as a vertex, set it to that vertex
+        for(uint j = 0;j<primitive_vertices.size();j++)
+        {
+            for(uint i=0;i<slice_points.size();i++)
+            {
+                //distance between slice point and primitive vertex
+                float Dxyza = sqrtf(powf(primitive_vertices.at(j).x - slice_points.at(i).x, 2.0) + powf(primitive_vertices.at(j).y - slice_points.at(i).y, 2.0) + powf(primitive_vertices.at(j).z - slice_points.at(i).z, 2.0) ); 
+                if(approxSame(Dxyza, float(0.0), absTol, relTol))
+                {
+                    slice_points.at(i) = primitive_vertices.at(j);
+                }
+            }  
+        }
+            
         
     }else if(initial_slice_points_size == 3){
         
@@ -1589,49 +1606,6 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                         t2 = context->addTriangle(primitive_vertices.at(1) - buffer,  primitive_vertices.at(2) - buffer, primitive_vertices.at(3) - buffer, tex, v_uv.at(1) , v_uv.at(2), v_uv.at(3));
                     }
                     
-                    // if(slice_points_edge_ID.at(0) == 0 && vertex_index == 2)
-                    // {
-                    //     diag_1 = 122;
-                    //     t0 = context->addTriangle(slice_points.at(0) + buffer, slice_points.at(1) + buffer,  primitive_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1), v_uv.at(0));
-                    //     t1 = context->addTriangle(slice_points.at(0) - buffer,  primitive_vertices.at(1) - buffer, slice_points.at(1) - buffer, tex, ip_uv.at(0), v_uv.at(1), ip_uv.at(1));
-                    //     t2 = context->addTriangle(slice_points.at(1) + buffer,  primitive_vertices.at(3) + buffer, primitive_vertices.at(0) + buffer, tex, ip_uv.at(1), v_uv.at(3), v_uv.at(0));
-                    // }else if(slice_points_edge_ID.at(0) == 0 && vertex_index == 3){
-                    //     diag_1 = 123;
-                    //     t0 = context->addTriangle(slice_points.at(0) + buffer, slice_points.at(1) + buffer,  primitive_vertices.at(0) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(0));
-                    //     t1 = context->addTriangle(slice_points.at(0) - buffer, primitive_vertices.at(1) - buffer, slice_points.at(1) - buffer, tex, ip_uv.at(0) , v_uv.at(1), ip_uv.at(1));
-                    //     t2 = context->addTriangle(slice_points.at(1) - buffer,  primitive_vertices.at(1) - buffer, primitive_vertices.at(2) - buffer, tex, ip_uv.at(1), v_uv.at(1) , v_uv.at(2));
-                    // }else if(slice_points_edge_ID.at(0) == 1 && vertex_index == 3){
-                    //     diag_1 = 124;
-                    //     t0 = context->addTriangle(slice_points.at(0) + buffer, slice_points.at(1) + buffer,  primitive_vertices.at(1) + buffer,  tex, ip_uv.at(0), ip_uv.at(1) , v_uv.at(1));
-                    //     t1 = context->addTriangle(slice_points.at(1) + buffer, primitive_vertices.at(0) + buffer, primitive_vertices.at(1) + buffer, tex, ip_uv.at(1), v_uv.at(0), v_uv.at(1));
-                    //     t2 = context->addTriangle(slice_points.at(0) - buffer,  primitive_vertices.at(2) - buffer, slice_points.at(1) - buffer, tex, ip_uv.at(0), v_uv.at(2), ip_uv.at(1));
-                    // }else if(slice_points_edge_ID.at(0) == 1 && vertex_index == 0){
-                    //     diag_1 = 125;
-                    //     t0 = context->addTriangle(slice_points.at(0) + buffer,  slice_points.at(1) + buffer, primitive_vertices.at(1) + buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(1));
-                    //     t1 = context->addTriangle(slice_points.at(0) - buffer, primitive_vertices.at(2) - buffer, slice_points.at(1) - buffer, tex, ip_uv.at(0), v_uv.at(2), ip_uv.at(1));
-                    //     t2 = context->addTriangle(slice_points.at(1) - buffer,  primitive_vertices.at(2) - buffer, primitive_vertices.at(3) - buffer, tex, ip_uv.at(1), v_uv.at(2), v_uv.at(3));
-                    // }else if(slice_points_edge_ID.at(0) == 2 && vertex_index == 1){
-                    //     diag_1 = 126;
-                    //     t0 = context->addTriangle(slice_points.at(0) - buffer, slice_points.at(1) - buffer,  primitive_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(2));
-                    //     t1 = context->addTriangle(slice_points.at(0) + buffer,  primitive_vertices.at(3) + buffer, slice_points.at(1) + buffer, tex, ip_uv.at(0), v_uv.at(3), ip_uv.at(1));
-                    //     t2 = context->addTriangle(slice_points.at(1) + buffer,  primitive_vertices.at(3) + buffer, primitive_vertices.at(0) + buffer, tex, ip_uv.at(1), v_uv.at(3) , v_uv.at(0));
-                    // }else if(slice_points_edge_ID.at(0) == 2 && vertex_index == 0){
-                    //     diag_1 = 127;
-                    //     t0 = context->addTriangle(slice_points.at(0) + buffer,  primitive_vertices.at(3) + buffer, slice_points.at(1) + buffer, tex, ip_uv.at(0), v_uv.at(3), ip_uv.at(1));
-                    //     t1 = context->addTriangle(slice_points.at(0) - buffer, slice_points.at(1) - buffer, primitive_vertices.at(2) - buffer, tex, ip_uv.at(0), ip_uv.at(1), v_uv.at(2));
-                    //     t2 = context->addTriangle(slice_points.at(1) - buffer,  primitive_vertices.at(1) - buffer, primitive_vertices.at(2) - buffer, tex, ip_uv.at(1), v_uv.at(1), v_uv.at(2));
-                    // }else if(slice_points_edge_ID.at(0) == 3 && vertex_index == 2){
-                    //     diag_1 = 128;
-                    //     t0 = context->addTriangle(slice_points.at(0) + buffer,  primitive_vertices.at(0) + buffer, slice_points.at(1) + buffer, tex, ip_uv.at(0), v_uv.at(0), ip_uv.at(1));
-                    //     t1 = context->addTriangle(slice_points.at(1) + buffer, primitive_vertices.at(0) + buffer, primitive_vertices.at(1) + buffer, tex, ip_uv.at(1), v_uv.at(0), v_uv.at(1));
-                    //     t2 = context->addTriangle(slice_points.at(0) - buffer,   slice_points.at(1) - buffer, primitive_vertices.at(3) - buffer, tex, ip_uv.at(0), ip_uv.at(1), v_uv.at(3));
-                    // }else if(slice_points_edge_ID.at(0) == 3 && vertex_index == 1){
-                    //     diag_1 = 129;
-                    //     t0 = context->addTriangle(slice_points.at(0) + buffer,  primitive_vertices.at(0) + buffer, slice_points.at(1) + buffer, tex, ip_uv.at(0), v_uv.at(0), ip_uv.at(1) );
-                    //     t1 = context->addTriangle(slice_points.at(0) - buffer, slice_points.at(1) - buffer, primitive_vertices.at(3) - buffer, tex, ip_uv.at(0), ip_uv.at(1) ,v_uv.at(3));
-                    //     t2 = context->addTriangle(slice_points.at(1) - buffer,  primitive_vertices.at(2) - buffer, primitive_vertices.at(3) - buffer, tex, ip_uv.at(1), v_uv.at(2), v_uv.at(3));
-                    // }
-                    
                     //delete triangles with area of zero, otherwise add to resulting_UUIDs vector
                     if(context->getPrimitiveArea(t0) < minArea)
                     {
@@ -1915,6 +1889,7 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
     
     for(uint p=0;p<UUIDs_to_slice.size();p++)
     {
+        // std::cout << "UUIDs_to_slice.at(p) = " << UUIDs_to_slice.at(p) << std::endl;
         int cell_ID = 0;
         bool flag = false;
         
@@ -2020,14 +1995,23 @@ helios::vec2 VoxelIntersection::interpolate_texture_UV_to_slice_point(helios::ve
     // std::cout << "f = " << (Dxyzs/Dxyz) << std::endl;
     // std::cout << "f*Duv = " << Duv*(Dxyzs/Dxyz) << std::endl;
 
-
+    float absTol = pow(10, -6);
 
     float F = (Dxyzs/Dxyz);
     if(F > 1.0)
     {
         std::cerr << "ERROR (interpolate_texture_UV_to_slice_point): slice point is not between the two end points" << std::endl;
         throw(1);
+    }else if(approxSame(p1, ps, absTol)){
+        // then the slice point is the same as the first vertex
+        uvs = make_vec2(uv1.x, uv1.y);
+        return uvs;
+    }else if(approxSame(p2, ps, absTol)){
+        // then the slice point is the same as the first vertex
+        uvs = make_vec2(uv2.x, uv2.y);
+        return uvs;
     }
+    
 
     //if the u coordinates of the two vertices are the same
     if(uv2.x == uv1.x)
@@ -2056,10 +2040,10 @@ helios::vec2 VoxelIntersection::interpolate_texture_UV_to_slice_point(helios::ve
         float vs_a = slope*us_a + offset;
         float vs_b = slope*us_b + offset;
         
-        // std::cout << "slope = " << slope << ", offset = " << offset << std::endl;
-        // std::cout << "a = " << a << ", b = " << b << ", c = " << c << std::endl;
-        // std::cout << "us_a = " << us_a << ", vs_a = " << vs_a << std::endl;
-        // std::cout << "us_b = " << us_b << ", vs_b = " << vs_b << std::endl;
+        std::cout << "slope = " << slope << ", offset = " << offset << std::endl;
+        std::cout << "a = " << a << ", b = " << b << ", c = " << c << std::endl;
+        std::cout << "us_a = " << us_a << ", vs_a = " << vs_a << std::endl;
+        std::cout << "us_b = " << us_b << ", vs_b = " << vs_b << std::endl;
         
         
         //determine which of the roots is the right one
