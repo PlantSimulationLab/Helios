@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.2.56
+/*! \mainpage Helios Documentation v1.2.57
 
   \image html Helios_logo.png
 
@@ -687,9 +687,9 @@
 
  The \ref scalePrimitive() function takes a vec3 that denotes a scaling factor to apply in each Cartesian direction (x,y,z). The \ref translatePrimitive() function moves the primitive based on values provided by a vec3 that specifies the distance to translate in the x-, y-, and z-directions.
 
- The \ref rotatePrimitive() function rotates the primitive about an axis through an angle specified in radians. To rotate about one of the x-, y-, or z-axes, the function can be supplied a string of 'x', 'y', or 'z', respectively. The primitive can also be rotated about an arbitrary axis described by a unit vector argument.
+ The \ref rotatePrimitive() function rotates the primitive about an axis through an angle specified in radians. To rotate about one of the x-, y-, or z-axes, the function can be supplied a string of 'x', 'y', or 'z', respectively. The primitive can also be rotated about an arbitrary axis described by a unit vector argument. By default, the axis passes through the origin, but there is also an option to specify an arbitrary axis of rotation passing through an arbitrary origin point.
 
- It is important to note that the order that transformations are applied is important. Each transformation is applied based on the primitives current state. Rotating a primitive centered about the origin will cause the primitive to rotate about its own center. However, if a primitive is first translated then rotated, the primitive will be rotated about the origin (0,0,0), which does not necessarily coincide with the primitive's center if it has been translated.
+ It is important to note that the order in which transformations are applied matters. Each transformation is applied based on the primitives current state. Rotating a primitive centered about the origin will cause the primitive to rotate about its own center. However, if a primitive is first translated then rotated, the primitive will be rotated about the origin (0,0,0), which does not necessarily coincide with the primitive's center if it has been translated.
 
  The table below gives a list of primitive transformation functions, each of which take either a single UUID or a vector of UUIDs to apply the same transformation to multiple primitives.
 
@@ -705,6 +705,8 @@
                                 <li>\ref helios::Context::rotatePrimitive( const std::vector<uint>&, float, const char* )</li>
                                 <li>\ref helios::Context::rotatePrimitive( uint, float, const helios::vec3& )</li>
                                 <li>\ref helios::Context::rotatePrimitive( const std::vector<uint> &, float, const helios::vec3& )</li>
+                                <li>\ref helios::Context::rotatePrimitive( uint, float, const helios::vec3&, const helios::vec3& )</li>
+                                <li>\ref helios::Context::rotatePrimitive( const std::vector<uint> &, float, const helios::vec3&, const helios::vec3& )</li>
                             </ul>
                        </td></tr>
 <tr><td>Scaling</td><td> <ul>

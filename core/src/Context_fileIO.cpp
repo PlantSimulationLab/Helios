@@ -1582,19 +1582,35 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     //Create a dummy patch in order to get the center, size, and rotation based on transformation matrix
     Patch patch( make_RGBAcolor(0,0,0,0), 0, 0 );
     patch.setTransformationMatrix(transform);
-    SphericalCoord rotation = cart2sphere(patch.getNormal());
-    rotation.elevation = rotation.zenith;
+//    SphericalCoord rotation = cart2sphere(patch.getNormal());
+//    rotation.elevation = rotation.zenith;
 
     // * Add the Tile * //
+//    if (strcmp(texture_file.c_str(), "none") == 0) {
+//      if( strlen(color_str) == 0 ){
+//        ID = addTileObject(patch.getCenter(), patch.getSize(), rotation, subdiv );
+//      }else {
+//        ID = addTileObject(patch.getCenter(), patch.getSize(), rotation, subdiv, make_RGBcolor(color.r, color.g, color.b));
+//      }
+//    } else {
+//      ID = addTileObject(patch.getCenter(), patch.getSize(), rotation, subdiv, texture_file.c_str());
+//    }
+
     if (strcmp(texture_file.c_str(), "none") == 0) {
       if( strlen(color_str) == 0 ){
-        ID = addTileObject(patch.getCenter(), patch.getSize(), rotation, subdiv );
+        ID = addTileObject( make_vec3(0,0,0), make_vec2(1,1), nullrotation, subdiv );
       }else {
-        ID = addTileObject(patch.getCenter(), patch.getSize(), rotation, subdiv, make_RGBcolor(color.r, color.g, color.b));
+        ID = addTileObject( make_vec3(0,0,0), make_vec2(1,1), nullrotation, subdiv, make_RGBcolor(color.r, color.g, color.b));
       }
     } else {
-      ID = addTileObject(patch.getCenter(), patch.getSize(), rotation, subdiv, texture_file.c_str());
+      ID = addTileObject( make_vec3(0,0,0), make_vec2(1,1), nullrotation, subdiv, texture_file.c_str());
     }
+
+    getTileObjectPointer(ID)->setTransformationMatrix(transform);
+
+//    float T[16];
+//    makeTranslationMatrix(-patch.getCenter()
+    setPrimitiveTransformationMatrix(getObjectPrimitiveUUIDs(ID),transform);
 
     //if primitives exist that were assigned to this object, delete all primitives that were just created
     if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {

@@ -1203,3 +1203,17 @@
 
 *Synthetic Annotation*
 - Visualizer geometry was being updated for every view when generating labels, which resulted in slow performance and building of large amounts of memory.
+
+[1.2.57] 2022-02-23
+
+*Context*
+- Some temporary fixes applied related to reading/writing of Tile Objects to XML. There are still issues when the tiles have been rotated about their normal axis that need to be resolved.
+
+*Synthetic Annotation*
+- Error fixed that could cause a character buffer overflow for very long file paths. Strings are now used instead of character arrays, which allows for arbitrarily long paths.
+
+*Energy Balance*
+- Documentation updated to clarify that primitive outgoing emission depends on whether the primitive is 'two-sided'
+
+*Boundary-Layer Conductance*
+- Minor errors corrected in documentation
