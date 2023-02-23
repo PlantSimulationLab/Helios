@@ -35,7 +35,7 @@ SyntheticAnnotation::SyntheticAnnotation( helios::Context* __context ){
   camera_lookat.push_back( make_vec3(0, 0, 1) );
 }
 
-int SyntheticAnnotation::selfTest( void ) const{
+int SyntheticAnnotation::selfTest() const{
 
     if( printmessages ) {
         std::cout << "Running synthetic image annotation self-test..." << std::flush;
@@ -289,18 +289,21 @@ void SyntheticAnnotation::render( const char* outputdir ) {
         return;
     }
     //create sub-directory structure for each view
-    char viewdir[100];
+    //std::string viewdir;
     for( int d=0; d<camera_position.size(); d++ ){
-        sprintf(viewdir,"%sview%05d/",createdir.c_str(),d);
-        int dir = system(viewdir);
-        if (dir < 0) {
-            std::cerr << "ERROR (SyntheticAnnotation::render): view sub-directory could not be created. Exiting..." << std::endl;
-            return;
-        }
+      std::stringstream viewdir;
+      viewdir << createdir << "view" << std::setfill('0') << std::setw(5) << d << "/";
+      std::cout << "viewdir: " << viewdir.str() << std::endl;
+      //std::snprintf(viewdir,createdir.size()+24,"%sview%05d/",createdir.c_str(),d);
+      int dir = system( viewdir.str().c_str() );
+      if (dir < 0) {
+        std::cerr << "ERROR (SyntheticAnnotation::render): view sub-directory could not be created. Exiting..." << std::endl;
+        return;
+      }
     }
 
     uint framebufferW, framebufferH;
-    char outfile[100];
+    std::stringstream outfile;
 
     //------ RGB rendering with no labels --------//
 
@@ -331,8 +334,11 @@ void SyntheticAnnotation::render( const char* outputdir ) {
 
         wait(5);
 
-        sprintf(outfile, "%sview%05d/RGB_rendering.jpeg", odir.c_str(),view);
-        vis_RGB.printWindow(outfile);
+        outfile.clear();
+        outfile.str("");
+        outfile << odir << "view" << std::setfill('0') << std::setw(5) << view << "/RGB_rendering.jpeg";
+        //std::snprintf(outfile, odir.size()+48, "%sview%05d/RGB_rendering.jpeg", odir.c_str(),view);
+        vis_RGB.printWindow(outfile.str().c_str());
 
     }
 
@@ -365,11 +371,14 @@ void SyntheticAnnotation::render( const char* outputdir ) {
 
     vis.getFramebufferSize(framebufferW, framebufferH);
 
-    sprintf(outfile, "%s/ID_mapping.txt", odir.c_str());
-    std::ofstream mapping_file(outfile);
+    outfile.clear();
+    outfile.str("");
+    outfile << odir << "/ID_mapping.txt";
+    //std::snprintf(outfile, odir.size()+24, "%s/ID_mapping.txt", odir.c_str());
+    std::ofstream mapping_file(outfile.str());
 
     int gID = 0;
-    for (std::map<std::string, std::vector<uint> >::iterator g = labelIDs.begin(); g != labelIDs.end(); ++g) { //looping over labels
+    for ( auto g = labelIDs.begin(); g != labelIDs.end(); ++g) { //looping over labels
 
         //todo I think some additional modifications will be needed to make this work again
 //        mapping_file << g->first << " " << g->second << std::endl;
@@ -428,8 +437,11 @@ void SyntheticAnnotation::render( const char* outputdir ) {
 
         vis.getWindowPixelsRGB(&pixels[0]);
 
-        sprintf(outfile, "%sview%05d/pixelID_combined.txt", odir.c_str(), view);
-        std::ofstream file(outfile);
+        outfile.clear();
+        outfile.str("");
+        outfile << odir << "view" << std::setfill('0') << std::setw(5) << view << "/pixelID_combined.txt";
+        //std::snprintf(outfile, odir.size()+48, "%sview%05d/pixelID_combined.txt", odir.c_str(), view);
+        std::ofstream file(outfile.str());
         int t = 0;
         for (int j = framebufferH; j > 0; j--) {
             for (int i = 0; i < framebufferW; i++) {
@@ -455,9 +467,12 @@ void SyntheticAnnotation::render( const char* outputdir ) {
 
             int4 bbox;
 
-            for (std::map<std::string, std::vector<uint> >::iterator g = labelIDs.begin(); g != labelIDs.end(); ++g) { //looping over labels
-                sprintf(outfile, "%s/view%05d/rectangular_labels_%s.txt", outputdir,view,g->first.c_str());
-                std::ofstream labelfile_rectoccluded(outfile);
+            for ( auto g = labelIDs.begin(); g != labelIDs.end(); ++g) { //looping over labels
+              outfile.clear();
+              outfile.str("");
+              outfile << odir << "view" << std::setfill('0') << std::setw(5) << view << "/rectangular_labels_" << g->first.c_str() << ".txt";
+              //std::snprintf(outfile, outputdir.size()+48, "%s/view%05d/rectangular_labels_%s.txt", outputdir,view,g->first.c_str());
+              std::ofstream labelfile_rectoccluded(outfile.str());
                 for (size_t group = 0; group < g->second.size(); group++) {//looping over objects within each label
 
                     gID = g->second.at(group);
@@ -498,18 +513,21 @@ void SyntheticAnnotation::render( const char* outputdir ) {
                     std::vector<uint> groupIDall;
                     int element_position;
                     //Extract masks and write to file for each Label group
-                    sprintf(outfile, "%sview%05d/semantic_segmentation_ID_mapping.txt", odir.c_str(), view);
-                    std::ofstream SemanticSegmentationID(outfile);
+                    outfile.clear();
+                    outfile.str("");
+                    outfile << odir << "view" << std::setfill('0') << std::setw(5) << view << "/semantic_segmentation_ID_mapping.txt";
+                    //std::snprintf(outfile, odir.size()+48, "%sview%05d/semantic_segmentation_ID_mapping.txt", odir.c_str(), view);
+                    std::ofstream SemanticSegmentationID(outfile.str());
                     SemanticSegmentationID << "Element" << " " << "Label" << std::endl;
-                    for (std::map<std::string, std::vector<uint> >::iterator g = labelIDs.begin();
-                        g != labelIDs.end(); ++g) { //looping over labels
+                    for ( auto g = labelIDs.begin(); g != labelIDs.end(); ++g) { //looping over labels
                         new_label += 1;
                         cout << g->first << endl;
                         SemanticSegmentationID << g->first << " " << new_label << std::endl;
-                        //sprintf(outfile, "%sview%05d/semantic_segmentation_%s.txt", odir.c_str(), view, g->first.c_str()); //Use this line if you want separete files for the Semantic Segmentation
-                        //std::ofstream labelfile_semanticsegmentation(outfile); //Use this line if you want separete files for the Semantic Segmentation
-                        sprintf(outfile, "%sview%05d/semantic_segmentation.txt", odir.c_str(), view);
-                        std::ofstream SemanticSegmentation(outfile);
+                        outfile.clear();
+                        outfile.str("");
+                        outfile << odir << "view" << std::setfill('0') << std::setw(5) << view << "/semantic_segmentation.txt";
+                        //std::snprintf(outfile, odir.size()+48, "%sview%05d/semantic_segmentation.txt", odir.c_str(), view);
+                        std::ofstream SemanticSegmentation(outfile.str());
                         std::vector<uint> groupID;
                         for (size_t group = 0; group < g->second.size(); group++) {//looping over objects within each label
                             gID = g->second.at(group);
@@ -599,13 +617,16 @@ void SyntheticAnnotation::render( const char* outputdir ) {
 
                     vis.plotUpdate( true );
 
-                    sprintf(outfile,"%sview%05d/instance_segmentation_%s_%07d.txt",odir.c_str(), view,g->first.c_str(),counter_object);
+                    outfile.clear();
+                    outfile.str("");
+                    outfile << odir << "view" << std::setfill('0') << std::setw(5) << view << "/instance_segmentation_" << g->first.c_str() << "_" << std::setfill('0') << std::setw(7) << ".txt";
+                    //std::snprintf(outfile, odir.size()+96, "%sview%05d/instance_segmentation_%s_%07d.txt",odir.c_str(), view,g->first.c_str(),counter_object);
 
                     //Extract masks and write to file
 
                     vis.getWindowPixelsRGB(&pixels[0]);
 
-                    writePixelID(outfile,labelminpixels,&vis);
+                    writePixelID(outfile.str().c_str(),labelminpixels,&vis);
 
                     vis.clearGeometry();
 

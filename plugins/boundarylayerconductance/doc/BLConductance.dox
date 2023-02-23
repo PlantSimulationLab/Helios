@@ -36,17 +36,17 @@
 
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description <th>Available Plug-ins <th>Default Value
-  <tr><td>wind_speed <td>m/s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
-  <tr><td>object_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
-  <tr><td>air_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>290 K
- <tr><td>surface_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Object surface temperature. <td>\ref EnergyBalanceModel <td>300 K
- <tr><td>twosided_flag <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces with energy transfer (must be 1 or 2). <td>N/A <td>2  </table>
+  <tr><td>wind\_speed <td>m/s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
+  <tr><td>object\_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
+  <tr><td>air\_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>290 K
+ <tr><td>surface\_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Object surface temperature. <td>\ref EnergyBalanceModel <td>300 K
+ <tr><td>twosided\_flag <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces with energy transfer (must be 1 or 2). <td>N/A <td>2  </table>
 
  \subsection BLOutputData Default Output Primitive Data
  
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description
- <tr><td>boundarylayer_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive boundary-layer conductance calculated by this plug-in.
+ <tr><td>boundarylayer\_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive boundary-layer conductance calculated by this plug-in.
  </table>
 
  \section BLUse Using the Boundary Layer Conductance Model Plug-in
@@ -75,15 +75,15 @@
 
  The Polhausen equation is a classical similarity solution describing the boundary-layer conductance to heat for a flat plate parallel with the flow direction that is infinitely wide in the spanwise direction, and has finite length of \f$L\f$ in the streamwise direction. This model also assumes that the plate/primitive boundary-layer is laminar, and that convection is entirely forced (i.e., momentum forces dominate buoyancy forces). The boundary-layer conductance is calculated as
 
- \f$g_H = 0.135\sqrt{\frac{U}{L}}n_s\f$,
+ \f$g_H = 0.135 n_s\sqrt{\frac{U}{L}}\f$,
 
- where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension in the streamwise direction of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. If the primitive belongs to a Tile Compound Object, the plug-in will automatically use the dimension of the entire tile object and not that of a single patch/tile. Note that \f$g_H\f$ describes transfer from both sides of the plate/primitive, but transfer from each side of the plate/primitive is asymmetric because of buoyancy forces. $n_s$ is the number of primitive faces, which is determined by the value of primitive data ``twosided-flag" (twosided_flag=0 is single-sided and $n_s=1$, twosided_flag=1 is two-sided and $n_s=2$).
+ where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension in the streamwise direction of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. If the primitive belongs to a Tile Compound Object, the plug-in will automatically use the dimension of the entire tile object and not that of a single patch/tile. Note that \f$g_H\f$ describes transfer from both sides of the plate/primitive, but transfer from each side of the plate/primitive is asymmetric because of buoyancy forces. \f$n_s\f$ is the number of primitive faces, which is determined by the value of primitive data "twosided_flag" (twosided\_flag=0 is single-sided and \f$n_s=1\f$, twosided\_flag=1 is two-sided and \f$n_s=2\f$).
 
  \subsubsection BLC2 2. Laminar Inclined Plate, Mixed Free-Forced Convection
 
  <a href="https://doi.org/10.1115/1.3247020">Chen et al. (1986)</a> provide a correlation for the boundary-layer conductance of a flat plate that is inclined with respect to the mean ambient flow direction. The correlation assumes that the plate is infinite in the spanwise direction, and has length \f$L\f$ in the other direction.
 
- The boundary-layer conductace for a plate inclined at \f$\theta_L\leq 75^\circ\f$ is given by
+ The boundary-layer conductance for a plate inclined at \f$\theta_L\leq 75^\circ\f$ is given by
 
  \f$g_H(\theta_L)=\frac{\rho_a \nu}{Pr\,D_L}2F_1Re^{1/2}\left\{1\pm\left[\frac{2F_2\left(Gr\,\mathrm{cos}\,\theta_L/Re^2\right)^{1/4}}{3F_1}\right]^3\right\}^{1/3},\f$
 

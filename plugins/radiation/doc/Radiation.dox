@@ -75,7 +75,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <th>Units</th>
      <th>Data Type</th>
      <th>Description</th>
-     <th>Availalbe Plug-ins</th>
+     <th>Available Plug-ins</th>
      <th>Default Value</th>
    </tr>
    <tr>
@@ -87,7 +87,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <td>300 K</td>
    </tr>
    <tr>
-     <td>reflectivity_*</td>
+     <td>reflectivity\_*</td>
      <td>unitless</td>
      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
      <td>Primitive reflectivity for band * (i.e., reflectivity for band 'PAR' would be 'reflectivity_PAR').</td>
@@ -95,7 +95,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <td>0</td>
    </tr>
    <tr>
-     <td>transmissivity_*</td>
+     <td>transmissivity\_*</td>
      <td>unitless</td>
      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
      <td>Primitive transmissivity for band * (i.e., transmissivity for band 'PAR' would be 'transmissivity_PAR').</td>
@@ -103,7 +103,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <td>0</td>
    </tr>
    <tr>
-     <td>emissivity_*</td>
+     <td>emissivity\_*</td>
      <td>unitless</td>
      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
      <td>Primitive emissivity for band * (i.e., emissivity for band 'PAR' would be 'emissivity_PAR'). <b>NOTE: Only needed if performing emission calculations.</b></td>
@@ -111,10 +111,10 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <td>1.0</td>
    </tr>
    <tr>
-     <td>twosided_flag</td>
+     <td>twosided\_flag</td>
      <td>N/A</td>
      <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td>
-     <td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. ``\ref RadTwoSided" below for more information.</td>
+     <td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. \ref RadTwoSided below for more information.</td>
      <td>N/A</td>
      <td>1</td>
    </tr>
@@ -130,7 +130,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <th>Description</th>
    </tr>
    <tr>	
-     <td>radiation_flux_*</td>
+     <td>radiation\_flux\_*</td>
      <td>W/m<sup>2</sup></td>
      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
      <td>Absorbed radiation flux for band * (i.e., the flux for band 'PAR' would be 'radiation_flux_PAR').</td>
@@ -141,7 +141,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsection RadConst Model Class Constructor
 
- The radiation model class contains functions and data assoicated with the model. To begin, declare an instance of the RadiationModel class. The class constructor takes one argument - a pointer to the Helios context. It uses this pointer to access model geometry and data in the context.
+ The radiation model class contains functions and data associated with the model. To begin, declare an instance of the RadiationModel class. The class constructor takes one argument - a pointer to the Helios context. It uses this pointer to access model geometry and data in the context.
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
    <pre><code>%RadiationModel radiationmodel(&context); //declare the model class</code></pre></div>

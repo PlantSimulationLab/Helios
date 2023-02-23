@@ -47,7 +47,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  The model is solving the steady-state budget between absorbed radiation, emitted radiation, sensible heat exchange, and latent heat exchange, which is written as
 
- \f[ R-\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+C_p\frac{dT_s}{dt}+Q_{other}\f]
+ \f[ R-n_s\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+C_p\frac{dT_s}{dt}+Q_{other}\f]
 
  Variables in this equation are listed in this table:
 
@@ -65,6 +65,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <tr><td>\f$p_{atm}\f$ (Pa)</td><td>Atmospheric pressure.</td></tr>
  <tr><td>\f$C_p\f$ (J/m<sup>2</sup>/<sup>o</sup>C)</td><td>Heat capacity of object.</td></tr>
  <tr><td>\f$Q_{other}\f$ (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, or latent (e.g., storage).</td></tr>
+ <tr><td>\f$n_s\f$</td><td>Number of primitive faces (e.g., typically \f$n_s=2\f$ for leaves, and \f$n_s=1\f$ for the ground.</td></tr>
  </table>
 
  Constants are given by:
@@ -90,36 +91,36 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description <th>Available Plug-ins <th>Default Value
- <tr><td>radiation_flux_[*] <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Net absorbed radiation flux for band [*] (e.g., direct_flux_PAR). <td>Can be computed by \ref RadiationModel plug-in. <td>0
-  <tr><td>wind_speed <td>m/s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
-  <tr><td>object_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
- <tr><td>boundarylayer_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
- <tr><td>air_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>300 K
- <tr><td>moisture_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Conductance to moisture between sub-surface air spaces and surface (e.g., for leaves this is stomatal conductance). <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0
- <tr><td>surface_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Relative humidity of air immediately above surface evaporating site. <td>N/A <td>1.0 (saturated)
- <tr><td>air_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air relative humidity outside of surface boundary layer. <td>N/A <td>0.5
- <tr><td>air_pressure <td>Pascals <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Atmospheric pressure. <td>N/A <td>101,000 Pa
- <tr><td>heat_capacity <td> J/m<sup>2</sup>/<sup>o</sup>C <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Heat capacity of object. <td>N/A <td>0
- <tr><td>other_surface_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Other surface energy fluxes. <td>N/A <td>0
- <tr><td>twosided_flag <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces with energy transfer (must be 1 or 2). <td>N/A <td>2
- <tr><td>evaporating_faces <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces from which water is evaporating (must be 1 or 2). Note: if "twosided_flag" is equal to 1, the number of evaporating faces will be automatically set to 1.<td>N/A <td>1  </table>
+ <tr><td>radiation\_flux\_[*] <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Net absorbed radiation flux for band [*] (e.g., direct_flux_PAR). <td>Can be computed by \ref RadiationModel plug-in. <td>0
+  <tr><td>wind\_speed <td>m/s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
+  <tr><td>object\_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
+ <tr><td>boundarylayer\_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
+ <tr><td>air\_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>300 K
+ <tr><td>moisture\_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Conductance to moisture between sub-surface air spaces and surface (e.g., for leaves this is stomatal conductance). <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0
+ <tr><td>surface\_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Relative humidity of air immediately above surface evaporating site. <td>N/A <td>1.0 (saturated)
+ <tr><td>air\_humidity <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air relative humidity outside of surface boundary layer. <td>N/A <td>0.5
+ <tr><td>air\_pressure <td>Pascals <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Atmospheric pressure. <td>N/A <td>101,000 Pa
+ <tr><td>heat\_capacity <td> J/m<sup>2</sup>/<sup>o</sup>C <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Heat capacity of object. <td>N/A <td>0
+ <tr><td>other\_surface\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Other surface energy fluxes. <td>N/A <td>0
+ <tr><td>twosided\_flag <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces with energy transfer (must be 1 or 2). <td>N/A <td>2
+ <tr><td>evaporating\_faces <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces from which water is evaporating (must be 1 or 2). Note: if "twosided_flag" is equal to 1, the number of evaporating faces will be automatically set to 1.<td>N/A <td>1  </table>
  
  \subsection EBOutputData Default Output Primitive Data
  
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description
  <tr><td>temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive surface temperature.
- <tr><td>sensible_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Sensible heat flux.
- <tr><td>latent_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Latent heat flux.
- <tr><td>storage_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Storage heat flux.
+ <tr><td>sensible\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Sensible heat flux.
+ <tr><td>latent\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Latent heat flux.
+ <tr><td>storage\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Storage heat flux.
  </table>
 
  \subsection EBOptionalOutputData Optional Output Primitive Data
  
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description
- <tr><td>boundarylayer_conductance_out <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive boundary-layer conductance calculated by this plug-in.
- <tr><td>vapor_pressure_deficit <td>mol/mol <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Surface vapor pressure deficit.
+ <tr><td>boundarylayer\_conductance\_out <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive boundary-layer conductance calculated by this plug-in.
+ <tr><td>vapor\_pressure\_deficit <td>mol/mol <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Surface vapor pressure deficit.
  </table>
 
  \section EBUse Using the Energy Balance Model Plug-in
@@ -133,7 +134,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  In order for the model to calculate the absorbed all-wave radiation flux, it needs to know the names of all radiation bands that were added to the radiation model. This is done using the function \ref EnergyBalanceModel::addRadiationBand() "addRadiationBand()". In the following examplle, assume we have three radiative wavebands "PAR", "NIR", and "LW". 
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> \c// Initialize the Model
+ <pre><code> \c // Initialize the Model
   %EnergyBalanceModel energybalance(&context);
 
   energybalance.addRadiationBand("PAR");
@@ -142,19 +143,19 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsection EBblc Boundary-layer Conductance Model
 
- The primitive boundary-layer conductance can either be set using the \ref BLConductanceModel plug-in, or using the default model which is the Polhausen equation. Note also that custom conductance values can also be provided by setting the value of primitive data labeled `boundarylayer_conductance', which overrides the computed model value.
+ The primitive boundary-layer conductance can either be set using the \ref BLConductanceModel plug-in, or using the default model which is the Polhausen equation. Note also that custom conductance values can also be provided by setting the value of primitive data labeled 'boundarylayer_conductance', which overrides the computed model value.
 
  It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.
 
  The default boundary-layer conductance is calculated as
 
- \f$g_H = 0.135\sqrt{\frac{U}{L}}n_s\f$,
+ \f$g_H = 0.135 n_s\sqrt{\frac{U}{L}}\f$,
 
- where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. \f$n_s\f$ is the number of primitive faces, which is determined by the value of primitive data ``twosided_flag" (twosided_flag=0 is single-sided and \f$n_s=1\f$, twosided_flag=1 is two-sided and \f$n_s=2\f$).
+ where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. \f$n_s\f$ is the number of primitive faces , which is determined by the value of primitive data "twosided_flag" (twosided\_flag=0 is single-sided and \f$n_s=1\f$, twosided\_flag=1 is two-sided and \f$n_s=2\f$).
 
  \subsection EBgm Moisture Conductance
 
-  For surfaces that are not completely dry or completely saturated with water, availability of water at the surface determines the rate of moisture transfer from the surface. This is represented by the surface moisture conductance \f$g_S\f$, and corresponds to the conductance between the sub-surface air spaces and the surface.
+ For surfaces that are not completely dry or completely saturated with water, availability of water at the surface determines the rate of moisture transfer from the surface. This is represented by the surface moisture conductance \f$g_S\f$, and corresponds to the conductance between the sub-surface air spaces and the surface.
 
   For a dry surface, \f$g_S=0\f$ and thus there is no moisture transfer at the surface. For a surface that is saturated with water (e.g., a lake, puddle), \f$g_S\rightarrow\infty\f$ as the supply of water at the surface is theoretically infinite.
 
@@ -168,7 +169,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
    \f$g_M = n_e\dfrac{(1.08g_H/n_s)g_S}{1.08g_H/n_s+g_S}\f$,
 
-   where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat. \f$n_e\f$ is the number of evaporating surfaces of the primitive (either 1 or 2), which is set by the primitive data value ``evaporating faces". For leaves, \f$n_e=1\f$ corresponds to hypostomatous leaves (stomata on one side), and \f$n_e=2\f$ to amphistomatous leaves (stomata on both sides).
+   where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat. \f$n_e\f$ is the number of evaporating surfaces of the primitive (either 1 or 2), which is set by the primitive data value "evaporating_faces". For leaves, \f$n_e=1\f$ corresponds to hypostomatous leaves (stomata on one side), and \f$n_e=2\f$ to amphistomatous leaves (stomata on both sides).
 
    It is important to note that if \f$n_s=1\f$, then the value of \f$n_e\f$ will be overridden and also set to 1.
 
@@ -211,7 +212,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Additional functions are available to run the unsteady energy balance model with heat storage. If the timestep argument "dt" is passed with value greater than 0, and the heat capacity \f$C_p\f$ is greater than 0, the unsteady energy balance equation will be applied with the heat storage term included. The equation is discretized in time using a forward Euler scheme in order to solve for the surface temperature at time \f$t+\Delta t\f$
 
- \f[ T_s(t+\Delta t) = T_s(t)+\left( R-\varepsilon\sigma T_s^4 - c_p g_H \left( T_s-T_a \right) - \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)-Q_{other} \right)\frac{\Delta t}{C_p}.\f]
+ \f[ T_s(t+\Delta t) = T_s(t)+\left( R-n_s\varepsilon\sigma T_s^4 - c_p g_H \left( T_s-T_a \right) - \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)-Q_{other} \right)\frac{\Delta t}{C_p}.\f]
 
  The timestep should be chosen such that it is significantly smaller than the characteristic time constant of heat storage.
 
