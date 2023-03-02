@@ -1659,7 +1659,7 @@ void LiDARcloud::calculateLeafAreaGPU_synthetic( helios::Context* context, bool 
   }
   
   if( !triangulationcomputed ){
-    std::cerr << "ERROR (calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
+    std::cerr << "ERROR (calculateLeafAreaGPU_synthetic): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
     exit(EXIT_FAILURE);
   }
   
@@ -1759,7 +1759,7 @@ void LiDARcloud::calculateLeafAreaGPU_synthetic( helios::Context* context, bool 
     }
     
     // create a vector each element of which represents a unique beam and is another vector of the hit point indices of this_scan_xyz that is associated with this beam
-    float previous_beam = 0;
+    float previous_beam = getHitData(this_scan_index[0], "timestamp");
     uint beam_ID = 0;
     std::vector<std::vector<uint>> beam_array(Nbeams);
     for(uint i=0; i < Nhits; i++)
@@ -2296,6 +2296,47 @@ void LiDARcloud::calculateLeafAreaGPU_synthetic( helios::Context* context, bool 
   if( printmessages ){
     std::cout << "finished LAD inversions" << std::endl;
   }
+  
+  for(uint c=0; c<Ncells; c++)
+  {
+    helios::vec3 grid_size = getCellSize(c);
+    helios::vec3 grid_center = getCellCenter(c);
+    
+    if( printmessages ){
+      std::cout << "Cell " << c << ", voxel_beam_count = " << voxel_beam_count_tot[c]  << std::endl;
+      std::cout << "Cell " << c << ", P_first = " << P_first[c] << std::endl;
+      std::cout << "Cell " << c << ", P_sequal = " << P_sequal[c] << std::endl;
+      std::cout << "Cell " << c << ", P_equal = " << P_equal[c] << std::endl;
+      std::cout << "Cell " << c << ", P_intensity = " << P_intensity[c] << std::endl;
+      std::cout << "Cell " << c << ", P_exact = " << P_exact[c] << std::endl;
+      std::cout << "Cell " << c << ", P_ref = " << P_ref[c] << std::endl;
+      
+      std::cout << " " << std::endl;
+      std::cout << "Cell " << c << ", Gref = " << Gtheta_ref[c] << std::endl;
+      std::cout << "Cell " << c << ", Gtri = " << Gtheta[c] << std::endl;
+      std::cout << " " << std::endl;
+    }
+    
+    
+    if( printmessages ){
+      std::cout << "Cell " << c << ", LAD_first = " << LAD_first[c] << std::endl;
+      std::cout << "Cell " << c << ", LAD_equal = " << LAD_equal[c] << std::endl;
+      std::cout << "Cell " << c << ", LAD_intensity = " << LAD_intensity[c] << std::endl;
+      std::cout << "Cell " << c << ", LAD_exact = " << LAD_exact[c] << std::endl;
+      
+      std::cout << " " << std::endl;
+      
+      std::cout << "Cell " << c << ", LAD_first_Gref = " << LAD_first_Gref[c] << std::endl;
+      std::cout << "Cell " << c << ", LAD_equal_Gref = " << LAD_equal_Gref[c] << std::endl;
+      std::cout << "Cell " << c << ", LAD_intensity_Gref = " << LAD_intensity_Gref[c] << std::endl;
+      std::cout << "Cell " << c << ", LAD_exact_Gref = " << LAD_exact_Gref[c] << std::endl;
+      
+      std::cout << "Cell " << c << ", LAD_ref = " <<LA_ref[c]/(grid_size.x*grid_size.y*grid_size.z) << std::endl;
+      
+    }
+  }
+  
+  
   
   // output the voxel level variables
   std::ofstream file_output;
