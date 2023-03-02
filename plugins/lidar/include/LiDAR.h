@@ -1022,6 +1022,15 @@ d the last cell's index is Ncells-1.
    * \return (x,y,z) of missing points added to the scan from gapfilling
    */
   std::vector<helios::vec3> gapfillMisses( uint scanID );
+  
+  //! For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.
+  /**
+   * \param[in] "scanID" ID of scan to gapfill
+   * \param[in] "gapfill_grid_only" if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid. If false missing points are gap filled across the range of phi and theta values specified in the scan xml file.
+   * \return (x,y,z) of missing points added to the scan from gapfilling
+   */
+  std::vector<helios::vec3> gapfillMisses( uint scanID, const bool gapfill_grid_only );
+  
 
   //! Calculate the leaf area for each grid volume
   void calculateLeafAreaGPU();
