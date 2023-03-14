@@ -1175,7 +1175,7 @@
 *Context*
 - Fixed an error in Context::loadPLY() introduced in version 1.2.52 that caused PLY models to not be read correctly.
 
-[1.2.55] 2022-01-06
+[1.2.55] 2023-01-06
 
 *General*
 - The CMakeLists.txt for tutorial1 was not updated to be consistent with all the rest.
@@ -1193,7 +1193,7 @@
 *Canopy Generator*
 - All primitives in the grapevine and bean models now belong to compound objects.
 
-[1.2.56] 2022-01-18
+[1.2.56] 2023-01-18
 
 *Context*
 - There were some minor memory leaks associated with the PNG texture/image reading/writing. These were generally very small leaks.
@@ -1204,7 +1204,7 @@
 *Synthetic Annotation*
 - Visualizer geometry was being updated for every view when generating labels, which resulted in slow performance and building of large amounts of memory.
 
-[1.2.57] 2022-02-23
+[1.2.57] 2023-02-23
 
 *Context*
 - Some temporary fixes applied related to reading/writing of Tile Objects to XML. There are still issues when the tiles have been rotated about their normal axis that need to be resolved.
@@ -1217,3 +1217,34 @@
 
 *Boundary-Layer Conductance*
 - Minor errors corrected in documentation
+
+[1.2.58] 2023-03-14
+
+*Context*
+- Context::copyObject() function did not copy object data. Function Context::copyObjectData() was added and is now called.
+- When writing primitive data files from Context::writeOBJ() function, the .dat file would always be written to the build directory rather than to the same folder where the .obj and .mtl files should be written.
+- There were cases in which objects read from file could end up with child primitives that had the wrong object ID.
+
+*Canopy Generator*
+- Changing bean model to use Polymesh objects for leaves broke the model. Reverting back to triangle primitives for now.
+
+*VoxelIntersection*
+- Credit to Eric Kent for these updates
+- redid UV interpolation code in slicePrimitive to fix bug occurring when x and y coordinates of a vertex were the same and pulled out into a separate function (interpolate_texture_UV_to_slice_point)
+- changed some naming conventions for clarity inside slicePrimitive
+- changed order of some if statements and removed some repetitive ones inside slicePrimitive
+- fixed issue in slicePrimitive when slice points fell on primitive vertices for triangles. Note that it hasn't been fixed for patches yet.
+- added check in slicePrimitive to make sure the sliced primitive normals match the original normal
+- added check in slicePrimitive to make sure the sum of the sliced primitive surface areas match the original primitive surface area
+
+*LiDAR*
+- Credit to Eric Kent for these updates
+- added non-idealized intensity-based weighting to calculateLeafAreaGPU_synthetic
+- added calculateLeafAreaGPU_equal_weighting that pulls out only the equal weighting method from the _synthetic version for use with actual LiDAR data
+- fixed bug in calculateLeafAreaGPU_synthetic related to indexing when the first beam of a scan was a "miss"
+- calculateLeafAreaGPU_synthetic can now print LAD and G in addition to P to console
+- gapfillMisses now adds hitpoints directly to the point cloud and adds timestamp and target_index as data
+- an overloaded version of gapfillMisses allows for extrapolation of only beams that intersect the axis-aligned bounding box of the voxel grid to save time and reduce unwanted gap filling
+
+*Visualizer*
+- Bug fixed in Visualizer::clearGeometry() function, which was not completely clearing all geometric information.

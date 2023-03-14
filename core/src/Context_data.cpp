@@ -1832,6 +1832,65 @@ bool Context::doesObjectDataExist( const uint objID, const char* label ) const{
   return objects.at(objID)->doesObjectDataExist(label);
 }
 
+void Context::copyObjectData( uint objID, uint oldObjID){
+
+    //copy the object data
+    std::vector<std::string> plabel = getObjectPointer_private(objID)->listObjectData();
+    for(auto & p : plabel){
+
+        HeliosDataType type = getObjectDataType( objID, p.c_str() );
+
+        if( type==HELIOS_TYPE_INT ){
+            std::vector<int> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_INT, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_UINT ){
+            std::vector<uint> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_UINT, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_FLOAT ){
+            std::vector<float> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_FLOAT, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_DOUBLE ){
+            std::vector<double> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_DOUBLE, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_VEC2 ){
+            std::vector<vec2> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_VEC2, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_VEC3 ){
+            std::vector<vec3> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_VEC3, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_VEC4 ){
+            std::vector<vec4> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_VEC4, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_INT2 ){
+            std::vector<int2> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_INT2, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_INT3 ){
+            std::vector<int3> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_INT3, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_INT4 ){
+            std::vector<int4> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_INT4, pdata.size(), &pdata.at(0) );
+        }else if( type==HELIOS_TYPE_STRING ){
+            std::vector<std::string> pdata;
+            getObjectData( objID, p.c_str(), pdata );
+            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_STRING, pdata.size(), &pdata.at(0) );
+        }else{
+            assert(false);
+        }
+
+    }
+}
+
 void Context::clearObjectData( const uint objID, const char* label ){
   if( objects.find(objID) == objects.end() ){
     throw( std::runtime_error("ERROR (clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context."));

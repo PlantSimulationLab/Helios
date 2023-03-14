@@ -79,7 +79,7 @@
    \f$TC=4(15UTC-longitude)+EoT\f$,         (6)
  </center>
 
- Finally, the solar zenith angle is given by
+ Finally, the solar elevation angle is given by
 
  <center>
  \f$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )\f$,         (7)

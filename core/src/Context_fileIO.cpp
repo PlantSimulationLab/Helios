@@ -1232,6 +1232,8 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   uint ID;
   std::vector<uint> UUID;
 
+  std::map<uint,uint> remapped_ObjIDs;
+
   // Using "pugixml" parser.  See pugixml.org
   pugi::xml_document xmldoc;
 
@@ -1613,14 +1615,14 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     setPrimitiveTransformationMatrix(getObjectPrimitiveUUIDs(ID),transform);
 
     //if primitives exist that were assigned to this object, delete all primitives that were just created
-    if( objID>0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
+    if( objID>0 && !object_prim_UUIDs.empty() && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end() ) {
       std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
       getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
-      deletePrimitive(uuids_to_delete); // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives
-                                        //            if( !doesObjectExist(objID) ){ //if the above method deleted all primitives for this object, move on
-                                        //              continue;
-                                        //            }
+        deletePrimitive(uuids_to_delete);
+       // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives
     }
+
+    setPrimitiveParentObjectID( getObjectPrimitiveUUIDs(ID), ID );
 
     // * Tile Sub-Patch Data * //
 
@@ -1642,6 +1644,13 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
       throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'sphere' block must be a non-negative integer value."));
+    }
+
+    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
+        objID = remapped_ObjIDs.at(objID);
+    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+        objID = currentObjectID;
+        currentObjectID++;
     }
 
     // * Sphere Transformation Matrix * //
@@ -1702,6 +1711,8 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       //          }
     }
 
+    setPrimitiveParentObjectID( getObjectPrimitiveUUIDs(ID), ID );
+
     // * Sphere Sub-Triangle Data * //
 
     loadOsubPData(p,ID);
@@ -1722,6 +1733,13 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
       throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tube' block must be a non-negative integer value."));
+    }
+
+    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
+        objID = remapped_ObjIDs.at(objID);
+    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+        objID = currentObjectID;
+        currentObjectID++;
     }
 
     // * Tube Transformation Matrix * //
@@ -1800,6 +1818,8 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       //            }
     }
 
+    setPrimitiveParentObjectID( getObjectPrimitiveUUIDs(ID), ID );
+
     // * Tube Sub-Triangle Data * //
 
     loadOsubPData(p,ID);
@@ -1820,6 +1840,13 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
       throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'box' block must be a non-negative integer value."));
+    }
+
+    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
+        objID = remapped_ObjIDs.at(objID);
+    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+        objID = currentObjectID;
+        currentObjectID++;
     }
 
     // * Box Transformation Matrix * //
@@ -1880,6 +1907,8 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       //            }
     }
 
+    setPrimitiveParentObjectID( getObjectPrimitiveUUIDs(ID), ID );
+
     // * Box Sub-Patch Data * //
 
     loadOsubPData(p,ID);
@@ -1900,6 +1929,13 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
       throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'disk' block must be a non-negative integer value."));
+    }
+
+    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
+        objID = remapped_ObjIDs.at(objID);
+    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+        objID = currentObjectID;
+        currentObjectID++;
     }
 
     // * Disk Transformation Matrix * //
@@ -1960,6 +1996,8 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       //            }
     }
 
+    setPrimitiveParentObjectID( getObjectPrimitiveUUIDs(ID), ID );
+
     // * Disk Sub-Triangle Data * //
 
     loadOsubPData(p,ID);
@@ -1980,6 +2018,13 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
       throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'cone' block must be a non-negative integer value."));
+    }
+
+    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
+        objID = remapped_ObjIDs.at(objID);
+    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+        objID = currentObjectID;
+        currentObjectID++;
     }
 
     // * Cone Transformation Matrix * //
@@ -2046,6 +2091,8 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       //            continue;
       //          }
     }
+
+    setPrimitiveParentObjectID( getObjectPrimitiveUUIDs(ID), ID );
 
     // * Cone Sub-Triangle Data * //
 
@@ -4236,7 +4283,7 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
 
     for( std::string label : primitive_dat_fields ){
 
-      std::string datfilename = std::string(label) + ".dat";
+      std::string datfilename = file_path + std::string(label) + ".dat";
       std::ofstream datout(datfilename);
 
       for( int mat=0; mat<materials.size(); mat++ ) {

@@ -995,6 +995,10 @@ void Visualizer::clearGeometry( void ){
     textureIDData.clear();
     contextPrimitiveIDs.clear();
     colorPrimitives_UUIDs.clear();
+    colorPrimitives_objIDs.clear();
+    contextPrimitiveIDs.clear();
+    depth_buffer_data.clear();
+    group_start.clear();
 }
 
 void Visualizer::closeWindow( void ){

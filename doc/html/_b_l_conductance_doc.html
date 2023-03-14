@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.57</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.58</span>
    </div>
   </td>
  </tr>
@@ -177,7 +177,7 @@ Boundary-layer Conductance Models</h2>
 <h3><a class="anchor" id="BLC1"></a>
 1. The Polhausen Equation (Laminar Flat Plate, Forced Convection)</h3>
 <p>The Polhausen equation is a classical similarity solution describing the boundary-layer conductance to heat for a flat plate parallel with the flow direction that is infinitely wide in the spanwise direction, and has finite length of <img class="formulaInl" alt="$L$" src="form_23.png" width="11" height="12"/> in the streamwise direction. This model also assumes that the plate/primitive boundary-layer is laminar, and that convection is entirely forced (i.e., momentum forces dominate buoyancy forces). The boundary-layer conductance is calculated as</p>
-<p><img class="formulaInl" alt="$g_H = 0.135 n_s\sqrt{\frac{U}{L}}$" src="form_73.png" width="117" height="29"/>,</p>
+<p><img class="formulaInl" alt="$g_H = 0.135 n_s\sqrt{\frac{U}{L}}$" src="form_24.png" width="117" height="29"/>,</p>
 <p>where <img class="formulaInl" alt="$U$" src="form_25.png" width="12" height="12"/> is the wind speed just outside of the primitive boundary-layer, and <img class="formulaInl" alt="$L$" src="form_23.png" width="11" height="12"/> is the characteristic length/dimension in the streamwise direction of the object that the primitive belongs to. For a leaf consisting of a single primitive, <img class="formulaInl" alt="$L$" src="form_23.png" width="11" height="12"/> could be assumed to be the length of the primitive. If the primitive belongs to a Tile Compound Object, the plug-in will automatically use the dimension of the entire tile object and not that of a single patch/tile. Note that <img class="formulaInl" alt="$g_H$" src="form_26.png" width="20" height="11"/> describes transfer from both sides of the plate/primitive, but transfer from each side of the plate/primitive is asymmetric because of buoyancy forces. <img class="formulaInl" alt="$n_s$" src="form_27.png" width="15" height="11"/> is the number of primitive faces, which is determined by the value of primitive data "twosided_flag" (twosided_flag=0 is single-sided and <img class="formulaInl" alt="$n_s=1$" src="form_28.png" width="44" height="14"/>, twosided_flag=1 is two-sided and <img class="formulaInl" alt="$n_s=2$" src="form_29.png" width="44" height="14"/>).</p>
 <h3><a class="anchor" id="BLC2"></a>
 2. Laminar Inclined Plate, Mixed Free-Forced Convection</h3>

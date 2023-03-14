@@ -4091,6 +4091,13 @@ public:
      \return ID for copied object.
      */
     std::vector<uint> copyObject(const std::vector<uint> &ObjIDs );
+
+    //! copy all object data from one compound object to another
+    /**
+     * \param[in] "objID" uint Object identifier for compound object that is the source of data for copying
+     * \param[in] "currentObjID" uint Object identifier for compound object that is the destination for data copying
+     */
+    void copyObjectData( uint objID, uint currentObjID);
     
     //! Get a vector of object IDs that meet filtering criteria based on object data
     /**

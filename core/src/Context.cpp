@@ -2470,6 +2470,8 @@ uint Context::copyObject(uint ObjID ){
 
     }
 
+    copyObjectData( ObjID, currentObjectID );
+
     float T[16];
     getObjectPointer( ObjID )->getTransformationMatrix( T );
 
@@ -6275,7 +6277,7 @@ void Context::setPrimitiveParentObjectID(uint UUID, uint objID){
     uint current_objID = getPrimitivePointer_private(UUID)->getParentObjectID();
     getPrimitivePointer_private(UUID)->setParentObjectID(objID);
     
-    if(current_objID != uint(0))
+    if(current_objID != uint(0) && current_objID!=objID )
     {
 
         if( doesObjectExist(current_objID) ) {

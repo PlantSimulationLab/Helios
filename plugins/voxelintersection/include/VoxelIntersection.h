@@ -93,6 +93,16 @@ class VoxelIntersection{
      \return boolean true if absolute difference between each element of a and b is within the absolute tolerance
      */
     bool approxSame(helios::vec3 a, helios::vec3 b, float absTol);  
+    
+    //! find the uv coordinate of a slice point
+    /** \param[in] "p1" xyz coordinate of first vertex of the primitive edge that has the slice point on it
+     \param[in] "uv1" uv coordinate of first vertex of the primitive edge that has the slice point on it
+     \param[in] "p2" xyz coordinate of second vertex of the primitive edge that has the slice point on it
+     \param[in] "uv2" uv coordinate of second vertex of the primitive edge that has the slice point on it
+     \param[in] "ps" xyz coordinate of the slice point
+     \return vec2 uvs the uv coordinate of the slice point
+     */
+    helios::vec2 interpolate_texture_UV_to_slice_point(helios::vec3 p1, helios::vec2 uv1, helios::vec3 p2, helios::vec2 uv2, helios::vec3 ps);
 
  private:
 

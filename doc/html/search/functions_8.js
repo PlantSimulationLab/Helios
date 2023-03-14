@@ -6,6 +6,7 @@ var searchData=
   ['int3_3',['int3',['../structhelios_1_1int3.html#a083ddc83d97c9eb4963c61a008a8ed98',1,'helios::int3::int3()'],['../structhelios_1_1int3.html#a7d8c299d611aaff2092ef6c6811a1435',1,'helios::int3::int3(const std::vector&lt; int &gt; &amp;v)'],['../structhelios_1_1int3.html#a4be47afa5e91a293126a39b9928d7d21',1,'helios::int3::int3(const int v[3])'],['../structhelios_1_1int3.html#a3522bf2be027f0897d62a56fe412096c',1,'helios::int3::int3(int v0, int v1, int v2)']]],
   ['int4_4',['int4',['../structhelios_1_1int4.html#a495ca613c03f0b6748dc484e1d5bc6a6',1,'helios::int4::int4()'],['../structhelios_1_1int4.html#a0c96514a7e15c6638d34ddfe50b7c7fc',1,'helios::int4::int4(const std::vector&lt; int &gt; &amp;v)'],['../structhelios_1_1int4.html#ad4011b8fcdb338dd35b97eab6a90e978',1,'helios::int4::int4(const int v[3])'],['../structhelios_1_1int4.html#a56c4775603496c334254104c76608e1f',1,'helios::int4::int4(int v0, int v1, int v2, int v3)']]],
   ['interp1_5',['interp1',['../global_8h.html#a4d45cb06725a89f41266c8c89974c73e',1,'helios']]],
-  ['isgeometrydirty_6',['isGeometryDirty',['../classhelios_1_1_context.html#a64f402ff71dd246be8c1b06699c05e26',1,'helios::Context']]],
-  ['isprimitivetexturecoloroverridden_7',['isPrimitiveTextureColorOverridden',['../classhelios_1_1_context.html#aaaa6de8a55765b258d6e65c52bf5df69',1,'helios::Context']]]
+  ['interpolate_5ftexture_5fuv_5fto_5fslice_5fpoint_6',['interpolate_texture_UV_to_slice_point',['../class_voxel_intersection.html#aba4e8fce246ada7df4f9975bc7b9624f',1,'VoxelIntersection']]],
+  ['isgeometrydirty_7',['isGeometryDirty',['../classhelios_1_1_context.html#a64f402ff71dd246be8c1b06699c05e26',1,'helios::Context']]],
+  ['isprimitivetexturecoloroverridden_8',['isPrimitiveTextureColorOverridden',['../classhelios_1_1_context.html#aaaa6de8a55765b258d6e65c52bf5df69',1,'helios::Context']]]
 ];

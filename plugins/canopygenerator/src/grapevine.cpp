@@ -389,7 +389,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
                 vec3 position = origin+pos_leaf+leaf_offset;
 
                 std::vector<uint> UUID_leaf = context->copyPrimitive( leaf_ptype );
-                context->addPolymeshObject( UUID_leaf );
+//                context->addPolymeshObject( UUID_leaf );
                 context->scalePrimitive( UUID_leaf, make_vec3(lsize,lsize,lsize));
                 context->rotatePrimitive( UUID_leaf, -Rtheta,"y");
                 context->rotatePrimitive( UUID_leaf, Rphi,"z");
