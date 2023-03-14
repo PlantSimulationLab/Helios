@@ -1022,6 +1022,15 @@ d the last cell's index is Ncells-1.
    * \return (x,y,z) of missing points added to the scan from gapfilling
    */
   std::vector<helios::vec3> gapfillMisses( uint scanID );
+  
+  //! For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.
+  /**
+   * \param[in] "scanID" ID of scan to gapfill
+   * \param[in] "gapfill_grid_only" if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid. If false missing points are gap filled across the range of phi and theta values specified in the scan xml file.
+   * \return (x,y,z) of missing points added to the scan from gapfilling
+   */
+  std::vector<helios::vec3> gapfillMisses( uint scanID, const bool gapfill_grid_only );
+  
 
   //! Calculate the leaf area for each grid volume
   void calculateLeafAreaGPU();
@@ -1048,6 +1057,15 @@ d the last cell's index is Ncells-1.
   */
   void calculateLeafAreaGPU_synthetic( helios::Context* context,  bool beamoutput, bool fillAnalytic );
 
+  //! Calculate the leaf area for each grid volume using equal weighting method
+  /**
+   * \param [in] "beamoutput" if true writes detailed data about each beam to ../beamoutput/beam_data_s_[scan index]_c_[grid cell index].txt.
+   * \param [in] "fillAnalytic" if true, when the iterative LAD inversion fails, the analytic solution using mean dr will be substituted. If false LAD is set to 999.
+   * \note writes voxel level data to ../voxeloutput/voxeloutput.txt
+   */
+  void calculateLeafAreaGPU_equal_weighting( bool beamoutput, bool fillAnalytic );
+  
+  
   // -------- RECONSTRUCTION --------- //
 
   //! Perform a leaf reconstruction based on texture-masked Patches within each gridcell.  The reconstruction produces Patches for each reconstructed leaf surface, with leaf size automatically estimated algorithmically.  

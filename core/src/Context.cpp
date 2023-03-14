@@ -2470,6 +2470,8 @@ uint Context::copyObject(uint ObjID ){
 
     }
 
+    copyObjectData( ObjID, currentObjectID );
+
     float T[16];
     getObjectPointer( ObjID )->getTransformationMatrix( T );
 

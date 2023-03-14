@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.57</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.58</span>
    </div>
   </td>
  </tr>
@@ -114,6 +114,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af78fea330c0c2e38e3a02db732ed7dd7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_voxel_intersection.html#af78fea330c0c2e38e3a02db732ed7dd7">approxSame</a> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> a, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> b, float absTol)</td></tr>
 <tr class="memdesc:af78fea330c0c2e38e3a02db732ed7dd7"><td class="mdescLeft">&#160;</td><td class="mdescRight">compare two vec3's to within an absolute and relative error tolerance  <br /></td></tr>
 <tr class="separator:af78fea330c0c2e38e3a02db732ed7dd7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba4e8fce246ada7df4f9975bc7b9624f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_voxel_intersection.html#aba4e8fce246ada7df4f9975bc7b9624f">interpolate_texture_UV_to_slice_point</a> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> p1, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> uv1, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> p2, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> uv2, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> ps)</td></tr>
+<tr class="memdesc:aba4e8fce246ada7df4f9975bc7b9624f"><td class="mdescLeft">&#160;</td><td class="mdescRight">find the uv coordinate of a slice point  <br /></td></tr>
+<tr class="separator:aba4e8fce246ada7df4f9975bc7b9624f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -198,7 +201,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>boolean true if absolute difference between a and b is within absolute or relative tolerances </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01562">1562</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01970">1970</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -245,7 +248,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>boolean true if absolute difference between each element of a and b is within the absolute tolerance </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01568">1568</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01976">1976</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -363,7 +366,68 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>2D vector of UUIDs within grid cells with grid cell ID as the first index and primitive ID as second index </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>vector is one element longer than the number of grid cells, with the last element storing UUIDs that didn't fall into any grid cell </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01556">1556</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01964">1964</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aba4e8fce246ada7df4f9975bc7b9624f" name="aba4e8fce246ada7df4f9975bc7b9624f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba4e8fce246ada7df4f9975bc7b9624f">&#9670;&#160;</a></span>interpolate_texture_UV_to_slice_point()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> VoxelIntersection::interpolate_texture_UV_to_slice_point </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td>
+          <td class="paramname"><em>p1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td>
+          <td class="paramname"><em>uv1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td>
+          <td class="paramname"><em>p2</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td>
+          <td class="paramname"><em>uv2</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td>
+          <td class="paramname"><em>ps</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>find the uv coordinate of a slice point </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">p1</td><td>xyz coordinate of first vertex of the primitive edge that has the slice point on it </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">uv1</td><td>uv coordinate of first vertex of the primitive edge that has the slice point on it </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">p2</td><td>xyz coordinate of second vertex of the primitive edge that has the slice point on it </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">uv2</td><td>uv coordinate of second vertex of the primitive edge that has the slice point on it </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ps</td><td>xyz coordinate of the slice point </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>vec2 uvs the uv coordinate of the slice point </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01981">1981</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -534,7 +598,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>vector of new planar primitives representing the original surfaces provided in UUIDs </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01303">1303</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01710">1710</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
