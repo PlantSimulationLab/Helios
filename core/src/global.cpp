@@ -49,6 +49,7 @@ RGBcolor RGB::yellowgreen = make_RGBcolor( 0.6, 0.8, 0.2 );
 RGBcolor RGB::goldenrod = make_RGBcolor( 0.855, 0.647, 0.126 );
 
 SphericalCoord helios::nullrotation = make_SphericalCoord(0,0);
+vec3 helios::nullorigin = make_vec3(0,0,0);
 
 RGBcolor helios::blend( RGBcolor color0, RGBcolor color1, float weight ){
   RGBcolor color;

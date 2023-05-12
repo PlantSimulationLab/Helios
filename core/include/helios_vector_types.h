@@ -400,10 +400,7 @@ inline float vec2::operator*(const vec2& a) const{
 }
 
 inline vec2 vec2::operator+(const vec2& a) const{
-  vec2 c;
-  c.x=a.x+x;
-  c.y=a.y+y;
-  return  c;
+  return  {a.x+x,a.y+y};
 }
 
 inline vec2 vec2::operator+(const float a) const {
@@ -415,10 +412,7 @@ inline vec2 operator+(const float a, const vec2& v){
 }
 
 inline vec2 vec2::operator-(const vec2& a) const{
-  vec2 c;
-  c.x=x-a.x;
-  c.y=y-a.y;
-  return  c;
+  return  {x-a.x,y-a.y};
 }
 
 inline vec2 vec2::operator-(const float a) const {
@@ -430,10 +424,7 @@ inline vec2 operator-(const float a, const vec2& v) {
 }
 
 inline vec2 vec2::operator*(const float a) const{
-  vec2 c;
-  c.x=x*a;
-  c.y=y*a;
-  return c;
+  return {x*a,y*a};
 }
 
 inline vec2 operator*(const float a, const vec2& v) {
@@ -441,10 +432,7 @@ inline vec2 operator*(const float a, const vec2& v) {
 }
 
 inline vec2 vec2::operator/(const float a) const{
-  vec2 c;
-  c.x=x/a;
-  c.y=y/a;
-  return c;
+  return {x/a,y/a};
 }
 
 inline bool vec2::operator==(const vec2& a) const{
@@ -548,11 +536,7 @@ inline vec3 make_vec3( float X[3] ){
 }
 
 inline vec3 cross(const vec3 &a, const vec3 &b ){
-  vec3 c;
-  c.x=a.y*b.z - b.y*a.z;
-  c.y=b.x*a.z - a.x*b.z;
-  c.z=a.x*b.y - b.x*a.y;
-  return c;
+  return {a.y*b.z - b.y*a.z,b.x*a.z - a.x*b.z,a.x*b.y - b.x*a.y };
 }
 
 inline float vec3::operator*(const vec3& a) const{
@@ -560,11 +544,7 @@ inline float vec3::operator*(const vec3& a) const{
 }
 
 inline vec3 vec3::operator+(const vec3& a) const{
-  vec3 c;
-  c.x=a.x+x;
-  c.y=a.y+y;
-  c.z=a.z+z;
-  return  c;
+  return  {a.x+x,a.y+y,a.z+z};
 }
 
 inline vec3 vec3::operator+(const float a) const{
@@ -576,11 +556,7 @@ inline vec3 operator+(const float a, const vec3& v) {
 }
 
 inline vec3 vec3::operator-(const vec3& a) const{
-  vec3 c;
-  c.x=x-a.x;
-  c.y=y-a.y;
-  c.z=z-a.z;
-  return  c;
+  return  {x-a.x,y-a.y,z-a.z};
 }
 
 inline vec3 vec3::operator-(const float a) const{
@@ -592,11 +568,7 @@ inline vec3 operator-(const float a, const vec3& v) {
 }
 
 inline vec3 vec3::operator*(const float a) const{
-  vec3 c;
-  c.x=x*a;
-  c.y=y*a;
-  c.z=z*a;
-  return  c;
+  return  {x*a,y*a,z*a};
 }
 
 inline vec3 operator*(const float a, const vec3& v) {
@@ -604,11 +576,7 @@ inline vec3 operator*(const float a, const vec3& v) {
 }
 
 inline vec3 vec3::operator/(const float a) const{
-  vec3 c;
-  c.x=x/a;
-  c.y=y/a;
-  c.z=z/a;
-  return c;
+  return {x/a,y/a,z/a};
 }
 
 inline bool vec3::operator==(const vec3& a) const{
@@ -721,12 +689,7 @@ inline float vec4::operator*(const vec4& a) const{
 }
 
 inline vec4 vec4::operator+(const vec4& a) const{
-  vec4 c;
-  c.x=a.x+x;
-  c.y=a.y+y;
-  c.z=a.z+z;
-  c.w=a.w+w;
-  return  c;
+  return  {a.x+x,a.y+y,a.z+z,a.w+w};
 }
 
 inline vec4 vec4::operator+(const float a) const{
@@ -738,12 +701,7 @@ inline vec4 operator+(const float a, const vec4& v) {
 }
 
 inline vec4 vec4::operator-(const vec4& a) const{
-  vec4 c;
-  c.x=x-a.x;
-  c.y=y-a.y;
-  c.z=z-a.z;
-  c.w=w-a.w;
-  return  c;
+  return  {x-a.x,y-a.y,z-a.z,w-a.w};
 }
 
 inline vec4 vec4::operator-(const float a) const{
@@ -755,12 +713,7 @@ inline vec4 operator-(const float a, const vec4& v) {
 }
 
 inline vec4 vec4::operator*(const float a) const{
-  vec4 c;
-  c.x=x*a;
-  c.y=y*a;
-  c.z=z*a;
-  c.w=w*a;
-  return  c;
+  return  {x*a,y*a,z*a,w*a};
 }
 
 inline vec4 operator*(const float a, const vec4& v) {
@@ -768,12 +721,7 @@ inline vec4 operator*(const float a, const vec4& v) {
 }
 
 inline vec4 vec4::operator/(const float a) const{
-  vec4 c;
-  c.x=x/a;
-  c.y=y/a;
-  c.z=z/a;
-  c.w=w/a;
-  return c;
+  return {x/a,y/a,z/a,w/a};
 }
 
 inline bool vec4::operator==(const vec4& a) const{

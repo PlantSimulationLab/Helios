@@ -4283,7 +4283,7 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
 
     for( std::string label : primitive_dat_fields ){
 
-      std::string datfilename = file_path + std::string(label) + ".dat";
+      std::string datfilename = file_path + file_stem + "_" + std::string(label) + ".dat";
       std::ofstream datout(datfilename);
 
       for( int mat=0; mat<materials.size(); mat++ ) {

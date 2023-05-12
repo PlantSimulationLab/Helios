@@ -389,9 +389,9 @@ float Wj = J*Ci/(4.f*Ci+8.f*Gamma_star);
 float A = (1-Gamma_star/Ci)*fmin(Wc,Wj)-Rd;
 
 float limitation_state;
-if( Wj<Wc ){ //light limited
+if( Wj>Wc ){ //Rubisco limited
     limitation_state = 0;
-}else{ //CO2 limited
+}else{ //Electron transport limited
     limitation_state = 1;
 }
 

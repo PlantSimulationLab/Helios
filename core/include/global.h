@@ -773,6 +773,7 @@ std::vector<float> importVectorFromFile(const std::string &filepath);
 
 
 extern SphericalCoord nullrotation;
+extern vec3 nullorigin;
 
 }
 

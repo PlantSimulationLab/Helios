@@ -228,6 +228,12 @@ public:
      * \param[in] "axis" Vector describing axis about which to rotate.
      */
     void rotate( float rot, const helios::vec3& origin, const helios::vec3& axis );
+
+    //! Function to scale a compound object in the x-, y- and z-directions
+    /**
+     * \param[in] "scale" Scaling factor to apply in the x-, y- and z-directions
+     */
+    void scale( const helios::vec3 &scale );
     
     //! Function to return the Affine transformation matrix of a Compound Object
     /**
@@ -601,12 +607,6 @@ public:
     //! Get the normalized (u,v) coordinates of the texture at each of the four corners of the tile object
     std::vector<helios::vec2> getTextureUV() const;
     
-    //! Function to scale the dimensions of a Compound Object
-    /**
-     * \param[in] "S" Scaling factor
-     */
-    void scale(const vec3 &S );
-    
 protected:
     
     helios::int2 subdiv;
@@ -623,7 +623,7 @@ public:
     ~Sphere() override = default;
     
     //! Get the radius of the sphere
-    float getRadius() const;
+    helios::vec3 getRadius() const;
     
     //! Get the Cartesian coordinates of the center of the sphere object
     vec3 getCenter() const;
@@ -636,12 +636,6 @@ public:
      * \param[in] "subdiv" Number of subdivisions in zenithal and azimuthal directions.
      */
     void setSubdivisionCount(uint subdiv );
-    
-    //! Function to scale the dimensions of a Compound Object
-    /**
-     * \param[in] "S" Scaling factor
-     */
-    void scale( float S );
     
 protected:
     
@@ -675,12 +669,6 @@ public:
      * \param[in] "subdiv" Number of subdivisions in zenithal and azimuthal directions.
      */
     void setSubdivisionCount( uint subdiv );
-    
-    //! Function to scale the dimensions of a Compound Object
-    /**
-     * \param[in] "S" Scaling factor
-     */
-    void scale( float S );
     
 protected:
     
@@ -718,12 +706,6 @@ public:
      */
     void setSubdivisionCount( const helios::int3 &subdiv );
     
-    //! Function to scale the dimensions of a Compound Object
-    /**
-     * \param[in] "S" Scaling factor
-     */
-    void scale(const vec3 &S );
-    
 protected:
     
     helios::int3 subdiv;
@@ -753,12 +735,6 @@ public:
      * \param[in] "subdiv" Number of triangle subdivisions.
      */
     void setSubdivisionCount( uint subdiv );
-    
-    //! Function to scale the dimensions of a Compound Object
-    /**
-     * \param[in] "S" Scaling factor
-     */
-    void scale(const vec3 &S );
     
 protected:
     
@@ -4171,6 +4147,20 @@ public:
      * \param[in] "axis" Vector describing axis about which to rotate
      */
     void rotateObject( const std::vector<uint>& ObjIDs, float rot, const vec3& origin, const vec3& axis );
+
+    //! Function to scale a compound object in the x-, y- and z-directions
+    /**
+     * \param[in] "ObjID" Object ID to scale
+     * \param[in] "scalefact" Scaling factor to apply in the x-, y- and z-directions
+     */
+    void scaleObject( uint ObjID, const helios::vec3 &scalefact );
+
+    //! Function to scale a compound object in the x-, y- and z-directions
+    /**
+     * \param[in] "ObjID" Vector of object IDs to scale
+     * \param[in] "scalefact" Scaling factor to apply in the x-, y- and z-directions
+     */
+    void scaleObject( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact );
     
     //! Get primitive UUIDs associated with compound objects
     /**
@@ -4278,7 +4268,7 @@ public:
     /**
      * \param[in] "ObjectID" object ID of the Sphere object
      */
-    float getSphereObjectRadius(uint &ObjectID) const;
+    helios::vec3 getSphereObjectRadius(uint &ObjID) const;
     
     //! get the subdivision count of a Sphere object from the context
     /**
@@ -4428,85 +4418,118 @@ public:
     
     //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x- and y-directions
-     \param[in] "rotation" Spherical rotation of tiled surface
-     \param[in] "subdiv" Number of subdivisions in x- and y-directions
-     \param[in] "color" r-g-b color of tiled surface
-     \return Vector of UUIDs for each sub-patch
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x- and y-directions
+     * \param[in] "rotation" Spherical rotation of tiled surface
+     * \param[in] "subdiv" Number of subdivisions in x- and y-directions
+     * \param[in] "color" r-g-b color of tiled surface
+     * \return Vector of UUIDs for each sub-patch
+     * \ingroup compoundobjects
      */
     uint addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color );
     
     //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x- and y-directions
-     \param[in] "rotation" Spherical rotation of tiled surface
-     \param[in] "subdiv" Number of subdivisions in x- and y-directions
-     \param[in] "texturefile" Name of image file for texture map
-     \return Vector of UUIDs for each sub-patch
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x- and y-directions
+     * \param[in] "rotation" Spherical rotation of tiled surface
+     * \param[in] "subdiv" Number of subdivisions in x- and y-directions
+     * \param[in] "texturefile" Name of image file for texture map
+     * \return Vector of UUIDs for each sub-patch
+     * \ingroup compoundobjects
      */
     uint addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile );
-    
+
     //! Add a spherical compound object to the Context
-    /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
-     \param[in] "center" (x,y,z) coordinate of sphere center
-     \param[in] "radius" Radius of sphere
-     \note Assumes a default color of green
-     \ingroup compoundobjects
+    /**
+     * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
+     * \param[in] "center" (x,y,z) coordinate of sphere center
+     * \param[in] "radius" Radius of sphere
+     * \note Assumes a default color of green
+     * \ingroup compoundobjects
      */
     uint addSphereObject(uint Ndivs, const vec3 &center, float radius );
-    
+
     //! Add a spherical compound object to the Context
-    /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
-     \param[in] "center" (x,y,z) coordinate of sphere center
-     \param[in] "radius" Radius of sphere
-     \param[in] "color" r-g-b color of sphere
-     \ingroup compoundobjects
+    /**
+     * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
+     * \param[in] "center" (x,y,z) coordinate of sphere center
+     * \param[in] "radius" Radius of sphere
+     * \param[in] "color" r-g-b color of sphere
+     * \ingroup compoundobjects
      */
     uint addSphereObject(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color );
-    
+
     //! Add a spherical compound object to the Context colored by texture map
-    /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
-     \param[in] "center" (x,y,z) coordinate of sphere center
-     \param[in] "radius" Radius of sphere
-     \param[in] "texturefile" Name of image file for texture map
-     \ingroup compoundobjects
+    /**
+     * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
+     * \param[in] "center" (x,y,z) coordinate of sphere center
+     * \param[in] "radius" Radius of sphere
+     * \param[in] "texturefile" Name of image file for texture map
+     * \ingroup compoundobjects
      */
     uint addSphereObject(uint Ndivs, const vec3 &center, float radius, const char* texturefile );
+
+    //! Add a spherical/ellipsoidal compound object to the Context
+    /**
+     * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
+     * \param[in] "center" (x,y,z) coordinate of sphere center
+     * \param[in] "radius" Radius of sphere in x-, y-, and z-directions
+     * \note Assumes a default color of green
+     * \ingroup compoundobjects
+     */
+    uint addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius );
+
+    //! Add a spherical/ellipsoidal compound object to the Context
+    /**
+     * \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+     * \param[in] "center" (x,y,z) coordinate of sphere center
+     * \param[in] "radius" Radius of sphere in x-, y-, and z-directions
+     * \param[in] "color" r-g-b color of sphere
+     * \ingroup compoundobjects
+     */
+    uint addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const RGBcolor &color );
+
+    //! Add a spherical/ellipsoidal compound object to the Context colored by texture map
+    /**
+     * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
+     * \param[in] "center" (x,y,z) coordinate of sphere center
+     * \param[in] "radius" Radius of sphere in x-, y-, and z-directions
+     * \param[in] "texturefile" Name of image file for texture map
+     * \ingroup compoundobjects
+     */
+    uint addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const char* texturefile );
     
     //! Add a 3D tube compound object to the Context
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
-     \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
-     \param[in] "radius" Radius of the tube at each node position.
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
+     * \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
+     * \param[in] "radius" Radius of the tube at each node position.
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     uint addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius );
     
     //! Add a 3D tube compound object to the Context and specify its diffuse color
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
-     \param[in] "radius" Radius of the tube at each node position.
-     \param[in] "color" Diffuse color of each tube segment.
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
+     * \param[in] "radius" Radius of the tube at each node position.
+     * \param[in] "color" Diffuse color of each tube segment.
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     uint addTubeObject( uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color );
     
     //! Add a 3D tube compound object to the Context that is texture-mapped
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
-     \param[in] "radius" Radius of the tube at each node position.
-     \param[in] "texturefile" Name of image file for texture map
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
+     * \param[in] "radius" Radius of the tube at each node position.
+     * \param[in] "texturefile" Name of image file for texture map
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     uint addTubeObject( uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile );
     
@@ -4524,50 +4547,50 @@ public:
     
     //! Add a rectangular prism tesselated with Patch primitives
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x-, y-, and z-directions
-     \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     \param[in] "color" r-g-b color of box
-     \return Vector of UUIDs for each sub-patch
-     \note This version of addBox assumes that all surface normal vectors point away from the box
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x-, y-, and z-directions
+     * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+     * \param[in] "color" r-g-b color of box
+     * \return Vector of UUIDs for each sub-patch
+     * \note This version of addBox assumes that all surface normal vectors point away from the box
+     * \ingroup compoundobjects
      */
     uint addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color );
     
     //! Add a rectangular prism tesselated with Patch primitives
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x-, y-, and z-directions
-     \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     \param[in] "texturefile" Name of image file for texture map
-     \return Vector of UUIDs for each sub-patch
-     \note This version of addBox assumes that all surface normal vectors point away from the box
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x-, y-, and z-directions
+     * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+     * \param[in] "texturefile" Name of image file for texture map
+     * \return Vector of UUIDs for each sub-patch
+     * \note This version of addBox assumes that all surface normal vectors point away from the box
+     * \ingroup compoundobjects
      */
     uint addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const char* texturefile );
     
     //! Add a rectangular prism tesselated with Patch primitives
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x-, y-, and z-directions
-     \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     \param[in] "color" r-g-b color of box
-     \param[in] "reverse_normals" Flip all surface normals so that patch normals point inside the box
-     \return Vector of UUIDs for each sub-patch
-     \note This version of addBox assumes that all surface normal vectors point away from the box
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x-, y-, and z-directions
+     * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+     * \param[in] "color" r-g-b color of box
+     * \param[in] "reverse_normals" Flip all surface normals so that patch normals point inside the box
+     * \return Vector of UUIDs for each sub-patch
+     * \note This version of addBox assumes that all surface normal vectors point away from the box
+     * \ingroup compoundobjects
      */
     uint addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals );
     
     //! Add a rectangular prism tesselated with Patch primitives
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x-, y-, and z-directions
-     \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     \param[in] "texturefile" Name of image file for texture map
-     \return Vector of UUIDs for each sub-patch
-     \note This version of addBox assumes that all surface normal vectors point away from the box
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x-, y-, and z-directions
+     * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+     * \param[in] "texturefile" Name of image file for texture map
+     * \return Vector of UUIDs for each sub-patch
+     * \note This version of addBox assumes that all surface normal vectors point away from the box
+     * \ingroup compoundobjects
      */
     uint addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, const char* texturefile, bool reverse_normals );
     
@@ -4585,327 +4608,330 @@ public:
     
     //! Add new Disk Compound Object
     /** Function to add a new Disk to the Context given its center, size, and spherical rotation.
-     \param[in] "Ndiv" Number to triangles used to form disk
-     \param[in] "center" 3D coordinates of Disk center
-     \param[in] "size" length of Disk semi-major and semi-minor radii
-     \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
-     \return Vector of UUIDs for each sub-triangle
-     \note Assumes a default color of black.
-     \ingroup compoundobjects
+     * \param[in] "Ndiv" Number to triangles used to form disk
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \note Assumes a default color of black.
+     * \ingroup compoundobjects
      */
     uint addDiskObject(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation );
     
     //! Add new Disk Compound Object
     /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
-     \param[in] "Ndiv" Number to triangles used to form disk
-     \param[in] "center" 3D coordinates of Disk center
-     \param[in] "size" length of Disk semi-major and semi-minor radii
-     \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
-     \param[in] "color" diffuse R-G-B color of Disk
-     \return Vector of UUIDs for each sub-triangle
-     \ingroup compoundobjects
+     * \param[in] "Ndiv" Number to triangles used to form disk
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "color" diffuse R-G-B color of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \ingroup compoundobjects
      */
     uint addDiskObject(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color );
     
     //! Add new Disk Compound Object
     /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
-     \param[in] "Ndiv" Number to triangles used to form disk
-     \param[in] "center" 3D coordinates of Disk center
-     \param[in] "size" length of Disk semi-major and semi-minor radii
-     \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
-     \param[in] "color" diffuse R-G-B-A color of Disk
-     \return Vector of UUIDs for each sub-triangle
-     \ingroup compoundobjects
+     * \param[in] "Ndiv" Number to triangles used to form disk
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "color" diffuse R-G-B-A color of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \ingroup compoundobjects
      */
     uint addDiskObject(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color );
     
     //! Add new Disk Compound Object
     /** Function to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
-     \param[in] "Ndiv" Number to triangles used to form disk
-     \param[in] "center" 3D coordinates of Disk center
-     \param[in] "size" length of Disk semi-major and semi-minor radii
-     \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
-     \param[in] "texture_file" path to JPEG file to be used as texture
-     \return Vector of UUIDs for each sub-triangle
-     \note Assumes a default color of black.
-     \ingroup compoundobjects
+     * \param[in] "Ndiv" Number to triangles used to form disk
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "texture_file" path to JPEG file to be used as texture
+     * \return Vector of UUIDs for each sub-triangle
+     * \note Assumes a default color of black.
+     * \ingroup compoundobjects
      */
     uint addDiskObject(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
     
     //! Add new Polymesh Compound Object
     /** Function to add a new Polymesh to the Context given a vector of UUIDs
-     \param[in] "UUIDs" Unique universal identifiers of primitives to be added to polymesh object
-     \ingroup compoundobjects
+     * \param[in] "UUIDs" Unique universal identifiers of primitives to be added to polymesh object
+     * \ingroup compoundobjects
      */
     uint addPolymeshObject(const std::vector<uint> &UUIDs );
     
     //! Add a 3D cone compound object to the Context
     /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
-     \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
-     \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "node0" (x,y,z) position defining the base of the cone
-     \param[in] "node1" (x,y,z) position defining the end of the cone
-     \param[in] "radius0" Radius of the cone at the base node.
-     \param[in] "radius1" Radius of the cone at the base node.
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
+     * \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "node0" (x,y,z) position defining the base of the cone
+     * \param[in] "node1" (x,y,z) position defining the end of the cone
+     * \param[in] "radius0" Radius of the cone at the base node.
+     * \param[in] "radius1" Radius of the cone at the base node.
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     uint addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1 );
     
     //! Add a 3D cone compound object to the Context and specify its diffuse color
     /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
-     \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "node0" (x,y,z) position defining the base of the cone
-     \param[in] "node1" (x,y,z) position defining the end of the cone
-     \param[in] "radius0" Radius of the cone at the base node.
-     \param[in] "radius1" Radius of the cone at the base node.
-     \param[in] "color" Diffuse color of each tube segment.
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "node0" (x,y,z) position defining the base of the cone
+     * \param[in] "node1" (x,y,z) position defining the end of the cone
+     * \param[in] "radius0" Radius of the cone at the base node.
+     * \param[in] "radius1" Radius of the cone at the base node.
+     * \param[in] "color" Diffuse color of each tube segment.
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     uint addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const RGBcolor &color );
     
     //! Add a 3D cone compound object to the Context that is texture-mapped
     /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
-     \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "node0" (x,y,z) position defining the base of the cone
-     \param[in] "node1" (x,y,z) position defining the end of the cone
-     \param[in] "radius0" Radius of the cone at the base node.
-     \param[in] "radius1" Radius of the cone at the base node.
-     \param[in] "texturefile" Name of image file for texture map
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "node0" (x,y,z) position defining the base of the cone
+     * \param[in] "node1" (x,y,z) position defining the end of the cone
+     * \param[in] "radius0" Radius of the cone at the base node.
+     * \param[in] "radius1" Radius of the cone at the base node.
+     * \param[in] "texturefile" Name of image file for texture map
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     uint addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const char* texturefile );
     
     //! Add a spherical compound object to the Context
-    /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
-     \param[in] "center" (x,y,z) coordinate of sphere center
-     \param[in] "radius" Radius of sphere
-     \note Assumes a default color of green
-     \ingroup compoundobjects
+    /**
+     * \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+     * \param[in] "center" (x,y,z) coordinate of sphere center
+     * \param[in] "radius" Radius of sphere
+     * \note Assumes a default color of green
+     * \ingroup compoundobjects
      */
     std::vector<uint> addSphere(uint Ndivs, const vec3 &center, float radius );
     
     //! Add a spherical compound object to the Context
-    /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
-     \param[in] "center" (x,y,z) coordinate of sphere center
-     \param[in] "radius" Radius of sphere
-     \param[in] "color" r-g-b color of sphere
-     \ingroup compoundobjects
+    /**
+     * \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+     * \param[in] "center" (x,y,z) coordinate of sphere center
+     * \param[in] "radius" Radius of sphere
+     * \param[in] "color" r-g-b color of sphere
+     * \ingroup compoundobjects
      */
     std::vector<uint> addSphere(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color );
     
     //! Add a spherical compound object to the Context colored by texture map
-    /** \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
-     \param[in] "center" (x,y,z) coordinate of sphere center
-     \param[in] "radius" Radius of sphere
-     \param[in] "texturefile" Name of image file for texture map
-     \ingroup compoundobjects
+    /**
+     * \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+     * \param[in] "center" (x,y,z) coordinate of sphere center
+     * \param[in] "radius" Radius of sphere
+     * \param[in] "texturefile" Name of image file for texture map
+     * \ingroup compoundobjects
      */
     std::vector<uint> addSphere(uint Ndivs, const vec3 &center, float radius, const char* texturefile );
     
     //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x- and y-directions
-     \param[in] "rotation" Spherical rotation of tiled surface
-     \param[in] "subdiv" Number of subdivisions in x- and y-directions
-     \return Vector of UUIDs for each sub-patch
-     \note Assumes default color of green
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x- and y-directions
+     * \param[in] "rotation" Spherical rotation of tiled surface
+     * \param[in] "subdiv" Number of subdivisions in x- and y-directions
+     * \return Vector of UUIDs for each sub-patch
+     * \note Assumes default color of green
+     * \ingroup compoundobjects
      */
     std::vector<uint> addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv );
     
     //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x- and y-directions
-     \param[in] "rotation" Spherical rotation of tiled surface
-     \param[in] "subdiv" Number of subdivisions in x- and y-directions
-     \param[in] "color" r-g-b color of tiled surface
-     \return Vector of UUIDs for each sub-patch
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x- and y-directions
+     * \param[in] "rotation" Spherical rotation of tiled surface
+     * \param[in] "subdiv" Number of subdivisions in x- and y-directions
+     * \param[in] "color" r-g-b color of tiled surface
+     * \return Vector of UUIDs for each sub-patch
+     * \ingroup compoundobjects
      */
     std::vector<uint> addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color );
     
     //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x- and y-directions
-     \param[in] "rotation" Spherical rotation of tiled surface
-     \param[in] "subdiv" Number of subdivisions in x- and y-directions
-     \param[in] "texturefile" Name of image file for texture map
-     \return Vector of UUIDs for each sub-patch
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x- and y-directions
+     * \param[in] "rotation" Spherical rotation of tiled surface
+     * \param[in] "subdiv" Number of subdivisions in x- and y-directions
+     * \param[in] "texturefile" Name of image file for texture map
+     * \return Vector of UUIDs for each sub-patch
+     * \ingroup compoundobjects
      */
     std::vector<uint> addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile );
     
     //! Add a 3D tube compound object to the Context
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
-     \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
-     \param[in] "radius" Radius of the tube at each node position.
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
+     * \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
+     * \param[in] "radius" Radius of the tube at each node position.
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     std::vector<uint> addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius );
     
     //! Add a 3D tube compound object to the Context and specify its diffuse color
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
-     \param[in] "radius" Radius of the tube at each node position.
-     \param[in] "color" Diffuse color of each tube segment.
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
+     * \param[in] "radius" Radius of the tube at each node position.
+     * \param[in] "color" Diffuse color of each tube segment.
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     std::vector<uint> addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color );
     
     //! Add a 3D tube compound object to the Context that is texture-mapped
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
-     \param[in] "radius" Radius of the tube at each node position.
-     \param[in] "texturefile" Name of image file for texture map
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
+     * \param[in] "radius" Radius of the tube at each node position.
+     * \param[in] "texturefile" Name of image file for texture map
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     std::vector<uint> addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x-, y-, and z-directions
-     \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     \return Vector of UUIDs for each sub-patch
-     \note Assumes default color of green
-     \note This version of addBox assumes that all surface normal vectors point away from the box
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x-, y-, and z-directions
+     * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+     * \return Vector of UUIDs for each sub-patch
+     * \note Assumes default color of green
+     * \note This version of addBox assumes that all surface normal vectors point away from the box
+     * \ingroup compoundobjects
      */
     std::vector<uint> addBox(const vec3 &center, const vec3 &size, const int3 &subdiv );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x-, y-, and z-directions
-     \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     \param[in] "color" r-g-b color of box
-     \return Vector of UUIDs for each sub-patch
-     \note This version of addBox assumes that all surface normal vectors point away from the box
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x-, y-, and z-directions
+     * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+     * \param[in] "color" r-g-b color of box
+     * \return Vector of UUIDs for each sub-patch
+     * \note This version of addBox assumes that all surface normal vectors point away from the box
+     * \ingroup compoundobjects
      */
     std::vector<uint> addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x-, y-, and z-directions
-     \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     \param[in] "texturefile" Name of image file for texture map
-     \return Vector of UUIDs for each sub-patch
-     \note This version of addBox assumes that all surface normal vectors point away from the box
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x-, y-, and z-directions
+     * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+     * \param[in] "texturefile" Name of image file for texture map
+     * \return Vector of UUIDs for each sub-patch
+     * \note This version of addBox assumes that all surface normal vectors point away from the box
+     * \ingroup compoundobjects
      */
     std::vector<uint> addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const char* texturefile );
     
     //! Add a rectangular prism tesselated with Patch primitives
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x-, y-, and z-directions
-     \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     \param[in] "color" r-g-b color of box
-     \param[in] "reverse_normals" Flip all surface normals so that patch normals point inside the box
-     \return Vector of UUIDs for each sub-patch
-     \note This version of addBox assumes that all surface normal vectors point away from the box
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x-, y-, and z-directions
+     * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+     * \param[in] "color" r-g-b color of box
+     * \param[in] "reverse_normals" Flip all surface normals so that patch normals point inside the box
+     * \return Vector of UUIDs for each sub-patch
+     * \note This version of addBox assumes that all surface normal vectors point away from the box
+     * \ingroup compoundobjects
      */
     std::vector<uint> addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals );
     
     //! Add a rectangular prism tesselated with Patch primitives
     /**
-     \param[in] "center" 3D coordinates of box center
-     \param[in] "size" Size of the box in the x-, y-, and z-directions
-     \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     \param[in] "texturefile" Name of image file for texture map
-     \return Vector of UUIDs for each sub-patch
-     \note This version of addBox assumes that all surface normal vectors point away from the box
-     \ingroup compoundobjects
+     * \param[in] "center" 3D coordinates of box center
+     * \param[in] "size" Size of the box in the x-, y-, and z-directions
+     * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
+     * \param[in] "texturefile" Name of image file for texture map
+     * \return Vector of UUIDs for each sub-patch
+     * \note This version of addBox assumes that all surface normal vectors point away from the box
+     * \ingroup compoundobjects
      */
     std::vector<uint> addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const char* texturefile, bool reverse_normals );
     
     //! Add new Disk geometric primitive to the Context given its center, and size.
     /**
-     \param[in] "Ndiv" Number to triangles used to form disk
-     \param[in] "center" 3D coordinates of Disk center
-     \param[in] "size" length of Disk semi-major and semi-minor radii
-     \return Vector of UUIDs for each sub-triangle
-     \note Assumes that disk is horizontal.
-     \note Assumes a default color of black.
-     \ingroup compoundobjects
+     * \param[in] "Ndiv" Number to triangles used to form disk
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \return Vector of UUIDs for each sub-triangle
+     * \note Assumes that disk is horizontal.
+     * \note Assumes a default color of black.
+     * \ingroup compoundobjects
      */
     std::vector<uint> addDisk(uint Ndivs, const helios::vec3& center, const helios::vec2& size );
     
     //! Add new Disk geometric primitive
     /** Function to add a new Disk to the Context given its center, size, and spherical rotation.
-     \param[in] "Ndiv" Number to triangles used to form disk
-     \param[in] "center" 3D coordinates of Disk center
-     \param[in] "size" length of Disk semi-major and semi-minor radii
-     \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
-     \return Vector of UUIDs for each sub-triangle
-     \note Assumes a default color of black.
-     \ingroup compoundobjects
+     * \param[in] "Ndiv" Number to triangles used to form disk
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \note Assumes a default color of black.
+     * \ingroup compoundobjects
      */
     std::vector<uint> addDisk(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation );
     
     //! Add new Disk geometric primitive
     /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
-     \param[in] "Ndiv" Number to triangles used to form disk
-     \param[in] "center" 3D coordinates of Disk center
-     \param[in] "size" length of Disk semi-major and semi-minor radii
-     \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
-     \param[in] "color" diffuse R-G-B color of Disk
-     \return Vector of UUIDs for each sub-triangle
-     \ingroup compoundobjects
+     * \param[in] "Ndiv" Number to triangles used to form disk
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "color" diffuse R-G-B color of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \ingroup compoundobjects
      */
     std::vector<uint> addDisk(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color );
     
     //! Add new Disk geometric primitive
     /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
-     \param[in] "Ndiv" Number to triangles used to form disk
-     \param[in] "center" 3D coordinates of Disk center
-     \param[in] "size" length of Disk semi-major and semi-minor radii
-     \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
-     \param[in] "color" diffuse R-G-B-A color of Disk
-     \return Vector of UUIDs for each sub-triangle
-     \ingroup compoundobjects
+     * \param[in] "Ndiv" Number to triangles used to form disk
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "color" diffuse R-G-B-A color of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \ingroup compoundobjects
      */
     std::vector<uint> addDisk(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color );
     
     //! Add new Disk geometric primitive
     /** Function to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
-     \param[in] "Ndiv" Number to triangles used to form disk
-     \param[in] "center" 3D coordinates of Disk center
-     \param[in] "size" length of Disk semi-major and semi-minor radii
-     \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
-     \param[in] "texture_file" path to JPEG file to be used as texture
-     \return Vector of UUIDs for each sub-triangle
-     \note Assumes a default color of black.
-     \ingroup compoundobjects
+     * \param[in] "Ndiv" Number to triangles used to form disk
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "texture_file" path to JPEG file to be used as texture
+     * \return Vector of UUIDs for each sub-triangle
+     * \note Assumes a default color of black.
+     * \ingroup compoundobjects
      */
     std::vector<uint> addDisk(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
     
     //! Add a 3D cone to the Context
     /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
-     \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
-     \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
-     \param[in] "node0" (x,y,z) position defining the base of the cone
-     \param[in] "node1" (x,y,z) position defining the end of the cone
-     \param[in] "radius0" Radius of the cone at the base node.
-     \param[in] "radius1" Radius of the cone at the base node.
-     \note Ndivs must be greater than 2.
-     \ingroup compoundobjects
+     * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
+     * \param[in] "Ndivs" Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] "node0" (x,y,z) position defining the base of the cone
+     * \param[in] "node1" (x,y,z) position defining the end of the cone
+     * \param[in] "radius0" Radius of the cone at the base node.
+     * \param[in] "radius1" Radius of the cone at the base node.
+     * \note Ndivs must be greater than 2.
+     * \ingroup compoundobjects
      */
     std::vector<uint> addCone(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1 );
     
@@ -4971,32 +4997,35 @@ public:
     float queryTimeseriesData( const char* label, uint index ) const;
     
     //! Get the time associated with a timeseries data point
-    /**\param[in] "label" Name of timeseries variable (e.g., temperature)
-     \param[in] "index" Index of timeseries data point. The index starts at 0 for the earliest data point, and moves chronologically in time.
-     \return Time of timeseries data point
-     \ingroup timeseries
+    /**
+     * \param[in] "label" Name of timeseries variable (e.g., temperature)
+     * \param[in] "index" Index of timeseries data point. The index starts at 0 for the earliest data point, and moves chronologically in time.
+     * \return Time of timeseries data point
+     * \ingroup timeseries
      */
     Time queryTimeseriesTime( const char* label, uint index ) const;
     
     //! Get the date associated with a timeseries data point
-    /**\param[in] "label" Name of timeseries variable (e.g., temperature)
-     \param[in] "index" Index of timeseries data point. The index starts at 0 for the earliest data point, and moves chronologically in time.
-     \return Date of timeseries data point
-     \ingroup timeseries
+    /**
+     * \param[in] "label" Name of timeseries variable (e.g., temperature)
+     * \param[in] "index" Index of timeseries data point. The index starts at 0 for the earliest data point, and moves chronologically in time.
+     * \return Date of timeseries data point
+     * \ingroup timeseries
      */
     Date queryTimeseriesDate( const char* label, uint index ) const;
     
     //! Get the length of timeseries data
     /**
-     \param[in] "label" Name of timeseries variable (e.g., temperature)
-     \ingroup timeseries
+     * \param[in] "label" Name of timeseries variable (e.g., temperature)
+     * \ingroup timeseries
      */
     uint getTimeseriesLength( const char* label ) const;
     
     //! Get a box that bounds all primitives in the domain
-    /** \param[out] "xbounds" Domain bounds in x-direction (xbounds.x=min bound, xbounds.y=max bound)
-     \param[out] "ybounds" Domain bounds in x-direction (ybounds.x=min bound, ybounds.y=max bound)
-     \param[out] "zbounds" Domain bounds in x-direction (zbounds.x=min bound, zbounds.y=max bound)
+    /**
+     * \param[out] "xbounds" Domain bounds in x-direction (xbounds.x=min bound, xbounds.y=max bound)
+     * \param[out] "ybounds" Domain bounds in x-direction (ybounds.x=min bound, ybounds.y=max bound)
+     * \param[out] "zbounds" Domain bounds in x-direction (zbounds.x=min bound, zbounds.y=max bound)
      */
     void getDomainBoundingBox( helios::vec2& xbounds, helios::vec2& ybounds, helios::vec2& zbounds ) const;
     
@@ -5009,45 +5038,52 @@ public:
     void getDomainBoundingBox( const std::vector<uint>& UUIDs, helios::vec2& xbounds, helios::vec2& ybounds, helios::vec2& zbounds ) const;
     
     //! Get the center and radius of a sphere that bounds all primitives in the domain
-    /** \param[out] "center" Center of domain bounding sphere.
-     \param[out] "radius" Radius of domain bounding sphere.
+    /**
+     * \param[out] "center" Center of domain bounding sphere.
+     * \param[out] "radius" Radius of domain bounding sphere.
      */
     void getDomainBoundingSphere( helios::vec3& center, float& radius ) const;
     
     //! Get the center and radius of a sphere that bounds a subset of primitives
-    /** \param[in] "UUIDs" Subset of primitive UUIDs for bounding sphere calculation.
-     \param[out] "center" Center of primitive bounding sphere.
-     \param[out] "radius" Radius of primitive bounding sphere.
+    /**
+     * \param[in] "UUIDs" Subset of primitive UUIDs for bounding sphere calculation.
+     * \param[out] "center" Center of primitive bounding sphere.
+     * \param[out] "radius" Radius of primitive bounding sphere.
      */
     void getDomainBoundingSphere( const std::vector<uint>& UUIDs, helios::vec3& center, float& radius ) const;
     
     //! Crop the domain in the x-direction such that all primitives lie within some specified x interval.
-    /** \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.
+    /**
+     * \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.
      */
     void cropDomainX(const vec2 &xbounds );
     
     //! Crop the domain in the y-direction such that all primitives lie within some specified y interval.
-    /** \param[in] "ybounds" Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction.
+    /**
+     * \param[in] "ybounds" Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction.
      */
     void cropDomainY(const vec2 &ybounds );
     
     //! Crop the domain in the z-direction such that all primitives lie within some specified z interval.
-    /** \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
+    /**
+     * \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
      */
     void cropDomainZ(const vec2 &zbounds );
     
     //! Crop specified UUIDs such that they lie within some specified axis-aligned box
-    /** \param[in] "UUIDs" vector of UUIDs to crop
-     \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.
-     \param[in] "ybounds" Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction.
-     \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
+    /**
+     * \param[in] "UUIDs" vector of UUIDs to crop
+     * \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.
+     * \param[in] "ybounds" Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction.
+     * \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
      */
     void cropDomain(const std::vector<uint> &UUIDs, const vec2 &xbounds, const vec2 &ybounds, const vec2 &zbounds );
     
     //! Crop the domain such that all primitives lie within some specified axis-aligned box
-    /** \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.
-     \param[in] "ybounds" Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction.
-     \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
+    /**
+     * \param[in] "xbounds" Minimum (xbounds.x) and maximum (xbounds.y) extent of cropped domain in x-direction.
+     * \param[in] "ybounds" Minimum (ybounds.x) and maximum (ybounds.y) extent of cropped domain in y-direction.
+     * \param[in] "zbounds" Minimum (zbounds.x) and maximum (zbounds.y) extent of cropped domain in z-direction.
      */
     void cropDomain(const vec2 &xbounds, const vec2 &ybounds, const vec2 &zbounds );
 
@@ -5106,7 +5142,7 @@ public:
      * \param[in] "filename" name of ply file.
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
-     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). It is assumed by default that the y-axis is upward ("YUP"), which is common in computer graphics applications.
+     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
      * \param[in] "silent" If set to true, output messaged will be disabled.
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
@@ -5118,7 +5154,7 @@ public:
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift).
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "rotation" Spherical rotation of PLY object about origin
-     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). It is assumed by default that the y-axis is upward ("YUP"), which is common in computer graphics applications.
+     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
      * \param[in] "silent" If set to true, output messaged will be disabled
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
@@ -5130,7 +5166,7 @@ public:
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). It is assumed by default that the y-axis is upward ("YUP"), which is common in computer graphics applications.
+     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
      * \param[in] "silent" If set to true, output messaged will be disabled
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
@@ -5142,7 +5178,7 @@ public:
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). It is assumed by default that the y-axis is upward ("YUP"), which is common in computer graphics applications.
+     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
      * \param[in] "silent" If set to true, output messaged will be disabled
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
@@ -5171,7 +5207,7 @@ public:
      * \param[in] "height" A z-scaling factor is applied to make the model 'height' tall. If height=0, no scaling is applied
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file
+     * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file (one of "XUP", "YUP", or "ZUP" - "ZUP" is default).
      * \param[in] "silent" If set to true, output messaged will be disabled
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );
@@ -5181,10 +5217,10 @@ public:
     /**
      * \param[in] "filename" name of OBJ file
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
-     * \param[in] "scale" (x,y,z) scaling factor to be applied to PLY vertex coordinates
+     * \param[in] "scale" (x,y,z) scaling factor to be applied to OBJ vertex coordinates (if scale.x=scale.y=scale.z=0, no scaling is applied).
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file
+     * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file (one of "XUP", "YUP", or "ZUP" - "ZUP" is default).
      * \param[in] "silent" If set to true, output messaged will be disabled
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, const helios::vec3 &scale, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );

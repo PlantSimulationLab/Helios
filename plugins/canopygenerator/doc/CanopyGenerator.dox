@@ -170,7 +170,7 @@
  <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>1.2</td></tr>
  <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
  <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon (thus each plant has 4*shoots\_per\_cordon shoots).</td><td>10</td></tr>
- <tr><td>shoots\_tip\_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
+ <tr><td>shoot\_angle\_tip</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
  <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
  <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
  <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
@@ -212,7 +212,7 @@
  <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>0.9</td></tr>
  <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
  <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon.</td><td>20</td></tr>
- <tr><td>shoots\_tip\_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
+ <tr><td>shoot\_angle\_tip</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
  <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
  <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
  <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
@@ -254,7 +254,7 @@
  <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>0.9</td></tr>
  <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
  <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon.</td><td>10</td></tr>
- <tr><td>shoots\_tip\_angle</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
+ <tr><td>shoot\_angle\_tip</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
  <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
  <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
  <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>

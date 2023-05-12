@@ -2269,6 +2269,25 @@ void CompoundObject::rotate( float rot, const helios::vec3&  origin, const helio
 
 }
 
+void CompoundObject::scale( const helios::vec3 &scale ){
+
+    float T[16], T_prim[16];
+    makeScaleMatrix( scale, T);
+    matmult(T,transform,transform);
+
+    for( uint UUID : UUIDs) {
+
+        if (context->doesPrimitiveExist(UUID)) {
+
+            context->getPrimitiveTransformationMatrix(UUID, T_prim);
+            matmult(T, T_prim, T_prim);
+            context->setPrimitiveTransformationMatrix(UUID, T_prim);
+
+        }
+
+    }
+}
+
 void CompoundObject::getTransformationMatrix( float (&T)[16] ) const{
     for( int i=0; i<16; i++ ){
         T[i]=transform[i];
@@ -2607,6 +2626,16 @@ void Context::rotateObject(uint ObjID, float rot, const vec3& origin, const vec3
 void Context::rotateObject( const std::vector<uint>& ObjIDs, float rot, const vec3& origin, const vec3& axis ){
     for( uint ID : ObjIDs){
         getObjectPointer(ID)->rotate(rot,origin,axis);
+    }
+}
+
+void Context::scaleObject( uint ObjID, const helios::vec3 &scalefact ){
+    getObjectPointer(ObjID)->scale(scalefact);
+}
+
+void Context::scaleObject( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact ){
+    for( uint ID : ObjIDs){
+        getObjectPointer(ID)->scale(scalefact);
     }
 }
 
@@ -3089,26 +3118,6 @@ std::vector<helios::vec2> Tile::getTextureUV() const{
 
 }
 
-void Tile::scale(const vec3 &S ){
-
-    float T[16], T_prim[16];
-    makeScaleMatrix( S, T);
-    matmult(T,transform,transform);
-
-    for( uint UUID : UUIDs) {
-
-        if (context->doesPrimitiveExist(UUID)) {
-
-            context->getPrimitiveTransformationMatrix(UUID, T_prim);
-            matmult(T, T_prim, T_prim);
-            context->setPrimitiveTransformationMatrix(UUID, T_prim);
-
-        }
-
-    }
-
-}
-
 Sphere::Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
@@ -3129,15 +3138,33 @@ Sphere* Context::getSphereObjectPointer(uint ObjID ) const{
     return dynamic_cast<Sphere*>(objects.at(ObjID));
 }
 
-float Sphere::getRadius() const{
+helios::vec3 Sphere::getRadius() const{
 
-    vec3 n0(0,0,0), n1(1,0,0);
-    vec3 n0_T, n1_T;
+//    vec3 n0(0,0,0), n1(1,0,0);
+//    vec3 n0_T, n1_T;
+//
+//    vecmult(transform,n0,n0_T);
+//    vecmult(transform,n1,n1_T);
+//
+//    return  (n1_T-n0_T).magnitude();
+
+    vec3 n0(0,0,0);
+    vec3 nx(1,0,0);
+    vec3 ny(0,1,0);
+    vec3 nz(0,0,1);
+    vec3 n0_T, nx_T, ny_T, nz_T;
 
     vecmult(transform,n0,n0_T);
-    vecmult(transform,n1,n1_T);
+    vecmult(transform,nx,nx_T);
+    vecmult(transform,ny,ny_T);
+    vecmult(transform,nz,nz_T);
 
-    return  (n1_T-n0_T).magnitude();
+    vec3 radii;
+    radii.x = (nx_T-n0_T).magnitude();
+    radii.y = (ny_T-n0_T).magnitude();
+    radii.z = (nz_T-n0_T).magnitude();
+
+    return radii;
 
 }
 
@@ -3163,26 +3190,6 @@ uint Sphere::getSubdivisionCount() const{
 
 void Sphere::setSubdivisionCount( uint a_subdiv ){
     subdiv = a_subdiv;
-}
-
-void Sphere::scale( float S ){
-
-    float T[16], T_prim[16];
-    makeScaleMatrix( make_vec3(S,S,S), T);
-    matmult(T,transform,transform);
-
-    for( uint UUID : UUIDs){
-
-        if( context->doesPrimitiveExist( UUID ) ){
-
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
-            matmult(T,T_prim,T_prim);
-            context->setPrimitiveTransformationMatrix( UUID,T_prim);
-
-        }
-
-    }
-
 }
 
 Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
@@ -3252,26 +3259,6 @@ void Tube::setSubdivisionCount( uint a_subdiv ){
     subdiv = a_subdiv;
 }
 
-void Tube::scale( float S ){
-
-    float T[16], T_prim[16];
-    makeScaleMatrix( make_vec3(S,S,S), T);
-    matmult(T,transform,transform);
-
-    for( uint UUID : UUIDs){
-
-        if( context->doesPrimitiveExist( UUID ) ){
-
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
-            matmult(T,T_prim,T_prim);
-            context->setPrimitiveTransformationMatrix( UUID,T_prim);
-
-        }
-
-    }
-
-}
-
 Box::Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, const char *a_texturefile,
          helios::Context *a_context) {
 
@@ -3336,26 +3323,6 @@ void Box::setSubdivisionCount( const helios::int3 &a_subdiv ){
     subdiv = a_subdiv;
 }
 
-void Box::scale(const vec3 &S ){
-
-    float T[16], T_prim[16];
-    makeScaleMatrix( S, T);
-    matmult(T,transform,transform);
-
-    for( uint UUID : UUIDs){
-
-        if( context->doesPrimitiveExist( UUID ) ){
-
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
-            matmult(T,T_prim,T_prim);
-            context->setPrimitiveTransformationMatrix( UUID,T_prim);
-
-        }
-
-    }
-
-}
-
 Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile,
            helios::Context *a_context) {
 
@@ -3415,26 +3382,6 @@ uint Disk::getSubdivisionCount() const{
 
 void Disk::setSubdivisionCount( uint a_subdiv ){
     subdiv = a_subdiv;
-}
-
-void Disk::scale(const vec3 &S ){
-
-    float T[16], T_prim[16];
-    makeScaleMatrix( S, T);
-    matmult(T,transform,transform);
-
-    for( uint UUID : UUIDs){
-
-        if( context->doesPrimitiveExist( UUID ) ){
-
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
-            matmult(T,T_prim,T_prim);
-            context->setPrimitiveTransformationMatrix( UUID,T_prim);
-
-        }
-
-    }
-
 }
 
 Polymesh::Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_texturefile,
@@ -3680,16 +3627,26 @@ void Cone::scaleGirth( float S ){
 }
 
 uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius ){
-
-    RGBcolor color = make_RGBcolor(0.f,0.75f,0.f); //Default color is green
-
-    return addSphereObject(Ndivs,center,radius,color);
-
+    return addSphereObject(Ndivs,center,{radius,radius,radius},{0.f,0.75f,0.f}); //Default color is green
 }
 
 uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color ){
+    return addSphereObject(Ndivs,center,{radius,radius,radius},color);
+}
 
-    if( radius<=0.f ){
+uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, const char* texturefile ){
+    return addSphereObject(Ndivs,center,{radius,radius,radius},texturefile);
+}
+
+uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius ){
+
+    return addSphereObject(Ndivs,center,radius,{0.f,0.75f,0.f}); //Default color is green
+
+}
+
+uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const RGBcolor &color ){
+
+    if( radius.x<=0.f || radius.y<=0.f || radius.z<=0.f ){
         throw( std::runtime_error("ERROR (addSphereObject): Radius of sphere must be positive."));
     }
 
@@ -3699,12 +3656,17 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     float dtheta=float(M_PI)/float(Ndivs);
     float dphi=2.0f*float(M_PI)/float(Ndivs);
 
+    vec3 cart;
+
     //bottom cap
     for( int j=0; j<Ndivs; j++ ){
 
-        vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI), 0 ) );
-        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+dtheta, float(j)*dphi ) );
-        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+dtheta, float(j+1)*dphi ) );
+        cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI), 0 ) );
+        vec3 v0 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+dtheta, float(j)*dphi ) );
+        vec3 v1 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+dtheta, float(j+1)*dphi ) );
+        vec3 v2 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
 
         UUID.push_back( addTriangle(v0,v1,v2,color) );
 
@@ -3713,9 +3675,12 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     //top cap
     for( int j=0; j<Ndivs; j++ ){
 
-        vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI), 0 ) );
-        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI)-dtheta, float(j)*dphi ) );
-        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI)-dtheta, float(j+1)*dphi ) );
+        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI), 0 ) );
+        vec3 v0 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI)-dtheta, float(j)*dphi ) );
+        vec3 v1 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI)-dtheta, float(j+1)*dphi ) );
+        vec3 v2 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
 
         UUID.push_back( addTriangle(v2,v1,v0,color) );
 
@@ -3725,10 +3690,14 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     for( int j=0; j<Ndivs; j++ ){
         for( int i=1; i<Ndivs-1; i++ ){
 
-            vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+float(i)*dtheta, float(j)*dphi ) );
-            vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+float(i+1)*dtheta, float(j)*dphi ) );
-            vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+float(i+1)*dtheta, float(j+1)*dphi ) );
-            vec3 v3 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+float(i)*dtheta, float(j+1)*dphi ) );
+            cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+float(i)*dtheta, float(j)*dphi ) );
+            vec3 v0 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+            cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+float(i+1)*dtheta, float(j)*dphi ) );
+            vec3 v1 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+            cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+float(i+1)*dtheta, float(j+1)*dphi ) );
+            vec3 v2 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+            cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+float(i)*dtheta, float(j+1)*dphi ) );
+            vec3 v3 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
 
             UUID.push_back( addTriangle(v0,v1,v2,color) );
             UUID.push_back( addTriangle(v0,v2,v3,color) );
@@ -3741,7 +3710,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     float T[16], transform[16];
     sphere_new->getTransformationMatrix( transform );
 
-    makeScaleMatrix(make_vec3(radius,radius,radius),T);
+    makeScaleMatrix(radius,T);
     matmult(T,transform,transform);
 
     makeTranslationMatrix(center,T);
@@ -3762,9 +3731,9 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
 
 }
 
-uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, const char* texturefile ){
+uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const char* texturefile ){
 
-    if( radius<=0.f ){
+    if( radius.x<=0.f || radius.y<=0.f || radius.z<=0.f ){
         throw( std::runtime_error("ERROR (addSphereObject): Radius of sphere must be positive."));
     }
 
@@ -3774,12 +3743,17 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     float dtheta=float(M_PI)/float(Ndivs);
     float dphi=2.0f*float(M_PI)/float(Ndivs);
 
+    vec3 cart;
+
     //bottom cap
     for( int j=0; j<Ndivs; j++ ){
 
-        vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI), 0 ) );
-        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+dtheta, float(j+1)*dphi ) );
-        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+dtheta, float(j)*dphi ) );
+        cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI), 0 ) );
+        vec3 v0 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+dtheta, float(j)*dphi ) );
+        vec3 v1 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+dtheta, float(j+1)*dphi ) );
+        vec3 v2 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
 
         vec3 n0 = v0-center;
         n0.normalize();
@@ -3803,9 +3777,12 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     //top cap
     for( int j=0; j<Ndivs; j++ ){
 
-        vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI), 0 ) );
-        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI)-dtheta, float(j+1)*dphi ) );
-        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*float(M_PI)-dtheta, float(j)*dphi ) );
+        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI), 0 ) );
+        vec3 v0 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI)-dtheta, float(j)*dphi ) );
+        vec3 v1 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI)-dtheta, float(j+1)*dphi ) );
+        vec3 v2 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
 
         vec3 n0 = v0-center;
         n0.normalize();
@@ -3830,10 +3807,14 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     for( int j=0; j<Ndivs; j++ ){
         for( int i=1; i<Ndivs-1; i++ ){
 
-            vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+float(i)*dtheta, float(j)*dphi ) );
-            vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+float(i+1)*dtheta, float(j)*dphi ) );
-            vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+float(i+1)*dtheta, float(j+1)*dphi ) );
-            vec3 v3 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*float(M_PI)+float(i)*dtheta, float(j+1)*dphi ) );
+            cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+float(i)*dtheta, float(j)*dphi ) );
+            vec3 v0 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+            cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+float(i+1)*dtheta, float(j)*dphi ) );
+            vec3 v1 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+            cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+float(i+1)*dtheta, float(j+1)*dphi ) );
+            vec3 v2 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+            cart = sphere2cart( make_SphericalCoord(1.f, -0.5f*float(M_PI)+float(i)*dtheta, float(j+1)*dphi ) );
+            vec3 v3 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
 
             vec3 n0 = v0-center;
             n0.normalize();
@@ -3865,7 +3846,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, cons
     float T[16], transform[16];
     sphere_new->getTransformationMatrix( transform );
 
-    makeScaleMatrix(make_vec3(radius,radius,radius),T);
+    makeScaleMatrix(radius,T);
     matmult(T,transform,transform);
 
     makeTranslationMatrix(center,T);
@@ -7396,7 +7377,7 @@ helios::vec3 Context::getSphereObjectCenter(uint &ObjID) const {
     return getSphereObjectPointer_private(ObjID)->getCenter();
 }
 
-float Context::getSphereObjectRadius(uint &ObjID) const {
+helios::vec3 Context::getSphereObjectRadius(uint &ObjID) const {
     return getSphereObjectPointer_private(ObjID)->getRadius();
 }
 

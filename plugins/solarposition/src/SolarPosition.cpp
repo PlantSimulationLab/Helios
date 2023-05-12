@@ -49,7 +49,7 @@ SolarPosition::SolarPosition( int __UTC, float __latitude, float __longitude, he
     
 }
 
-int SolarPosition::selfTest( void ) const{
+int SolarPosition::selfTest() const{
 
   std::cout << "Running solar position model self-test..." << std::flush;
   int error_count = 0;
@@ -139,7 +139,7 @@ int SolarPosition::selfTest( void ) const{
 
 }
 
-SphericalCoord SolarPosition::calculateSunDirection( helios::Time time, helios::Date date ) const{
+SphericalCoord SolarPosition::calculateSunDirection( const helios::Time &time, const helios::Date &date ) const{
   
   int solstice_day, LSTM;
   float Gamma, delta, time_dec, B, EoT, TC, LST, h, theta, phi, rad;
@@ -187,7 +187,7 @@ SphericalCoord SolarPosition::calculateSunDirection( helios::Time time, helios::
 
 }
 
-Time SolarPosition::getSunriseTime( void ) const{
+Time SolarPosition::getSunriseTime() const{
 
   //This is a lazy way to find the sunrise/sunset time.  If anyone wants to do the math and solve for it algebraically, go for it.
   SphericalCoord sun_dir;
@@ -204,7 +204,7 @@ Time SolarPosition::getSunriseTime( void ) const{
 
 }
 
-Time SolarPosition::getSunsetTime( void ) const{
+Time SolarPosition::getSunsetTime() const{
 
   // SphericalCoord sun_dir;
   for( uint h=23; h>=1; h-- ){
@@ -220,61 +220,86 @@ Time SolarPosition::getSunsetTime( void ) const{
 
 }
 
-float SolarPosition::getSunElevation( void ){
-  SphericalCoord sun_direction = calculateSunDirection(context->getTime(),context->getDate());
-  return sun_direction.elevation;
+float SolarPosition::getSunElevation(){
+    float elevation;
+    if( issolarpositionoverridden ){
+        elevation = sun_direction.elevation;
+    }else{
+        elevation = calculateSunDirection(context->getTime(),context->getDate()).elevation;
+    }
+    return elevation;
 }
 
-float SolarPosition::getSunZenith( void ){
-  SphericalCoord sun_direction = calculateSunDirection(context->getTime(),context->getDate());
-  return sun_direction.zenith;
+float SolarPosition::getSunZenith(){
+    float zenith;
+    if( issolarpositionoverridden ){
+        zenith = sun_direction.zenith;
+    }else{
+        zenith = calculateSunDirection(context->getTime(),context->getDate()).zenith;
+    }
+    return zenith;
 }
 
-float SolarPosition::getSunAzimuth( void ){
-  SphericalCoord sun_direction = calculateSunDirection(context->getTime(),context->getDate());
-  return sun_direction.azimuth;
+float SolarPosition::getSunAzimuth(){
+    float azimuth;
+    if( issolarpositionoverridden ){
+        azimuth = sun_direction.azimuth;
+    }else{
+        azimuth = calculateSunDirection(context->getTime(),context->getDate()).azimuth;
+    }
+    return azimuth;
 }
 
-vec3 SolarPosition::getSunDirectionVector( void ){
-  SphericalCoord sun_direction = calculateSunDirection(context->getTime(),context->getDate());
-  return sphere2cart(sun_direction);
+vec3 SolarPosition::getSunDirectionVector(){
+    SphericalCoord sundirection;
+    if( issolarpositionoverridden ) {
+        sundirection = sun_direction;
+    }else{
+        sundirection = calculateSunDirection(context->getTime(),context->getDate());
+    }
+    return sphere2cart(sundirection);
 }
 
-SphericalCoord SolarPosition::getSunDirectionSpherical( void ){
-  return calculateSunDirection(context->getTime(),context->getDate());
+SphericalCoord SolarPosition::getSunDirectionSpherical(){
+    SphericalCoord sundirection;
+    if( issolarpositionoverridden ) {
+        sundirection = sun_direction;
+    }else{
+        sundirection = calculateSunDirection(context->getTime(),context->getDate());
+    }
+    return sundirection;
 }
 
-float SolarPosition::getSolarFlux( const float pressure, const float temperature, const float humidity, const float turbidity ){
+void SolarPosition::setSunDirection( const helios::SphericalCoord &sundirection ){
+    issolarpositionoverridden = true;
+    sun_direction = sundirection;
+}
+
+float SolarPosition::getSolarFlux( float pressure, float temperature, float humidity, float turbidity ){
   float Eb_PAR, Eb_NIR, fdiff;
   GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
   return Eb_PAR+Eb_NIR;
 }
 
-float SolarPosition::getSolarFluxPAR( const float pressure, const float temperature, const float humidity, const float turbidity ){
+float SolarPosition::getSolarFluxPAR( float pressure, float temperature, float humidity, float turbidity ){
   float Eb_PAR, Eb_NIR, fdiff;
   GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
   return Eb_PAR;
 }
 
-float SolarPosition::getSolarFluxNIR( const float pressure, const float temperature, const float humidity, const float turbidity ){
+float SolarPosition::getSolarFluxNIR( float pressure, float temperature, float humidity, float turbidity ){
   float Eb_PAR, Eb_NIR, fdiff;
   GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
   return Eb_NIR;
 }
 
-float SolarPosition::getDiffuseFraction( const float pressure, const float temperature, const float humidity, const float turbidity ){
+float SolarPosition::getDiffuseFraction( float pressure, float temperature, float humidity, float turbidity ){
   float Eb_PAR, Eb_NIR, fdiff;
   GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
   return fdiff;
 }
 
-void SolarPosition::GueymardSolarModel( const float pressure, const float temperature, const float humidity, const float turbidity, float& Eb_PAR, float& Eb_NIR, float &fdiff ){
-
-  //float pressure = 101325;
-  //float T = 25;
-  //float RH = 0.5;
-
-  //float beta = 0.5;
+void SolarPosition::GueymardSolarModel( float pressure, float temperature, float humidity, float turbidity, float& Eb_PAR, float& Eb_NIR, float &fdiff ){
 
   float beta = turbidity;
 
@@ -390,7 +415,7 @@ void SolarPosition::GueymardSolarModel( const float pressure, const float temper
 
   float Tas_NIR=exp(-ma*omega_NIR*beta*pow(lambdae_NIR,-alpha.y));
 
-  //global irradiation
+  //direct irradiation
   Eb_PAR=TR_PAR*Tg_PAR*To_PAR*Tn_PAR*Tw_PAR*Ta_PAR*E0_PAR;
   Eb_NIR=TR_NIR*Tg_NIR*To_NIR*Tn_NIR*Tw_NIR*Ta_NIR*E0_NIR;
   float Eb=Eb_PAR+Eb_NIR;
@@ -401,9 +426,7 @@ void SolarPosition::GueymardSolarModel( const float pressure, const float temper
   float Edp=Edp_PAR+Edp_NIR;
 
   //diffuse fraction
-  //float fdiff_PAR=Edp_PAR/Eb_PAR;
-  //float fdiff_NIR=Edp_NIR/Eb_NIR;
-  fdiff = Edp/Eb;
+  fdiff = Edp/(Eb+Edp);
 
   //fraction can't be greater than 1.0
   if( fdiff>1.0 ){
@@ -418,7 +441,7 @@ void SolarPosition::GueymardSolarModel( const float pressure, const float temper
     
 }
 
-float SolarPosition::getAmbientLongwaveFlux( const float temperature, const float humidity ){
+float SolarPosition::getAmbientLongwaveFlux( float temperature, float humidity ){
 
   //Model from Prata (1996) Q. J. R. Meteorol. Soc.
 

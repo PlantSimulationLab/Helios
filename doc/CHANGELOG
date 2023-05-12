@@ -1248,3 +1248,19 @@
 
 *Visualizer*
 - Bug fixed in Visualizer::clearGeometry() function, which was not completely clearing all geometric information.
+
+[1.2.59] 2023-05-12
+
+*Context*
+- Some efficiency improvements in Helios vector types.
+- writeOBJ() updated to write optional .dat files to same directory that the .obj and .mtl files will be written.
+- scaleObject() function was added to allow for scaling of compound objects after they have been created. As a result, scaling of objects is now done the same regardless of the object type.
+- 'nullorigin' global variable created to avoid having to type out make_vec3(0,0,0).
+
+*Solar Position*
+- Error corrected in calculation of diffuse fraction using Gueymard model (credit to Alejandra for finding this)
+- Added function setSunDirection() to manually set the sun direction.
+
+*Photosynthesis*
+- Error in documentation corrected that had column labels for photosynthesis model parameters swapped for theta and Rd.
+- Optional output data for limitation state was outputting the wrong value.

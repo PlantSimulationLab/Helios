@@ -137,8 +137,8 @@
  	<th>\f$J_{max,25}\f$ (\f$\mu\f$mol/m<sup>2</sup>-s)</th>
  	<th>\f$C_{Jmax}\f$ (unitless)</th>
  	<th>\f$H_{a,Jmax}\f$ (mol/J)</th>
- 	<th>\f$R_{d,25}\f$ (mol air/m<sup>2</sup>-s)</th>
  	<th>\f$\alpha\f$ (unitless)</th>
+ 	<th>\f$R_{d,25}\f$ ($\mu$mol/m<sup>2</sup>-s)</th>
  	<th>\f$R^2\f$ of fit</th>
  </tr>
  <tr>

@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.2.58
+/*! \mainpage Helios Documentation v1.2.59
 
   \image html Helios_logo.png
 
@@ -173,7 +173,7 @@
 
   \subsection SetupPCMSVC Install Microsoft Visual Studio C++ compiler tools
 
-  Download and install Microsoft Visual Studio Community 2022 if your GPU has compute capability of 5 or higher. You can look up your GPU's compute capability here. If your compute capability is less than 5, you'll need to download Visual Studio Community 2019 and CUDA 10.2 to ensure compatability. The link to download older versions of Visual Studio is here: <a href="https://visualstudio.microsoft.com/vs/older-downloads/">https://visualstudio.microsoft.com/vs/older-downloads/</a>. It will require that you <a href="https://visualstudio.microsoft.com/dev-essentials/">join the free Dev Essentials program</a> in order to access the old downloads. Once you have reached the downloads page, Download Visual Studio Community 2019. For more information on choosing your compiler version, consult \ref chooseCUDA "this page".
+  Download and install Microsoft Visual Studio Community 2022 if your GPU has compute capability of 5 or higher. You can look up your GPU's compute capability here. If your compute capability is less than 5, you'll need to download Visual Studio Community 2019 and CUDA 10.2 to ensure compatibility. The link to download older versions of Visual Studio is here: <a href="https://visualstudio.microsoft.com/vs/older-downloads/">https://visualstudio.microsoft.com/vs/older-downloads/</a>. It will require that you <a href="https://visualstudio.microsoft.com/dev-essentials/">join the free Dev Essentials program</a> in order to access the old downloads. Once you have reached the downloads page, Download Visual Studio Community 2019. For more information on choosing your compiler version, consult \ref chooseCUDA "this page".
 
   Once you have successfully downloaded the EXE install file, you can run it to perform the install. The important step is to be sure to install the optional packages for C++ Desktop Development. The figure below shows the check box to enable. When the installer finishes, there is no need to actually open Visual Studio, and you can move on to the next step.
 
@@ -195,15 +195,15 @@
 
   \image html CLion_generator_setup.png
 
-  That should be all that is needed to build basic programs that do not require CUDA. You can test by building the context_selftest project in the "samples" directory. In the left "Project" pane (main CLion window), expand the "samples" folder, and the subdirectory called "context_selftest". Right-click on the CMakeLists.txt file in that directory and select "Load CMake Project". You should then be able to compile and run it by clicking the play icon in the upper right hand corner of the CLion window. If you get build errors that have the word "Ninja" in various places, you missed the previous step changing the Generator to "NMake Makefiles".
+  That should be all that is needed to build basic programs that do not require CUDA. You can test by building the context\_selftest project in the "samples" directory. In the left "Project" pane (main CLion window), expand the "samples" folder, and the subdirectory called "context\_selftest". Right-click on the CMakeLists.txt file in that directory and select "Load CMake Project". You should then be able to compile and run it by clicking the play icon in the upper right hand corner of the CLion window. If you get build errors that have the word "Ninja" in various places, you missed the previous step changing the Generator to "NMake Makefiles".
 
   \subsection SetupPCCUDA Setting up NVIDIA CUDA
 
-  The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a> (note that if you installed Visual Studio 2019 instead of 2022, you'll need to install CUDA 10.2 instead of the latest version). Download the base CUDA Toolkit installer for your Windows OS. Installing from the "exe (network)" type will result in a smaller file being downloaded. Click through the installer and accept all the default options. By default, it should have installed to "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\", where v1X.X is the version that you installed. You can verify this installation location using the file browser.
+  The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a> (note that if you installed Visual Studio 2019 instead of 2022, you'll need to install CUDA 10.2 instead of the latest version). Download the base CUDA Toolkit installer for your Windows OS. Installing from the "exe (network)" type will result in a smaller file being downloaded. Click through the installer and accept all the default options. By default, it should have installed to 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\', where v1X.X is the version that you installed. You can verify this installation location using the file browser.
 
-  In order to use CUDA within CLion, you need to tell it where to find the CUDA toolkit. To do this, open up the settings in CLion, and go to "Build, Execution, Deployment" and then to CMake. Click the icon next to the "Environment" field to edit environmental variables. Find the variable named "Path", and double click to edit it. At the end of the list of directories, add the path to the CUDA bin folder, i.e., "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\bin;". Make sure there is a semicolon before and after the path, and that you replace the v1X.X with your actual CUDA version. It is important to hit the return key, which should cause the Path variable list to turn blue. When you hit OK, the Path variable should be listed under the Environment field.
+  In order to use CUDA within CLion, you need to tell it where to find the CUDA toolkit. To do this, open up the settings in CLion, and go to "Build, Execution, Deployment" and then to CMake. Click the icon next to the "Environment" field to edit environmental variables. Find the variable named "Path", and double click to edit it. At the end of the list of directories, add the path to the CUDA bin folder, i.e., 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\bin;'. Make sure there is a semicolon before and after the path, and that you replace the v1X.X with your actual CUDA version. It is important to hit the return key, which should cause the Path variable list to turn blue. When you hit OK, the Path variable should be listed under the Environment field.
 
-  Once that is done, you can test it by building and running the self-test for a CUDA-based plug-in such as the energy balance model following similar steps above for the context_selftest. If you get a CMake error that asks you to "Specify CUDA_TOOLKIT_ROOT_DIR", it can't find your CUDA install, and most likely you set the "Path" variable incorrectly.
+  Once that is done, you can test it by building and running the self-test for a CUDA-based plug-in such as the energy balance model following similar steps above for the context\_selftest. If you get a CMake error that asks you to 'Specify CUDA_TOOLKIT_ROOT_DIR', it can't find your CUDA install, and most likely you set the "Path" variable incorrectly.
 
   \section SetupLinux Set-up on Linux
 
@@ -225,16 +225,16 @@
 
   The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. While CUDA can be installed on Linux via apt-get, this tends to often cause problems. It has proven more robust to simply download CUDA from the NVIDIA website and run the installer.
 
-  Note that individual plugins may have their own library dependencies.  Consult their documentation for dependency information. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a>. However, you'll want to be sure that the version of CUDA that you install works with your compiler version. This website has a table showing compatability for all versions: <a href="https://gist.github.com/ax3l/9489132">https://gist.github.com/ax3l/9489132</a>, check the g++ column. To figure out which version of g++ you have, you can type the command "g++ --version".
+  Note that individual plugins may have their own library dependencies.  Consult their documentation for dependency information. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a>. However, you'll want to be sure that the version of CUDA that you install works with your compiler version. This website has a table showing compatibility for all versions: <a href="https://gist.github.com/ax3l/9489132">https://gist.github.com/ax3l/9489132</a>, check the g++ column. To figure out which version of g++ you have, you can type the command "g++ --version".
 
-  The Linux installation guide for the latest version of CUDA can be found here: <a href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html">https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html</a>. If you are installing an older version, you can find its Linux installation guide within the documentation for that specific version. Note also that Table 1 gives gcc/g++ compiler compatability information.
+  The Linux installation guide for the latest version of CUDA can be found here: <a href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html">https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html</a>. If you are installing an older version, you can find its Linux installation guide within the documentation for that specific version. Note also that Table 1 gives gcc/g++ compiler compatibility information.
 
   Probably the easiest installation approach is to use the runfile installer type. When you choose this option on the downloads page, it will give you two commands to run the installer: 1) a 'wget' command to download the installer, 2) the command to run the downloaded installer. Complete instructions can be found in <a href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile">Section 7</a> of the latest Linux install guide. Note that  one of the steps is disabling the Nouvou graphics drivers, which disables the "free" graphics driver that may be on your system and can conflict with the NVIDIA driver.  This can be done in a few easy commands:
 
   1. echo blacklist nouveau > /etc/modprobe.d/blacklist-nvidia-nouveau.conf
   2. echo options nouveau modeset=0 >> /etc/modprobe.d/blacklist-nvidia-nouveau.conf
 
-  A restart is then needed. It is usually a good idea to install the graphics driver that comes with the CUDA installer to avoid incompatability issues.
+  A restart is then needed. It is usually a good idea to install the graphics driver that comes with the CUDA installer to avoid incompatibility issues.
 
   \subsection SetupLinuxVis Dependencies of the Visualizer Plug-in
 
@@ -244,7 +244,7 @@
 
   \subsection SetupMacCLion Setting up basic build functionality
 
-  CLion provides the ability to install all required dependent software (except for CUDA, see below) directly from the IDE. When you open CLion for the first time, or by going to "File->New->Project from Version Control", the default Version Control system should be Git, and it should prompt you to install git along with XCode. Follow the prompts to do so, but if it fails you can also install XCode from the App Store. Type in the URL for the Helios GitHub repository: "https://www.github.com/PlantSimulationLab/Helios", select the directory where you'd like the Helios source code to be located, and hit "Clone".
+  CLion provides the ability to install all required dependent software (except for CUDA, see below) directly from the IDE. When you open CLion for the first time, or by going to "File->New->Project from Version Control", the default Version Control system should be Git, and it should prompt you to install git along with XCode. Follow the prompts to do so, but if it fails you can also install XCode from the App Store. Type in the URL for the Helios GitHub repository: 'https://www.github.com/PlantSimulationLab/Helios', select the directory where you'd like the Helios source code to be located, and hit "Clone".
 
   If you are opening CLion for the first time, it should also open up a Toolchain Wizard window (or you can find it by going to "CLion->Preferences->Build, Execution, Deployment->Toolchains". It should automatically pick up Make and the C/C++ compilers if you have XCode installed.
 
@@ -262,39 +262,6 @@
   CMake: Components of Helios are compiled using the CMake package (<a href="www.cmake.org">www.cmake.org</a>).  Version 2.5+ is required on Mac.  CMake can be easily installed via the command line using homebrew "brew install cmake".
 
   C/C++ Compiler: You will also need a C/C++ compiler installed - we recommend using the GNU compilers or the AppleClang compilers.  The GNU compilers can easily be installed via the command line "brew install gcc".
-
-  <!--
-
-  <table>
-  <tr><th>Package</th><td>\image html apple-logo.jpg</td><td>\image html unix-logo.png</td><td>\image html windows-logo.jpg</td></tr>
-  <tr><td>CMake</td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install cmake</code></div></td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install cmake</code></div></td><td>See <a href="www.cmake.org">www.cmake.org</a> for the graphical version of CMake.</td></tr>
-  <tr><td>GNU C/C++ Compiler</td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install gcc</code></div></td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install gcc g++</code></div></td><td>Unknown</td></tr>
-  </table>
-  
-  \subsection Comp Compiling and Running Samples
-
-  Several code samples are given in the 'samples' directory.  Each sample is compiled and run separately.  To compile a sample, change into the build directory of the sample, and issue the following command to compile. For example, the context self-test sample can be run by using:
-
-  <div style="padding:12px;background-color:#D0D0D0 ;line-height:1.4;">
-    <code> $ cd samples/context_selftest/build </code>
-    <code> $ cmake .. </code>
-  </div>
-
-  This command references the CMakeLists.txt file in the main sample directory, which contains instructions for CMake as to how the code should be built.  Note that some samples use plugins (see \ref Plugins) that may have library dependencies, which must be installed.  See the sample's documentation for more information.
-
-  The cmake utility should generate a makefile that can be used to compile the sample:
-
-  <div style="padding:12px;background-color:#D0D0D0 ;line-height:1.4;">
-    <code> $ make </code>
-  </div>
-
-  This will produce and executable with the same name as the sample that can be run.
-
-  Graphical CMake: The graphical CMake application can be used as well to build the code.  In the field 'Where is the source code:' browse to the main sample directory, and in the field 'Where to build the binaries:' browse to the sample's build directory, as shown below.  Then simply click the 'Configure' button, followed by the 'Generate' button.  This should generate the file 'Makefile' in the build directory.
-
-  \image html CMake_build.png
-
-  -->
 
 */
 	
@@ -380,19 +347,19 @@
 
   \subsection DirScript New Project Script
 
-  There is a script in the main Helios directory that can quickly set up a new project called "create_project.sh". First, create a new directory where the project will exist, for example:
+  There is a script in the main Helios directory that can quickly set up a new project called "create\_project.sh". First, create a new directory where the project will exist, for example:
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>$ mkdir projects/myProject</code></pre></div>
 
- To set up the new project, run the create_project.sh script, with the input argument of the project directory:
+ To set up the new project, run the create\_project.sh script, with the input argument of the project directory:
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>$ utilities/create_project.sh projects/myProjects</code></pre></div>
 
  This will create the CMakeLists.txt file, a main.cpp file template, and an empty build directory.
 
- You can also specify plug-ins as command-line arguments to the create_project.sh script, in which case the script will create a CMakeLists.txt and main.cpp file that are set up to load those plug-ins:
+ You can also specify plug-ins as command-line arguments to the create\_project.sh script, in which case the script will create a CMakeLists.txt and main.cpp file that are set up to load those plug-ins:
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>$ utilities/create_project.sh projects/myProjects radiation visualizer</code></pre></div>
@@ -544,14 +511,14 @@
  
  <table>
  <tr><th>Primitive</th><th>Description</th><th>Enumeration</th></tr>
- <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>PRIMITIVE_TYPE_PATCH</td></tr>
- <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE_TYPE_TRIANGLE "PRIMITIVE_TYPE_TRIANGLE"</td></tr>
-  <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE_TYPE_VOXEL "PRIMITIVE_TYPE_VOXEL"</td></tr>
+ <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>PRIMITIVE\_TYPE\_PATCH</td></tr>
+ <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE\_TYPE\_TRIANGLE"</td></tr>
+  <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_VOXEL "PRIMITIVE\_TYPE\_VOXEL"</td></tr>
  </table>	
  
  \subsection AddingPrims Adding Primitives
  
- Primitives are referenced by their 'universal uinique identifier' or UUID.  When a function is called to add a primitive to the context, a UUID is returned that can be used later to reference the primitive.  Objects can be formed simply by storing a group of UUIDs corresponding to the primitives that make up the object.
+ Primitives are referenced by their 'universal unique identifier' or UUID.  When a function is called to add a primitive to the context, a UUID is returned that can be used later to reference the primitive.  Objects can be formed simply by storing a group of UUIDs corresponding to the primitives that make up the object.
  
  Each primitive type has a different function that is used to add it to the Context, which are detailed in the table below.
 
@@ -589,7 +556,7 @@
  <pre><code> #include "Context.h"
   using namespace helios;
        
-  int main( void ){
+  int main(){
        
      Context context;
 
@@ -625,7 +592,7 @@
  <pre><code> #include "Context.h"
   using namespace helios;
        
-  int main( void ){
+  int main(){
        
      Context context;
 
@@ -655,7 +622,7 @@
  <pre><code>  #include "Context.h"
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
      Context context;
 
@@ -719,11 +686,10 @@
   Below is a code example of applying a transformation using a pointer to the primitive:
 
    <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code>  #include "Context.h"
+   <pre><code>   #include "Context.h"
     using namespace helios;
 
-    int main( void ){
-
+    int main(){
 
        \c// Initialize the Context
        Context context;
@@ -775,7 +741,7 @@
  <pre><code>  #include "Context.h"
   using namespace helios;
      
-  int main( void ){
+  int main(){
 
      \c// Initialize the Context
      Context context;
@@ -830,7 +796,7 @@
  <pre><code>  #include "Context.h"
   using namespace helios;
      
-  int main( void ){
+  int main(){
 
      \c// Initialize the Context
      Context context;
@@ -856,7 +822,7 @@
  <pre><code>  #include "Context.h"
   using namespace helios;
      
-  int main( void ){
+  int main(){
 
      \c// Initialize the Context
      Context context;
@@ -1286,7 +1252,7 @@
  <pre><code>  #include "Context.h"
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
      Context context;
 
@@ -1316,7 +1282,7 @@
  <pre><code>  #include "Context.h"
   using namespace helios;
      
-  int main( void ){
+  int main(){
 
      Context context;
 
@@ -1355,7 +1321,7 @@
  <pre><code>  #include "Context.h"
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
      Context context;
 
@@ -1389,7 +1355,7 @@
  <pre><code>  #include "Context.h"
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
         \c// Initialize the Context
         Context context;
@@ -1561,7 +1527,7 @@
   <pre><code> #include "Context.h"
    using namespace helios;
 
-   int main( void ){
+   int main(){
 
       Context context;
 
@@ -1580,7 +1546,7 @@
   <pre><code> #include "Context.h"
    using namespace helios;
 
-   int main( void ){
+   int main(){
 
        Context context;
 
@@ -1616,9 +1582,35 @@
   - Texture map image files (.jpg, .png) associated with materials
   - Object groups. When the 'o groupname' is added before a set of vertices, primitive data called 'object_group' is written for the resulting set of primitives.
 
-  Wavefront files are loaded via the \ref Context::loadOBJ() command, which takes the name of an .obj file.  If the file defines materials and lists an associated material (.mtl) file, the code looks in one of two places for the file.  First, if an absolute or relative path is given for the .mtl file name, the file is simply loaded from that location.  If only a file name is given for the .mtl file, the directory where the original .obj file was found is searched for the .mtl file.
+  Wavefront files are loaded via the \ref helios::Context::loadOBJ() function, which takes the name of an .obj file.  If the file defines materials and lists an associated material (.mtl) file, the code looks in one of two places for the file.  First, if an absolute or relative path is given for the .mtl file name, the file is simply loaded from that location.  If only a file name is given for the .mtl file, the directory where the original .obj file was found is searched for the .mtl file.
 
   All aspects of material files are not supported. Helios simply searches for the "Kd" texture map, and uses that to color the primitives.
+
+  The \ref helios::Context::loadOBJ() function requires inputs that scale the model to achieve a certain size of the model, and apply a rotation to the model. There are multiple overloaded versions of this function (listed below) that allow specification of these aspects differently.
+
+  <table>
+   <tr><th>Function</th><th>Description</th></tr>
+   <tr><td>\ref helios::Context::loadOBJ( const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, bool silent=false )</td><td>Load the model and translate it to the location 'origin', scale to have a height of 'height' (set height=0 to apply no scaling), and apply spherical rotation of 'rotation'.</td></tr>
+   <tr><td>\ref helios::Context::loadOBJ( const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false )</td><td>Same as above, except specify the 'up axis' of the model ('XUP', 'YUP', or 'ZUP'). Some 3D modeling software uses a different default axis corresponding to the up direction (e.g., computer graphics software commonly uses 'y' as the up direction).</td></tr>
+   <tr><td>\ref helios::Context::loadOBJ( const char* filename, const vec3 &origin, const vec3 &scale, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false )</td><td>Same as above, except a scaling factor is applied to the model in the x-, y-, and z-directions based on the value of 'scale' (if scale.x=scale.y=scale.z=0, no scaling is applied).</td></tr>
+  </table>
+
+  The last optional argument to the \ref helios::Context::loadOBJ() function allows the user to disable any messages output from the function while loading by setting silent=true.
+
+  Example code is given below to load an OBJ model at the origin with no scaling (height=0) or rotation (rotation='nullrotation') applied and default up axis of "z".
+
+  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code> #include "Context.h"
+   using namespace helios;
+
+   int main(){
+
+      Context context;
+
+      context.loadOBJ("relative/path/to/someobjfile.obj", make_vec3(0,0,0), 0, nullrotation, RGB::red );
+
+   }</code></pre>
+  </div>
 
   \subsection PLYwrite Writing PLY (Stanford Polygon) Files
 
@@ -1628,7 +1620,7 @@
   <pre><code> #include "Context.h"
    using namespace helios;
 
-   int main( void ){
+   int main(){
 
        Context context;
 
@@ -1647,7 +1639,7 @@
   <pre><code> #include "Context.h"
    using namespace helios;
 
-   int main( void ){
+   int main(){
 
        Context context;
 
@@ -1669,7 +1661,7 @@
   <pre><code> #include "Context.h"
    using namespace helios;
 
-   int main( void ){
+   int main(){
 
        Context context;
 
@@ -1688,7 +1680,7 @@
   <pre><code> #include "Context.h"
    using namespace helios;
 
-   int main( void ){
+   int main(){
 
        Context context;
 
@@ -1706,7 +1698,7 @@
     <pre><code> #include "Context.h"
      using namespace helios;
 
-     int main( void ){
+     int main(){
 
          Context context;
 

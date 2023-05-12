@@ -93,7 +93,7 @@
 \_form#92=11x11:$\mu$
 \_form#93=12x12:$A$
 \_form#94=15x15:$C_i$
-\_form#95=11x11:$\Gamma$
+\_form#95=11x12:$\Gamma$
 \_form#96=233x38:\[A=\left(1-\frac{\Gamma^*}{C_i}\right)\mathrm{min}\left\{W_c,W_j\right\}-R_d,\]
 \_form#97=101x35:\[W_c=\frac{V_{cmax}C_i}{C_i+K_{co}}\]
 \_form#98=146x38:\[K_{co}=K_c\left(1+\frac{O}{K_O}\right),\]
@@ -116,8 +116,8 @@
 \_form#108=48x17:$J_{max,25}$
 \_form#109=42x15:$C_{Jmax}$
 \_form#110=54x17:$H_{a,Jmax}$
-\_form#111=33x17:$R_{d,25}$
-\_form#112=9x8:$\alpha$
+\_form#111=9x8:$\alpha$
+\_form#112=33x17:$R_{d,25}$
 \_form#113=17x14:$R^2$
 \_form#114=147x15:$A = A_{sat} f_L f_T f_C - R_d$
 \_form#115=129x18:$A_{sat}\,({\mu}mol/m^2-s)$
@@ -128,11 +128,11 @@
 \_form#120=27x15:$T_{opt}$
 \_form#121=374x39:$f_T(T_s) = \left(\dfrac{T_s-T_{min}}{T_{ref}-T_{min}}\right)^q\left(\dfrac{(1+q)T_{opt}-T_{min}-qT_s}{(1+q)T_{opt}-T_{min}-qT_{ref}}\right)$
 \_form#122=32x14:$T_{min}$
-\_form#123=30x17:$A_{ref}$
+\_form#123=32x17:$A_{ref}$
 \_form#124=8x11:$q$
 \_form#125=18x15:$R_d$
 \_form#126=221x18:$R_d = R\sqrt{T_s}\mathrm{exp}\left(-E_R/(T_s+273)\right)$
-\_form#127=20x14:$E_R$
+\_form#127=20x15:$E_R$
 \_form#128=123x38:$f_C(C_i) = k_C\dfrac{C_i}{C_{i,ref}}$
 \_form#129=161x17:$A = 0.75g_M\left(C_{amb}-C_i\right)$
 \_form#130=6x11:$i$
@@ -164,7 +164,7 @@
 \_form#156=200x57:\[ \frac{1}{\pi}\int\limits_0^{2\pi}\int\limits_0^{\pi/2}\,f_d\,\mathrm{cos}\,\theta\,\mathrm{sin}\,\theta\,d\theta d\phi = 1. \]
 \_form#157=14x12:$K$
 \_form#158=41x12:$K=0$
-\_form#159=38x11:$\Gamma=0$
+\_form#159=38x12:$\Gamma=0$
 \_form#160=171x17:$\Gamma = 2\pi(DOY-1)/365.25$
 \_form#161=575x35:$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$
 \_form#162=527x35:$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$
@@ -209,7 +209,7 @@
 \_form#201=177x38:\[g_s = \frac{E_m\beta(Q+i_0)}{k+bQ+(Q+i_0)D_s},\]
 \_form#202=65x15:$E_m,\,i_0,\,k,$
 \_form#203=6x12:$b$
-\_form#204=21x14:$E_m$
+\_form#204=21x15:$E_m$
 \_form#205=12x14:$i_0$
 \_form#206=8x12:$k$
 \_form#207=44x15:$\theta_L=0$
