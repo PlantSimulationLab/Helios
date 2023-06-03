@@ -1,7 +1,7 @@
 /** \file "Context_data.cpp" Context primitive data, object data, and global data declarations.
 \author Brian Bailey
 
-Copyright (C) 2016-2022 Brian Bailey
+Copyright (C) 2016-2023 Brian Bailey
 
                     This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

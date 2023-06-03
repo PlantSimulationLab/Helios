@@ -1,7 +1,7 @@
 /** \file "Context.cpp" Context declarations. 
     \author Brian Bailey
 
-    Copyright (C) 2016-2022 Brian Bailey
+    Copyright (C) 2016-2023 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -2105,9 +2105,6 @@ void CompoundObject::setColor( const helios::RGBcolor& a_color ){
         }
 
     }
-
-    color = make_RGBAcolor(a_color, 1.f);
-
 }
 
 void CompoundObject::setColor( const helios::RGBAcolor& a_color ){
@@ -2118,21 +2115,6 @@ void CompoundObject::setColor( const helios::RGBAcolor& a_color ){
         }
 
     }
-
-    color = a_color;
-
-}
-
-RGBcolor CompoundObject::getColor()const {
-    return make_RGBcolor( color.r, color.g, color.b );
-}
-
-RGBcolor CompoundObject::getColorRGB()const {
-    return make_RGBcolor( color.r, color.g, color.b );
-}
-
-RGBAcolor CompoundObject::getColorRGBA()const {
-    return color;
 }
 
 void CompoundObject::overrideTextureColor(){
@@ -2742,7 +2724,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
         vec3 center = current_object_pointer->getCenter();
         vec3 normal = current_object_pointer->getNormal();
         SphericalCoord rotation = cart2sphere(normal);
-        RGBcolor color = current_object_pointer->getColorRGB();
+        RGBcolor color = getPrimitiveColor(UUIDs_old.front());
         
         std::vector<uint> UUIDs_new = addTile(center, size, rotation, new_subdiv, color );
         
@@ -2869,7 +2851,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
         vec3 center = current_object_pointer->getCenter();
         vec3 normal = current_object_pointer->getNormal();
         SphericalCoord rotation = cart2sphere(normal);
-        RGBcolor color = current_object_pointer->getColorRGB();
+        RGBcolor color = getPrimitiveColor(UUIDs_old.front());
         
         float tile_area = current_object_pointer->getArea();
         
@@ -4670,8 +4652,6 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
 uint Context::addPolymeshObject(const std::vector<uint> &UUIDs ){
 
     auto* polymesh_new = (new Polymesh(currentObjectID, UUIDs, "", this));
-
-    polymesh_new->setColor( getPrimitivePointer_private( UUIDs.front())->getColor() );
 
     float T[16], transform[16];
     polymesh_new->getTransformationMatrix( transform );
@@ -6935,9 +6915,7 @@ void Context::printObjectInfo(uint ObjID) const{
     std::cout << "   " << T[4] << "      " << T[5] << "      " << T[6] << "      " << T[7] << std::endl;
     std::cout << "   " << T[8] << "      " << T[9] << "      " << T[10] << "      " << T[11] << std::endl;
     std::cout << "   " << T[12] << "      " << T[13] << "      " << T[14] << "      " << T[15] << std::endl;
-    
-    std::cout << "RGB Color: " << getObjectColorRGB(ObjID) << std::endl;
-    std::cout << "RGBA Color: " << getObjectColorRGBA(ObjID) << std::endl;
+
     std::cout << "Texture File: " << getObjectTextureFile(ObjID) << std::endl;
     
     std::cout << "Object Data: " << std::endl;
@@ -7166,15 +7144,6 @@ uint Context::getObjectPrimitiveCount(uint ObjID) const {
 
 helios::vec3 Context::getObjectCenter(uint ObjID) const {
     return getObjectPointer_private(ObjID)->getObjectCenter();
-}
-
-RGBcolor Context::getObjectColorRGB(uint ObjID) const {
-    RGBAcolor  color = getObjectPointer_private(ObjID)->getColorRGBA();
-    return make_RGBcolor( color.r, color.g, color.b );
-}
-
-RGBAcolor Context::getObjectColorRGBA(uint ObjID) const {
-    return getObjectPointer_private(ObjID)->getColorRGBA();
 }
 
 std::string Context::getObjectTextureFile(uint ObjID) const{

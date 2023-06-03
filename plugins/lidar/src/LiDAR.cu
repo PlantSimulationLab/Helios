@@ -1,7 +1,7 @@
 /** \file "LiDAR.cu" CUDA-related LiDAR plug-in functions 
     \author Brian Bailey, Eric Kent
 
-    Copyright (C) 2016-2022 Brian Bailey
+    Copyright (C) 2016-2023 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -3132,6 +3132,8 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
     return;
   }
 
+  float miss_distance = 1e5;  //arbitrary distance from scanner for 'miss' points
+
   float3 bb_center;
   float3 bb_size;
     
@@ -3209,7 +3211,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
               }
 
               std::vector<helios::vec2> uv = context->getPrimitiveTextureUV(UUID);
-              if( uv.size()==4 ){//cusom uv coordinates
+              if( uv.size()==4 ){//custom uv coordinates
                   patch_uv[2*c] = vec2tofloat2(uv.at(1));
                   patch_uv[2*c+1] = vec2tofloat2(uv.at(3));
               }else{//default uv coordinates
@@ -3411,9 +3413,9 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
     float hit_out = 0;
     for( int i=0; i<Ntheta*Nphi; i++ ){
       if( bb_hit[i]==1 ){
-	N++;
-	helios::SphericalCoord dir = cart2sphere(raydir[i]);
-	hit_out += sin(dir.zenith);
+	    N++;
+	    helios::SphericalCoord dir = cart2sphere(raydir[i]);
+	    hit_out += sin(dir.zenith);
       }
     }
 
@@ -3425,13 +3427,36 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
     //make a new array of ray directions for rays that hit bounding box
     float3* direction = (float3*)malloc(N * sizeof(float3)); //allocate host memory
 
+    std::vector<helios::int2> pulse_scangrid_ij(N);
+
     int count=0;
     for( int i=0; i<Ntheta*Nphi; i++ ){
-      if( bb_hit[i]==1 ){
-	direction[count] = vec3tofloat3(raydir.at(i));
-	count++;
-      }
-    }    
+        if( bb_hit[i]==1 ){
+
+            direction[count] = vec3tofloat3(raydir.at(i));
+
+            int jj = floor(i/Ntheta);
+            int ii = i-jj*Ntheta;
+            pulse_scangrid_ij[count] = helios::make_int2(ii,jj);
+
+            count++;
+        }else if( record_misses && !scan_grid_only ){
+
+            std::map<std::string,double> data;
+            data["target_index"] = 0;
+            data["target_count"] = 1;
+            data["deviation"] = 0;
+            data["timestamp"] = i;
+            data["intensity"] = 0;
+            data["distance"] = miss_distance;
+            data["nRaysHit"] = rays_per_pulse;
+
+            helios::vec3 miss_xyz = getScanOrigin(s) + miss_distance*raydir.at(i);
+
+            addHitPoint( s, miss_xyz, helios::cart2sphere(raydir.at(i)), helios::RGB::black, data );
+
+        }
+    }
     free(bb_hit);
 
     float3* d_raydir;
@@ -3443,7 +3468,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
     CUDA_CHECK_ERROR( cudaMalloc((void**)&d_hit_t,N*Npulse*sizeof(float)) ); //allocate device memory
     float* hit_t = (float*)malloc(N*Npulse * sizeof(float)); //allocate host memory
     for( int i=0; i<N*Npulse; i++ ){
-      hit_t[i] = 1e5;
+      hit_t[i] = miss_distance;
     }
     CUDA_CHECK_ERROR( cudaMemcpy(d_hit_t, hit_t, N*Npulse*sizeof(float), cudaMemcpyHostToDevice) );
 
@@ -3496,26 +3521,34 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
     //looping over beams
     for( size_t r=0; r<N; r++ ){
 
-      std::vector<std::vector<float> > t_pulse;
-      std::vector<std::vector<float> > t_hit;
+        std::vector<std::vector<float> > t_pulse;
+        std::vector<std::vector<float> > t_hit;
 
-      //looping over rays in each beam
-      for( size_t p=0; p<Npulse; p++ ){
-	
-    	float t = hit_t[r*Npulse+p];  //distance to hit (misses t=1e6)
-	float i = hit_fnorm[r*Npulse+p]; //dot product between beam direction and primitive normal
-	float ID = float(hit_ID[r*Npulse+p]);   //ID of intersected primitive
+        //looping over rays in each beam
+        for( size_t p=0; p<Npulse; p++ ){
 
-    	if( record_misses || (!record_misses && t<1e5) ){ 
-	  std::vector<float> v{t,i,ID};
-	  t_pulse.push_back(v);
-	}
+            float t = hit_t[r*Npulse+p];  //distance to hit (misses t=1e6)
+            float i = hit_fnorm[r*Npulse+p]; //dot product between beam direction and primitive normal
+            float ID = float(hit_ID[r*Npulse+p]);   //ID of intersected primitive
 
-      }
+            if( record_misses || (!record_misses && t<miss_distance ) ){
+                std::vector<float> v{t,i,ID};
+                t_pulse.push_back(v);
+            }
+
+        }
 
       if( t_pulse.size()==1 ){ //this is discrete-return data, or we only had one hit for this pulse
 
-	std::vector<float> v{t_pulse.front().at(0),t_pulse.front().at(1),1,t_pulse.front().at(2)};
+          float distance = t_pulse.front().at(0);
+          float intensity = t_pulse.front().at(1);
+          if( distance>=0.98f*miss_distance ){
+              intensity=0;
+          }
+          float nPulseHit = 1;
+          float IDmap = t_pulse.front().at(2);
+
+	    std::vector<float> v{distance,intensity,nPulseHit,IDmap};
     	t_hit.push_back( v );
 
       }else if( t_pulse.size()>1 ){ //more than one hit for this pulse
@@ -3532,14 +3565,30 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
                     
 	  // if the end has been reached, output the last hitpoint
 	  if( hit == t_pulse.size()){
-                        
-	    std::vector<float> v{d/float(count), f/float(Npulse), float(count), t_pulse.at(hit-1).at(2) }; //Note: the last index of t_pulse (.at(2)) is the object identifier. We don't want object identifiers to be averaged, so we'll assign the hit identifier based on the last ray in the group
+
+          float distance = d/float(count);
+          float intensity = f/float(Npulse);
+          if( distance>=0.98f*miss_distance ){
+              intensity=0;
+          }
+          float nPulseHit = float(count);
+          float IDmap = t_pulse.at(hit-1).at(2);
+
+          std::vector<float> v{distance, intensity, nPulseHit, IDmap}; //Note: the last index of t_pulse (.at(2)) is the object identifier. We don't want object identifiers to be averaged, so we'll assign the hit identifier based on the last ray in the group
 	    t_hit.push_back( v );
                         
 	    // else if the current ray is more than the pulse threshold distance from t0,  it is part of the next hitpoint so output the previous hitpoint and reset
 	  }else if( t_pulse.at(hit).at(0)-t0>pulse_distance_threshold ){
-                        
-	    std::vector<float> v{d/float(count), f/float(Npulse), float(count), t_pulse.at(hit-1).at(2)}; //included the ray count here
+
+          float distance = d/float(count);
+          float intensity = f/float(Npulse);
+          if( distance>=0.98f*miss_distance ){
+              intensity=0;
+          }
+          float nPulseHit = float(count);
+          float IDmap = t_pulse.at(hit-1).at(2);
+
+	    std::vector<float> v{distance, intensity, nPulseHit, IDmap}; //included the ray count here
 	    //Note: the last index of t_pulse (.at(2)) is the object identifier. We don't want object identifiers to be averaged, so we'll assign the hit identifier based on the last ray in the group
 	    t_hit.push_back( v );
 
@@ -3552,7 +3601,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
 	  }else{
 	    
 	    count++;
-            t0=t_pulse.at(hit).at(0);
+        t0=t_pulse.at(hit).at(0);
 	    d+=t_pulse.at(hit).at(0);
 	    f+=t_pulse.at(hit).at(1);
             
@@ -3573,7 +3622,7 @@ void LiDARcloud::syntheticScan( helios::Context* context, int rays_per_pulse, fl
     	data["target_index"] = hit;
     	data["target_count"] = t_hit.size();
 	data["deviation"] = fabs(t_hit.at(hit).at(0)-average);
-	data["timestamp"] = r;
+	data["timestamp"] = pulse_scangrid_ij.at(r).y*Ntheta+pulse_scangrid_ij.at(r).x;
 	data["intensity"] = t_hit.at(hit).at(1);
 	data["distance"] = t_hit.at(hit).at(0);
 	data["nRaysHit"] = t_hit.at(hit).at(2);
@@ -3769,199 +3818,204 @@ std::vector<float> LiDARcloud::calculateSyntheticLeafArea( helios::Context* cont
 
 __global__ void LIDAR_CUDA::intersectPatches( const size_t Npulse, const int rays_per_pulse, const float3 origin, float3* d_raydir, const float exit_diameter, const float beam_divergence,const int Npatches, float3* d_patch_vertex, int* d_patch_textureID, const int Ntextures, int2* d_masksize, int2 masksize_max, bool* d_maskdata, float2* d_patch_uv, float* d_hit_t, float* d_hit_fnorm, int* d_hit_ID ){
 
-  int idx = blockIdx.x*blockDim.x+threadIdx.x;
+    int idx = blockIdx.x*blockDim.x+threadIdx.x;
 
-  int subpulse = blockIdx.y*blockDim.y+threadIdx.y;
+    int subpulse = blockIdx.y*blockDim.y+threadIdx.y;
 
-  if( idx>=Npulse || subpulse>=rays_per_pulse ){
-    return;
-  }
-
-  int i_global = idx*rays_per_pulse+subpulse;
-
-  uint seed = tea<16>(subpulse,i_global);
-
-  float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );
-  
-  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );
-
-  float zenith = acos_safe( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );
-  float azimuth = atan2_2pi( d_raydir[idx].x, d_raydir[idx].y );
-  raydir = d_rotatePoint( raydir, zenith, 0.5*M_PI-azimuth );
-
-  float3 disk_pt3 = d_rotatePoint( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );
-
-  float tmin = d_hit_t[i_global];
-  float nmin = d_hit_fnorm[i_global];
-  for( int p=0; p<Npatches; p++ ){
-
-    float3 v0 = d_patch_vertex[4*p];
-    float3 v1 = d_patch_vertex[4*p+1];
-    float3 v2 = d_patch_vertex[4*p+2];
-    float3 v3 = d_patch_vertex[4*p+3];
-
-    float3 anchor = v0;
-    float3 normal = normalize( cross( v1-v0, v2-v0 ) );
-
-    float3 a = v1-v0;
-    float3 b = v3-v0;
-    
-    float t = ((anchor - origin - disk_pt3)*normal) / (raydir*normal); 
-    
-    if( t==t && t>1e-8 && t<tmin ){
-			
-      float3 point = origin + disk_pt3 + raydir * t;
-      float3 d = point - anchor;
-      
-      float ddota = d*a;
-      
-      if (ddota > 0.0 && ddota < a*a ){
-	
-	float ddotb = d*b;
-
-	if (ddotb > 0.0 && ddotb < b*b ){
-
-	  if( d_patch_textureID[p]<0 ){//no texture mask
-	    
-	    tmin = t;
-	    nmin = fabs(normal*raydir);
-	    d_hit_ID[i_global] = p; 
-
-	  }else{ //has texture mask
-
-	    float amag = magnitude(a);
-	    float bmag = magnitude(b);
-	    float2 uv = make_float2( 1.f-ddota/amag/amag, ddotb/bmag/bmag );
-	    int ID = d_patch_textureID[p];
-	    int2 sz = d_masksize[ID];
-
-	    float2 uvmin = d_patch_uv[2*p];
-	    float2 duv;
-	    duv.x = d_patch_uv[ 2*p+1 ].x - d_patch_uv[ 2*p ].x;
-	    duv.y = d_patch_uv[ 2*p+1 ].y - d_patch_uv[ 2*p ].y;
-	    int2 ind = make_int2( roundf(float(sz.x-1)*(uvmin.x+fabs(uv.x)*duv.x)), roundf(float(sz.y-1)*(uvmin.y+fabs(uv.y)*duv.y)) );
-	    assert( ind.x>=0 && ind.x<sz.x && ind.y>=0 && ind.y<sz.y );
-
-	    if( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){
-
-	      tmin = t;
-	      nmin = fabs(normal*raydir);
-	      d_hit_ID[i_global] = p; 
-	    
-	    }
-	    
-	  }
-	    
-	}		
-	
-      }
+    if( idx>=Npulse || subpulse>=rays_per_pulse ){
+        return;
     }
-  }
 
-  d_hit_t[i_global] = tmin;
+    int i_global = idx*rays_per_pulse+subpulse;
 
-  d_hit_fnorm[i_global] = nmin;
-  
+    uint seed = tea<16>(subpulse,i_global);
+
+    float kEpsilon = 1e-6;
+
+    float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );
+
+    float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );
+
+    float zenith = acos_safe( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );
+    float azimuth = atan2_2pi( d_raydir[idx].x, d_raydir[idx].y );
+    raydir = d_rotatePoint( raydir, zenith, 0.5*M_PI-azimuth );
+
+    float3 disk_pt3 = d_rotatePoint( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );
+
+    float tmin = d_hit_t[i_global];
+    float nmin = d_hit_fnorm[i_global];
+    for( int p=0; p<Npatches; p++ ){
+
+        float3 v0 = d_patch_vertex[4*p];
+        float3 v1 = d_patch_vertex[4*p+1];
+        float3 v2 = d_patch_vertex[4*p+2];
+        float3 v3 = d_patch_vertex[4*p+3];
+
+        float3 anchor = v0;
+        float3 normal = normalize( cross( v1-v0, v2-v0 ) );
+
+        float3 a = v1-v0;
+        float3 b = v3-v0;
+
+        float t = ((anchor - origin - disk_pt3)*normal) / (raydir*normal);
+
+        if( t==t && t>-kEpsilon && t<tmin ){
+
+            float3 point = origin + disk_pt3 + raydir * t;
+            float3 d = point - anchor;
+
+            float ddota = d*a;
+
+            if (ddota > -kEpsilon && ddota < a*a ){
+
+                float ddotb = d*b;
+
+                if (ddotb > -kEpsilon && ddotb < b*b ){
+
+                    if( d_patch_textureID[p]<0 ){//no texture mask
+
+                        tmin = t;
+                        nmin = fabs(normal*raydir);
+                        d_hit_ID[i_global] = p;
+
+                    }else{ //has texture mask
+
+                        float amag = magnitude(a);
+                        float bmag = magnitude(b);
+                        float2 uv = make_float2( 1.f-ddota/amag/amag, ddotb/bmag/bmag );
+                        int ID = d_patch_textureID[p];
+                        int2 sz = d_masksize[ID];
+
+                        float2 uvmin = d_patch_uv[2*p];
+                        float2 duv;
+                        duv.x = d_patch_uv[ 2*p+1 ].x - d_patch_uv[ 2*p ].x;
+                        duv.y = d_patch_uv[ 2*p+1 ].y - d_patch_uv[ 2*p ].y;
+                        int2 ind = make_int2( roundf(float(sz.x-1)*(uvmin.x+fabs(uv.x)*duv.x)), roundf(float(sz.y-1)*(uvmin.y+fabs(uv.y)*duv.y)) );
+                        assert( ind.x>=0 && ind.x<sz.x && ind.y>=0 && ind.y<sz.y );
+
+                        if( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){
+
+                            tmin = t;
+                            nmin = fabs(normal*raydir);
+                            d_hit_ID[i_global] = p;
+
+                        }
+
+                    }
+
+                }
+
+            }
+        }
+    }
+
+    d_hit_t[i_global] = tmin;
+
+    d_hit_fnorm[i_global] = nmin;
+
 }
 
 __global__ void LIDAR_CUDA::intersectTriangles( const size_t Npulse, const int rays_per_pulse, const float3 origin, float3* d_raydir, const float exit_diameter, const float beam_divergence, const int Ntriangles, const int Npatches, float3* d_tri_vertex, int* d_tri_textureID, const int Ntextures, int2* d_masksize, const int2 masksize_max, bool* d_maskdata, float2* d_tri_uv, float* d_hit_t, float* d_hit_fnorm, int* d_hit_ID ){
 
-  int idx = blockIdx.x*blockDim.x+threadIdx.x;
+    int idx = blockIdx.x*blockDim.x+threadIdx.x;
 
-  int subpulse = blockIdx.y*blockDim.y+threadIdx.y;
+    int subpulse = blockIdx.y*blockDim.y+threadIdx.y;
 
-  if( idx>=Npulse || subpulse>=rays_per_pulse ){
-    return;
-  }
-
-  int i_global = idx*rays_per_pulse+subpulse;
-
-  uint seed = tea<16>(subpulse,i_global);
-
-  float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );
-  
-  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );
-
-  float zenith = acos_safe( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );
-  float azimuth = atan2_2pi( d_raydir[idx].x, d_raydir[idx].y );
-  raydir = d_rotatePoint( raydir, zenith, 0.5*M_PI-azimuth );
-
-  float3 disk_pt3 = d_rotatePoint( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );
-
-  float tmin = d_hit_t[i_global];
-  float nmin = d_hit_fnorm[i_global];
-  for( int tri=0; tri<Ntriangles; tri++ ){
-
-    float3 v0 = d_tri_vertex[3*tri];
-    float3 v1 = d_tri_vertex[3*tri+1];
-    float3 v2 = d_tri_vertex[3*tri+2];
-
-    float a = v0.x - v1.x, b = v0.x - v2.x, c = raydir.x, d = v0.x - origin.x - disk_pt3.x; 
-    float e = v0.y - v1.y, f = v0.y - v2.y, g = raydir.y, h = v0.y - origin.y - disk_pt3.y;
-    float i = v0.z - v1.z, j = v0.z - v2.z, k = raydir.z, l = v0.z - origin.z - disk_pt3.z;
-		
-    float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
-    float q = g * i - e * k, s = e * j - f * i;
-  
-    float inv_denom  = 1.f / (a * m + b * q + c * s);
-  
-    float e1 = d * m - b * n - c * p;
-    float beta = e1 * inv_denom;
-  
-    if (beta > 0.0){
-      
-      float r = r = e * l - h * i;
-      float e2 = a * n + d * q + c * r;
-      float gamma = e2 * inv_denom;
-      
-      if (gamma > 0.0 && beta + gamma < 1.0 ){
-	
-	float e3 = a * p - b * r + d * s;
-	float t = e3 * inv_denom;
-
-	if( t>1e-6 && t<tmin ){
-
-	  if( d_tri_textureID[tri]<0 ){//no texture mask	  
-	    tmin = t;
-	    float3 normal = normalize( cross( v1-v0, v2-v0 ) );
-	    nmin = fabs(normal*raydir);
-	    d_hit_ID[i_global] = Npatches+tri; 
-	  }else{//has texture mask
-
-	  int ID = d_tri_textureID[tri];
-	  int2 sz = d_masksize[ID];
-	  
-	  float2 uv0 = d_tri_uv[tri*3];
-	  float2 uv1 = d_tri_uv[tri*3+1];
-	  float2 uv2 = d_tri_uv[tri*3+2];
-
-	    float2 uv;
-	    uv.x = (uv0.x + beta*(uv1.x-uv0.x) + gamma*(uv2.x-uv0.x));
-	    uv.y = (uv0.y + beta*(uv1.y-uv0.y) + gamma*(uv2.y-uv0.y));
-
-	    uint2 ind = make_uint2( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)) );
-	    assert( ind.x<sz.x && ind.y<sz.y );
-
-	    if( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){
-	      tmin = t;
-	      float3 normal = normalize( cross( v1-v0, v2-v0 ) );
-	      nmin = fabs(normal*raydir);
-	      d_hit_ID[i_global] = Npatches+tri; 
-	    }
-	    
-	    
-	  }
-	}
-      
-      }
+    if( idx>=Npulse || subpulse>=rays_per_pulse ){
+        return;
     }
-  }
 
-  d_hit_t[i_global] = tmin;
+    int i_global = idx*rays_per_pulse+subpulse;
 
-  d_hit_fnorm[i_global] = nmin;
-  
+    uint seed = tea<16>(subpulse,i_global);
+
+    float kEpsilon = 1e-5;
+
+    float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );
+
+    float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );
+
+    float zenith = acos_safe( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );
+    float azimuth = atan2_2pi( d_raydir[idx].x, d_raydir[idx].y );
+    raydir = d_rotatePoint( raydir, zenith, 0.5*M_PI-azimuth );
+
+    float3 disk_pt3 = d_rotatePoint( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );
+
+    float tmin = d_hit_t[i_global];
+    float nmin = d_hit_fnorm[i_global];
+    for( int tri=0; tri<Ntriangles; tri++ ){
+
+        float3 v0 = d_tri_vertex[3*tri];
+        float3 v1 = d_tri_vertex[3*tri+1];
+        float3 v2 = d_tri_vertex[3*tri+2];
+
+        float a = v0.x - v1.x, b = v0.x - v2.x, c = raydir.x, d = v0.x - origin.x - disk_pt3.x;
+        float e = v0.y - v1.y, f = v0.y - v2.y, g = raydir.y, h = v0.y - origin.y - disk_pt3.y;
+        float i = v0.z - v1.z, j = v0.z - v2.z, k = raydir.z, l = v0.z - origin.z - disk_pt3.z;
+
+        float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
+        float q = g * i - e * k, s = e * j - f * i;
+
+        float inv_denom  = 1.f / (a * m + b * q + c * s);
+
+        float e1 = d * m - b * n - c * p;
+        float beta = e1 * inv_denom;
+
+        if (beta >= -kEpsilon ){
+
+            float r = r = e * l - h * i;
+            float e2 = a * n + d * q + c * r;
+            float gamma = e2 * inv_denom;
+
+            if (gamma > -kEpsilon && beta + gamma < 1.f+kEpsilon ){
+
+                float e3 = a * p - b * r + d * s;
+                float t = e3 * inv_denom;
+
+                if( t>kEpsilon && t<tmin ){
+
+                    if( d_tri_textureID[tri]<0 ){//no texture mask
+                        tmin = t;
+                        float3 normal = normalize( cross( v1-v0, v2-v0 ) );
+                        nmin = fabs(normal*raydir);
+                        d_hit_ID[i_global] = Npatches+tri;
+                    }else{//has texture mask
+
+                        int ID = d_tri_textureID[tri];
+                        int2 sz = d_masksize[ID];
+
+                        float2 uv0 = d_tri_uv[tri*3];
+                        float2 uv1 = d_tri_uv[tri*3+1];
+                        float2 uv2 = d_tri_uv[tri*3+2];
+
+                        float2 uv;
+                        uv.x = (uv0.x + beta*(uv1.x-uv0.x) + gamma*(uv2.x-uv0.x));
+                        uv.y = (uv0.y + beta*(uv1.y-uv0.y) + gamma*(uv2.y-uv0.y));
+
+                        uint2 ind = make_uint2( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)) );
+                        assert( ind.x<sz.x && ind.y<sz.y );
+
+                        if( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){
+                            tmin = t;
+                            float3 normal = normalize( cross( v1-v0, v2-v0 ) );
+                            nmin = fabs(normal*raydir);
+                            d_hit_ID[i_global] = Npatches+tri;
+                        }
+
+
+                    }
+                }
+
+            }
+        }
+    }
+
+    d_hit_t[i_global] = tmin;
+
+    d_hit_fnorm[i_global] = nmin;
+
 }
+
 
 
 

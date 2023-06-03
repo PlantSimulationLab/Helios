@@ -1,7 +1,7 @@
 /** \file "LiDAR.cpp" Primary source file for LiDAR plug-in.
     \author Brian Bailey
 
-    Copyright (C) 2016-2022 Brian Bailey
+    Copyright (C) 2016-2023 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -583,26 +583,26 @@ void LiDARcloud::addHitsToVisualizer( Visualizer* visualizer, uint pointsize, co
 
   for( uint i=0; i< getHitCount(); i++ ){
 
-    if( strcmp(color_value,"")==0 ){
-      color = getHitColor(i);
-    }else if( strcmp(color_value,"gridcell")==0 ){
-      if( getHitGridCell(i)<0 ){
-	color = RGB::red;
+      if( strcmp(color_value,"")==0 ){
+          color = getHitColor(i);
+      }else if( strcmp(color_value,"gridcell")==0 ){
+          if( getHitGridCell(i)<0 ){
+              color = RGB::red;
+          }else{
+              color = cmap.query( getHitGridCell(i) );
+          }
       }else{
-	color = cmap.query( getHitGridCell(i) );
+          if( !doesHitDataExist(i,color_value) ){
+              color = RGB::red;
+          }else{
+              float data = float(getHitData(i,color_value));
+              color = cmap.query( data );
+          }
       }
-    }else{
-      if( !doesHitDataExist(i,color_value) ){
-	color = RGB::red;
-      }else{
-	float data = float(getHitData(i,color_value));
-	color = cmap.query( data );
-      }
-    }
 
-    vec3 center = getHitXYZ(i);
+      vec3 center = getHitXYZ(i);
 
-    visualizer->addPoint( center, color, pointsize, Visualizer::COORDINATES_CARTESIAN );
+      visualizer->addPoint( center, color, pointsize, Visualizer::COORDINATES_CARTESIAN );
 
   }
 

@@ -13,6 +13,5 @@ var searchData=
   ['splitgrapevineparameters_10',['SplitGrapevineParameters',['../struct_split_grapevine_parameters.html',1,'']]],
   ['stomatalconductancemodel_11',['StomatalConductanceModel',['../class_stomatal_conductance_model.html',1,'']]],
   ['strawberryparameters_12',['StrawberryParameters',['../struct_strawberry_parameters.html',1,'']]],
-  ['structuralparameter_13',['StructuralParameter',['../struct_structural_parameter.html',1,'']]],
-  ['syntheticannotation_14',['SyntheticAnnotation',['../class_synthetic_annotation.html',1,'']]]
+  ['syntheticannotation_13',['SyntheticAnnotation',['../class_synthetic_annotation.html',1,'']]]
 ];

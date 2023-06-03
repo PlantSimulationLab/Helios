@@ -1,7 +1,7 @@
 /** \file "Context_fileIO.cpp" Filesystem input/output functions within the Context.
 \author Brian Bailey
 
-Copyright (C) 2016-2022 Brian Bailey
+Copyright (C) 2016-2023 Brian Bailey
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -2774,8 +2774,6 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
 
     CompoundObject* obj = object.second;
 
-    RGBAcolor color = obj->getColorRGBA();
-
     std::string texture_file = obj->getTextureFile();
 
     std::vector<std::string> odata = obj->listObjectData();
@@ -2799,9 +2797,6 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
     }
 
     outfile << "\t<objID>" << o << "</objID>" << std::endl;
-    if( !(obj->getObjectType()==OBJECT_TYPE_TUBE) ){
-      outfile << "\t<color>" << color.r << " " << color.g << " " << color.b << " " << color.a << "</color>" << std::endl;
-    }
     if( obj->hasTexture() ){
       outfile << "\t<texture>" << texture_file << "</texture>" << std::endl;
     }

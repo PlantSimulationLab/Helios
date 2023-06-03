@@ -1,7 +1,7 @@
 /** \file "Context.h" Context header file. 
  \author Brian Bailey
  
- Copyright (C) 2016-2022 Brian Bailey
+ Copyright (C) 2016-2023 Brian Bailey
  
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -178,15 +178,6 @@ public:
      * /param[in] "color" New color of primitives
      */
     void setColor( const helios::RGBAcolor& color );
-    
-    //! Function to return the diffuse color of a Compound Object
-    helios::RGBcolor getColor() const;
-    
-    //! Function to return the R-G-B diffuse color of a Compound Object
-    helios::RGBcolor getColorRGB() const;
-    
-    //! Function to return the R-G-B-A diffuse color of a Compound Object
-    helios::RGBAcolor getColorRGBA() const;
     
     //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
     void overrideTextureColor();
@@ -544,9 +535,6 @@ protected:
     
     //! Pointer to the Helios context object was added to
     helios::Context* context;
-    
-    //! Diffuse color of all primitives in object
-    RGBAcolor color;
     
     //! Path to texture map file
     std::string texturefile;
@@ -2902,39 +2890,27 @@ public:
     /** \param[in] "ObjID" Identifier of the object.
      */
     helios::vec3 getObjectCenter( uint ObjID ) const;
-    
-    //! Function to return the diffuse color of an Object
-    /**
-     * \param[in] "ObjID" Identifier of the object.
-     */
-    helios::RGBcolor getObjectColorRGB( uint ObjID ) const;
-    
-    //! Function to return the diffuse color of an Object with transparency
-    /**
-     * \param[in] "ObjID" Identifier of the object.
-     */
-    helios::RGBAcolor getObjectColorRGBA( uint ObjID ) const;
-    
+
     //! Function to set the diffuse color of an Object
     /**
      * \param[in] "ObjID" Universal unique identifier of object.
      * \param[in] "color" New color of object
      */
     void setObjectColor( uint ObjID, const helios::RGBcolor& color );
-    
+
     //! Function to set the diffuse color of an Object for a vector of ObjIDs
     /**
      * \param[in] "ObjIDs" Vector of identifiers of object.
      * \param[in] "color" New color of object
      */
     void setObjectColor( const std::vector<uint> &ObjIDs, const helios::RGBcolor& color );
-    
+
     //! Function to set the diffuse color of an Object with transparency
     /** \param[in] "ObjID" Identifier of object.
      * \param[in] "color" New color of object
      */
     void setObjectColor( uint ObjID, const helios::RGBAcolor& color );
-    
+
     //! Function to set the diffuse color of an Object with transparency for a vector of ObjIDs
     /**
      * \param[in] "ObjIDs" Vector of identifiers of objects.

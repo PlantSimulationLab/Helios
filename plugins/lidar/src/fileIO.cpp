@@ -1,7 +1,7 @@
 /** \file "fileIO.cpp" Declarations for LiDAR plug-in related to file input/output. 
     \author Brian Bailey
 
-    Copyright (C) 2016-2022 Brian Bailey
+    Copyright (C) 2016-2023 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -739,7 +739,7 @@ void LiDARcloud::exportPointCloud( const char* filename, uint scanID ){
       }else if( hits.at(r).data.find(ASCII_format.at(c))!=hits.at(r).data.end() ){ //hit scalar data
 	file << getHitData(r,ASCII_format.at(c).c_str());
       }else{
-	file << -9999 << std::endl;
+	file << -9999;
       }
 
       if( c<ASCII_format.size()-1 ){

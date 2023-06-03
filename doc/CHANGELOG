@@ -1264,3 +1264,17 @@
 *Photosynthesis*
 - Error in documentation corrected that had column labels for photosynthesis model parameters swapped for theta and Rd.
 - Optional output data for limitation state was outputting the wrong value.
+
+[1.2.60] 2023-06-03
+
+* Copyrights updated
+
+*Context*
+- Compound objects no longer manage color in order to allow object primitives to have different colors.
+
+*LiDAR*
+- Error corrected when writing synthetic point clouds that would incorrectly add a line carriage return after a point that was un-labeled.
+- Numerical precision issues corrected in synthetic scans where hit points lying exactly on the seam where two primitives meet could randomly result in a miss.
+- When calling LiDARcloud::syntheticScan() with record_misses=true now generates miss points for beams that do not intersect the voxel grid.
+- The 'timestamp' field for synthetic scans was revised to be globally consistent for all pulses including misses.
+- The 'intensity' field for synthetic scans was revised to have a value of 0 for misses (was previously an arbitrarily large number).

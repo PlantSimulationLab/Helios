@@ -48,6 +48,15 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 
 If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
 
+ \section RadIssues Known Issues
+
+  - If the RadiationModel class is re-declared many (e.g., hundreds) of times within a loop, this causes an internal OpTiX error. The error will look something like this:
+
+  <code>OptiX Error: Unknown error (Details: Function "RTresult _rtContextLaunch3D(RTcontext, unsigned int, RTsize, RTsize, RTsize)" caught exception: Assertion failed: "!m_building : dirty list modified while build in progress", file: <internal>, line: 94)
+        (/home/user/Helios/plugins/radiation/src/RadiationModel.cpp:2920)</code>
+
+  It is recommended to declare the RadiationModel class outside of a loop, then call updateGeometry() on every loop iteration if geometry has changed.
+
  \section Introduction
 
  This model simulates the transport of radiative energy for arbitrary wavelength bands using a GPU-accelerated ray-tracing model. The model details are described in <a href="http://dx.doi.org/10.1016/j.ecolmodel.2017.11.022">Bailey (2018)</a>. Briefly, the model uses a reverse ray-tracing approach to simulate emission from primitive elements, collimated radiation sources, and point radiation sources.
