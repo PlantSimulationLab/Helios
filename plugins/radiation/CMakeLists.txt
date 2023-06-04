@@ -11,7 +11,8 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(radiation STATIC "src/RadiationModel.cpp")
+add_library(radiation STATIC "src/RadiationModel.cpp;src/selfTest.cpp;src/CameraCalibration.cpp;src/Annotation.cpp;src/LeafOptics.cpp" include/Annotation.h)
+
 
 find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
@@ -59,7 +60,7 @@ if(NOT DEFINED OPTIX_PATH)
        message( FATAL_ERROR "ERROR: Could not determine operating system for unknown reason." )
 endif(NOT DEFINED OPTIX_PATH)
 
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${OPTIX_PATH}include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
+set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_SOURCE_DIR}/lib/Eigen;${OPTIX_PATH}include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
 
 set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --use_fast_math --gpu-architecture=compute_35 -Wno-deprecated-gpu-targets" )
 
@@ -71,9 +72,9 @@ else()
 	set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_3 ON )
 endif()
 
-set( CUDA_SOURCES "src/primitiveIntersection.cu;src/rayGeneration.cu;src/rayHit.cu;src/rayHit_MCRT.cu" )
-cuda_compile_ptx( cuda_ptx_files ${CUDA_SOURCES} )
-add_custom_target( ptx ALL DEPENDS ${cuda_ptx_files}  ${CUDA_SOURCES} ${OPTIX_LIBRARIES} SOURCES ${CUDA_SOURCES} )
+set( CUDA_SOURCES "src/primitiveIntersection.cu;src/rayGeneration.cu;src/rayHit.cu;" )
+cuda_compile_ptx(  cuda_ptx_files ${CUDA_SOURCES} )
+add_custom_target(ptx ALL DEPENDS ${cuda_ptx_files}  ${CUDA_SOURCES} ${OPTIX_LIBRARIES} SOURCES ${CUDA_SOURCES} )
 add_dependencies( radiation ptx )
 
 #for cmake version 3.7 or greater, cuda_compile_ptx puts an _1_ in the ptx filename.  Rename the file to stay consistent.
@@ -81,8 +82,7 @@ if( CMAKE_VERSION VERSION_GREATER 3.6 )
 add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_primitiveIntersection.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_primitiveIntersection.cu.ptx )
 add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayGeneration.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayGeneration.cu.ptx )
 add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit.cu.ptx )
-add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit_MCRT.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayHit_MCRT.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit_MCRT.cu.ptx )
 endif()
 
-file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
-
+file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
+file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
