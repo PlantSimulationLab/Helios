@@ -5,7 +5,6 @@
 #ifndef HELIOS_ANNOTATION_H
 #define HELIOS_ANNOTATION_H
 #include "Context.h"
-#include <fstream>
 
 class Annotation {
 

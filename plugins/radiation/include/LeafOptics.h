@@ -3,7 +3,6 @@
 **/
 
 #include "Context.h"
-#include <vector>
 
 //! LeafOptics model class
 /** Prospect-D & PRO based computation of spectral total reflectance and transmittance with dimension reduction */

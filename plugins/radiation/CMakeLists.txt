@@ -11,8 +11,7 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(radiation STATIC "src/RadiationModel.cpp;src/selfTest.cpp;src/CameraCalibration.cpp;src/Annotation.cpp;src/LeafOptics.cpp" include/Annotation.h)
-
+add_library(radiation STATIC "src/RadiationModel.cpp;src/selfTest.cpp;src/CameraCalibration.cpp;src/Annotation.cpp;src/LeafOptics.cpp")
 
 find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
@@ -60,7 +59,7 @@ if(NOT DEFINED OPTIX_PATH)
        message( FATAL_ERROR "ERROR: Could not determine operating system for unknown reason." )
 endif(NOT DEFINED OPTIX_PATH)
 
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_SOURCE_DIR}/lib/Eigen;${OPTIX_PATH}include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
+set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${OPTIX_PATH}include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
 
 set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --use_fast_math --gpu-architecture=compute_35 -Wno-deprecated-gpu-targets" )
 

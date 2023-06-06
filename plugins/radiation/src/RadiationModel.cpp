@@ -434,25 +434,25 @@ void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios
 
 }
 
-void RadiationModel::setSourceSpectrum( uint source_ID, const char* spectrum_label ){
+void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectrum_label ){
 
     if( source_ID >= radiation_sources.size() ){
         throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Cannot add radiation spectra for this source because it is not a valid radiation source ID.\n") );
-    }else if( strcmp(spectrum_label,"ASTMG173")==0 ) {
+    }else if( spectrum_label == "ASTMG173" ) {
         context->loadXML("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml", true);
         if( !context->doesGlobalDataExist("solar_spectrum_ASTMG173") ){
-            throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): The file ""plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml could not be loaded.") );
+            throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): The file ""plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml"" could not be loaded.") );
         }else {
             std::vector<vec2> spectrum;
             context->getGlobalData("solar_spectrum_ASTMG173",spectrum);
             radiation_sources.at(source_ID).source_spectrum = spectrum;
         }
     }else{
-        if( !context->doesGlobalDataExist(spectrum_label) ) {
+        if( !context->doesGlobalDataExist(spectrum_label.c_str()) ) {
             throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Global data " + std::string(spectrum_label) + " does not exist and thus source spectrum cannot be set."));
         }else{
             std::vector<vec2> spectrum;
-            context->getGlobalData(spectrum_label,spectrum);
+            context->getGlobalData(spectrum_label.c_str(),spectrum);
             radiation_sources.at(source_ID).source_spectrum = spectrum;
         }
     }
@@ -692,17 +692,17 @@ void RadiationModel::setMinScatterEnergy(const std::string &label, uint energy )
   
 }
 
-void RadiationModel::enforcePeriodicBoundary( const char* boundary ){
+void RadiationModel::enforcePeriodicBoundary(const std::string &boundary ){
 
-  if( !strcmp(boundary,"x") ){
+  if( boundary=="x" ){
  
     periodic_flag.x = 1;
     
-  }else if( !strcmp(boundary,"y") ){
+  }else if( boundary=="y" ){
  
     periodic_flag.y = 1;
     
-  }else if( !strcmp(boundary,"xy") ){
+  }else if( boundary=="xy" ){
 
     periodic_flag.x = 1;
     periodic_flag.y = 1;
@@ -893,7 +893,6 @@ void RadiationModel::writeCameraImage( const std::string &camera, const std::vec
             }else{
                 pixel_color = make_RGBcolor(camera_data.at(0).at(j * camera_resolution.x + i),camera_data.at(1).at(j * camera_resolution.x + i),camera_data.at(2).at(j * camera_resolution.x + i));
             }
-//            std::cout << pixel_color.r << " " << pixel_color.g << " " << pixel_color.b << std::endl;
             pixel_data.at(j * camera_resolution.x + i) = pixel_color;
         }
     }

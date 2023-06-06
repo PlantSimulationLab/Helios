@@ -365,7 +365,6 @@ public:
     */
     void copyRadiationBand(const std::string &old_label, const std::string &new_label );
 
-
     //! Copy a spectral radiation band based on a previously created band and explicitly set new band wavelength range
     /**
      * \param[in] "old_label" Label of old radiation band to be copied
@@ -464,8 +463,8 @@ public:
 
     //! Set source spectra integral prior to modelling
     /**
-     * \param[in] "source_ID" Unit ID of source
-     * \param[in] "source_integral" float value of calculated integral
+     * \param[in] "source_ID" ID of source
+     * \param[in] "source_integral" Integration of source spectral distribution across all possible wavelengths (=∫Sdλ)
     */
     void setSourceIntegral( uint source_ID, float source_integral);
 
@@ -511,21 +510,7 @@ public:
       * \param[in] "ID" Identifier of radiation source.
       * \param[in] "spectrum_label" Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
     */
-    void setSourceSpectrum(uint source_ID, const char* spectrum_label );
-
-    //! Set the spectral reflectivity of primitives according to a vector of wavelength-reflectivity pairs.
-    /**
-     * \param[in] "spectrum_data" Vector containing spectral reflectivity data. Each index of "spectrum" gives the wavelength (.x) and spectral reflectivity (.y).
-     * \param[in] "UUIDs" Universal unique identifiers of primitives to set spectral reflectivity.
-     */
-    void setSpectralReflectivity( const std::vector<helios::vec2> &spectrum_data, const std::vector<uint> &UUIDs );
-
-    //! Set the spectral transmissivity of primitives according to a vector of wavelength-transmissivity pairs.
-    /**
-      * \param[in] "spectrum_data" Vector containing spectral transmissivity data. Each index of "spectrum" gives the wavelength (.x) and spectral transmissivity (.y).
-      * \param[in] "UUIDs" Universal unique identifiers of primitives to set spectral transmissivity.
-    */
-    void setSpectralTransmissivity( const std::vector<helios::vec2> &spectrum_data, const std::vector<uint> &UUIDs );
+    void setSourceSpectrum(uint source_ID, const std::string &spectrum_label );
 
     //! Set the spectral reflectivity of primitives based on global data of wavelength-reflectivity pairs.
     /**
@@ -569,7 +554,7 @@ public:
     /**
      * \param[in] "boundary" Lateral direction to enforce periodic boundary - choices are "x" (periodic only in x-direction), "y" (periodic only in y-direction), or "xy" (periodic in both x- and y-directions).
     */
-    void enforcePeriodicBoundary( const char* boundary );
+    void enforcePeriodicBoundary(const std::string &boundary );
 
     //! Add a radiation camera sensor
     /**
@@ -654,9 +639,17 @@ public:
      */
     std::vector<std::string> getAllCameraLabels();
 
+    //! Write camera data for one or more bands to a JPEG image
+    /**
+     * \param[in] camera Label for camera to be queried
+     * \param[in] bands Vector of labels for radiative bands to be written
+     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path Path to directory where images should be saved
+     * \param[in] frame A frame count number to be appended to the output image file (e.g., camera_thermal_0001.jpeg)
+     */
     void writeCameraImage( const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path="./", int frame=-1 );
 
-        //! Adds all geometric primitives from the Context to OptiX
+    //! Adds all geometric primitives from the Context to OptiX
     /**
      * This function should be called anytime Context geometry is created or modified
      * \note \ref updateGeometry() must be called before simulation can be run
@@ -730,7 +723,6 @@ protected:
     helios::Context* context;
 
     //! Pointers to current primitive geometry
-//    std::vector<helios::Primitive*> primitives;
     std::vector<uint> primitiveID;
 
     //! UUIDs currently added from the Context
