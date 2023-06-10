@@ -117,17 +117,23 @@ std::vector<uint> CameraCalibration::addDefaultColorboard(const helios::vec3 &ce
     std::vector<uint> UUIDs;
     CameraCalibration::addColorboard(centrelocation, rotationrad, UUIDs,colorassignment_default,patchsize);
 
+    CameraCalibration::setDefaultColorBoardSpectra();
+
+    return UUIDs;
+}
+
+void CameraCalibration::setDefaultColorBoardSpectra(){
+
     uint colornumber=colorassignment_default.size()*colorassignment_default.at(0).size();
     std::string numberstr;
+    std::vector<vec2> spectraldata;
+    std::string filename;
+    std::string labelname;
 
     // Color board spectra XML file ID
     // white to black:  1,  2,  3,  4,  5,  6
     // basic colors:    7,  8,  9, 10, 11, 12
     // bottom colors:   13, 14, 15, 16, 17, 18
-
-    std::vector<vec2> spectraldata;
-    std::string filename;
-    std::string labelname;
 
     for (uint UUID:UUIDs_colorboard){
         numberstr = std::to_string(colornumber);
@@ -139,8 +145,6 @@ std::vector<uint> CameraCalibration::addDefaultColorboard(const helios::vec3 &ce
         CameraCalibration::setColorboardReflectivity(UUID, filename, labelname);
         colornumber=colornumber-1;
     }
-
-    return UUIDs;
 }
 
 std::vector<uint> CameraCalibration::getColorBoardUUIDs(){
@@ -334,12 +338,12 @@ std::vector<float> CameraCalibration::updateCameraResponseSpectra(const std::vec
     return loss;
 }
 
-void CameraCalibration::writeCalibratedCameraResponses(const std::vector<std::string>& camerareponselabels, const std::string &label, float scale){
+void CameraCalibration::writeCalibratedCameraResponses(const std::vector<std::string>& camerareponselabels, const std::string &calibratemark, float scale){
     // write the calibrated camera response spectra in xml files and set them as global data
 
     for (const std::string& cameraresponselabel:camerareponselabels){
         std::vector<vec2> cameraresponsespectrum = calibratedcameraspectra[cameraresponselabel];
-        std::string calibratedlabel = label+ "_" + cameraresponselabel;
+        std::string calibratedlabel = calibratemark+ "_" + cameraresponselabel;
         for (int ispec = 0; ispec < cameraresponsespectrum.size(); ispec ++){
             cameraresponsespectrum.at(ispec).y= cameraresponsespectrum.at(ispec).y * scale;
         }
@@ -348,14 +352,14 @@ void CameraCalibration::writeCalibratedCameraResponses(const std::vector<std::st
     }
 }
 
-void CameraCalibration::resetCameraResponses(std::string camerareponselabels, float scale) {
-    std::vector<vec2> cameraresponsespectrum;
-    context->getGlobalData(camerareponselabels.c_str(),cameraresponsespectrum);
-    for (int ispec = 0; ispec < cameraresponsespectrum.size(); ispec ++){
-        cameraresponsespectrum.at(ispec).y= cameraresponsespectrum.at(ispec).y * scale;
-    }
-    context->setGlobalData(camerareponselabels.c_str(),HELIOS_TYPE_VEC2,cameraresponsespectrum.size(),&cameraresponsespectrum[0]);
-}
+//void CameraCalibration::resetCameraResponses(std::string camerareponselabels, float scale) {
+//    std::vector<vec2> cameraresponsespectrum;
+//    context->getGlobalData(camerareponselabels.c_str(),cameraresponsespectrum);
+//    for (int ispec = 0; ispec < cameraresponsespectrum.size(); ispec ++){
+//        cameraresponsespectrum.at(ispec).y= cameraresponsespectrum.at(ispec).y * scale;
+//    }
+//    context->setGlobalData(camerareponselabels.c_str(),HELIOS_TYPE_VEC2,cameraresponsespectrum.size(),&cameraresponsespectrum[0]);
+//}
 
 //void CameraCalibration::distortImage(const std::string& cameralabel, const std::vector<std::string>& bandlabels,
 //                                     const helios::vec2 &focalxy, std::vector<double> &distCoeffs, helios::int2 cameraresolution,
@@ -446,6 +450,15 @@ void undistortImage(std::vector<std::vector<unsigned char>> &image,
     }
 }
 
+static void wavelengthboundary(float &lowwavelength, float &highwavelength, const std::vector<vec2>& spectrum){
+
+    if (spectrum.back().x<highwavelength){
+        highwavelength = spectrum.back().x;
+    }
+    if (spectrum.at(0).x>lowwavelength){
+        lowwavelength = spectrum.at(0).x;
+    }
+}
 
 void CameraCalibration::preprocessSpectra(const std::vector<std::string>& sourcelabels, const std::vector<std::string>& cameralabels,
                                           std::vector<std::string>& objectlabels, vec2 &wavelengthrange, const std::string& targetlabel){
@@ -459,6 +472,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
             std::vector<vec2> Source_spectrum;
             context->getGlobalData(sourcelable.c_str(), Source_spectrum);
             Source_spectra.emplace(sourcelable, Source_spectrum);
+            wavelengthboundary(wavelengthrange.x, wavelengthrange.y, Source_spectrum);
         }
         else {std::cout << "WARNING: Source ("<< sourcelable <<") does not exist in global data"<< std::endl;}
     }
@@ -471,6 +485,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
             std::vector<vec2> Camera_spectrum;
             context->getGlobalData(cameralabel.c_str(), Camera_spectrum);
             Camera_spectra.emplace(cameralabel, Camera_spectrum);
+            wavelengthboundary(wavelengthrange.x, wavelengthrange.y, Camera_spectrum);
         }
         else {std::cout << "WARNING: Camera ("<< cameralabel <<") does not exist in global data"<< std::endl;}
     }
@@ -484,6 +499,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
                 std::vector<vec2> Object_spectrum;
                 context->getGlobalData(objectlable.c_str(), Object_spectrum);
                 Object_spectra.emplace(objectlable, Object_spectrum);
+                wavelengthboundary(wavelengthrange.x, wavelengthrange.y, Object_spectrum);
             }
             else {std::cout << "WARNING: Object ("<< objectlable <<") does not exist in global data"<< std::endl;}
         }
@@ -502,6 +518,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
                     std::vector<vec2> Object_spectrum;
                     context->getGlobalData(spectralreflectivitylabel.c_str(), Object_spectrum);
                     Object_spectra.emplace(spectralreflectivitylabel, Object_spectrum);
+                    wavelengthboundary(wavelengthrange.x, wavelengthrange.y, Object_spectrum);
                 }
             }
         }
@@ -516,6 +533,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
                     std::vector<vec2> Object_spectrum;
                     context->getGlobalData(spectraltransmissivitylabel.c_str(), Object_spectrum);
                     Object_spectra.emplace(spectraltransmissivitylabel, Object_spectrum);
+                    wavelengthboundary(wavelengthrange.x, wavelengthrange.y, Object_spectrum);
                 }
             }
         }
@@ -554,7 +572,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
     // store wavelengths into global data
     std::vector<float> wavelengths;
     for (auto ispectralvalue:target_spectrum){
-        if(ispectralvalue.x>wavelengthrange.y){
+        if(ispectralvalue.x>wavelengthrange.y || ispectralvalue.x == target_spectrum.back().x){
             context->setGlobalData("wavelengths", HELIOS_TYPE_FLOAT, wavelengths.size(), &wavelengths[0]);
             break;
         }
@@ -565,7 +583,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
 
 }
 
-float CameraCalibration::getFluxScale(const std::string &cameralabel, const helios::int2 cameraresolution, const std::vector<std::string> &bandlabels,
+float CameraCalibration::getCameraResponseScale(const std::string &cameralabel, const helios::int2 cameraresolution, const std::vector<std::string> &bandlabels,
                                       const std::vector<std::vector<float>> &truevalues) {
 
     std::vector<uint> camera_UUIDs;
@@ -637,5 +655,4 @@ std::vector<uint> CameraCalibration::readROMCCanopy(){
     inputFile.close();
     return iCUUIDs;
 }
-
 

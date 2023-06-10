@@ -861,7 +861,7 @@ int RadiationModel::selfTest(){
 
     // -------- Test #9: homogeneous "canopy" ---------- //
 
-    std::cout << "Test #9: homogeneous 'canopy' of patches..." << std::flush;
+    std::cout << "Test #9: Homogeneous 'canopy' of patches..." << std::flush;
 
     bool failure_9 = false;
 
@@ -1197,7 +1197,7 @@ int RadiationModel::selfTest(){
 
     // -------- Test #12: homogeneous "canopy" with periodic boundaries---------- //
 
-    std::cout << "Test #12: homogeneous 'canopy' of patches with periodic boundaries..." << std::flush;
+    std::cout << "Test #12: Homogeneous 'canopy' of patches with periodic boundaries..." << std::flush;
 
     bool failure_12 = false;
 
@@ -1474,7 +1474,7 @@ int RadiationModel::selfTest(){
 
     // -------- Test #14: anisotropoic diffuse radiation for a horizontal patch---------- //
 
-    std::cout << "Test #14: anisotropic diffuse radiation horizontal patch..." << std::flush;
+    std::cout << "Test #14: Anisotropic diffuse radiation horizontal patch..." << std::flush;
 
     bool failure_14 = false;
 
@@ -1532,7 +1532,7 @@ int RadiationModel::selfTest(){
 
     // -------- Test #15: Disk radiation source above a circular element ---------- //
 
-    std::cout << "Test #15: disk radiation source above a circular element..." << std::flush;
+    std::cout << "Test #15: Disk radiation source above a circular element..." << std::flush;
 
     bool failure_15 = false;
 
@@ -1580,7 +1580,7 @@ int RadiationModel::selfTest(){
 
     // -------- Test #16: Rectangular radiation source above a patch ---------- //
 
-    std::cout << "Test #16: rectangular radiation source above a patch..." << std::flush;
+    std::cout << "Test #16: Rectangular radiation source above a patch..." << std::flush;
 
     bool failure_16 = false;
 

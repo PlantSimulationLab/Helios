@@ -71,15 +71,14 @@ public:
 
     void setProperties(std::vector<uint> UUIDs,  const LeafOpticsProperties &leafproperties);
 
-    std::vector<float> R_spec_normal, R_spec_diffuse, wave_length, Rtotal, Ttotal ;
-
 
 
 private:
 
+    std::vector<float> R_spec_normal, R_spec_diffuse, wave_length, Rtotal, Ttotal ;
+
     //!  400...2500 nm fixed wavelength range of input spectra specifing refractive index,...,absorption_drymass
     const uint nw  = 2101;
-
 
     //! Copy of a pointer to the context
     helios::Context* context;

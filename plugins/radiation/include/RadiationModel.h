@@ -512,28 +512,47 @@ public:
     */
     void setSourceSpectrum(uint source_ID, const std::string &spectrum_label );
 
-    //! Set the spectral reflectivity of primitives based on global data of wavelength-reflectivity pairs.
+    //! Integrate a spectral distribution between two wavelength bounds
     /**
-      * \param[in] "spectrum_globaldata" Label of global data containing spectral reflectivity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral reflectivity (.y).
-      * \param[in] "UUIDs" Universal unique identifiers of primitives to set spectral reflectivity.
-    */
-    void setSpectralReflectivity(const std::string &spectrum_globaldata, const std::vector<uint> &UUIDs );
-
-    //! Set the spectral transmissivity of primitives based on global data of wavelength-transmissivity pairs.
-    /**
-      * \param[in] "spectrum_globaldata" Label of global data containing spectral transmissivity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral transmissivity (.y).
-      * \param[in] "UUIDs" Universal unique identifiers of primitives to set spectral transmissivity.
-    */
-    void setSpectralTransmissivity(const std::string &spectrum_globaldata, const std::vector<uint> &UUIDs );
-
-    float integrateSpectrum(uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2 ) const;
-
+     * \param[in] "object_spectrum" Vector containing spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
+     * \param[in] "wavelength1" Wavelength for lower bounds of integration
+     * \param[in] "wavelength2" Wavelength for upper bounds of integration
+     * \return Integral of spectral data from wavelength1 to wavelength2
+     */
     float integrateSpectrum( const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2 ) const;
 
+    //! Integrate a spectral distribution across all wavelengths
+    /**
+     * \param[in] "object_spectrum" Vector containing spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
+     * \return Integral of spectral data from minimum to maximum wavelength
+     */
     float integrateSpectrum( const std::vector<helios::vec2> &object_spectrum) const;
 
+    //! Integrate the product of a radiation source spectral distribution with specified spectral data between two wavelength bounds
+    /**
+     * \param[in] "source_ID" Identifier of a radiation source.
+     * \param[in] "object_spectrum" Vector containing spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
+     * \param[in] "wavelength1" Wavelength for lower bounds of integration
+     * \param[in] "wavelength2" Wavelength for upper bounds of integration
+     * \return Integral of product of source energy spectrum and spectral data from minimum to maximum wavelength
+     */
+    float integrateSpectrum(uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2 ) const;
+
+    //! Integrate the product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths
+    /**
+     * \param[in] "source_ID" Identifier of a radiation source.
+     * \param[in] "object_spectrum" Vector containing surface spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
+     * \param[in] "camera_spectrum" Vector containing camera spectral response data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
+     * \return Integral of product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths
+     */
     float integrateSpectrum(uint source_ID, const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum ) const;
 
+    //! Integrate the product of surface spectral data and camera spectral response across all wavelengths
+    /**
+     * \param[in] "object_spectrum" Vector containing surface spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
+     * \param[in] "camera_spectrum" Vector containing camera spectral response data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
+     * \return Integral of product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths
+     */
     float integrateSpectrum( const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum ) const;
 
     //! Set the number of scattering iterations for a certain band
@@ -603,14 +622,12 @@ public:
      */
     void setCameraSpectralResponse( const std::string &camera_label, const std::string &band_label, const std::string &global_data );
 
-
     //! Set the position of the radiation camera.
     /**
      * \param[in] camera_label Label for the camera to be set.
      * \param[in] position Cartesian coordinate of camera position.
      */
      void setCameraPosition( const std::string &camera_label, const helios::vec3& position );
-
 
     //! Set the position the radiation camera is pointed toward (used to calculate camera orientation)
     /**
@@ -692,23 +709,51 @@ public:
     */
     float calculateGtheta(helios::Context* context, helios::vec3 view_direction );
 
-    //! Get average spectra of simulated target UUIDs without camera response
+    void setColorCalibration(CameraCalibration *CameraCalibration);
+
+    //! Update the camera response for a given camera based on color board
     /**
-     * \param[in] cameraproperties: UUIDs of target
-     * \param[in] cameraproperties: Vector of wavelengths
-     * \param[in] allspectra" Containing object, camera, and source spectra.
-     * \return Average spectra of simulated target UUIDs
+     * \param[in] "orginalcameralabel" Label of camera to be used for simulation
+     * \param[in] "sourcelabels_raw" Vector of labels of source spectra to be used for simulation
+     * \param[in] "cameraresponselabels" Vector of labels of camera spectral responses
+     * \param[in] "wavelengthrange" Wavelength range of the camera
+     * \param[in] "truevalues" True image values of the color board
+     * \param[in] "calibratedmark" Mark of the calibrated camera
     */
-    std::map<uint,std::vector<helios::vec2>> getSimulatedTargetSpectra(CameraProperties cameraproperties,
-                                                                       const std::vector<std::string> &sourcelabels_raw,helios::vec3 camera_position,
-                                                                       CameraCalibration *CameraCalibration,
-                                                                       helios::vec3 camera_lookat = helios::make_vec3(0,0,0));
+    void updateCameraResponse(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels_raw,
+                                 const std::vector<std::string>& cameraresponselabels, helios::vec2 &wavelengthrange,
+                                 const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark);
 
+    //! Get the scale factor of the camera response for a given camera
+    /**
+     * \param[in] "orginalcameralabel" Label of camera to be used for simulation
+     * \param[in] "cameraresponselabels" Vector of labels of camera spectral responses
+     * \param[in] "bandlabels" Vector of labels of radiation bands to be used for simulation
+     * \param[in] "sourcelabels" Vector of labels of source spectra to be used for simulation
+     * \param[in] "wavelengthrange" Wavelength range of the camera
+     * \param[in] "truevalues" True image values of the color board
+     * \return scale factor
+    */
+    float getCameraResponseScale(const std::string &orginalcameralabel, const std::vector<std::string>& cameraresponselabels,
+                                 const std::vector<std::string>& bandlabels, const std::vector<std::string> &sourcelabels,
+                                 helios::vec2 &wavelengthrange, const std::vector<std::vector<float>> &truevalues);
 
+    //! Run radiation imaging simulation
+    /**
+     * \param[in] "cameralabel" Label of camera to be used for simulation
+     * \param[in] "sourcelabels" Vector of labels of source spectra to be used for simulation
+     * \param[in] "bandlabels" Vector of labels of radiation bands to be used for simulation
+     * \param[in] "cameraresponselabels" Vector of labels of camera spectral responses
+     * \param[in] "wavelengthrange" Wavelength range of spectra
+     * \param[in] "fluxscale" Scale factor for source flux
+     * \param[in] "diffusefactor" Diffuse factor for diffuse radiation
+     * \param[in] "scatteringdepth" Number of scattering events to simulate
+    */
     void runRadiationImaging(const std::string& cameralabel, const std::vector<std::string>& sourcelabels, const std::vector<std::string>& bandlabels,
                              const std::vector<std::string>& cameraresponselabels, helios::vec2 wavelengthrange,
-                             float fluxscale, float diffusefactor = 0.0005, uint scatteringdepth = 3);
+                             float fluxscale = 1, float diffusefactor = 0.0005, uint scatteringdepth = 3);
 
+    //! Specifically used for ROMC verification
     float getRadiationCameraValue(const std::vector<std::string>& cameralabels, const std::string& sourcelabel,const std::string& bandlabels,
                                                  const std::string& cameraresponselabel,  const std::string& filename);
 
@@ -721,6 +766,8 @@ protected:
 
     //! Pointer to the context
     helios::Context* context;
+
+    CameraCalibration *cameracalibration;
 
     //! Pointers to current primitive geometry
     std::vector<uint> primitiveID;

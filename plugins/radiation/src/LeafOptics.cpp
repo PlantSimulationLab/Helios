@@ -99,7 +99,7 @@ void LeafOptics::prospect(float numberlayers, float chlorophyllcontent, float ca
         // k: the mean absorption coefficient of each elementary layer.
         k = (chlorophyllcontent * absorption_chlorophyll.at(i) + carotenoidcontent * absorption_carotenoid.at(i) + anthocyancontent * absorption_anthocyanin.at(i)
              + brownpigments * absorption_brown.at(i) + watermass * absorption_water.at(i) + drymass * absorption_drymass.at(i)
-             + + protein * absorption_protein.at(i)+carbonconstituents * absorption_carbonconstituents.at(i)) / numberlayers;
+             +  protein * absorption_protein.at(i)+carbonconstituents * absorption_carbonconstituents.at(i)) / numberlayers;
 
         // diffuse transmittance through elementary layer, this integral needs more effort in C++
         tau = transmittance(k);
@@ -393,10 +393,10 @@ void LeafOptics::inializeProperties(uint UUID ) {
     }
 
     float Brown = 0.0;
-    if (context->doesPrimitiveDataExist(UUID, "Brown")) {
-        context->getPrimitiveData(UUID, "Brown", Brown);
+    if (context->doesPrimitiveDataExist(UUID, "brown")) {
+        context->getPrimitiveData(UUID, "brown", Brown);
     }
     else {
-        context->setPrimitiveData(UUID, "Brown", Brown);
+        context->setPrimitiveData(UUID, "brown", Brown);
     }
 }

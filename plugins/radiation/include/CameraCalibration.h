@@ -53,6 +53,8 @@ struct CameraCalibration{
     */
     std::vector<uint> addDefaultColorboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad, float patchsize=0.5);
 
+    void setDefaultColorBoardSpectra();
+
     std::vector<uint> getColorBoardUUIDs();
 
     //! Write XML file from spectral vectors containing both wavelengths and spectral values
@@ -97,6 +99,7 @@ struct CameraCalibration{
                                                    const std::map<uint,std::vector<helios::vec2>>& simulatedinputspectra,
                                                    const std::vector<std::vector<float>> &truevalues);
 
+    //! Parameter struct for gradient descent.
     struct GradientDescentParameters
     {
         float learningrate=0.8;
@@ -107,14 +110,6 @@ struct CameraCalibration{
     };
 
     GradientDescentParameters responseupdateparameters;
-
-    //! Expand vector for integral.
-    /**
-     * \param[in] targetspectrum: Spectrum to be expanded.
-     * \param[in] scale: Scale value for spectrum.
-     * \return Expanded spectrum.
-    */
-    std::vector<float> expandSpectrum(const std::vector<helios::vec2>& targetspectrum, float scale);
 
     //! Preprocess all spectra for modelling.
     /**
@@ -140,23 +135,33 @@ struct CameraCalibration{
     void distortImage(const std::string& cameralabel, const std::vector<std::string>& bandlabels, const helios::vec2 &focalxy,
                       std::vector<double> &distCoeffs, helios::int2 camerareoslution);
 
-    //! Get radiation flux scale.
+    //! Get camera spectral response scale.
     /**
      * \param[in] cameralabel: Label of camera.
      * \param[in] cameraresolution: Resolution of camera.
      * \param[in] bandlabels: Label vector of bands.
      * \param[in] truevalues: True color board values.
     */
-    float getFluxScale(const std::string &cameralabel, const helios::int2 cameraresolution, const std::vector<std::string> &bandlabels,
+    float getCameraResponseScale(const std::string &cameralabel, const helios::int2 cameraresolution, const std::vector<std::string> &bandlabels,
                        const std::vector<std::vector<float>> &truevalues);
 
     std::map<std::string,std::map<std::string, std::vector<helios::vec2>>> processedspectra;
 
+    //! Read ROMC canopy file (Used for self test).
+    /**
+     * \return A vector of ROMC canopy UUIDs.
+    */
     std::vector<uint> readROMCCanopy();
 
-    void writeCalibratedCameraResponses(const std::vector<std::string>& camerareponselabels, const std::string &label, float scale);
+    //! Write calibrated camera response spectra.
+    /**
+     * \param[in] camerareponselabels: Label vector of original camera response spectra to be written.
+     * \param[in] calibratemark: Calibration mark.
+     * \param[in] scale: Manually adjustable Scaling factor for calibrated camera response spectra.
+    */
+    void writeCalibratedCameraResponses(const std::vector<std::string>& camerareponselabels, const std::string &calibratemark, float scale);
 
-    void resetCameraResponses(std::string camerareponselabels, float scale);
+//    void resetCameraResponses(std::string camerareponselabels, float scale);
 
 protected:
 
@@ -164,6 +169,13 @@ protected:
 
     helios::Context *context;
 
+    //! Expand vector for integral.
+    /**
+     * \param[in] targetspectrum: Spectrum to be expanded.
+     * \param[in] scale: Scale value for spectrum.
+     * \return Expanded spectrum.
+    */
+    std::vector<float> expandSpectrum(const std::vector<helios::vec2>& targetspectrum, float scale);
 
     //! UUIDs of colorboard patches
     std::vector<uint> UUIDs_colorboard;

@@ -4223,11 +4223,27 @@ float RadiationModel::calculateGtheta(helios::Context* context, vec3 view_direct
   
 }
 
-std::map<uint,std::vector<vec2>> RadiationModel::getSimulatedTargetSpectra(CameraProperties cameraproperties,
-                                                                           const std::vector<std::string> &sourcelabels_raw, vec3 camera_position,
-                                                                           CameraCalibration *CameraCalibration, vec3 camera_lookat) {
+void RadiationModel::setColorCalibration(CameraCalibration *CameraCalibration){
+    cameracalibration = CameraCalibration;
+}
 
-    std::vector<uint> UUIDs_target = CameraCalibration->getColorBoardUUIDs();
+void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels_raw,
+                                             const std::vector<std::string>& cameraresponselabels, vec2 &wavelengthrange,
+                                             const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark) {
+
+    std::vector<std::string> objectlabels;
+    vec2 wavelengthrange_c = wavelengthrange;
+    cameracalibration->preprocessSpectra(sourcelabels_raw, cameraresponselabels, objectlabels, wavelengthrange_c);
+
+    RadiationCamera calibratecamera = cameras.at(orginalcameralabel);
+    CameraProperties cameraproperties;
+    cameraproperties.HFOV = calibratecamera.HFOV_degrees;
+    cameraproperties.camera_resolution = calibratecamera.resolution;
+    cameraproperties.focal_plane_distance = calibratecamera.focal_length;
+    cameraproperties.lens_diameter = calibratecamera.lens_diameter;
+    cameraproperties.sensor_size = calibratecamera.sensor_size;
+
+    std::vector<uint> UUIDs_target = cameracalibration->getColorBoardUUIDs();
     std::string cameralabel = "calibration";
     std::map<uint,std::vector<vec2>> simulatedcolorboardspectra;
     for (uint UUID:UUIDs_target){
@@ -4248,8 +4264,8 @@ std::map<uint,std::vector<vec2>> RadiationModel::getSimulatedTargetSpectra(Camer
         std::vector<std::string> sourcelabels;
         for (std::string sourcelabel_raw:sourcelabels_raw){
             std::vector<vec2> icalsource;
-            icalsource.push_back(CameraCalibration->processedspectra.at("source").at(sourcelabel_raw).at(iw));
-            icalsource.push_back(CameraCalibration->processedspectra.at("source").at(sourcelabel_raw).at(iw));
+            icalsource.push_back(cameracalibration->processedspectra.at("source").at(sourcelabel_raw).at(iw));
+            icalsource.push_back(cameracalibration->processedspectra.at("source").at(sourcelabel_raw).at(iw));
             icalsource.at(1).x+=1;
             std::string sourcelable = "Cal_source_"+sourcelabel_raw;
             sourcelabels.push_back(sourcelable);
@@ -4264,7 +4280,7 @@ std::map<uint,std::vector<vec2>> RadiationModel::getSimulatedTargetSpectra(Camer
         std::string camlable = "Cal_cameraresponse";
         context->setGlobalData(camlable.c_str(),HELIOS_TYPE_VEC2,2,&icalcamera[0]);
 
-        for (auto objectpair : CameraCalibration->processedspectra.at("object")){
+        for (auto objectpair : cameracalibration->processedspectra.at("object")){
             std::vector<vec2> spectrum_obj;
             spectrum_obj.push_back(objectpair.second.at(iw));
             spectrum_obj.push_back(objectpair.second.at(iw));
@@ -4285,7 +4301,7 @@ std::map<uint,std::vector<vec2>> RadiationModel::getSimulatedTargetSpectra(Camer
         RadiationModel::setDiffuseRadiationFlux(wavelengthlabel, 0);
         RadiationModel::setDiffuseRadiationExtinctionCoeff(wavelengthlabel, 0.f, make_vec3(-0.5, 0.5, 1));
 
-        RadiationModel::addRadiationCamera(cameralabel, {wavelengthlabel}, camera_position, camera_lookat, cameraproperties, 10);
+        RadiationModel::addRadiationCamera(cameralabel, {wavelengthlabel}, calibratecamera.position, calibratecamera.lookat, cameraproperties, 10);
         RadiationModel::setCameraSpectralResponse(cameralabel, wavelengthlabel, camlable);
         RadiationModel::updateGeometry();
         RadiationModel::runBand({wavelengthlabel});
@@ -4299,11 +4315,11 @@ std::map<uint,std::vector<vec2>> RadiationModel::getSimulatedTargetSpectra(Camer
         std::string global_data_label_UUID = "camera_" + cameralabel + "_pixel_UUID";
         context->getGlobalData(global_data_label_UUID.c_str(), pixel_labels);
 
-        for (uint j = 0; j < cameraproperties.camera_resolution.y; j++) {
-            for (uint i = 0; i < cameraproperties.camera_resolution.x; i++) {
-                float icdata = camera_data.at(j * cameraproperties.camera_resolution.x + i);
+        for (uint j = 0; j < calibratecamera.resolution.y; j++) {
+            for (uint i = 0; i < calibratecamera.resolution.x; i++) {
+                float icdata = camera_data.at(j * calibratecamera.resolution.x + i);
 
-                uint UUID = pixel_labels.at(j * cameraproperties.camera_resolution.x + i)-1;
+                uint UUID = pixel_labels.at(j * calibratecamera.resolution.x + i)-1;
                 if (find(UUIDs_target.begin(), UUIDs_target.end(), UUID) != UUIDs_target.end()){
                     if ( simulatedcolorboardspectra.at(UUID).empty()){
                         simulatedcolorboardspectra.at(UUID).push_back(make_vec2(wavelengths.at(iw), icdata / float(numberwavelengths)));
@@ -4318,7 +4334,10 @@ std::map<uint,std::vector<vec2>> RadiationModel::getSimulatedTargetSpectra(Camer
             }
         }
     }
-    return simulatedcolorboardspectra;
+    // Update camera response spectra
+    cameracalibration->updateCameraResponseSpectra(cameraresponselabels, calibratedmark ,simulatedcolorboardspectra, truevalues);
+    // Reset color board spectra
+    cameracalibration->setDefaultColorBoardSpectra();
 }
 
 void RadiationModel::runRadiationImaging(const std::string& cameralabel, const std::vector<std::string>& sourcelabels, const std::vector<std::string>& bandlabels,
@@ -4420,6 +4439,27 @@ float RadiationModel::getRadiationCameraValue(const std::vector<std::string>& ca
     return cameravalue;
 }
 
+float RadiationModel::getCameraResponseScale(const std::string &orginalcameralabel, const std::vector<std::string>& cameraresponselabels,
+                                             const std::vector<std::string>& bandlabels, const std::vector<std::string> &sourcelabels,
+                                             vec2 &wavelengthrange, const std::vector<std::vector<float>> &truevalues){
+
+
+    RadiationCamera calibratecamera = cameras.at(orginalcameralabel);
+    CameraProperties cameraproperties;
+    cameraproperties.HFOV = calibratecamera.HFOV_degrees;
+    cameraproperties.camera_resolution = calibratecamera.resolution;
+    cameraproperties.focal_plane_distance = calibratecamera.focal_length;
+    cameraproperties.lens_diameter = calibratecamera.lens_diameter;
+    cameraproperties.sensor_size = calibratecamera.sensor_size;
+
+    std::string cameralabel = orginalcameralabel+"Scale";
+    RadiationModel::addRadiationCamera(cameralabel, bandlabels, calibratecamera.position, calibratecamera.lookat, cameraproperties,20);
+    RadiationModel::runRadiationImaging(cameralabel, sourcelabels, bandlabels, cameraresponselabels, wavelengthrange, 1, 0);
+
+    // Get camera spectral response scale based on comparing true values and calibrated image
+    float camerascale = cameracalibration->getCameraResponseScale(cameralabel, cameraproperties.camera_resolution, bandlabels, truevalues);
+    return camerascale;
+}
 
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line)
 {
