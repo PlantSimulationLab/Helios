@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.2.60
+/*! \mainpage Helios Documentation v1.3.0
 
   \image html Helios_logo.png
 
@@ -1150,78 +1150,6 @@
  <tr><td>\htmlonly<font face="courier" color="green">int4</font>\endhtmlonly</td><td>\ref helios::HELIOS_TYPE_INT4 "HELIOS_TYPE_INT4"</td></tr>
  <tr><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>\ref helios::HELIOS_TYPE_STRING "HELIOS_TYPE_STRING"</td></tr>	
  </table>
- 
- <!--
- \subsection Variables Variables
-
- \subsubsection AddVariables Adding Variables
-
- Variables are created from the Context via the \ref helios::Context::addVariable "addVariable" command.  The user specifies the name of the variable upon creation, which will be used to reference the data later.
- 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  using namespace helios;
-
-  int main(int argc, char* argv[]){
-
-     Context context;
-
-     context.addVariable("temperature");
-
-  }</code></pre>
- </div>
-
- Variables can be added before or after primitives are added to the Context.  If variables are added before a primitive, newly added primitive variable values will be initialized to zero as they are added.  If variables are added after some primitives have been added, any previously added primitive variable values will be set to zero, and newly added primitive variable values will be initialized to zero as they are added.  
-
- The existence of a variable can be queried via the \ref helios::Context::doesVariableExist "doesVariableExist" function.
-	
- \subsubsection SetVariables Setting Variable Values
-
- The values of variables can be set through the Context via the \ref helios::Context::setVariableValue "setVariableValue" function:
-
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  using namespace helios;
-     
-  int main(int argc, char* argv[]){
-
-     Context context;
-
-     context.addVariable("temperature");
-
-     uint UUID = context.addPatch( center, size, RGB::red );
-
-     context.setVariableValue(UUID,"temperature",300); 
-
-  }</code></pre>
- </div>	
-
- \subsubsection GetVariables Getting Variable Values
- 
- Getting the values of variables is done via the \ref helios::Context::getVariableValue "getVariableValue" function:
- 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  using namespace helios;
-
-  int main(int argc, char* argv[]){
-
-     Context context;
-
-     context.addVariable("temperature");
-
-     uint UUID = context.addPatch( center, size, RGB::red );
-
-     context.setVariableValue(UUID,"temperature",300);
-
-     float T = context.getVariableValue(UUID,"temperature");
-
-  }</code></pre>
- </div>
-
- In the above example, the value of 'T' in equal to 300.f.
-
- -->
 
  \subsection PrimData Primitive Data
 
@@ -1278,7 +1206,7 @@
 
  If primitive data is a scalar value, it can be retrieved for a given primitive via the Context using the \ref helios::Context::getPrimitiveData() "getPrimitiveData" function:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.0;">
  <pre><code>  #include "Context.h"
   using namespace helios;
      
@@ -1286,10 +1214,7 @@
 
      Context context;
 
-     vec3 center(0,0,0);
-     vec2 size(1,1);
-
-     uint UUID = context.addPatch( center, size );
+     uint UUID = context.addPatch();
 
      float eps = 0.9;
      context.setPrimitiveData(UUID,"emissivity",eps);
@@ -1297,12 +1222,9 @@
      float emissivity;
      context.getPrimitiveData(UUID,"emissivity",emissivity);
 
-  }</code></pre>
- </div>
+  }</code></pre></div>
 
  In the above example, the value of 'emissivity' is 0.9.
-
- For a vector of primitive data, use the \ref helios::Context::getPrimitiveData_v() "getPrimitiveData_v" function.  Note that the 'getPrimitiveData_v' function can always be used regardless of whether the data is scalar or vector valued.  If the data is scalar and 'getPrimitiveData_v' is used, the function will simply return a vector structure of length 1.
 
  \subsubsection PrimDataHelpers Primitive Data Query Functions
 
@@ -1310,14 +1232,14 @@
 
  <table>
  <tr><th>Function</th><th>Description</th></tr>
- <tr><td>\ref helios::Primitive::doesPrimitiveDataExist( const char* label ) const "doesPrimitiveDataExist( const char* label )"</td><td>Check whether primitive data named 'label' exists for the primitive.</td></tr>
- <tr><td>\ref helios::Primitive::getPrimitiveDataType( const char* label ) const "getPrimitiveDataType( const char* label )"</td><td>Get the \ref helios::HeliosDataType for the primitive.</td></tr>
- <tr><td>\ref helios::Primitive::getPrimitiveDataSize( const char* label ) const "getPrimitiveDataSize( const char* label )"</td><td>Get the length/size of the primitive data named 'label'.</td></tr>
+ <tr><td>\ref helios::Context::doesPrimitiveDataExist( uint UUID, const char* label ) const "doesPrimitiveDataExist( uint UUID, const char* label )"</td><td>Check whether primitive data named 'label' exists for the primitive.</td></tr>
+ <tr><td>\ref helios::Context::getPrimitiveDataType( uint UUID, const char* label ) const "getPrimitiveDataType( uint UUID, const char* label )"</td><td>Get the \ref helios::HeliosDataType for the primitive.</td></tr>
+ <tr><td>\ref helios::Context::getPrimitiveDataSize( uint UUID, const char* label ) const "getPrimitiveDataSize( uint UUID, const char* label )"</td><td>Get the length/size of the primitive data named 'label'.</td></tr>
  </table>  
  
  <p> <br> </p>  
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.0;">
  <pre><code>  #include "Context.h"
   using namespace helios;
 
@@ -1325,10 +1247,7 @@
 
      Context context;
 
-     vec3 center(0,0,0);
-     vec2 size(1,1);
-
-     uint UUID = context.addPatch( center, size );
+     uint UUID = context.addPatch();
 
      float eps = 0.9;
      context.setPrimitiveData(UUID, "emissivity", eps);
@@ -1338,12 +1257,20 @@
         uint L = context.getPrimitiveDataSize(UUID, "emissivity");
      }
 
-  }</code></pre>
- </div>
+  }</code></pre></div>
 
  \subsection GlobalData Global Data
 
- Global data is similar to primitive data, except that it does not correspond to any particular primitive, rather it is a single instance of a certain data structure. The functions used to create global data within the Context are essentially the same as those used to create primitive data, except they do not take a primitive UUID as an argument (because they do not correspond to primitives).
+ Global data is similar to primitive data, except that it does not correspond to any particular primitive, rather it is a single instance of a certain data structure. The functions used to create global data within the Context are essentially the same as those used to create primitive data, except they do not take a primitive UUID as an argument (because they do not correspond to primitives). Available global data functions are listed in the table below. Note that these functions do not have a UUID argument because global data is not tied to any particular primitive.
+
+ <table>
+  <tr><th>Function</th><th>Description</th></tr>
+  <tr><td>\ref helios::Context::setGlobalData() "setGlobalData()"</td><td>Set the value of global data named 'label'. Note that there are many overloaded versions of this function based on the data type.</td></tr>
+  <tr><td>\ref helios::Context::getGlobalData() "getGlobalData()"</td><td>Get the value of global data named 'label'. Note that there are many overloaded versions of this function based on the data type.</td></tr>
+  <tr><td>\ref helios::Context::doesGlobalDataExist( const char* label ) const "doesGlobalDataExist( const char* label )"</td><td>Check whether global data named 'label' exists in the Context.</td></tr>
+  <tr><td>\ref helios::Context::getGlobalDataType( const char* label ) const "getGlobalDataType( const char* label )"</td><td>Get the \ref helios::HeliosDataType of the global data.</td></tr>
+  <tr><td>\ref helios::Context::getGlobalDataSize( const char* label ) const "getGlobalDataSize( const char* label )"</td><td>Get the length/size of the global data named 'label'.</td></tr>
+  </table>
 
  \subsection DataTimeseries Data Timeseries
 
@@ -1357,7 +1284,7 @@
 
   int main(){
 
-        \c// Initialize the Context
+        \// Initialize the Context
         Context context;
      
         \c// Add data to timeseries
@@ -1442,9 +1369,9 @@
 	  <pre><code> \<patch\>
 	   \<center\>0 0 0\</center\>
 	   \<size\>1 1\</size\>
-	   \<rotation\>0 0\</rotation\> \<!-- OPTIONAL -->
-	   \<color\>1 0 0\</color\> \<!-- OPTIONAL -->
-	   \<texture\>"grass.jpg"\</texture\> \<!-- OPTIONAL -->
+	   \<rotation\>0 0\</rotation\>
+	   \<color\>1 0 0\</color\>
+	   \<texture\>"grass.jpg"\</texture\>
 	\</patch\></code></pre>
 	</div>
   </td></tr>
@@ -1456,17 +1383,6 @@
 	   \<vertex\>1 1 0\</vertex\>
 	   \<color\>1 0 0\</color\>
 	\</triangle\></code></pre>
-	</div>
-  </td></tr>
-  <tr><td>Disk</td><td>
-	<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-	  <pre><code> \<disk\>
-	   \<center\>0 0 0\</center\>
-	   \<size\>1 1\</size\>
-	   \<rotation\>0 0\</rotation\>
-	   \<color\>1 0 0\</color\>
-	   \<texture\>"grass.jpg"\</texture\>
-	\</disk\></code></pre>
 	</div>
   </td></tr>
   <tr><td>Voxel</td><td>

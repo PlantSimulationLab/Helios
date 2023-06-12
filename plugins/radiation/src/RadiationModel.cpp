@@ -459,26 +459,6 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
 
 }
 
-void RadiationModel::setSpectralReflectivity(const std::string &spectrum_globaldata, const std::vector<uint> &UUIDs ){
-
-    if( spectral_reflectivity_data.find(spectrum_globaldata)==spectral_reflectivity_data.end() ) {
-        spectral_reflectivity_data[spectrum_globaldata] = UUIDs;
-    }else{
-        spectral_reflectivity_data.at(spectrum_globaldata).insert(spectral_reflectivity_data.at(spectrum_globaldata).end(),UUIDs.begin(),UUIDs.end());
-    }
-
-}
-
-void RadiationModel::setSpectralTransmissivity(const std::string &spectrum_globaldata, const std::vector<uint> &UUIDs ){
-
-    if( spectral_transmissivity_data.find(spectrum_globaldata)==spectral_transmissivity_data.end() ) {
-        spectral_transmissivity_data[spectrum_globaldata] = UUIDs;
-    }else{
-        spectral_transmissivity_data.at(spectrum_globaldata).insert(spectral_transmissivity_data.at(spectrum_globaldata).end(),UUIDs.begin(),UUIDs.end());
-    }
-
-}
-
 float RadiationModel::integrateSpectrum( uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2 ) const{
 
     if( source_ID >= radiation_sources.size() ){
@@ -824,7 +804,9 @@ std::vector<std::string> RadiationModel::getAllCameraLabels(){
     return labels;
 }
 
-void RadiationModel::writeCameraImage( const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame ){
+void RadiationModel::writeCameraImage(const std::string &camera, const std::vector<std::string> &bands,
+                                      const std::string &imagefile_base,
+                                      const std::string &image_path, int frame) {
 
     //check if camera exists
     if( cameras.find(camera)==cameras.end() ){
@@ -871,7 +853,11 @@ void RadiationModel::writeCameraImage( const std::string &camera, const std::vec
         outfile << image_path << "/";
     }
 
-    outfile << "camera_" << camera << "_" << imagefile_base << "_" << std::setw(4) << std::setfill('0') << frame_str << ".jpeg";
+    if( frame>=0 ) {
+        outfile << "camera_" << camera << "_" << imagefile_base << "_" << std::setw(4) << std::setfill('0') << frame_str << ".jpeg";
+    }else{
+        outfile << "camera_" << camera << "_" << imagefile_base << ".jpeg";
+    }
     std::ofstream testfile(outfile.str());
 
     if( !testfile.is_open() ){

@@ -163,23 +163,74 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsection RadBands Defining Wavelength Bands
 
- Arbitrary radiation wavelength bands can be added to the model, over which radiation calculations are performed.  Each wavelength band is given a label that is defined by the user (e.g., 'PAR').  Each band has the possibility of having components of direct, diffuse, and emission, each of which are specified when adding the band.  The \ref RadiationModel::addRadiationBand() "addRadiationBand()" command is used to add each band, which takes one argument, which is a user-defined label for the band (e.g, 'PAR').
+ The end output of the radiation model is absorbed radiative fluxes for primitives or camera pixels for one or more wavelength bands. Radiative bands are defined by the total radiative fluxes emitted by any radiative sources, surface radiative properties integrated over the band (reflectivity, transmissivity, and emissivity). These source fluxes and surface radiative properties can be manually specified for each band, or can be automatically calculated based on spectral data input to the model.
+
+ Each wavelength band is given a label that is defined by the user (e.g., 'PAR').  Each band has the possibility of having components of direct, diffuse, and emission, each of which are specified when adding the band.  The \ref RadiationModel::addRadiationBand() "addRadiationBand()" command is used to add each band, which takes one argument, which is a user-defined label for the band (e.g, 'PAR').
+
+ Radiation bands are defined in the model by calling the \ref RadiationModel::addRadiationBand() method. At a minimum, the user must provide an arbitrary label for the band to be added (e.g., "PAR"), which will be used to reference it later. The actual value of the label does not matter - calling a band "PAR" for example doesn't mean anything itself, it's just a label.
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>radiationmodel.addRadiationBand( "PAR" ); //Add band 'PAR'</code></pre></div>
 
+ When a band is added in this way, we will need to manually specify source fluxes and surface radiative properties. These values are what would actually make the band "PAR", or "NIR", or "shortwave", for example. We would set source fluxes and radiative properties consistent with that particular band.
+
+ If we have source flux spectral data, or surface spectral radiative properties, we can input this into the model and have it automatically calculate source fluxes and radiative properties. The procedure for actually inputting this spectral data is described in detail below, but in this case we need to specify the wavelength range for our band when we create it:
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code>radiationmodel.addRadiationBand( "PAR", 400, 700 ); //Add band 'PAR', defined as 400-700nm</code></pre></div>
+
+ In the example above, we have defined our wavelength band as 400-700 nm. Thus, any spectral data input to the model will be integrated over this wavelength band to determine source fluxes and radiative properties.
+
+ \subsection InputSpectra Input Spectral Data
+
+ Spectral data is comprised of data value pairs - a wavelength value paired with a response value (e.g., spectral flux, reflectivity, transmissivity). These wavelength-value pairs are represented using the \ref helios::vec2 structure. Raw spectral data is stored as global data in the Helios Context as a vector of vec2's. The label of the global data can then be assigned to radiative sources or primitive data in order to map the spectral data to a given source or primitive.
+
+ Spectral data is usually read into the Context from an XML file, although it could be manually created within a program and stored as global data. The spectral data should be stored in an XML file as global data, consisting of many vec2 data point and a label string. An example might be as follows (although it will typically have many more values in a real use case). See the page on \ref IO "File I/O" for more information about the specification of XML files in Helios.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+   <pre><code> \<helios\>
+    \<globaldata_vec2 label="leaf_transmissivity"\>
+        300.0 0.11880
+        400.0 0.10533
+        500.0 0.09013
+        600.0 0.08810
+    \<\c/globaldata_vec2\>
+ \<\c/helios\></code></pre></div>
+
+ In this example, we've specified the leaf spectral transmissivity at four wavebands - 300, 400, 500, and 600 nm. Note that wavelength values are always given in nanometers. The label "leaf_transmissivity" is important, as this would be used later to assign this transmissivity spectrum to one or more primitives.
+
+ The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically copied into the project build directory under "plugins/radiation/spectral_data/". The file "surface_spectral_library.xml" has many surface reflectivity and transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.
+
+ In order to get the spectral data into the Context as global data, the XML file containing the data must be loaded. This is done via the usual procedure:
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+    <pre><code> context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");</code></pre></div>
+
+ This command would load all the surface spectra from the file "surface_spectral_library.xml" into the Context as global data. We could then access it in the usual way (see page on \ref GlobalData "Global Data" for details on Helios global data):
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+     <pre><code> std::vector<vec2> transmissivity;
+ context.getGlobalData("grape_leaf_transmissivity_0000", transmissivity);
+ float wavelength = transmissivity.at(0).x;
+ float tau = transmissivity.at(0).y;</code></pre></div>
+
+ In the above example, we've retrieved the spectrum in the file "surface_spectral_library.xml" with the tag "grape_leaf_transmissivity_0000" and stored it into the vector "transmissivity". As an example, we looked up the wavelength and transmissivity at the first wavelength (index of 0).
+
+
  \subsection RadProps Radiative Properties
 
- Radiative properties (reflectivity, transmissivity, emissivity) are defined for each band each primitive.  Their values are set via primitive data (see also Input Primitive Data table above, and \ref helios::Context::setPrimitiveData() "setPrimitiveData()"):  
+ Radiative properties (reflectivity, transmissivity, emissivity) are defined for each band for each primitive.  Their reflectivity or transmissivity values can be set directly via primitive data, or they can be calculated from spectral data. The emissivity is always a constant and cannot be set from spectral data.
+
+ 1. Setting reflectivity and transmissivity manually to a constant value for each band and primitive
+
+ By setting the value of primitive data "reflectivity_[*]" or "transmissivity_[*]", where "[*]" is the name of a radiative band that has been created, this sets a constant reflectivity or transmissivity value for the given band and primitive. And example is given below.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>  \c// Initialize the Context
   Context context;
 
   \c// Add 'Patch' primitive
-  vec3 center = make_vec3(0,0,1);
-  vec2 size = make_vec2(1,1);
-  uint UUID = context.addPatch( center, size );
+  uint UUID = context.addPatch();
 
   float rho = 0.1; //reflectivity value
   context.setPrimitiveData( UUID, "reflectivity_PAR", rho);
@@ -187,15 +238,19 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
   float tau = 0.1; //transmissivity value
   context.setPrimitiveData( UUID, "transmissivity_PAR", tau);</code></pre></div>
 
- Note that absorptivity is not directly set, rather it is calculated as \f$1-\rho-\tau\f$.  If \f$1-\rho-\tau\f$ is calculated to be negative, an error is thrown.
+ Note that absorptivity is not directly set, rather it is calculated as \f$1-\rho-\tau\f$.  If \f$1-\rho-\tau\f$ is calculated to be negative or greater than 1, an error is thrown.
 
- If radiative properties are changed from default vaules, the number of scattering iterations needs to be increased from the default value of 0 (see \ref RadScatter). If radiative properties are changed, but the number of scattering iterations is set to the default value of 0, the modified radiative property values are overridden and set back to their default values (black surface).
+ If reflectivity or transmissivity primitive data does not exist for a primitive, a default value of 0 is assumed. If radiative properties are changed from default values, the number of scattering iterations needs to be increased from the default value of 0 (see \ref RadScatter). If radiative properties are changed, but the number of scattering iterations is set to the default value of 0, the modified radiative property values are overridden and set back to their default values (black surface).
+
+ 2. Specifying reflectivity and transmissivity based on spectral data
+
+ 
 
  \subsection RadEmission Radiative Emission
 
  By default, radiation emission calculations are performed for each band.  Each primitive emits radiation with a flux of \f$\varepsilon \sigma T^4\f$, where \f$\varepsilon\f$ is the primitive's emissivity, \f$\sigma=5.67\times 10^{-8}\,W/m^2/K^4\f$ is the Steffan Boltzmann constant, and \f$T\f$ is the primitive's surface temperature in Kelvin.  By default, it is assumed that \f$\varepsilon=1\f$, unless primitive data exists that defines the emissivity.  By default, it is also assumed that \f$T=300K\f$, unless the primitive data 'temperature' exists in the Context whose value defines the temperature.
 
- Emission can be disabled for the band by caling the \ref RadiationModel::disableEmission() "disableEmission()" function.  For example, for the photosynthetically active (PAR) band, terrestrial objects do not emit radiation (i.e., \f$\varepsilon\approx 0\f$) and thus rather than setting a zero emissivity for this band for all primitives, it is desirable to simply disable radiation emission for this band:
+ Emission can be disabled for the band by calling the \ref RadiationModel::disableEmission() "disableEmission()" function.  For example, for the photosynthetically active (PAR) band, terrestrial objects do not emit radiation (i.e., \f$\varepsilon\approx 0\f$) and thus rather than setting a zero emissivity for this band for all primitives, it is desirable to simply disable radiation emission for this band:
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
    <pre><code> radiationmodel.disableEmission( "PAR" ); //Disable emission for the 'PAR' band</code></pre></div>
