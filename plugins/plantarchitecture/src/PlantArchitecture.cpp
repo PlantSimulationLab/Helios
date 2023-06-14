@@ -284,6 +284,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
     for(int bud=0; bud < phytomer_parameters.internode.petioles_per_internode; bud++ ) {
 
+        if( bud>0 ) {
+            float budrot = float(bud)*2.f*M_PI/float(phytomer_parameters.internode.petioles_per_internode);
+            petiole_axis = rotatePointAboutLine(petiole_axis, petiole_vertices.at(0), internode_axis, budrot );
+            petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, petiole_vertices.at(0), internode_axis, budrot );
+        }
+
         for (int j = 1; j <= Ndiv_petiole; j++) {
 
             petiole_axis = rotatePointAboutLine(petiole_axis, petiole_vertices.at(j-1), petiole_rotation_axis, -deg2rad(phytomer_parameters.petiole.curvature.val()*dr_petiole) );
@@ -307,7 +313,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
         for(int leaf=0; leaf < phytomer_parameters.petiole.leaves_per_petiole; leaf++ ){
 
-            float ind_from_tip = fabs(leaf-float(phytomer_parameters.petiole.leaves_per_petiole-1)/2.f);
+            float ind_from_tip = leaf-float(phytomer_parameters.petiole.leaves_per_petiole-1)/2.f;
 
             uint objID_leaf = phytomer_parameters.leaf.prototype_function(context_ptr,1,(int)ind_from_tip);
 
@@ -315,7 +321,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
             vec3 leaf_scale = phytomer_parameters.leaf.prototype_scale;
             if( phytomer_parameters.petiole.leaves_per_petiole>0 && phytomer_parameters.leaf.leaflet_scale.val()!=1.f && ind_from_tip!=0 ){
-                leaf_scale = powf(phytomer_parameters.leaf.leaflet_scale.val(),ind_from_tip)*leaf_scale;
+                leaf_scale = powf(phytomer_parameters.leaf.leaflet_scale.val(),fabs(ind_from_tip))*leaf_scale;
             }
 
             context_ptr->scaleObject( objID_leaf, leaf_scale );
@@ -339,7 +345,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
             // -- rotations -- //
 
             //\todo All the rotations below should be based on local_petiole_axis, but it doesn't seem to be working
-            vec3 local_petiole_axis = interpolateTube( petiole_vertices, 1.f-ind_from_tip*phytomer_parameters.leaf.leaflet_offset.val() );
+//            vec3 local_petiole_axis = interpolateTube( petiole_vertices, 1.f-fabs(ind_from_tip)*phytomer_parameters.leaf.leaflet_offset.val() );
 
             //pitch rotation
             float pitch_rot = phytomer_parameters.leaf.pitch.val();
@@ -369,7 +375,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
             vec3 leaf_base = petiole_vertices.back();
             if( phytomer_parameters.petiole.leaves_per_petiole>1 && phytomer_parameters.leaf.leaflet_offset.val()>0 ){
                 if( ind_from_tip != 0 ) {
-                    float offset = (ind_from_tip - 0.5f) * phytomer_parameters.leaf.leaflet_offset.val() * phytomer_parameters.petiole.length.val();
+                    float offset = (fabs(ind_from_tip) - 0.5f) * phytomer_parameters.leaf.leaflet_offset.val() * phytomer_parameters.petiole.length.val();
                     leaf_base = interpolateTube(petiole_vertices, 1.f - offset / phytomer_parameters.petiole.length.val() );
                 }
             }
@@ -534,7 +540,7 @@ Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::ve
             phytomer_parameters.petiole.roll = 0;
         }
 
-        phytomer_parameters.internode.radius = phytomer_params.internode.radius*(1.f-shoot_params.shoot_internode_taper*float(i)/float(current_node_number-1) );
+        phytomer_parameters.internode.radius = phytomer_params.internode.radius*(1.f-shoot_params.shoot_internode_taper*float(i)/float(current_node_number) );
 
         int pID = addPhytomer(phytomer_parameters, shoot_base_rotation);
 
@@ -619,37 +625,40 @@ void PlantArchitecture::setCurrentPhytomerParameters( const std::string &phytome
     if( phytomer_label=="bean" ){
 
         phytomer_parameters_current.internode.pitch = 0.1 * M_PI; //pitch>0 creates zig-zagging
-        phytomer_parameters_current.internode.tube_subdivisions = 5;
-        phytomer_parameters_current.internode.curvature = -100;
         phytomer_parameters_current.internode.radius = 0.0025;
         phytomer_parameters_current.internode.length = 0.015;
-//    phytomer_parameters_current.internode.color = make_RGBcolor(0.48, 0.58, 0.14);
+        phytomer_parameters_current.internode.curvature = -100;
+        phytomer_parameters_current.internode.petioles_per_internode = 1;
         phytomer_parameters_current.internode.color = make_RGBcolor(0.38, 0.48, 0.1);
+        phytomer_parameters_current.internode.tube_subdivisions = 5;
 
         phytomer_parameters_current.petiole.pitch = 0.25 * M_PI;
         phytomer_parameters_current.petiole.yaw = M_PI;
-        phytomer_parameters_current.petiole.taper = 0.1;
-        phytomer_parameters_current.petiole.tube_subdivisions = 5;
-        phytomer_parameters_current.petiole.curvature = -600;
+        phytomer_parameters_current.petiole.roll = 0;
+        phytomer_parameters_current.petiole.radius = 0.0015;
         phytomer_parameters_current.petiole.length = 0.03;
+        phytomer_parameters_current.petiole.taper = 0.1;
+        phytomer_parameters_current.petiole.curvature = -600;
+        phytomer_parameters_current.petiole.tube_subdivisions = 5;
         phytomer_parameters_current.petiole.leaves_per_petiole = 3;
 
         phytomer_parameters_current.leaf.pitch.normalDistribution( 0, 0.1 * M_PI);
+        phytomer_parameters_current.leaf.yaw = 0;
         phytomer_parameters_current.leaf.roll.normalDistribution( 0, 0.05 * M_PI);
-        phytomer_parameters_current.leaf.leaflet_offset = 0.4;
+        phytomer_parameters_current.leaf.leaflet_offset = 0.3;
         phytomer_parameters_current.leaf.leaflet_scale = 0.9;
         phytomer_parameters_current.leaf.prototype_function = BeanLeafPrototype;
-        phytomer_parameters_current.leaf.prototype_scale = 0.007 * make_vec3(1, 1, 1.3);
+        phytomer_parameters_current.leaf.prototype_scale = 0.04 * make_vec3(1, 1, 1.);
 
         phytomer_parameters_current.inflorescence.reproductive_state = 0;
         phytomer_parameters_current.inflorescence.tube_subdivisions = 10;
         phytomer_parameters_current.inflorescence.fruit_prototype_function = BeanFruitPrototype;
-        phytomer_parameters_current.inflorescence.fruit_prototype_scale = 0.1 * make_vec3(1, 1, 1);
+        phytomer_parameters_current.inflorescence.fruit_prototype_scale = 0.05 * make_vec3(1, 1, 1);
         phytomer_parameters_current.inflorescence.fruit_arrangement_pattern = "opposite";
         phytomer_parameters_current.inflorescence.fruit_per_inflorescence = 4;
-        phytomer_parameters_current.inflorescence.fruit_offset = 0.;
+        phytomer_parameters_current.inflorescence.fruit_offset = 0.2;
         phytomer_parameters_current.inflorescence.curvature = -200;
-        phytomer_parameters_current.inflorescence.length = 0.075;
+        phytomer_parameters_current.inflorescence.length = 0.025;
         phytomer_parameters_current.inflorescence.rachis_radius = 0.001;
         
     }else if( phytomer_label=="cowpea" ){
@@ -658,8 +667,7 @@ void PlantArchitecture::setCurrentPhytomerParameters( const std::string &phytome
         phytomer_parameters_current.internode.tube_subdivisions = 5;
         phytomer_parameters_current.internode.curvature = -100;
         phytomer_parameters_current.internode.radius = 0.0025;
-        phytomer_parameters_current.internode.length = 0.025;
-//    phytomer_parameters_current.internode.color = make_RGBcolor(0.48, 0.58, 0.14);
+        phytomer_parameters_current.internode.length = 0.015;
         phytomer_parameters_current.internode.color = make_RGBcolor(0.38, 0.48, 0.1);
 
         phytomer_parameters_current.petiole.pitch = 0.25 * M_PI;
@@ -667,13 +675,13 @@ void PlantArchitecture::setCurrentPhytomerParameters( const std::string &phytome
         phytomer_parameters_current.petiole.taper = 0.1;
         phytomer_parameters_current.petiole.tube_subdivisions = 5;
         phytomer_parameters_current.petiole.curvature = -600;
-        phytomer_parameters_current.petiole.length = 0.1;
+        phytomer_parameters_current.petiole.length = 0.02;
         phytomer_parameters_current.petiole.leaves_per_petiole = 3;
 
         phytomer_parameters_current.leaf.leaflet_offset = 0.3;
         phytomer_parameters_current.leaf.leaflet_scale = 0.9;
         phytomer_parameters_current.leaf.prototype_function = CowpeaLeafPrototype;
-        phytomer_parameters_current.leaf.prototype_scale = 0.01 * make_vec3(1, 1, 1.3);
+        phytomer_parameters_current.leaf.prototype_scale = 0.05 * make_vec3(1, 1, 1);
 
         phytomer_parameters_current.inflorescence.reproductive_state = 0;
         phytomer_parameters_current.inflorescence.tube_subdivisions = 10;
@@ -688,9 +696,9 @@ void PlantArchitecture::setCurrentPhytomerParameters( const std::string &phytome
         
     }else if( phytomer_label=="tomato" ){
 
-        phytomer_parameters_current.internode.pitch = 0.1 * M_PI; //pitch>0 creates zig-zagging
+        phytomer_parameters_current.internode.pitch = 0.05 * M_PI; //pitch>0 creates zig-zagging
         phytomer_parameters_current.internode.tube_subdivisions = 5;
-        phytomer_parameters_current.internode.curvature = -100;
+        phytomer_parameters_current.internode.curvature = -00;
         phytomer_parameters_current.internode.radius = 0.0025;
         phytomer_parameters_current.internode.length.uniformDistribution(0.03,0.05);
         phytomer_parameters_current.internode.color = make_RGBcolor(0.26, 0.38, 0.10);
@@ -708,9 +716,9 @@ void PlantArchitecture::setCurrentPhytomerParameters( const std::string &phytome
         phytomer_parameters_current.leaf.leaflet_offset = 0.2;
         phytomer_parameters_current.leaf.leaflet_scale = 0.7;
         phytomer_parameters_current.leaf.prototype_function = TomatoLeafPrototype;
-        phytomer_parameters_current.leaf.prototype_scale = 0.01 * make_vec3(1, 1, 1);
+        phytomer_parameters_current.leaf.prototype_scale = 0.05 * make_vec3(1, 1, 1);
 
-        phytomer_parameters_current.inflorescence.reproductive_state = 2;
+        phytomer_parameters_current.inflorescence.reproductive_state = 1;
         phytomer_parameters_current.inflorescence.tube_subdivisions = 10;
         phytomer_parameters_current.inflorescence.fruit_prototype_function = TomatoFruitPrototype;
         phytomer_parameters_current.inflorescence.flower_prototype_function = TomatoFlowerPrototype;

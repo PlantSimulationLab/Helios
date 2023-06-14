@@ -161,7 +161,7 @@ private:
     int constval;
     std::string distribution;
     std::vector<int> distribution_parameters;
-    std::uniform_real_distribution<int> unif_distribution;
+    std::uniform_int_distribution<int> unif_distribution;
     std::minstd_rand0 *generator;
 };
 
