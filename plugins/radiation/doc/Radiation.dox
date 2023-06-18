@@ -244,7 +244,36 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  2. Specifying reflectivity and transmissivity based on spectral data
 
- 
+ Spectral reflectivity or transmissivity data can be associated with a primitive, such that the radiative properties for a given band can be calculated automatically. At a minimum, two things must be set in order for this to happen: a) the radiation band must have been created with a defined wavelength range (see above and method \ref RadiationModel::addRadiationBand( const std::string&, float, float) ); b) primitive data with label "reflectivity_spectrum" and/or "transmissivity_spectrum" must be set for the primitive, and the value (a string) must reference a valid spectral dataset that has been loaded into the Context.
+
+ Below is a code example for specifying the reflectivity and transmissivity for a primitive based on spectral data. In this case, the model will assume the source spectral distribution is constant over all wave bands, and thus total reflectivity/transmissivity is just the integral of the spectral reflectivity/transmissivity. If there was a radiative source with a specified spectral distribution, the total reflectivity/transmissivity would be calculated by integrating the product of the reflectivity/transmissivity and source spectral intensity (example given for reflectivity only):
+
+ \f[ \rho = \dfrac{\int_{\lambda_{min}}^{\lambda_{max}}\rho_\lambda I_\lambda d\lambda}{\int_{\lambda_{min}}^{\lambda_{max}} I_\lambda d\lambda}\f]
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  \c// Initialize the Context
+  Context context;
+
+  \c// Add 'Patch' primitive
+  uint UUID = context.addPatch();
+
+  \c// Load the surface spectral library
+  context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
+
+  \c// Set the reflectivity and transmissivity based on an example spectrum in the library
+  context.setPrimitiveData( UUID, "reflectivity_spectrum", "grape_leaf_reflectivity_0000" );
+  context.setPrimitiveData( UUID, "transmissivity_spectrum", "grape_leaf_transmissivity_0000" );
+
+  \c// Declare the radiation model
+  %RadiationModel radiationmodel(&context);
+
+  \c// Add a band with explicit wavelength bounds (400-700nm)
+  radiationmodel.addRadiationBand( "PAR", 400, 700 );
+
+  \c// Updating the geometry will perform radiative property calculations and set primitive data
+  radiationmodel.updateGeometry();</code></pre></div>
+
+ Note that in the above example, we did not add a radiative source or set its spectral distribution.
 
  \subsection RadEmission Radiative Emission
 
@@ -265,8 +294,10 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsection RadSources External Radiation Sources
 
- There are three types of external sources of radiation that can be simulated: 1) a collimated radiation source (beams of radiation are approximately parallel), 2) ambient diffuse radiation, and 3) a point source.
- 
+ There are six types of external sources of radiation that can be simulated: 1) a collimated radiation source (beams of radiation are approximately parallel), 2) a sphere with the same radius and distance as the sun, 3) a sphere with prescribed radius and position, 4) a disk with prescribed radius, position, and orientation, 5) a rectangle with prescribed size, position, and orientation, 6) ambient diffuse radiation with prescribed angular distribution.
+
+ \image html RadiationSources.png
+
  \subsubsection ColSource Adding Collimated Sources
 
  A collimated radiation source is defined by a unit vector pointing in the direction of the collimated source, and by the radiation flux emitted by the source normal to the direction of radiation propagation.
@@ -281,28 +312,73 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source
  radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div>
 
+ The \ref RadiationModel::addCollimatedRadiationSource() method can also be called with no argument, in which case it will set the sun direction to be vertical. It can also be called based on a \ref helios::SphericalCoord.
+
  \subsubsection SunSphereSource Adding Spherical Sun Source
 
  To represent penumbral effects, a spherical radiation source can be used to represent the sun. The sun is represented by a sphere, which has the same diameter and distance from the earth as the sun.
 
-The spherical sun source is defined in a similar manner as the collimated radiation source, but using the \ref RadiationModel::addSunSphereRadiationSource() "addSunSphereRadiationSource()" function. Below is an example of adding a spherical sun source, with a flux of 800 and using 200 rays per primitive:
+ The spherical sun source is defined in a similar manner as the collimated radiation source, but using the \ref RadiationModel::addSunSphereRadiationSource() "addSunSphereRadiationSource()" function. Below is an example of adding a spherical sun source, with a flux of 800:
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code> vec3 sun_dir(0,0,1);
  uint SunSource = radiationmodel.addSunSphereRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'SunSource' variable
- radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source
- radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div>
+ radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source</code></pre></div>
 
- \subsubsection PointSource Adding Spherical Sources
+ \subsubsection PointSource Adding Spherical Radiation Sources
 
- More general spherical radiation sources can be added to represent sources such as a lamp. Spherical sources are added using the \ref RadiationModel::addSphereRadiationSource() "addSphereRadiationSource()" function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the source can also be set using the source identifier.
+ Spherical sources are added using the \ref RadiationModel::addSphereRadiationSource() "addSphereRadiationSource()" function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the surface of the source can also be set using the source identifier.
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code> vec3 sun_dir(0,0,1);
  float sphere_radius = 1.0;
  uint SphereSource = radiationmodel.addSphereRadiationSource( sun_dir, sphere_radius ); //add the source, whose identifier is stored in the 'SphereSource' variable
- radiationmodel.setSourceFlux(SphereSource,"PAR",800); //set the flux of the source
- radiationmodel.setDirectRayCount("PAR",200); //set the ray count for source</code></pre></div>
+ radiationmodel.setSourceFlux(SphereSource,"PAR",800); //set the flux of the source</code></pre></div>
+
+ \subsubsection DiskSource Adding Disk Radiation Sources
+
+ A disk radiation source emits directionally from one surface of a circular disk. Disk sources are added using the \ref RadiationModel::addDiskRadiationSource() "addDiskRadiationSource()" function, which takes an (x,y,z) location of the disk source center, its radius, and its rotation as arguments. By default, the disk is horizontal and emits from its upper face. The rotation argument specifies the rotation angle in radians about its x-, y-, and z-axes. For example, to have a downward-emitting disk, the rotation would be (\f$\pi\f$, 0, 0).  The flux emanating from the surface of the disk can also be set using the source identifier.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> vec3 rotation(M_PI,0,0); //emitting downward
+ float disk_radius = 1.0;
+ uint DiskSource = radiationmodel.addDiskRadiationSource( nullorigin, disk_radius, rotation );
+ radiationmodel.setSourceFlux(DiskSource,"PAR",800); //set the flux of the source</code></pre></div>
+
+ \subsubsection RectSource Adding Rectangular Radiation Sources
+
+ Adding a rectangular radiation source is nearly the same as adding a disk source, except that the horizontal and lateral dimensions of the source can be specified independently. As with the disk source, the rectangle is horizontal by default and emits from its upper face.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> vec3 rotation(M_PI,0,0); //emitting downward
+ vec2 size(2.0, 1.0);
+ uint RectSource = radiationmodel.addRectangleRadiationSource( nullorigin, size, rotation );
+ radiationmodel.setSourceFlux(RectSource,"PAR",800); //set the flux of the source</code></pre></div>
+
+ \subsubsection SourceDist Setting the Radiation Source Spectral Distribution and Normalization
+
+ In the above examples, the source flux was specified directly for each band, and integrated surface radiative properties assumed the source flux spectral distribution was constant over the wave band. Optionally, users can specify a source spectral distribution by referencing a spectral distribution that has been loaded into the Context based on the procedure described above (\ref RadProps).
+
+ The \ref RadiationModel::setSourceSpectrum() method sets the source spectral flux distribution, and takes two arguments: 1) The identifier of a radiative source (i.e., the output argument of the add[*]Source() call), 2) The label (string) of a spectral distribution that has been loaded into the Context.
+
+ The main difference between the spectral distribution data for radiative properties and for sources is that for sources each ".y" value in the spectral dataset is the spectral-hemispherical emitted flux at that wavelength (".x") in units of W/m<sup>2</sup>/nm.
+
+ An example of setting the source distribution based on the ASTMG173 standard solar spectral distribution is given below.
+
+ It is important to note that if a spectral flux distribution is specified for a source, the total flux emitted by the source for a given waveband will be calculated by integrating the source flux distribution over that band (provided a wavelength range was specified when calling the \ref RadiationModel::addRadiationBand() function):
+
+ \f[R = \int\limits_{\lambda_{min}}^{\lambda_{max}} R_\lambda d\lambda \f]
+
+ However, users typically want to change the integral of the source flux distribution dynamically throughout a simulation. This can be done using the \ref RadiationModel::setSourceSpectrumIntegral() method. The user can either set the integral of the source flux spectral distribution across all wavelengths to a prescribed value. The source flux spectral distribution can also be scaled based on a prescribed integral between two wavelengths. For example, if only the total PAR flux was known, the entire solar source flux distribution could be scaled based on the integral from 400-700nm. When called, the \ref RadiationModel::setSourceSpectrumIntegral() function properly normalizes the source spectral distribution, calculates radiative source fluxes for all bands through integration, then calls the \ref RadiationModel::setSourceFlux() method for all bands based on the updated fluxes.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code>
+  uint SourceID = radiationmodel.addSunSphereRadiationSource(); //add a radiation source
+  radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum
+  radiationmodel.addRadiationBand("PAR", 400, 700); //add a radiation band called "PAR" defined between 400-700nm
+  radiationmodel.setSourceSpectrumIntegral(SourceID, 1000 ); //set the integral of solar flux spectrum across all bands to 1000 W/m^2</code></pre></div>
+
+  In order to be able to set the source spectrum integral, it is required that: 1) the source has been assigned a spectral distribution via the \ref RadiationModel::setSourceSpectrum() method, and 2) bands should have been added with explicit wavelength bounds. If they were not, their fluxes will not be set based on the updated source flux integral.
 	 
  \subsubsection AmbSource Adding Diffuse/Ambient Sources
 

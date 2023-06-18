@@ -308,7 +308,7 @@
   Projects that use the Helios API are typically built using a CMakeLists.txt file.  A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.
 
   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-    <pre><code> # Helios standard CMakeLists.txt file version 1.8
+  <pre><code>  # Helios standard CMakeLists.txt file version 1.8
   # Helios standard CMakeLists.txt file version 1.8
   if ( WIN32 )
       cmake_minimum_required(VERSION 3.15)
@@ -332,8 +332,8 @@
   set( PLUGINS "visualizer" )
 
   #-------- DO NOT MODIFY ---------#
-  include( "${BASE_DIRECTORY}/core/CMake_project.txt" )
-  </code></pre></div>
+  include( "${BASE_DIRECTORY}/core/CMake_project.txt" )</code></pre>
+  </div>
 
   The easiest way to compile the code is by using an IDE such as CLion, which is described in detail on the page \ref CLionIDE "Using the CLion IDE with Helios".
 
@@ -372,28 +372,28 @@
 
  <table>
    <tr><th>Header File</th></tr>
-   <tr><td><cstdlib></td></tr>
-   <tr><td><cstdio></td></tr>
-   <tr><td><cstring></td></tr>
-   <tr><td><iostream></td></tr>
-   <tr><td><sstream></td></tr>
-   <tr><td><fstream></td></tr>
-   <tr><td><vector></td></tr>
-   <tr><td><stdexcept></td></tr>
-   <tr><td><exception></td></tr>
-   <tr><td><cassert></td></tr>
-   <tr><td><cmath></td></tr>
-   <tr><td><memory></td></tr>
-   <tr><td><ctime></td></tr>
-   <tr><td><map></td></tr>
-   <tr><td><algorithm></td></tr>
-   <tr><td><ctime></td></tr>
-   <tr><td><random></td></tr>
-   <tr><td><chrono></td></tr>
-   <tr><td><thread></td></tr>
-   <tr><td><filesystem></td></tr>
-   </table>
- 
+   <tr><td>\<cstdlib\></td></tr>
+   <tr><td>\<cstdio\><\td></tr>
+   <tr><td>\<cstring\><\td></tr>
+   <tr><td>\<iostream\><\td></tr>
+   <tr><td>\<sstream\><\td></tr>
+   <tr><td>\<fstream\><\td></tr>
+   <tr><td>\<vector\><\td></tr>
+   <tr><td>\<stdexcept\><\td></tr>
+   <tr><td>\<exception\><\td></tr>
+   <tr><td>\<cassert\><\td></tr>
+   <tr><td>\<cmath\><\td></tr>
+   <tr><td>\<memory\><\td></tr>
+   <tr><td>\<ctime\><\td></tr>
+   <tr><td>\<map\><\td></tr>
+   <tr><td>\<algorithm\><\td></tr>
+   <tr><td>\<ctime\><\td></tr>
+   <tr><td>\<random\><\td></tr>
+   <tr><td>\<chrono\><\td></tr>
+   <tr><td>\<thread\><\td></tr>
+   <tr><td>\<filesystem\><\td></tr>
+  </table>
+
  <!-- **************** CONTEXT ***************** -->
  \section ContextSect Context
 
@@ -416,11 +416,11 @@
  The context is typically created within the main function:
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height: 1.2;">
- <pre><code> #include "Context.h"
-  void main(){
-     Context context;
-  }
- </code></pre>	     
+ <code> #include "Context.h"
+ void main(){
+    Context context;
+ }
+ </code>
  </div>
 
  The Context is usually passed to plugins (see \ref Plugins), which gives them access to geometry and data.
@@ -511,9 +511,9 @@
  
  <table>
  <tr><th>Primitive</th><th>Description</th><th>Enumeration</th></tr>
- <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>PRIMITIVE\_TYPE\_PATCH</td></tr>
- <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE\_TYPE\_TRIANGLE"</td></tr>
-  <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_VOXEL "PRIMITIVE\_TYPE\_VOXEL"</td></tr>
+ <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>\ref helios::PrimitiveType::PRIMITIVE_TYPE_PATCH "PRIMITIVE_TYPE_PATCH"</td></tr>
+ <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE_TYPE_TRIANGLE "PRIMITIVE_TYPE_TRIANGLE"</td></tr>
+ <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE_TYPE_VOXEL "PRIMITIVE_TYPE_VOXEL"</td></tr>
  </table>	
  
  \subsection AddingPrims Adding Primitives
@@ -553,7 +553,7 @@
  Patches are added by specifying the (x,y,z) coordinate of its center, the lengths of its sides in the x- and y-directions, and optionally its spherical rotation (see \ref Coord) and r-g-b color.  The following is an example of using the 'addPatch' function to add a simple patch:
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> #include "Context.h"
+ <pre><code>  #include "Context.h"
   using namespace helios;
        
   int main(){
@@ -576,7 +576,7 @@
  The patch can also be rotated by adding the optional SphericalCoord argument:
  
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> vec3 center = make_vec3(0,0,1);
+ <pre><code>  vec3 center = make_vec3(0,0,1);
   vec2 size = make_vec2(1,1);
   SphericalCoord rotation = make_SphericalCoord(0.25*M_PI,0.5*M_PI);
   context.addPatch( center, size, rotation );</code></pre>
@@ -589,7 +589,7 @@
  Triangles are added by specifying the (x,y,z) coordinates of the triangle's three vertices, and optionally its r-g-b color.  The following is an example of using the 'addTriangle()' function to add a simple triangle:
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> #include "Context.h"
+ <pre><code>  #include "Context.h"
   using namespace helios;
        
   int main(){
@@ -1043,9 +1043,6 @@
  <tr><td>Member Primitive Check</td><td>\ref helios::CompoundObject::doesObjectContainPrimitive() "doesObjectContainPrimitive()"</td></tr>
  <tr><td>Object Center</td><td>\ref helios::CompoundObject::getObjectCenter() "getObjectCenter()"</td></tr>
  <tr><td>Surface Area</td><td>\ref helios::CompoundObject::getArea() "getArea()"</td></tr>
- <tr><td>Diffuse R-G-B color code</td><td>\ref helios::CompoundObject::getColor() "getColor()"</td></tr>
- <tr><td>Diffuse R-G-B color code</td><td>\ref helios::CompoundObject::getRGBColor() "getColorRGB()"</td></tr>
- <tr><td>Diffuse R-G-B-A color code</td><td>\ref helios::CompoundObject::getRGBAColor() "getColorRGBA()"</td></tr>
  <tr><td>Override Texture</td><td>\ref helios::CompoundObject::overrideTextureColor() "overrideTextureColor()"</td></tr>
  <tr><td>Use Texture</td><td>\ref helios::CompoundObject::useTextureColor() "useTextureColor()"</td></tr>
  </table>

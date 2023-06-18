@@ -278,9 +278,6 @@ public:
     //! Fluxes of radiation source for all bands
     std::map<std::string,float> source_fluxes;
 
-    //! Pre-calculate source_integral
-    float source_integral = 0.f;
-
 private:
 
 
@@ -461,12 +458,21 @@ public:
     */
     uint addDiskRadiationSource( const helios::vec3 &position, float radius, const helios::vec3& rotation );
 
-    //! Set source spectra integral prior to modelling
+    //! Set the integral of the source spectral flux distribution across all possible wavelengths (=∫Sdλ)
     /**
      * \param[in] "source_ID" ID of source
-     * \param[in] "source_integral" Integration of source spectral distribution across all possible wavelengths (=∫Sdλ)
+     * \param[in] "source_integral" Integration of source spectral flux distribution across all possible wavelengths (=∫Sdλ)
+     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
     */
-    void setSourceIntegral( uint source_ID, float source_integral);
+    void setSourceSpectrumIntegral(uint source_ID, float source_integral);
+
+    //! Scale the source spectral flux distribution based on a prescribed integral between two wavelengths (=∫Sdλ)
+    /**
+     * \param[in] "source_ID" ID of source
+     * \param[in] "source_integral" Integration of source spectral flux distribution between two wavelengths (=∫Sdλ)
+     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
+    */
+    void setSourceSpectrumIntegral(uint source_ID, float source_integral, float wavelength1, float wavelength2);
 
     //! Set the flux of radiation source for this band.
     /**

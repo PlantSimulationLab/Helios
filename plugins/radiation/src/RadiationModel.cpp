@@ -361,17 +361,55 @@ uint RadiationModel::addDiskRadiationSource( const vec3 &position, float radius,
 
     return Nsources-1;
 
+
 }
 
-void RadiationModel::setSourceIntegral( uint source_ID, float source_integral){
+void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_integral){
 
     if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
+        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
     }else if( source_integral<0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceIntegral): Source integral must be non-negative." ));
+        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source integral must be non-negative." ));
+    }else if( radiation_sources.at(source_ID).source_spectrum.empty() ){
+        std::cout << "WARNING (RadiationModel::setSourceSpectrumIntegral): Spectral distribution has not been set for radiation source. Cannot set its integral." << std::endl;
+        return;
     }
 
-    radiation_sources.at(source_ID).source_integral = source_integral;
+    RadiationSource &source = radiation_sources.at(source_ID);
+
+    setSourceSpectrumIntegral( source_ID, source_integral, source.source_spectrum.front().x, source.source_spectrum.back().x);
+
+}
+
+void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_integral, float wavelength1, float wavelength2){
+
+    if( source_ID >= radiation_sources.size() ){
+        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
+    }else if( source_integral<0 ){
+        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source integral must be non-negative." ));
+    }else if( radiation_sources.at(source_ID).source_spectrum.empty() ){
+        std::cout << "WARNING (RadiationModel::setSourceSpectrumIntegral): Spectral distribution has not been set for radiation source. Cannot set its integral." << std::endl;
+        return;
+    }
+
+    RadiationSource &source = radiation_sources.at(source_ID);
+
+    float old_integral = integrateSpectrum( source.source_spectrum, wavelength1, wavelength2 );
+
+    for( vec2 &wavelength : source.source_spectrum ){
+        wavelength.y *= source_integral/old_integral;
+    }
+
+    uint b=0;
+    for( auto &band : radiation_bands ){
+        if( band.second.wavebandBounds.x==0 && band.second.wavebandBounds.y==0 ){
+            continue;
+        }
+        float lmin = band.second.wavebandBounds.x;
+        float lmax = band.second.wavebandBounds.y;
+        source.source_fluxes.at(band.first) = integrateSpectrum(source_ID,source.source_spectrum,lmin,lmax);
+        b++;
+    }
 
 }
 
@@ -487,9 +525,6 @@ float RadiationModel::integrateSpectrum( uint source_ID, const std::vector<helio
 
     float E = 0;
     float Etot=0;
-    if (radiation_sources.at(source_ID).source_integral!=0){
-        Etot = radiation_sources.at(source_ID).source_integral;
-    }
     for( auto i=istart; i<iend; i++ ){
 
         float x0 = object_spectrum.at(i).x;
@@ -501,9 +536,7 @@ float RadiationModel::integrateSpectrum( uint source_ID, const std::vector<helio
         float Esource1 = interp1( source_spectrum, object_spectrum.at(i+1).x);
         
         E += 0.5f*(Eobject0*Esource0+Eobject1*Esource1)*(x1-x0);
-        if (radiation_sources.at(source_ID).source_integral==0){
-            Etot += 0.5f*(Esource1+Esource0)*(x1-x0);
-        }
+        Etot += 0.5f*(Esource1+Esource0)*(x1-x0);
     }
 
     return E/Etot;
@@ -564,9 +597,6 @@ float RadiationModel::integrateSpectrum(uint source_ID, const std::vector<helios
 
     float E = 0;
     float Etot=0;
-    if (radiation_sources.at(source_ID).source_integral!=0){
-        Etot = radiation_sources.at(source_ID).source_integral;
-    }
 
     for( auto i=1; i<object_spectrum.size(); i++ ){
 
@@ -588,9 +618,7 @@ float RadiationModel::integrateSpectrum(uint source_ID, const std::vector<helios
         float Ecamera0 = interp1( camera_spectrum, x0);
 
         E += 0.5f*((Eobject1*Esource1*Ecamera1)+(Eobject0*Ecamera0*Esource0))*(x1-x0);
-        if (radiation_sources.at(source_ID).source_integral==0){
-            Etot += 0.5f*(Esource1+Esource0)*(x1-x0);
-        }
+        Etot += 0.5f*(Esource1+Esource0)*(x1-x0);
     }
 
 
@@ -2075,7 +2103,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         rho_unique.at(spectrum.first).at(b).at(s) = integrateSpectrum(s, spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y);
                      } else {
                         //source spectrum not provided, assume source intensity is constant over the band
-                        rho_unique.at(spectrum.first).at(b).at(s) = integrateSpectrum(spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y);
+                        rho_unique.at(spectrum.first).at(b).at(s) = integrateSpectrum(spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y)/(radiation_bands.at(band).wavebandBounds.y-radiation_bands.at(band).wavebandBounds.x);
                     }
                 }else{
                     rho_unique.at(spectrum.first).at(b).at(s) = rho_default;
@@ -2133,7 +2161,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                     if (!radiation_sources.at(s).source_spectrum.empty()) {
                         tau_unique.at(spectrum.first).at(b).at(s) = integrateSpectrum(s, spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y);
                     } else{
-                        tau_unique.at(spectrum.first).at(b).at(s) = integrateSpectrum(spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y);
+                        tau_unique.at(spectrum.first).at(b).at(s) = integrateSpectrum(spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y)/(radiation_bands.at(band).wavebandBounds.y-radiation_bands.at(band).wavebandBounds.x);
                     }
                 }else{
                     tau_unique.at(spectrum.first).at(b).at(s) = tau_default;
@@ -4237,7 +4265,7 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
     }
 
     for (uint ID = 0; ID<radiation_sources.size();ID++) {
-        RadiationModel::setSourceIntegral(ID, 1);
+        RadiationModel::setSourceSpectrumIntegral(ID, 1);
     }
 
     std::vector<float> wavelengths;
@@ -4336,7 +4364,7 @@ void RadiationModel::runRadiationImaging(const std::string& cameralabel, const s
         std::vector<vec2> Source_spectrum;
         context->getGlobalData(sourcelabels.at(ID).c_str(), Source_spectrum);
         sources_fluxes.push_back(RadiationModel::integrateSpectrum(Source_spectrum, wavelengthrange.x, wavelengthrange.y));
-        RadiationModel::setSourceIntegral(ID, sources_fluxes.at(ID));
+        RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
         RadiationModel::setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
         sources_fluxsum += sources_fluxes.at(ID);
     }
