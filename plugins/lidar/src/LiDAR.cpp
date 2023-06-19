@@ -85,8 +85,8 @@ helios::int2 ScanMetadata::direction2rc(const SphericalCoord &direction ) const{
     column = Nphi-1;
   }
 
-  //assert( row>=0 && row<Ntheta );
-  //assert( column>=0 && column<Nphi );
+  assert( row>=0 && row<Ntheta );
+  assert( column>=0 && column<Nphi );
 
   return helios::make_int2(row,column);
 
@@ -429,7 +429,11 @@ int LiDARcloud::getHitIndex(uint scanID, uint row, uint column ) const{
     exit(EXIT_FAILURE);
   }
 
-  return hit_tables.at(scanID).get(row,column);
+  int hit = hit_tables.at(scanID).get(row,column);
+
+  assert( hit<getScanSizeTheta(scanID)*getScanSizePhi(scanID) );
+
+  return hit;
 }
 
 int LiDARcloud::getHitGridCell(uint index ) const{

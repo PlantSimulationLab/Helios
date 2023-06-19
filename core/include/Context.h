@@ -5095,6 +5095,14 @@ public:
      * \param[in] "quiet" output messages are disabled if quiet is set to 'true' (default is quiet='false').
      */
     void writeXML( const char* filename, const std::vector<uint> &UUIDs, bool quiet = false ) const;
+
+    //! Write Context geometry and data to XML file for a subset of compound object IDs in the context
+    /**
+     * \param[in] "filename" name of XML file.
+     * \param[in] "objIDs" Identifiers for compound objects that should be written to XML file.
+     * \param[in] "quiet" output messages are disabled if quiet is set to 'true' (default is quiet='false').
+     */
+    void writeXML_byobject( const char* filename, const std::vector<uint> &UUIDs, bool quiet = false ) const;
     
     //! Write primitive data to an ASCII text file for all primitives in the Context
     /**

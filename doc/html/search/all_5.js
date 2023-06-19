@@ -20,7 +20,8 @@ var searchData=
   ['exportleafareadensities_17',['exportLeafAreaDensities',['../class_li_d_a_rcloud.html#a6e438fd60af7f54f4d1c09ac64fd7338',1,'LiDARcloud']]],
   ['exportleafareas_18',['exportLeafAreas',['../class_li_d_a_rcloud.html#a8e8bd43bf3b2c107994fee402c41240f',1,'LiDARcloud']]],
   ['exportpointcloud_19',['exportPointCloud',['../class_aerial_li_d_a_rcloud.html#a7f0992570b8535f687fd7067eb9f3593',1,'AerialLiDARcloud::exportPointCloud()'],['../class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322',1,'LiDARcloud::exportPointCloud(const char *filename)'],['../class_li_d_a_rcloud.html#ae9910fa1aae6b8b077d57417c130e753',1,'LiDARcloud::exportPointCloud(const char *filename, uint scanID)']]],
-  ['exporttriangleareas_20',['exportTriangleAreas',['../class_li_d_a_rcloud.html#a416638f486c4fd2572a9589b69605fe7',1,'LiDARcloud::exportTriangleAreas(const char *filename)'],['../class_li_d_a_rcloud.html#adb93e3a16abc8100b2e5dac956c6cc3e',1,'LiDARcloud::exportTriangleAreas(const char *filename, int gridcell)']]],
-  ['exporttrianglenormals_21',['exportTriangleNormals',['../class_li_d_a_rcloud.html#ad030fdddcfa669d6af513eb66a9cbd1a',1,'LiDARcloud::exportTriangleNormals(const char *filename)'],['../class_li_d_a_rcloud.html#aa8376ce652d2e95e886d4d60d321c274',1,'LiDARcloud::exportTriangleNormals(const char *filename, int gridcell)']]],
-  ['extent_22',['extent',['../struct_aerial_scan_metadata.html#a5c51ed2d651b82502f0921bb52d80095',1,'AerialScanMetadata']]]
+  ['exportpointcloudptx_20',['exportPointCloudPTX',['../class_li_d_a_rcloud.html#ac48fe9018f26664dd9abd8c100fccaa6',1,'LiDARcloud']]],
+  ['exporttriangleareas_21',['exportTriangleAreas',['../class_li_d_a_rcloud.html#a416638f486c4fd2572a9589b69605fe7',1,'LiDARcloud::exportTriangleAreas(const char *filename)'],['../class_li_d_a_rcloud.html#adb93e3a16abc8100b2e5dac956c6cc3e',1,'LiDARcloud::exportTriangleAreas(const char *filename, int gridcell)']]],
+  ['exporttrianglenormals_22',['exportTriangleNormals',['../class_li_d_a_rcloud.html#ad030fdddcfa669d6af513eb66a9cbd1a',1,'LiDARcloud::exportTriangleNormals(const char *filename)'],['../class_li_d_a_rcloud.html#aa8376ce652d2e95e886d4d60d321c274',1,'LiDARcloud::exportTriangleNormals(const char *filename, int gridcell)']]],
+  ['extent_23',['extent',['../struct_aerial_scan_metadata.html#a5c51ed2d651b82502f0921bb52d80095',1,'AerialScanMetadata']]]
 ];

@@ -64,14 +64,6 @@ public:
       exit(EXIT_FAILURE);
     }
   }
-  void resize( const int nx, const int ny ){
-    Ntheta=nx;
-    Nphi=ny;
-    data.resize(Nphi);
-    for( int j=0; j<Nphi; j++ ){
-      data.at(j).resize(Ntheta);
-    }
-  }
   void resize( const int nx, const int ny, const datatype initval ){
     Ntheta=nx;
     Nphi=ny;
@@ -672,6 +664,13 @@ class LiDARcloud{
    * \param[in] "scanID" Identifier of scan to be exported
   */
   void exportPointCloud( const char* filename, uint scanID );
+
+    //! Export to file all points from a given scan to PTX file.
+    /**
+     * \param[in] "filename" Name of file
+     * \param[in] "scanID" Identifier of scan to be exported
+    */
+    void exportPointCloudPTX( const char* filename, uint scanID );
 
   // ------- VISUALIZER --------- //
   
