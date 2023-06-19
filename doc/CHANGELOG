@@ -1278,3 +1278,17 @@
 - When calling LiDARcloud::syntheticScan() with record_misses=true now generates miss points for beams that do not intersect the voxel grid.
 - The 'timestamp' field for synthetic scans was revised to be globally consistent for all pulses including misses.
 - The 'intensity' field for synthetic scans was revised to have a value of 0 for misses (was previously an arbitrarily large number).
+
+[1.2.61] 2023-06-19
+
+*Context*
+- Fixed Context::writeXML( const char*, std::vector<uint> ) method, which would write out primitives that were part of compound objects regardless of whether their UUID was specified in the input vector argument.
+- Added Context::writeXML_byobjects() method to write geometry to XML based on a vector of compound object IDs.
+- Made temporary fix to Context::writeXML() file to correct an issue where primitives part of a Tile were not loaded correctly if the Tile is complete. The fix was to write all primitives part of an object to XML regardless of whether the object is complete.
+
+*LiDAR*
+- Added LiDARcloud::exportPointCloudPTX() method to export to the PTX file format.
+
+*Canopy Generator*
+- Fixed error caused by canopy_rotation is not equal to zero in the SplitGrapevine canopy.
+- Added a catch for when leaf_width = 0 in grapevine canopies, which would cause an infinite loop.

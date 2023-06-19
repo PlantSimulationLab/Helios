@@ -2312,7 +2312,7 @@ void CanopyGenerator::buildCanopy(const VSPGrapevineParameters &params ){
 
     if( params.cordon_height<params.trunk_height ){
         std::cout << "failed." << std::endl;
-        throw(std::runtime_error("ERROR: Cannot build VSP grapevine canopy. Cordon height cannot be less than the trunk height."));
+        throw(std::runtime_error("ERROR (CanopyGenerator::buildCanopy)): Cannot build VSP grapevine canopy. Cordon height cannot be less than the trunk height."));
     }
 
     std::uniform_real_distribution<float> unif_distribution;
