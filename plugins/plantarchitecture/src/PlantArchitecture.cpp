@@ -722,7 +722,7 @@ void PlantArchitecture::setCurrentPhytomerParameters( const std::string &phytome
         phytomer_parameters_current.inflorescence.tube_subdivisions = 10;
         phytomer_parameters_current.inflorescence.fruit_prototype_function = TomatoFruitPrototype;
         phytomer_parameters_current.inflorescence.flower_prototype_function = TomatoFlowerPrototype;
-        phytomer_parameters_current.inflorescence.fruit_prototype_scale = 0.015 * make_vec3(1, 1, 1);
+        phytomer_parameters_current.inflorescence.fruit_prototype_scale = 0.01 * make_vec3(1, 1, 1);
         phytomer_parameters_current.inflorescence.fruit_arrangement_pattern = "alternate";
         phytomer_parameters_current.inflorescence.fruit_per_inflorescence = 9;
         phytomer_parameters_current.inflorescence.fruit_offset = 0.14;
