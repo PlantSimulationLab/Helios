@@ -1095,6 +1095,13 @@ d the last cell's index is Ncells-1.
   */
   void trunkReconstruction( const helios::vec3 &box_center, const helios::vec3 &box_size, float Lmax, float max_aspect_ratio );
   
+  //! Delete hitpoints that do not pass through / intersect the voxel grid
+  /**
+   * \param[in] "source" the scan index
+   */
+  void cropBeamsToGridAngleRange(const uint source);
+  
+  
 };
 
 bool sortcol0( const std::vector<double>& v0, const std::vector<double>& v1 );

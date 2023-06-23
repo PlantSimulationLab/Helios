@@ -2330,3 +2330,78 @@ void LiDARcloud::calculateLeafAngleCDF(
   }
 
 }
+
+void LiDARcloud::cropBeamsToGridAngleRange(uint source){
+    
+    // loop through the vertices of the voxel grid.
+    std::vector<helios::vec3> grid_vertices;
+    helios::vec3 boxmin, boxmax;
+    getGridBoundingBox(boxmin, boxmax); // axis aligned bounding box of all grid cells
+    grid_vertices.push_back(boxmin);
+    grid_vertices.push_back(boxmax);
+    grid_vertices.push_back(helios::make_vec3(boxmin.x, boxmin.y, boxmax.z));
+    grid_vertices.push_back(helios::make_vec3(boxmax.x, boxmax.y, boxmin.z));
+    grid_vertices.push_back(helios::make_vec3(boxmin.x, boxmax.y, boxmin.z));
+    grid_vertices.push_back(helios::make_vec3(boxmin.x, boxmax.y, boxmax.z));
+    grid_vertices.push_back(helios::make_vec3(boxmax.x, boxmin.y, boxmin.z));
+    grid_vertices.push_back(helios::make_vec3(boxmax.x, boxmin.y, boxmax.z));
+    
+    float max_theta = 0;
+    float min_theta = M_PI;
+    float max_phi = 0;
+    float min_phi = 2*M_PI;
+    for(uint gg=0;gg<grid_vertices.size();gg++)
+    {
+        helios::vec3 direction_cart =  grid_vertices.at(gg) - getScanOrigin(source);
+        helios::SphericalCoord sc = cart2sphere(direction_cart);
+        
+        std::cout << "azimuth " << sc.azimuth*(180/M_PI) <<", zenith " <<  sc.zenith*(180/M_PI) << std::endl;
+        
+        if(sc.azimuth < min_phi)
+        {
+            min_phi = sc.azimuth;
+        }
+        
+        if(sc.azimuth > max_phi)
+        {
+            max_phi = sc.azimuth;
+        }
+        
+        if(sc.zenith < min_theta)
+        {
+            min_theta = sc.zenith;
+        }
+        
+        if(sc.zenith > max_theta)
+        {
+            max_theta = sc.zenith;
+        }
+    }
+    
+    vec2 theta_range = helios::make_vec2(min_theta, max_theta);
+    vec2 phi_range = helios::make_vec2(min_phi, max_phi);
+    
+    std::cout << "theta_range = " << theta_range*(180.0/M_PI) << std::endl;
+    std::cout << "phi_range = " << phi_range*(180.0/M_PI) << std::endl;
+    
+    std::cout << "original # hitpoints = " << getHitCount() << std::endl;    
+    
+    std::cout << "getHitScanID(getHitCount()-1) = " << getHitScanID(getHitCount()-1) << " getHitScanID(0) = " << getHitScanID(0) << std::endl; 
+    
+    for( int r = (getHitCount() - 1); r>=0; r-- ){
+        if( getHitScanID(r)== source){
+            helios::SphericalCoord raydir = getHitRaydir(r);
+            float this_theta =  raydir.zenith;
+            float this_phi = raydir.azimuth;
+            double this_phi_d = double(this_phi) ;
+            setHitData(r, "beam_azimuth", this_phi_d);
+            if(this_phi < phi_range.x || this_phi > phi_range.y || this_phi < phi_range.x || this_theta > theta_range.y)
+            {
+                deleteHitPoint(r);
+            }
+        }
+    }
+    
+    std::cout << "# hitpoints remaining after crop = " << getHitCount() << std::endl;
+}
+
