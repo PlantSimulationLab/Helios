@@ -1587,6 +1587,212 @@ void LiDARcloud::triangulateHitPoints( float Lmax, float max_aspect_ratio ){
 
 }
 
+//ERK
+void LiDARcloud::triangulateHitPoints( float Lmax, float max_aspect_ratio, const char* scalar_field, const float threshold, const char* comparator ){
+    
+    if( printmessages && getScanCount() ==0 ){
+        cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
+        return;
+    }else if( printmessages && getHitCount() ==0 ){
+        cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
+        return;
+    }
+    
+    if( !hitgridcellcomputed ){
+        calculateHitGridCellGPU();
+    }
+    
+    int Ntriangles=0;
+    
+    for( uint s=0; s< getScanCount(); s++ ){
+        
+        std::vector<int> Delaunay_inds;
+        
+        std::vector<Shx> pts, pts_copy;
+        
+        std::size_t delete_count = 0;
+        int count = 0;
+        for( int r=0; r< getHitCount(); r++ ){
+            
+            
+            
+            if( getHitScanID(r)==s && getHitGridCell(r)>=0 ){
+                
+                if( hits.at(r).data.find(scalar_field) != hits.at(r).data.end() ){
+                    double R = getHitData(r,scalar_field);
+                    if( strcmp(comparator,"<")==0 ){
+                        if( R<threshold ){
+                            delete_count++;
+                            continue;
+                        }
+                    }else if( strcmp(comparator,">")==0 ){
+                        if( R>threshold ){
+                            delete_count++;
+                            continue;
+                        }
+                    }else if( strcmp(comparator,"=")==0 ){
+                        if( R==threshold ){
+                            
+                            delete_count++;
+                            continue;
+                        }
+                    }
+                }
+                
+                helios::SphericalCoord direction = getHitRaydir(r);
+                
+                helios::vec3 direction_cart = getHitXYZ(r)-getScanOrigin(s);
+                direction = cart2sphere( direction_cart );
+                
+                Shx pt;
+                pt.id = count;
+                pt.r = direction.zenith;
+                pt.c = direction.azimuth;
+                
+                pts.push_back(pt);
+                
+                Delaunay_inds.push_back(r);
+                
+                count++;
+                
+            }
+            
+        }
+        
+        std::cout << count << " points used for triangulation" << std::endl;
+        std::cout << delete_count << " points filtered out" << std::endl;
+        
+        if( pts.size()==0 ){
+            if( printmessages ){
+                std::cout << "Scan " << s << " contains no triangles. Skipping this scan..." << std::endl;
+            }
+            continue;
+        }
+        
+        float h[2] = {0,0};
+        for( int r=0; r<pts.size(); r++ ){
+            if( pts.at(r).c<0.5*M_PI ){
+                h[0] += 1.f;
+            }else if( pts.at(r).c>1.5*M_PI ){
+                h[1] += 1.f;
+            }
+        }
+        h[0] /= float(pts.size());
+        h[1] /= float(pts.size());
+        if( h[0]+h[1]>0.4 ){
+            if( printmessages ){
+                std::cout << "Shifting scan " << s << std::endl;
+            }
+            for( int r=0; r<pts.size(); r++ ){
+                pts.at(r).c += M_PI;
+                if( pts.at(r).c > 2.f*M_PI ){
+                    pts.at(r).c -= 2.f*M_PI;
+                }
+            }
+        }
+        
+        std::vector<int> dupes;
+        int nx = de_duplicate( pts, dupes);
+        pts_copy = pts;
+        
+        std::vector<Triad> triads;
+        
+        if( printmessages ){
+            std::cout << "starting triangulation for scan " << s << "..." << std::endl;
+        }
+        
+        int success = 0;
+        int Ntries = 0;
+        while( success!=1 && Ntries<3 ){
+            Ntries++;
+            
+            success = s_hull_pro( pts, triads );
+            
+            if( success!=1 ){
+                
+                //try a 90 degree coordinate shift
+                if( printmessages ){
+                    std::cout << "Shifting scan " << s << " (try " << Ntries << " of 3)" << std::endl;
+                }
+                for( int r=0; r<pts.size(); r++ ){
+                    pts.at(r).c += 0.25*M_PI;
+                    if( pts.at(r).c > 2.f*M_PI ){
+                        pts.at(r).c -= 2.f*M_PI;
+                    }
+                }
+            }
+            
+        }
+        
+        if( success!=1 ){
+            if( printmessages ){
+                std::cout << "FAILED: could not triangulate scan " << s << ". Skipping this scan." << std::endl;
+            }
+            continue;
+        }else if( printmessages ){
+            std::cout << "finished triangulation" << std::endl;
+        }
+        
+        for( int t=0; t<triads.size(); t++ ){
+            
+            int ID0 = Delaunay_inds.at(triads.at(t).a);
+            int ID1 = Delaunay_inds.at(triads.at(t).b);
+            int ID2 = Delaunay_inds.at(triads.at(t).c);
+            
+            helios::vec3 vertex0 = getHitXYZ( ID0 );
+            helios::SphericalCoord raydir0 = getHitRaydir( ID0 );
+            
+            helios::vec3 vertex1 = getHitXYZ( ID1 );
+            helios::SphericalCoord raydir1 = getHitRaydir( ID1 );
+            
+            helios::vec3 vertex2 = getHitXYZ( ID2 );
+            helios::SphericalCoord raydir2 = getHitRaydir( ID2 );
+            
+            helios::vec3 v;
+            v=vertex0-vertex1;
+            float L0 = v.magnitude();
+            v=vertex0-vertex2;
+            float L1 = v.magnitude();
+            v=vertex1-vertex2;
+            float L2 = v.magnitude();
+            
+            float aspect_ratio = max(max(L0,L1),L2)/min(min(L0,L1),L2);
+            
+            if( L0>Lmax || L1>Lmax || L2>Lmax || aspect_ratio>max_aspect_ratio ){
+                continue;
+            }
+            
+            int gridcell = getHitGridCell( ID0 );
+            
+            if( printmessages && gridcell==-2 ){
+                cout << "WARNING (triangulateHitPoints): You typically want to define the hit grid cell for all hit points before performing triangulation." << endl;
+            }
+            
+            RGBcolor color = make_RGBcolor(0,0,0);
+            color.r = (hits.at(ID0).color.r + hits.at(ID1).color.r + hits.at(ID2).color.r )/3.f;
+            color.g = (hits.at(ID0).color.g + hits.at(ID1).color.g + hits.at(ID2).color.g )/3.f;
+            color.b = (hits.at(ID0).color.b + hits.at(ID1).color.b + hits.at(ID2).color.b )/3.f;
+            
+            Triangulation tri( s, vertex0, vertex1, vertex2, ID0, ID1, ID2, color, gridcell );
+            
+            triangles.push_back(tri);
+            
+            Ntriangles++;
+            
+        }
+        
+    }
+    
+    triangulationcomputed = true;
+    
+    if( printmessages ){
+        cout << "\r                                           " ;
+        cout << "\rTriangulating...formed " << Ntriangles << " total triangles." << endl;
+    }
+    
+}
+
+
 void LiDARcloud::addTrianglesToContext( Context* context ) const{
 
   if( scans.size()==0 ){
