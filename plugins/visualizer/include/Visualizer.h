@@ -773,6 +773,17 @@ public:
    */
   void colorContextPrimitivesRandomly();
   
+  //! Color objects from Context with a random color
+  /** \note Useful for visualizing individual objects
+   */
+  void colorContextObjectsRandomly(const std::vector<uint>& ObjIDs );
+  
+  //! Color objects from Context with a random color
+  /** \note Useful for visualizing individual objects
+   */
+  void colorContextObjectsRandomly();
+  
+  
   //! Make Helios logo watermark invisible
   void hideWatermark( void );
 
