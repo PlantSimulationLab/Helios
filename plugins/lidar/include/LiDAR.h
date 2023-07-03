@@ -1039,9 +1039,10 @@ d the last cell's index is Ncells-1.
   /**
    * \param[in] "scanID" ID of scan to gapfill
    * \param[in] "gapfill_grid_only" if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid. If false missing points are gap filled across the range of phi and theta values specified in the scan xml file.
+   * \param[in] "add_flags" if true, gapfillMisses_code is added as hitpoint data. 0 = original points, 1 = gapfilled, 2 = extrapolated at downward edge, 3 = extrapolated at upward edge 
    * \return (x,y,z) of missing points added to the scan from gapfilling
    */
-  std::vector<helios::vec3> gapfillMisses( uint scanID, const bool gapfill_grid_only );
+  std::vector<helios::vec3> gapfillMisses( uint scanID, const bool gapfill_grid_only, const bool add_flags );
   
 
   //! Calculate the leaf area for each grid volume
