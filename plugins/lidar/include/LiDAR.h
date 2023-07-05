@@ -1078,6 +1078,15 @@ d the last cell's index is Ncells-1.
    */
   void calculateLeafAreaGPU_equal_weighting( bool beamoutput, bool fillAnalytic );
   
+  //! Calculate the leaf area for each grid volume using equal weighting method
+  /**
+   * \param [in] "beamoutput" if true writes detailed data about each beam to ../beamoutput/beam_data_s_[scan index]_c_[grid cell index].txt.
+   * \param [in] "fillAnalytic" if true, when the iterative LAD inversion fails, the analytic solution using mean dr will be substituted. If false LAD is set to 999.
+   * \param [in] "constant_G" A separate LAD inversion will be performed for each element of this vector, setting the value of G in all voxels to the value given in this vector.
+   * \note writes voxel level data to ../voxeloutput/voxeloutput.txt
+   */
+  void calculateLeafAreaGPU_equal_weighting( bool beamoutput, bool fillAnalytic, std::vector<float> constant_G );
+  
   
   // -------- RECONSTRUCTION --------- //
 
