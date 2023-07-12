@@ -1295,6 +1295,9 @@
 
 [1.2.62] 2023-07-XX
 
+*Context*
+- Option added for Context::addDisk() and Context::addDiskObject() to specify disk subdivisions in the radial direction.
+
 *Photosynthesis*
 - Boundary-layer conductance was not properly incorporated into CO2 diffusion equation.
 - Default moisture conductance in the code did not match documentation.

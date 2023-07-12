@@ -704,7 +704,7 @@ class Disk : public CompoundObject {
 public:
     
     //! Default constructor
-    Disk(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
+    Disk(uint a_OID, const std::vector<uint> &a_UUIDs, int2 a_subdiv, const char *a_texturefile, helios::Context *a_context);
     
     //! Disk destructor
     ~Disk() override = default;
@@ -716,17 +716,17 @@ public:
     vec3 getCenter() const;
     
     //! Get the number of sub-triangle divisions of the disk object
-    uint getSubdivisionCount() const;
+    int2 getSubdivisionCount() const;
     
     //! Set the number of disk sub-triangle divisions
     /**
      * \param[in] "subdiv" Number of triangle subdivisions.
      */
-    void setSubdivisionCount( uint subdiv );
+    void setSubdivisionCount(int2 subdiv );
     
 protected:
     
-    uint subdiv;
+    int2 subdiv;
     
 };
 
@@ -4630,6 +4630,43 @@ public:
      * \ingroup compoundobjects
      */
     uint addDiskObject(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
+
+    //! Add new Disk Compound Object
+    /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
+     * \param[in] "Ndiv" Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "color" diffuse R-G-B color of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \ingroup compoundobjects
+     */
+    uint addDiskObject(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color );
+
+    //! Add new Disk Compound Object
+    /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
+     * \param[in] "Ndiv" Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "color" diffuse R-G-B-A color of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \ingroup compoundobjects
+     */
+    uint addDiskObject(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color );
+
+    //! Add new Disk Compound Object
+    /** Function to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
+     * \param[in] "Ndiv" Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "texture_file" path to JPEG file to be used as texture
+     * \return Vector of UUIDs for each sub-triangle
+     * \note Assumes a default color of black.
+     * \ingroup compoundobjects
+     */
+    uint addDiskObject(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
     
     //! Add new Polymesh Compound Object
     /** Function to add a new Polymesh to the Context given a vector of UUIDs
@@ -4897,6 +4934,43 @@ public:
      * \ingroup compoundobjects
      */
     std::vector<uint> addDisk(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
+
+    //! Add new Disk geometric primitive
+    /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
+     * \param[in] "Ndiv" Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "color" diffuse R-G-B color of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \ingroup compoundobjects
+     */
+    std::vector<uint> addDisk(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color );
+
+    //! Add new Disk geometric primitive
+    /** Function to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
+     * \param[in] "Ndiv" Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "color" diffuse R-G-B-A color of Disk
+     * \return Vector of UUIDs for each sub-triangle
+     * \ingroup compoundobjects
+     */
+    std::vector<uint> addDisk(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color );
+
+    //! Add new Disk geometric primitive
+    /** Function to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
+     * \param[in] "Ndiv" Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] "center" 3D coordinates of Disk center
+     * \param[in] "size" length of Disk semi-major and semi-minor radii
+     * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
+     * \param[in] "texture_file" path to JPEG file to be used as texture
+     * \return Vector of UUIDs for each sub-triangle
+     * \note Assumes a default color of black.
+     * \ingroup compoundobjects
+     */
+    std::vector<uint> addDisk(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
     
     //! Add a 3D cone to the Context
     /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives

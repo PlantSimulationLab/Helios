@@ -50,7 +50,7 @@ std::vector<float> A;
 
 float Qin[9] = {0, 50, 100, 200, 400, 800, 1200, 1500, 2000};
 A.resize(9);
-std::vector<float> AQ_expected{-2.3948,8.7823,13.7131,18.2686,21.5700,21.5700,21.5700,21.5700,21.5700};
+std::vector<float> AQ_expected{-2.39479,8.30612,12.5873,16.2634,16.6826,16.6826,16.6826,16.6826,16.6826};
 
 //Generate a light response curve using empirical model with default parmeters
 for( int i=0; i<9; i++ ){
@@ -97,7 +97,7 @@ for( int i=0; i<9; i++ ){
 
 //Generate an A vs Ci curve using Farquhar model with default parameters
 
-std::vector<float> ACi_expected{2.4503,10.0469,16.5228,22.0911,26.9183,29.2785,30.4181,31.2971,32.5621};
+std::vector<float> ACi_expected{1.70787,7.29261,12.426,17.1353,21.4501,25.4004,28.5788,29.8179,31.5575};
 
 photomodel.setModelCoefficients(fcoeffs);
 for( int i=0; i<9; i++ ){
@@ -126,7 +126,7 @@ for( int i=0; i<7; i++ ){
 
 //Generate an A vs temperature curve using Farquhar model with default parameters
 
-std::vector<float> AT_expected{3.8978,9.1137,16.4810,22.0911,22.2232,16.4393,5.5393};
+std::vector<float> AT_expected{3.8609,8.71169,14.3514,17.1353,16.0244,11.5661,3.91437};
 
 photomodel.setModelCoefficients(fcoeffs);
 for( int i=0; i<7; i++ ){
