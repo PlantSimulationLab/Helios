@@ -149,6 +149,12 @@ void RadiationModel::addRadiationBand( const std::string &label, float wavelengt
         source.source_fluxes[label] = 0.f;
     }
 
+    //set the flux for all current bands and sources based on the integral of any source spectra that have been specified
+    for( uint ID = 0; ID<radiation_sources.size(); ID++ ) {
+        updateFluxesFromSpectra(ID);
+    }
+
+
 }
 
 void RadiationModel::copyRadiationBand( const std::string &old_label, const std::string &new_label ) {
@@ -400,16 +406,8 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
         wavelength.y *= source_integral/old_integral;
     }
 
-    uint b=0;
-    for( auto &band : radiation_bands ){
-        if( band.second.wavebandBounds.x==0 && band.second.wavebandBounds.y==0 ){
-            continue;
-        }
-        float lmin = band.second.wavebandBounds.x;
-        float lmax = band.second.wavebandBounds.y;
-        source.source_fluxes.at(band.first) = integrateSpectrum(source_ID,source.source_spectrum,lmin,lmax);
-        b++;
-    }
+    //set the flux for all current bands based on the spectrum's integral
+    updateFluxesFromSpectra( source_ID );
 
 }
 
@@ -468,7 +466,12 @@ void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios
         }
     }
 
-    radiation_sources.at(source_ID).source_spectrum = spectrum;
+    RadiationSource &source = radiation_sources.at(source_ID);
+
+    source.source_spectrum = spectrum;
+
+    //set the flux for all current bands based on the spectrum's integral
+    updateFluxesFromSpectra( source_ID );
 
 }
 
@@ -476,7 +479,7 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
 
     if( source_ID >= radiation_sources.size() ){
         throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Cannot add radiation spectra for this source because it is not a valid radiation source ID.\n") );
-    }else if( spectrum_label == "ASTMG173" ) {
+    }else if( spectrum_label == "ASTMG173" || spectrum_label == "solar_spectrum_ASTMG173" ) {
         context->loadXML("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml", true);
         if( !context->doesGlobalDataExist("solar_spectrum_ASTMG173") ){
             throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): The file ""plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml"" could not be loaded.") );
@@ -494,6 +497,9 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
             radiation_sources.at(source_ID).source_spectrum = spectrum;
         }
     }
+
+    //set the flux for all current bands based on the spectrum's integral
+    updateFluxesFromSpectra( source_ID );
 
 }
 
@@ -723,7 +729,7 @@ void RadiationModel::enforcePeriodicBoundary(const std::string &boundary ){
 
 }
 
-void RadiationModel::addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::vec3 &lookat, float lens_diameter, const helios::vec2 &sensor_size, float focal_length, float HFOV_degrees, uint antialiasing_samples, const helios::int2 &resolution) {
+void RadiationModel::addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::vec3 &lookat, float lens_diameter, const helios::vec2 &sensor_size, float focal_plane_distance, float HFOV_degrees, uint antialiasing_samples, const helios::int2 &resolution) {
 
     if( sensor_size.x<=0 || sensor_size.y<=0 ){
         throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): Sensor size must be greater than 0.") );
@@ -735,7 +741,7 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
         throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horzontal field of view must be between 0 and 180 degrees.") );
     }
 
-    RadiationCamera camera(camera_label, band_label, position, lookat, resolution, lens_diameter, sensor_size, focal_length, HFOV_degrees, antialiasing_samples );
+    RadiationCamera camera(camera_label, band_label, position, lookat, resolution, lens_diameter, sensor_size, focal_plane_distance, HFOV_degrees, antialiasing_samples );
     if(cameras.find(camera_label)==cameras.end()){
         cameras.emplace(camera_label,camera);
     }
@@ -2476,6 +2482,26 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
 
 }
 
+void RadiationModel::updateFluxesFromSpectra( uint SourceID ){
+
+    if( SourceID>=radiation_sources.size() ){
+        throw(std::runtime_error("ERROR (RadiationModel::updateFluxesFromSpectra): Source does not exist."));
+    }
+
+    RadiationSource &source = radiation_sources.at(SourceID);
+    uint b=0;
+    for( auto &band : radiation_bands ){
+        if( band.second.wavebandBounds.x==0 && band.second.wavebandBounds.y==0 ){
+            continue;
+        }
+        float lmin = band.second.wavebandBounds.x;
+        float lmax = band.second.wavebandBounds.y;
+        source.source_fluxes.at(band.first) = RadiationModel::integrateSpectrum(source.source_spectrum,lmin,lmax)*source.source_flux_scaling_factor;
+        b++;
+    }
+
+}
+
 void RadiationModel::runBand( const std::string &label ) {
     std::vector<std::string> labels{label};
     runBand(labels);
@@ -2872,9 +2898,9 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
         if( message_flag ){
             std::cout << "Performing primary diffuse radiation ray trace for bands ";
             for( const auto &band : label ) {
-                std::cout << band << " ";
+                std::cout << band << ", ";
             }
-            std::cout << "...done." << std::flush;
+            std::cout << "...done." << std::endl;
         }
 
     }

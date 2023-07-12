@@ -278,10 +278,6 @@ public:
     //! Fluxes of radiation source for all bands
     std::map<std::string,float> source_fluxes;
 
-private:
-
-
-
 };
 
 //! Radiation transport model plugin
@@ -594,7 +590,7 @@ public:
      * \param[in] "antialiasing_samples" Number of ray samples per pixel. More samples will decrease noise/aliasing in the image, but will take longer to run.
      * \param[in] "resolution" Pixel resolution of the camera in the horizontal x vertical directions.
      */
-    DEPRECATED( void addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::vec3 &lookat, float lens_diameter, const helios::vec2 &sensor_size, float focal_length, float HFOV_degrees, uint antialiasing_samples, const helios::int2 &resolution) );
+    DEPRECATED( void addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::vec3 &lookat, float lens_diameter, const helios::vec2 &sensor_size, float focal_plane_distance, float HFOV_degrees, uint antialiasing_samples, const helios::int2 &resolution) );
 
     //! Add a radiation camera sensor
     /**
@@ -889,6 +885,8 @@ protected:
         \note \ref updateRadiativeProperties() must be called before simulation can be run
     */
     void updateRadiativeProperties( const std::vector<std::string> &labels );
+
+    void updateFluxesFromSpectra( uint SourceID );
 
     //! Get 1D array of data for an OptiX buffer of floats
     /**

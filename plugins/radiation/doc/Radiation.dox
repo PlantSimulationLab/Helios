@@ -189,7 +189,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
    <pre><code> \<helios\>
-    \<globaldata_vec2 label="leaf_transmissivity"\>
+    \<label="leaf_transmissivity"\>
         300.0 0.11880
         400.0 0.10533
         500.0 0.09013
@@ -209,7 +209,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  This command would load all the surface spectra from the file "surface_spectral_library.xml" into the Context as global data. We could then access it in the usual way (see page on \ref GlobalData "Global Data" for details on Helios global data):
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-     <pre><code> std::vector<vec2> transmissivity;
+ <pre><code> std::vector<vec2> transmissivity;
  context.getGlobalData("grape_leaf_transmissivity_0000", transmissivity);
  float wavelength = transmissivity.at(0).x;
  float tau = transmissivity.at(0).y;</code></pre></div>
@@ -363,7 +363,13 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  The main difference between the spectral distribution data for radiative properties and for sources is that for sources each ".y" value in the spectral dataset is the spectral-hemispherical emitted flux at that wavelength (".x") in units of W/m<sup>2</sup>/nm.
 
- An example of setting the source distribution based on the ASTMG173 standard solar spectral distribution is given below.
+ An example of setting the source distribution based on the ASTMG173 standard solar spectral distribution is given below. Note that the ASTMG173 solar spectrum is automatically loaded by the radiation model. However, in general, the user needs to load an XML file containing the spectral data into the Context. For example,
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>
+ context.loadXML("plugins/radiationmodel/spectral_data/light_spectral_library.xml");</code></pre></div>
+
+ This would allow for use of the "CREE_XLamp_XHP70p2_6500K" source flux spectral distribution, for example.
 
  It is important to note that if a spectral flux distribution is specified for a source, the total flux emitted by the source for a given waveband will be calculated by integrating the source flux distribution over that band (provided a wavelength range was specified when calling the \ref RadiationModel::addRadiationBand() function):
 
@@ -372,14 +378,24 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  However, users typically want to change the integral of the source flux distribution dynamically throughout a simulation. This can be done using the \ref RadiationModel::setSourceSpectrumIntegral() method. The user can either set the integral of the source flux spectral distribution across all wavelengths to a prescribed value. The source flux spectral distribution can also be scaled based on a prescribed integral between two wavelengths. For example, if only the total PAR flux was known, the entire solar source flux distribution could be scaled based on the integral from 400-700nm. When called, the \ref RadiationModel::setSourceSpectrumIntegral() function properly normalizes the source spectral distribution, calculates radiative source fluxes for all bands through integration, then calls the \ref RadiationModel::setSourceFlux() method for all bands based on the updated fluxes.
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>
-  uint SourceID = radiationmodel.addSunSphereRadiationSource(); //add a radiation source
-  radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum
-  radiationmodel.addRadiationBand("PAR", 400, 700); //add a radiation band called "PAR" defined between 400-700nm
-  radiationmodel.setSourceSpectrumIntegral(SourceID, 1000 ); //set the integral of solar flux spectrum across all bands to 1000 W/m^2</code></pre></div>
+ <pre><code>
+ uint SourceID = radiationmodel.addSunSphereRadiationSource(); //add a radiation source
+ radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum
+ radiationmodel.addRadiationBand("PAR", 400, 700); //add a radiation band called "PAR" defined between 400-700nm
+ radiationmodel.setSourceSpectrumIntegral(SourceID, 1000 ); //set the integral of solar flux spectrum across all bands to 1000 W/m^2</code></pre></div>
 
-  In order to be able to set the source spectrum integral, it is required that: 1) the source has been assigned a spectral distribution via the \ref RadiationModel::setSourceSpectrum() method, and 2) bands should have been added with explicit wavelength bounds. If they were not, their fluxes will not be set based on the updated source flux integral.
-	 
+ In order to be able to set the source spectrum integral, it is required that: 1) the source has been assigned a spectral distribution via the \ref RadiationModel::setSourceSpectrum() method, and 2) bands should have been added with explicit wavelength bounds. If they were not, their fluxes will not be set based on the updated source flux integral.
+
+ A user may want to set the source integral based on only a subset of wavelengths contained in the entire spectrum. For example, if only the PAR (400-700nm) flux was known, the entire source flux distribution could be normalized to produce a given PAR flux.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>
+ uint SourceID = radiationmodel.addSunSphereRadiationSource(); //add a radiation source
+ radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum
+ radiationmodel.addRadiationBand("PAR", 400, 700); //add a radiation band called "PAR" defined between 400-700nm
+ radiationmodel.setSourceSpectrumIntegral(SourceID, 300, 400, 700 ); //set the integral of solar flux spectrum from 400-700nm to 300 W/m^2</code></pre></div>
+
+
  \subsubsection AmbSource Adding Diffuse/Ambient Sources
 
  An ambient radiation source is added simply by setting its flux value:
@@ -436,13 +452,97 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  Note that it is very important that no primitives extend laterally beyond the ground surface, otherwise the periodic boundary will lie beyond the lateral extent of the ground and there will potentially be ambient radiation that enters the domain from below. If there is a chance that primitives may laterally extend beyond the ground, it is recommended to use the \ref Context::cropDomain() function to crop the domain in the horizontal to the size of the ground.
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> vec2 ground_size(10,10);  //lateral size of the ground
+ <pre><code> vec2 ground_size(10,10);  //lateral size of the ground
  vec3 ground_center(0,0,0);  //position of the ground center
  context.addPatch( ground_center, ground_size );  //ground patch
 
  context.cropDomainX( ground_center.x + make_vec2(-0.5*ground_size.x,0.5*ground_size.x) );
  context.cropDomainY( ground_center.y + make_vec2(-0.5*ground_size.y,0.5*ground_size.y) );</code></pre></div>
 
+ \subsection RadCam Radiation Cameras
+
+ Simulated cameras can be added to the domain in order to measure radiative fluxes and produce simulated images (with annotations if desired).
+
+ \subsubsection RadCamAdd Adding a Radiation Camera
+
+ A radiation camera is defined by the properties given in the two tables below. The first set of parameters gives the camera's extrinsic properties that determine where the camera is located, how it is oriented, and how it numerically samples the domain.
+
+ <table>
+   <tr>
+     <th>Parameter</th>
+     <th>Data Type</th>
+     <th>Description</th>
+   </tr>
+   <tr>
+     <td>camera_position</td>
+     <td>\htmlonly<font face="courier" color="green">vec3</font>\endhtmlonly</td>
+     <td>Cartesian (x,y,z) position of the center of the camera lens.</td>
+   </tr>
+   <tr>
+     <td>camera_lookat</td>
+     <td>\htmlonly<font face="courier" color="green">vec3</font>\endhtmlonly</td>
+     <td>Cartesian (x,y,z) position that the camera is looking directly at (i.e., a line perpendicular to the lens will pass through camera_position and camera_lookat).</td>
+   </tr>
+   <tr>
+     <td>antialiasing_samples</td>
+     <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td>
+     <td>Number of ray samples launched per camera pixel.</td>
+   </tr>
+ </table>
+
+ The set of parameters given in the table below define a camera's intrinsic parameters that determines how it captures images. Each of these values are member variables of a parameters structure called \ref CameraProperties.
+
+ <table>
+   <tr>
+     <td>lens_diameter</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Physical diameter of the camera lens.</td>
+   </tr>
+   <tr>
+     <td>sensor_size</td>
+     <td>\htmlonly<font face="courier" color="green">vec2</font>\endhtmlonly</td>
+     <td>Physical dimension (w x h) of the camera's pixel sensing array.</td>
+   </tr>
+   <tr>
+     <td>focal_plane_distance</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Distance from the camera lens to the focal plane (at this distance from the camera, all objects will be in focus).</td>
+   </tr>
+   <tr>
+     <td>HFOV</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Angle of the horizontal camera field of view in degrees.</td>
+   </tr>
+   <tr>
+     <td>camera_resolution</td>
+     <td>\htmlonly<font face="courier" color="green">int2</font>\endhtmlonly</td>
+     <td>Number of camera pixels in the horizontal and vertical directions.</td>
+   </tr>
+ </table>
+
+ The last thing to define before adding a camera is which radiation bands the camera will detect. This is specified via a vector of strings, with each element corresponding to the label for a radiation band that has been added from the \ref RadiationModel::addRadiationBand() method. Note that if a camera band was never added, an error will be thrown. Each camera band will correspond to a channel of the camera image.
+
+ Once all these parameters have been defined, we can add a camera to the simulation using the \ref RadiationModel::addRadiationCamera() method. The first argument to this method is an arbitrary label string (e.g., "thermal", "multispec", "mycamera") that will later be used to reference the camera. Example code is given below.
+
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>%CameraProperties properties; //define the camera properties structure
+ properties.HFOV = 45;  //change some properties if we want
+
+ vec3 camera_position(0,0,3);
+ vec3 camera_lookat(0,0,0);
+ uint antialiasing_samples = 100;
+
+ radiationmodel.addRadiationCamera("visible", {"red","green","blue"}, camera_position, camera_lookat, properties, antialiasing_samples );</code></pre></div>
+
+ This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to \ref RadiationModel::addBand().
+
+ By default, it is assumed that the spectral sensitivity is 100\% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the \ref RadiationModel::setCameraSpectralResponse() method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of
+
+ \image html CameraSpectralResponse.png
+
+ \subsubsection RadCamCalib Calibrating a Radiation Camera
+
+ \subsubsection RadCamOut Writing Camera Images to File
 
  \subsection RadRun Running Simulations
 
@@ -553,7 +653,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      
   }</code></pre></div>
  
- \subsection RadVis Visualizing Model Outputs
+ \subsection RadVis Visualizing Model Outputs using the Visualizer Plug-In
  
  Visualization of radiation model outputs is typically achieved by coloring primitives based on the value of the primitive data "radiation_flux_*" for a particular band.  However, we could visualize any input or output of the model or calculated value based on the model outputs.
 
