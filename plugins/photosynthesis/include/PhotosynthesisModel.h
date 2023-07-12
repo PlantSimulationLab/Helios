@@ -204,6 +204,7 @@ float i_PAR_default;
 float TL_default;
 float CO2_default;
 float gM_default;
+float gH_default;
 
 //! Names of additional primitive data to add to the Context
 std::vector<std::string> output_prim_data;

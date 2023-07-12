@@ -28,7 +28,8 @@ model = "farquhar";
 i_PAR_default = 0;
 TL_default = 300;
 CO2_default = 390;
-gM_default = 1;
+gM_default = 0.25;
+gH_default = 1;
 
 
 }
@@ -230,6 +231,20 @@ for( uint UUID : lUUIDs){
         gM = gM_default;
     }
 
+    float gH;
+    if( context->doesPrimitiveDataExist(UUID,"boundarylayer_conductance") && context->getPrimitiveDataType(UUID,"boundarylayer_conductance")==HELIOS_TYPE_FLOAT ){
+        context->getPrimitiveData(UUID,"boundarylayer_conductance",gH);
+        if( gH<0 ){
+            gH = 0;
+            std::cout << "WARNING (PhotosynthesisModel::run): Boundary-layer conductance value provided was negative. Clipping to zero." << std::endl;
+        }
+    }else{
+        gH = gH_default;
+    }
+
+    //combine stomatal (gM) and boundary-layer (gH) conductances
+    gM = 1.08f*gH*gM/(1.08*gH+gM);
+
     float A, Ci, Gamma;
     int limitation_state;
 
@@ -357,10 +372,8 @@ return A;
 
 }
 
-//float PhotosynthesisModel::evaluateCi_Farquhar( const float Ci, const float CO2, const float i_PAR, const float TL, const float gM, float& A, int& limitation_state ) const{
 float PhotosynthesisModel::evaluateCi_Farquhar( float Ci, std::vector<float> &variables, const void* parameters ){
 
-//    std::vector<float> variables_v = *reinterpret_cast<std::vector<float>*>(variables);
 const FarquharModelCoefficients modelcoeffs = *reinterpret_cast<const FarquharModelCoefficients*>(parameters);
 
 float CO2 = variables[0];

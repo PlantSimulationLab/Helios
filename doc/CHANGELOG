@@ -1292,3 +1292,9 @@
 *Canopy Generator*
 - Fixed error caused by canopy_rotation is not equal to zero in the SplitGrapevine canopy.
 - Added a catch for when leaf_width = 0 in grapevine canopies, which would cause an infinite loop.
+
+[1.2.62] 2023-07-XX
+
+*Photosynthesis*
+- Boundary-layer conductance was not properly incorporated into CO2 diffusion equation.
+- Default moisture conductance in the code did not match documentation.

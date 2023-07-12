@@ -3326,6 +3326,46 @@ void Visualizer::colorContextPrimitivesRandomly(){
     
 } 
 
+
+void Visualizer::colorContextObjectsRandomly(const std::vector<uint>& ObjIDs ){
+    
+    disableColorbar();
+    if( !colorPrimitives_UUIDs.empty() ){
+        colorPrimitives_UUIDs.clear();
+    }
+    for( uint ObjID : ObjIDs ){
+        float rc = randu();
+        context->setObjectData(ObjID, "random_color", rc);
+    }
+    
+    colorPrimitivesByData = "";
+    colorPrimitivesByObjectData = "random_color";
+
+}
+
+void Visualizer::colorContextObjectsRandomly(){
+    std::vector<uint> all_ObjIDs = context->getAllObjectIDs(); 
+    disableColorbar();
+    if( !colorPrimitives_UUIDs.empty() ){
+        colorPrimitives_UUIDs.clear();
+    }
+    for( uint ObjID : all_ObjIDs ){
+        float rc = randu();
+        context->setObjectData(ObjID, "random_color", rc);
+    }
+    
+    colorPrimitivesByData = "";
+    colorPrimitivesByObjectData = "random_color";
+
+}
+
+
+
+
+
+
+
+
 std::vector<helios::vec3> Visualizer::plotInteractive(){
 
     if( message_flag ){

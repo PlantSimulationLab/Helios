@@ -27,7 +27,8 @@
  <tr><td>radiation\_flux\_PAR</td><td>\f$Q\f$</td><td>W/m<sup>2</sup></td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radiative flux in PAR band. NOTE: this is automatically converted to units of photon flux density, which are the units used in the photosynthesis model.</td><td>Can be computed by \ref RadiationModel plug-in.</td><td>0</td></tr>
  <tr><td>temperature</td><td>\f$T_s\f$</td><td>Kelvin</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Primitive surface temperature.</td><td>Can be computed by \ref EnergyBalanceModel plug-in.</td><td>300 K</td></tr>
  <tr><td>air\_CO2</td><td>\f$C_a\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>CO<sub>2</sub> concentration of air outside of primitive boundary-layer.</td><td>N/A</td><td>390 \f$\mu\f$mol/mol</td></tr>
- <tr><td>moisture\_conductance</td><td>\f$g_M\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Overall conductance to moisture between substomatal cells and outside of boundary-layer.</td><td>Can be computed by \ref StomatalConductanceModel plug-in.</td><td>0.25 mol/m<sup>2</sup>-s</td></tr>
+ <tr><td>moisture\_conductance</td><td>\f$g_M\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to moisture between sub-stomatal cells and leaf surface (i.e., stomatal conductance).</td><td>Can be computed by \ref StomatalConductanceModel plug-in.</td><td>0.25 mol/m<sup>2</sup>-s</td></tr>
+ <tr><td>boundarylayer\_conductance</td><td>\f$g_M\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to heat between leaf surface and outside of the boundary-layer (i.e., boundary-layer conductance).</td><td>Can be computed by \ref BLConductanceModel plug-in.</td><td>1.0 mol/m<sup>2</sup>-s</td></tr>
  </table>	
  
  \subsection PhotoOutputData Default Output Primitive Data
@@ -97,7 +98,7 @@
 
  The intercellular CO<sub>2</sub> concentration \f$C_i\f$ is determined from the relation
 
- \f$A=0.75g_M\left(C_{a}-C_i\right)\f$
+ \f$A=0.75\left(\frac{1.08g_Hg_M}{1.08g_H+g_M}\right)\left(C_{a}-C_i\right)\f$
 
  which is solved numerically using the Secant method, since \f$A\f$ is a complex nonlinear function of \f$C_i\f$ which prevents an analytical solution for \f$C_i\f$. The 0.75 factor comes from the fact that diffusion of CO<sub>2</sub> in air is slower than that of water vapor (see Eq. 7.33 of <a href="http://www.springer.com/us/book/9780387949376#otherversion=9781461216261">Campbell and Norman</a>).
 
@@ -123,7 +124,8 @@
  <tr><td>\f$Q\f$</td><td>\f$\mu\f$mol/m<sup>2</sup>-sec.</td><td>Photosynthetic radiation energy flux.</td></tr>
  <tr><td>\f$T_s\f$</td><td>Kelvin</td><td>Surface temperature.</td></tr>
  <tr><td>\f$C_{a}\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td><td>Ambient CO<sub>2</sub> concentration outside of boundary-layer.</td></tr>
- <tr><td>\f$g_M\f$</td><td>mol air/m<sup>2</sup>-s</td><td>Conductance to moisture transfer between inside of the leaf and outside of boundary-layer.</td></tr>
+ <tr><td>\f$g_M\f$</td><td>mol air/m<sup>2</sup>-s</td><td>Conductance to moisture transfer between inside the leaf and leaf surface (i.e., stomatal conductance).</td></tr>
+ <tr><td>\f$g_H\f$</td><td>mol air/m<sup>2</sup>-s</td><td>Conductance to heat transfer between the leaf surface and outside the boundary-layer (i.e., boundary-layer conductance).</td></tr>
  </table>
  
  \subsubsection FvCBPhotoParams Summary of FvCB Model Parameters
