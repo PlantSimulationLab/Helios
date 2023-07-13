@@ -1959,24 +1959,24 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     }
 
     // * Disk Subdivisions * //
-    uint subdiv;
+    int2 subdiv;
     int result_subdiv = XMLparser::parse_subdivisions(p,subdiv);
     if ( result_subdiv==1 ) {
       std::cerr << "WARNING (Context::loadXML): Number of subdivisions for disk was not provided. Assuming 1x1." << std::endl;
-      subdiv = 5;
+      subdiv = make_int2(5,1);
     } else if( result_subdiv==2 ) {
       throw( std::runtime_error("ERROR (Context::loadXML): Disk <subdivisions> node contains invalid data. ") );
     }
 
     //Create a dummy disk in order to get the center and size based on transformation matrix
     std::vector<uint> empty;
-    Disk disk( 0, empty, 1, "", this );
+    Disk disk( 0, empty, make_int2(1,1), "", this );
     disk.setTransformationMatrix(transform);
 
     // * Add the disk * //
     if (strcmp(texture_file.c_str(), "none") == 0) {
       if( strlen(color_str) == 0 ){
-        ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize() );
+        ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize(), nullrotation, RGB::red );
       }else {
         ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize(), nullrotation, make_RGBcolor(color.r, color.g, color.b) );
       }
@@ -3107,8 +3107,8 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
       }
       outfile << "</transform>" << std::endl;
 
-      uint subdiv = disk->getSubdivisionCount();
-      outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
+      int2 subdiv = disk->getSubdivisionCount();
+      outfile << "\t<subdivisions> " << subdiv.x << " " << subdiv.y << " </subdivisions>" << std::endl;
 
       outfile << "   </disk>" << std::endl;
 

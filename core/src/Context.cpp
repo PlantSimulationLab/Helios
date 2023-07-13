@@ -2442,7 +2442,7 @@ uint Context::copyObject(uint ObjID ){
         Disk* o = getDiskObjectPointer( ObjID );
 
         vec2 size = o->getSize();
-        uint subdiv = o->getSubdivisionCount();
+        int2 subdiv = o->getSubdivisionCount();
 
         auto* disk_new = (new Disk(currentObjectID, UUIDs_copy, subdiv, texturefile.c_str(), this));
 
@@ -3305,7 +3305,7 @@ void Box::setSubdivisionCount( const helios::int3 &a_subdiv ){
     subdiv = a_subdiv;
 }
 
-Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile,
+Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, int2 a_subdiv, const char *a_texturefile,
            helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
@@ -3358,11 +3358,11 @@ vec3 Disk::getCenter() const{
 
 }
 
-uint Disk::getSubdivisionCount() const{
+int2 Disk::getSubdivisionCount() const{
     return subdiv;
 }
 
-void Disk::setSubdivisionCount( uint a_subdiv ){
+void Disk::setSubdivisionCount(int2 a_subdiv ){
     subdiv = a_subdiv;
 }
 
@@ -4551,31 +4551,61 @@ uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, co
 }
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size ){
-    return addDiskObject(Ndivs,center,size,make_SphericalCoord(0,0),make_RGBAcolor(1,0,0,1));
+    return addDiskObject(make_int2(Ndivs,1),center,size,make_SphericalCoord(0,0),make_RGBAcolor(1,0,0,1));
 }
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation ){
-    return addDiskObject(Ndivs,center,size,rotation,make_RGBAcolor(1,0,0,1));
+    return addDiskObject(make_int2(Ndivs,1),center,size,rotation,make_RGBAcolor(1,0,0,1));
 }
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color ){
-    return addDiskObject(Ndivs,center,size,rotation,make_RGBAcolor(color,1));
+    return addDiskObject(make_int2(Ndivs,1),center,size,rotation,make_RGBAcolor(color,1));
 }
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
+    return addDiskObject(make_int2(Ndivs,1),center,size,rotation,color);
+}
+
+uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
+    return addDiskObject(make_int2(Ndivs,1),center,size,rotation,texture_file);
+}
+
+uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color ){
+    return addDiskObject(Ndivs,center,size,rotation,make_RGBAcolor(color,1));
+}
+
+uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
 
     std::vector<uint> UUID;
-    UUID.resize(Ndivs);
 
-    for( int i=0; i<Ndivs; i++ ){
+    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    int i=0;
+    for( int r=0; r < Ndivs.y; r++ ) {
+        for (int t = 0; t < Ndivs.x; t++) {
 
-        float dtheta = 2.f*float(M_PI)/float(Ndivs);
+            float dtheta = 2.f * float(M_PI) / float(Ndivs.x);
+            float theta = dtheta*float(t);
+            float theta_plus = dtheta*float(t+1);
 
-        UUID.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), color );
-        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer_private(UUID.at(i))->translate( center );
+            float rx = size.x/float(Ndivs.y)*float(r);
+            float ry = size.y/float(Ndivs.y)*float(r);
 
+            float rx_plus = size.x/float(Ndivs.y)*float(r+1);
+            float ry_plus = size.y/float(Ndivs.y)*float(r+1);
+
+            if( r==0 ) {
+                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
+            }else{
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0),make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), color);
+                i++;
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
+            }
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
+            getPrimitivePointer_private(UUID.at(i))->translate(center);
+
+            i++;
+        }
     }
 
     auto* disk_new = (new Disk(currentObjectID, UUID, Ndivs, "", this));
@@ -4603,7 +4633,7 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
 
 }
 
-uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
+uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
 
   //texture must have type PNG or JPEG
   std::string fn = texture_file;
@@ -4613,17 +4643,34 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
   }
 
     std::vector<uint> UUID;
-    UUID.resize(Ndivs);
 
-    for( int i=0; i<Ndivs; i++ ){
+    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    int i=0;
+    for( int r=0; r < Ndivs.y; r++ ) {
+        for (int t = 0; t < Ndivs.x; t++) {
 
-        float dtheta = 2.f*float(M_PI)/float(Ndivs);
+            float dtheta = 2.f * float(M_PI) / float(Ndivs.x);
+            float theta = dtheta*float(t);
+            float theta_plus = dtheta*float(t+1);
 
-        UUID.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(dtheta*float(i))),0.5f*(1.f+sinf(dtheta*float(i)))), make_vec2(0.5f*(1.f+cosf(dtheta*float(i+1))),0.5f*(1.f+sinf(dtheta*float(i+1))))  );
-        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer_private(UUID.at(i))->translate( center );
+            float rx = size.x/float(Ndivs.y)*float(r);
+            float ry = size.y/float(Ndivs.y)*float(r);
+            float rx_plus = size.x/float(Ndivs.y)*float(r+1);
+            float ry_plus = size.y/float(Ndivs.y)*float(r+1);
 
+            if( r==0 ) {
+                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)), make_vec2(0.5f*(1.f+cosf(theta_plus)*rx_plus/size.x), 0.5f*(1.f+sinf(theta_plus)*ry_plus/size.y)));
+            }else{
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0),make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), texture_file, make_vec2(0.5f*(1.f+cosf(theta_plus)*rx/size.x), 0.5f*(1.f+sinf(theta_plus)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx/size.x), 0.5f*(1.f+sinf(theta)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)));
+                i++;
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texture_file, make_vec2(0.5f*(1.f+cosf(theta_plus)*rx/size.x), 0.5f*(1.f+sinf(theta_plus)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)), make_vec2(0.5f*(1.f+cosf(theta_plus)*rx_plus/size.x), 0.5f*(1.f+sinf(theta_plus)*ry_plus/size.y)));
+            }
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
+            getPrimitivePointer_private(UUID.at(i))->translate(center);
+
+            i++;
+        }
     }
 
     auto* disk_new = (new Disk(currentObjectID, UUID, Ndivs, texture_file, this));
@@ -5639,38 +5686,67 @@ std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const in
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size ){
-    return addDisk(Ndivs,center,size,make_SphericalCoord(0,0),make_RGBAcolor(1,0,0,1));
+    return addDisk(make_int2(Ndivs,1),center,size,make_SphericalCoord(0,0),make_RGBAcolor(1,0,0,1));
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation ){
-    return addDisk(Ndivs,center,size,rotation,make_RGBAcolor(1,0,0,1));
+    return addDisk(make_int2(Ndivs,1),center,size,rotation,make_RGBAcolor(1,0,0,1));
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color ){
-    return addDisk(Ndivs,center,size,rotation,make_RGBAcolor(color,1));
+    return addDisk(make_int2(Ndivs,1),center,size,rotation,make_RGBAcolor(color,1));
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
-
-    std::vector<uint> UUIDs;
-    UUIDs.resize(Ndivs);
-
-    for( int i=0; i<Ndivs; i++ ){
-
-        float dtheta = 2.f*float(M_PI)/float(Ndivs);
-
-        UUIDs.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), color );
-        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer_private(UUIDs.at(i))->translate( center );
-
-    }
-
-    return UUIDs;
-
+    return addDisk(make_int2(Ndivs,1),center,size,rotation,color);
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
+    return addDisk(make_int2(Ndivs,1),center,size,rotation,texture_file);
+}
+
+std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color ){
+    return addDisk(Ndivs,center,size,rotation,make_RGBAcolor(color,1));
+}
+
+std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
+
+    std::vector<uint> UUID;
+    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    int i=0;
+    for( int r=0; r < Ndivs.y; r++ ) {
+        for (int t = 0; t < Ndivs.x; t++) {
+
+            float dtheta = 2.f * float(M_PI) / float(Ndivs.x);
+            float theta = dtheta*float(t);
+            float theta_plus = dtheta*float(t+1);
+
+            float rx = size.x/float(Ndivs.y)*float(r);
+            float ry = size.y/float(Ndivs.y)*float(r);
+
+            float rx_plus = size.x/float(Ndivs.y)*float(r+1);
+            float ry_plus = size.y/float(Ndivs.y)*float(r+1);
+
+            if( r==0 ) {
+                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
+            }else{
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0),make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), color);
+                i++;
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
+            }
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
+            getPrimitivePointer_private(UUID.at(i))->translate(center);
+
+            i++;
+        }
+    }
+
+    return UUID;
+
+}
+
+std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
 
   //texture must have type PNG or JPEG
   std::string fn = texture_file;
@@ -5679,21 +5755,37 @@ std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &s
     throw( std::runtime_error("ERROR (Context::addDisk): Texture file " + fn + " is not PNG or JPEG format.") );
   }
 
-    std::vector<uint> UUIDs;
-    UUIDs.resize(Ndivs);
+    std::vector<uint> UUID;
+    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    int i=0;
+    for( int r=0; r < Ndivs.y; r++ ) {
+        for (int t = 0; t < Ndivs.x; t++) {
 
-    for( int i=0; i<Ndivs; i++ ){
+            float dtheta = 2.f * float(M_PI) / float(Ndivs.x);
+            float theta = dtheta*float(t);
+            float theta_plus = dtheta*float(t+1);
 
-        float dtheta = 2.f*float(M_PI)/float(Ndivs);
+            float rx = size.x/float(Ndivs.y)*float(r);
+            float ry = size.y/float(Ndivs.y)*float(r);
+            float rx_plus = size.x/float(Ndivs.y)*float(r+1);
+            float ry_plus = size.y/float(Ndivs.y)*float(r+1);
 
-        UUIDs.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(dtheta*float(i))),0.5f*(1.f+sinf(dtheta*float(i)))), make_vec2(0.5f*(1.f+cosf(dtheta*float(i+1))),0.5f*(1.f+sinf(dtheta*float(i+1))))  );
-        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer_private(UUIDs.at(i))->translate( center );
+            if( r==0 ) {
+                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)), make_vec2(0.5f*(1.f+cosf(theta_plus)*rx_plus/size.x), 0.5f*(1.f+sinf(theta_plus)*ry_plus/size.y)));
+            }else{
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0),make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), texture_file, make_vec2(0.5f*(1.f+cosf(theta_plus)*rx/size.x), 0.5f*(1.f+sinf(theta_plus)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx/size.x), 0.5f*(1.f+sinf(theta)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)));
+                i++;
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texture_file, make_vec2(0.5f*(1.f+cosf(theta_plus)*rx/size.x), 0.5f*(1.f+sinf(theta_plus)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)), make_vec2(0.5f*(1.f+cosf(theta_plus)*rx_plus/size.x), 0.5f*(1.f+sinf(theta_plus)*ry_plus/size.y)));
+            }
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
+            getPrimitivePointer_private(UUID.at(i))->translate(center);
 
+            i++;
+        }
     }
 
-    return UUIDs;
+    return UUID;
 
 }
 
@@ -7391,7 +7483,7 @@ helios::vec2 Context::getDiskObjectSize(uint &ObjID) const {
 }
 
 uint Context::getDiskObjectSubdivisionCount(uint &ObjID) const {
-    return getDiskObjectPointer_private(ObjID)->getSubdivisionCount();
+    return getDiskObjectPointer_private(ObjID)->getSubdivisionCount().x;
 }
 
 uint Context::getConeObjectSubdivisionCount(uint &ObjID) const {

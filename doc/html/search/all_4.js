@@ -24,7 +24,7 @@ var searchData=
   ['disableobjectdetection_21',['disableObjectDetection',['../class_synthetic_annotation.html#a482f3217d844ba462f3640c07902ea58',1,'SyntheticAnnotation']]],
   ['disablesemanticsegmentation_22',['disableSemanticSegmentation',['../class_synthetic_annotation.html#aaacbec2f1a8da152494b802d98f54cde',1,'SyntheticAnnotation']]],
   ['disabletextures_23',['disableTextures',['../struct_shader.html#a94921e991dbaaa5b6d9bad8c7885af0f',1,'Shader']]],
-  ['disk_24',['Disk',['../classhelios_1_1_disk.html#a5d06d1da043ccb610e07bdd0e592c148',1,'helios::Disk::Disk()'],['../classhelios_1_1_disk.html',1,'helios::Disk']]],
+  ['disk_24',['Disk',['../classhelios_1_1_disk.html#aedc5a15466aa7b07a76605473a00ba15',1,'helios::Disk::Disk()'],['../classhelios_1_1_disk.html',1,'helios::Disk']]],
   ['disk_5fbounds_25',['disk_bounds',['../primitive_intersection_8cu.html#aab2e16ff4d5a4bca2d90c49f777500e9',1,'primitiveIntersection.cu']]],
   ['disk_5fintersect_26',['disk_intersect',['../primitive_intersection_8cu.html#a45dc4da4927abe579fd24be608e4cd75',1,'primitiveIntersection.cu']]],
   ['distancefilter_27',['distanceFilter',['../class_aerial_li_d_a_rcloud.html#acc26240eea9ec98c6b354041cd9b9efc',1,'AerialLiDARcloud::distanceFilter()'],['../class_li_d_a_rcloud.html#af21b843806f22fb9bc80e7ef370aee1d',1,'LiDARcloud::distanceFilter()']]],

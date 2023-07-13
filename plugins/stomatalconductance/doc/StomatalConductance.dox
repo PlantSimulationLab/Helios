@@ -34,9 +34,9 @@
    </tr>
  </table>
 
-\section VarsAndProps Primitive Data
+\section "VarsAndProps" Primitive Data
 
- \subsection StomatalInputData Input Primitive Data
+ \subsection "StomatalInputData" Input Primitive Data
 
  <table>
    <tr>	
@@ -100,13 +100,13 @@
       <td>0.5</td>
    </tr>
    <tr>
-      <td>boundarylayer_conductance</td>
+      <td>boundarylayer_conductance**</td>
       <td>\f$g_H\f$</td>
       <td>mol air/m<sup>2</sup>-s</td>
       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-      <td>Boundary-layer conductance to heat. (Assumed that b.l. conductance to moisture is 0.97 that of heat.)</td>
+      <td>Boundary-layer conductance to heat. (Assumed that b.l. conductance to moisture is 1.08 that of heat.)</td>
       <td>All</td>
-      <td>N/A</td>
+      <td>Can be computed by \ref BLConductanceModel plug-in, or by \ref EnergyBalanceModel plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td>
       <td>0.1 mol/m<sup>2</sup>-s</td>
    </tr>
      <tr>
@@ -150,6 +150,9 @@
          <td>100 \f$\mu\f$mol/mol</td>
      </tr>
   </table>
+
+  \*\*The stomatal conductance model will also check for primitive data "boundarylayer_conductance_out" if "boundarylayer_conductance" does not exist. If you are using the energy balance model to calculate the boundary-layer conductance, you should enable optional output primitive data "boundarylayer_conductance_out" so that other plug-ins can use it.
+
    
  \subsection StomatalOutputData Output Primitive Data
 

@@ -268,11 +268,18 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
         //boundary-layer conductance to heat/moisture (mol/m^2/s)
         float gbw = blconductance_default;
-        if( context->doesPrimitiveDataExist(UUID,"boundarylayer_conductance") && context->getPrimitiveDataType(UUID,"boundarylayer_conductance")==HELIOS_TYPE_FLOAT ){
-          context->getPrimitiveData(UUID,"boundarylayer_conductance",gbw);
-          gbw = gbw*0.97f;  //assume bl conductance to moisture is 0.97 of conductance to heat
+        if( context->doesPrimitiveDataExist(UUID,"boundarylayer_conductance") && context->getPrimitiveDataType(UUID,"boundarylayer_conductance")==HELIOS_TYPE_FLOAT ) {
+            context->getPrimitiveData(UUID, "boundarylayer_conductance", gbw);
+            gbw = gbw * 1.08;  //assume bl conductance to moisture is 1.08 of conductance to heat
+        }else if( context->doesPrimitiveDataExist(UUID,"boundarylayer_conductance_out") && context->getPrimitiveDataType(UUID,"boundarylayer_conductance_out")==HELIOS_TYPE_FLOAT ){
+            context->getPrimitiveData(UUID,"boundarylayer_conductance_out",gbw);
+            gbw = gbw*1.08;  //assume bl conductance to moisture is 1.08 of conductance to heat
         }else{
           assumed_default_gbw++;
+        }
+        if( gbw<0 ){
+            gbw = 0;
+            std::cout << "WARNING (StomatalConductanceModel::run): Boundary-layer conductance value provided was negative. Clipping to zero." << std::endl;
         }
 
         //beta soil moisture factor

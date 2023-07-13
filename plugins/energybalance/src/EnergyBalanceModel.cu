@@ -237,6 +237,8 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     float* d_heatcapacity;
     CUDA_CHECK_ERROR( cudaMalloc((void**)&d_heatcapacity, Nprimitives*sizeof(float)) );
 
+    bool calculated_blconductance_used = false;
+
     for( uint u=0; u<Nprimitives; u++ ){
         size_t p = UUIDs.at(u);
 
@@ -342,6 +344,8 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
             }
 
             gH[u]=0.135f*sqrt(U/L)*float(Nsides[u]);
+
+            calculated_blconductance_used = true;
         }
 
         //Moisture conductance
@@ -371,6 +375,14 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         //Net absorbed radiation
         R[u] = Rn.at(u);
 
+    }
+
+    //if we used the calculated boundary-layer conductance, enable output primitive data "boundarylayer_conductance_out" so that it can be used by other plug-ins
+    if( calculated_blconductance_used ){
+        auto it = find( output_prim_data.begin(), output_prim_data.end(), "boundarylayer_conductance_out" );
+        if( it == output_prim_data.end() ){
+            output_prim_data.emplace_back( "boundarylayer_conductance_out" );
+        }
     }
 
     //To,R,Qother,eps,U,L,Ta,ea,pressure,gS,Nsides
