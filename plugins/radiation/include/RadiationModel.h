@@ -781,6 +781,8 @@ protected:
 
     std::map<std::string,RadiationBand> radiation_bands;
 
+    std::vector<bool> scattering_iterations_needed;
+
     // --- radiation source variables --- //
 
     std::vector<RadiationSource> radiation_sources;

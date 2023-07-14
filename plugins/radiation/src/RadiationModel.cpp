@@ -1908,6 +1908,11 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
     size_t Nobjects = primitiveID.size();
     size_t Nprimitives = context_UUIDs.size();
 
+    scattering_iterations_needed.resize(Nbands);
+    for( int b=0; b<Nbands; b++ ){
+        scattering_iterations_needed.at(b) = false;
+    }
+
     std::vector<std::vector<std::vector<float> > > rho, tau; //first index is the source, second index is the primitive, third index is the band
     std::vector<std::vector<std::vector<std::vector<float> > > > rho_cam, tau_cam; //Fourth index is the camera
     float eps;
@@ -2289,19 +2294,13 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                     //check for primitive data of form "reflectivity_bandname"
                     prop = "reflectivity_" + band;
 
+                    float rho_s = rho_default;
+                    if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
+                        context->getPrimitiveData(UUID, prop.c_str(), rho_s);
+                    }
+
                     for (uint s = 0; s < Nsources; s++) {
-                        if (context->doesPrimitiveDataExist(UUID, prop.c_str())) { //rho value specified through primitive data - use this value for both primitive and camera
-                            float rho_s = rho.at(s).at(u).at(b);
-                            context->getPrimitiveData(UUID, prop.c_str(), rho_s);
-                            rho.at(s).at(u).at(b) = rho_s;
-
-                            //cameras
-                            for( uint cam=0; cam<Ncameras; cam++ ){
-                                rho_cam.at(s).at(u).at(b).at(cam) = rho_s;
-                            }
-
-                            //check if spectral data was assigned to this primitive
-                        } else if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
+                        if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
 
                             rho.at(s).at(u).at(b) = rho_unique.at(spectrum_label).at(b).at(s);
 
@@ -2310,9 +2309,14 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                                 rho_cam.at(s).at(u).at(b).at(cam) = rho_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
                             }
 
-                            //assign default value if there is no primitive data or spectral data
+                        //assign default value if there is no primitive data or spectral data
                         } else {
-                            rho.at(s).at(u).at(b) = rho_default;
+                            rho.at(s).at(u).at(b) = rho_s;
+
+                            //cameras
+                            for( uint cam=0; cam<Ncameras; cam++ ){
+                                rho_cam.at(s).at(u).at(b).at(cam) = rho_s;
+                            }
                         }
 
                         //error checking
@@ -2326,6 +2330,9 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                             if (message_flag) {
                                 std::cout << "WARNING (RadiationModel): reflectivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::flush;
                             }
+                        }
+                        if( rho.at(s).at(u).at(b)!=0 ){
+                            scattering_iterations_needed.at(b) = true;
                         }
 
                     }
@@ -2348,19 +2355,13 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                     //check for primitive data of form "transmissivity_bandname"
                     prop = "transmissivity_" + band;
 
+                    float tau_s = tau_default;
+                    if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
+                        context->getPrimitiveData(UUID, prop.c_str(), tau_s);
+                    }
+
                     for (uint s = 0; s < Nsources; s++) {
-                        if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
-                            float tau_s = tau.at(s).at(u).at(b);
-                            context->getPrimitiveData(UUID, prop.c_str(), tau_s);
-                            tau.at(s).at(u).at(b) = tau_s;
-
-                            //cameras
-                            for( uint cam=0; cam<Ncameras; cam++ ){
-                                tau_cam.at(s).at(u).at(b).at(cam) = tau_s;
-                            }
-
-                            //check if spectral data was assigned to this primitive
-                        } else if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
+                        if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
                             tau.at(s).at(u).at(b) = tau_unique.at(spectrum_label).at(b).at(s);
 
                             //cameras
@@ -2368,9 +2369,14 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                                 tau_cam.at(s).at(u).at(b).at(cam) = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
                             }
 
-                            //assign default value if there is no primitive data or spectral data
+                        //assign default value if there is no primitive data or spectral data
                         } else {
                             tau.at(s).at(u).at(b) = tau_default;
+
+                            //cameras
+                            for( uint cam=0; cam<Ncameras; cam++ ){
+                                tau_cam.at(s).at(u).at(b).at(cam) = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
+                            }
                         }
 
                         //error checking
@@ -2384,6 +2390,9 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                             if (message_flag) {
                                 std::cout << "WARNING (RadiationModel): transmissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
                             }
+                        }
+                        if( tau.at(s).at(u).at(b)!=0 ){
+                            scattering_iterations_needed.at(b) = true;
                         }
                     }
                     b++;
@@ -2412,6 +2421,9 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         if (message_flag) {
                             std::cout << "WARNING (RadiationModel): emissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
                         }
+                    }
+                    if( eps!=1 ){
+                        scattering_iterations_needed.at(b) = true;
                     }
 
                     assert(doesBandExist(band));
@@ -2446,29 +2458,6 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                 }
             }
         }
-
-
-//    for( uint s=0; s<Nsources; s++ ){
-//        for( uint p=0; p<Nprimitives; p++ ){
-//            for( uint b=0; b<Nbands; b++ ){
-////                printf("rho, source %d, primitive %d, band %s: %f\n",s,p,labels.at(b).c_str(),rho.at(s).at(p).at(b));
-////                printf("tau, source %d, primitive %d, band %s: %f\n",s,p,labels.at(b).c_str(),tau.at(s).at(p).at(b));
-////                std::string pdata = "reflectivity_" + labels.at(b);
-//                context->setPrimitiveData( context_UUIDs.at(p), "reflectivity", rho.at(s).at(p).at(b));
-//            }
-//        }
-//    }
-
-//    for( uint s=0; s<Nsources; s++ ){
-//        for( uint p=0; p<Nprimitives; p++ ){
-//            for( uint b=0; b<Nbands; b++ ){
-//                for( uint cam=0; cam<Ncameras; cam++ ) {
-//                    printf("source %d, primitive %d, band %s, camera %d: rho_cam = %f\n", s, p, labels.at(b).c_str(),cam, rho_cam.at(s).at(p).at(b).at(cam));
-//                    printf("source %d, primitive %d, band %s, camera %d: tau_cam = %f\n", s, p, labels.at(b).c_str(),cam, tau_cam.at(s).at(p).at(b).at(cam));
-//                }
-//            }
-//        }
-//    }
 
     initializeBuffer1Df(rho_RTbuffer, flatten(rho));
     initializeBuffer1Df(tau_RTbuffer, flatten(tau));
@@ -2581,6 +2570,13 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
         }
     }
     initializeBuffer1Dui( max_scatters_RTbuffer, scattering_depth );
+
+    //Issue warning if rho>0, tau>0, or eps<1
+    for( int b=0; b<Nbands; b++ ){
+        if( scattering_depth.at(b)==0 && scattering_iterations_needed.at(b) ){
+            std::cout << "WARNING (RadiationModel::runBand): Surface radiative properties for band " << label.at(b) << " are set to non-default values, but scattering iterations are disabled. Surface radiative properties will be ignored unless scattering depth is non-zero." << std::endl;
+        }
+    }
 
     //Set diffuse flux for each band
     std::vector<float> diffuse_flux(Nbands);
