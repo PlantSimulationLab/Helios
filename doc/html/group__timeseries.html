@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.62</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.63</span>
    </div>
   </td>
  </tr>
@@ -81,9 +81,6 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:gab4e83017576a164eaa7c61cd0812d8a2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__timeseries.html#gab4e83017576a164eaa7c61cd0812d8a2">helios::Context::addTimeseriesData</a> (const char *label, float value, const <a class="el" href="structhelios_1_1_date.html">Date</a> &amp;date, const <a class="el" href="structhelios_1_1_time.html">Time</a> &amp;time)</td></tr>
-<tr class="memdesc:gab4e83017576a164eaa7c61cd0812d8a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a data point to timeseries of data.  <br /></td></tr>
-<tr class="separator:gab4e83017576a164eaa7c61cd0812d8a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__timeseries.html#ga3ca2e5c0a2c1983d552fd7ee57d04997">helios::Context::setCurrentTimeseriesPoint</a> (const char *label, uint index)</td></tr>
 <tr class="memdesc:ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> date and time by providing the index of a timeseries data point.  <br /></td></tr>
 <tr class="separator:ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -106,59 +103,6 @@ Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Timeseries-related functions. </p>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="gab4e83017576a164eaa7c61cd0812d8a2" name="gab4e83017576a164eaa7c61cd0812d8a2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gab4e83017576a164eaa7c61cd0812d8a2">&#9670;&#160;</a></span>addTimeseriesData()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Context::addTimeseriesData </td>
-          <td>(</td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>label</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>value</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1_date.html">Date</a> &amp;&#160;</td>
-          <td class="paramname"><em>date</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1_time.html">Time</a> &amp;&#160;</td>
-          <td class="paramname"><em>time</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Add a data point to timeseries of data. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Name of timeseries variable (e.g., temperature) </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">value</td><td>Value of timeseries data point </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">date</td><td><a class="el" href="structhelios_1_1_date.html" title="Date vector.">Date</a> vector corresponding to the time of &lsquo;value&rsquo; (see <a class="el" href="structhelios_1_1_date.html">Date</a>) </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">time</td><td><a class="el" href="structhelios_1_1_time.html" title="Time vector.">Time</a> vector corresponding to the time of &lsquo;value&rsquo; (see Time) </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01643">1643</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
-
-</div>
-</div>
 <a id="ga56d13f8c949e68137581a3c974790892" name="ga56d13f8c949e68137581a3c974790892"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ga56d13f8c949e68137581a3c974790892">&#9670;&#160;</a></span>getTimeseriesLength()</h2>
 
@@ -183,7 +127,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01830">1830</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01876">1876</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -220,17 +164,17 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Get a timeseries data point by specifying a date and time vector. </p>
-<p>This function interpolates the timeseries data to provide a value at exactly &lsquo;date&rsquo; and &lsquo;time&rsquo;. Thus, &lsquo;date&rsquo; and &lsquo;time&rsquo; must be between the first and last timeseries values. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>This method interpolates the timeseries data to provide a value at exactly &lsquo;date&rsquo; and &lsquo;time&rsquo;. Thus, &lsquo;date&rsquo; and &lsquo;time&rsquo; must be between the first and last timeseries values. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Name of timeseries variable (e.g., temperature) </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">date</td><td><a class="el" href="structhelios_1_1_date.html" title="Date vector.">Date</a> vector corresponding to the time of &lsquo;value&rsquo; (see <a class="el" href="structhelios_1_1_date.html">Date</a>) </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">time</td><td><a class="el" href="structhelios_1_1_time.html" title="Time vector.">Time</a> vector corresponding to the time of &lsquo;value&rsquo; (see Time) </td></tr>
+    <tr><td class="paramname">label</td><td>Name of timeseries variable (e.g., temperature) </td></tr>
+    <tr><td class="paramname">date</td><td><a class="el" href="structhelios_1_1_date.html" title="Date vector.">Date</a> vector corresponding to the time of &lsquo;value&rsquo; (see <a class="el" href="structhelios_1_1_date.html">Date</a>) </td></tr>
+    <tr><td class="paramname">time</td><td><a class="el" href="structhelios_1_1_time.html" title="Time vector.">Time</a> vector corresponding to the time of &lsquo;value&rsquo; (see Time) </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01714">1714</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01760">1760</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -261,16 +205,16 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Get a timeseries data point by index in the timeseries. </p>
-<p>This function returns timeseries data by index, and is typically used when looping over all data in the timeseries. See <a class="el" href="group__timeseries.html#ga56d13f8c949e68137581a3c974790892">getTimeseriesLength()</a> to get the total length of the timeseries data. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>This method returns timeseries data by index, and is typically used when looping over all data in the timeseries. See <a class="el" href="group__timeseries.html#ga56d13f8c949e68137581a3c974790892">getTimeseriesLength()</a> to get the total length of the timeseries data. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Name of timeseries variable (e.g., temperature) </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">index</td><td>Index of timeseries data point. The index starts at 0 for the earliest data point, and moves chronologically in time. </td></tr>
+    <tr><td class="paramname">label</td><td>Name of timeseries variable (e.g., temperature) </td></tr>
+    <tr><td class="paramname">index</td><td>Index of timeseries data point. The index starts at 0 for the earliest data point, and moves chronologically in time. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01764">1764</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01810">1810</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -310,7 +254,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="structhelios_1_1_date.html" title="Date vector.">Date</a> of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01810">1810</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01856">1856</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -343,14 +287,14 @@ Functions</h2></td></tr>
 <p>Get the time associated with a timeseries data point. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Name of timeseries variable (e.g., temperature) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">label</td><td>Name of timeseries variable (e.g., temperature) </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">index</td><td>Index of timeseries data point. The index starts at 0 for the earliest data point, and moves chronologically in time. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="structhelios_1_1_time.html" title="Time vector.">Time</a> of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01774">1774</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01820">1820</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -383,13 +327,13 @@ Functions</h2></td></tr>
 <p>Set the <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> date and time by providing the index of a timeseries data point. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Name of timeseries variable (e.g., temperature) </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">index</td><td>Index of timeseries data point. The index starts at 0 for the earliest data point, and moves chronologically in time. </td></tr>
+    <tr><td class="paramname">label</td><td>Name of timeseries variable (e.g., temperature) </td></tr>
+    <tr><td class="paramname">index</td><td>Index of timeseries data point. The index starts at 0 for the earliest data point, and moves chronologically in time. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01706">1706</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01752">1752</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

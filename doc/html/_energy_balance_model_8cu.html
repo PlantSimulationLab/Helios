@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.62</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.63</span>
    </div>
   </td>
  </tr>
@@ -94,10 +94,10 @@ Macros</h2></td></tr>
 Functions</h2></td></tr>
 <tr class="memitem:ab3e90881a2476fd461eb2bcfcaa7cf63"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_energy_balance_model_8cu.html#ab3e90881a2476fd461eb2bcfcaa7cf63">gpuAssert</a> (cudaError_t code, const char *file, int line, bool abort=true)</td></tr>
 <tr class="separator:ab3e90881a2476fd461eb2bcfcaa7cf63"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a84c39821a0ec3c77642bbf4a2331bbb8"><td class="memItemLeft" align="right" valign="top">__device__ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_energy_balance_model_8cu.html#a84c39821a0ec3c77642bbf4a2331bbb8">evaluateEnergyBalance</a> (float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, char Ntranspire, float heatcapacity, float dt, float Tprev)</td></tr>
-<tr class="separator:a84c39821a0ec3c77642bbf4a2331bbb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8bf4c460fcbdbb323fa2b8ccabebed64"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_energy_balance_model_8cu.html#a8bf4c460fcbdbb323fa2b8ccabebed64">solveEnergyBalance</a> (uint Nprimitives, float *To, float *R, float *Qother, float *eps, float *Ta, float *ea, float *pressure, float *gH, float *gS, uint *Nsides, char *Ntranspire, float *TL, float *heatcapacity, float dt)</td></tr>
-<tr class="separator:a8bf4c460fcbdbb323fa2b8ccabebed64"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae2520e1ff02193564990d75aea9a660b"><td class="memItemLeft" align="right" valign="top">__device__ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_energy_balance_model_8cu.html#ae2520e1ff02193564990d75aea9a660b">evaluateEnergyBalance</a> (float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, char Ntranspire, float heatcapacity, float surfacehumidity, float dt, float Tprev)</td></tr>
+<tr class="separator:ae2520e1ff02193564990d75aea9a660b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b7138496459b2389dc1438d91f83aff"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_energy_balance_model_8cu.html#a5b7138496459b2389dc1438d91f83aff">solveEnergyBalance</a> (uint Nprimitives, float *To, float *R, float *Qother, float *eps, float *Ta, float *ea, float *pressure, float *gH, float *gS, uint *Nsides, char *Ntranspire, float *TL, float *heatcapacity, float *surfacehumidity, float dt)</td></tr>
+<tr class="separator:a5b7138496459b2389dc1438d91f83aff"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Energy balance model plugin declarations (CUDA kernels). </p><dl class="section author"><dt>Author</dt><dd>Brian Bailey</dd></dl>
@@ -128,8 +128,8 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a84c39821a0ec3c77642bbf4a2331bbb8" name="a84c39821a0ec3c77642bbf4a2331bbb8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a84c39821a0ec3c77642bbf4a2331bbb8">&#9670;&#160;</a></span>evaluateEnergyBalance()</h2>
+<a id="ae2520e1ff02193564990d75aea9a660b" name="ae2520e1ff02193564990d75aea9a660b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae2520e1ff02193564990d75aea9a660b">&#9670;&#160;</a></span>evaluateEnergyBalance()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -210,6 +210,12 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>surfacehumidity</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>dt</em>, </td>
         </tr>
         <tr>
@@ -280,8 +286,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a8bf4c460fcbdbb323fa2b8ccabebed64" name="a8bf4c460fcbdbb323fa2b8ccabebed64"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8bf4c460fcbdbb323fa2b8ccabebed64">&#9670;&#160;</a></span>solveEnergyBalance()</h2>
+<a id="a5b7138496459b2389dc1438d91f83aff" name="a5b7138496459b2389dc1438d91f83aff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5b7138496459b2389dc1438d91f83aff">&#9670;&#160;</a></span>solveEnergyBalance()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -369,6 +375,12 @@ Functions</h2></td></tr>
           <td></td>
           <td class="paramtype">float *&#160;</td>
           <td class="paramname"><em>heatcapacity</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float *&#160;</td>
+          <td class="paramname"><em>surfacehumidity</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
