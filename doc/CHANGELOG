@@ -1315,3 +1315,26 @@
 
 *Visualizer*
 - Added colorContextObjectsRandomly().
+
+[1.2.63] 2023-07-15
+
+*Context*
+- Primitive transformation functions when called with a vector of UUIDs will now calculate the transformation matrix once, and apply it to all primitives for improved efficiency.
+- Added primitive data processing methods Context::scalePrimitiveData(), Context::aggregatePrimitiveDataSum(), and Context::aggregatePrimitiveDataProduct().
+
+*Stomatal Conductance*
+- printDefaultValueReport() method was added to print a summary of default input value usage to help with debugging.
+- Very minor change to not get primitive data for photosynthesis or Gamma if not using a photosynthesis-based stomatal conductance model.
+- Made selfTest() static so it can be called without declaring the StomatalConductanceModel class.
+
+*Photosynthesis*
+- printDefaultValueReport() method was added to print a summary of default input value usage to help with debugging.
+- Made selfTest() static so it can be called without declaring the PhotosynthesisModel class.
+
+*Energy Balance*
+- There was an error in the documentation which said that twosided_flag=1 was for one-sided heat transfer and twosided_flag=2 for two-sided heat transfer. It should be twosided_flag=0 for one-sided heat transfer and twosided_flag=1 for two-sided heat transfer.
+- The 'surface_humidity' input listed in the documentation was not actually implemented.
+- A warning message is now issued if the boundary-layer conductance is calculated from the length/area of a primitive instead of an object.
+- Made sure warning messages are disabled when disableMessages() is called.
+- printDefaultValueReport() method was added to print a summary of default input value usage to help with debugging.
+- Made selfTest() static so it can be called without declaring the EnergyBalanceModel class.

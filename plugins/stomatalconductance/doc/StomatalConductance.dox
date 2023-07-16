@@ -54,7 +54,7 @@
       <td>\f$Q\f$</td>
       <td>W/m<sup>2</sup></td>
       <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-      <td>PAR photon flux density. Note W/m<sup>2</sup> is automatically converted to \f$\mu\f$mol/<sup>2</sup> using a factor of 4.57.</td>
+      <td>PAR photon flux density. Note W/m<sup>2</sup> is automatically converted to \f$\mu\f$mol/m<sup>2</sup>/s using a factor of 4.57.</td>
       <td>BMF</td>
       <td>Can be computed by \ref RadiationModel plug-in.</td>
       <td>0</td>

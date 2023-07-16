@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.62</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.63</span>
    </div>
   </td>
  </tr>
@@ -71,7 +71,8 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a>  </div>
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
   <div class="headertitle"><div class="title">StomatalConductanceModel Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -81,9 +82,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a8d0993a2649b696c37c2f24799b1b545"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a8d0993a2649b696c37c2f24799b1b545">StomatalConductanceModel</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *m_context)</td></tr>
 <tr class="memdesc:a8d0993a2649b696c37c2f24799b1b545"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <br /></td></tr>
 <tr class="separator:a8d0993a2649b696c37c2f24799b1b545"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#aa32dad6bf0ee3ecb37b02957ebea0e3d">selfTest</a> ()</td></tr>
-<tr class="memdesc:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test (unit test) routine.  <br /></td></tr>
-<tr class="separator:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afbbb0af7d8b3c7966058dbb1289dca13"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#afbbb0af7d8b3c7966058dbb1289dca13">setModelCoefficients</a> (const <a class="el" href="struct_b_w_bcoefficients.html">BWBcoefficients</a> &amp;coeffs)</td></tr>
 <tr class="memdesc:afbbb0af7d8b3c7966058dbb1289dca13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the model coefficient values for all primitives - Ball, Woodrow, Berry model.  <br /></td></tr>
 <tr class="separator:afbbb0af7d8b3c7966058dbb1289dca13"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -123,6 +121,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a9618e00c9b4649c289debff2a4a1cfd4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a9618e00c9b4649c289debff2a4a1cfd4">optionalOutputPrimitiveData</a> (const char *label)</td></tr>
 <tr class="memdesc:a9618e00c9b4649c289debff2a4a1cfd4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add optional output primitive data values to the Context.  <br /></td></tr>
 <tr class="separator:a9618e00c9b4649c289debff2a4a1cfd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a66e680118d189c0ed79ca45636262a35"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a66e680118d189c0ed79ca45636262a35">printDefaultValueReport</a> () const</td></tr>
+<tr class="memdesc:a66e680118d189c0ed79ca45636262a35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Print a report detailing usage of default input values for all primitives in the Context.  <br /></td></tr>
+<tr class="separator:a66e680118d189c0ed79ca45636262a35"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a28c60dbd86a0aa2c3b8a90704205abde"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#a28c60dbd86a0aa2c3b8a90704205abde">printDefaultValueReport</a> (const std::vector&lt; uint &gt; &amp;UUIDs) const</td></tr>
+<tr class="memdesc:a28c60dbd86a0aa2c3b8a90704205abde"><td class="mdescLeft">&#160;</td><td class="mdescRight">Print a report detailing usage of default input values based on a subset of primitive UUIDs.  <br /></td></tr>
+<tr class="separator:a28c60dbd86a0aa2c3b8a90704205abde"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_stomatal_conductance_model.html#aa32dad6bf0ee3ecb37b02957ebea0e3d">selfTest</a> ()</td></tr>
+<tr class="memdesc:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test (unit test) routine.  <br /></td></tr>
+<tr class="separator:aa32dad6bf0ee3ecb37b02957ebea0e3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -189,7 +199,51 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00603">603</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00579">579</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a66e680118d189c0ed79ca45636262a35" name="a66e680118d189c0ed79ca45636262a35"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a66e680118d189c0ed79ca45636262a35">&#9670;&#160;</a></span>printDefaultValueReport() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void StomatalConductanceModel::printDefaultValueReport </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Print a report detailing usage of default input values for all primitives in the Context. </p>
+
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00589">589</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a28c60dbd86a0aa2c3b8a90704205abde" name="a28c60dbd86a0aa2c3b8a90704205abde"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a28c60dbd86a0aa2c3b8a90704205abde">&#9670;&#160;</a></span>printDefaultValueReport() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void StomatalConductanceModel::printDefaultValueReport </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Print a report detailing usage of default input values based on a subset of primitive UUIDs. </p>
+<p>\params[in] "UUIDs" Universal unique identifiers for report </p>
+
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00593">593</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -242,6 +296,9 @@ Public Member Functions</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int StomatalConductanceModel::selfTest </td>
@@ -250,6 +307,11 @@ Public Member Functions</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Self-test (unit test) routine. </p>

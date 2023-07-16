@@ -52,6 +52,8 @@ StomatalConductanceModel::StomatalConductanceModel( helios::Context* m_context )
 
 int StomatalConductanceModel::selfTest(){
 
+    Context context_selftest;
+
   std::cout << "Running stomatal conductance model self-test..." << std::flush;
 
   float RMSE_max = 0.03;
@@ -72,14 +74,14 @@ int StomatalConductanceModel::selfTest(){
   std::vector<float> gs_MOPT(gs_ref.size());
   std::vector<float> gs_BMF(gs_ref.size());
 
-  uint UUID0 = context->addPatch();
+  uint UUID0 = context_selftest.addPatch();
 
   BWBcoefficients BWBcoeffs;
   BBLcoefficients BBLcoeffs;
   MOPTcoefficients MOPTcoeffs;
   BMFcoefficients BMFcoeffs;
 
-  StomatalConductanceModel gsm(context);
+  StomatalConductanceModel gsm(&context_selftest);
 
   float RMSE_BWB = 0.f;
   float RMSE_BBL = 0.f;
@@ -88,34 +90,34 @@ int StomatalConductanceModel::selfTest(){
 
   for( uint i=0; i<gs_ref.size(); i++ ) {
 
-    context->setPrimitiveData( UUID0, "radiation_flux_PAR", Q_ref.at(i)/4.57f );
-    context->setPrimitiveData( UUID0, "net_photosynthesis", An_ref.at(i) );
-    context->setPrimitiveData( UUID0, "temperature", TL_ref.at(i)+273.f );
-    context->setPrimitiveData( UUID0, "air_temperature", Tair_ref.at(i)+273.f );
-    context->setPrimitiveData( UUID0, "air_CO2", Cs_ref );
-    context->setPrimitiveData( UUID0, "air_humidity", hs_ref );
-    context->setPrimitiveData( UUID0, "air_pressure", Patm_ref );
-    context->setPrimitiveData( UUID0, "boundarylayer_conductance", gbw_ref);
-    context->setPrimitiveData( UUID0, "Gamma_CO2", Gamma_ref.at(i));
+    context_selftest.setPrimitiveData( UUID0, "radiation_flux_PAR", Q_ref.at(i)/4.57f );
+    context_selftest.setPrimitiveData( UUID0, "net_photosynthesis", An_ref.at(i) );
+    context_selftest.setPrimitiveData( UUID0, "temperature", TL_ref.at(i)+273.f );
+    context_selftest.setPrimitiveData( UUID0, "air_temperature", Tair_ref.at(i)+273.f );
+    context_selftest.setPrimitiveData( UUID0, "air_CO2", Cs_ref );
+    context_selftest.setPrimitiveData( UUID0, "air_humidity", hs_ref );
+    context_selftest.setPrimitiveData( UUID0, "air_pressure", Patm_ref );
+    context_selftest.setPrimitiveData( UUID0, "boundarylayer_conductance", gbw_ref);
+    context_selftest.setPrimitiveData( UUID0, "Gamma_CO2", Gamma_ref.at(i));
 
     gsm.setModelCoefficients(BWBcoeffs);
     gsm.run();
-    context->getPrimitiveData(UUID0,"moisture_conductance",gs_BWB.at(i));
+    context_selftest.getPrimitiveData(UUID0,"moisture_conductance",gs_BWB.at(i));
     RMSE_BWB += pow(gs_BWB.at(i)-gs_ref.at(i),2)/float(gs_ref.size());
 
     gsm.setModelCoefficients(BBLcoeffs);
     gsm.run();
-    context->getPrimitiveData(UUID0,"moisture_conductance",gs_BBL.at(i));
+    context_selftest.getPrimitiveData(UUID0,"moisture_conductance",gs_BBL.at(i));
     RMSE_BBL += pow(gs_BBL.at(i)-gs_ref.at(i),2)/float(gs_ref.size());
 
     gsm.setModelCoefficients(MOPTcoeffs);
     gsm.run();
-    context->getPrimitiveData(UUID0,"moisture_conductance",gs_MOPT.at(i));
+    context_selftest.getPrimitiveData(UUID0,"moisture_conductance",gs_MOPT.at(i));
     RMSE_MOPT += pow(gs_MOPT.at(i)-gs_ref.at(i),2)/float(gs_ref.size());
 
     gsm.setModelCoefficients(BMFcoeffs);
     gsm.run();
-    context->getPrimitiveData(UUID0,"moisture_conductance",gs_BMF.at(i));
+    context_selftest.getPrimitiveData(UUID0,"moisture_conductance",gs_BMF.at(i));
     RMSE_BMF += pow(gs_BMF.at(i)-gs_ref.at(i),2)/float(gs_ref.size());
 
   }
@@ -202,17 +204,8 @@ void StomatalConductanceModel::run(){
 
 void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
-    size_t assumed_default_i = 0;
-    size_t assumed_default_TL = 0;
-    size_t assumed_default_p = 0;
-    size_t assumed_default_Ta = 0;
-    size_t assumed_default_rh = 0;
-    size_t assumed_default_Psix = 0;
     size_t assumed_default_An = 0;
     size_t assumed_default_Gamma = 0;
-    size_t assumed_default_CO2 = 0;
-    size_t assumed_default_gbw = 0;
-    size_t assumed_default_beta = 0;
 
     for( uint UUID : UUIDs){
 
@@ -226,8 +219,6 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
         if( context->doesPrimitiveDataExist(UUID,"radiation_flux_PAR") && context->getPrimitiveDataType(UUID,"radiation_flux_PAR")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"radiation_flux_PAR",i); //W/m^2
             i = i*4.57f; //umol/m^2-s (ref https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf)
-        }else{
-            assumed_default_i++;
         }
 
         //surface temperature (K)
@@ -238,8 +229,6 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
               std::cout << "WARNING (StomatalConductanceModel::run): Specified surface temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
               TL = TL_default;
             }
-        }else{
-            assumed_default_TL++;
         }
 
         //air pressure (Pa)
@@ -250,8 +239,6 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
               std::cout << "WARNING (StomatalConductanceModel::run): Specified air pressure value is very low - assuming default value instead. Did you accidentally specify pressure in kPA instead of Pa?" << std::endl;
               press = pressure_default;
             }
-        }else{
-            assumed_default_p++;
         }
 
         //air temperature (K)
@@ -262,8 +249,6 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
               std::cout << "WARNING (StomatalConductanceModel::run): Specified air temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
               Ta = air_temperature_default;
             }
-        }else{
-            assumed_default_Ta++;
         }
 
         //boundary-layer conductance to heat/moisture (mol/m^2/s)
@@ -274,8 +259,6 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
         }else if( context->doesPrimitiveDataExist(UUID,"boundarylayer_conductance_out") && context->getPrimitiveDataType(UUID,"boundarylayer_conductance_out")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"boundarylayer_conductance_out",gbw);
             gbw = gbw*1.08;  //assume bl conductance to moisture is 1.08 of conductance to heat
-        }else{
-          assumed_default_gbw++;
         }
         if( gbw<0 ){
             gbw = 0;
@@ -286,8 +269,6 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
         float beta = beta_default;
         if( context->doesPrimitiveDataExist(UUID,"beta_soil") && context->getPrimitiveDataType(UUID,"beta_soil")==HELIOS_TYPE_FLOAT ){
           context->getPrimitiveData(UUID,"beta_soil",beta);
-        }else{
-          assumed_default_beta++;
         }
 
         //air humidity
@@ -298,8 +279,6 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
               std::cout << "WARNING (StomatalConductanceModel::run): Specified air humidity value is greater than 1 - clamping to 1. Did you accidentally specify in percent instead of a decimal?" << std::endl;
               rh = 1.f;
             }
-        }else{
-            assumed_default_rh++;
         }
 
         //calculate VPD (mmol/mol) between sub-stomatal cavity and outside of boundary layer
@@ -308,47 +287,46 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
         float es = 611.f * exp(17.502f * (TL - 273.f) / ((TL - 273.f) + 240.97f));
         float D = max(0.f, (es - ea) / press * 1000.f); //mmol/mol
 
-        //xylem moisture potential
-        float Psix = xylem_potential_default;
-        if( context->doesPrimitiveDataExist(UUID,"xylem_water_potential") && context->getPrimitiveDataType(UUID,"xylem_water_potential")==HELIOS_TYPE_FLOAT ){
-            context->getPrimitiveData(UUID,"xylem_water_potential",Psix);
-        }else{
-            assumed_default_Psix++;
-        }
-
-        //net photosynthesis
-        float An = An_default;
-        if( context->doesPrimitiveDataExist(UUID,"net_photosynthesis") && context->getPrimitiveDataType(UUID,"net_photosynthesis")==HELIOS_TYPE_FLOAT ){
-          context->getPrimitiveData(UUID,"net_photosynthesis",An);
-        }else{
-          assumed_default_An++;
-        }
-
-        //CO2 compensation point - Gamma
-        float Gamma = Gamma_default;
-        if( context->doesPrimitiveDataExist(UUID,"Gamma_CO2") && context->getPrimitiveDataType(UUID,"Gamma_CO2")==HELIOS_TYPE_FLOAT ){
-          context->getPrimitiveData(UUID,"Gamma_CO2",Gamma);
-        }else{
-          assumed_default_Gamma++;
-        }
 
         //Compute CO2 concentration at leaf surface
+        float An = An_default;
+        float Gamma = Gamma_default;
         float Cs = air_CO2_default;
         if( model == "BWB" || model == "BBL" || model == "MOPT" ){
 
-          //ambient air CO2
-          float Ca = air_CO2_default;
-          if( context->doesPrimitiveDataExist(UUID,"air_CO2") && context->getPrimitiveDataType(UUID,"air_CO2")==HELIOS_TYPE_FLOAT ){
-            context->getPrimitiveData(UUID,"air_CO2",Ca);
-          }else{
-            assumed_default_CO2++;
-          }
+            //net photosynthesis
+            if( context->doesPrimitiveDataExist(UUID,"net_photosynthesis") && context->getPrimitiveDataType(UUID,"net_photosynthesis")==HELIOS_TYPE_FLOAT ) {
+                context->getPrimitiveData(UUID, "net_photosynthesis", An);
+            }else{
+                assumed_default_An++;
+            }
 
-          float gbc = 0.75f*gbw; //bl conductance to CO2
+            //CO2 compensation point - Gamma
+            if( context->doesPrimitiveDataExist(UUID,"Gamma_CO2") && context->getPrimitiveDataType(UUID,"Gamma_CO2")==HELIOS_TYPE_FLOAT ) {
+                context->getPrimitiveData(UUID, "Gamma_CO2", Gamma);
+            }else{
+                assumed_default_Gamma++;
+            }
 
-          //An = gbc*(Ca-Cs)
-          Cs = Ca - An/gbc;
+            //ambient air CO2
+            float Ca = air_CO2_default;
+            if( context->doesPrimitiveDataExist(UUID,"air_CO2") && context->getPrimitiveDataType(UUID,"air_CO2")==HELIOS_TYPE_FLOAT ){
+                context->getPrimitiveData(UUID,"air_CO2",Ca);
+            }
 
+            float gbc = 0.75f*gbw; //bl conductance to CO2
+
+            //An = gbc*(Ca-Cs)
+            Cs = Ca - An/gbc;
+
+        }
+
+        float Psix = xylem_potential_default;
+        if( model == "BB" ){
+            //xylem moisture potential
+            if( context->doesPrimitiveDataExist(UUID,"xylem_water_potential") && context->getPrimitiveDataType(UUID,"xylem_water_potential")==HELIOS_TYPE_FLOAT ){
+                context->getPrimitiveData(UUID,"xylem_water_potential",Psix);
+            }
         }
 
 
@@ -607,5 +585,121 @@ void StomatalConductanceModel::optionalOutputPrimitiveData( const char* label ){
   }else{
     std::cout << "WARNING (StomatalConductanceModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
   }
+
+}
+
+void StomatalConductanceModel::printDefaultValueReport() const{
+    printDefaultValueReport(context->getAllUUIDs());
+}
+
+void StomatalConductanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs) const {
+
+    size_t assumed_default_i = 0;
+    size_t assumed_default_TL = 0;
+    size_t assumed_default_p = 0;
+    size_t assumed_default_Ta = 0;
+    size_t assumed_default_rh = 0;
+    size_t assumed_default_Psix = 0;
+    size_t assumed_default_An = 0;
+    size_t assumed_default_Gamma = 0;
+    size_t assumed_default_CO2 = 0;
+    size_t assumed_default_gbw = 0;
+    size_t assumed_default_beta = 0;
+
+    size_t Nprimitives = UUIDs.size();
+
+    for (uint UUID: UUIDs) {
+
+        if (!context->doesPrimitiveDataExist(UUID, "radiation_flux_PAR") ||
+            context->getPrimitiveDataType(UUID, "radiation_flux_PAR") != HELIOS_TYPE_FLOAT) {
+            assumed_default_i++;
+        }
+
+        //surface temperature (K)
+        if (!context->doesPrimitiveDataExist(UUID, "temperature") ||
+            context->getPrimitiveDataType(UUID, "temperature") != HELIOS_TYPE_FLOAT) {
+            assumed_default_TL++;
+        }
+
+        //air pressure (Pa)
+        if (!context->doesPrimitiveDataExist(UUID, "air_pressure") ||
+            context->getPrimitiveDataType(UUID, "air_pressure") != HELIOS_TYPE_FLOAT) {
+            assumed_default_p++;
+        }
+
+        //air temperature (K)
+        if (!context->doesPrimitiveDataExist(UUID, "air_temperature") ||
+            context->getPrimitiveDataType(UUID, "air_temperature") != HELIOS_TYPE_FLOAT) {
+            assumed_default_Ta++;
+        }
+
+        //air humidity
+        if (!context->doesPrimitiveDataExist(UUID, "air_humidity") ||
+            context->getPrimitiveDataType(UUID, "air_humidity") != HELIOS_TYPE_FLOAT) {
+            assumed_default_rh++;
+        }
+
+        //boundary-layer conductance to heat/moisture (mol/m^2/s)
+        if ((!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") || context->getPrimitiveDataType(UUID, "boundarylayer_conductance") != HELIOS_TYPE_FLOAT) &&
+            (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") || context->getPrimitiveDataType(UUID, "boundarylayer_conductance_out") != HELIOS_TYPE_FLOAT)) {
+            assumed_default_gbw++;
+        }
+
+        //beta soil moisture factor
+        if (!context->doesPrimitiveDataExist(UUID, "beta_soil") ||
+            context->getPrimitiveDataType(UUID, "beta_soil") != HELIOS_TYPE_FLOAT) {
+            assumed_default_beta++;
+        }
+
+        //Compute CO2 concentration at leaf surface
+        if (model == "BWB" || model == "BBL" || model == "MOPT") {
+
+            //net photosynthesis
+            if (!context->doesPrimitiveDataExist(UUID, "net_photosynthesis") ||
+                context->getPrimitiveDataType(UUID, "net_photosynthesis") != HELIOS_TYPE_FLOAT) {
+                assumed_default_An++;
+            }
+
+            //CO2 compensation point - Gamma
+            if (!context->doesPrimitiveDataExist(UUID, "Gamma_CO2") ||
+                context->getPrimitiveDataType(UUID, "Gamma_CO2") != HELIOS_TYPE_FLOAT) {
+                assumed_default_Gamma++;
+            }
+
+            //ambient air CO2
+            if (!context->doesPrimitiveDataExist(UUID, "air_CO2") ||
+                context->getPrimitiveDataType(UUID, "air_CO2") != HELIOS_TYPE_FLOAT) {
+                assumed_default_CO2++;
+            }
+        }else if( model == "BB" ){
+            //xylem moisture potential
+            if (!context->doesPrimitiveDataExist(UUID, "xylem_water_potential") ||
+                context->getPrimitiveDataType(UUID, "xylem_water_potential") != HELIOS_TYPE_FLOAT) {
+                assumed_default_Psix++;
+            }
+        }
+
+
+    }
+
+    std::cout << "--- Stomatal Conductance Model Default Value Report ---" << std::endl;
+
+    std::cout << "PAR flux: " << assumed_default_i << " of " << Nprimitives << " used default value of " << i_default << " because ""radiation_flux_PAR"" primitive data did not exist" << std::endl;
+    std::cout << "surface temperature: " << assumed_default_TL << " of " << Nprimitives << " used default value of " << TL_default << " because ""temperature"" primitive data did not exist" << std::endl;
+    std::cout << "air pressure: " << assumed_default_p << " of " << Nprimitives << " used default value of " << pressure_default << " because ""air_pressure"" primitive data did not exist" << std::endl;
+    std::cout << "air temperature: " << assumed_default_Ta << " of " << Nprimitives << " used default value of " << air_temperature_default << " because ""air_temperature"" primitive data did not exist" << std::endl;
+    std::cout << "air humidity: " << assumed_default_rh << " of " << Nprimitives << " used default value of " << air_humidity_default << " because ""air_humidity"" primitive data did not exist" << std::endl;
+    std::cout << "boundary-layer conductance: " << assumed_default_gbw << " of " << Nprimitives << " used default value of " << blconductance_default << " because ""boundarylayer_conductance"" primitive data did not exist" << std::endl;
+    std::cout << "soil moisture factor: " << assumed_default_beta << " of " << Nprimitives << " used default value of " << beta_default << " because ""soil_beta"" primitive data did not exist" << std::endl;
+
+    if (model == "BWB" || model == "BBL" || model == "MOPT") {
+        std::cout << "net photosynthesis: " << assumed_default_An << " of " << Nprimitives << " used default value of " << An_default << " because ""net_photosynthesis"" primitive data did not exist" << std::endl;
+        std::cout << "Gamma: " << assumed_default_Gamma << " of " << Nprimitives << " used default value of " << Gamma_default << " because ""Gamma_CO2"" primitive data did not exist" << std::endl;
+        std::cout << "air CO2: " << assumed_default_CO2 << " of " << Nprimitives << " used default value of " << air_CO2_default << " because ""air_CO2"" primitive data did not exist" << std::endl;
+    }else if( model == "BB" ){
+        std::cout << "xylem water potential: " << assumed_default_Psix << " of " << Nprimitives << " used default value of " << xylem_potential_default << " because ""xylem_water_potential"" primitive data did not exist" << std::endl;
+    }
+
+    std::cout << "------------------------------------------------------" << std::endl;
 
 }
