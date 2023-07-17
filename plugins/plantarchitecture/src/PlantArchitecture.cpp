@@ -262,8 +262,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
     }
 
-    uint objID = context_ptr->addTubeObject(10, internode_vertices, internode_radii, internode_colors );
-    internode_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID);
+    //uint objID = context_ptr->addTubeObject(10, internode_vertices, internode_radii, internode_colors );
+    std::vector<uint> objIDs = PlantArchitecture::makeTubeFromCones( 10, internode_vertices, internode_radii, internode_colors, context_ptr );
+    internode_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objIDs);
 
     //--- create petiole ---//
 
@@ -301,8 +302,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
         }
 
-        objID = context_ptr->addTubeObject(10, petiole_vertices, petiole_radii, petiole_colors);
-        std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID);
+//        uint objID = context_ptr->addTubeObject(10, petiole_vertices, petiole_radii, petiole_colors);
+        objIDs = PlantArchitecture::makeTubeFromCones(10, petiole_vertices, petiole_radii, petiole_colors, context_ptr);
+        std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objIDs);
         petiole_UUIDs.insert( petiole_UUIDs.end(), UUIDs.begin(), UUIDs.end() );
 
         //--- create leaves ---//
@@ -504,6 +506,27 @@ void Phytomer::addInfluorescence(const helios::vec3 &base_position, const AxisRo
 
 }
 
+void Phytomer::scaleInternode( float girth_scale_factor, float length_scale_factor ){
+
+    if( girth_scale_factor!=1.f || length_scale_factor!=1.f ){
+
+        // \todo Probably better to store object IDs directly for better efficiency
+        std::vector<uint> objIDs = context_ptr->getUniquePrimitiveParentObjectIDs( internode_UUIDs, false );
+
+        for( uint objID : objIDs ) {
+            if( girth_scale_factor!=1.f ) {
+                context_ptr->getConeObjectPointer(objID)->scaleGirth(girth_scale_factor);
+            }
+            if( length_scale_factor!=1.f ){
+                context_ptr->getConeObjectPointer(objID)->scaleLength(girth_scale_factor);
+            }
+        }
+
+    }
+
+
+}
+
 uint PlantArchitecture::addShoot(int parentID, uint parent_node, uint rank, uint current_node_number,
                                  const helios::vec3 &base_position, const AxisRotation &base_rotation, const ShootParameters &shoot_params) {
 
@@ -581,8 +604,7 @@ Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::ve
 
 }
 
-uint PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint current_node_number,
-                                      const AxisRotation &base_rotation, const ShootParameters &shoot_params) {
+uint PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, const ShootParameters &shoot_params) {
 
     if( parentID<-1 || parentID>=shoot_tree.size() ){
         throw( std::runtime_error("ERROR (PlantArchitecture::addChildShoot): Parent with ID of " + std::to_string(parentID) + " does not exist.") );
@@ -613,6 +635,18 @@ uint PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint curre
     shoot_tree.at(parentID).childIDs.push_back(childID);
 
     return childID;
+
+}
+
+int PlantArchitecture::addPhytomerToShoot( uint shootID, PhytomerParameters phytomer_parameters ){
+
+    if( shootID>=shoot_tree.size() ){
+        throw( std::runtime_error("ERROR (PlantArchitecture::addPhytomerToShoot): Parent shoot with ID of " + std::to_string(shootID) + " does not exist.") );
+    }
+
+    Shoot* parent_shoot = &shoot_tree.at(shootID);
+
+    return parent_shoot->addPhytomer( phytomer_parameters, parent_shoot->base_rotation );
 
 }
 
@@ -771,4 +805,39 @@ void PlantArchitecture::setCurrentPhytomerParameters( const std::string &phytome
         throw( std::runtime_error("ERROR (PlantArchitecture::setCurrentPhytomerParameters): " + phytomer_label + " is not a valid phytomer in the library.") );
     }
     
+}
+
+void PlantArchitecture::scalePhytomerInternode( uint shootID, uint node_number, float girth_scale_factor, float length_scale_factor ){
+
+    if( shootID>=shoot_tree.size() ){
+        throw( std::runtime_error("ERROR (PlantArchitecture::scalePhytomerInternode): Shoot with ID of " + std::to_string(shootID) + " does not exist.") );
+    }else if( node_number>=shoot_tree.at(shootID).current_node_number ){
+        throw( std::runtime_error("ERROR (PlantArchitecture::scalePhytomerInternode): Cannot scale internode " + std::to_string(node_number) + " because there are only " + std::to_string(shoot_tree.at(shootID).current_node_number) + " nodes in this shoot.") );
+    }
+
+    shoot_tree.at(shootID).phytomers.at(node_number).scaleInternode(girth_scale_factor, length_scale_factor );
+
+}
+
+std::vector<uint> PlantArchitecture::makeTubeFromCones(uint Ndivs, const std::vector<helios::vec3> &vertices,
+                                                       const std::vector<float> &radii,
+                                                       const std::vector<helios::RGBcolor> &colors,
+                                                       Context *context_ptr) {
+
+    uint Nverts = vertices.size();
+
+    if( radii.size()!=Nverts || colors.size()!=Nverts ){
+        throw( std::runtime_error("ERROR (PlantArchitecture::makeTubeFromCones): Length of vertex vectors is not consistent.") );
+    }
+
+    std::vector<uint> objIDs(Nverts-1);
+
+    for( uint v=0; v<Nverts-1; v++ ){
+
+        objIDs.at(v) = context_ptr->addConeObject(Ndivs, vertices.at(v), vertices.at(v + 1), radii.at(v), radii.at(v + 1), colors.at(v) );
+
+    }
+
+    return objIDs;
+
 }

@@ -314,6 +314,12 @@ public:
 
     helios::vec3 getPetioleAxisVector( float stem_fraction ) const;
 
+    helios::vec3 getAxisVector( float stem_fraction, const std::vector<helios::vec3> &axis_vertices ) const;
+
+    void addInfluorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &inflorescence_bending_axis);
+
+    void scaleInternode( float girth_scale_factor, float length_scale_factor );
+
     std::vector<helios::vec3> internode_vertices;
     std::vector<helios::vec3> petiole_vertices; //\todo this needs to be a multidimensional array for the case in which we have multiple buds per phytomer
 
@@ -332,12 +338,9 @@ public:
 
     uint rank;
 
+    float age = 0;
+
     helios::Context *context_ptr;
-
-    helios::vec3 getAxisVector( float stem_fraction, const std::vector<helios::vec3> &axis_vertices ) const;
-
-    void addInfluorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation,
-                           const helios::vec3 &inflorescence_bending_axis);
 
 };
 
@@ -380,11 +383,17 @@ public:
     uint addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation,
                        const ShootParameters &shoot_params);
 
+    int addPhytomerToShoot( uint shootID, PhytomerParameters phytomer_parameters );
+
     void setCurrentPhytomerParameters( const PhytomerParameters &phytomer_parameters_new );
 
     void setCurrentPhytomerParameters( const std::string &phytomer_label );
 
+    void scalePhytomerInternode( uint shootID, uint node_number, float girth_scale_factor, float length_scale_factor );
+
     PhytomerParameters phytomer_parameters_current;
+
+    static std::vector<uint> makeTubeFromCones(uint Ndivs, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
 
 private:
 
@@ -392,8 +401,6 @@ private:
     std::vector<Shoot> shoot_tree;
 
     helios::Context* context_ptr;
-
-
 
 };
 

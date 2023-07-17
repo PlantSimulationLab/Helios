@@ -2464,8 +2464,8 @@ uint Context::copyObject(uint ObjID ){
         std::vector<float> radius = o->getNodeRadii();
         uint subdiv = o->getSubdivisionCount();
 
-        auto* cone_new = (new Cone(currentObjectID, UUIDs_copy, nodes.at(0), nodes.at(1), radius.at(0), radius.at(1),
-                                   subdiv, texturefile.c_str(), this));
+        auto* cone_new = (new Cone(currentObjectID, UUIDs_copy, nodes.at(0), nodes.at(1), radius.at(0), radius.at(1),subdiv, texturefile.c_str(), this));
+
 
         objects[currentObjectID] = cone_new;
 
@@ -3603,7 +3603,7 @@ void Cone::scaleGirth( float S ){
         context->getConeObjectPointer(OID)->rotate( angle, ra );
     }
 
-    // //translate back
+    // translate back
     context->getConeObjectPointer(OID)->translate(nodes_T.at(0));
 
 }
@@ -4144,9 +4144,6 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
 
     auto* tube_new = (new Tube(currentObjectID, UUID, nodes, radius, color, Ndivs, "", this));
 
-    float T[16],  transform[16];
-    tube_new->getTransformationMatrix( transform );
-
     for( uint p : UUID){
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
@@ -4276,9 +4273,6 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
     std::vector<RGBcolor> colors;
 
     auto* tube_new = (new Tube(currentObjectID, UUID, nodes, radius, colors, Ndivs, texturefile, this));
-
-    float T[16],  transform[16];
-    tube_new->getTransformationMatrix( transform );
 
     for( uint p : UUID){
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
@@ -4761,14 +4755,6 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
 
     auto* cone_new = (new Cone(currentObjectID, UUID, node0, node1, radius0, radius1, Ndivs, "", this));
 
-    float T[16],  transform[16];
-    cone_new->getTransformationMatrix( transform );
-
-    makeTranslationMatrix(nodes.front(),T);
-    matmult(T,transform,transform);
-
-    cone_new->setTransformationMatrix( transform );
-
     for( uint p : UUID){
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
@@ -4889,14 +4875,6 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
     }
 
     auto* cone_new = (new Cone(currentObjectID, UUID, node0, node1, radius0, radius1, Ndivs, texturefile, this));
-
-    float T[16],  transform[16];
-    cone_new->getTransformationMatrix( transform );
-
-    makeTranslationMatrix(nodes.front(),T);
-    matmult(T,transform,transform);
-
-    cone_new->setTransformationMatrix( transform );
 
     for( uint p : UUID){
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
