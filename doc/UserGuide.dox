@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.0
+/*! \mainpage Helios Documentation v1.2.64
 
   \image html Helios_logo.png
 
@@ -308,7 +308,7 @@
   Projects that use the Helios API are typically built using a CMakeLists.txt file.  A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.
 
   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>  # Helios standard CMakeLists.txt file version 1.8
+    <pre><code> # Helios standard CMakeLists.txt file version 1.8
   # Helios standard CMakeLists.txt file version 1.8
   if ( WIN32 )
       cmake_minimum_required(VERSION 3.15)
@@ -332,8 +332,8 @@
   set( PLUGINS "visualizer" )
 
   #-------- DO NOT MODIFY ---------#
-  include( "${BASE_DIRECTORY}/core/CMake_project.txt" )</code></pre>
-  </div>
+  include( "${BASE_DIRECTORY}/core/CMake_project.txt" )
+  </code></pre></div>
 
   The easiest way to compile the code is by using an IDE such as CLion, which is described in detail on the page \ref CLionIDE "Using the CLion IDE with Helios".
 
@@ -372,28 +372,28 @@
 
  <table>
    <tr><th>Header File</th></tr>
-   <tr><td>\<cstdlib\></td></tr>
-   <tr><td>\<cstdio\><\td></tr>
-   <tr><td>\<cstring\><\td></tr>
-   <tr><td>\<iostream\><\td></tr>
-   <tr><td>\<sstream\><\td></tr>
-   <tr><td>\<fstream\><\td></tr>
-   <tr><td>\<vector\><\td></tr>
-   <tr><td>\<stdexcept\><\td></tr>
-   <tr><td>\<exception\><\td></tr>
-   <tr><td>\<cassert\><\td></tr>
-   <tr><td>\<cmath\><\td></tr>
-   <tr><td>\<memory\><\td></tr>
-   <tr><td>\<ctime\><\td></tr>
-   <tr><td>\<map\><\td></tr>
-   <tr><td>\<algorithm\><\td></tr>
-   <tr><td>\<ctime\><\td></tr>
-   <tr><td>\<random\><\td></tr>
-   <tr><td>\<chrono\><\td></tr>
-   <tr><td>\<thread\><\td></tr>
-   <tr><td>\<filesystem\><\td></tr>
-  </table>
-
+   <tr><td><cstdlib></td></tr>
+   <tr><td><cstdio></td></tr>
+   <tr><td><cstring></td></tr>
+   <tr><td><iostream></td></tr>
+   <tr><td><sstream></td></tr>
+   <tr><td><fstream></td></tr>
+   <tr><td><vector></td></tr>
+   <tr><td><stdexcept></td></tr>
+   <tr><td><exception></td></tr>
+   <tr><td><cassert></td></tr>
+   <tr><td><cmath></td></tr>
+   <tr><td><memory></td></tr>
+   <tr><td><ctime></td></tr>
+   <tr><td><map></td></tr>
+   <tr><td><algorithm></td></tr>
+   <tr><td><ctime></td></tr>
+   <tr><td><random></td></tr>
+   <tr><td><chrono></td></tr>
+   <tr><td><thread></td></tr>
+   <tr><td><filesystem></td></tr>
+   </table>
+ 
  <!-- **************** CONTEXT ***************** -->
  \section ContextSect Context
 
@@ -416,11 +416,11 @@
  The context is typically created within the main function:
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height: 1.2;">
- <code> #include "Context.h"
- void main(){
-    Context context;
- }
- </code>
+ <pre><code> #include "Context.h"
+  void main(){
+     Context context;
+  }
+ </code></pre>	     
  </div>
 
  The Context is usually passed to plugins (see \ref Plugins), which gives them access to geometry and data.
@@ -511,9 +511,9 @@
  
  <table>
  <tr><th>Primitive</th><th>Description</th><th>Enumeration</th></tr>
- <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>\ref helios::PrimitiveType::PRIMITIVE_TYPE_PATCH "PRIMITIVE_TYPE_PATCH"</td></tr>
- <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE_TYPE_TRIANGLE "PRIMITIVE_TYPE_TRIANGLE"</td></tr>
- <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE_TYPE_VOXEL "PRIMITIVE_TYPE_VOXEL"</td></tr>
+ <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>PRIMITIVE\_TYPE\_PATCH</td></tr>
+ <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE\_TYPE\_TRIANGLE"</td></tr>
+  <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_VOXEL "PRIMITIVE\_TYPE\_VOXEL"</td></tr>
  </table>	
  
  \subsection AddingPrims Adding Primitives
@@ -553,7 +553,7 @@
  Patches are added by specifying the (x,y,z) coordinate of its center, the lengths of its sides in the x- and y-directions, and optionally its spherical rotation (see \ref Coord) and r-g-b color.  The following is an example of using the 'addPatch' function to add a simple patch:
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ <pre><code> #include "Context.h"
   using namespace helios;
        
   int main(){
@@ -576,7 +576,7 @@
  The patch can also be rotated by adding the optional SphericalCoord argument:
  
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  vec3 center = make_vec3(0,0,1);
+ <pre><code> vec3 center = make_vec3(0,0,1);
   vec2 size = make_vec2(1,1);
   SphericalCoord rotation = make_SphericalCoord(0.25*M_PI,0.5*M_PI);
   context.addPatch( center, size, rotation );</code></pre>
@@ -589,7 +589,7 @@
  Triangles are added by specifying the (x,y,z) coordinates of the triangle's three vertices, and optionally its r-g-b color.  The following is an example of using the 'addTriangle()' function to add a simple triangle:
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ <pre><code> #include "Context.h"
   using namespace helios;
        
   int main(){
@@ -1043,6 +1043,9 @@
  <tr><td>Member Primitive Check</td><td>\ref helios::CompoundObject::doesObjectContainPrimitive() "doesObjectContainPrimitive()"</td></tr>
  <tr><td>Object Center</td><td>\ref helios::CompoundObject::getObjectCenter() "getObjectCenter()"</td></tr>
  <tr><td>Surface Area</td><td>\ref helios::CompoundObject::getArea() "getArea()"</td></tr>
+ <tr><td>Diffuse R-G-B color code</td><td>\ref helios::CompoundObject::getColor() "getColor()"</td></tr>
+ <tr><td>Diffuse R-G-B color code</td><td>\ref helios::CompoundObject::getRGBColor() "getColorRGB()"</td></tr>
+ <tr><td>Diffuse R-G-B-A color code</td><td>\ref helios::CompoundObject::getRGBAColor() "getColorRGBA()"</td></tr>
  <tr><td>Override Texture</td><td>\ref helios::CompoundObject::overrideTextureColor() "overrideTextureColor()"</td></tr>
  <tr><td>Use Texture</td><td>\ref helios::CompoundObject::useTextureColor() "useTextureColor()"</td></tr>
  </table>
@@ -1147,6 +1150,78 @@
  <tr><td>\htmlonly<font face="courier" color="green">int4</font>\endhtmlonly</td><td>\ref helios::HELIOS_TYPE_INT4 "HELIOS_TYPE_INT4"</td></tr>
  <tr><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>\ref helios::HELIOS_TYPE_STRING "HELIOS_TYPE_STRING"</td></tr>	
  </table>
+ 
+ <!--
+ \subsection Variables Variables
+
+ \subsubsection AddVariables Adding Variables
+
+ Variables are created from the Context via the \ref helios::Context::addVariable "addVariable" command.  The user specifies the name of the variable upon creation, which will be used to reference the data later.
+ 
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  #include "Context.h"
+  using namespace helios;
+
+  int main(int argc, char* argv[]){
+
+     Context context;
+
+     context.addVariable("temperature");
+
+  }</code></pre>
+ </div>
+
+ Variables can be added before or after primitives are added to the Context.  If variables are added before a primitive, newly added primitive variable values will be initialized to zero as they are added.  If variables are added after some primitives have been added, any previously added primitive variable values will be set to zero, and newly added primitive variable values will be initialized to zero as they are added.  
+
+ The existence of a variable can be queried via the \ref helios::Context::doesVariableExist "doesVariableExist" function.
+	
+ \subsubsection SetVariables Setting Variable Values
+
+ The values of variables can be set through the Context via the \ref helios::Context::setVariableValue "setVariableValue" function:
+
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  #include "Context.h"
+  using namespace helios;
+     
+  int main(int argc, char* argv[]){
+
+     Context context;
+
+     context.addVariable("temperature");
+
+     uint UUID = context.addPatch( center, size, RGB::red );
+
+     context.setVariableValue(UUID,"temperature",300); 
+
+  }</code></pre>
+ </div>	
+
+ \subsubsection GetVariables Getting Variable Values
+ 
+ Getting the values of variables is done via the \ref helios::Context::getVariableValue "getVariableValue" function:
+ 
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code>  #include "Context.h"
+  using namespace helios;
+
+  int main(int argc, char* argv[]){
+
+     Context context;
+
+     context.addVariable("temperature");
+
+     uint UUID = context.addPatch( center, size, RGB::red );
+
+     context.setVariableValue(UUID,"temperature",300);
+
+     float T = context.getVariableValue(UUID,"temperature");
+
+  }</code></pre>
+ </div>
+
+ In the above example, the value of 'T' in equal to 300.f.
+
+ -->
 
  \subsection PrimData Primitive Data
 
@@ -1203,7 +1278,7 @@
 
  If primitive data is a scalar value, it can be retrieved for a given primitive via the Context using the \ref helios::Context::getPrimitiveData() "getPrimitiveData" function:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.0;">
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>  #include "Context.h"
   using namespace helios;
      
@@ -1211,7 +1286,10 @@
 
      Context context;
 
-     uint UUID = context.addPatch();
+     vec3 center(0,0,0);
+     vec2 size(1,1);
+
+     uint UUID = context.addPatch( center, size );
 
      float eps = 0.9;
      context.setPrimitiveData(UUID,"emissivity",eps);
@@ -1219,9 +1297,12 @@
      float emissivity;
      context.getPrimitiveData(UUID,"emissivity",emissivity);
 
-  }</code></pre></div>
+  }</code></pre>
+ </div>
 
  In the above example, the value of 'emissivity' is 0.9.
+
+ For a vector of primitive data, use the \ref helios::Context::getPrimitiveData_v() "getPrimitiveData_v" function.  Note that the 'getPrimitiveData_v' function can always be used regardless of whether the data is scalar or vector valued.  If the data is scalar and 'getPrimitiveData_v' is used, the function will simply return a vector structure of length 1.
 
  \subsubsection PrimDataHelpers Primitive Data Query Functions
 
@@ -1229,14 +1310,14 @@
 
  <table>
  <tr><th>Function</th><th>Description</th></tr>
- <tr><td>\ref helios::Context::doesPrimitiveDataExist( uint UUID, const char* label ) const "doesPrimitiveDataExist( uint UUID, const char* label )"</td><td>Check whether primitive data named 'label' exists for the primitive.</td></tr>
- <tr><td>\ref helios::Context::getPrimitiveDataType( uint UUID, const char* label ) const "getPrimitiveDataType( uint UUID, const char* label )"</td><td>Get the \ref helios::HeliosDataType for the primitive.</td></tr>
- <tr><td>\ref helios::Context::getPrimitiveDataSize( uint UUID, const char* label ) const "getPrimitiveDataSize( uint UUID, const char* label )"</td><td>Get the length/size of the primitive data named 'label'.</td></tr>
+ <tr><td>\ref helios::Primitive::doesPrimitiveDataExist( const char* label ) const "doesPrimitiveDataExist( const char* label )"</td><td>Check whether primitive data named 'label' exists for the primitive.</td></tr>
+ <tr><td>\ref helios::Primitive::getPrimitiveDataType( const char* label ) const "getPrimitiveDataType( const char* label )"</td><td>Get the \ref helios::HeliosDataType for the primitive.</td></tr>
+ <tr><td>\ref helios::Primitive::getPrimitiveDataSize( const char* label ) const "getPrimitiveDataSize( const char* label )"</td><td>Get the length/size of the primitive data named 'label'.</td></tr>
  </table>  
  
  <p> <br> </p>  
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.0;">
+ <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>  #include "Context.h"
   using namespace helios;
 
@@ -1244,7 +1325,10 @@
 
      Context context;
 
-     uint UUID = context.addPatch();
+     vec3 center(0,0,0);
+     vec2 size(1,1);
+
+     uint UUID = context.addPatch( center, size );
 
      float eps = 0.9;
      context.setPrimitiveData(UUID, "emissivity", eps);
@@ -1254,20 +1338,12 @@
         uint L = context.getPrimitiveDataSize(UUID, "emissivity");
      }
 
-  }</code></pre></div>
+  }</code></pre>
+ </div>
 
  \subsection GlobalData Global Data
 
- Global data is similar to primitive data, except that it does not correspond to any particular primitive, rather it is a single instance of a certain data structure. The functions used to create global data within the Context are essentially the same as those used to create primitive data, except they do not take a primitive UUID as an argument (because they do not correspond to primitives). Available global data functions are listed in the table below. Note that these functions do not have a UUID argument because global data is not tied to any particular primitive.
-
- <table>
-  <tr><th>Function</th><th>Description</th></tr>
-  <tr><td>\ref helios::Context::setGlobalData() "setGlobalData()"</td><td>Set the value of global data named 'label'. Note that there are many overloaded versions of this function based on the data type.</td></tr>
-  <tr><td>\ref helios::Context::getGlobalData() "getGlobalData()"</td><td>Get the value of global data named 'label'. Note that there are many overloaded versions of this function based on the data type.</td></tr>
-  <tr><td>\ref helios::Context::doesGlobalDataExist( const char* label ) const "doesGlobalDataExist( const char* label )"</td><td>Check whether global data named 'label' exists in the Context.</td></tr>
-  <tr><td>\ref helios::Context::getGlobalDataType( const char* label ) const "getGlobalDataType( const char* label )"</td><td>Get the \ref helios::HeliosDataType of the global data.</td></tr>
-  <tr><td>\ref helios::Context::getGlobalDataSize( const char* label ) const "getGlobalDataSize( const char* label )"</td><td>Get the length/size of the global data named 'label'.</td></tr>
-  </table>
+ Global data is similar to primitive data, except that it does not correspond to any particular primitive, rather it is a single instance of a certain data structure. The functions used to create global data within the Context are essentially the same as those used to create primitive data, except they do not take a primitive UUID as an argument (because they do not correspond to primitives).
 
  \subsection DataTimeseries Data Timeseries
 
@@ -1281,7 +1357,7 @@
 
   int main(){
 
-        \// Initialize the Context
+        \c// Initialize the Context
         Context context;
      
         \c// Add data to timeseries
@@ -1366,9 +1442,9 @@
 	  <pre><code> \<patch\>
 	   \<center\>0 0 0\</center\>
 	   \<size\>1 1\</size\>
-	   \<rotation\>0 0\</rotation\>
-	   \<color\>1 0 0\</color\>
-	   \<texture\>"grass.jpg"\</texture\>
+	   \<rotation\>0 0\</rotation\> \<!-- OPTIONAL -->
+	   \<color\>1 0 0\</color\> \<!-- OPTIONAL -->
+	   \<texture\>"grass.jpg"\</texture\> \<!-- OPTIONAL -->
 	\</patch\></code></pre>
 	</div>
   </td></tr>
@@ -1380,6 +1456,17 @@
 	   \<vertex\>1 1 0\</vertex\>
 	   \<color\>1 0 0\</color\>
 	\</triangle\></code></pre>
+	</div>
+  </td></tr>
+  <tr><td>Disk</td><td>
+	<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+	  <pre><code> \<disk\>
+	   \<center\>0 0 0\</center\>
+	   \<size\>1 1\</size\>
+	   \<rotation\>0 0\</rotation\>
+	   \<color\>1 0 0\</color\>
+	   \<texture\>"grass.jpg"\</texture\>
+	\</disk\></code></pre>
 	</div>
   </td></tr>
   <tr><td>Voxel</td><td>

@@ -30,7 +30,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
     }
 }
 
-__device__ float evaluateEnergyBalance( float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, char Ntranspire, float heatcapacity, float dt, float Tprev ){
+__device__ float evaluateEnergyBalance( float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, char Ntranspire, float heatcapacity, float surfacehumidity, float dt, float Tprev ){
 
     //Outgoing emission flux
     float Rout = float(Nsides)*eps*5.67e-8F*T*T*T*T;
@@ -46,7 +46,7 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
         gM = 0;
     }
     float lambda = 44000.f; //Latent heat of vaporization for water. Units: J/mol
-    float QL = gM*lambda*(es-ea)/pressure;
+    float QL = gM*lambda*(es-ea*surfacehumidity)/pressure;
 
     //Storage heat flux
     float storage = 0.f;
@@ -59,7 +59,7 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
 
 }
 
-__global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float* Qother, float* eps, float* Ta, float* ea, float* pressure, float* gH, float* gS, uint* Nsides, char* Ntranspire, float* TL, float* heatcapacity, float dt ){
+__global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float* Qother, float* eps, float* Ta, float* ea, float* pressure, float* gH, float* gS, uint* Nsides, char* Ntranspire, float* TL, float* heatcapacity, float* surfacehumidity, float dt ){
 
     uint p = blockIdx.x*blockDim.x+threadIdx.x;
 
@@ -77,8 +77,8 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
     float T_old = T_old_old;
     T_old_old = 400.f;
 
-    float resid_old = evaluateEnergyBalance(T_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],Ntranspire[p],heatcapacity[p],dt,To[p]);
-    float resid_old_old = evaluateEnergyBalance(T_old_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],Ntranspire[p],heatcapacity[p],dt,To[p]);
+    float resid_old = evaluateEnergyBalance(T_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],Ntranspire[p],heatcapacity[p],surfacehumidity[p],dt,To[p]);
+    float resid_old_old = evaluateEnergyBalance(T_old_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],Ntranspire[p],heatcapacity[p],surfacehumidity[p],dt,To[p]);
 
     float resid = 100;
     float err = resid;
@@ -92,7 +92,7 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
 
         T = fabs((T_old_old*resid_old-T_old*resid_old_old)/(resid_old-resid_old_old));
 
-        resid = evaluateEnergyBalance(T,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],Ntranspire[p],heatcapacity[p],dt,To[p]);
+        resid = evaluateEnergyBalance(T,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],Ntranspire[p],heatcapacity[p],surfacehumidity[p],dt,To[p]);
 
         resid_old_old = resid_old;
         resid_old = resid;
@@ -109,7 +109,7 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
     }
 
     if( err>err_max ){
-        printf("WARNING (solveEnergyBalance): Energy balance did not converge.\n");
+        printf("WARNING (EnergyBalanceModel::solveEnergyBalance): Energy balance did not converge.\n");
     }
 
     TL[p] = T;
@@ -237,6 +237,13 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     float* d_heatcapacity;
     CUDA_CHECK_ERROR( cudaMalloc((void**)&d_heatcapacity, Nprimitives*sizeof(float)) );
 
+    float* surfacehumidity = (float*)malloc( Nprimitives*sizeof(float) );
+    float* d_surfacehumidity;
+    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_surfacehumidity, Nprimitives*sizeof(float)) );
+
+    bool calculated_blconductance_used = false;
+    bool primitive_length_used = false;
+
     for( uint u=0; u<Nprimitives; u++ ){
         size_t p = UUIDs.at(u);
 
@@ -253,7 +260,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         //Air temperature
         if( context->doesPrimitiveDataExist(p,"air_temperature") && context->getPrimitiveDataType(p,"air_temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_temperature",Ta[u]);
-            if( Ta[u]<250.f ){
+            if( message_flag && Ta[u]<250.f ){
               std::cout << "WARNING (EnergyBalanceModel::run): Value of " << Ta[u] << " given in 'air_temperature' primitive data is very small. Values should be given in units of Kelvin. Assuming default value of " << air_temperature_default << std::endl;
               Ta[u] = air_temperature_default;
             }
@@ -266,11 +273,15 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         if( context->doesPrimitiveDataExist(p,"air_humidity") && context->getPrimitiveDataType(p,"air_humidity")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_humidity",hr);
             if( hr>1.f ){
-              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << hr << " given in 'air_humidity' primitive data is large than 1. Values should be given as fractional values between 0 and 1. Assuming default value of " << air_humidity_default << std::endl;
-              hr = air_humidity_default;
+                if( message_flag ){
+                    std::cout << "WARNING (EnergyBalanceModel::run): Value of " << hr << " given in 'air_humidity' primitive data is large than 1. Values should be given as fractional values between 0 and 1. Assuming default value of " << air_humidity_default << std::endl;
+                }
+                hr = air_humidity_default;
             }else if( hr<0.f ){
-              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << hr << " given in 'air_humidity' primitive data is less than 0. Values should be given as fractional values between 0 and 1. Assuming default value of " << air_humidity_default << std::endl;
-              hr = air_humidity_default;
+                if( message_flag ) {
+                    std::cout << "WARNING (EnergyBalanceModel::run): Value of " << hr << " given in 'air_humidity' primitive data is less than 0. Values should be given as fractional values between 0 and 1. Assuming default value of " << air_humidity_default << std::endl;
+                }
+                hr = air_humidity_default;
             }
         }else{
             hr = air_humidity_default;
@@ -284,7 +295,9 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         if( context->doesPrimitiveDataExist(p,"air_pressure") && context->getPrimitiveDataType(p,"air_pressure")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(p,"air_pressure",pressure[u]);
             if( pressure[u]<10000.f ){
-              std::cout << "WARNING (EnergyBalanceModel::run): Value of " << pressure[u] << " given in 'air_pressure' primitive data is very small. Values should be given in units of Pascals. Assuming default value of " << pressure_default << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (EnergyBalanceModel::run): Value of " << pressure[u] << " given in 'air_pressure' primitive data is very small. Values should be given in units of Pascals. Assuming default value of " << pressure_default << std::endl;
+                }
               pressure[u] = pressure_default;
             }
         }else{
@@ -333,15 +346,19 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
                 context->getPrimitiveData(p,"object_length",L);
                 if( L==0 ){
                     L = sqrt(context->getPrimitiveArea(p));
+                    primitive_length_used = true;
                 }
             }else if( context->getPrimitiveParentObjectID(p)>0 ){
               uint objID = context->getPrimitiveParentObjectID(p);
               L = sqrt(context->getObjectArea(objID));
             }else{
                 L = sqrt(context->getPrimitiveArea(p));
+                primitive_length_used = true;
             }
 
             gH[u]=0.135f*sqrt(U/L)*float(Nsides[u]);
+
+            calculated_blconductance_used = true;
         }
 
         //Moisture conductance
@@ -365,12 +382,32 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
             heatcapacity[u] = heatcapacity_default;
         }
 
+        //Surface humidity
+        if( context->doesPrimitiveDataExist(p,"surface_humidity") && context->getPrimitiveDataType(p,"surface_humidity")==HELIOS_TYPE_FLOAT ){
+            context->getPrimitiveData(p,"surface_humidity",surfacehumidity[u]);
+        }else{
+            surfacehumidity[u] = surface_humidity_default;
+        }
+
         //Emissivity
         eps[u] = emissivity.at(u);
 
         //Net absorbed radiation
         R[u] = Rn.at(u);
 
+    }
+
+    //if we used the calculated boundary-layer conductance, enable output primitive data "boundarylayer_conductance_out" so that it can be used by other plug-ins
+    if( calculated_blconductance_used ){
+        auto it = find( output_prim_data.begin(), output_prim_data.end(), "boundarylayer_conductance_out" );
+        if( it == output_prim_data.end() ){
+            output_prim_data.emplace_back( "boundarylayer_conductance_out" );
+        }
+    }
+
+    //if the length of a primitive that is not a member of an object was used, issue a warning
+    if( message_flag && primitive_length_used ){
+        std::cout << "WARNING (EnergyBalanceModel::run): The length of a primitive that is not a member of a compound object was used to calculate the boundary-layer conductance. This often results in incorrect results because the length should be that of the object (e.g., leaf, stem) not the primitive. Make sure this is what you intended." << std::endl;
     }
 
     //To,R,Qother,eps,U,L,Ta,ea,pressure,gS,Nsides
@@ -386,6 +423,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     CUDA_CHECK_ERROR( cudaMemcpy(d_Nsides, Nsides, Nprimitives*sizeof(uint), cudaMemcpyHostToDevice) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_Ntranspire, Ntranspire, Nprimitives*sizeof(char), cudaMemcpyHostToDevice) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_heatcapacity, heatcapacity, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_surfacehumidity, surfacehumidity, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
 
     float* T = (float*)malloc( Nprimitives*sizeof(float) );
     float* d_T;
@@ -395,7 +433,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     dim3 dimBlock( 64, 1 );
     dim3 dimGrid( ceil(Nprimitives/64.f) );
 
-    solveEnergyBalance <<< dimGrid, dimBlock >>>(Nprimitives,d_To,d_R,d_Qother,d_eps,d_Ta,d_ea,d_pressure,d_gH,d_gS,d_Nsides,d_Ntranspire,d_T,d_heatcapacity,dt);
+    solveEnergyBalance <<< dimGrid, dimBlock >>>(Nprimitives,d_To,d_R,d_Qother,d_eps,d_Ta,d_ea,d_pressure,d_gH,d_gS,d_Nsides,d_Ntranspire,d_T,d_heatcapacity,d_surfacehumidity,dt);
 
     CUDA_CHECK_ERROR( cudaPeekAtLastError() );
     CUDA_CHECK_ERROR( cudaDeviceSynchronize() );

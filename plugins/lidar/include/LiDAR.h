@@ -64,14 +64,6 @@ public:
       exit(EXIT_FAILURE);
     }
   }
-  void resize( const int nx, const int ny ){
-    Ntheta=nx;
-    Nphi=ny;
-    data.resize(Nphi);
-    for( int j=0; j<Nphi; j++ ){
-      data.at(j).resize(Ntheta);
-    }
-  }
   void resize( const int nx, const int ny, const datatype initval ){
     Ntheta=nx;
     Nphi=ny;
@@ -673,6 +665,13 @@ class LiDARcloud{
   */
   void exportPointCloud( const char* filename, uint scanID );
 
+    //! Export to file all points from a given scan to PTX file.
+    /**
+     * \param[in] "filename" Name of file
+     * \param[in] "scanID" Identifier of scan to be exported
+    */
+    void exportPointCloudPTX( const char* filename, uint scanID );
+
   // ------- VISUALIZER --------- //
   
   //! Add all hit points to the visualizer plug-in, and color them by their r-g-b color
@@ -870,6 +869,19 @@ class LiDARcloud{
   */
   void triangulateHitPoints( float Lmax, float max_aspect_ratio );
 
+  //ERK
+  //! Perform triangulation on hit points in point cloud that meet some filtering criteria based on scalar data
+  /**
+   * \param[in] "Lmax" Maximum allowable length of triangle sides.
+   * \param[in] "max_aspect_ratio" Maximum allowable aspect ratio of triangles.
+   * * \param[in] "scalar_field" Name of a scalar field defined in the ASCII point cloud data (e.g., "deviation")
+   * \param[in] "threshold" Value for filter threshold
+   * \param[in] "comparator" Points will not be used in triangulation if "scalar (comparator) threshold", where (comparator) is one of ">", "<", or "="
+   * \note As an example, imagine we wanted to remove all hit points where the deviation is greater than 15 for the purposes of the triangulation. In this case we would call triangulateHitPoints(Lmax, max_aspect_ratio, "deviation", 15, ">" );
+   */
+  void triangulateHitPoints( float Lmax, float max_aspect_ratio, const char* scalar_field, float threshold, const char* comparator );
+  
+  
   //! Add triangle geometry to Helios context
   /**
    * \parameter[in] "context" Pointer to Helios context
@@ -1027,9 +1039,10 @@ d the last cell's index is Ncells-1.
   /**
    * \param[in] "scanID" ID of scan to gapfill
    * \param[in] "gapfill_grid_only" if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid. If false missing points are gap filled across the range of phi and theta values specified in the scan xml file.
+   * \param[in] "add_flags" if true, gapfillMisses_code is added as hitpoint data. 0 = original points, 1 = gapfilled, 2 = extrapolated at downward edge, 3 = extrapolated at upward edge 
    * \return (x,y,z) of missing points added to the scan from gapfilling
    */
-  std::vector<helios::vec3> gapfillMisses( uint scanID, const bool gapfill_grid_only );
+  std::vector<helios::vec3> gapfillMisses( uint scanID, const bool gapfill_grid_only, const bool add_flags );
   
 
   //! Calculate the leaf area for each grid volume
@@ -1065,6 +1078,15 @@ d the last cell's index is Ncells-1.
    */
   void calculateLeafAreaGPU_equal_weighting( bool beamoutput, bool fillAnalytic );
   
+  //! Calculate the leaf area for each grid volume using equal weighting method
+  /**
+   * \param [in] "beamoutput" if true writes detailed data about each beam to ../beamoutput/beam_data_s_[scan index]_c_[grid cell index].txt.
+   * \param [in] "fillAnalytic" if true, when the iterative LAD inversion fails, the analytic solution using mean dr will be substituted. If false LAD is set to 999.
+   * \param [in] "constant_G" A separate LAD inversion will be performed for each element of this vector, setting the value of G in all voxels to the value given in this vector.
+   * \note writes voxel level data to ../voxeloutput/voxeloutput.txt
+   */
+  void calculateLeafAreaGPU_equal_weighting( bool beamoutput, bool fillAnalytic, std::vector<float> constant_G );
+  
   
   // -------- RECONSTRUCTION --------- //
 
@@ -1095,6 +1117,13 @@ d the last cell's index is Ncells-1.
    * \param[in] "max_aspect_ratio" Maximum allowable aspect ratio of triangles (see also triangulateHitPoints())
   */
   void trunkReconstruction( const helios::vec3 &box_center, const helios::vec3 &box_size, float Lmax, float max_aspect_ratio );
+  
+  //! Delete hitpoints that do not pass through / intersect the voxel grid
+  /**
+   * \param[in] "source" the scan index
+   */
+  void cropBeamsToGridAngleRange(const uint source);
+  
   
 };
 

@@ -3,11 +3,11 @@
 using namespace helios;
 
 int main(){
-  
-  Context context;
 
-  StomatalConductanceModel stomatalconductance(&context);
+    Context context;
 
-  return stomatalconductance.selfTest();
+    StomatalConductanceModel gs(&context);
+
+    return gs.selfTest();
 
 }

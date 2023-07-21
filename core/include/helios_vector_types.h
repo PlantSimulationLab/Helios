@@ -51,37 +51,33 @@ public:
 
   //! Default constructor
   /* initializes to zero */
-  int2(){
-    x=0;
-    y=0;
-  }
+  int2() : x(0), y(0) {}
+
   //! Construct int2 from a vector of ints
   explicit int2( const std::vector<int> &v ){
     if( v.size()!=2){
       throw(std::runtime_error("ERROR: vector for initialization of int2 must have length 2."));
     }
-    x=v.at(0);
-    y=v.at(1);
-  }
-  //! Construct int2 from an array of ints
-  explicit int2( const int v[2] ){
     x=v[0];
     y=v[1];
   }
+  //! Construct int2 from an array of ints
+  explicit int2( const int v[2] ) : x(v[0]), y(v[1]) {}
+
   //! Construct int2 from two ints
-  int2( int v0, int v1 ){
-    x=v0;
-    y=v1;
-  }
+  int2( int v0, int v1 ) : x(v0), y(v1) {}
+
 
   //! Add two int2 vectors
   int2 operator+(const int2& a) const;
+  //! Increment int2 vector
+  void operator+=(const int2& a);
   //! Subtract two int2 vectors
   int2 operator-(const int2& a) const;
   //! Equality for all elements
   bool operator==( const int2& a ) const;
 
-  friend std::ostream &operator<<(std::ostream &os, helios::int2 const &vec) {
+  friend std::ostream &operator<<(std::ostream &os, const helios::int2 &vec) {
     return os << "helios::int2<" << vec.x << ", " << vec.y << ">";
   }
 
@@ -94,8 +90,7 @@ public:
  * \ingroup vectors
 */
 inline int2 make_int2( int X, int Y ){
-  int2 v(X,Y);
-  return v;
+  return {X,Y};
 }
  
 //! Make an int2 vector from an array of ints
@@ -104,22 +99,20 @@ inline int2 make_int2( int X, int Y ){
  * \ingroup vectors
 */
 inline int2 make_int2( int X[2] ){
-  int2 v(X[0],X[1]);
-  return v;
+  return {X[0],X[1]};
 }
 
 inline int2 int2::operator+(const int2& a) const{
-  int2 c;
-  c.x=a.x+x;
-  c.y=a.y+y;
-  return  c;
+  return {a.x+x, a.y+y};
+}
+
+inline void int2::operator+=(const int2& a){
+    x += a.x;
+    y += a.y;
 }
 
 inline int2 int2::operator-(const int2& a) const{
-  int2 c;
-  c.x=x-a.x;
-  c.y=y-a.y;
-  return  c;
+  return {x-a.x, y-a.y};
 }
 
 inline bool int2::operator==( const int2& a ) const{
@@ -140,41 +133,33 @@ public:
 
   //! Default constructor
   /* initializes to zero */
-  int3(){
-    x=0;
-    y=0;
-    z=0;
-  }
+  int3() : x(0), y(0), z(0) {}
+
   //! Construct int3 from a vector of ints
   explicit int3( const std::vector<int> &v ){
     if( v.size()!=3){
         throw(std::runtime_error("ERROR: vector for initialization of int3 must have length 3."));
     }
-    x=v.at(0);
-    y=v.at(1);
-    z=v.at(2);
-  }
-  //! Construct int3 from an array of ints
-  explicit int3( const int v[3] ){
     x=v[0];
     y=v[1];
     z=v[2];
   }
+  //! Construct int3 from an array of ints
+  explicit int3( const int v[3] ) : x(v[0]), y(v[1]), z(v[2]) {}
+
   //! Construct int3 from three ints
-  int3( int v0, int v1, int v2 ){
-    x=v0;
-    y=v1;
-    z=v2;
-  }
+  int3( int v0, int v1, int v2 ) : x(v0), y(v1), z(v2) {}
 
   //! Add two int3 vectors
   int3 operator+(const int3& a) const;
+  //! Increment int3 vector
+  void operator+=(const int3& a);
   //! Subtract two int3 vectors
   int3 operator-(const int3& a) const;
   //! Equality for all elements
   bool operator==( const int3& a ) const;
 
-  friend std::ostream &operator<<(std::ostream &os, helios::int3 const &vec) {
+  friend std::ostream &operator<<(std::ostream &os, const helios::int3 &vec) {
     return os << "helios::int3<" << vec.x << ", " << vec.y << ", " << vec.z << ">";
   }
 
@@ -182,30 +167,26 @@ public:
 
 //! Make an int3 vector from three ints
 inline int3 make_int3( int X, int Y, int Z ){
-  int3 v(X,Y,Z);
-  return v;
+  return {X,Y,Z};
 }
 
 //! Make an int2 vector from an array of ints
 inline int3 make_int3( int X[3] ){
-  int3 v(X[0],X[1],X[2]);
-  return v;
+  return {X[0],X[1],X[2]};
 }
 
 inline int3 int3::operator+(const int3& a) const{
-  int3 c;
-  c.x=a.x+x;
-  c.y=a.y+y;
-  c.z=a.z+z;
-  return  c;
+  return {a.x+x, a.y+y, a.z+z};
+}
+
+inline void int3::operator+=(const int3& a){
+    x += a.x;
+    y += a.y;
+    z += a.z;
 }
 
 inline int3 int3::operator-(const int3& a) const{
-  int3 c;
-  c.x=x-a.x;
-  c.y=y-a.y;
-  c.z=z-a.z;
-  return  c;
+  return {x-a.x, y-a.y, z-a.z};
 }
 
 inline bool int3::operator==( const int3& a ) const{
@@ -228,45 +209,35 @@ public:
 
   //! Default constructor
   /* initializes to zero */
-  int4(){
-    x=0;
-    y=0;
-    z=0;
-    w=0;
-  }
+  int4() : x(0), y(0), z(0), w(0) {}
+
   //! Construct int3 from a vector of ints
   explicit int4( const std::vector<int> &v ){
     if( v.size()!=4){
         throw(std::runtime_error("ERROR: vector for initialization of int4 must have length 4."));
     }
-    x=v.at(0);
-    y=v.at(1);
-    z=v.at(2);
-    w=v.at(3);
-  }
-  //! Construct int4 from an array of ints
-  explicit int4( const int v[3] ){
     x=v[0];
     y=v[1];
     z=v[2];
     w=v[3];
   }
+
+  //! Construct int4 from an array of ints
+  explicit int4( const int v[3] ) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
+
   //! Construct int4 from four ints
-  int4( int v0, int v1, int v2, int v3 ){
-    x=v0;
-    y=v1;
-    z=v2;
-    w=v3;
-  }
+  int4( int v0, int v1, int v2, int v3 ) : x(v0), y(v1), z(v2), w(v3) {}
 
   //! Add two int4 vectors
   int4 operator+(const int4& a) const;
+  //! Increment int4 vector
+  void operator+=(const int4& a);
   //! Subtract two int4 vectors
   int4 operator-(const int4& a) const;
   //! Equality for all elements
   bool operator==( const int4& a ) const;
 
-  friend std::ostream &operator<<(std::ostream &os, helios::int4 const &vec) {
+  friend std::ostream &operator<<(std::ostream &os, const helios::int4 &vec) {
     return os << "helios::int4<" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ">";
   }
 
@@ -274,32 +245,27 @@ public:
 
 //! Make an int4 vector from three ints
  inline int4 make_int4( int X, int Y, int Z, int W ){
-   int4 v(X,Y,Z,W);
-   return v;
+   return {X,Y,Z,W};
  }
 
  //! Make an int4 vector from an array of ints
-inline int4 make_int4( int X[4] ){
-  int4 v(X[0],X[1],X[2],X[3]);
-  return v;
+inline int4 make_int4( const int X[4] ){
+  return {X[0],X[1],X[2],X[3]};
 }
 
 inline int4 int4::operator+(const int4& a) const{
-  int4 c;
-  c.x=a.x+x;
-  c.y=a.y+y;
-  c.z=a.z+z;
-  c.w=a.w+w;
-  return  c;
+  return {a.x+x, a.y+y, a.z+z, a.w+w};
+}
+
+inline void int4::operator+=(const int4& a){
+    x += a.x;
+    y += a.y;
+    z += a.z;
+    w += a.w;
 }
 
 inline int4 int4::operator-(const int4& a) const{
-  int4 c;
-  c.x=x-a.x;
-  c.y=y-a.y;
-  c.z=z-a.z;
-  c.w=w-a.w;
-  return  c;
+    return {a.x-x, a.y-y, a.z-z, a.w-w};
 }
 
 inline bool int4::operator==( const int4& a ) const{
@@ -333,10 +299,8 @@ public:
 
   //! Default constructor 
   /** initializes to zero */
-  vec2(){
-    x=0;
-    y=0;
-  }
+  vec2() : x(0), y(0) {}
+
   //! Initialize vec2 using a vector of floats
   explicit vec2( const std::vector<float> &v ){
     if( v.size()!=2){
@@ -346,20 +310,17 @@ public:
     y=v.at(1);
   }						
   //! Initialize vec2 using an array of floats
-  explicit vec2( const float v[2] ){
-    x=v[0];
-    y=v[1];
-  }
+  explicit vec2( const float v[2] ) : x(v[0]), y(v[1]) {}
+
   //! Initialize vec2 using two floats
-  vec2( float v0, float v1 ){
-    x=v0;
-    y=v1;
-  }
+  vec2( float v0, float v1 ) : x(v0), y(v1) {}
 
   //! Dot (scalar) product of two vec2 vectors
   float operator*(const vec2& a) const;
   //! Sum of two vec2 vectors
   vec2 operator+(const vec2& a) const;
+  //! Increment vec2 vector
+  void operator+=(const vec2& a);
   //! Difference of two vec2 vectors
   vec2 operator-(const vec2& a) const;
   //! Multiply each element by scalar (scalar is multiplied on right: vec2*a)
@@ -373,7 +334,7 @@ public:
   //! check for equality of two vec2 vectors
   bool operator==(const vec2& a) const;
 
-  friend std::ostream &operator<<(std::ostream &os, helios::vec2 const &vec) {
+  friend std::ostream &operator<<(std::ostream &os, const helios::vec2 &vec) {
     return os << "helios::vec2<" << vec.x << ", " << vec.y << ">";
   }
 
@@ -401,6 +362,11 @@ inline float vec2::operator*(const vec2& a) const{
 
 inline vec2 vec2::operator+(const vec2& a) const{
   return  {a.x+x,a.y+y};
+}
+
+inline void vec2::operator+=(const vec2& a){
+    x += a.x;
+    y += a.y;
 }
 
 inline vec2 vec2::operator+(const float a) const {
@@ -469,36 +435,30 @@ public:
 
   //! Default constructor 
   /** initializes to zero */
-  vec3(){
-    x=y=z=0;
-  }
+  vec3() : x(0), y(0), z(0) {}
+
   //! Initialize vec3 using a vector of floats
   explicit vec3( const std::vector<float> &v ){
     if( v.size()!=3){
         throw(std::runtime_error("ERROR: vector for initialization of vec3 must have length 3."));
     }
-    x=v.at(0);
-    y=v.at(1);
-    z=v.at(2);
-  }
-  //! Initialize vec3 using an array of floats
-  explicit vec3( const float v[3] ){
     x=v[0];
     y=v[1];
     z=v[2];
   }
+  //! Initialize vec3 using an array of floats
+  explicit vec3( const float v[3] ) : x(v[0]), y(v[1]), z(v[2]) {}
+
   //! Initialize vec3 using three floats
-  vec3( float v0, float v1, float v2 ){
-    x=v0;
-    y=v1;
-    z=v2;
-  }
+  vec3( float v0, float v1, float v2 ) : x(v0), y(v1), z(v2) {}
 
   //! Dot (scalar) product of two vec3 vectors
   float operator*(const vec3& a) const;
   //! Sum of two vec3 vectors
   vec3 operator+(const vec3& a) const;
-  //! Difference of two vec2 vectors
+  //! Increment vec3 vector
+  void operator+=(const vec3& a);
+  //! Difference of two vec3 vectors
   vec3 operator-(const vec3& a) const;
   //! Multiply each element by scalar (scalar is multiplied on right: vec3*a)
   vec3 operator*( float a) const;
@@ -512,7 +472,7 @@ public:
   //! check for equality of two vec3 vectors
   bool operator==(const vec3& a) const;
 
-  friend std::ostream &operator<<(std::ostream &os, helios::vec3 const &vec) { 
+  friend std::ostream &operator<<(std::ostream &os, const helios::vec3 &vec) {
     return os << "helios::vec3<" << vec.x << ", " << vec.y << ", " << vec.z << ">";
   }
 
@@ -545,6 +505,12 @@ inline float vec3::operator*(const vec3& a) const{
 
 inline vec3 vec3::operator+(const vec3& a) const{
   return  {a.x+x,a.y+y,a.z+z};
+}
+
+inline void vec3::operator+=(const vec3& a){
+    x += a.x;
+    y += a.y;
+    z += a.z;
 }
 
 inline vec3 vec3::operator+(const float a) const{
@@ -616,38 +582,30 @@ public:
 
   //! Default constructor 
   /** initializes to zero */
-  vec4(){
-    x=y=z=w=0;
-  }
+  vec4() : x(0), y(0), z(0), w(0) {}
+
   //! Initialize vec4 using a vector of floats
   explicit vec4( const std::vector<float> &v ){
     if( v.size()!=4){
         throw(std::runtime_error("ERROR: vector for initialization of vec4 must have length 4."));
     }
-    x=v.at(0);
-    y=v.at(1);
-    z=v.at(2);
-    w=v.at(3);
-  }
-  //! Initialize vec3 using an array of floats
-  explicit vec4( const float v[4] ){
     x=v[0];
     y=v[1];
     z=v[2];
     w=v[3];
   }
+  //! Initialize vec3 using an array of floats
+  explicit vec4( const float v[4] ) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
+
   //! Initialize vec4 using four floats
-  vec4( float v0, float v1, float v2, float v3 ){
-    x=v0;
-    y=v1;
-    z=v2;
-    w=v3;
-  }
+  vec4( float v0, float v1, float v2, float v3 ) : x(v0), y(v1), z(v2), w(v3) {}
 
   //! Dot (scalar) product of two vec4 vectors
   float operator*(const vec4& a) const;
   //! Sum of two vec4 vectors
   vec4 operator+(const vec4& a) const;
+  //! Increment vec4 vector
+  void operator+=(const vec4& a);
   //! Difference of two vec4 vectors
   vec4 operator-(const vec4& a) const;
   //! Multiply each element by scalar (scalar is multiplied on right: vec4*a)
@@ -661,7 +619,7 @@ public:
   //! check for equality of two vec4 vectors
   bool operator==(const vec4& a) const;
 
-  friend std::ostream &operator<<(std::ostream &os, helios::vec4 const &vec) {
+  friend std::ostream &operator<<(std::ostream &os, const helios::vec4 &vec) {
     return os << "helios::vec3<" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ">";
   }
 
@@ -691,6 +649,13 @@ inline float vec4::operator*(const vec4& a) const{
 inline vec4 vec4::operator+(const vec4& a) const{
   return  {a.x+x,a.y+y,a.z+z,a.w+w};
 }
+
+inline void vec4::operator+=(const vec4& a){
+     x += a.x;
+     y += a.y;
+     z += a.z;
+     w += a.w;
+ }
 
 inline vec4 vec4::operator+(const float a) const{
   return { x+a, y+a, z+a, w+a };
@@ -744,11 +709,8 @@ public:
   float b;
 
   //! Defalut constructor - initializes color to black. 
-  RGBcolor(){
-    r=0;
-    g=0;
-    b=0;
-  }
+  RGBcolor() : r(0), g(0), b(0) {}
+
   //! Constructor given three floats denoting R-G-B components.
   /**
    *\param[in] "r_" Red color component
@@ -780,9 +742,9 @@ public:
     if( C.size()!=3 ){
         throw(std::runtime_error("ERROR: cannot initialize RGBcolor using supplied vector - size should be 3."));
     }
-    r=clamp(C.at(0));
-    g=clamp(C.at(1));
-    b=clamp(C.at(2));
+    r=clamp(C[0]);
+    g=clamp(C[1]);
+    b=clamp(C[2]);
   }
   //! Constructor given a vec3 denoting R-G-B components.
   /**
@@ -808,7 +770,7 @@ public:
     b*=scl;
   }
 
-  friend std::ostream &operator<<(std::ostream &os, helios::RGBcolor const &c) {
+  friend std::ostream &operator<<(std::ostream &os, const helios::RGBcolor &c) {
     return os << "helios::RGBcolor<" << c.r << ", " << c.g << ", " << c.b << ">";
   }
 
@@ -903,12 +865,8 @@ public:
   float a;
 
   //! Defalut constructor - initializes color to black. 
-  RGBAcolor(){
-    r=0;
-    g=0;
-    b=0;
-    a=0;
-  }
+  RGBAcolor() : r(0), g(0), b(0), a(1) {}
+
   //! Constructor given three floats denoting R-G-B components.
   /**
    * \param[in] "r_" Red color component
@@ -943,10 +901,10 @@ public:
     if( C.size()!=4 ){
         throw(std::runtime_error("ERROR: cannot initialize RGBAcolor using supplied vector - size should be 4."));
     }
-    r=clamp(C.at(0));
-    g=clamp(C.at(1));
-    b=clamp(C.at(2));
-    a=clamp(C.at(3));
+    r=clamp(C[0]);
+    g=clamp(C[1]);
+    b=clamp(C[2]);
+    a=clamp(C[3]);
   }
 
   //! Scale RGBAcolor by some factor.
@@ -963,7 +921,7 @@ public:
     a*=scl;
   }
 
-  friend std::ostream &operator<<(std::ostream &os, helios::RGBAcolor const &c) {
+  friend std::ostream &operator<<(std::ostream &os, const helios::RGBAcolor &c) {
     return os << "helios::RGBAcolor<" << c.r << ", " << c.g << ", " << c.b << ", " << c.a << ">";
   }
 

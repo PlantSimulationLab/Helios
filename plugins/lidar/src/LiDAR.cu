@@ -492,363 +492,415 @@ void LiDARcloud::sourcesInsideGridCellGPU() {
 
 
 std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source){
-  std::vector<helios::vec3> xyz_filled =  gapfillMisses(source, false);
-  return xyz_filled;
+    std::vector<helios::vec3> xyz_filled =  gapfillMisses(source, false, false);
+    return xyz_filled;
 }
 
-std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapfill_grid_only){
-  
-  std::cout << "gap filling complete misses in scan " << source << std::endl; 
-  std::cout << "gapfill_grid_only = " << gapfill_grid_only << std::endl;
-  
-  
-  float gap_distance = 1e5;
-  std::cout << "filled gaps set to distance of " << gap_distance << "m from scanner" << std::endl;
-  
-  
-  
-  helios::vec3 origin = getScanOrigin(source);
-  std::vector<helios::vec3> xyz_filled;
-  
-  // Populating a hit table for each scan:
-  // Column 0 - hit index; Column 1 - timestamp; Column 2 - ray zenith; Column 3 - ray azimuth
-  std::vector<std::vector<double> > hit_table;
-  for( size_t r=0; r< getHitCount(); r++ ){
-    if( getHitScanID(r)== source){
-      
-      helios::SphericalCoord raydir = getHitRaydir(r);
-      
-      if( !doesHitDataExist(r,"timestamp") ){
-        std::cerr << "ERROR (LiDARcloud::gapfillMisses): timestamp value is missing for hit " << r << ". Cannot gapfill. Skipping..." << std::endl;
-        return xyz_filled;
-      }
-      
-      double timestamp = getHitData(r,"timestamp");
-      std::vector<double> data;
-      data.resize(4);
-      data.at(0) = float(r);
-      data.at(1) = timestamp;
-      data.at(2) = raydir.zenith;
-      data.at(3) = raydir.azimuth;
-      hit_table.push_back( data );
-      
-    }
-  }
-  
-  std::cout << "# of hits in the scan =  " << hit_table.size() << std::endl;
-  
-  // sorting, initial dt and dtheta calculations, and determining minimum target index in the scan
-  
-  //sort the hit table by column 1 (timestamp)
-  std::sort( hit_table.begin(), hit_table.end(), LIDAR_CUDA::sortcol1 );
-  
-  int min_tindex = 1;
-  for( size_t r=0; r<hit_table.size()-1; r++ ){
+std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapfill_grid_only, const bool add_flags){
     
-    //this is to figure out if target indexing uses 0 or 1 offset
-    if( min_tindex==1 && doesHitDataExist(hit_table.at(r).at(0),"target_index") && doesHitDataExist(hit_table.at(r).at(0),"target_count") ){
-      if( getHitData(hit_table.at(r).at(0),"target_index")==0 ){
-        min_tindex=0;
-      }
-    }
+    std::cout << "gap filling complete misses in scan " << source << std::endl; 
+    std::cout << "gapfill_grid_only = " << gapfill_grid_only << std::endl;
+    std::cout << "add_flags = " << add_flags << std::endl;
     
-  }
-  
-  // getting rid of points with target index greater than the minimum
-  
-  int ndup_target = 0;
-  // create new array without duplicate timestamps
-  std::vector<std::vector<double> > hit_table_semiclean;
-  for( size_t r=0; r<hit_table.size()-1; r++ ){    
+    float gap_distance = 20000;
+    //float gap_distance = 1e5;
+    std::cout << "filled gaps set to distance of " << gap_distance << "m from scanner" << std::endl;
     
-    //only consider first hits
-    if( doesHitDataExist(hit_table.at(r).at(0),"target_index") && doesHitDataExist(hit_table.at(r).at(0),"target_count") ){
-      if( getHitData(hit_table.at(r).at(0),"target_index")>min_tindex ){
-        ndup_target ++;
-        continue;
-      }
-    }
     
-    hit_table_semiclean.push_back(hit_table.at(r));
     
-  }
-  
-  //  re-calculating dt
-  
-  std::vector<double> dt_semiclean;
-  dt_semiclean.resize(hit_table_semiclean.size());
-  for( size_t r=0; r<hit_table_semiclean.size()-1; r++ ){
+    helios::vec3 origin = getScanOrigin(source);
+    std::vector<helios::vec3> xyz_filled;
     
-    dt_semiclean.at(r) = hit_table_semiclean.at(r+1).at(1)-hit_table_semiclean.at(r).at(1);
-    // set the hit index of the new array
-    hit_table_semiclean.at(r).at(0) = r; 
-    
-  }
-  
-  //  checking for duplicate timestamps in the remaining data
-  
-  int ndup = 0;
-  // create new array without duplicate timestamps
-  std::vector<std::vector<double> > hit_table_clean;
-  for( size_t r=0; r<hit_table_semiclean.size()-1; r++ ){    
-    
-    // if there are still rows with duplicate timestamps, it probably means there is no "target_index" column, but multiple hits per timestamp are still included
-    // proceed using this assumption, just get rid of the rows where dt = 0 for simplicity (last hits probably are what remain). 
-    if( dt_semiclean.at(r)==0){
-      ndup ++;
-      continue;
-    }
-    
-    hit_table_clean.push_back(hit_table_semiclean.at(r));
-  }
-  
-  std::cout << "# of beams in the scan =  " << hit_table_clean.size() << std::endl;
-  
-  
-  // recalculate dt and dtheta with only one hit per beam
-  // and calculate the minimum dt value  
-  std::vector<double> dt_clean;
-  std::vector<float> dtheta_clean;
-  dt_clean.resize(hit_table_clean.size());
-  dtheta_clean.resize(hit_table_clean.size());
-  
-  double dt_clean_min = 1e6;
-  for( size_t r=0; r<hit_table_clean.size()-1; r++ ){
-    
-    dt_clean.at(r) = hit_table_clean.at(r+1).at(1)-hit_table_clean.at(r).at(1);
-    dtheta_clean.at(r) = hit_table_clean.at(r+1).at(2)-hit_table_clean.at(r).at(2);
-    // set the hit index of the new array
-    hit_table_clean.at(r).at(0) = r; 
-    
-    if( dt_clean.at(r)<dt_clean_min){
-      dt_clean_min = dt_clean.at(r);
-    }
-    
-  }
-  
-  // configuration of 2D map
-  // reconfigure hit table into 2D (theta,phi) map
-  std::vector<std::vector<std::vector<double> > > hit_table2D;
-  
-  int column = 0;
-  hit_table2D.resize(1);
-  for( size_t r=0; r<hit_table_clean.size()-1; r++ ){
-    
-    hit_table2D.at(column).push_back( hit_table_clean.at(r) );
-    //for small scans (like the rectangle test case, this needs to change to < 0 or some smaller angle (that is larger than noise))
-    // if( dtheta_clean.at(r) < 0 ){
-    // for normal scans, this threshold allows for 10 degrees drops in theta within a given sweep as noise. This can be adjusted as appropriate. 
-    if( dtheta_clean.at(r) < -0.1745329f ){
-      column++;
-      hit_table2D.resize(column+1);
-    }
-    
-  }
-  
-  std::cout << "# of sweeps in the scan =  " << hit_table2D.size() << std::endl;
-  
-  // calculate average dt and dtheta for subsequent points
-  
-  //calculate average dt
-  float dt_avg = 0;
-  int dt_sum = 0;
-  
-  //calculate the average dtheta to use for extrapolation
-  float dtheta_avg = 0;
-  int dtheta_sum = 0;
-  
-  for( int j=0; j<hit_table2D.size(); j++ ){
-    for( int i=0; i<hit_table2D.at(j).size(); i++ ){
-      int r = int(hit_table2D.at(j).at(i).at(0));
-      if( dt_clean.at(r)>=dt_clean_min && dt_clean.at(r)<1.5*dt_clean_min ){
-        dt_avg += dt_clean.at(r);
-        dt_sum ++;
-        
-        //calculate the average dtheta to use for extrapolation
-        dtheta_avg += dtheta_clean.at(r);
-        dtheta_sum ++;
-        
-      }
-    }
-  }
-  
-  dt_avg = dt_avg/float(dt_sum);
-  //Calculate the average dtheta to use for extrapolation
-  dtheta_avg = dtheta_avg/float(dtheta_sum);
-  
-  //identify gaps and fill
-  for( int j=0; j<hit_table2D.size(); j++ ){
-    for( int i=0; i<hit_table2D.at(j).size()-1; i++ ){
-      
-      double dt = hit_table2D.at(j).at(i+1).at(1)-hit_table2D.at(j).at(i).at(1);
-      
-      if( dt>1.5f*dt_clean_min ){ //missing hit(s)
-        
-        //calculate number of missing hits
-        int Ngap = round(dt/dt_avg)-1;
-        
-        //fill missing points
-        for( int k=1; k<=Ngap; k++ ){
-          
-          float timestep = hit_table2D.at(j).at(i).at(1) + dt_avg*float(k);
-          
-          //interpolate theta and phi
-          float theta = hit_table2D.at(j).at(i).at(2) + (hit_table2D.at(j).at(i+1).at(2)-hit_table2D.at(j).at(i).at(2))*float(k)/float(Ngap+1);
-          float phi = hit_table2D.at(j).at(i).at(3) + (hit_table2D.at(j).at(i+1).at(3)-hit_table2D.at(j).at(i).at(3))*float(k)/float(Ngap+1);
-          if( phi>2.f*M_PI ){
-            phi = phi-2.f*M_PI;
-          }
-          
-          //calculate the (x,y,z) position of the filled hit point
-          helios::SphericalCoord spherical(gap_distance,0.5*M_PI-theta,phi);
-          helios::vec3 xyz = origin+helios::sphere2cart(spherical);
-          
-          xyz_filled.push_back(xyz);
-          
-          //ERK
-          std::map<std::string, double> data;
-          data.insert(std::pair<std::string, double>("timestamp", timestep));
-          data.insert(std::pair<std::string, double>("target_index", min_tindex));
-          data.insert(std::pair<std::string, double>("nRaysHit", 500));
-          addHitPoint(source, xyz, spherical, data); 
-          
+    // Populating a hit table for each scan:
+    // Column 0 - hit index; Column 1 - timestamp; Column 2 - ray zenith; Column 3 - ray azimuth
+    std::vector<std::vector<double> > hit_table;
+    for( size_t r=0; r< getHitCount(); r++ ){
+        if( getHitScanID(r)== source){
+            
+            if(add_flags)
+            {
+                // gapfillMisses_code = 0: original points
+                setHitData(r, "gapfillMisses_code", 0.0);
+            }
+            
+            
+            helios::SphericalCoord raydir = getHitRaydir(r);
+            
+            if( !doesHitDataExist(r,"timestamp") ){
+                std::cerr << "ERROR (LiDARcloud::gapfillMisses): timestamp value is missing for hit " << r << ". Cannot gapfill. Skipping..." << std::endl;
+                return xyz_filled;
+            }
+            
+            double timestamp = getHitData(r,"timestamp");
+            std::vector<double> data;
+            data.resize(4);
+            data.at(0) = float(r);
+            data.at(1) = timestamp;
+            data.at(2) = raydir.zenith;
+            data.at(3) = raydir.azimuth;
+            hit_table.push_back( data );
+            
         }
-      }
     }
-  }
-  uint npointsfilled = xyz_filled.size();
-  std::cout << "# of points filled =  " << npointsfilled << std::endl;
-  
-  helios::vec2 theta_range;
-  // extrapolate missing points
-  if(gapfill_grid_only == true)
-  {
     
-    //ERK
-    //instead of extrapolating to the angle ranges given in the xml file, we can extrapolate to the angle range of the voxel grid to save time. 
-    // to do this we loop through the vertices of the voxel grid.
-    std::vector<helios::vec3> grid_vertices;
-    helios::vec3 boxmin, boxmax;
-    getGridBoundingBox(boxmin, boxmax); // axis aligned bounding box of all grid cells
-    grid_vertices.push_back(boxmin);
-    grid_vertices.push_back(boxmax);
-    grid_vertices.push_back(helios::make_vec3(boxmin.x, boxmin.y, boxmax.z));
-    grid_vertices.push_back(helios::make_vec3(boxmax.x, boxmax.y, boxmin.z));
-    grid_vertices.push_back(helios::make_vec3(boxmin.x, boxmax.y, boxmin.z));
-    grid_vertices.push_back(helios::make_vec3(boxmin.x, boxmax.y, boxmax.z));
-    grid_vertices.push_back(helios::make_vec3(boxmax.x, boxmin.y, boxmin.z));
-    grid_vertices.push_back(helios::make_vec3(boxmax.x, boxmin.y, boxmax.z));
+    std::cout << "# of hits in the scan =  " << hit_table.size() << std::endl;
     
-    float max_theta = 0;
-    float min_theta = M_PI;
-    float max_phi = 0;
-    float min_phi = 2*M_PI;
-    for(uint gg=0;gg<grid_vertices.size();gg++)
+    // sorting, initial dt and dtheta calculations, and determining minimum target index in the scan
+    
+    //sort the hit table by column 1 (timestamp)
+    std::sort( hit_table.begin(), hit_table.end(), LIDAR_CUDA::sortcol1 );
+    
+    int min_tindex = 1;
+    for( size_t r=0; r<hit_table.size()-1; r++ ){
+        
+        //this is to figure out if target indexing uses 0 or 1 offset
+        if( min_tindex==1 && doesHitDataExist(hit_table.at(r).at(0),"target_index") && doesHitDataExist(hit_table.at(r).at(0),"target_count") ){
+            if( getHitData(hit_table.at(r).at(0),"target_index")==0 ){
+                min_tindex=0;
+            }
+        }
+        
+    }
+    
+    // getting rid of points with target index greater than the minimum
+    
+    int ndup_target = 0;
+    // create new array without duplicate timestamps
+    std::vector<std::vector<double> > hit_table_semiclean;
+    for( size_t r=0; r<hit_table.size()-1; r++ ){    
+        
+        //only consider first hits
+        if( doesHitDataExist(hit_table.at(r).at(0),"target_index") && doesHitDataExist(hit_table.at(r).at(0),"target_count") ){
+            if( getHitData(hit_table.at(r).at(0),"target_index")>min_tindex ){
+                ndup_target ++;
+                continue;
+            }
+        }
+        
+        hit_table_semiclean.push_back(hit_table.at(r));
+        
+    }
+    
+    //  re-calculating dt
+    
+    std::vector<double> dt_semiclean;
+    dt_semiclean.resize(hit_table_semiclean.size());
+    for( size_t r=0; r<hit_table_semiclean.size()-1; r++ ){
+        
+        dt_semiclean.at(r) = hit_table_semiclean.at(r+1).at(1)-hit_table_semiclean.at(r).at(1);
+        // set the hit index of the new array
+        hit_table_semiclean.at(r).at(0) = r; 
+        
+    }
+    
+    //  checking for duplicate timestamps in the remaining data
+    
+    int ndup = 0;
+    // create new array without duplicate timestamps
+    std::vector<std::vector<double> > hit_table_clean;
+    for( size_t r=0; r<hit_table_semiclean.size()-1; r++ ){    
+        
+        // if there are still rows with duplicate timestamps, it probably means there is no "target_index" column, but multiple hits per timestamp are still included
+        // proceed using this assumption, just get rid of the rows where dt = 0 for simplicity (last hits probably are what remain). 
+        if( dt_semiclean.at(r)==0){
+            ndup ++;
+            continue;
+        }
+        
+        hit_table_clean.push_back(hit_table_semiclean.at(r));
+    }
+    
+    std::cout << "# of beams in the scan =  " << hit_table_clean.size() << std::endl;
+    
+    
+    // recalculate dt and dtheta with only one hit per beam
+    // and calculate the minimum dt value  
+    std::vector<double> dt_clean;
+    std::vector<float> dtheta_clean;
+    dt_clean.resize(hit_table_clean.size());
+    dtheta_clean.resize(hit_table_clean.size());
+    
+    double dt_clean_min = 1e6;
+    for( size_t r=0; r<hit_table_clean.size()-1; r++ ){
+        
+        dt_clean.at(r) = hit_table_clean.at(r+1).at(1)-hit_table_clean.at(r).at(1);
+        dtheta_clean.at(r) = hit_table_clean.at(r+1).at(2)-hit_table_clean.at(r).at(2);
+        // set the hit index of the new array
+        hit_table_clean.at(r).at(0) = r; 
+        
+        if( dt_clean.at(r)<dt_clean_min){
+            dt_clean_min = dt_clean.at(r);
+        }
+        
+    }
+    
+    // configuration of 2D map
+    // reconfigure hit table into 2D (theta,phi) map
+    std::vector<std::vector<std::vector<double> > > hit_table2D;
+    
+    int column = 0;
+    hit_table2D.resize(1);
+    for( size_t r=0; r<hit_table_clean.size()-1; r++ ){
+        
+        hit_table2D.at(column).push_back( hit_table_clean.at(r) );
+        //for small scans (like the rectangle test case, this needs to change to < 0 or some smaller angle (that is larger than noise))
+        // if( dtheta_clean.at(r) < 0 ){
+        // for normal scans, this threshold allows for 10 degrees drops in theta within a given sweep as noise. This can be adjusted as appropriate. 
+        if( dtheta_clean.at(r) < -0.1745329f ){
+            column++;
+            hit_table2D.resize(column+1);
+        }
+        
+    }
+    
+    std::cout << "# of sweeps in the scan =  " << hit_table2D.size() << std::endl;
+    
+    // calculate average dt and dtheta for subsequent points
+    
+    //calculate average dt
+    float dt_avg = 0;
+    int dt_sum = 0;
+    
+    //calculate the average dtheta to use for extrapolation
+    float dtheta_avg = 0;
+    int dtheta_sum = 0;
+    
+    for( int j=0; j<hit_table2D.size(); j++ ){
+        for( int i=0; i<hit_table2D.at(j).size(); i++ ){
+            int r = int(hit_table2D.at(j).at(i).at(0));
+            if( dt_clean.at(r)>=dt_clean_min && dt_clean.at(r)<1.5*dt_clean_min ){
+                dt_avg += dt_clean.at(r);
+                dt_sum ++;
+                
+                //calculate the average dtheta to use for extrapolation
+                dtheta_avg += dtheta_clean.at(r);
+                dtheta_sum ++;
+                
+            }
+        }
+    }
+    
+    dt_avg = dt_avg/float(dt_sum);
+    //Calculate the average dtheta to use for extrapolation
+    dtheta_avg = dtheta_avg/float(dtheta_sum);
+    
+    std::cout << "dt_avg = " << dt_avg << std::endl;
+    std::cout << "dtheta_avg = " << dtheta_avg << std::endl;
+    std::cout << "hit_table2D.size() = "<< hit_table2D.size() << std::endl;
+    
+    //identify gaps and fill
+    for( int j=0; j<hit_table2D.size(); j++ ){
+        
+        //std::cout << "hit_table2D.at(j = " << j << " ) = "<< hit_table2D.at(j).size() << std::endl;
+        if(hit_table2D.at(j).size() > 0)
+        {
+            for( int i=0; i<hit_table2D.at(j).size()-1; i++ ){
+            
+            double dt = hit_table2D.at(j).at(i+1).at(1)-hit_table2D.at(j).at(i).at(1);
+            
+            if( dt>1.5f*dt_clean_min ){ //missing hit(s)
+                
+                //calculate number of missing hits
+                int Ngap = round(dt/dt_avg)-1;
+                
+                //fill missing points
+                for( int k=1; k<=Ngap; k++ ){
+                    
+                    float timestep = hit_table2D.at(j).at(i).at(1) + dt_avg*float(k);
+                    
+                    //interpolate theta and phi
+                    float theta = hit_table2D.at(j).at(i).at(2) + (hit_table2D.at(j).at(i+1).at(2)-hit_table2D.at(j).at(i).at(2))*float(k)/float(Ngap+1);
+                    float phi = hit_table2D.at(j).at(i).at(3) + (hit_table2D.at(j).at(i+1).at(3)-hit_table2D.at(j).at(i).at(3))*float(k)/float(Ngap+1);
+                    if( phi>2.f*M_PI ){
+                        phi = phi-2.f*M_PI;
+                    }
+                    
+                        //calculate the (x,y,z) position of the filled hit point
+                        helios::SphericalCoord spherical(gap_distance,0.5*M_PI-theta,phi);
+                        helios::vec3 xyz = origin+helios::sphere2cart(spherical);
+                        
+                        xyz_filled.push_back(xyz);
+                        
+                        //ERK
+                        std::map<std::string, double> data;
+                        data.insert(std::pair<std::string, double>("timestamp", timestep));
+                        data.insert(std::pair<std::string, double>("target_index", min_tindex));
+                        data.insert(std::pair<std::string, double>("nRaysHit", 500));
+                        if(add_flags)
+                        {
+                            // gapfillMisses_code = 1: gapfilled points
+                            data.insert(std::pair<std::string, double>("gapfillMisses_code", 1.0));  
+                        }
+                        addHitPoint(source, xyz, spherical, data); 
+                    
+                    }
+                }
+            }
+        }
+ 
+    }
+    uint npointsfilled = xyz_filled.size();
+    std::cout << "# of points filled =  " << npointsfilled << std::endl;
+    
+    helios::vec2 theta_range;
+    theta_range = getScanRangeTheta(source); // use ranges from xml file to start
+    
+    if(gapfill_grid_only == true)
     {
-      helios::vec3 direction_cart = grid_vertices.at(gg)-getScanOrigin(source);
-      helios::SphericalCoord sc = cart2sphere(direction_cart);
-      if(sc.azimuth < min_phi)
-      {
-        min_phi = sc.azimuth;
-      }
-      
-      if(sc.azimuth > max_phi)
-      {
-        max_phi = sc.azimuth;
-      }
-      
-      if(sc.zenith < min_theta)
-      {
-        min_theta = sc.zenith;
-      }
-      
-      if(sc.zenith > max_theta)
-      {
-        max_theta = sc.zenith;
-      }
+        //instead of extrapolating to the angle ranges given in the xml file, we can extrapolate to the angle range of the voxel grid to save time. 
+        // to do this we loop through the vertices of the voxel grid.
+        std::vector<helios::vec3> grid_vertices;
+        helios::vec3 boxmin, boxmax;
+        getGridBoundingBox(boxmin, boxmax); // axis aligned bounding box of all grid cells
+        grid_vertices.push_back(boxmin);
+        grid_vertices.push_back(boxmax);
+        grid_vertices.push_back(helios::make_vec3(boxmin.x, boxmin.y, boxmax.z));
+        grid_vertices.push_back(helios::make_vec3(boxmax.x, boxmax.y, boxmin.z));
+        grid_vertices.push_back(helios::make_vec3(boxmin.x, boxmax.y, boxmin.z));
+        grid_vertices.push_back(helios::make_vec3(boxmin.x, boxmax.y, boxmax.z));
+        grid_vertices.push_back(helios::make_vec3(boxmax.x, boxmin.y, boxmin.z));
+        grid_vertices.push_back(helios::make_vec3(boxmax.x, boxmin.y, boxmax.z));
+        
+        float max_theta = 0;
+        float min_theta = M_PI;
+        float max_phi = 0;
+        float min_phi = 2*M_PI;
+        for(uint gg=0;gg<grid_vertices.size();gg++)
+        {
+            helios::vec3 direction_cart = grid_vertices.at(gg)-getScanOrigin(source);
+            helios::SphericalCoord sc = cart2sphere(direction_cart);
+            if(sc.azimuth < min_phi)
+            {
+                min_phi = sc.azimuth;
+            }
+            
+            if(sc.azimuth > max_phi)
+            {
+                max_phi = sc.azimuth;
+            }
+            
+            if(sc.zenith < min_theta)
+            {
+                min_theta = sc.zenith;
+            }
+            
+            if(sc.zenith > max_theta)
+            {
+                max_theta = sc.zenith;
+            }
+        }
+        
+        
+        // if the min or max theta is outside of the values provided in xml, use the xml values
+        if(min_theta < theta_range.x)
+        {
+            min_theta = theta_range.x;
+        }
+        
+        if(max_theta > theta_range.y)
+        {
+            max_theta = theta_range.y;
+        }
+        
+        theta_range = helios::make_vec2(min_theta, max_theta);
     }
     
-    theta_range = helios::make_vec2(min_theta, max_theta);
-  }else{
-    theta_range = getScanRangeTheta(source); // use ranges from xml file
-  }
-  
-  for( int j=0; j<hit_table2D.size(); j++ ){
+    std::cout << "theta_range for extrapolation: " << theta_range.x*(180.0/M_PI) << ", " << theta_range.y*(180.0/M_PI) << std::endl;
     
-    //upward edge points
-    if( hit_table2D.at(j).front().at(2)>theta_range.x ){
-      
-      float dtheta = dtheta_avg;
-      float theta = hit_table2D.at(j).at(0).at(2) - dtheta;
-      //just use the the last value of phi in the sweep
-      float phi =  hit_table2D.at(j).at(0).at(3);
-      float timestep = hit_table2D.at(j).at(0).at(1) - dt_avg;
-      if( dtheta==0 ){
-        continue;
-      }
-      
-      while( theta>theta_range.x ){
+    // extrapolate missing points
+    for( int j=0; j<hit_table2D.size(); j++ ){
         
-        helios::SphericalCoord spherical(gap_distance,0.5*M_PI-theta,phi);
-        helios::vec3 xyz = origin+helios::sphere2cart(spherical);
+        if(hit_table2D.at(j).size() > 0)
+        {
         
-        xyz_filled.push_back(xyz);
+            //upward edge points
+            if( hit_table2D.at(j).front().at(2)>theta_range.x ){
+                
+                float dtheta = dtheta_avg;
+                float theta = hit_table2D.at(j).at(0).at(2) - dtheta;
+                //just use the the last value of phi in the sweep
+                float phi =  hit_table2D.at(j).at(0).at(3);
+                float timestep = hit_table2D.at(j).at(0).at(1) - dt_avg;
+                if( dtheta==0 ){
+                    continue;
+                }
+                
+                while( theta>theta_range.x ){
+                    
+                    helios::SphericalCoord spherical(gap_distance,0.5*M_PI-theta,phi);
+                    helios::vec3 xyz = origin+helios::sphere2cart(spherical);
+                    
+                    xyz_filled.push_back(xyz);
+                    
+                    
+                    //ERK
+                    std::map<std::string, double> data;
+                    data.insert(std::pair<std::string, double>("timestamp", timestep));
+                    data.insert(std::pair<std::string, double>("target_index", min_tindex));
+                    data.insert(std::pair<std::string, double>("nRaysHit", 500));
+                    if(add_flags)
+                    {
+                        // gapfillMisses_code = 3: upward edge points
+                        data.insert(std::pair<std::string, double>("gapfillMisses_code", 3.0));
+                        
+                    }
+    
+                    addHitPoint(source, xyz, spherical, data); 
+                    
+                    
+                    theta = theta - dtheta;
+                    timestep = timestep - dt_avg;
+                    
+                    
+                }
+            }
+            
+            //downward edge points
+            //ERK changed .x to .y here
+            if( hit_table2D.at(j).back().at(2)<theta_range.y ){
+                
+                int sz = hit_table2D.at(j).size();
+                // same concept as above for downward edge points
+                float dtheta = dtheta_avg;
+                float theta = hit_table2D.at(j).at(sz-1).at(2) + dtheta;
+                float phi = hit_table2D.at(j).at(sz-1).at(3);
+                float timestep = hit_table2D.at(j).at(sz-1).at(1) + dt_avg;
+                while( theta<theta_range.y ){
+                    
+                    helios::SphericalCoord spherical(gap_distance,0.5*M_PI-theta,phi);
+                    helios::vec3 xyz = origin+helios::sphere2cart(spherical);
+                    
+                    xyz_filled.push_back(xyz);
+                    
+                    //ERK
+                    std::map<std::string, double> data;
+                    data.insert(std::pair<std::string, double>("timestamp", timestep));
+                    data.insert(std::pair<std::string, double>("target_index", min_tindex));
+                    data.insert(std::pair<std::string, double>("nRaysHit", 500));
+                    if(add_flags)
+                    {
+                        // gapfillMisses_code = 2: downward edge points
+                        data.insert(std::pair<std::string, double>("gapfillMisses_code", 2.0));
+                    }
+                  
+                    addHitPoint(source, xyz, spherical, data); 
+                    
+                    theta = theta + dtheta;
+                    timestep = timestep + dt_avg;
+                    
+                }
+            }
+        }
         
-        
-        //ERK
-        std::map<std::string, double> data;
-        data.insert(std::pair<std::string, double>("timestamp", timestep));
-        data.insert(std::pair<std::string, double>("target_index", min_tindex));
-        data.insert(std::pair<std::string, double>("nRaysHit", 500));
-        addHitPoint(source, xyz, spherical, data); 
-        
-        
-        theta = theta - dtheta;
-        timestep = timestep - dt_avg;
-        
-        
-      }
     }
     
-    //downward edge points
-    //ERK changed .x to .y here
-    if( hit_table2D.at(j).back().at(2)<theta_range.y ){
-      
-      int sz = hit_table2D.at(j).size();
-      // same concept as above for downward edge points
-      float dtheta = dtheta_avg;
-      float theta = hit_table2D.at(j).at(sz-1).at(2) + dtheta;
-      float phi = hit_table2D.at(j).at(sz-1).at(3);
-      float timestep = hit_table2D.at(j).at(sz-1).at(1) + dt_avg;
-      while( theta<theta_range.y ){
-        
-        helios::SphericalCoord spherical(gap_distance,0.5*M_PI-theta,phi);
-        helios::vec3 xyz = origin+helios::sphere2cart(spherical);
-        
-        xyz_filled.push_back(xyz);
-        
-        //ERK
-        std::map<std::string, double> data;
-        data.insert(std::pair<std::string, double>("timestamp", timestep));
-        data.insert(std::pair<std::string, double>("target_index", min_tindex));
-        data.insert(std::pair<std::string, double>("nRaysHit", 500));
-        addHitPoint(source, xyz, spherical, data); 
-        
-        theta = theta + dtheta;
-        timestep = timestep + dt_avg;
-        
-      }
-    }
+    uint npointsextrapolated = xyz_filled.size() - npointsfilled;
+    std::cout << "# of points extrapolated =  " << npointsextrapolated << std::endl;
     
-  }
-  
-  uint npointsextrapolated = xyz_filled.size() - npointsfilled;
-  std::cout << "# of points extrapolated =  " << npointsextrapolated << std::endl;
-  
-  
-  std::cout << xyz_filled.size() << " points in the gap filled data" << std::endl;
-  return xyz_filled;
-  
+    
+    std::cout << xyz_filled.size() << " points in the gap filled data" << std::endl;
+    return xyz_filled;
+    
 }
 
 
@@ -4018,461 +4070,961 @@ __global__ void LIDAR_CUDA::intersectTriangles( const size_t Npulse, const int r
 
 
 
-
-
-
 void LiDARcloud::calculateLeafAreaGPU_equal_weighting(bool beamoutput, bool fillAnalytic  ){
-  
-  // calculates LAD using the equal weighting method 
-  // writes all voxel level variables to a file
-  // unlike previous calculateLeafAreaGPU versions, this one does not set the cell leaf area variable and does not filter based on minVoxelHits argument 
-  
-  if( printmessages ){
-    std::cout << "Calculating leaf area..." << std::endl;
-  }
-  
-  if( !triangulationcomputed ){
-    std::cerr << "ERROR (calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
-    exit(EXIT_FAILURE);
-  }
-  
-  if( !hitgridcellcomputed ){
-    calculateHitGridCellGPU();
-  }
-  
-  const uint Nscans = getScanCount();
-  const uint Ncells = getGridCellCount();
-  
-  //variable aggregates over all scans where we just keep tacking hits on the end for all scans
-  std::vector<std::vector<float> > dr_agg; //dr is path length through grid cell
-  dr_agg.resize(Ncells);
-  std::vector<float> G_agg; //G is dot product between ray direction and triangle normal that was hit (only relevant for hits)
-  G_agg.resize(Ncells,0);
-  std::vector<float> hit_before_agg; //hit_before corresponds to scan points that hit something before encountering a particular grid cell
-  hit_before_agg.resize(Ncells,0);
-  std::vector<float> hit_after_agg; //hit_after corresponds to scan points that hit something after encountering a particular grid cell (including something inside that cell)
-  hit_after_agg.resize(Ncells,0);
-  std::vector<float> hit_inside_agg; //hit_inside corresponds to scan points that hit something within a particular grid cell.
-  hit_inside_agg.resize(Ncells,0);
-  
-  //average G(theta)
-  std::vector<float> Gtheta_bar;
-  Gtheta_bar.resize(Ncells,0.f);
-  
-  // nested vectors to save P calculation terms
-  // cell, scan, variable, value
-  std::vector<std::vector<float>>  P_equal_numerator_array(Ncells);
-  std::vector<std::vector<float>>  P_equal_denominator_array(Ncells);
-  
-  std::vector<std::vector<uint>>  voxel_beam_count_array(Ncells);
-  std::vector<std::vector<float>>  dr_array(Ncells);
-  
-  
-  // r is the index of all hitpoints (all scans)
-  // it is saved for the current scan in this_scan_index
-  // i is the index of this_scan_index
-  // so when accessing the things using getHitData(), getHitXYZ(), etc, 
-  // for only one of the scans (this_scan), 
-  // need to use getHitData(this_scan_index[i]) not getHitData(i)
-  
-  ////////////// We are going to perform all calculations on a scan-by-scan basis: loop through each scan
-  for( uint s=0; s<Nscans; s++ ){
-    
+
+    // calculates LAD using the equal weighting method
+    // writes all voxel level variables to a file
+    // unlike previous calculateLeafAreaGPU versions, this one does not set the cell leaf area variable and does not filter based on minVoxelHits argument
+
     if( printmessages ){
-      std::cout << "------------------------SCAN = " << s << std::endl;
+        std::cout << "Calculating leaf area..." << std::endl;
     }
-    
-    //only work with hitpoints associated with current scan
-    std::vector<helios::vec3> this_scan_xyz;
-    std::vector<uint> this_scan_index;
-    for( size_t r=0; r< getHitCount(); r++ ){
-      if( getHitScanID(r)==s ){
-        this_scan_xyz.push_back( getHitXYZ(r) );
-        this_scan_index.push_back(r);
-      }
+
+    if( !triangulationcomputed ){
+        std::cerr << "ERROR (calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
+        exit(EXIT_FAILURE);
     }
-    // size of the array of all the hits in this scan
-    size_t Nhits = this_scan_xyz.size();
-    
-    if( printmessages ){
-      std::cout << "Number of hitpoints associated with this scan = Nhits = " << Nhits << std::endl;
+
+    if( !hitgridcellcomputed ){
+        calculateHitGridCellGPU();
     }
-    
-    // count the number of beams (i.e. don't count multiple hits per beam)
-    float previous_time = -1.f;
-    uint Nbeams = 0;
-    for(uint i=0; i < Nhits; i++)
-    {
-      float current_time = getHitData(this_scan_index[i], "timestamp");
-      if(current_time != previous_time){
-        Nbeams ++;
-        previous_time = current_time;
-      }
-    }
-    
-    if( printmessages ){
-      std::cout << "Number of beams associated with this scan = Nbeams = " << Nbeams << std::endl;
-    }
-    
-    // create a vector each element of which represents a unique beam and is another vector of the hit point indices of this_scan_xyz that is associated with this beam
-    float previous_beam = getHitData(this_scan_index[0], "timestamp");
-    uint beam_ID = 0;
-    std::vector<std::vector<uint>> beam_array(Nbeams);
-    for(uint i=0; i < Nhits; i++)
-    {
-      float current_beam = getHitData(this_scan_index[i], "timestamp");
-      
-      if(current_beam == previous_beam)
-      {
-        beam_array.at(beam_ID).push_back(i); //ERK 
-      }else{
-        beam_ID ++;
-        beam_array.at(beam_ID).push_back(i); //ERK
-        previous_beam = current_beam;
-      }
-      
-    }
-    
-    // set up GPU things for current scan
-    const float3 origin = vec3tofloat3(getScanOrigin(s));
-    float3* scan_xyz = (float3*)malloc( Nhits*sizeof(float3) );
-    float* scan_weight = (float*)malloc( Nhits*sizeof(float) );
-    
-    for( size_t i=0; i<Nhits; i++ ){
-      scan_xyz[i] = vec3tofloat3(this_scan_xyz.at(i));
-      scan_weight[i] = 1.f;
-    }
-    
-    float* hit_before = (float*)malloc( sizeof(float));
-    float* hit_after = (float*)malloc( sizeof(float));
-    float* d_hit_before;
-    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_before, sizeof(float)) );
-    float* d_hit_after;
-    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_after, sizeof(float)) );
-    
-    float3* d_scan_xyz;
-    CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_xyz, Nhits*sizeof(float3)) );
-    CUDA_CHECK_ERROR( cudaMemcpy(d_scan_xyz, scan_xyz, Nhits*sizeof(float3), cudaMemcpyHostToDevice) );
-    
-    float* d_scan_weight;
-    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_scan_weight, Nhits*sizeof(float)) );
-    CUDA_CHECK_ERROR( cudaMemcpy(d_scan_weight, scan_weight, Nhits*sizeof(float), cudaMemcpyHostToDevice) );
-    
-    float* dr = (float*)malloc( Nhits*sizeof(float));
-    float* d_dr;
-    CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr, Nhits*sizeof(float)) );
-    
-    uint* hit_location = (uint*)malloc( Nhits*sizeof(uint));
-    uint* d_hit_location;
-    CUDA_CHECK_ERROR( cudaMalloc((uint**)&d_hit_location, Nhits*sizeof(uint)) );
-    
-    
-    /////////////////////////////////////////////////////////////////////
-    // now loop through each voxel
-    for( uint c=0; c<Ncells; c++ ){
-      
-      if( printmessages ){
-        std::cout << "----CELL = " << c << std::endl;
-      }
-      
-      std::ofstream file_beam;
-      if( beamoutput){
-        // set up header of file that outputs one row for each beam in the current scan that interacts with the current voxel
-        
-        file_beam.open("../beamoutput/beam_data_s_" + std::to_string(s) + "_c_" + std::to_string(c) + ".txt");
-        file_beam << "scan, cell, beam, E_before, E_inside, E_after, E_miss, sin_theta, dr, last_dr"  << std::endl;
-      }
-      
-      //load the attributes of the grid cell
-      float3 center = vec3tofloat3(getCellCenter(c));
-      float3 anchor = vec3tofloat3(getCellGlobalAnchor(c));
-      float3 size = vec3tofloat3(getCellSize(c));
-      float rotation = getCellRotation(c);
-      
-      CUDA_CHECK_ERROR( cudaMemset( d_hit_location, 0, Nhits*sizeof(uint)) );
-      CUDA_CHECK_ERROR( cudaMemset( d_dr, 0, Nhits*sizeof(float)) );
-      CUDA_CHECK_ERROR( cudaMemset( d_hit_before, 0, sizeof(float)) );
-      CUDA_CHECK_ERROR( cudaMemset( d_hit_after, 0, sizeof(float)) );
-      
-      uint3 dimBlock = make_uint3( min(size_t(512),Nhits), 1, 1 );
-      uint3 dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), 1, 1  );
-      
-      if( dimBlock.x==0 && dimGrid.x==0 ){
-        continue;
-      }
-      
-      float scanner_range = 5000.0;
-      intersectGridcell_synthetic <<< dimGrid, dimBlock >>>( Nhits, origin, d_scan_xyz, d_scan_weight, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after, d_hit_location, scanner_range );
-      
-      cudaDeviceSynchronize();
-      CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
-      
-      //copy results back to host
-      CUDA_CHECK_ERROR( cudaMemcpy( hit_before, d_hit_before, sizeof(float), cudaMemcpyDeviceToHost));
-      CUDA_CHECK_ERROR( cudaMemcpy( hit_after, d_hit_after, sizeof(float), cudaMemcpyDeviceToHost));
-      CUDA_CHECK_ERROR( cudaMemcpy( dr, d_dr, Nhits*sizeof(float), cudaMemcpyDeviceToHost));
-      CUDA_CHECK_ERROR( cudaMemcpy( hit_location, d_hit_location, Nhits*sizeof(uint), cudaMemcpyDeviceToHost));
-      
-      float P_equal_numerator = 0;
-      float P_equal_denominator = 0;
-      uint voxel_beam_count = 0;
-      
-      if( printmessages ){
-        std::cout << "Nbeams = " << Nbeams << std::endl;
-      }
-      ////////////////////////// loop through each beam associated with the current scan
-      for(int k = 0; k < Nbeams; k++){
-        
-        float E_before = 0;
-        float E_inside = 0;
-        float E_after = 0;
-        float E_miss = 0;
-        
-        float sin_theta;
-        // float W = 0;
-        float drr = 0;
-        float last_drr = 0;
-        
-        ////////// loop through the hitpoints in the current beam to get number of rays in each location
-        for(int j = 0; j < beam_array.at(k).size(); j++){
-          
-          // pull out the index of the current scan's current beam's current hit (which is used to access the overall hit index r through this_scan_index[i])
-          uint i = beam_array.at(k).at(j);
-          
-          helios::vec3 direction = getHitXYZ(this_scan_index[i])-getScanOrigin(getHitScanID(this_scan_index[i]));
-          direction.normalize();
-          sin_theta = sin(acos_safe(direction.z));
-          
-          last_drr = dr[i];
-          drr += dr[i];
-          
-          if(hit_location[i] == 1){
-            E_before ++;
-          }else if(hit_location[i] == 2){
-            E_inside ++;
-          }else if(hit_location[i] == 3){
-            E_after ++;
-            //   if(getHitData(this_scan_index[i], "target_index") == 0){ // if this is the first hitpoint for this beam,
-            //      W = 1.0;
-            //    }
-          }else if(hit_location[i] == 4){
-            E_miss ++;
-          } // or this hitpoint / beam did not intersect the voxel and should not be added to the total number of beams for this voxel
-          
-        } // end of loop through each hit in the current beam
-        
-        // calculate the average dr across all hitpoints for the beam (they should all be the same anyway... but just in case)
-        float drrx = drr / float(beam_array.at(k).size());
-        
-        // if the path length is greater than 0 (it passes throught the current voxel), save it as an element of
-        if( drrx > 0.f )
-        {
-          dr_array.at(c).push_back(drrx);
-        }
-        
-        if( beamoutput ){
-          // output info about the current beam to file
-          file_beam << s << "," << c << "," << k << "," << E_before << "," << E_inside << "," << E_after << "," << E_miss << "," << sin_theta << "," << drrx << "," << last_drr << std::endl;
-        }
-        
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // calculate terms equal weighting P method
-        
-        // P_equal
-        if(E_inside != 0 || E_after != 0){ // only count for P_equal if some hit points were inside or after the voxel
-          P_equal_numerator += (E_after / (E_before + E_inside + E_after))*sin_theta;
-          P_equal_denominator += ((E_inside + E_after) / (E_before + E_inside + E_after))*sin_theta;
-          voxel_beam_count++;
-        }else if(E_inside == 0 && E_after == 0 && E_before == 0 && E_miss != 0){ // also count this beam if there is only a "hitpoint" that missed (far after the voxel)
-          P_equal_numerator += 1*sin_theta;
-          P_equal_denominator += 1*sin_theta;
-          voxel_beam_count++;
-        }
-        
-        
-      }// end of loop through all beams for the current cell
-      
-      // save results for the current cell to the arrays
-      P_equal_numerator_array.at(c).push_back(P_equal_numerator);
-      P_equal_denominator_array.at(c).push_back(P_equal_denominator);
-      voxel_beam_count_array.at(c).push_back(voxel_beam_count);
-      hit_before_agg.at(c) += *hit_before;
-      hit_after_agg.at(c) += *hit_after;
-      
-      for( size_t i=0; i<Nhits; i++ ){
-        if( dr[i]>0.f ){
-          dr_agg.at(c).push_back(dr[i]);
-        }
-      }
-      
-      file_beam.close();
-    } // end of loop through all cells
-    
-    free( scan_xyz );
-    free( scan_weight );
-    free( dr );
-    free( hit_before );
-    free( hit_after );
-    CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
-    CUDA_CHECK_ERROR( cudaFree(d_scan_weight) );
-    CUDA_CHECK_ERROR( cudaFree(d_dr) );
-    CUDA_CHECK_ERROR( cudaFree(d_hit_before) );
-    CUDA_CHECK_ERROR( cudaFree(d_hit_after) );
-    
-  }//end scan loop
-  
-  std::vector<float> P_equal(Ncells);
-  std::vector<uint> voxel_beam_count_tot(Ncells);
-  std::vector<float> dr_bar(Ncells);
-  
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // now aggregate over all scans
-  for( uint c=0; c<Ncells; c++ ){
-    
-    float P_equal_numerator_array_agg = 0;
-    float P_equal_denominator_array_agg = 0;
-    uint voxel_beam_count_array_agg=0;
-    
+
+    const uint Nscans = getScanCount();
+    const uint Ncells = getGridCellCount();
+
+    //variable aggregates over all scans where we just keep tacking hits on the end for all scans
+    std::vector<std::vector<float> > dr_agg; //dr is path length through grid cell
+    dr_agg.resize(Ncells);
+    std::vector<float> G_agg; //G is dot product between ray direction and triangle normal that was hit (only relevant for hits)
+    G_agg.resize(Ncells,0);
+    std::vector<float> hit_before_agg; //hit_before corresponds to scan points that hit something before encountering a particular grid cell
+    hit_before_agg.resize(Ncells,0);
+    std::vector<float> hit_after_agg; //hit_after corresponds to scan points that hit something after encountering a particular grid cell (including something inside that cell)
+    hit_after_agg.resize(Ncells,0);
+    std::vector<float> hit_inside_agg; //hit_inside corresponds to scan points that hit something within a particular grid cell.
+    hit_inside_agg.resize(Ncells,0);
+
+    //average G(theta)
+    std::vector<float> Gtheta_bar;
+    Gtheta_bar.resize(Ncells,0.f);
+
+    // nested vectors to save P calculation terms
+    // cell, scan, variable, value
+    std::vector<std::vector<float>>  P_equal_numerator_array(Ncells);
+    std::vector<std::vector<float>>  P_equal_denominator_array(Ncells);
+
+    std::vector<std::vector<uint>>  voxel_beam_count_array(Ncells);
+    std::vector<std::vector<float>>  dr_array(Ncells);
+
+
+    // r is the index of all hitpoints (all scans)
+    // it is saved for the current scan in this_scan_index
+    // i is the index of this_scan_index
+    // so when accessing the things using getHitData(), getHitXYZ(), etc,
+    // for only one of the scans (this_scan),
+    // need to use getHitData(this_scan_index[i]) not getHitData(i)
+
+    ////////////// We are going to perform all calculations on a scan-by-scan basis: loop through each scan
     for( uint s=0; s<Nscans; s++ ){
-      
-      P_equal_numerator_array_agg += P_equal_numerator_array.at(c).at(s);
-      P_equal_denominator_array_agg += P_equal_denominator_array.at(c).at(s);
-      voxel_beam_count_array_agg += voxel_beam_count_array.at(c).at(s);
+
+        if( printmessages ){
+            std::cout << "------------------------SCAN = " << s << std::endl;
+        }
+
+        //only work with hitpoints associated with current scan
+        std::vector<helios::vec3> this_scan_xyz;
+        std::vector<uint> this_scan_index;
+        for( size_t r=0; r< getHitCount(); r++ ){
+            if( getHitScanID(r)==s ){
+                this_scan_xyz.push_back( getHitXYZ(r) );
+                this_scan_index.push_back(r);
+            }
+        }
+        // size of the array of all the hits in this scan
+        size_t Nhits = this_scan_xyz.size();
+
+        if( printmessages ){
+            std::cout << "Number of hitpoints associated with this scan = Nhits = " << Nhits << std::endl;
+        }
+
+        // count the number of beams (i.e. don't count multiple hits per beam)
+        float previous_time = -1.f;
+        uint Nbeams = 0;
+        for(uint i=0; i < Nhits; i++)
+        {
+            float current_time = getHitData(this_scan_index[i], "timestamp");
+            if(current_time != previous_time){
+                Nbeams ++;
+                previous_time = current_time;
+            }
+        }
+
+        if( printmessages ){
+            std::cout << "Number of beams associated with this scan = Nbeams = " << Nbeams << std::endl;
+        }
+
+        // create a vector each element of which represents a unique beam and is another vector of the hit point indices of this_scan_xyz that is associated with this beam
+        float previous_beam = getHitData(this_scan_index[0], "timestamp");
+        uint beam_ID = 0;
+        std::vector<std::vector<uint>> beam_array(Nbeams);
+        for(uint i=0; i < Nhits; i++)
+        {
+            float current_beam = getHitData(this_scan_index[i], "timestamp");
+
+            if(current_beam == previous_beam)
+            {
+                beam_array.at(beam_ID).push_back(i); //ERK
+            }else{
+                beam_ID ++;
+                beam_array.at(beam_ID).push_back(i); //ERK
+                previous_beam = current_beam;
+            }
+
+        }
+
+        // set up GPU things for current scan
+        const float3 origin = vec3tofloat3(getScanOrigin(s));
+        float3* scan_xyz = (float3*)malloc( Nhits*sizeof(float3) );
+        float* scan_weight = (float*)malloc( Nhits*sizeof(float) );
+
+        for( size_t i=0; i<Nhits; i++ ){
+            scan_xyz[i] = vec3tofloat3(this_scan_xyz.at(i));
+            scan_weight[i] = 1.f;
+        }
+
+        float* hit_before = (float*)malloc( sizeof(float));
+        float* hit_after = (float*)malloc( sizeof(float));
+        float* d_hit_before;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_before, sizeof(float)) );
+        float* d_hit_after;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_after, sizeof(float)) );
+
+        float3* d_scan_xyz;
+        CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_xyz, Nhits*sizeof(float3)) );
+        CUDA_CHECK_ERROR( cudaMemcpy(d_scan_xyz, scan_xyz, Nhits*sizeof(float3), cudaMemcpyHostToDevice) );
+
+        float* d_scan_weight;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_scan_weight, Nhits*sizeof(float)) );
+        CUDA_CHECK_ERROR( cudaMemcpy(d_scan_weight, scan_weight, Nhits*sizeof(float), cudaMemcpyHostToDevice) );
+
+        float* dr = (float*)malloc( Nhits*sizeof(float));
+        float* d_dr;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr, Nhits*sizeof(float)) );
+
+        uint* hit_location = (uint*)malloc( Nhits*sizeof(uint));
+        uint* d_hit_location;
+        CUDA_CHECK_ERROR( cudaMalloc((uint**)&d_hit_location, Nhits*sizeof(uint)) );
+
+
+        /////////////////////////////////////////////////////////////////////
+        // now loop through each voxel
+        for( uint c=0; c<Ncells; c++ ){
+
+            if( printmessages ){
+                std::cout << "----CELL = " << c << std::endl;
+            }
+
+            std::ofstream file_beam;
+            if( beamoutput){
+                // set up header of file that outputs one row for each beam in the current scan that interacts with the current voxel
+
+                file_beam.open("../beamoutput/beam_data_s_" + std::to_string(s) + "_c_" + std::to_string(c) + ".txt");
+                file_beam << "scan, cell, beam, E_before, E_inside, E_after, E_miss, sin_theta, dr, last_dr"  << std::endl;
+            }
+
+            //load the attributes of the grid cell
+            float3 center = vec3tofloat3(getCellCenter(c));
+            float3 anchor = vec3tofloat3(getCellGlobalAnchor(c));
+            float3 size = vec3tofloat3(getCellSize(c));
+            float rotation = getCellRotation(c);
+
+            CUDA_CHECK_ERROR( cudaMemset( d_hit_location, 0, Nhits*sizeof(uint)) );
+            CUDA_CHECK_ERROR( cudaMemset( d_dr, 0, Nhits*sizeof(float)) );
+            CUDA_CHECK_ERROR( cudaMemset( d_hit_before, 0, sizeof(float)) );
+            CUDA_CHECK_ERROR( cudaMemset( d_hit_after, 0, sizeof(float)) );
+
+            uint3 dimBlock = make_uint3( min(size_t(512),Nhits), 1, 1 );
+            uint3 dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), 1, 1  );
+
+            if( dimBlock.x==0 && dimGrid.x==0 ){
+                continue;
+            }
+
+            float scanner_range = 5000.0;
+            intersectGridcell_synthetic <<< dimGrid, dimBlock >>>( Nhits, origin, d_scan_xyz, d_scan_weight, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after, d_hit_location, scanner_range );
+
+            cudaDeviceSynchronize();
+            CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
+
+            //copy results back to host
+            CUDA_CHECK_ERROR( cudaMemcpy( hit_before, d_hit_before, sizeof(float), cudaMemcpyDeviceToHost));
+            CUDA_CHECK_ERROR( cudaMemcpy( hit_after, d_hit_after, sizeof(float), cudaMemcpyDeviceToHost));
+            CUDA_CHECK_ERROR( cudaMemcpy( dr, d_dr, Nhits*sizeof(float), cudaMemcpyDeviceToHost));
+            CUDA_CHECK_ERROR( cudaMemcpy( hit_location, d_hit_location, Nhits*sizeof(uint), cudaMemcpyDeviceToHost));
+
+            float P_equal_numerator = 0;
+            float P_equal_denominator = 0;
+            uint voxel_beam_count = 0;
+
+            if( printmessages ){
+                std::cout << "Nbeams = " << Nbeams << std::endl;
+            }
+            ////////////////////////// loop through each beam associated with the current scan
+            for(int k = 0; k < Nbeams; k++){
+
+                float E_before = 0;
+                float E_inside = 0;
+                float E_after = 0;
+                float E_miss = 0;
+
+                float sin_theta;
+                // float W = 0;
+                float drr = 0;
+                float last_drr = 0;
+
+                ////////// loop through the hitpoints in the current beam to get number of rays in each location
+                for(int j = 0; j < beam_array.at(k).size(); j++){
+
+                    // pull out the index of the current scan's current beam's current hit (which is used to access the overall hit index r through this_scan_index[i])
+                    uint i = beam_array.at(k).at(j);
+
+                    helios::vec3 direction = getHitXYZ(this_scan_index[i])-getScanOrigin(getHitScanID(this_scan_index[i]));
+                    direction.normalize();
+                    sin_theta = sin(acos_safe(direction.z));
+
+                    last_drr = dr[i];
+                    drr += dr[i];
+
+                    if(hit_location[i] == 1){
+                        E_before ++;
+                    }else if(hit_location[i] == 2){
+                        E_inside ++;
+                    }else if(hit_location[i] == 3){
+                        E_after ++;
+                        //   if(getHitData(this_scan_index[i], "target_index") == 0){ // if this is the first hitpoint for this beam,
+                        //      W = 1.0;
+                        //    }
+                    }else if(hit_location[i] == 4){
+                        E_miss ++;
+                    } // or this hitpoint / beam did not intersect the voxel and should not be added to the total number of beams for this voxel
+
+                } // end of loop through each hit in the current beam
+
+                // calculate the average dr across all hitpoints for the beam (they should all be the same anyway... but just in case)
+                float drrx = drr / float(beam_array.at(k).size());
+
+                // if the path length is greater than 0 (it passes throught the current voxel), save it as an element of
+                if( drrx > 0.f )
+                {
+                    dr_array.at(c).push_back(drrx);
+                }
+
+                if( beamoutput ){
+                    // output info about the current beam to file
+                    file_beam << s << "," << c << "," << k << "," << E_before << "," << E_inside << "," << E_after << "," << E_miss << "," << sin_theta << "," << drrx << "," << last_drr << std::endl;
+                }
+
+                ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                // calculate terms equal weighting P method
+
+                // P_equal
+                if(E_inside != 0 || E_after != 0){ // only count for P_equal if some hit points were inside or after the voxel
+                    P_equal_numerator += (E_after / (E_before + E_inside + E_after))*sin_theta;
+                    P_equal_denominator += ((E_inside + E_after) / (E_before + E_inside + E_after))*sin_theta;
+                    voxel_beam_count++;
+                }else if(E_inside == 0 && E_after == 0 && E_before == 0 && E_miss != 0){ // also count this beam if there is only a "hitpoint" that missed (far after the voxel)
+                    P_equal_numerator += 1*sin_theta;
+                    P_equal_denominator += 1*sin_theta;
+                    voxel_beam_count++;
+                }
+
+
+            }// end of loop through all beams for the current cell
+
+            // save results for the current cell to the arrays
+            P_equal_numerator_array.at(c).push_back(P_equal_numerator);
+            P_equal_denominator_array.at(c).push_back(P_equal_denominator);
+            voxel_beam_count_array.at(c).push_back(voxel_beam_count);
+            hit_before_agg.at(c) += *hit_before;
+            hit_after_agg.at(c) += *hit_after;
+
+            for( size_t i=0; i<Nhits; i++ ){
+                if( dr[i]>0.f ){
+                    dr_agg.at(c).push_back(dr[i]);
+                }
+            }
+
+            file_beam.close();
+        } // end of loop through all cells
+
+        free( scan_xyz );
+        free( scan_weight );
+        free( dr );
+        free( hit_before );
+        free( hit_after );
+        CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
+        CUDA_CHECK_ERROR( cudaFree(d_scan_weight) );
+        CUDA_CHECK_ERROR( cudaFree(d_dr) );
+        CUDA_CHECK_ERROR( cudaFree(d_hit_before) );
+        CUDA_CHECK_ERROR( cudaFree(d_hit_after) );
+
+    }//end scan loop
+
+    std::vector<float> P_equal(Ncells);
+    std::vector<uint> voxel_beam_count_tot(Ncells);
+    std::vector<float> dr_bar(Ncells);
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // now aggregate over all scans
+    for( uint c=0; c<Ncells; c++ ){
+
+        float P_equal_numerator_array_agg = 0;
+        float P_equal_denominator_array_agg = 0;
+        uint voxel_beam_count_array_agg=0;
+
+        for( uint s=0; s<Nscans; s++ ){
+
+            P_equal_numerator_array_agg += P_equal_numerator_array.at(c).at(s);
+            P_equal_denominator_array_agg += P_equal_denominator_array.at(c).at(s);
+            voxel_beam_count_array_agg += voxel_beam_count_array.at(c).at(s);
+        }
+
+        P_equal[c] = P_equal_numerator_array_agg / P_equal_denominator_array_agg ;
+        voxel_beam_count_tot[c] = voxel_beam_count_array_agg;
+
+        if( printmessages ){
+            std::cout << "Cell " << c << ", voxel_beam_count = " << voxel_beam_count_tot[c]  << std::endl;
+            std::cout << "Cell " << c << ", P_equal = " << P_equal[c] << std::endl;
+        }
+
+        float mean_dr = 0;
+        for(int j = 0; j < dr_array.at(c).size(); j++)
+        {
+            mean_dr += dr_array.at(c).at(j);
+        }
+        dr_bar[c] = mean_dr/ float(dr_array.at(c).size());
+        if( printmessages ){
+            std::cout << "Cell " << c << ", dr_bar = " <<  dr_bar[c] << std::endl;
+        }
+    } //end of loop through cells to aggregate all scans
+
+
+    /// old code in original calculateLeafAreaGPU_testing() ... do we need to keep this??
+    //----------- Calculate number of hits in voxels -------------- //
+
+    //figure out hits for all scans
+    for( size_t r=0; r< getHitCount(); r++ ){
+        if( getHitGridCell(r)>=0 ){
+            helios::vec3 direction = getHitXYZ(r)-getScanOrigin(getHitScanID(r));
+            direction.normalize();
+            hit_inside_agg.at(getHitGridCell(r)) += sin(acos_safe(direction.z));
+        }
     }
-    
-    P_equal[c] = P_equal_numerator_array_agg / P_equal_denominator_array_agg ;
-    voxel_beam_count_tot[c] = voxel_beam_count_array_agg;
-    
+
+    //---------------------- Calculate G(theta) from triangulation --------------------------//
+
+    std::vector<float> Gtheta;
+    Gtheta.resize(Ncells,0.f);
+
+    const size_t Ntri = getTriangleCount();
+
+    std::vector<uint> cell_tri_count;
+    cell_tri_count.resize(Ncells,0);
+
+    std::vector<float> area_sin_sum;
+    area_sin_sum.resize(Ncells,0.f);
+
+    for( size_t t=0; t<Ntri; t++ ){
+
+        Triangulation tri = getTriangle(t);
+        int cell = tri.gridcell;
+
+        if( cell>=0 && cell<Ncells ){ //triangle is inside a grid cell
+
+            helios::vec3 t0 = tri.vertex0;
+            helios::vec3 t1 = tri.vertex1;
+            helios::vec3 t2 = tri.vertex2;
+
+            helios::vec3 v0 = t1-t0;
+            helios::vec3 v1 = t2-t0;
+            helios::vec3 v2 = t2-t1;
+
+            float L0 = v0.magnitude();
+            float L1 = v1.magnitude();
+            float L2 = v2.magnitude();
+
+            float S = 0.5f*(L0+L1+L2);
+            float area = sqrt( S*(S-L0)*(S-L1)*(S-L2) );
+
+            helios::vec3 normal = cross( v0, v2 );
+            normal.normalize();
+
+            helios::vec3 raydir = t0-getScanOrigin( tri.scanID );
+            raydir.normalize();
+
+            float theta = fabs(acos_safe(raydir.z));
+
+            if( area==area ){ //in rare cases you can get area=NaN
+
+                Gtheta.at(cell) += fabs(normal*raydir)*area*fabs(sin(theta));
+                area_sin_sum.at(cell) += area*fabs(sin(theta));
+                cell_tri_count.at(cell) += 1;
+
+            }
+
+        }
+    }
+
+    for( uint c=0; c<Ncells; c++ ){
+        if( cell_tri_count[c]>0 ){
+            //Gtheta[c] *= float(cell_tri_count[c])/(area_sum[c]*sin_sum[c]);
+            //Gtheta[c] *= float(cell_tri_count[c])/(area_sin_sum[c]);
+            Gtheta[c] *= 1.0/(area_sin_sum[c]);
+
+            Gtheta_bar[c] += Gtheta[c]/float(Nscans);
+            std::cout << "Cell " << c << " Gtheta_bar = " <<  Gtheta_bar[c] << std::endl;
+        }
+    }
+
+
+    //------------------ Perform inversions to get LAD using the different methods for P --------------------//
+
     if( printmessages ){
-      std::cout << "Cell " << c << ", voxel_beam_count = " << voxel_beam_count_tot[c]  << std::endl;
-      std::cout << "Cell " << c << ", P_equal = " << P_equal[c] << std::endl;
+        std::cout << "Inverting to find LAD..." << std::flush;
     }
-    
-    float mean_dr = 0;
-    for(int j = 0; j < dr_array.at(c).size(); j++)
+
+    // perform LAD inversion using triangulation-estimated Gtheta
+    std::vector<float> LAD_equal = LAD_inversion(P_equal, Gtheta, dr_array, fillAnalytic);
+
+    if( printmessages ){
+        std::cout << "finished LAD inversions" << std::endl;
+    }
+
+    // output the voxel level variables
+    std::ofstream file_output;
+    file_output.open("../voxeloutput/voxeloutput.txt");
+    file_output << "cell, grid_center_x, grid_center_y, grid_center_z, grid_size_x, grid_size_y, grid_size_z, Nbeams, dr_bar, G, P_equal, LAD_equal"  << std::endl;
+
+    for(uint c=0; c<Ncells; c++)
     {
-      mean_dr += dr_array.at(c).at(j);
+        helios::vec3 grid_size = getCellSize(c);
+        helios::vec3 grid_center = getCellCenter(c);
+
+        setCellLeafArea(LAD_equal[c]*grid_size.x*grid_size.y*grid_size.z,c);
+
+        setCellGtheta( Gtheta[c], c );
+
+        file_output << c << "," << grid_center.x << "," << grid_center.y << "," << grid_center.z << "," << grid_size.x << "," << grid_size.y << "," << grid_size.z << "," << voxel_beam_count_tot.at(c) << "," << dr_bar[c] << "," << Gtheta[c] << "," << P_equal[c] << "," << LAD_equal[c] << std::endl;
     }
-    dr_bar[c] = mean_dr/ float(dr_array.at(c).size());
+    file_output.close();
+
     if( printmessages ){
-      std::cout << "Cell " << c << ", dr_bar = " <<  dr_bar[c] << std::endl;
+        std::cout << "done." << std::endl;
     }
-  } //end of loop through cells to aggregate all scans
-  
-  
-  /// old code in original calculateLeafAreaGPU_testing() ... do we need to keep this??
-  //----------- Calculate number of hits in voxels -------------- //
-  
-  //figure out hits for all scans
-  for( size_t r=0; r< getHitCount(); r++ ){
-    if( getHitGridCell(r)>=0 ){
-      helios::vec3 direction = getHitXYZ(r)-getScanOrigin(getHitScanID(r));
-      direction.normalize();
-      hit_inside_agg.at(getHitGridCell(r)) += sin(acos_safe(direction.z));
+
+}
+
+
+void LiDARcloud::calculateLeafAreaGPU_equal_weighting(bool beamoutput, bool fillAnalytic, std::vector<float> constant_G){
+    
+    // calculates LAD using the equal weighting method 
+    // writes all voxel level variables to a file
+    // unlike previous calculateLeafAreaGPU versions, this one does not set the cell leaf area variable and does not filter based on minVoxelHits argument 
+    
+    if( printmessages ){
+        std::cout << "Calculating leaf area..." << std::endl;
     }
-  }
-  
-  //---------------------- Calculate G(theta) from triangulation --------------------------//
-  
-  std::vector<float> Gtheta;
-  Gtheta.resize(Ncells,0.f);
-  
-  const size_t Ntri = getTriangleCount();
-  
-  std::vector<uint> cell_tri_count;
-  cell_tri_count.resize(Ncells,0);
-  
-  std::vector<float> area_sin_sum;
-  area_sin_sum.resize(Ncells,0.f);
-  
-  for( size_t t=0; t<Ntri; t++ ){
     
-    Triangulation tri = getTriangle(t);
-    int cell = tri.gridcell;
+    if( !triangulationcomputed ){
+        std::cerr << "ERROR (calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
+        exit(EXIT_FAILURE);
+    }
     
-    if( cell>=0 && cell<Ncells ){ //triangle is inside a grid cell
-      
-      helios::vec3 t0 = tri.vertex0;
-      helios::vec3 t1 = tri.vertex1;
-      helios::vec3 t2 = tri.vertex2;
-      
-      helios::vec3 v0 = t1-t0;
-      helios::vec3 v1 = t2-t0;
-      helios::vec3 v2 = t2-t1;
-      
-      float L0 = v0.magnitude();
-      float L1 = v1.magnitude();
-      float L2 = v2.magnitude();
-      
-      float S = 0.5f*(L0+L1+L2);
-      float area = sqrt( S*(S-L0)*(S-L1)*(S-L2) );
-      
-      helios::vec3 normal = cross( v0, v2 );
-      normal.normalize();
-      
-      helios::vec3 raydir = t0-getScanOrigin( tri.scanID );
-      raydir.normalize();
-      
-      float theta = fabs(acos_safe(raydir.z));
-      
-      if( area==area ){ //in rare cases you can get area=NaN
+    if( !hitgridcellcomputed ){
+        calculateHitGridCellGPU();
+    }
+    
+    const uint Nscans = getScanCount();
+    const uint Ncells = getGridCellCount();
+    
+    //variable aggregates over all scans where we just keep tacking hits on the end for all scans
+    std::vector<std::vector<float> > dr_agg; //dr is path length through grid cell
+    dr_agg.resize(Ncells);
+    std::vector<float> G_agg; //G is dot product between ray direction and triangle normal that was hit (only relevant for hits)
+    G_agg.resize(Ncells,0);
+    std::vector<float> hit_before_agg; //hit_before corresponds to scan points that hit something before encountering a particular grid cell
+    hit_before_agg.resize(Ncells,0);
+    std::vector<float> hit_after_agg; //hit_after corresponds to scan points that hit something after encountering a particular grid cell (including something inside that cell)
+    hit_after_agg.resize(Ncells,0);
+    std::vector<float> hit_inside_agg; //hit_inside corresponds to scan points that hit something within a particular grid cell.
+    hit_inside_agg.resize(Ncells,0);
+    
+    //average G(theta)
+    std::vector<float> Gtheta_bar;
+    Gtheta_bar.resize(Ncells,0.f);
+    
+    // nested vectors to save P calculation terms
+    // cell, scan, variable, value
+    std::vector<std::vector<float>>  P_equal_numerator_array(Ncells);
+    std::vector<std::vector<float>>  P_equal_denominator_array(Ncells);
+    
+    std::vector<std::vector<uint>>  voxel_beam_count_array(Ncells);
+    std::vector<std::vector<float>>  dr_array(Ncells);
+    
+    
+    // r is the index of all hitpoints (all scans)
+    // it is saved for the current scan in this_scan_index
+    // i is the index of this_scan_index
+    // so when accessing the things using getHitData(), getHitXYZ(), etc, 
+    // for only one of the scans (this_scan), 
+    // need to use getHitData(this_scan_index[i]) not getHitData(i)
+    
+    ////////////// We are going to perform all calculations on a scan-by-scan basis: loop through each scan
+    for( uint s=0; s<Nscans; s++ ){
         
-        Gtheta.at(cell) += fabs(normal*raydir)*area*fabs(sin(theta));
-        area_sin_sum.at(cell) += area*fabs(sin(theta));
-        cell_tri_count.at(cell) += 1;
+        if( printmessages ){
+            std::cout << "------------------------SCAN = " << s << std::endl;
+        }
         
-      }
-      
+        //only work with hitpoints associated with current scan
+        std::vector<helios::vec3> this_scan_xyz;
+        std::vector<uint> this_scan_index;
+        for( size_t r=0; r< getHitCount(); r++ ){
+            if( getHitScanID(r)==s ){
+                this_scan_xyz.push_back( getHitXYZ(r) );
+                this_scan_index.push_back(r);
+            }
+        }
+        // size of the array of all the hits in this scan
+        size_t Nhits = this_scan_xyz.size();
+        
+        if( printmessages ){
+            std::cout << "Number of hitpoints associated with this scan = Nhits = " << Nhits << std::endl;
+        }
+        
+        // count the number of beams (i.e. don't count multiple hits per beam)
+        float previous_time = -1.f;
+        uint Nbeams = 0;
+        for(uint i=0; i < Nhits; i++)
+        {
+            float current_time = getHitData(this_scan_index[i], "timestamp");
+            if(current_time != previous_time){
+                Nbeams ++;
+                previous_time = current_time;
+            }
+        }
+        
+        if( printmessages ){
+            std::cout << "Number of beams associated with this scan = Nbeams = " << Nbeams << std::endl;
+        }
+        
+        // create a vector each element of which represents a unique beam and is another vector of the hit point indices of this_scan_xyz that is associated with this beam
+        float previous_beam = getHitData(this_scan_index[0], "timestamp");
+        uint beam_ID = 0;
+        std::vector<std::vector<uint>> beam_array(Nbeams);
+        for(uint i=0; i < Nhits; i++)
+        {
+            float current_beam = getHitData(this_scan_index[i], "timestamp");
+            
+            if(current_beam == previous_beam)
+            {
+                beam_array.at(beam_ID).push_back(i); //ERK 
+            }else{
+                beam_ID ++;
+                beam_array.at(beam_ID).push_back(i); //ERK
+                previous_beam = current_beam;
+            }
+            
+        }
+        
+        // set up GPU things for current scan
+        const float3 origin = vec3tofloat3(getScanOrigin(s));
+        float3* scan_xyz = (float3*)malloc( Nhits*sizeof(float3) );
+        float* scan_weight = (float*)malloc( Nhits*sizeof(float) );
+        
+        for( size_t i=0; i<Nhits; i++ ){
+            scan_xyz[i] = vec3tofloat3(this_scan_xyz.at(i));
+            scan_weight[i] = 1.f;
+        }
+        
+        float* hit_before = (float*)malloc( sizeof(float));
+        float* hit_after = (float*)malloc( sizeof(float));
+        float* d_hit_before;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_before, sizeof(float)) );
+        float* d_hit_after;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_hit_after, sizeof(float)) );
+        
+        float3* d_scan_xyz;
+        CUDA_CHECK_ERROR( cudaMalloc((float3**)&d_scan_xyz, Nhits*sizeof(float3)) );
+        CUDA_CHECK_ERROR( cudaMemcpy(d_scan_xyz, scan_xyz, Nhits*sizeof(float3), cudaMemcpyHostToDevice) );
+        
+        float* d_scan_weight;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_scan_weight, Nhits*sizeof(float)) );
+        CUDA_CHECK_ERROR( cudaMemcpy(d_scan_weight, scan_weight, Nhits*sizeof(float), cudaMemcpyHostToDevice) );
+        
+        float* dr = (float*)malloc( Nhits*sizeof(float));
+        float* d_dr;
+        CUDA_CHECK_ERROR( cudaMalloc((float**)&d_dr, Nhits*sizeof(float)) );
+        
+        uint* hit_location = (uint*)malloc( Nhits*sizeof(uint));
+        uint* d_hit_location;
+        CUDA_CHECK_ERROR( cudaMalloc((uint**)&d_hit_location, Nhits*sizeof(uint)) );
+        
+        
+        /////////////////////////////////////////////////////////////////////
+        // now loop through each voxel
+        for( uint c=0; c<Ncells; c++ ){
+            
+            if( printmessages ){
+                std::cout << "----CELL = " << c << std::endl;
+            }
+            
+            std::ofstream file_beam;
+            if( beamoutput){
+                // set up header of file that outputs one row for each beam in the current scan that interacts with the current voxel
+                
+                file_beam.open("../beamoutput/beam_data_s_" + std::to_string(s) + "_c_" + std::to_string(c) + ".txt");
+                file_beam << "scan, cell, beam, E_before, E_inside, E_after, E_miss, sin_theta, dr, last_dr"  << std::endl;
+            }
+            
+            //load the attributes of the grid cell
+            float3 center = vec3tofloat3(getCellCenter(c));
+            float3 anchor = vec3tofloat3(getCellGlobalAnchor(c));
+            float3 size = vec3tofloat3(getCellSize(c));
+            float rotation = getCellRotation(c);
+            
+            CUDA_CHECK_ERROR( cudaMemset( d_hit_location, 0, Nhits*sizeof(uint)) );
+            CUDA_CHECK_ERROR( cudaMemset( d_dr, 0, Nhits*sizeof(float)) );
+            CUDA_CHECK_ERROR( cudaMemset( d_hit_before, 0, sizeof(float)) );
+            CUDA_CHECK_ERROR( cudaMemset( d_hit_after, 0, sizeof(float)) );
+            
+            uint3 dimBlock = make_uint3( min(size_t(512),Nhits), 1, 1 );
+            uint3 dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), 1, 1  );
+            
+            if( dimBlock.x==0 && dimGrid.x==0 ){
+                continue;
+            }
+            
+            float scanner_range = 5000.0;
+            intersectGridcell_synthetic <<< dimGrid, dimBlock >>>( Nhits, origin, d_scan_xyz, d_scan_weight, center, anchor, size, rotation, d_dr, d_hit_before, d_hit_after, d_hit_location, scanner_range );
+            
+            cudaDeviceSynchronize();
+            CUDA_CHECK_ERROR( cudaPeekAtLastError() ); //if there was an error inside the kernel, it will show up here
+            
+            //copy results back to host
+            CUDA_CHECK_ERROR( cudaMemcpy( hit_before, d_hit_before, sizeof(float), cudaMemcpyDeviceToHost));
+            CUDA_CHECK_ERROR( cudaMemcpy( hit_after, d_hit_after, sizeof(float), cudaMemcpyDeviceToHost));
+            CUDA_CHECK_ERROR( cudaMemcpy( dr, d_dr, Nhits*sizeof(float), cudaMemcpyDeviceToHost));
+            CUDA_CHECK_ERROR( cudaMemcpy( hit_location, d_hit_location, Nhits*sizeof(uint), cudaMemcpyDeviceToHost));
+            
+            float P_equal_numerator = 0;
+            float P_equal_denominator = 0;
+            uint voxel_beam_count = 0;
+            
+            if( printmessages ){
+                std::cout << "Nbeams = " << Nbeams << std::endl;
+            }
+            ////////////////////////// loop through each beam associated with the current scan
+            for(int k = 0; k < Nbeams; k++){
+                
+                float E_before = 0;
+                float E_inside = 0;
+                float E_after = 0;
+                float E_miss = 0;
+                
+                float sin_theta;
+                // float W = 0;
+                float drr = 0;
+                float last_drr = 0;
+                
+                ////////// loop through the hitpoints in the current beam to get number of rays in each location
+                for(int j = 0; j < beam_array.at(k).size(); j++){
+                    
+                    // pull out the index of the current scan's current beam's current hit (which is used to access the overall hit index r through this_scan_index[i])
+                    uint i = beam_array.at(k).at(j);
+                    
+                    helios::vec3 direction = getHitXYZ(this_scan_index[i])-getScanOrigin(getHitScanID(this_scan_index[i]));
+                    direction.normalize();
+                    sin_theta = sin(acos_safe(direction.z));
+                    
+                    last_drr = dr[i];
+                    drr += dr[i];
+                    
+                    if(hit_location[i] == 1){
+                        E_before ++;
+                    }else if(hit_location[i] == 2){
+                        E_inside ++;
+                    }else if(hit_location[i] == 3){
+                        E_after ++;
+                        //   if(getHitData(this_scan_index[i], "target_index") == 0){ // if this is the first hitpoint for this beam,
+                        //      W = 1.0;
+                        //    }
+                    }else if(hit_location[i] == 4){
+                        E_miss ++;
+                    } // or this hitpoint / beam did not intersect the voxel and should not be added to the total number of beams for this voxel
+                    
+                } // end of loop through each hit in the current beam
+                
+                // calculate the average dr across all hitpoints for the beam (they should all be the same anyway... but just in case)
+                float drrx = drr / float(beam_array.at(k).size());
+                
+                // if the path length is greater than 0 (it passes throught the current voxel), save it as an element of
+                if( drrx > 0.f )
+                {
+                    dr_array.at(c).push_back(drrx);
+                }
+                
+                if( beamoutput ){
+                    // output info about the current beam to file
+                    file_beam << s << "," << c << "," << k << "," << E_before << "," << E_inside << "," << E_after << "," << E_miss << "," << sin_theta << "," << drrx << "," << last_drr << std::endl;
+                }
+                
+                ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                // calculate terms equal weighting P method
+                
+                // P_equal
+                if(E_inside != 0 || E_after != 0){ // only count for P_equal if some hit points were inside or after the voxel
+                    P_equal_numerator += (E_after / (E_before + E_inside + E_after))*sin_theta;
+                    P_equal_denominator += ((E_inside + E_after) / (E_before + E_inside + E_after))*sin_theta;
+                    voxel_beam_count++;
+                }else if(E_inside == 0 && E_after == 0 && E_before == 0 && E_miss != 0){ // also count this beam if there is only a "hitpoint" that missed (far after the voxel)
+                    P_equal_numerator += 1*sin_theta;
+                    P_equal_denominator += 1*sin_theta;
+                    voxel_beam_count++;
+                }
+                
+                
+            }// end of loop through all beams for the current cell
+            
+            // save results for the current cell to the arrays
+            P_equal_numerator_array.at(c).push_back(P_equal_numerator);
+            P_equal_denominator_array.at(c).push_back(P_equal_denominator);
+            voxel_beam_count_array.at(c).push_back(voxel_beam_count);
+            hit_before_agg.at(c) += *hit_before;
+            hit_after_agg.at(c) += *hit_after;
+            
+            for( size_t i=0; i<Nhits; i++ ){
+                if( dr[i]>0.f ){
+                    dr_agg.at(c).push_back(dr[i]);
+                }
+            }
+            
+            file_beam.close();
+        } // end of loop through all cells
+        
+        free( scan_xyz );
+        free( scan_weight );
+        free( dr );
+        free( hit_before );
+        free( hit_after );
+        CUDA_CHECK_ERROR( cudaFree(d_scan_xyz) );
+        CUDA_CHECK_ERROR( cudaFree(d_scan_weight) );
+        CUDA_CHECK_ERROR( cudaFree(d_dr) );
+        CUDA_CHECK_ERROR( cudaFree(d_hit_before) );
+        CUDA_CHECK_ERROR( cudaFree(d_hit_after) );
+        
+    }//end scan loop
+    
+    std::vector<float> P_equal(Ncells);
+    std::vector<uint> voxel_beam_count_tot(Ncells);
+    std::vector<float> dr_bar(Ncells);
+    
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // now aggregate over all scans
+    for( uint c=0; c<Ncells; c++ ){
+        
+        float P_equal_numerator_array_agg = 0;
+        float P_equal_denominator_array_agg = 0;
+        uint voxel_beam_count_array_agg=0;
+        
+        for( uint s=0; s<Nscans; s++ ){
+            
+            P_equal_numerator_array_agg += P_equal_numerator_array.at(c).at(s);
+            P_equal_denominator_array_agg += P_equal_denominator_array.at(c).at(s);
+            voxel_beam_count_array_agg += voxel_beam_count_array.at(c).at(s);
+        }
+        
+        P_equal[c] = P_equal_numerator_array_agg / P_equal_denominator_array_agg ;
+        voxel_beam_count_tot[c] = voxel_beam_count_array_agg;
+        
+        if( printmessages ){
+            std::cout << "Cell " << c << ", voxel_beam_count = " << voxel_beam_count_tot[c]  << std::endl;
+            std::cout << "Cell " << c << ", P_equal = " << P_equal[c] << std::endl;
+        }
+        
+        float mean_dr = 0;
+        for(int j = 0; j < dr_array.at(c).size(); j++)
+        {
+            mean_dr += dr_array.at(c).at(j);
+        }
+        dr_bar[c] = mean_dr/ float(dr_array.at(c).size());
+        if( printmessages ){
+            std::cout << "Cell " << c << ", dr_bar = " <<  dr_bar[c] << std::endl;
+        }
+    } //end of loop through cells to aggregate all scans
+    
+    
+    /// old code in original calculateLeafAreaGPU_testing() ... do we need to keep this??
+    //----------- Calculate number of hits in voxels -------------- //
+    
+    //figure out hits for all scans
+    for( size_t r=0; r< getHitCount(); r++ ){
+        if( getHitGridCell(r)>=0 ){
+            helios::vec3 direction = getHitXYZ(r)-getScanOrigin(getHitScanID(r));
+            direction.normalize();
+            hit_inside_agg.at(getHitGridCell(r)) += sin(acos_safe(direction.z));
+        }
     }
-  }
-  
-  for( uint c=0; c<Ncells; c++ ){
-    if( cell_tri_count[c]>0 ){
-      //Gtheta[c] *= float(cell_tri_count[c])/(area_sum[c]*sin_sum[c]);
-      //Gtheta[c] *= float(cell_tri_count[c])/(area_sin_sum[c]);
-      Gtheta[c] *= 1.0/(area_sin_sum[c]);
-      
-      Gtheta_bar[c] += Gtheta[c]/float(Nscans);
-      std::cout << "Cell " << c << " Gtheta_bar = " <<  Gtheta_bar[c] << std::endl;
+    
+    //---------------------- Calculate G(theta) from triangulation --------------------------//
+    
+    std::vector<float> Gtheta;
+    Gtheta.resize(Ncells,0.f);
+    
+    const size_t Ntri = getTriangleCount();
+    
+    std::vector<uint> cell_tri_count;
+    cell_tri_count.resize(Ncells,0);
+    
+    std::vector<float> area_sin_sum;
+    area_sin_sum.resize(Ncells,0.f);
+    
+    for( size_t t=0; t<Ntri; t++ ){
+        
+        Triangulation tri = getTriangle(t);
+        int cell = tri.gridcell;
+        
+        if( cell>=0 && cell<Ncells ){ //triangle is inside a grid cell
+            
+            helios::vec3 t0 = tri.vertex0;
+            helios::vec3 t1 = tri.vertex1;
+            helios::vec3 t2 = tri.vertex2;
+            
+            helios::vec3 v0 = t1-t0;
+            helios::vec3 v1 = t2-t0;
+            helios::vec3 v2 = t2-t1;
+            
+            float L0 = v0.magnitude();
+            float L1 = v1.magnitude();
+            float L2 = v2.magnitude();
+            
+            float S = 0.5f*(L0+L1+L2);
+            float area = sqrt( S*(S-L0)*(S-L1)*(S-L2) );
+            
+            helios::vec3 normal = cross( v0, v2 );
+            normal.normalize();
+            
+            helios::vec3 raydir = t0-getScanOrigin( tri.scanID );
+            raydir.normalize();
+            
+            float theta = fabs(acos_safe(raydir.z));
+            
+            if( area==area ){ //in rare cases you can get area=NaN
+                
+                Gtheta.at(cell) += fabs(normal*raydir)*area*fabs(sin(theta));
+                area_sin_sum.at(cell) += area*fabs(sin(theta));
+                cell_tri_count.at(cell) += 1;
+                
+            }
+            
+        }
     }
-  }
-  
-  
-  //------------------ Perform inversions to get LAD using the different methods for P --------------------//
-  
-  if( printmessages ){
-    std::cout << "Inverting to find LAD..." << std::flush;
-  }
-  
-  // perform LAD inversion using triangulation-estimated Gtheta
-  std::vector<float> LAD_equal = LAD_inversion(P_equal, Gtheta, dr_array, fillAnalytic);
-  
-  if( printmessages ){
-    std::cout << "finished LAD inversions" << std::endl;
-  }
-  
-  // output the voxel level variables
-  std::ofstream file_output;
-  file_output.open("../voxeloutput/voxeloutput.txt");
-  file_output << "cell, grid_center_x, grid_center_y, grid_center_z, grid_size_x, grid_size_y, grid_size_z, Nbeams, dr_bar, G, P_equal, LAD_equal"  << std::endl;
-  
-  for(uint c=0; c<Ncells; c++)
-  {
-    helios::vec3 grid_size = getCellSize(c);
-    helios::vec3 grid_center = getCellCenter(c);
     
-    setCellLeafArea(LAD_equal[c]*grid_size.x*grid_size.y*grid_size.z,c);
+    for( uint c=0; c<Ncells; c++ ){
+        if( cell_tri_count[c]>0 ){
+            //Gtheta[c] *= float(cell_tri_count[c])/(area_sum[c]*sin_sum[c]);
+            //Gtheta[c] *= float(cell_tri_count[c])/(area_sin_sum[c]);
+            Gtheta[c] *= 1.0/(area_sin_sum[c]);
+            
+            Gtheta_bar[c] += Gtheta[c]/float(Nscans);
+            std::cout << "Cell " << c << " Gtheta_bar = " <<  Gtheta_bar[c] << std::endl;
+        }
+    }
     
-    setCellGtheta( Gtheta[c], c );
     
-    file_output << c << "," << grid_center.x << "," << grid_center.y << "," << grid_center.z << "," << grid_size.x << "," << grid_size.y << "," << grid_size.z << "," << voxel_beam_count_tot.at(c) << "," << dr_bar[c] << "," << Gtheta[c] << "," << P_equal[c] << "," << LAD_equal[c] << std::endl;
-  }
-  file_output.close();
-  
-  if( printmessages ){
-    std::cout << "done." << std::endl;
-  }
-  
+    //------------------ Perform inversions to get LAD using the different methods for P --------------------//
+    
+    if( printmessages ){
+        std::cout << "Inverting to find LAD..." << std::flush;
+    }
+    
+    // perform LAD inversion using triangulation-estimated Gtheta
+    std::vector<float> LAD_equal = LAD_inversion(P_equal, Gtheta, dr_array, fillAnalytic);
+    
+    std::cout << "LAD inversion using triangulation complete" << std::endl;
+    
+    
+    
+    //ERK
+    // std::vector<float> constant_G{0.6, 0.55, 0.5, 0.45, 0.4, 0.35};
+    std::cout << "constant_G.size() = " << constant_G.size() << std::endl;
+    
+    std::vector<std::vector<float> > constant_G_LAD_equal;
+    constant_G_LAD_equal.resize(constant_G.size());
+    for(uint i=0;i<constant_G.size();i++)
+    {
+        std::vector<float> constant_G_vector(P_equal.size(), constant_G.at(i));
+        // perform LAD inversion using triangulation-estimated Gtheta
+        std::vector<float> LAD_equal_cg = LAD_inversion(P_equal, constant_G_vector, dr_array, fillAnalytic);
+        //   std::cout << "LAD_equal_cg.size() = " << LAD_equal_cg.size() << std::endl; 
+        constant_G_LAD_equal.at(i) = LAD_equal_cg;
+    }
+    
+    // std::cout << "constant_G_LAD_equal.size() = " << constant_G_LAD_equal.size() << std::endl;
+    //  std::cout << "constant_G_LAD_equal.at(0).size() = " << constant_G_LAD_equal.at(0).size() << std::endl;
+    
+    
+    if( printmessages ){
+        std::cout << "finished LAD inversions" << std::endl;
+    }
+    
+    
+    
+    // output the voxel level variables
+    std::ofstream file_output;
+    file_output.open("../voxeloutput/voxeloutput.txt");
+    file_output << "cell, grid_center_x, grid_center_y, grid_center_z, grid_size_x, grid_size_y, grid_size_z, Nbeams, dr_bar, G, P_equal, LAD_equal, ";
+    for(uint i=0;i<constant_G.size();i++)
+    {
+        std::stringstream stream;
+        stream << std::fixed << std::setprecision(2) << constant_G.at(i);
+        std::string s = stream.str();
+        std::string clab = "LAD_equal_constant_G_" + s;
+        
+        file_output <<  clab << ", ";
+    }
+    file_output << std::endl;
+    
+    
+    std::cout << "printed labels " << std::endl;
+    
+    std::cout << "Ncells =  " << Ncells << std::endl;
+    
+    for(uint c=0; c<Ncells; c++)
+    {
+        helios::vec3 grid_size = getCellSize(c);
+        helios::vec3 grid_center = getCellCenter(c);
+        
+        setCellLeafArea(LAD_equal[c]*grid_size.x*grid_size.y*grid_size.z,c);
+        
+        setCellGtheta( Gtheta[c], c );
+        
+        file_output << c << "," << grid_center.x << "," << grid_center.y << "," << grid_center.z << "," << grid_size.x << "," << grid_size.y << "," << grid_size.z << "," << voxel_beam_count_tot.at(c) << "," << dr_bar[c] << "," << Gtheta[c] << "," << P_equal[c] << "," << LAD_equal[c];
+        
+        for(uint i=0;i<constant_G.size();i++)
+        {
+            // std::cout << constant_G_LAD_equal.at(i).size() << std::endl;
+            file_output << ", " << constant_G_LAD_equal.at(i).at(c);
+        }
+        file_output << std::endl;
+        
+    }
+    file_output.close();
+    
+    if( printmessages ){
+        std::cout << "done." << std::endl;
+    }
+    
 }
 
 

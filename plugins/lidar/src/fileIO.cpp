@@ -756,3 +756,77 @@ void LiDARcloud::exportPointCloud( const char* filename, uint scanID ){
   
 }
 
+void LiDARcloud::exportPointCloudPTX( const char* filename, uint scanID ){
+
+    if( scanID> getScanCount()){
+        std::cerr << "ERROR (LiDARcloud::exportPointCloudPTX): Cannot export scan " << scanID << " because this scan does not exist." << std::endl;
+        throw 1;
+    }
+
+    ofstream file;
+
+    file.open(filename);
+
+    std::vector<std::string> ASCII_format = getScanColumnFormat(scanID);
+
+    uint Nx = getScanSizeTheta(scanID);
+    uint Ny = getScanSizePhi(scanID);
+
+    file << Nx << std::endl;
+    file << Ny << std::endl;
+    file << "0 0 0" << std::endl;
+    file << "1 0 0" << std::endl;
+    file << "0 1 0" << std::endl;
+    file << "0 0 1" << std::endl;
+    file << "1 0 0 0" << std::endl;
+    file << "0 1 0 0" << std::endl;
+    file << "0 0 1 0" << std::endl;
+    file << "0 0 0 1" << std::endl;
+
+    std::vector<std::vector<vec4> > xyzi(Ny);
+    for( int j=0; j<Ny; j++ ){
+        xyzi.at(j).resize(Nx);
+        for( int i=0; i<Nx; i++ ){
+            xyzi.at(j).at(i) = make_vec4(0,0,0,1);
+        }
+    }
+
+    vec3 origin = getScanOrigin(scanID);
+
+    for( int r=0; r<getHitCount(); r++ ){
+
+        if( getHitScanID(r) != scanID ){
+            continue;
+        }
+
+        SphericalCoord raydir = getHitRaydir(r);
+
+        int2 row_column = scans.at(scanID).direction2rc(raydir);
+
+        assert( row_column.x>=0 && row_column.x<Nx && row_column.y>=0 && row_column.y<Ny );
+
+        vec3 xyz = getHitXYZ(r);
+
+        if( (xyz-origin).magnitude()>=1e4 ){
+            continue;
+        }
+
+        float intensity = 1.f;
+        if( hits.at(r).data.find("intensity")!=hits.at(r).data.end() ) {
+            intensity = getHitData(r, "intensity");
+        }
+
+        xyzi.at(row_column.y).at(row_column.x) = make_vec4( xyz.x, xyz.y, xyz.z, intensity );
+
+    }
+
+    for( int j=0; j<Ny; j++ ){
+        for( int i=0; i<Nx; i++ ){
+            file << xyzi.at(j).at(i).x << " " << xyzi.at(j).at(i).y << " " << xyzi.at(j).at(i).z << " " << xyzi.at(j).at(i).w << std::endl;
+        }
+    }
+
+    file.close();
+
+}
+
