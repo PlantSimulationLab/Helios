@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.60</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.64</span>
    </div>
   </td>
  </tr>
@@ -71,7 +71,8 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a>  </div>
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
   <div class="headertitle"><div class="title">PhotosynthesisModel Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -81,8 +82,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2cfdf33f994c6b6cb84432dcb7e57b3b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_photosynthesis_model.html#a2cfdf33f994c6b6cb84432dcb7e57b3b">PhotosynthesisModel</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *a_context)</td></tr>
 <tr class="memdesc:a2cfdf33f994c6b6cb84432dcb7e57b3b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <br /></td></tr>
 <tr class="separator:a2cfdf33f994c6b6cb84432dcb7e57b3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8e52da873d4c6223dfdb1456d8639a95"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_photosynthesis_model.html#a8e52da873d4c6223dfdb1456d8639a95">selfTest</a> ()</td></tr>
-<tr class="separator:a8e52da873d4c6223dfdb1456d8639a95"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae4f1ad6808c1b8ccc28912a4a7dd9363"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_photosynthesis_model.html#ae4f1ad6808c1b8ccc28912a4a7dd9363">setModelType_Empirical</a> ()</td></tr>
 <tr class="memdesc:ae4f1ad6808c1b8ccc28912a4a7dd9363"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets photosynthesis to be calculated according to the empirical model.  <br /></td></tr>
 <tr class="separator:ae4f1ad6808c1b8ccc28912a4a7dd9363"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -116,6 +115,17 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a9ec83db517f4c7d0eb09c20a9f61ef20"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_photosynthesis_model.html#a9ec83db517f4c7d0eb09c20a9f61ef20">optionalOutputPrimitiveData</a> (const char *label)</td></tr>
 <tr class="memdesc:a9ec83db517f4c7d0eb09c20a9f61ef20"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add optional output primitive data values to the Context.  <br /></td></tr>
 <tr class="separator:a9ec83db517f4c7d0eb09c20a9f61ef20"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4ed6afbb715d143cedf136ff355c1b3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_photosynthesis_model.html#ab4ed6afbb715d143cedf136ff355c1b3">printDefaultValueReport</a> () const</td></tr>
+<tr class="memdesc:ab4ed6afbb715d143cedf136ff355c1b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Print a report detailing usage of default input values for all primitives in the Context.  <br /></td></tr>
+<tr class="separator:ab4ed6afbb715d143cedf136ff355c1b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5de185fd3e46ef009c362b116e3d7771"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_photosynthesis_model.html#a5de185fd3e46ef009c362b116e3d7771">printDefaultValueReport</a> (const std::vector&lt; uint &gt; &amp;UUIDs) const</td></tr>
+<tr class="memdesc:a5de185fd3e46ef009c362b116e3d7771"><td class="mdescLeft">&#160;</td><td class="mdescRight">Print a report detailing usage of default input values based on a subset of primitive UUIDs.  <br /></td></tr>
+<tr class="separator:a5de185fd3e46ef009c362b116e3d7771"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:a8e52da873d4c6223dfdb1456d8639a95"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_photosynthesis_model.html#a8e52da873d4c6223dfdb1456d8639a95">selfTest</a> ()</td></tr>
+<tr class="separator:a8e52da873d4c6223dfdb1456d8639a95"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -176,7 +186,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the current model coefficients for the empirical model. </p>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00429">429</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00444">444</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -198,7 +208,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the current model coefficients for the Farquhar-von Caemmerer-Berry model. </p>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00442">442</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00457">457</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -226,7 +236,51 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00455">455</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00470">470</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab4ed6afbb715d143cedf136ff355c1b3" name="ab4ed6afbb715d143cedf136ff355c1b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4ed6afbb715d143cedf136ff355c1b3">&#9670;&#160;</a></span>printDefaultValueReport() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PhotosynthesisModel::printDefaultValueReport </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Print a report detailing usage of default input values for all primitives in the Context. </p>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00480">480</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5de185fd3e46ef009c362b116e3d7771" name="a5de185fd3e46ef009c362b116e3d7771"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5de185fd3e46ef009c362b116e3d7771">&#9670;&#160;</a></span>printDefaultValueReport() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PhotosynthesisModel::printDefaultValueReport </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;&#160;</td>
+          <td class="paramname"><em>UUIDs</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Print a report detailing usage of default input values based on a subset of primitive UUIDs. </p>
+<p>\params[in] "UUIDs" Universal unique identifiers for report </p>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00484">484</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -247,7 +301,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Run the model for all UUIDs in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00180">180</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00181">181</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -269,7 +323,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Run the model for a select sub-set of UUIDs. </p>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00184">184</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00185">185</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -278,6 +332,9 @@ Public Member Functions</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int PhotosynthesisModel::selfTest </td>
@@ -286,9 +343,14 @@ Public Member Functions</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00036">36</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00037">37</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -317,7 +379,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The model type will be set based on the most recent call to <a class="el" href="class_photosynthesis_model.html#a80a8bb51f617da1a7e2d03a67890bf1d" title="Set the empirical model coefficients for all primitives.">setModelCoefficients()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00154">154</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00155">155</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -357,7 +419,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The model type will be set based on the most recent call to <a class="el" href="class_photosynthesis_model.html#a80a8bb51f617da1a7e2d03a67890bf1d" title="Set the empirical model coefficients for all primitives.">setModelCoefficients()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00160">160</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00161">161</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -386,7 +448,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The model type will be set based on the most recent call to <a class="el" href="class_photosynthesis_model.html#a80a8bb51f617da1a7e2d03a67890bf1d" title="Set the empirical model coefficients for all primitives.">setModelCoefficients()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00167">167</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00168">168</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -426,7 +488,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The model type will be set based on the most recent call to <a class="el" href="class_photosynthesis_model.html#a80a8bb51f617da1a7e2d03a67890bf1d" title="Set the empirical model coefficients for all primitives.">setModelCoefficients()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00173">173</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00174">174</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -447,7 +509,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Sets photosynthesis to be calculated according to the empirical model. </p>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00146">146</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00147">147</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -468,7 +530,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Sets photosynthesis to be calculated according to the Farquhar-von Caemmerer-Berry model. </p>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00150">150</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8cpp_source.html#l00151">151</a> of file <a class="el" href="_photosynthesis_model_8cpp_source.html">PhotosynthesisModel.cpp</a>.</p>
 
 </div>
 </div>

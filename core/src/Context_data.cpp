@@ -218,7 +218,7 @@ void Primitive::setPrimitiveData( const char* label, HeliosDataType type, uint s
 void Primitive::getPrimitiveData( const char* label, int& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -227,7 +227,7 @@ void Primitive::getPrimitiveData( const char* label, int& data ) const{
     std::vector<int> d = primitive_data_int.at(label);
     data = d.at(0);
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type int, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int." ) );
   }
 
 }
@@ -235,7 +235,7 @@ void Primitive::getPrimitiveData( const char* label, int& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<int>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -244,7 +244,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int>& data ) co
     std::vector<int> d = primitive_data_int.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type int, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int." ) );
   }
 
 }
@@ -252,7 +252,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int>& data ) co
 void Primitive::getPrimitiveData( const char* label, uint& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -261,7 +261,7 @@ void Primitive::getPrimitiveData( const char* label, uint& data ) const{
     std::vector<uint> d = primitive_data_uint.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type uint, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type uint, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint." ) );
   }
 
 }
@@ -269,7 +269,7 @@ void Primitive::getPrimitiveData( const char* label, uint& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<uint>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -278,7 +278,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<uint>& data ) c
     std::vector<uint> d = primitive_data_uint.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type uint, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type uint, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint." ) );
   }
 
 }
@@ -286,7 +286,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<uint>& data ) c
 void Primitive::getPrimitiveData( const char* label, float& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -295,7 +295,7 @@ void Primitive::getPrimitiveData( const char* label, float& data ) const{
     std::vector<float> d = primitive_data_float.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type float, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type float, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float." ) );
   }
 
 }
@@ -303,7 +303,7 @@ void Primitive::getPrimitiveData( const char* label, float& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<float>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -312,7 +312,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<float>& data ) 
     std::vector<float> d = primitive_data_float.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type float, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type float, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float." ) );
   }
 
 }
@@ -320,7 +320,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<float>& data ) 
 void Primitive::getPrimitiveData( const char* label, double& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -329,7 +329,7 @@ void Primitive::getPrimitiveData( const char* label, double& data ) const{
     std::vector<double> d = primitive_data_double.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type double, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type double, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double." ) );
   }
 
 }
@@ -337,7 +337,7 @@ void Primitive::getPrimitiveData( const char* label, double& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<double>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -346,7 +346,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<double>& data )
     std::vector<double> d = primitive_data_double.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type double, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type double, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double." ) );
   }
 
 }
@@ -354,7 +354,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<double>& data )
 void Primitive::getPrimitiveData( const char* label, vec2& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -363,7 +363,7 @@ void Primitive::getPrimitiveData( const char* label, vec2& data ) const{
     std::vector<vec2> d = primitive_data_vec2.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type vec2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2." ) );
   }
 
 }
@@ -371,7 +371,7 @@ void Primitive::getPrimitiveData( const char* label, vec2& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<vec2>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -380,7 +380,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec2>& data ) c
     std::vector<vec2> d = primitive_data_vec2.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type vec2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2." ) );
   }
 
 }
@@ -388,7 +388,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec2>& data ) c
 void Primitive::getPrimitiveData( const char* label, vec3& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -397,7 +397,7 @@ void Primitive::getPrimitiveData( const char* label, vec3& data ) const{
     std::vector<vec3> d = primitive_data_vec3.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type vec3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3." ) );
   }
 
 }
@@ -405,7 +405,7 @@ void Primitive::getPrimitiveData( const char* label, vec3& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<vec3>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -414,7 +414,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec3>& data ) c
     std::vector<vec3> d = primitive_data_vec3.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type vec3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3." ) );
   }
 
 }
@@ -422,7 +422,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec3>& data ) c
 void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -431,7 +431,7 @@ void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
     std::vector<vec4> d = primitive_data_vec4.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type vec4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4." ) );
   }
 
 }
@@ -439,7 +439,7 @@ void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -448,7 +448,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) c
     std::vector<vec4> d = primitive_data_vec4.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type vec4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4." ) );
   }
 
 }
@@ -456,7 +456,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) c
 void Primitive::getPrimitiveData( const char* label, int2& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -465,7 +465,7 @@ void Primitive::getPrimitiveData( const char* label, int2& data ) const{
     std::vector<int2> d = primitive_data_int2.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type int2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2." ) );
   }
 
 }
@@ -473,7 +473,7 @@ void Primitive::getPrimitiveData( const char* label, int2& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -482,7 +482,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) c
     std::vector<int2> d = primitive_data_int2.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type int2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2." ) );
   }
 
 }
@@ -490,7 +490,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) c
 void Primitive::getPrimitiveData( const char* label, int3& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -499,7 +499,7 @@ void Primitive::getPrimitiveData( const char* label, int3& data ) const{
     std::vector<int3> d = primitive_data_int3.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type int3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3." ) );
   }
 
 }
@@ -507,7 +507,7 @@ void Primitive::getPrimitiveData( const char* label, int3& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -516,7 +516,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) c
     std::vector<int3> d = primitive_data_int3.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type int3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3." ) );
   }
 
 }
@@ -524,7 +524,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) c
 void Primitive::getPrimitiveData( const char* label, int4& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -533,7 +533,7 @@ void Primitive::getPrimitiveData( const char* label, int4& data ) const{
     std::vector<int4> d = primitive_data_int4.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type int4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4." ) );
   }
 
 }
@@ -541,7 +541,7 @@ void Primitive::getPrimitiveData( const char* label, int4& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -550,7 +550,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) c
     std::vector<int4> d = primitive_data_int4.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type int4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4." ) );
   }
 
 }
@@ -558,7 +558,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) c
 void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -567,7 +567,7 @@ void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
     std::vector<std::string> d = primitive_data_string.at(label);
     data = d.front();
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type string, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type string, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string." ) );
   }
 
 }
@@ -575,7 +575,7 @@ void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
 void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& data ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -584,7 +584,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& d
     std::vector<std::string> d = primitive_data_string.at(label);
     data = d;
   }else{
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Attempted to get data for type string, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string." ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type string, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string." ) );
   }
 
 }
@@ -592,7 +592,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& d
 HeliosDataType Primitive::getPrimitiveDataType( const char* label ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveDataType): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   return primitive_data_types.at(label);
@@ -602,7 +602,7 @@ HeliosDataType Primitive::getPrimitiveDataType( const char* label ) const{
 uint Primitive::getPrimitiveDataSize( const char* label ) const{
 
   if( !doesPrimitiveDataExist( label ) ){
-    throw( std::runtime_error( "ERROR (getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
+    throw( std::runtime_error( "ERROR (Primitive::getPrimitiveDataSize): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) ) );
   }
 
   HeliosDataType type = primitive_data_types.at(label);
@@ -1056,182 +1056,182 @@ void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> 
 
 void Context::getPrimitiveData(uint UUID, const char* label, int& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, uint& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<uint>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, float& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<float>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, double& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<double>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, vec2& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<vec2>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, vec3& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<vec3>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, vec4& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<vec4>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, int2& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int2>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, int3& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int3>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, int4& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int4>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::string& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<std::string>& data ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
 HeliosDataType Context::getPrimitiveDataType( const uint UUID, const char* label )const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveDataType): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   return primitives.at(UUID)->getPrimitiveDataType(label);
 }
 
 uint Context::getPrimitiveDataSize( const uint UUID, const char* label )const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveDataSize): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   return primitives.at(UUID)->getPrimitiveDataSize(label);
 }
 
 bool Context::doesPrimitiveDataExist( const uint UUID, const char* label ) const{
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::doesPrimitiveDataExist): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   return primitives.at(UUID)->doesPrimitiveDataExist(label);
 }
 
 void Context::clearPrimitiveData( const uint UUID, const char* label ){
   if( primitives.find(UUID) == primitives.end() ){
-    throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+    throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
   }
   primitives.at(UUID)->clearPrimitiveData(label);
 }
@@ -1239,7 +1239,7 @@ void Context::clearPrimitiveData( const uint UUID, const char* label ){
 void Context::clearPrimitiveData( const std::vector<uint>& UUIDs, const char* label ){
   for( unsigned int UUID : UUIDs){
     if( primitives.find(UUID) == primitives.end() ){
-      throw( std::runtime_error("ERROR (getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
+      throw( std::runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context."));
     }
     primitives.at(UUID)->clearPrimitiveData(label);
   }

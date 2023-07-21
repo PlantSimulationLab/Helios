@@ -1,7 +1,7 @@
 var searchData=
 [
   ['g_0',['g',['../structhelios_1_1_r_g_bcolor.html#ae002d220d8695538760eee2a6c4e9023',1,'helios::RGBcolor::g()'],['../structhelios_1_1_r_g_b_acolor.html#ac018f8ed01b4d4128a68ebe42e1e6a00',1,'helios::RGBAcolor::g()']]],
-  ['gapfillmisses_1',['gapfillMisses',['../class_li_d_a_rcloud.html#a544384a19e7d060c85eb5a8daa1aeef4',1,'LiDARcloud::gapfillMisses(uint scanID)'],['../class_li_d_a_rcloud.html#a31cfa1abddbde80a2f32016f722cc2e3',1,'LiDARcloud::gapfillMisses(uint scanID, const bool gapfill_grid_only)']]],
+  ['gapfillmisses_1',['gapfillMisses',['../class_li_d_a_rcloud.html#a544384a19e7d060c85eb5a8daa1aeef4',1,'LiDARcloud::gapfillMisses(uint scanID)'],['../class_li_d_a_rcloud.html#aa70d9c9fb6ca8c20a818c2bc68d39077',1,'LiDARcloud::gapfillMisses(uint scanID, const bool gapfill_grid_only, const bool add_flags)']]],
   ['generateheightmodel_2',['generateHeightModel',['../class_aerial_li_d_a_rcloud.html#afc44503e2a6eb986fa79b5af56069468',1,'AerialLiDARcloud']]],
   ['geometric_20primitives_3',['Geometric Primitives',['../group__primitives.html',1,'']]],
   ['germination_5fprobability_4',['germination_probability',['../struct_bean_parameters.html#a9bec1a611d5100e6e7417b70a47cbe06',1,'BeanParameters']]],
@@ -149,7 +149,7 @@ var searchData=
   ['getsphereobjectpointer_146',['getSphereObjectPointer',['../classhelios_1_1_context.html#a8ed7580efa323c0f5e53e97d00e16c85',1,'helios::Context']]],
   ['getsphereobjectradius_147',['getSphereObjectRadius',['../classhelios_1_1_context.html#a934c294a6a4440e95c7bdc9c79ed1d0d',1,'helios::Context']]],
   ['getsphereobjectsubdivisioncount_148',['getSphereObjectSubdivisionCount',['../classhelios_1_1_context.html#acd14a9a8eaf7e7cb12970656d7d5b4fd',1,'helios::Context']]],
-  ['getsubdivisioncount_149',['getSubdivisionCount',['../classhelios_1_1_disk.html#ace21fc719d39ebebf3c78c14298c7c74',1,'helios::Disk::getSubdivisionCount()'],['../classhelios_1_1_cone.html#a051a2c5760d53a6c0b95f66cab9cbf73',1,'helios::Cone::getSubdivisionCount()'],['../classhelios_1_1_tile.html#a4f4198becfe3cafd989b5aa6cd21d5cf',1,'helios::Tile::getSubdivisionCount()'],['../classhelios_1_1_sphere.html#a152107e463d6765ba27ff8f3ab737711',1,'helios::Sphere::getSubdivisionCount()'],['../classhelios_1_1_tube.html#abf9bb1153b3607a5d616aafeee06e43e',1,'helios::Tube::getSubdivisionCount()'],['../classhelios_1_1_box.html#a6f25b211d8740257329f841cda737a4f',1,'helios::Box::getSubdivisionCount()']]],
+  ['getsubdivisioncount_149',['getSubdivisionCount',['../classhelios_1_1_disk.html#a8dc2a195735ee3321b274274e7e0352e',1,'helios::Disk::getSubdivisionCount()'],['../classhelios_1_1_cone.html#a051a2c5760d53a6c0b95f66cab9cbf73',1,'helios::Cone::getSubdivisionCount()'],['../classhelios_1_1_tile.html#a4f4198becfe3cafd989b5aa6cd21d5cf',1,'helios::Tile::getSubdivisionCount()'],['../classhelios_1_1_sphere.html#a152107e463d6765ba27ff8f3ab737711',1,'helios::Sphere::getSubdivisionCount()'],['../classhelios_1_1_tube.html#abf9bb1153b3607a5d616aafeee06e43e',1,'helios::Tube::getSubdivisionCount()'],['../classhelios_1_1_box.html#a6f25b211d8740257329f841cda737a4f',1,'helios::Box::getSubdivisionCount()']]],
   ['getsunazimuth_150',['getSunAzimuth',['../class_solar_position.html#ad76527124bd510683cae5b31cde4c98c',1,'SolarPosition']]],
   ['getsundirectionspherical_151',['getSunDirectionSpherical',['../class_solar_position.html#a060f455c03439db2a77a2b66a2463987',1,'SolarPosition']]],
   ['getsundirectionvector_152',['getSunDirectionVector',['../class_solar_position.html#aee0fc271ab0e8fb0be1967045e305ed9',1,'SolarPosition']]],

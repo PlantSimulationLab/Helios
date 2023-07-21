@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.60</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.64</span>
    </div>
   </td>
  </tr>
@@ -236,6 +236,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ae9910fa1aae6b8b077d57417c130e753"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#ae9910fa1aae6b8b077d57417c130e753">exportPointCloud</a> (const char *filename, uint scanID)</td></tr>
 <tr class="memdesc:ae9910fa1aae6b8b077d57417c130e753"><td class="mdescLeft">&#160;</td><td class="mdescRight">Export to file all points from a given scan to an ASCII text file following the column format specified by the &lt;ASCII_format&gt;&lt;/ASCII_format&gt; tag in the scan XML file.  <br /></td></tr>
 <tr class="separator:ae9910fa1aae6b8b077d57417c130e753"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac48fe9018f26664dd9abd8c100fccaa6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#ac48fe9018f26664dd9abd8c100fccaa6">exportPointCloudPTX</a> (const char *filename, uint scanID)</td></tr>
+<tr class="memdesc:ac48fe9018f26664dd9abd8c100fccaa6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Export to file all points from a given scan to PTX file.  <br /></td></tr>
+<tr class="separator:ac48fe9018f26664dd9abd8c100fccaa6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2102dd4711658414cca10fd40a66af18"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a2102dd4711658414cca10fd40a66af18">addHitsToVisualizer</a> (<a class="el" href="class_visualizer.html">Visualizer</a> *visualizer, uint pointsize) const</td></tr>
 <tr class="memdesc:a2102dd4711658414cca10fd40a66af18"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add all hit points to the visualizer plug-in, and color them by their r-g-b color.  <br /></td></tr>
 <tr class="separator:a2102dd4711658414cca10fd40a66af18"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -314,6 +317,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac495385c9dc7cc7773819ce77175242a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a> (float Lmax, float max_aspect_ratio)</td></tr>
 <tr class="memdesc:ac495385c9dc7cc7773819ce77175242a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Perform triangulation on all hit points in point cloud.  <br /></td></tr>
 <tr class="separator:ac495385c9dc7cc7773819ce77175242a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2e2d9ac728f839b64cedb20582d77d48"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a2e2d9ac728f839b64cedb20582d77d48">triangulateHitPoints</a> (float Lmax, float max_aspect_ratio, const char *scalar_field, float threshold, const char *comparator)</td></tr>
+<tr class="memdesc:a2e2d9ac728f839b64cedb20582d77d48"><td class="mdescLeft">&#160;</td><td class="mdescRight">Perform triangulation on hit points in point cloud that meet some filtering criteria based on scalar data.  <br /></td></tr>
+<tr class="separator:a2e2d9ac728f839b64cedb20582d77d48"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a65c36191d1f0f82b77ebd2ffa2fe3821"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a65c36191d1f0f82b77ebd2ffa2fe3821">addTrianglesToContext</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context) const</td></tr>
 <tr class="memdesc:a65c36191d1f0f82b77ebd2ffa2fe3821"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add triangle geometry to Helios context.  <br /></td></tr>
 <tr class="separator:a65c36191d1f0f82b77ebd2ffa2fe3821"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -377,9 +383,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a544384a19e7d060c85eb5a8daa1aeef4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a544384a19e7d060c85eb5a8daa1aeef4">gapfillMisses</a> (uint scanID)</td></tr>
 <tr class="memdesc:a544384a19e7d060c85eb5a8daa1aeef4"><td class="mdescLeft">&#160;</td><td class="mdescRight">For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.  <br /></td></tr>
 <tr class="separator:a544384a19e7d060c85eb5a8daa1aeef4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a31cfa1abddbde80a2f32016f722cc2e3"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a31cfa1abddbde80a2f32016f722cc2e3">gapfillMisses</a> (uint scanID, const bool gapfill_grid_only)</td></tr>
-<tr class="memdesc:a31cfa1abddbde80a2f32016f722cc2e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.  <br /></td></tr>
-<tr class="separator:a31cfa1abddbde80a2f32016f722cc2e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa70d9c9fb6ca8c20a818c2bc68d39077"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#aa70d9c9fb6ca8c20a818c2bc68d39077">gapfillMisses</a> (uint scanID, const bool gapfill_grid_only, const bool add_flags)</td></tr>
+<tr class="memdesc:aa70d9c9fb6ca8c20a818c2bc68d39077"><td class="mdescLeft">&#160;</td><td class="mdescRight">For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.  <br /></td></tr>
+<tr class="separator:aa70d9c9fb6ca8c20a818c2bc68d39077"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aff9aeedaa500516d1c227e5161fb599a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">calculateLeafAreaGPU</a> ()</td></tr>
 <tr class="memdesc:aff9aeedaa500516d1c227e5161fb599a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate the leaf area for each grid volume.  <br /></td></tr>
 <tr class="separator:aff9aeedaa500516d1c227e5161fb599a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -395,6 +401,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a7b23ba7fb6a900ff86d7957fcaa89f83"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a7b23ba7fb6a900ff86d7957fcaa89f83">calculateLeafAreaGPU_equal_weighting</a> (bool beamoutput, bool fillAnalytic)</td></tr>
 <tr class="memdesc:a7b23ba7fb6a900ff86d7957fcaa89f83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate the leaf area for each grid volume using equal weighting method.  <br /></td></tr>
 <tr class="separator:a7b23ba7fb6a900ff86d7957fcaa89f83"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5751d6482bc6747b3b0e8d4566b46ca2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a5751d6482bc6747b3b0e8d4566b46ca2">calculateLeafAreaGPU_equal_weighting</a> (bool beamoutput, bool fillAnalytic, std::vector&lt; float &gt; constant_G)</td></tr>
+<tr class="memdesc:a5751d6482bc6747b3b0e8d4566b46ca2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate the leaf area for each grid volume using equal weighting method.  <br /></td></tr>
+<tr class="separator:a5751d6482bc6747b3b0e8d4566b46ca2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aba102c6c5036ffb99b105fb2b4850935"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935">leafReconstructionAlphaMask</a> (float minimum_leaf_group_area, float maximum_leaf_group_area, float leaf_aspect_ratio, const char *mask_file)</td></tr>
 <tr class="memdesc:aba102c6c5036ffb99b105fb2b4850935"><td class="mdescLeft">&#160;</td><td class="mdescRight">Perform a leaf reconstruction based on texture-masked Patches within each gridcell. The reconstruction produces Patches for each reconstructed leaf surface, with leaf size automatically estimated algorithmically. <br  />
   <br /></td></tr>
@@ -405,11 +414,14 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aa7d6abb997267bce460c48cf02dc3545"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#aa7d6abb997267bce460c48cf02dc3545">trunkReconstruction</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;box_center, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;box_size, float Lmax, float max_aspect_ratio)</td></tr>
 <tr class="memdesc:aa7d6abb997267bce460c48cf02dc3545"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reconstruct the trunk of the tree. In order to do this, you must specify the center and size of a rectangular box that encompasses the tree trunk. This routine will then try to find the largest continuous triangle group, which is assumed to correspond to the trunk.  <br /></td></tr>
 <tr class="separator:aa7d6abb997267bce460c48cf02dc3545"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f1037d96d43b10de30338a820ce2a19"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_li_d_a_rcloud.html#a2f1037d96d43b10de30338a820ce2a19">cropBeamsToGridAngleRange</a> (const uint source)</td></tr>
+<tr class="memdesc:a2f1037d96d43b10de30338a820ce2a19"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete hitpoints that do not pass through / intersect the voxel grid.  <br /></td></tr>
+<tr class="separator:a2f1037d96d43b10de30338a820ce2a19"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Primary class for terrestrial LiDAR scan. </p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00281">281</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8h_source.html#l00273">273</a> of file <a class="el" href="_li_d_a_r_8h_source.html">LiDAR.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a1c946f80a3431e82e48fc54c611dca2c" name="a1c946f80a3431e82e48fc54c611dca2c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1c946f80a3431e82e48fc54c611dca2c">&#9670;&#160;</a></span>LiDARcloud()</h2>
@@ -482,7 +494,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00703">703</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00707">707</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -556,7 +568,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01613">1613</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01823">1823</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -602,7 +614,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01609">1609</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01819">1819</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -630,7 +642,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00611">611</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00615">615</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -658,7 +670,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00745">745</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00749">749</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -965,7 +977,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00546">546</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00550">550</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1011,7 +1023,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00551">551</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00555">555</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1040,7 +1052,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function creates the following primitive data for each patch 1) <code>gridCell" which indicates the index of the gridcell that contains the patch, 2)&lt;/tt&gt;directFlag" which equals 1 if the leaf was part of the direct reconstruction, and 0 if the leaf was backfilled. </code></dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00874">874</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00878">878</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1080,7 +1092,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function creates the following primitive data for each patch 1) <code>gridCell" which indicates the index of the gridcell that contains the patch, 2)&lt;/tt&gt;directFlag" which equals 1 if the leaf was part of the direct reconstruction, and 0 if the leaf was backfilled. </code></dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00878">878</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00882">882</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1108,7 +1120,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00780">780</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00784">784</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1137,7 +1149,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function creates primitive data called ``leafGroup" which provides an identifier for each triangle based on the fill group it is in. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00921">921</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00925">925</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1189,7 +1201,7 @@ Public Member Functions</h2></td></tr>
 <p>Add triangle geometry to Helios context. </p>
 <p>\parameter[in] "context" Pointer to Helios context </p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01586">1586</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01796">1796</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1217,7 +1229,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00666">666</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00670">670</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1256,7 +1268,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00683">683</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00687">687</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1284,7 +1296,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00954">954</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00958">958</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1312,7 +1324,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00832">832</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00836">836</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1351,7 +1363,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00854">854</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00858">858</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1398,7 +1410,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Calculate the leaf area for each grid volume. </p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l00855">855</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l00907">907</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
@@ -1427,12 +1439,12 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Currently, this version assumes all data is discrete-return. The function <a class="el" href="class_li_d_a_rcloud.html#aa6640bd0d26f6cd8e5b8225fe14eaa4d" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU_testing()</a> deals with waveform data, but may not be working correctly. In the next version, these two functions will be combined. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l00859">859</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l00911">911</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
 <a id="a7b23ba7fb6a900ff86d7957fcaa89f83" name="a7b23ba7fb6a900ff86d7957fcaa89f83"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7b23ba7fb6a900ff86d7957fcaa89f83">&#9670;&#160;</a></span>calculateLeafAreaGPU_equal_weighting()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a7b23ba7fb6a900ff86d7957fcaa89f83">&#9670;&#160;</a></span>calculateLeafAreaGPU_equal_weighting() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1468,7 +1480,55 @@ Public Member Functions</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>writes voxel level data to ../voxeloutput/voxeloutput.txt </dd></dl>
 <p>old code in original <a class="el" href="class_li_d_a_rcloud.html#aa6640bd0d26f6cd8e5b8225fe14eaa4d" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU_testing()</a> ... do we need to keep this??</p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l04024">4024</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l04073">4073</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+
+</div>
+</div>
+<a id="a5751d6482bc6747b3b0e8d4566b46ca2" name="a5751d6482bc6747b3b0e8d4566b46ca2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5751d6482bc6747b3b0e8d4566b46ca2">&#9670;&#160;</a></span>calculateLeafAreaGPU_equal_weighting() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LiDARcloud::calculateLeafAreaGPU_equal_weighting </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>beamoutput</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>fillAnalytic</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; float &gt;&#160;</td>
+          <td class="paramname"><em>constant_G</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculate the leaf area for each grid volume using equal weighting method. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">beamoutput</td><td>if true writes detailed data about each beam to ../beamoutput/beam_data_s_[scan index]_c_[grid cell index].txt. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">fillAnalytic</td><td>if true, when the iterative LAD inversion fails, the analytic solution using mean dr will be substituted. If false LAD is set to 999. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">constant_G</td><td>A separate LAD inversion will be performed for each element of this vector, setting the value of G in all voxels to the value given in this vector. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>writes voxel level data to ../voxeloutput/voxeloutput.txt </dd></dl>
+<p>old code in original <a class="el" href="class_li_d_a_rcloud.html#aa6640bd0d26f6cd8e5b8225fe14eaa4d" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU_testing()</a> ... do we need to keep this??</p>
+
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l04528">4528</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
@@ -1516,7 +1576,7 @@ Public Member Functions</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>writes voxel level data to ../voxeloutput/voxeloutput.txt </dd></dl>
 <p>old code in original <a class="el" href="class_li_d_a_rcloud.html#aa6640bd0d26f6cd8e5b8225fe14eaa4d" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU_testing()</a> ... do we need to keep this??</p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l01650">1650</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l01702">1702</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
@@ -1544,7 +1604,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l01318">1318</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l01370">1370</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
@@ -1572,7 +1632,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01667">1667</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01877">1877</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1604,7 +1664,7 @@ Public Member Functions</h2></td></tr>
 <p>Grid sizes on device (GPU) memory</p>
 <p>Grid rotations on device (GPU) memory</p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03704">3704</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03756">3756</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
@@ -1632,7 +1692,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00488">488</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00492">492</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1678,7 +1738,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00518">518</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00522">522</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1717,7 +1777,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00501">501</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00505">505</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1745,7 +1805,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00460">460</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00464">464</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1784,7 +1844,35 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00472">472</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00476">476</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2f1037d96d43b10de30338a820ce2a19" name="a2f1037d96d43b10de30338a820ce2a19"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2f1037d96d43b10de30338a820ce2a19">&#9670;&#160;</a></span>cropBeamsToGridAngleRange()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LiDARcloud::cropBeamsToGridAngleRange </td>
+          <td>(</td>
+          <td class="paramtype">const uint&#160;</td>
+          <td class="paramname"><em>source</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Delete hitpoints that do not pass through / intersect the voxel grid. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">source</td><td>the scan index </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l02540">2540</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -1861,7 +1949,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01064">1064</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01068">1068</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2077,6 +2165,45 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ac48fe9018f26664dd9abd8c100fccaa6" name="ac48fe9018f26664dd9abd8c100fccaa6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac48fe9018f26664dd9abd8c100fccaa6">&#9670;&#160;</a></span>exportPointCloudPTX()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LiDARcloud::exportPointCloudPTX </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>filename</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>scanID</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Export to file all points from a given scan to PTX file. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>Name of file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scanID</td><td>Identifier of scan to be exported </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="lidar_2src_2file_i_o_8cpp_source.html#l00759">759</a> of file <a class="el" href="lidar_2src_2file_i_o_8cpp_source.html">fileIO.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a416638f486c4fd2572a9589b69605fe7" name="a416638f486c4fd2572a9589b69605fe7"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a416638f486c4fd2572a9589b69605fe7">&#9670;&#160;</a></span>exportTriangleAreas() <span class="overload">[1/2]</span></h2>
 
@@ -2229,7 +2356,7 @@ Public Member Functions</h2></td></tr>
 <p>Filter full-waveform data to include only the first hit per laser pulse. The resulting point cloud will have only one hit point per laser pulse (first hits). </p>
 <dl class="section note"><dt>Note</dt><dd>This function is only applicable for full-waveform data and requires that the scalar field "target_index" is provided in the hit point data file. The "target_index" values can start at 0 or 1 for first hits as long as it is consistent throughout the point cloud. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01325">1325</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01329">1329</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2262,8 +2389,8 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a31cfa1abddbde80a2f32016f722cc2e3" name="a31cfa1abddbde80a2f32016f722cc2e3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a31cfa1abddbde80a2f32016f722cc2e3">&#9670;&#160;</a></span>gapfillMisses() <span class="overload">[2/2]</span></h2>
+<a id="aa70d9c9fb6ca8c20a818c2bc68d39077" name="aa70d9c9fb6ca8c20a818c2bc68d39077"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa70d9c9fb6ca8c20a818c2bc68d39077">&#9670;&#160;</a></span>gapfillMisses() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2278,7 +2405,13 @@ Public Member Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const bool&#160;</td>
-          <td class="paramname"><em>gapfill_grid_only</em>&#160;</td>
+          <td class="paramname"><em>gapfill_grid_only</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const bool&#160;</td>
+          <td class="paramname"><em>add_flags</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -2293,6 +2426,7 @@ Public Member Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">scanID</td><td>ID of scan to gapfill </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">gapfill_grid_only</td><td>if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid. If false missing points are gap filled across the range of phi and theta values specified in the scan xml file. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">add_flags</td><td>if true, gapfillMisses_code is added as hitpoint data. 0 = original points, 1 = gapfilled, 2 = extrapolated at downward edge, 3 = extrapolated at upward edge </td></tr>
   </table>
   </dd>
 </dl>
@@ -2326,7 +2460,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01623">1623</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01833">1833</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2354,7 +2488,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01634">1634</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01844">1844</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2382,7 +2516,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01783">1783</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01993">1993</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2410,7 +2544,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01750">1750</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01960">1960</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2438,7 +2572,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01761">1761</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01971">1971</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2466,7 +2600,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01656">1656</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01866">1866</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2490,7 +2624,7 @@ Public Member Functions</h2></td></tr>
 <pre class="fragment"> \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, an
 </pre><p> d the last cell's index is Ncells-1. </p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01645">1645</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01855">1855</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2529,7 +2663,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01017">1017</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01021">1021</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2551,7 +2685,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the number of cells in the grid. </p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01605">1605</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01815">1815</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2590,7 +2724,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00980">980</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00984">984</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -2710,7 +2844,7 @@ Public Member Functions</h2></td></tr>
 <dd>
 Calling this function requires that the function calculateHitGridCell[*]() has been called previously. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00435">435</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00439">439</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3113,7 +3247,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 <p>Get hit point corresponding to first vertex of triangle. </p>
 <p>\parameter[in] "index" <a class="el" href="struct_triangulation.html">Triangulation</a> index (0 thru Ntriangles-1) </p><dl class="section return"><dt>Returns</dt><dd>Hit point index (0 thru Nhits-1) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00536">536</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00540">540</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3134,7 +3268,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 
 <p>Get the number of triangles formed by the triangulation. </p>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00532">532</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00536">536</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3156,7 +3290,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 <p>Filter full-waveform data to include only the last hit per laser pulse. The resulting point cloud will have only one hit point per laser pulse (last hits). </p>
 <dl class="section note"><dt>Note</dt><dd>This function is only applicable for full-waveform data and requires that the scalar fields "target_index" and "target_count" are provided in the hit point data file. The "target_index" values can start at 0 or 1 for first hits as long as it is consistent throughout the point cloud. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01365">1365</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01369">1369</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3210,7 +3344,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01899">1899</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l02109">2109</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3270,7 +3404,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01903">1903</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l02113">2113</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3366,7 +3500,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function is only applicable for full-waveform data and requires that the scalar field "timestamp" is provided in the ASCII hit point data file. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01193">1193</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01197">1197</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3395,7 +3529,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function is only applicable for full-waveform data and requires that the scalar field "timestamp" is provided in the hit point data file. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01259">1259</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01263">1263</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3424,7 +3558,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If &lsquo;reflectance&rsquo; data was not provided for a hit point when calling Scan::addHitPoint(), the point will not be filtered. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01084">1084</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01088">1088</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3471,7 +3605,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </dl>
 <dl class="section note"><dt>Note</dt><dd>As an example, imagine we wanted to remove all hit points where the reflectance is less than -10. In this case we would call scalarFilter( "reflectance", -10, "&lt;" ); </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01103">1103</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01107">1107</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3531,7 +3665,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01773">1773</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01983">1983</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3570,7 +3704,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01740">1740</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01950">1950</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3654,7 +3788,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00449">449</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00453">453</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3682,7 +3816,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03101">3101</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03153">3153</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
@@ -3729,7 +3863,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...">syntheticScan()</a> with scan_grid_only=true can save substantial memory for contexts with large domains. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03105">3105</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03157">3157</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
@@ -3777,7 +3911,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...">syntheticScan()</a> with rays_per_pulse=1 will effectively run a discrete return synthetic scan. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03109">3109</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03161">3161</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
@@ -3838,12 +3972,12 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...">syntheticScan()</a> with rays_per_pulse=1 will effectively run a discrete return synthetic scan. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03113">3113</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l03165">3165</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
 <a id="ac495385c9dc7cc7773819ce77175242a" name="ac495385c9dc7cc7773819ce77175242a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac495385c9dc7cc7773819ce77175242a">&#9670;&#160;</a></span>triangulateHitPoints()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ac495385c9dc7cc7773819ce77175242a">&#9670;&#160;</a></span>triangulateHitPoints() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3877,7 +4011,71 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01409">1409</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01413">1413</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2e2d9ac728f839b64cedb20582d77d48" name="a2e2d9ac728f839b64cedb20582d77d48"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2e2d9ac728f839b64cedb20582d77d48">&#9670;&#160;</a></span>triangulateHitPoints() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LiDARcloud::triangulateHitPoints </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>Lmax</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>max_aspect_ratio</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>scalar_field</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>threshold</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>comparator</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Perform triangulation on hit points in point cloud that meet some filtering criteria based on scalar data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Lmax</td><td>Maximum allowable length of triangle sides. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">max_aspect_ratio</td><td>Maximum allowable aspect ratio of triangles.<ul>
+<li></li>
+</ul>
+</td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalar_field</td><td>Name of a scalar field defined in the ASCII point cloud data (e.g., "deviation") </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">threshold</td><td>Value for filter threshold </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">comparator</td><td>Points will not be used in triangulation if "scalar (comparator) threshold", where (comparator) is one of "&gt;", "&lt;", or "=" </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>As an example, imagine we wanted to remove all hit points where the deviation is greater than 15 for the purposes of the triangulation. In this case we would call triangulateHitPoints(Lmax, max_aspect_ratio, "deviation", 15, "&gt;" ); </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01591">1591</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -3930,7 +4128,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l02846">2846</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cu_source.html#l02898">2898</a> of file <a class="el" href="_li_d_a_r_8cu_source.html">LiDAR.cu</a>.</p>
 
 </div>
 </div>
@@ -4017,7 +4215,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </dl>
 <dl class="section note"><dt>Note</dt><dd>points outside the provided bounding box are deleted by default </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01134">1134</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01138">1138</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>
@@ -4092,7 +4290,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </dl>
 <dl class="section note"><dt>Note</dt><dd>points outside the provided bounding box are deleted </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01140">1140</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01144">1144</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>

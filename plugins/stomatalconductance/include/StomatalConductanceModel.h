@@ -110,7 +110,7 @@ public:
     explicit StomatalConductanceModel( helios::Context* m_context );
 
     //! Self-test (unit test) routine
-    int selfTest();
+    static int selfTest();
 
     //! Set the model coefficient values for all primitives - Ball, Woodrow, Berry model
     /**
@@ -191,6 +191,15 @@ public:
         * \param[in] "label" Name of primitive data (e.g., Ci)
      */
     void optionalOutputPrimitiveData( const char* label );
+
+    //! Print a report detailing usage of default input values for all primitives in the Context
+    void printDefaultValueReport() const;
+
+    //! Print a report detailing usage of default input values based on a subset of primitive UUIDs
+    /**
+     * \params[in] "UUIDs" Universal unique identifiers for report
+     */
+    void printDefaultValueReport(const std::vector<uint> &UUIDs) const;
 
 private:
 

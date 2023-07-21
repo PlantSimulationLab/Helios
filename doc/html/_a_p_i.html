@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.60</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.64</span>
    </div>
   </td>
  </tr>
@@ -425,10 +425,10 @@ Adding Patches</h3>
 <div class="line">    UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line"> }</div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01677">Context.h:1677</a></div></div>
-<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01122">Context.cpp:1122</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00311">helios_vector_types.h:311</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00444">helios_vector_types.h:444</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01683">Context.h:1683</a></div></div>
+<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01131">Context.cpp:1131</a></div></div>
+<div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00277">helios_vector_types.h:277</a></div></div>
+<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00410">helios_vector_types.h:410</a></div></div>
 </div><!-- fragment --></pre> </div><p>This will add the Patch shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the '<a class="el" href="class_visualizer.html">Visualizer</a>' plugin is needed to replicate this image, which is not shown in the example code.)</p>
 <div class="image">
 <img src="Patch.png" alt=""/>
@@ -439,7 +439,7 @@ Patch geometric primitive.</div></div>
 <div class="line"> <a class="code hl_struct" href="structhelios_1_1vec2.html">vec2</a> size = make_vec2(1,1);</div>
 <div class="line"> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> rotation = make_SphericalCoord(0.25*M_PI,0.5*M_PI);</div>
 <div class="line"> context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>( center, size, rotation );</div>
-<div class="ttc" id="astructhelios_1_1_spherical_coord_html"><div class="ttname"><a href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a></div><div class="ttdoc">Vector of spherical coordinates (elevation,azimuth)</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01292">helios_vector_types.h:1292</a></div></div>
+<div class="ttc" id="astructhelios_1_1_spherical_coord_html"><div class="ttname"><a href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a></div><div class="ttdoc">Vector of spherical coordinates (elevation,azimuth)</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01250">helios_vector_types.h:1250</a></div></div>
 </div><!-- fragment --></pre> </div><p>This will first rotate the patch by 0.25 <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/> rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/> rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
 <h3><a class="anchor" id="AddingTriangle"></a>
 Adding Triangles</h3>
@@ -459,7 +459,7 @@ Adding Triangles</h3>
 <div class="line">    UUID = context.<a class="code hl_function" href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77">addTriangle</a>( v0, v1, v2, RGB::red );</div>
 <div class="line"> </div>
 <div class="line"> }</div>
-<div class="ttc" id="agroup__primitives_html_ga2a78a464a4c7ef3375a0ced2f1005b77"><div class="ttname"><a href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77">helios::Context::addTriangle</a></div><div class="ttdeci">uint addTriangle(const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2)</div><div class="ttdoc">Add new Triangle geometric primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01252">Context.cpp:1252</a></div></div>
+<div class="ttc" id="agroup__primitives_html_ga2a78a464a4c7ef3375a0ced2f1005b77"><div class="ttname"><a href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77">helios::Context::addTriangle</a></div><div class="ttdeci">uint addTriangle(const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2)</div><div class="ttdoc">Add new Triangle geometric primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01261">Context.cpp:1261</a></div></div>
 </div><!-- fragment --></pre> </div><p>This will add the Triangle shown below. (Note that the addition of the checkerboard ground and the '<a class="el" href="class_visualizer.html">Visualizer</a>' plugin is needed to replicate this image, which is not shown in the example code.)</p>
 <div class="image">
 <img src="Triangle.png" alt=""/>
@@ -487,7 +487,7 @@ Adding Voxels</h3>
 <div class="line">   UUID = context.<a class="code hl_function" href="group__primitives.html#ga5c3476d33e4c6125276bcae114b49b10">addVoxel</a>( center, size, 0, RGB::red );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="agroup__primitives_html_ga5c3476d33e4c6125276bcae114b49b10"><div class="ttname"><a href="group__primitives.html#ga5c3476d33e4c6125276bcae114b49b10">helios::Context::addVoxel</a></div><div class="ttdeci">uint addVoxel(const helios::vec3 &amp;center, const helios::vec3 &amp;size)</div><div class="ttdoc">Add new Voxel geometric primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01303">Context.cpp:1303</a></div></div>
+<div class="ttc" id="agroup__primitives_html_ga5c3476d33e4c6125276bcae114b49b10"><div class="ttname"><a href="group__primitives.html#ga5c3476d33e4c6125276bcae114b49b10">helios::Context::addVoxel</a></div><div class="ttdeci">uint addVoxel(const helios::vec3 &amp;center, const helios::vec3 &amp;size)</div><div class="ttdoc">Add new Voxel geometric primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01312">Context.cpp:1312</a></div></div>
 </div><!-- fragment --></pre> </div><p>This will add the Voxel shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the 'visualizer' plugin is needed to replicate this image, which is not shown in the example code.)</p>
 <div class="image">
 <img src="Voxel.png" alt=""/>
@@ -903,7 +903,7 @@ td  </td></tr>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">float</span> area = <span class="keywordtype">object</span>-&gt;<a class="code hl_function" href="classhelios_1_1_compound_object.html#a8bb518f6166e2a2831a68a7626787ac1">getArea</a>();</div>
 <div class="ttc" id="aclasshelios_1_1_compound_object_html"><div class="ttname"><a href="classhelios_1_1_compound_object.html">helios::CompoundObject</a></div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l00145">Context.h:145</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_compound_object_html_a8bb518f6166e2a2831a68a7626787ac1"><div class="ttname"><a href="classhelios_1_1_compound_object.html#a8bb518f6166e2a2831a68a7626787ac1">helios::CompoundObject::getArea</a></div><div class="ttdeci">float getArea() const</div><div class="ttdoc">Calculate the total one-sided surface area of the Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l02084">Context.cpp:2084</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_compound_object_html_a8bb518f6166e2a2831a68a7626787ac1"><div class="ttname"><a href="classhelios_1_1_compound_object.html#a8bb518f6166e2a2831a68a7626787ac1">helios::CompoundObject::getArea</a></div><div class="ttdeci">float getArea() const</div><div class="ttdoc">Calculate the total one-sided surface area of the Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l02130">Context.cpp:2130</a></div></div>
 </div><!-- fragment --></pre> </div><p>or a shorthand would be</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><div class="fragment"><div class="line">uint objID; <span class="comment">//object identifier</span></div>
 <div class="line"><span class="keywordtype">float</span> area = context.getObjectPointer(objID)-&gt;getArea();</div>
@@ -1012,7 +1012,7 @@ td  </td></tr>
 <li>
 <a class="el" href="classhelios_1_1_disk.html#ae8ed884a95cbfa2440e3bd9f8e3e4057">getCenter()</a> </li>
 <li>
-<a class="el" href="classhelios_1_1_disk.html#ace21fc719d39ebebf3c78c14298c7c74">getSubdivisionCount()</a> </li>
+<a class="el" href="classhelios_1_1_disk.html#a8dc2a195735ee3321b274274e7e0352e">getSubdivisionCount()</a> </li>
 <li>
 <a class="el" href="classhelios_1_1_compound_object.html#a4b2124d89efe900244fb51426ab1f4ce">scale()</a> </li>
 </ul>
@@ -1236,8 +1236,8 @@ Data Timeseries</h2>
 <div class="line">   }</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="astructhelios_1_1_date_html"><div class="ttname"><a href="structhelios_1_1_date.html">helios::Date</a></div><div class="ttdoc">Date vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01032">helios_vector_types.h:1032</a></div></div>
-<div class="ttc" id="astructhelios_1_1_time_html"><div class="ttname"><a href="structhelios_1_1_time.html">helios::Time</a></div><div class="ttdoc">Time vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01192">helios_vector_types.h:1192</a></div></div>
+<div class="ttc" id="astructhelios_1_1_date_html"><div class="ttname"><a href="structhelios_1_1_date.html">helios::Date</a></div><div class="ttdoc">Date vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00990">helios_vector_types.h:990</a></div></div>
+<div class="ttc" id="astructhelios_1_1_time_html"><div class="ttname"><a href="structhelios_1_1_time.html">helios::Time</a></div><div class="ttdoc">Time vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01150">helios_vector_types.h:1150</a></div></div>
 </div><!-- fragment --></pre> </div><p>Typically, data is not entered manually, but rather through an XML file (see Reading XML Files for information).</p>
 <p>It is often necessary to get the number of data points in a given timeseries, which can be accomplished with the command:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><div class="fragment"><div class="line">uint N = context.getTimeseriesLength( <span class="stringliteral">&quot;temperature&quot;</span> );</div>

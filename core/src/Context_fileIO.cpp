@@ -1251,7 +1251,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     if( !quiet ) {
       std::cout << "failed." << std::endl;
     }
-    throw( std::runtime_error("ERROR (loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags."));
+    throw( std::runtime_error("ERROR (Context::loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags."));
   }
 
   //if primitives are added that belong to an object, store their UUIDs here so that we can make sure their UUIDs are consistent
@@ -1610,8 +1610,6 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     getTileObjectPointer(ID)->setTransformationMatrix(transform);
 
-//    float T[16];
-//    makeTranslationMatrix(-patch.getCenter()
     setPrimitiveTransformationMatrix(getObjectPrimitiveUUIDs(ID),transform);
 
     //if primitives exist that were assigned to this object, delete all primitives that were just created
@@ -1961,24 +1959,24 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     }
 
     // * Disk Subdivisions * //
-    uint subdiv;
+    int2 subdiv;
     int result_subdiv = XMLparser::parse_subdivisions(p,subdiv);
     if ( result_subdiv==1 ) {
       std::cerr << "WARNING (Context::loadXML): Number of subdivisions for disk was not provided. Assuming 1x1." << std::endl;
-      subdiv = 5;
+      subdiv = make_int2(5,1);
     } else if( result_subdiv==2 ) {
       throw( std::runtime_error("ERROR (Context::loadXML): Disk <subdivisions> node contains invalid data. ") );
     }
 
     //Create a dummy disk in order to get the center and size based on transformation matrix
     std::vector<uint> empty;
-    Disk disk( 0, empty, 1, "", this );
+    Disk disk( 0, empty, make_int2(1,1), "", this );
     disk.setTransformationMatrix(transform);
 
     // * Add the disk * //
     if (strcmp(texture_file.c_str(), "none") == 0) {
       if( strlen(color_str) == 0 ){
-        ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize() );
+        ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize(), nullrotation, RGB::red );
       }else {
         ID = addDiskObject( subdiv, disk.getCenter(), disk.getSize(), nullrotation, make_RGBcolor(color.r, color.g, color.b) );
       }
@@ -2603,6 +2601,15 @@ void Context::writeXML( const char* filename, bool quiet ) const {
   writeXML(filename, getAllUUIDs(), quiet);
 }
 
+void Context::writeXML_byobject( const char* filename, const std::vector<uint> &objIDs, bool quiet ) const {
+    for( uint objID : objIDs ){
+        if( !doesObjectExist(objID) ){
+            throw( std::runtime_error("ERROR (Context::writeXML_byobject): Object with ID of " + std::to_string(objID) + " does not exist.") );
+        }
+    }
+    writeXML(filename, getObjectPrimitiveUUIDs(objIDs), quiet);
+}
+
 void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bool quiet ) const{
 
   if( !quiet ) {
@@ -2615,6 +2622,8 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
   if( file_extension != ".xml" && file_extension != ".XML" ) { // append xml to file name
     xmlfilename.append(".xml");
   }
+
+  std::vector<uint> objectIDs = getUniquePrimitiveParentObjectIDs( UUIDs, false );
 
   std::ofstream outfile;
   outfile.open(xmlfilename);
@@ -2651,6 +2660,14 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
 
     uint p = UUID;
 
+    if( !doesPrimitiveExist(p) ){
+        if( doesObjectExist(p) ){
+            throw( std::runtime_error("ERROR (Context::writeXML): Primitive with UUID of " + std::to_string(p) + " does not exist. There is a compound object with this ID - did you mean to call Context::writeXML_byobject()?") );
+        }else{
+            throw( std::runtime_error("ERROR (Context::writeXML): Primitive with UUID of " + std::to_string(p) + " does not exist.") );
+        }
+    }
+
     Primitive* prim = getPrimitivePointer_private(p);
 
     uint parent_objID = prim->getParentObjectID();
@@ -2662,9 +2679,10 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
     std::vector<std::string> pdata = prim->listPrimitiveData();
 
     //if this primitive is a member of a compound object that is "complete", don't write it to XML
-    if( parent_objID>0 && areObjectPrimitivesComplete(parent_objID) ){
-      continue;
-    }
+    //\todo This was included to make the XML files more efficient and avoid writing all object primitives to file. However, it doesn't work in some cases because it makes it hard to figure out the primitive transformations.
+//    if( parent_objID>0 && areObjectPrimitivesComplete(parent_objID) ){
+//      continue;
+//    }
 
     if( prim->getType()==PRIMITIVE_TYPE_PATCH ){
       outfile << "   <patch>" << std::endl;
@@ -2768,17 +2786,13 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
 
   // -- objects -- //
 
-  for( const auto &object : objects ){
+  for( auto o : objectIDs ){
 
-    uint o = object.first;
-
-    CompoundObject* obj = object.second;
+    CompoundObject* obj = objects.at(o);
 
     std::string texture_file = obj->getTextureFile();
 
     std::vector<std::string> odata = obj->listObjectData();
-
-    //        std::vector<uint> prim_UUIDs = obj->getPrimitiveUUIDs();
 
     if( obj->getObjectType()==OBJECT_TYPE_TILE ){
       outfile << "   <tile>" << std::endl;
@@ -3093,8 +3107,8 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
       }
       outfile << "</transform>" << std::endl;
 
-      uint subdiv = disk->getSubdivisionCount();
-      outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
+      int2 subdiv = disk->getSubdivisionCount();
+      outfile << "\t<subdivisions> " << subdiv.x << " " << subdiv.y << " </subdivisions>" << std::endl;
 
       outfile << "   </disk>" << std::endl;
 

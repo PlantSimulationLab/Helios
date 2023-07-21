@@ -2252,15 +2252,6 @@ void CanopyGenerator::buildCanopy(const SphericalCrownsCanopyParameters &params 
 
             for (int l=0; l<Nleaves; l++ ){
 
-                // float u = unif_distribution(generator);
-                // float v = unif_distribution(generator);
-                // float theta = u * 2.0 * M_PI;
-                // float phi = acosf(2.0 * v - 1.0);
-                // float rad = pow(unif_distribution(generator),1.f/3.f);
-                // float x = r * rad * sinf(phi) * cosf(theta);
-                // float y = r * rad * sinf(phi) * sinf(theta);
-                // float z = r * rad * cosf(phi);
-
                 vec3 position(-9999,-9999,-9999);
 
                 while( pow(position.x,2)/pow(params.crown_radius.x,2)+pow(position.y,2)/pow(params.crown_radius.y,2)+pow(position.z,2)/pow(params.crown_radius.z,2) > 1.f ){
@@ -2312,7 +2303,7 @@ void CanopyGenerator::buildCanopy(const VSPGrapevineParameters &params ){
 
     if( params.cordon_height<params.trunk_height ){
         std::cout << "failed." << std::endl;
-        throw(std::runtime_error("ERROR: Cannot build VSP grapevine canopy. Cordon height cannot be less than the trunk height."));
+        throw(std::runtime_error("ERROR (CanopyGenerator::buildCanopy)): Cannot build VSP grapevine canopy. Cordon height cannot be less than the trunk height."));
     }
 
     std::uniform_real_distribution<float> unif_distribution;
@@ -2973,44 +2964,6 @@ float CanopyGenerator::sampleLeafPDF( const char* distribution ){
         std::vector<float> args{ru};
 
         thetaL = fzero( evaluateCDFresid, args, distribution, 0.25f );
-
-//    float err_max = 0.0001;
-//    uint max_iter = 100;
-//
-//    float tL_old_old = 0.25f*float(M_PI);
-//
-//    float tL_old = 0.24*float(M_PI);
-//
-//    float resid_old = evaluateCDFresid(distribution,tL_old,ru);
-//    float resid_old_old = evaluateCDFresid(distribution,tL_old_old,ru);
-//
-//    float resid = 100;
-//    float err = resid;
-//    uint iter = 0;
-//    while( err>err_max && iter<max_iter ){
-//
-//      if( resid_old==resid_old_old ){//this condition will cause NaN
-//	err=0;
-//	break;
-//      }
-//
-//      thetaL = fabs((tL_old_old*resid_old-tL_old*resid_old_old)/(resid_old-resid_old_old));
-//
-//      resid = evaluateCDFresid(distribution,thetaL,ru);
-//
-//      resid_old_old = resid_old;
-//      resid_old = resid;
-//
-//      err = fabs(tL_old-tL_old_old)/fabs(tL_old_old);
-//
-//      tL_old_old = tL_old;
-//      tL_old = thetaL;
-//
-//      iter++;
-//
-//    }
-//
-//    assert( err<=err_max );
 
     }else{
         throw(std::runtime_error("ERROR (sampleLeafPDF): Invalid leaf angle distribution of " + std::string(distribution) + " specified."));

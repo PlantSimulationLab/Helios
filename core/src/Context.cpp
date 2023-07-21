@@ -434,6 +434,15 @@ bool Triangle::edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const 
   return ((c.y - a.y) * (b.x - a.x)-(c.x - a.x) * (b.y - a.y) >= 0);
 }
 
+void Primitive::applyTransform( float (&T)[16] ){
+    if( parent_object_ID!=0 ){
+        std::cout << "WARNING (Primitive::applyTransform): Cannot transform individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+
+    matmult(T,transform,transform);
+}
+
 void Primitive::scale( const vec3& S ){
 
     if( parent_object_ID!=0 ){
@@ -1339,8 +1348,12 @@ void Context::translatePrimitive(uint UUID, const vec3& shift ){
 }
 
 void Context::translatePrimitive( const std::vector<uint>& UUIDs, const vec3& shift ){
+
+    float T[16];
+    makeTranslationMatrix(shift,T);
+
     for( uint UUID : UUIDs){
-        getPrimitivePointer_private(UUID)->translate(shift);
+        getPrimitivePointer_private(UUID)->applyTransform(T);
     }
 }
 
@@ -1349,8 +1362,23 @@ void Context::rotatePrimitive(uint UUID, float rot, const char* axis ){
 }
 
 void Context::rotatePrimitive( const std::vector<uint>& UUIDs, float rot, const char* axis ){
+
+    float T[16];
+    if( strcmp(axis,"z")==0 ){
+        makeRotationMatrix(rot,"z",T);
+    }else if( strcmp(axis,"y")==0 ){
+        makeRotationMatrix(rot,"y",T);
+    }else if( strcmp(axis,"x")==0 ){
+        makeRotationMatrix(rot,"x",T);
+    }else{
+        throw( std::runtime_error( "ERROR (Context::rotatePrimitive): Rotation axis should be one of x, y, or z." ) );
+    }
+
     for( uint UUID : UUIDs){
-        getPrimitivePointer_private(UUID)->rotate(rot,axis);
+        if( strcmp(axis,"z")!=0 && getPrimitivePointer_private(UUID)->getType()==PRIMITIVE_TYPE_VOXEL ){
+            std::cout << "WARNING (Context::rotatePrimitive): Voxels can only be rotate about the z-axis. Ignoring this rotation." << std::endl;
+        }
+        getPrimitivePointer_private(UUID)->applyTransform(T);
     }
 }
 
@@ -1359,8 +1387,15 @@ void Context::rotatePrimitive(uint UUID, float rot, const helios::vec3& axis ){
 }
 
 void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const vec3 &axis ){
+
+    float T[16];
+    makeRotationMatrix(rot,axis,T);
+
     for( uint UUID : UUIDs){
-        getPrimitivePointer_private(UUID)->rotate(rot,axis);
+        if( getPrimitivePointer_private(UUID)->getType()==PRIMITIVE_TYPE_VOXEL ){
+            std::cout << "WARNING (Context::rotatePrimitive): Voxels can only be rotate about the z-axis. Ignoring this rotation." << std::endl;
+        }
+        getPrimitivePointer_private(UUID)->applyTransform(T);
     }
 }
 
@@ -1369,8 +1404,15 @@ void Context::rotatePrimitive( uint UUID, float rot, const helios::vec3& origin,
 }
 
 void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const helios::vec3& origin, const vec3 &axis ){
+
+    float T[16];
+    makeRotationMatrix(rot,origin,axis,T);
+
     for( uint UUID : UUIDs){
-        getPrimitivePointer_private(UUID)->rotate(rot,origin,axis);
+        if( getPrimitivePointer_private(UUID)->getType()==PRIMITIVE_TYPE_VOXEL ){
+            std::cout << "WARNING (Context::rotatePrimitive): Voxels can only be rotate about the z-axis. Ignoring this rotation." << std::endl;
+        }
+        getPrimitivePointer_private(UUID)->applyTransform(T);
     }
 }
 
@@ -1379,8 +1421,12 @@ void Context::scalePrimitive(uint UUID, const helios::vec3& S ){
 }
 
 void Context::scalePrimitive( const std::vector<uint>& UUIDs, const helios::vec3& S ){
+
+    float T[16];
+    makeScaleMatrix(S,T);
+
     for( uint UUID : UUIDs){
-        getPrimitivePointer_private(UUID)->scale(S);
+        getPrimitivePointer_private(UUID)->applyTransform(T);
     }
 }
 
@@ -2442,7 +2488,7 @@ uint Context::copyObject(uint ObjID ){
         Disk* o = getDiskObjectPointer( ObjID );
 
         vec2 size = o->getSize();
-        uint subdiv = o->getSubdivisionCount();
+        int2 subdiv = o->getSubdivisionCount();
 
         auto* disk_new = (new Disk(currentObjectID, UUIDs_copy, subdiv, texturefile.c_str(), this));
 
@@ -3305,7 +3351,7 @@ void Box::setSubdivisionCount( const helios::int3 &a_subdiv ){
     subdiv = a_subdiv;
 }
 
-Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile,
+Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, int2 a_subdiv, const char *a_texturefile,
            helios::Context *a_context) {
 
     makeIdentityMatrix( transform );
@@ -3358,11 +3404,11 @@ vec3 Disk::getCenter() const{
 
 }
 
-uint Disk::getSubdivisionCount() const{
+int2 Disk::getSubdivisionCount() const{
     return subdiv;
 }
 
-void Disk::setSubdivisionCount( uint a_subdiv ){
+void Disk::setSubdivisionCount(int2 a_subdiv ){
     subdiv = a_subdiv;
 }
 
@@ -4545,31 +4591,61 @@ uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, co
 }
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size ){
-    return addDiskObject(Ndivs,center,size,make_SphericalCoord(0,0),make_RGBAcolor(1,0,0,1));
+    return addDiskObject(make_int2(Ndivs,1),center,size,make_SphericalCoord(0,0),make_RGBAcolor(1,0,0,1));
 }
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation ){
-    return addDiskObject(Ndivs,center,size,rotation,make_RGBAcolor(1,0,0,1));
+    return addDiskObject(make_int2(Ndivs,1),center,size,rotation,make_RGBAcolor(1,0,0,1));
 }
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color ){
-    return addDiskObject(Ndivs,center,size,rotation,make_RGBAcolor(color,1));
+    return addDiskObject(make_int2(Ndivs,1),center,size,rotation,make_RGBAcolor(color,1));
 }
 
 uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
+    return addDiskObject(make_int2(Ndivs,1),center,size,rotation,color);
+}
+
+uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
+    return addDiskObject(make_int2(Ndivs,1),center,size,rotation,texture_file);
+}
+
+uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color ){
+    return addDiskObject(Ndivs,center,size,rotation,make_RGBAcolor(color,1));
+}
+
+uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
 
     std::vector<uint> UUID;
-    UUID.resize(Ndivs);
 
-    for( int i=0; i<Ndivs; i++ ){
+    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    int i=0;
+    for( int r=0; r < Ndivs.y; r++ ) {
+        for (int t = 0; t < Ndivs.x; t++) {
 
-        float dtheta = 2.f*float(M_PI)/float(Ndivs);
+            float dtheta = 2.f * float(M_PI) / float(Ndivs.x);
+            float theta = dtheta*float(t);
+            float theta_plus = dtheta*float(t+1);
 
-        UUID.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), color );
-        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer_private(UUID.at(i))->translate( center );
+            float rx = size.x/float(Ndivs.y)*float(r);
+            float ry = size.y/float(Ndivs.y)*float(r);
 
+            float rx_plus = size.x/float(Ndivs.y)*float(r+1);
+            float ry_plus = size.y/float(Ndivs.y)*float(r+1);
+
+            if( r==0 ) {
+                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
+            }else{
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0),make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), color);
+                i++;
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
+            }
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
+            getPrimitivePointer_private(UUID.at(i))->translate(center);
+
+            i++;
+        }
     }
 
     auto* disk_new = (new Disk(currentObjectID, UUID, Ndivs, "", this));
@@ -4597,7 +4673,7 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
 
 }
 
-uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
+uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
 
   //texture must have type PNG or JPEG
   std::string fn = texture_file;
@@ -4607,17 +4683,34 @@ uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, co
   }
 
     std::vector<uint> UUID;
-    UUID.resize(Ndivs);
 
-    for( int i=0; i<Ndivs; i++ ){
+    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    int i=0;
+    for( int r=0; r < Ndivs.y; r++ ) {
+        for (int t = 0; t < Ndivs.x; t++) {
 
-        float dtheta = 2.f*float(M_PI)/float(Ndivs);
+            float dtheta = 2.f * float(M_PI) / float(Ndivs.x);
+            float theta = dtheta*float(t);
+            float theta_plus = dtheta*float(t+1);
 
-        UUID.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(dtheta*float(i))),0.5f*(1.f+sinf(dtheta*float(i)))), make_vec2(0.5f*(1.f+cosf(dtheta*float(i+1))),0.5f*(1.f+sinf(dtheta*float(i+1))))  );
-        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer_private(UUID.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer_private(UUID.at(i))->translate( center );
+            float rx = size.x/float(Ndivs.y)*float(r);
+            float ry = size.y/float(Ndivs.y)*float(r);
+            float rx_plus = size.x/float(Ndivs.y)*float(r+1);
+            float ry_plus = size.y/float(Ndivs.y)*float(r+1);
 
+            if( r==0 ) {
+                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)), make_vec2(0.5f*(1.f+cosf(theta_plus)*rx_plus/size.x), 0.5f*(1.f+sinf(theta_plus)*ry_plus/size.y)));
+            }else{
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0),make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), texture_file, make_vec2(0.5f*(1.f+cosf(theta_plus)*rx/size.x), 0.5f*(1.f+sinf(theta_plus)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx/size.x), 0.5f*(1.f+sinf(theta)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)));
+                i++;
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texture_file, make_vec2(0.5f*(1.f+cosf(theta_plus)*rx/size.x), 0.5f*(1.f+sinf(theta_plus)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)), make_vec2(0.5f*(1.f+cosf(theta_plus)*rx_plus/size.x), 0.5f*(1.f+sinf(theta_plus)*ry_plus/size.y)));
+            }
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
+            getPrimitivePointer_private(UUID.at(i))->translate(center);
+
+            i++;
+        }
     }
 
     auto* disk_new = (new Disk(currentObjectID, UUID, Ndivs, texture_file, this));
@@ -5617,38 +5710,67 @@ std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const in
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size ){
-    return addDisk(Ndivs,center,size,make_SphericalCoord(0,0),make_RGBAcolor(1,0,0,1));
+    return addDisk(make_int2(Ndivs,1),center,size,make_SphericalCoord(0,0),make_RGBAcolor(1,0,0,1));
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation ){
-    return addDisk(Ndivs,center,size,rotation,make_RGBAcolor(1,0,0,1));
+    return addDisk(make_int2(Ndivs,1),center,size,rotation,make_RGBAcolor(1,0,0,1));
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color ){
-    return addDisk(Ndivs,center,size,rotation,make_RGBAcolor(color,1));
+    return addDisk(make_int2(Ndivs,1),center,size,rotation,make_RGBAcolor(color,1));
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
-
-    std::vector<uint> UUIDs;
-    UUIDs.resize(Ndivs);
-
-    for( int i=0; i<Ndivs; i++ ){
-
-        float dtheta = 2.f*float(M_PI)/float(Ndivs);
-
-        UUIDs.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), color );
-        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer_private(UUIDs.at(i))->translate( center );
-
-    }
-
-    return UUIDs;
-
+    return addDisk(make_int2(Ndivs,1),center,size,rotation,color);
 }
 
 std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
+    return addDisk(make_int2(Ndivs,1),center,size,rotation,texture_file);
+}
+
+std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color ){
+    return addDisk(Ndivs,center,size,rotation,make_RGBAcolor(color,1));
+}
+
+std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
+
+    std::vector<uint> UUID;
+    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    int i=0;
+    for( int r=0; r < Ndivs.y; r++ ) {
+        for (int t = 0; t < Ndivs.x; t++) {
+
+            float dtheta = 2.f * float(M_PI) / float(Ndivs.x);
+            float theta = dtheta*float(t);
+            float theta_plus = dtheta*float(t+1);
+
+            float rx = size.x/float(Ndivs.y)*float(r);
+            float ry = size.y/float(Ndivs.y)*float(r);
+
+            float rx_plus = size.x/float(Ndivs.y)*float(r+1);
+            float ry_plus = size.y/float(Ndivs.y)*float(r+1);
+
+            if( r==0 ) {
+                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
+            }else{
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0),make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), color);
+                i++;
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
+            }
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
+            getPrimitivePointer_private(UUID.at(i))->translate(center);
+
+            i++;
+        }
+    }
+
+    return UUID;
+
+}
+
+std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
 
   //texture must have type PNG or JPEG
   std::string fn = texture_file;
@@ -5657,21 +5779,37 @@ std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &s
     throw( std::runtime_error("ERROR (Context::addDisk): Texture file " + fn + " is not PNG or JPEG format.") );
   }
 
-    std::vector<uint> UUIDs;
-    UUIDs.resize(Ndivs);
+    std::vector<uint> UUID;
+    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    int i=0;
+    for( int r=0; r < Ndivs.y; r++ ) {
+        for (int t = 0; t < Ndivs.x; t++) {
 
-    for( int i=0; i<Ndivs; i++ ){
+            float dtheta = 2.f * float(M_PI) / float(Ndivs.x);
+            float theta = dtheta*float(t);
+            float theta_plus = dtheta*float(t+1);
 
-        float dtheta = 2.f*float(M_PI)/float(Ndivs);
+            float rx = size.x/float(Ndivs.y)*float(r);
+            float ry = size.y/float(Ndivs.y)*float(r);
+            float rx_plus = size.x/float(Ndivs.y)*float(r+1);
+            float ry_plus = size.y/float(Ndivs.y)*float(r+1);
 
-        UUIDs.at(i) = addTriangle( make_vec3(0,0,0), make_vec3(size.x*cosf(dtheta*float(i)),size.y*sinf(dtheta*float(i)),0), make_vec3(size.x*cosf(dtheta*float(i+1)),size.y*sinf(dtheta*float(i+1)),0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(dtheta*float(i))),0.5f*(1.f+sinf(dtheta*float(i)))), make_vec2(0.5f*(1.f+cosf(dtheta*float(i+1))),0.5f*(1.f+sinf(dtheta*float(i+1))))  );
-        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.elevation, "y" );
-        getPrimitivePointer_private(UUIDs.at(i))->rotate( rotation.azimuth, "z" );
-        getPrimitivePointer_private(UUIDs.at(i))->translate( center );
+            if( r==0 ) {
+                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texture_file, make_vec2(0.5,0.5), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)), make_vec2(0.5f*(1.f+cosf(theta_plus)*rx_plus/size.x), 0.5f*(1.f+sinf(theta_plus)*ry_plus/size.y)));
+            }else{
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0),make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), texture_file, make_vec2(0.5f*(1.f+cosf(theta_plus)*rx/size.x), 0.5f*(1.f+sinf(theta_plus)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx/size.x), 0.5f*(1.f+sinf(theta)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)));
+                i++;
+                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0),make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texture_file, make_vec2(0.5f*(1.f+cosf(theta_plus)*rx/size.x), 0.5f*(1.f+sinf(theta_plus)*ry/size.y)), make_vec2(0.5f*(1.f+cosf(theta)*rx_plus/size.x), 0.5f*(1.f+sinf(theta)*ry_plus/size.y)), make_vec2(0.5f*(1.f+cosf(theta_plus)*rx_plus/size.x), 0.5f*(1.f+sinf(theta_plus)*ry_plus/size.y)));
+            }
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
+            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
+            getPrimitivePointer_private(UUID.at(i))->translate(center);
 
+            i++;
+        }
     }
 
-    return UUIDs;
+    return UUID;
 
 }
 
@@ -6421,11 +6559,23 @@ const std::vector<std::vector<bool>> * Context::getPrimitiveTextureTransparencyD
 
 void Context::overridePrimitiveTextureColor( uint UUID ){
     getPrimitivePointer_private(UUID)->overrideTextureColor();
-};
+}
+
+void Context::overridePrimitiveTextureColor( const std::vector<uint> &UUIDs ){
+    for( uint UUID : UUIDs ) {
+        getPrimitivePointer_private(UUID)->overrideTextureColor();
+    }
+}
 
 void Context::usePrimitiveTextureColor( uint UUID ){
     getPrimitivePointer_private(UUID)->useTextureColor();
-};
+}
+
+void Context::usePrimitiveTextureColor( const std::vector<uint> &UUIDs ){
+    for( uint UUID : UUIDs ) {
+        getPrimitivePointer_private(UUID)->useTextureColor();
+    }
+}
 
 bool Context::isPrimitiveTextureColorOverridden( uint UUID ) const{
     return getPrimitivePointer_private(UUID)->isTextureColorOverridden();
@@ -7174,8 +7324,20 @@ void Context::overrideObjectTextureColor(uint ObjID) {
     getObjectPointer_private(ObjID)->overrideTextureColor();
 }
 
+void Context::overrideObjectTextureColor( const std::vector<uint> &ObjIDs) {
+    for( uint ObjID : ObjIDs ) {
+        getObjectPointer_private(ObjID)->overrideTextureColor();
+    }
+}
+
 void Context::useObjectTextureColor(uint ObjID) {
     getObjectPointer_private(ObjID)->useTextureColor();
+}
+
+void Context::useObjectTextureColor( const std::vector<uint> &ObjIDs) {
+    for( uint ObjID : ObjIDs ) {
+        getObjectPointer_private(ObjID)->useTextureColor();
+    }
 }
 
 void Context::getObjectBoundingBox( uint ObjID, vec3 &min_corner, vec3 &max_corner ) const {
@@ -7369,7 +7531,7 @@ helios::vec2 Context::getDiskObjectSize(uint &ObjID) const {
 }
 
 uint Context::getDiskObjectSubdivisionCount(uint &ObjID) const {
-    return getDiskObjectPointer_private(ObjID)->getSubdivisionCount();
+    return getDiskObjectPointer_private(ObjID)->getSubdivisionCount().x;
 }
 
 uint Context::getConeObjectSubdivisionCount(uint &ObjID) const {
@@ -7842,6 +8004,363 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
   }
 
 }
+
+void Context::scalePrimitiveData( const std::vector<uint> &UUIDs, const std::string &label, float scaling_factor ){
+
+    uint primitives_not_exist = 0;
+    uint primitive_data_not_exist = 0;
+    for( uint UUID : UUIDs ){
+        if( !doesPrimitiveExist(UUID) ){
+            primitives_not_exist++;
+            continue;
+        }
+        if( !doesPrimitiveDataExist(UUID, label.c_str()) ){
+            primitive_data_not_exist++;
+            continue;
+        }
+        HeliosDataType data_type = getPrimitiveDataType(UUID,label.c_str());
+        if( data_type==HELIOS_TYPE_FLOAT ){
+            float data;
+            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
+            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+        }else if( data_type==HELIOS_TYPE_DOUBLE ){
+            double data;
+            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
+            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+        }else if( data_type==HELIOS_TYPE_VEC2 ){
+            vec2 data;
+            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
+            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+        }else if( data_type==HELIOS_TYPE_VEC3 ){
+            vec3 data;
+            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
+            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+        }else if( data_type==HELIOS_TYPE_VEC4 ){
+            vec4 data;
+            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
+            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+        }else{
+            throw( std::runtime_error("ERROR (Context::scalePrimitiveData): This operation only supports primitive data of type float, double, vec2, vec3, and vec4.") );
+        }
+    }
+
+    if( primitives_not_exist>0 ){
+        std::cout << "WARNING (Context::scalePrimitiveData): " << primitives_not_exist << " of " << UUIDs.size() << " from the input UUID vector did not exist." << std::endl;
+    }
+    if( primitive_data_not_exist>0 ){
+        std::cout << "WARNING (Context::scalePrimitiveData): Primitive data did not exist for " << primitive_data_not_exist << " primitives, and thus no scaling was applied." << std::endl;
+    }
+
+}
+
+void Context::aggregatePrimitiveDataSum( const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_data_labels, const std::string &result_primitive_data_label  ){
+
+    uint primitives_not_exist = 0;
+    uint primitive_data_not_exist = 0;
+
+    float data_float = 0;
+    double data_double = 0;
+    uint data_uint = 0;
+    int data_int = 0;
+    int2 data_int2;
+    int3 data_int3;
+    int4 data_int4;
+    vec2 data_vec2;
+    vec3 data_vec3;
+    vec4 data_vec4;
+
+    for( uint UUID : UUIDs ){
+        if( !doesPrimitiveExist(UUID) ){
+            primitives_not_exist++;
+            continue;
+        }
+
+        HeliosDataType data_type;
+
+        bool init_type = false;
+        for( const auto &label : primitive_data_labels ) {
+
+            if (!doesPrimitiveDataExist(UUID, label.c_str())) {
+                continue;
+            }
+
+            HeliosDataType data_type_current = getPrimitiveDataType(UUID, label.c_str());
+            if( !init_type ) {
+                data_type = data_type_current;
+                init_type = true;
+            }else{
+                if( data_type!=data_type_current ){
+                    throw( std::runtime_error("ERROR (Context::aggregatePrimitiveDataSum): Primitive data types are not consistent for UUID " + std::to_string(UUID)) );
+                }
+            }
+
+            if ( data_type_current == HELIOS_TYPE_FLOAT) {
+                float data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_float += data;
+            } else if ( data_type_current == HELIOS_TYPE_DOUBLE) {
+                double data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_double += data;
+            } else if ( data_type_current == HELIOS_TYPE_VEC2) {
+                vec2 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_vec2 = data_vec2 + data;
+            } else if ( data_type_current == HELIOS_TYPE_VEC3) {
+                vec3 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_vec3 = data_vec3 + data;
+            } else if ( data_type_current == HELIOS_TYPE_VEC4) {
+                vec4 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_vec4 = data_vec4 + data;
+            } else if ( data_type_current == HELIOS_TYPE_INT) {
+                int data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_int = data_int + data;
+            } else if ( data_type_current == HELIOS_TYPE_UINT) {
+                uint data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_uint = data_uint + data;
+            } else if ( data_type_current == HELIOS_TYPE_INT2) {
+                int2 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_int2 = data_int2 + data;
+            } else if ( data_type_current == HELIOS_TYPE_INT3) {
+                int3 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_int3 = data_int3 + data;
+            } else if ( data_type_current == HELIOS_TYPE_INT4) {
+                int4 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                data_int4 = data_int4 + data;
+            } else {
+                throw (std::runtime_error("ERROR (Context::aggregatePrimitiveDataSum): This operation is not supported for string primitive data types."));
+            }
+        }
+
+        if( !init_type ){
+            primitive_data_not_exist++;
+            continue;
+        }else if ( data_type == HELIOS_TYPE_FLOAT) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_float );
+            data_float = 0;
+        } else if ( data_type == HELIOS_TYPE_DOUBLE) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_double );
+            data_double = 0;
+        } else if ( data_type == HELIOS_TYPE_VEC2) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_vec2 );
+            data_vec2 = make_vec2(0,0);
+        } else if ( data_type == HELIOS_TYPE_VEC3) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_vec3 );
+            data_vec3 = make_vec3(0,0,0);
+        } else if ( data_type == HELIOS_TYPE_VEC4) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_vec4 );
+            data_vec4 = make_vec4(0,0,0,0);
+        } else if ( data_type == HELIOS_TYPE_INT) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_int );
+            data_int = 0;
+        } else if ( data_type == HELIOS_TYPE_UINT) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_uint );
+            data_uint = 0;
+        } else if ( data_type == HELIOS_TYPE_INT2) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_int2 );
+            data_int2 = make_int2(0,0);
+        } else if ( data_type == HELIOS_TYPE_INT3) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_int3 );
+            data_int3 = make_int3(0,0,0);
+        } else if ( data_type == HELIOS_TYPE_INT4) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_int4 );
+            data_int4 = make_int4(0,0,0,0);
+        }
+
+    }
+
+    if( primitives_not_exist>0 ){
+        std::cout << "WARNING (Context::aggregatePrimitiveDataSum): " << primitives_not_exist << " of " << UUIDs.size() << " from the input UUID vector did not exist." << std::endl;
+    }
+    if( primitive_data_not_exist>0 ){
+        std::cout << "WARNING (Context::aggregatePrimitiveDataSum): Primitive data did not exist for " << primitive_data_not_exist << " primitives, and thus no scaling summation was performed and new primitive data was not created for this primitive." << std::endl;
+    }
+
+}
+
+void Context::aggregatePrimitiveDataProduct( const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_data_labels, const std::string &result_primitive_data_label  ){
+
+    uint primitives_not_exist = 0;
+    uint primitive_data_not_exist = 0;
+
+    float data_float = 0;
+    double data_double = 0;
+    uint data_uint = 0;
+    int data_int = 0;
+    int2 data_int2;
+    int3 data_int3;
+    int4 data_int4;
+    vec2 data_vec2;
+    vec3 data_vec3;
+    vec4 data_vec4;
+
+    for( uint UUID : UUIDs ){
+        if( !doesPrimitiveExist(UUID) ){
+            primitives_not_exist++;
+            continue;
+        }
+
+        HeliosDataType data_type;
+
+        bool init_type = false;
+        int i=0;
+        for( const auto &label : primitive_data_labels ) {
+
+            if (!doesPrimitiveDataExist(UUID, label.c_str())) {
+                continue;
+            }
+
+            HeliosDataType data_type_current = getPrimitiveDataType(UUID, label.c_str());
+            if( !init_type ) {
+                data_type = data_type_current;
+                init_type = true;
+            }else{
+                if( data_type!=data_type_current ){
+                    throw( std::runtime_error("ERROR (Context::aggregatePrimitiveDataProduct): Primitive data types are not consistent for UUID " + std::to_string(UUID)) );
+                }
+            }
+
+            if ( data_type_current == HELIOS_TYPE_FLOAT) {
+                float data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ){
+                    data_float = data;
+                }else {
+                    data_float *= data;
+                }
+            } else if ( data_type_current == HELIOS_TYPE_DOUBLE) {
+                double data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ) {
+                    data_double *= data;
+                }else{
+                    data_double = data;
+                }
+            } else if ( data_type_current == HELIOS_TYPE_VEC2) {
+                vec2 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ){
+                    data_vec2.x *= data.x;
+                    data_vec2.y *= data.y;
+                }else{
+                    data_vec2 = data;
+                }
+            } else if ( data_type_current == HELIOS_TYPE_VEC3) {
+                vec3 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ){
+                    data_vec3.x *= data.x;
+                    data_vec3.y *= data.y;
+                    data_vec3.z *= data.z;
+                }else{
+                    data_vec3 = data;
+                }
+            } else if ( data_type_current == HELIOS_TYPE_VEC4) {
+                vec4 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ){
+                    data_vec4.x *= data.x;
+                    data_vec4.y *= data.y;
+                    data_vec4.z *= data.z;
+                    data_vec4.w *= data.w;
+                }else{
+                    data_vec4 = data;
+                }
+            } else if ( data_type_current == HELIOS_TYPE_INT) {
+                int data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ){
+                    data_int = data_int * data;
+                }else{
+                    data_int = data;
+                }
+            } else if ( data_type_current == HELIOS_TYPE_UINT) {
+                uint data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ){
+                    data_uint = data_uint * data;
+                }else{
+                    data_uint = data;
+                }
+            } else if ( data_type_current == HELIOS_TYPE_INT2) {
+                int2 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ){
+                    data_int2.x *= data.x;
+                    data_int2.y *= data.y;
+                }else{
+                    data_int2 = data;
+                }
+            } else if ( data_type_current == HELIOS_TYPE_INT3) {
+                int3 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ){
+                    data_int3.x *= data.x;
+                    data_int3.y *= data.y;
+                    data_int3.z *= data.z;
+                }else{
+                    data_int3 = data;
+                }
+            } else if ( data_type_current == HELIOS_TYPE_INT4) {
+                int4 data;
+                primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
+                if( i==0 ){
+                    data_int4.x *= data.x;
+                    data_int4.y *= data.y;
+                    data_int4.z *= data.z;
+                    data_int4.w *= data.w;
+                }else{
+                    data_int4 = data;
+                }
+            } else {
+                throw (std::runtime_error("ERROR (Context::aggregatePrimitiveDataProduct): This operation is not supported for string primitive data types."));
+            }
+            i++;
+        }
+
+        if( !init_type ){
+            primitive_data_not_exist++;
+            continue;
+        }else if ( data_type == HELIOS_TYPE_FLOAT) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_float );
+        } else if ( data_type == HELIOS_TYPE_DOUBLE) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_double );
+        } else if ( data_type == HELIOS_TYPE_VEC2) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_vec2 );
+        } else if ( data_type == HELIOS_TYPE_VEC3) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_vec3 );
+        } else if ( data_type == HELIOS_TYPE_VEC4) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_vec4 );
+        } else if ( data_type == HELIOS_TYPE_INT) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_int );
+        } else if ( data_type == HELIOS_TYPE_UINT) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_uint );
+        } else if ( data_type == HELIOS_TYPE_INT2) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_int2 );
+        } else if ( data_type == HELIOS_TYPE_INT3) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_int3 );
+        } else if ( data_type == HELIOS_TYPE_INT4) {
+            setPrimitiveData( UUID, result_primitive_data_label.c_str(), data_int4 );
+        }
+
+    }
+
+    if( primitives_not_exist>0 ){
+        std::cout << "WARNING (Context::aggregatePrimitiveDataProduct): " << primitives_not_exist << " of " << UUIDs.size() << " from the input UUID vector did not exist." << std::endl;
+    }
+    if( primitive_data_not_exist>0 ){
+        std::cout << "WARNING (Context::aggregatePrimitiveDataProduct): Primitive data did not exist for " << primitive_data_not_exist << " primitives, and thus no multiplication was performed and new primitive data was not created for this primitive." << std::endl;
+    }
+
+}
+
 
 float Context::sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const{
 

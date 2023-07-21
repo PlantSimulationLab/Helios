@@ -1278,3 +1278,70 @@
 - When calling LiDARcloud::syntheticScan() with record_misses=true now generates miss points for beams that do not intersect the voxel grid.
 - The 'timestamp' field for synthetic scans was revised to be globally consistent for all pulses including misses.
 - The 'intensity' field for synthetic scans was revised to have a value of 0 for misses (was previously an arbitrarily large number).
+
+[1.2.61] 2023-06-19
+
+*Context*
+- Fixed Context::writeXML( const char*, std::vector<uint> ) method, which would write out primitives that were part of compound objects regardless of whether their UUID was specified in the input vector argument.
+- Added Context::writeXML_byobjects() method to write geometry to XML based on a vector of compound object IDs.
+- Made temporary fix to Context::writeXML() file to correct an issue where primitives part of a Tile were not loaded correctly if the Tile is complete. The fix was to write all primitives part of an object to XML regardless of whether the object is complete.
+
+*LiDAR*
+- Added LiDARcloud::exportPointCloudPTX() method to export to the PTX file format.
+
+*Canopy Generator*
+- Fixed error caused by canopy_rotation is not equal to zero in the SplitGrapevine canopy.
+- Added a catch for when leaf_width = 0 in grapevine canopies, which would cause an infinite loop.
+
+[1.2.62] 2023-07-13
+
+*Context*
+- Option added for Context::addDisk() and Context::addDiskObject() to specify disk subdivisions in the radial direction.
+
+*Photosynthesis*
+- Boundary-layer conductance was not properly incorporated into CO2 diffusion equation.
+- Default moisture conductance in the code did not match documentation.
+- The photosynthesis model will now check for the primitive data "boundarylayer_conductance_out" to use for the boundary-layer conductance value. If the energy balance plug-in is being used to calculate the boundary-layer conductance, this optional output primitive data should be enabled so that it can be used by other plug-ins.
+
+*Stomatal Conductance*
+- Factor converting boundary-layer conductance to heat to moisture changed from 0.97 to 1.08 to be consistent with energy balance plug-in.
+- The stomatal conductance model will now check for the primitive data "boundarylayer_conductance_out" to use for the boundary-layer conductance value. If the energy balance plug-in is being used to calculate the boundary-layer conductance, this optional output primitive data should be enabled so that it can be used by other plug-ins.
+
+*LiDAR*
+- Added overloaded version of calculateLeafAreaGPU_equal_weighting() that accepts a vector of G values. A separate LAD inversion will be performed for each G value, setting G in all voxels to this value.
+- Modified the overloaded version of gapfillMisses to accept an additional argument, add_flags, which adds a flag as hitpoint data (0: original point, 1: gapfilled, 2: extrapolated at downward edge, 3: extrapolated at upward edge) - added checks to catch issue when one sweep of the LiDAR had zero points - added a check so that if gapfill_grid_only is true and the range is outside of the one provided in the XML file, the XML file range will be used - printed a little more info to screen about the extrapolation ranges and the input arguments.
+- Added in overloaded version of triangulateHitPoints() that applies a scalar filter before triangulating.
+- Implemented cropBeamToGridAngleRange() to reduce memory needed to process point clouds.
+
+*Visualizer*
+- Added colorContextObjectsRandomly().
+
+[1.2.63] 2023-07-15
+
+*Context*
+- Primitive transformation functions when called with a vector of UUIDs will now calculate the transformation matrix once, and apply it to all primitives for improved efficiency.
+- Added primitive data processing methods Context::scalePrimitiveData(), Context::aggregatePrimitiveDataSum(), and Context::aggregatePrimitiveDataProduct().
+
+*Stomatal Conductance*
+- printDefaultValueReport() method was added to print a summary of default input value usage to help with debugging.
+- Very minor change to not get primitive data for photosynthesis or Gamma if not using a photosynthesis-based stomatal conductance model.
+- Made selfTest() static so it can be called without declaring the StomatalConductanceModel class.
+
+*Photosynthesis*
+- printDefaultValueReport() method was added to print a summary of default input value usage to help with debugging.
+- Made selfTest() static so it can be called without declaring the PhotosynthesisModel class.
+
+*Energy Balance*
+- There was an error in the documentation which said that twosided_flag=1 was for one-sided heat transfer and twosided_flag=2 for two-sided heat transfer. It should be twosided_flag=0 for one-sided heat transfer and twosided_flag=1 for two-sided heat transfer.
+- The 'surface_humidity' input listed in the documentation was not actually implemented.
+- A warning message is now issued if the boundary-layer conductance is calculated from the length/area of a primitive instead of an object.
+- Made sure warning messages are disabled when disableMessages() is called.
+- printDefaultValueReport() method was added to print a summary of default input value usage to help with debugging.
+- Made selfTest() static so it can be called without declaring the EnergyBalanceModel class.
+
+[1.2.64] 2023-07-20
+
+*Context*
+- Increment operator added for Helios vector types int2, int3, int4, vec2, vec3, vec4, and general improvements to helios_vector_types.h
+- Overloaded versions of Context::overridePrimitiveTextureColor() and Context::usePrimitiveTextureColor() added to accept a vector of primitive UUIDs.
+- Overloaded versions of Context::overrideObjectTextureColor() and Context::useObjectTextureColor() added to accept a vector of object IDs.

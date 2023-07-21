@@ -65,7 +65,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <tr><td>\f$p_{atm}\f$ (Pa)</td><td>Atmospheric pressure.</td></tr>
  <tr><td>\f$C_p\f$ (J/m<sup>2</sup>/<sup>o</sup>C)</td><td>Heat capacity of object.</td></tr>
  <tr><td>\f$Q_{other}\f$ (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, or latent (e.g., storage).</td></tr>
- <tr><td>\f$n_s\f$</td><td>Number of primitive faces (e.g., typically \f$n_s=2\f$ for leaves, and \f$n_s=1\f$ for the ground.</td></tr>
+ <tr><td>\f$n_s\f$</td><td>Number of primitive faces with heat transfer (e.g., typically \f$n_s=1\f$ for leaves, and \f$n_s=0\f$ for the ground.</td></tr>
  </table>
 
  Constants are given by:
@@ -91,7 +91,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description <th>Available Plug-ins <th>Default Value
- <tr><td>radiation\_flux\_[*] <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Net absorbed radiation flux for band [*] (e.g., direct_flux_PAR). <td>Can be computed by \ref RadiationModel plug-in. <td>0
+ <tr><td>radiation\_flux\_[*] <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Net absorbed radiation flux for band [*] (e.g., radiation_flux_PAR). <td>Can be computed by \ref RadiationModel plug-in. <td>N/A (must add at least one band)
   <tr><td>wind\_speed <td>m/s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
   <tr><td>object\_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
  <tr><td>boundarylayer\_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
@@ -102,8 +102,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <tr><td>air\_pressure <td>Pascals <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Atmospheric pressure. <td>N/A <td>101,000 Pa
  <tr><td>heat\_capacity <td> J/m<sup>2</sup>/<sup>o</sup>C <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Heat capacity of object. <td>N/A <td>0
  <tr><td>other\_surface\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Other surface energy fluxes. <td>N/A <td>0
- <tr><td>twosided\_flag <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces with energy transfer (must be 1 or 2). <td>N/A <td>2
- <tr><td>evaporating\_faces <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces from which water is evaporating (must be 1 or 2). Note: if "twosided_flag" is equal to 1, the number of evaporating faces will be automatically set to 1.<td>N/A <td>1  </table>
+ <tr><td>twosided\_flag <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Flag indicating the number of primitive faces with heat transfer (twosided_flag = 0 for one-sided heat transfer; twosided_flag = 1 for two-sided heat transfer). <td>N/A <td>1
+ <tr><td>evaporating\_faces <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces from which water is evaporating (must be 1 or 2). Note: if "twosided_flag" is equal to 0, the number of evaporating faces will be automatically set to 1.<td>N/A <td>1  </table>
  
  \subsection EBOutputData Default Output Primitive Data
  

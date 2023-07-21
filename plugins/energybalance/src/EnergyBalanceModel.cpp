@@ -38,7 +38,7 @@ EnergyBalanceModel::EnergyBalanceModel( helios::Context* __context ){
 
   heatcapacity_default = 0; //J/m^2-oC
 
-  dt_default=0; //sec
+  surface_humidity_default = 1; //(unitless)
 
   message_flag = true; //print messages to screen by default
 
@@ -353,4 +353,137 @@ void EnergyBalanceModel::optionalOutputPrimitiveData( const char* label ){
     std::cout << "WARNING (EnergyBalanceModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
   }
   
+}
+
+void EnergyBalanceModel::printDefaultValueReport() const{
+    printDefaultValueReport(context->getAllUUIDs());
+}
+
+void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs) const {
+
+    size_t assumed_default_TL = 0;
+    size_t assumed_default_U = 0;
+    size_t assumed_default_L = 0;
+    size_t assumed_default_p = 0;
+    size_t assumed_default_Ta = 0;
+    size_t assumed_default_rh = 0;
+    size_t assumed_default_gH = 0;
+    size_t assumed_default_gs = 0;
+    size_t assumed_default_Qother = 0;
+    size_t assumed_default_heatcapacity = 0;
+    size_t assumed_default_fs = 0;
+    size_t twosided_0 = 0;
+    size_t twosided_1 = 0;
+    size_t Ne_1 = 0;
+    size_t Ne_2 = 0;
+
+    size_t Nprimitives = UUIDs.size();
+
+    for (uint UUID: UUIDs) {
+
+        //surface temperature (K)
+        if (!context->doesPrimitiveDataExist(UUID, "temperature") ||
+            context->getPrimitiveDataType(UUID, "temperature") != HELIOS_TYPE_FLOAT) {
+            assumed_default_TL++;
+        }
+
+        //air pressure (Pa)
+        if (!context->doesPrimitiveDataExist(UUID, "air_pressure") ||
+            context->getPrimitiveDataType(UUID, "air_pressure") != HELIOS_TYPE_FLOAT) {
+            assumed_default_p++;
+        }
+
+        //air temperature (K)
+        if (!context->doesPrimitiveDataExist(UUID, "air_temperature") ||
+            context->getPrimitiveDataType(UUID, "air_temperature") != HELIOS_TYPE_FLOAT) {
+            assumed_default_Ta++;
+        }
+
+        //air humidity
+        if (!context->doesPrimitiveDataExist(UUID, "air_humidity") ||
+            context->getPrimitiveDataType(UUID, "air_humidity") != HELIOS_TYPE_FLOAT) {
+            assumed_default_rh++;
+        }
+
+        //boundary-layer conductance to heat
+        if (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") || context->getPrimitiveDataType(UUID, "boundarylayer_conductance") != HELIOS_TYPE_FLOAT){
+             assumed_default_gH++;
+        }
+
+        //wind speed
+        if (!context->doesPrimitiveDataExist(UUID, "wind_speed") || context->getPrimitiveDataType(UUID, "wind_speed") != HELIOS_TYPE_FLOAT){
+            assumed_default_U++;
+        }
+
+        //object length
+        if (!context->doesPrimitiveDataExist(UUID, "object_length") || context->getPrimitiveDataType(UUID, "object_length") != HELIOS_TYPE_FLOAT){
+            assumed_default_L++;
+        }
+
+        //moisture conductance
+        if (!context->doesPrimitiveDataExist(UUID, "moisture_conductance") || context->getPrimitiveDataType(UUID, "moisture_conductance") != HELIOS_TYPE_FLOAT){
+            assumed_default_gs++;
+        }
+
+        //Heat capacity
+        if (!context->doesPrimitiveDataExist(UUID, "heat_capacity") || context->getPrimitiveDataType(UUID, "heat_capacity") != HELIOS_TYPE_FLOAT) {
+            assumed_default_heatcapacity++;
+        }
+
+        //"Other" heat fluxes
+        if (!context->doesPrimitiveDataExist(UUID, "other_surface_flux") || context->getPrimitiveDataType(UUID, "other_surface_flux") != HELIOS_TYPE_FLOAT) {
+            assumed_default_Qother++;
+        }
+
+        //two-sided flag
+        if ( context->doesPrimitiveDataExist(UUID, "twosided_flag") && context->getPrimitiveDataType(UUID, "twosided_flag") == HELIOS_TYPE_UINT) {
+            uint twosided;
+            context->getPrimitiveData(UUID, "twosided_flag", twosided);
+            if( twosided==0 ){
+                twosided_0++;
+            }else if( twosided==1 ){
+                twosided_1++;
+            }
+        }else{
+            twosided_1++;
+        }
+
+        //number of evaporating faces
+        if ( context->doesPrimitiveDataExist(UUID, "evaporating_faces") && context->getPrimitiveDataType(UUID, "evaporating_faces") == HELIOS_TYPE_UINT) {
+            uint Ne;
+            context->getPrimitiveData(UUID, "evaporating_faces", Ne);
+            if( Ne==1 ){
+                Ne_1++;
+            }else if( Ne==2 ){
+                Ne_2++;
+            }
+        }else{
+            Ne_1++;
+        }
+
+        //Surface humidity
+        if (!context->doesPrimitiveDataExist(UUID, "surface_humidity") || context->getPrimitiveDataType(UUID, "surface_humidity") != HELIOS_TYPE_FLOAT) {
+            assumed_default_fs++;
+        }
+
+    }
+
+    std::cout << "--- Energy Balance Model Default Value Report ---" << std::endl;
+
+    std::cout << "surface temperature (initial guess): " << assumed_default_TL << " of " << Nprimitives << " used default value of " << temperature_default << " because ""temperature"" primitive data did not exist" << std::endl;
+    std::cout << "air pressure: " << assumed_default_p << " of " << Nprimitives << " used default value of " << pressure_default << " because ""air_pressure"" primitive data did not exist" << std::endl;
+    std::cout << "air temperature: " << assumed_default_Ta << " of " << Nprimitives << " used default value of " << air_temperature_default << " because ""air_temperature"" primitive data did not exist" << std::endl;
+    std::cout << "air humidity: " << assumed_default_rh << " of " << Nprimitives << " used default value of " << air_humidity_default << " because ""air_humidity"" primitive data did not exist" << std::endl;
+    std::cout << "boundary-layer conductance: " << assumed_default_gH << " of " << Nprimitives << " calculated boundary-layer conductance from Polhausen equation because ""boundarylayer_conductance"" primitive data did not exist" << std::endl;
+    if( assumed_default_gH>0 ){
+        std::cout << "  - wind speed: " << assumed_default_U << " of " << assumed_default_gH << " using Polhausen equation used default value of " << wind_speed_default << " because ""wind_speed"" primitive data did not exist" << std::endl;
+        std::cout << "  - object length: " << assumed_default_L << " of " << assumed_default_gH << " using Polhausen equation used the primitive/object length/area to calculate object length because ""object_length"" primitive data did not exist" << std::endl;
+    }
+    std::cout << "moisture conductance: " << assumed_default_gs << " of " << Nprimitives << " used default value of " << gS_default << " because ""moisture_conductance"" primitive data did not exist" << std::endl;
+    std::cout << "surface humidity: " << assumed_default_fs << " of " << Nprimitives << " used default value of " << surface_humidity_default << " because ""surface_humidity"" primitive data did not exist" << std::endl;
+    std::cout << "two-sided flag: " << twosided_0 << " of " << Nprimitives << " used two-sided flag=0; " << twosided_1 << " of " << Nprimitives << " used two-sided flag=1 (default)" << std::endl;
+    std::cout << "evaporating faces: " << Ne_1 << " of " << Nprimitives << " used Ne = 1 (default); " << Ne_2 << " of " << Nprimitives << " used Ne = 2" << std::endl;
+
+    std::cout << "------------------------------------------------------" << std::endl;
+
 }
