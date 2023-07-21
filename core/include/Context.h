@@ -168,7 +168,7 @@ public:
     //! Calculate the total one-sided surface area of the Compound Object
     float getArea() const;
     
-    //! method to set the diffuse color for all primitives in the Compound Object
+    //! Method to set the diffuse color for all primitives in the Compound Object
     /** /param[in] "color" New color of primitives
      */
     void setColor( const helios::RGBcolor& color );
@@ -2986,12 +2986,24 @@ public:
      * \param[in] "ObjID" Identifier of the object.
      */
     void overrideObjectTextureColor( uint ObjID );
-    
-    //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is method reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
+
+    //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
+    /**
+     * \param[in] "ObjIDs" Vector of object identifiers.
+     */
+    void overrideObjectTextureColor( const std::vector<uint> &ObjIDs );
+
+    //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
     /**
      * \param[in] "ObjID" Identifier of the object.
      */
     void useObjectTextureColor( uint ObjID );
+
+    //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
+    /**
+     * \param[in] "ObjIDs" Vector of object identifiers.
+     */
+    void useObjectTextureColor( const std::vector<uint> &ObjIDs );
 
     //! Get the axis-aligned bounding box for a single object
     /**
@@ -3154,14 +3166,25 @@ public:
      * \param[in] "UUID" Universal unique identifier of primitive.
      */
     void overridePrimitiveTextureColor( uint UUID );
+
+    //! Override the color in the texture map for multiple primitives, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
+    /**
+     * \param[in] "UUIDs" Vector of universal unique identifier of primitives.
+     */
+    void overridePrimitiveTextureColor( const std::vector<uint> &UUIDs );
     
-    
-    //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is method reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
+    //! Use the texture map to color the primitive rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
     /**
      * \param[in] "UUID" Universal unique identifier of primitive.
      */
     void usePrimitiveTextureColor( uint UUID );
-    
+
+    //! Use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
+    /**
+     * \param[in] "UUIDs" Vector of universal unique identifier of primitives.
+     */
+    void usePrimitiveTextureColor( const std::vector<uint> &UUIDs );
+
     //! Check if color of texture map is overridden by the diffuse R-G-B color of the primitive
     /**
      * \param[in] UUID Unique universal identifier of primitive to be queried

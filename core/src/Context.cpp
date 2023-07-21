@@ -6581,11 +6581,23 @@ const std::vector<std::vector<bool>> * Context::getPrimitiveTextureTransparencyD
 
 void Context::overridePrimitiveTextureColor( uint UUID ){
     getPrimitivePointer_private(UUID)->overrideTextureColor();
-};
+}
+
+void Context::overridePrimitiveTextureColor( const std::vector<uint> &UUIDs ){
+    for( uint UUID : UUIDs ) {
+        getPrimitivePointer_private(UUID)->overrideTextureColor();
+    }
+}
 
 void Context::usePrimitiveTextureColor( uint UUID ){
     getPrimitivePointer_private(UUID)->useTextureColor();
-};
+}
+
+void Context::usePrimitiveTextureColor( const std::vector<uint> &UUIDs ){
+    for( uint UUID : UUIDs ) {
+        getPrimitivePointer_private(UUID)->useTextureColor();
+    }
+}
 
 bool Context::isPrimitiveTextureColorOverridden( uint UUID ) const{
     return getPrimitivePointer_private(UUID)->isTextureColorOverridden();
@@ -7334,8 +7346,20 @@ void Context::overrideObjectTextureColor(uint ObjID) {
     getObjectPointer_private(ObjID)->overrideTextureColor();
 }
 
+void Context::overrideObjectTextureColor( const std::vector<uint> &ObjIDs) {
+    for( uint ObjID : ObjIDs ) {
+        getObjectPointer_private(ObjID)->overrideTextureColor();
+    }
+}
+
 void Context::useObjectTextureColor(uint ObjID) {
     getObjectPointer_private(ObjID)->useTextureColor();
+}
+
+void Context::useObjectTextureColor( const std::vector<uint> &ObjIDs) {
+    for( uint ObjID : ObjIDs ) {
+        getObjectPointer_private(ObjID)->useTextureColor();
+    }
 }
 
 void Context::getObjectBoundingBox( uint ObjID, vec3 &min_corner, vec3 &max_corner ) const {

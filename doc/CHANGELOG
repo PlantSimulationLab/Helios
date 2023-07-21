@@ -1338,3 +1338,10 @@
 - Made sure warning messages are disabled when disableMessages() is called.
 - printDefaultValueReport() method was added to print a summary of default input value usage to help with debugging.
 - Made selfTest() static so it can be called without declaring the EnergyBalanceModel class.
+
+[1.2.64] 2023-07-20
+
+*Context*
+- Increment operator added for Helios vector types int2, int3, int4, vec2, vec3, vec4, and general improvements to helios_vector_types.h
+- Overloaded versions of Context::overridePrimitiveTextureColor() and Context::usePrimitiveTextureColor() added to accept a vector of primitive UUIDs.
+- Overloaded versions of Context::overrideObjectTextureColor() and Context::useObjectTextureColor() added to accept a vector of object IDs.
