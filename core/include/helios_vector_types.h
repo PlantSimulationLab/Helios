@@ -1026,10 +1026,22 @@ public:
   }
 
   //! Convert to Julian day
+  /**
+   * \return Julian day of the year
+   */
   int JulianDay() const;
 
+  //! Increment Date vector by one day
+  void incrementDay();
+
+  //! Check whether it is a leap year
+  /**
+   * \return True if it is a leap year, false if not
+   */
+  bool isLeapYear() const;
+
   friend std::ostream &operator<<(std::ostream &os, helios::Date const &d) {
-    return os << d.year << "-" << d.month << "-" << d.day;
+    return os << d.year << "-" << std::setfill('0') << std::setw(2) << d.month << "-" << std::setfill('0') << std::setw(2) << d.day;
   }
 
 };
@@ -1203,7 +1215,7 @@ struct Time{
   }
 
   friend std::ostream &operator<<(std::ostream &os, helios::Time const &t) {
-    return os << t.hour << ":" << t.minute << ":" << t.second;
+    return os << t.hour << ":" << std::setfill('0') << std::setw(2) << t.minute << ":" << std::setfill('0') << std::setw(2) << t.second;
   }
 
 };

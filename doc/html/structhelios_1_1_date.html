@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.64</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.65</span>
    </div>
   </td>
  </tr>
@@ -98,6 +98,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:abf3a401379adb23851174683a9191efc"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_date.html#abf3a401379adb23851174683a9191efc">JulianDay</a> () const</td></tr>
 <tr class="memdesc:abf3a401379adb23851174683a9191efc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert to Julian day.  <br /></td></tr>
 <tr class="separator:abf3a401379adb23851174683a9191efc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a82d115420d5c45d28e35d6226c3c8636"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_date.html#a82d115420d5c45d28e35d6226c3c8636">incrementDay</a> ()</td></tr>
+<tr class="memdesc:a82d115420d5c45d28e35d6226c3c8636"><td class="mdescLeft">&#160;</td><td class="mdescRight">Increment <a class="el" href="structhelios_1_1_date.html" title="Date vector.">Date</a> vector by one day.  <br /></td></tr>
+<tr class="separator:a82d115420d5c45d28e35d6226c3c8636"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae54ee66704fedfe50c8efc16695f3e9e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_date.html#ae54ee66704fedfe50c8efc16695f3e9e">isLeapYear</a> () const</td></tr>
+<tr class="memdesc:ae54ee66704fedfe50c8efc16695f3e9e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check whether it is a leap year.  <br /></td></tr>
+<tr class="separator:ae54ee66704fedfe50c8efc16695f3e9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -206,6 +212,49 @@ Friends</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a82d115420d5c45d28e35d6226c3c8636" name="a82d115420d5c45d28e35d6226c3c8636"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a82d115420d5c45d28e35d6226c3c8636">&#9670;&#160;</a></span>incrementDay()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void helios::Date::incrementDay </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Increment <a class="el" href="structhelios_1_1_date.html" title="Date vector.">Date</a> vector by one day. </p>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00188">188</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae54ee66704fedfe50c8efc16695f3e9e" name="ae54ee66704fedfe50c8efc16695f3e9e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae54ee66704fedfe50c8efc16695f3e9e">&#9670;&#160;</a></span>isLeapYear()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::Date::isLeapYear </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Check whether it is a leap year. </p>
+<dl class="section return"><dt>Returns</dt><dd>True if it is a leap year, false if not </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00201">201</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
 <a id="abf3a401379adb23851174683a9191efc" name="abf3a401379adb23851174683a9191efc"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#abf3a401379adb23851174683a9191efc">&#9670;&#160;</a></span>JulianDay()</h2>
 
@@ -222,6 +271,7 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Convert to Julian day. </p>
+<dl class="section return"><dt>Returns</dt><dd>Julian day of the year </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00172">172</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
@@ -262,7 +312,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01031">1031</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01043">1043</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>

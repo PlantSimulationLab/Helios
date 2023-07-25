@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.64</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.65</span>
    </div>
   </td>
  </tr>
@@ -1300,6 +1300,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ga56d13f8c949e68137581a3c974790892"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__timeseries.html#ga56d13f8c949e68137581a3c974790892">getTimeseriesLength</a> (const char *label) const</td></tr>
 <tr class="memdesc:ga56d13f8c949e68137581a3c974790892"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the length of timeseries data.  <br /></td></tr>
 <tr class="separator:ga56d13f8c949e68137581a3c974790892"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1dc9a0f79be2477c4873755586744e51"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">loadTabularTimeseriesData</a> (const std::string &amp;data_file, const std::vector&lt; std::string &gt; &amp;column_labels, const std::string &amp;delimiter, const std::string &amp;date_string_format=&quot;YYYYMMDD&quot;, uint headerlines=0)</td></tr>
+<tr class="memdesc:a1dc9a0f79be2477c4873755586744e51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load tabular weather data from text file into timeseries.  <br /></td></tr>
+<tr class="separator:a1dc9a0f79be2477c4873755586744e51"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8690412a63d1eff69e679e48d03c9838"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_context.html#a8690412a63d1eff69e679e48d03c9838">getDomainBoundingBox</a> (<a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &amp;xbounds, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &amp;ybounds, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &amp;zbounds) const</td></tr>
 <tr class="memdesc:a8690412a63d1eff69e679e48d03c9838"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a box that bounds all primitives in the domain.  <br /></td></tr>
 <tr class="separator:a8690412a63d1eff69e679e48d03c9838"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -10291,6 +10294,56 @@ Public Member Functions</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of blue if no colors are specified in the .ply file </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03307">3307</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1dc9a0f79be2477c4873755586744e51" name="a1dc9a0f79be2477c4873755586744e51"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1dc9a0f79be2477c4873755586744e51">&#9670;&#160;</a></span>loadTabularTimeseriesData()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::loadTabularTimeseriesData </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>data_file</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;&#160;</td>
+          <td class="paramname"><em>column_labels</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>delimiter</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>date_string_format</em> = <code>&quot;YYYYMMDD&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>headerlines</em> = <code>0</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Load tabular weather data from text file into timeseries. </p>
+
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04459">4459</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>

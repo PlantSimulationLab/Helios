@@ -1731,7 +1731,7 @@ void Context::addTimeseriesData(const char* label, float value, const Date &date
             //data should be inserted somewhere in the middle of timeseries
             for( uint t=0; t<N-1; t++ ){
                 if( date_value==timeseries_datevalue[label].at(t) ){
-                    std::cout << "WARNING (addTimeseriesData): Skipping duplicate timeseries date/time." << std::endl;
+                    std::cout << "WARNING (Context::addTimeseriesData): Skipping duplicate timeseries date/time." << std::endl;
                     continue;
                 }
                 if( date_value>timeseries_datevalue[label].at(t) && date_value<timeseries_datevalue[label].at(t+1) ){
@@ -1745,7 +1745,7 @@ void Context::addTimeseriesData(const char* label, float value, const Date &date
 
     }
 
-    throw( std::runtime_error("ERROR (addTimeseriesData): Failed to insert timeseries data for unknown reason.") );
+    throw( std::runtime_error("ERROR (Context::addTimeseriesData): Failed to insert timeseries data for unknown reason.") );
 
 }
 

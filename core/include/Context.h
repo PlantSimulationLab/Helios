@@ -5119,6 +5119,9 @@ public:
      * \ingroup timeseries
      */
     uint getTimeseriesLength( const char* label ) const;
+
+    //! Load tabular weather data from text file into timeseries
+    void loadTabularTimeseriesData( const std::string &data_file, const std::vector<std::string> &column_labels, const std::string &delimiter, const std::string &date_string_format="YYYYMMDD", uint headerlines=0 );
     
     //! Get a box that bounds all primitives in the domain
     /**

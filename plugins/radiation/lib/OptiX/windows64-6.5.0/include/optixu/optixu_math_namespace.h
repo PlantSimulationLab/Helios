@@ -283,12 +283,13 @@ namespace optix {
 /* Bit preserving casting functions */
 /******************************************************************************/
 
-#ifdef __CUDACC__
-
-  using ::float_as_int;
-  using ::int_as_float;
-
-#else
+// BNB 7/28/2023: This was causing a build error on CUDA 12.0+
+//#ifdef __CUDACC__
+//
+//  using ::float_as_int;
+//  using ::int_as_float;
+//
+//#else
 
 /** Bit preserving casting function */
 OPTIXU_INLINE int float_as_int(const float f)
@@ -314,7 +315,7 @@ OPTIXU_INLINE float int_as_float(int i)
   return v1.f;
 }
 
-#endif 
+//#endif
 
 
 /* float functions */

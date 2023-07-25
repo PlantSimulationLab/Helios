@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.64</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.65</span>
    </div>
   </td>
  </tr>
@@ -211,6 +211,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ga56b873fa7b729dd84412d44156fa2dca"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga56b873fa7b729dd84412d44156fa2dca">helios::trim_whitespace</a> (const std::string &amp;input)</td></tr>
 <tr class="memdesc:ga56b873fa7b729dd84412d44156fa2dca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove leading and trailing whitespace from a string.  <br /></td></tr>
 <tr class="separator:ga56b873fa7b729dd84412d44156fa2dca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gae239abbec7c2ff618b3603bf69ccf2ed"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gae239abbec7c2ff618b3603bf69ccf2ed">helios::separate_string_by_delimiter</a> (const std::string &amp;inputstring, const std::string &amp;delimiter)</td></tr>
+<tr class="memdesc:gae239abbec7c2ff618b3603bf69ccf2ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Separate string by delimiter and store into a vector.  <br /></td></tr>
+<tr class="separator:gae239abbec7c2ff618b3603bf69ccf2ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gafc2084bde2f2a0e15d637e973658a5a4"><td class="memTemplParams" colspan="2">template&lt;typename anytype &gt; </td></tr>
 <tr class="memitem:gafc2084bde2f2a0e15d637e973658a5a4"><td class="memTemplItemLeft" align="right" valign="top">anytype&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4">helios::clamp</a> (anytype value, anytype min, anytype max)</td></tr>
 <tr class="memdesc:gafc2084bde2f2a0e15d637e973658a5a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clamp value to be within some specified bounds.  <br /></td></tr>
@@ -567,7 +570,7 @@ Variables</h2></td></tr>
 
 <p>arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular acos() returns NaN </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00206">206</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00227">227</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -589,7 +592,7 @@ Variables</h2></td></tr>
 
 <p>arcsine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular asin() returns NaN </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00212">212</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00233">233</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -727,7 +730,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>int3, with int3::x = day, int3::y = month, int3::z = year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>JulianDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01062">1062</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01105">1105</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -757,7 +760,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>SphericalCoord vector. </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>sphere2cart(), SphericalCoord </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00554">554</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00575">575</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -779,7 +782,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D double vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01695">1695</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01738">1738</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -801,7 +804,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D float vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01674">1674</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01717">1717</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -823,7 +826,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D int2 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01779">1779</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01822">1822</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -845,7 +848,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D int3 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01800">1800</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01843">1843</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -867,7 +870,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D int4 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01821">1821</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01864">1864</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -889,7 +892,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D vec2 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01716">1716</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01759">1759</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -911,7 +914,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D vec3 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01737">1737</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01780">1780</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -933,7 +936,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D vec4 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01758">1758</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01801">1801</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -955,7 +958,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D int vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01632">1632</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01675">1675</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -977,7 +980,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D string vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01842">1842</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01885">1885</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -999,7 +1002,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D double vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01938">1938</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01981">1981</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1021,7 +1024,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D float vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01913">1913</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01956">1956</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1043,7 +1046,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D int2 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02038">2038</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02081">2081</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1065,7 +1068,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D int3 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02063">2063</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02106">2106</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1087,7 +1090,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D int4 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02088">2088</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02131">2131</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1109,7 +1112,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D vec2 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01963">1963</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02006">2006</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1131,7 +1134,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D vec3 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01988">1988</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02031">2031</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1153,7 +1156,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D vec4 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02013">2013</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02056">2056</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1175,7 +1178,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D int vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01863">1863</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01906">1906</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1197,7 +1200,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D string vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02113">2113</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02156">2156</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1219,7 +1222,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D double vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02225">2225</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02268">2268</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1241,7 +1244,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D float vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02196">2196</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02239">2239</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1263,7 +1266,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D int2 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02341">2341</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02384">2384</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1285,7 +1288,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D int3 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02370">2370</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02413">2413</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1307,7 +1310,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D int4 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02399">2399</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02442">2442</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1329,7 +1332,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D vec2 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02254">2254</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02297">2297</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1351,7 +1354,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D vec3 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02283">2283</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02326">2326</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1373,7 +1376,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D vec4 vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02312">2312</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02355">2355</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1395,7 +1398,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D int vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02138">2138</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02181">2181</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1417,7 +1420,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D string vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02428">2428</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02471">2471</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1439,7 +1442,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 4D uint vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02167">2167</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02210">2210</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1461,7 +1464,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 3D uint vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01888">1888</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01931">1931</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1483,7 +1486,7 @@ Variables</h2></td></tr>
 
 <p>Function to flatten a 2D uint &amp;vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01653">1653</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01696">1696</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1548,7 +1551,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02666">2666</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02709">2709</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1578,7 +1581,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain an extension, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02764">2764</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02807">2807</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1608,7 +1611,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename including extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02801">2801</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02844">2844</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1648,7 +1651,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File path contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a path, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02812">2812</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02855">2855</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1678,7 +1681,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename without extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02786">2786</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02829">2829</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1707,7 +1710,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>One-dimensional vector of floats contained in text file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02830">2830</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02873">2873</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1747,7 +1750,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of y interpolated at location x. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02711">2711</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02754">2754</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1795,7 +1798,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>CalendarDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01105">1105</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01148">1148</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1839,7 +1842,7 @@ Variables</h2></td></tr>
 
 <p>Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2). </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00218">218</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00239">239</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1861,7 +1864,7 @@ Variables</h2></td></tr>
 
 <p>Construct an identity matrix. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00499">499</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00520">520</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1899,7 +1902,7 @@ Variables</h2></td></tr>
 
 <p>Multiply 4x4 matrices: T=ML*MR. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00443">443</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00464">464</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1939,7 +1942,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00737">737</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00758">758</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1979,7 +1982,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00722">722</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00743">743</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2019,7 +2022,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00752">752</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00773">773</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2059,7 +2062,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00767">767</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00788">788</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2087,7 +2090,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01189">1189</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01232">1232</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2127,7 +2130,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>distance between p1 and p2 in three dimensions </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02760">2760</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02803">2803</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2159,7 +2162,7 @@ Variables</h2></td></tr>
 
 <p>Determine whether point lines within a polygon. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00241">241</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00262">262</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2212,7 +2215,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01498">1498</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01541">1541</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2265,7 +2268,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01342">1342</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01385">1385</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2294,7 +2297,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>2D mask, where false denotes no material </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01243">1243</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01286">1286</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2377,7 +2380,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>vec3 vector of Cartesian coordinates </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>cart2sphere() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00570">570</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00591">591</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2438,7 +2441,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Interpolated (x,y,z) Cartesian point. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02457">2457</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02500">2500</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2476,7 +2479,7 @@ Variables</h2></td></tr>
 
 <p>Multiply 4x4 transformation matrix by 3-element vector: T=M*v. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00483">483</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00504">504</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2514,7 +2517,7 @@ Variables</h2></td></tr>
 
 <p>Multiply 4x4 transformation matrix by 3-element vector: T=M*v. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00461">461</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00482">482</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2567,7 +2570,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01557">1557</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01600">1600</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2620,7 +2623,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01431">1431</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01474">1474</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2659,7 +2662,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02497">2497</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02540">2540</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2698,7 +2701,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02514">2514</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02557">2557</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2737,7 +2740,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02591">2591</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02634">2634</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2776,7 +2779,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02606">2606</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02649">2649</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2815,7 +2818,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02621">2621</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02664">2664</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2854,7 +2857,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02636">2636</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02679">2679</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2893,7 +2896,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02651">2651</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02694">2694</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2932,7 +2935,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02531">2531</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02574">2574</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2971,7 +2974,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02546">2546</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02589">2589</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -3010,7 +3013,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02561">2561</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02604">2604</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -3049,7 +3052,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02576">2576</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02619">2619</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

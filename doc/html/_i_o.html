@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.64</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.65</span>
    </div>
   </td>
  </tr>
@@ -145,7 +145,53 @@ Adding Timeseries Data</h2>
   &lt;/datapoint&gt;
 &lt;/timeseries&gt;
 &lt;/helios&gt;</code></pre> </div><p>Note that the date can alternatively be specified as a Julian day of year (1-366) using the &lt;dateJulian&gt; tag:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> &lt;dateJulian&gt;2 2000&lt;/dateJulian&gt; &lt;!-- 2 Jan. 2000, Julian Day = 2 --&gt;</code></pre> </div><h1><a class="anchor" id="XMLread"></a>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> &lt;dateJulian&gt;2 2000&lt;/dateJulian&gt; &lt;!-- 2 Jan. 2000, Julian Day = 2 --&gt;</code></pre> </div><h1><a class="anchor" id="ASCIItimeseries"></a>
+Adding Timeseries (Weather) Data from Tabular Text Files</h1>
+<p>If timeseries/weather data is available in a tabular ASCII text file, this can be read directly into the Context to create a timeseries using the <a class="el" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">helios::Context::loadTabularTimeseriesData()</a> method. The general format for these files is that each column should correspond to each variable (e.g., time, date, temperature, wind speed) and each row should be a different time point. There should be an equal number of columns on every line.</p>
+<p>At a minimum, there should be a column specifying the date, which could either be a date string (e.g., 03/10/2023) or Julian day and the year, as well as columns specifying the hour and at least one corresponding data value. The date string can separate values by the '/' or '-' characters (03/10/2023 or 03-10-2023, respectively), and can have different ordering (e.g., YYYYMMDD) which is specified based on an argument to the <a class="el" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">helios::Context::loadTabularTimeseriesData()</a> method.</p>
+<p>There are two ways of specifying the ordering and labels of columns. The first is to specify them in the file header (first line). The second is to specify them manually as an argument to the <a class="el" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">helios::Context::loadTabularTimeseriesData()</a> method. This can be useful if you want to customize the names of data values without modifying the actual text file.</p>
+<p>There are certain column labels that are keywords used by Helios to specify required values such as the date. These are given in the table below. Any other label not contained in the table below will be treated as a variable, whose label in the timeseries will be the given column label.</p>
+<table class="doxtable">
+<tr>
+<th>Column Label</th><th>Description</th><th>Required? </th></tr>
+<tr>
+<td>year</td><td>Year (YYYY)</td><td>year+DOY -OR- date </td></tr>
+<tr>
+<td>DOY or Jul</td><td>Day of year starting at Jan. 1 (DOY=1)</td><td>year+DOY -OR- date </td></tr>
+<tr>
+<td>date</td><td>Date string delimited by '/' or '-' character (default format YYYY-MM-DD)</td><td>year+DOY -OR- date </td></tr>
+<tr>
+<td>hour</td><td>Hour of the day. Can be specified either as 13 or 1300 (for 1PM example).</td><td>yes </td></tr>
+<tr>
+<td>minute</td><td>Minute of the hour. If 'hour' above is specified with minute included (e.g., 1315), the minute field will be automatically added.</td><td>no </td></tr>
+<tr>
+<td>second</td><td>Second of the minute.</td><td>no </td></tr>
+</table>
+<p>Arguments to the <a class="el" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">helios::Context::loadTabularTimeseriesData()</a> method:</p>
+<ol type="1">
+<li>A string specifying the file to be loaded, with path relative to where the executable was run (usually the build directory).</li>
+<li>A vector of strings specifying labels for the columns in the file. If an empty vector is specified ('{}'), the labels given in the first line of the file will be used. Otherwise, the length of the vector must match the number of columns in the file.</li>
+<li>The delimiter character separating values in each row (e.g., ',').</li>
+<li>(optional) The format of the date string used to specify date values (e.g., 'YYYYMMDD', 'MMDDYYYY'; month and day should always be two values, and year should be four values). This is not used if dates are specified using the year and DOY. The default format is 'YYYYMMDD'.</li>
+<li>(optional) Number of header lines in the file. By default, headerlines=0.</li>
+</ol>
+<p>There is a special shortcut for reading <a href="https://cimis.water.ca.gov">CIMIS weather station</a> files. To read these files, simply specify the second argument as a vector of length 1 containing the string 'CIMIS' (e.g., {'CIMIS'}), which will automatically set column labels as: '{"", "", "", "date", "hour", "DOY", "ETo", "", "precipitation", "", "net_radiation", "", "vapor_pressure", "", "air_temperature", "", "air_humidity", "", "dew_point", "", "wind_speed", "", "wind_direction", "", "soil_temperature", ""}'</p>
+<p>A code example is given below.</p>
+<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
+ using namespace helios;
+
+ int main(){
+
+    Context context;
+
+    context.loadTabularTimeseriesData("../input/weatherfile.csv", {"date", "hour", "temperature"}, ",", "MMDDYYYY", 1);
+
+    Date date = make_Date( 2, 1, 2020 );
+    Time time = make_Time( 13, 00, 00 );
+    float T = context.queryTimeseriesData( "temperature", date, time );
+
+ }</code></pre> </div><p>The above example would read the comma-delimited file "../input/weatherfile.csv". Timeseries data would be added to the Context for values of "temperature", which could be queried based on this label.</p>
+<h1><a class="anchor" id="XMLread"></a>
 Reading XML Files</h1>
 <p>XML files can be read by the Context via the function loadXML(). This function parses the XML file and adds all specified structures (see above) to the Context. Below is an example of how to load an XML file into the Context.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"

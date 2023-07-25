@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.64</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.65</span>
    </div>
   </td>
  </tr>
@@ -78,7 +78,7 @@ $(function() {
 CUDA Version</h1>
 <p>There are three main considerations when choosing your CUDA version:</p>
 <ol type="1">
-<li>GPU compute capability: The compute capability of your GPU is essentially an identifier corresponding to the architecture generation. Older GPUs will have a lower compute capability. You can look up your GPU's compute capability <a href="https://developer.nvidia.com/cuda-gpus">here</a>. You need a compute capability of 3.5 or higher to build Helios.</li>
+<li>GPU compute capability: The compute capability of your GPU is essentially an identifier corresponding to the architecture generation. Older GPUs will have a lower compute capability. You can look up your GPU's compute capability <a href="https://developer.nvidia.com/cuda-gpus">here</a>. You need a compute capability of 3.5 or higher to build Helios. If your compute capability is 3.5, you need to enable the OPTIX_VERSION_LEGACY option as described below.</li>
 <li>C++ compiler version: Only a certain range of compiler versions are supported for a given CUDA version. The procedure for looking up your compiler version is different for different operating systems, and is described below.</li>
 </ol>
 <p>The system requirements for any CUDA version can be found in the release notes, which is both packaged with the CUDA toolkit and can be found on the page where you download CUDA.</p>

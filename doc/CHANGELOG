@@ -1345,3 +1345,15 @@
 - Increment operator added for Helios vector types int2, int3, int4, vec2, vec3, vec4, and general improvements to helios_vector_types.h
 - Overloaded versions of Context::overridePrimitiveTextureColor() and Context::usePrimitiveTextureColor() added to accept a vector of primitive UUIDs.
 - Overloaded versions of Context::overrideObjectTextureColor() and Context::useObjectTextureColor() added to accept a vector of object IDs.
+
+[1.2.65] 2023-07-25
+
+*Context*
+- Added Context::loadTabularTimeseriesData() method to directly load a tabular text file containing weather data.
+- Self-test added for Context::loadTabularTimeseriesData().
+- Output streams to print a 'Date' or 'Time' vector modified to print leading zero for month, day, minute, and second.
+- Added Date::incrementDay() method to date vector to increment date by one day.
+- Added helios::separate_string_by_delimiter() function to separate a delimited string into a vector of strings.
+
+*Radiation*
+- Upgrading to CUDA 12.0+ caused build errors. Users with GPU compute capability of 3.5 now need to enable the OPTIX_VERSION_LEGACY build option.
