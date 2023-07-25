@@ -888,7 +888,7 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
     }
 
     if( frame>=0 ) {
-        outfile << "camera_" << camera << "_" << imagefile_base << "_" << std::setw(4) << std::setfill('0') << frame_str << ".jpeg";
+        outfile << "camera_" << camera << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame_str << ".jpeg";
     }else{
         outfile << "camera_" << camera << "_" << imagefile_base << ".jpeg";
     }
