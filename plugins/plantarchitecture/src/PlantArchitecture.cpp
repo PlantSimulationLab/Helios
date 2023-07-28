@@ -176,7 +176,7 @@ int Shoot::addPhytomer(PhytomerParameters &params, const AxisRotation &shoot_bas
         parent_petiole_axis = phytomers.back().getPetioleAxisVector(0.f);
     }
 
-    Phytomer phytomer(params, phytomers.size(), parent_internode_axis, parent_petiole_axis, shoot_base_rotation, 0.5, rank, context_ptr);
+    Phytomer phytomer(params, phytomers.size(), parent_internode_axis, parent_petiole_axis, shoot_base_rotation, phytomer_scale_factor_fraction, rank, context_ptr);
 
     phytomers.emplace_back(phytomer);
 
@@ -192,6 +192,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
     //if Ndiv=0, use Ndiv=1 (but don't add any primitives to Context)
     uint Ndiv_internode = std::max(uint(1), phytomer_parameters.internode.tube_subdivisions);
     uint Ndiv_petiole = std::max(uint(1), phytomer_parameters.petiole.tube_subdivisions);
+
+    current_internode_scale_factor = scale;
+    current_leaf_scale_factor = scale;
 
     //Length of longitudinal segments
     internode_length = scale * phytomer_parameters.internode.length.val();
@@ -594,7 +597,7 @@ void Phytomer::setInternodeScale( float scale_factor_fraction ){
 
     float delta_scale = scale_factor_fraction / current_internode_scale_factor;
 
-    internode_length *= delta_scale;
+    internode_length = internode_length*delta_scale;
     current_internode_scale_factor = scale_factor_fraction;
 
     int node = 0;
@@ -766,7 +769,7 @@ PlantArchitecture::addPhytomerToShoot(uint shootID, PhytomerParameters phytomer_
 
     Shoot* parent_shoot = &shoot_tree.at(shootID);
 
-    PhytomerParameters phytomer_parameters = phytomer_parameters;
+    PhytomerParameters phytomer_parameters = phytomer_params;
 
     phytomer_parameters.internode.origin = parent_shoot->phytomers.back().internode_vertices.back();
 
@@ -775,8 +778,6 @@ PlantArchitecture::addPhytomerToShoot(uint shootID, PhytomerParameters phytomer_
     int pID = parent_shoot->addPhytomer(phytomer_parameters, parent_shoot->base_rotation, scale_factor_fraction);
 
     parent_shoot->current_node_number ++;
-
-//    setPhytomerScale( shootID, parent_shoot->current_node_number-1, scale_factor_fraction );
 
     return pID;
 
@@ -1020,11 +1021,12 @@ void PlantArchitecture::advanceTime( float dt ){
         }
 
         // -- Add new phytomer based on the phyllochron -- //
-//        if( shoot.phytomers.back().age < 1.f/shoot.shoot_parameters.phyllochron && shoot.phytomers.back().age+dt >= 1.f/shoot.shoot_parameters.phyllochron ){
-//            int pID = addPhytomerToShoot(shoot.ID, phytomer_parameters_current, 0.01);
-//            context_ptr->setObjectColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}), RGB::red );
-//            context_ptr->overrideObjectTextureColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}) );
-//        }
+        //\todo I'm not sure why the check is needed for an empty phytomer vector. I don't know what would cause it to add a shoot with no phytomers.
+        if( !shoot.phytomers.empty() && shoot.phytomers.back().age < 1.f/shoot.shoot_parameters.phyllochron && shoot.phytomers.back().age+dt >= 1.f/shoot.shoot_parameters.phyllochron ){
+            int pID = addPhytomerToShoot(shoot.ID, phytomer_parameters_current, 0.01);
+            context_ptr->setObjectColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}), RGB::red );
+            context_ptr->overrideObjectTextureColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}) );
+        }
 
         int node_number = 0;
         for( auto &phytomer : shoot.phytomers ){
@@ -1036,8 +1038,11 @@ void PlantArchitecture::advanceTime( float dt ){
             //internode
             if( phytomer.current_internode_scale_factor<1 ){
                 float scale = fmin(1.f,(phytomer.internode_length+dL)/phytomer.phytomer_parameters.internode.length.val());
-                std::cout << "dL: " << dL << ", " << phytomer.current_internode_scale_factor << " " << scale << " " << phytomer.internode_length << " " << phytomer.phytomer_parameters.internode.length.val() << std::endl;
+//                float scale = fmin(1.f,1.f+dL/phytomer.internode_length);
+                std::cout << "dL: " << dL << ", " << phytomer.current_internode_scale_factor << " " << scale << " " << phytomer.internode_length << " " << phytomer.internode_length+dL << " " << phytomer.phytomer_parameters.internode.length.val() << " " << dL/phytomer.internode_length << std::endl;
+//                std::cout << "before: " << phytomer.current_internode_scale_factor << " " << scale << " " << phytomer.internode_length << std::endl;
                 phytomer.setInternodeScale(scale);
+//                std::cout << "after: " << phytomer.internode_length << std::endl;
             }
 
             //petiole/leaves
@@ -1058,13 +1063,12 @@ void PlantArchitecture::advanceTime( float dt ){
             // -- Add buds based on bud probability -- //
             if( shoot.shoot_parameters.bud_probability>0 ){
 
-//                if( phytomer.age<shoot.shoot_parameters.bud_time && phytomer.age+dt>=shoot.shoot_parameters.bud_time ){
-//                    if( context_ptr->randu()<shoot.shoot_parameters.bud_probability ){ //\todo There should be one centrally managed random number generator to draw from, not the Context one
-//                        addChildShoot(shoot.ID, node_number, 1, make_AxisRotation(-0.15 * M_PI, 0.6 * M_PI, -0. * M_PI),
-//                                      0.01, shoot.shoot_parameters);
-//                        std::cout << "Adding bud to phytomer " << node_number << std::endl;
-//                     }
-//                }
+                if( phytomer.age<shoot.shoot_parameters.bud_time && phytomer.age+dt>=shoot.shoot_parameters.bud_time ){
+                    if( context_ptr->randu()<shoot.shoot_parameters.bud_probability ){ //\todo There should be one centrally managed random number generator to draw from, not the Context one
+                        uint childID = addChildShoot(shoot.ID, node_number, 1, make_AxisRotation(-0.15 * M_PI, 0.6 * M_PI, -0. * M_PI),0.01, shoot.shoot_parameters);
+                        std::cout << "Adding bud to phytomer " << node_number << std::endl;
+                     }
+                }
 
             }
 
