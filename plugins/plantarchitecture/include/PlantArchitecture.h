@@ -323,6 +323,9 @@ struct ShootParameters{
     float phyllochron; //phytomers/day
     float growth_rate; //length/day
 
+    float bud_probability;
+    float bud_time;  //days
+
 };
 
 struct Phytomer {
@@ -388,10 +391,12 @@ public:
 struct Shoot{
 
     Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin,
-          const AxisRotation &shoot_base_rotation, uint current_node_number, const PhytomerParameters &phytomer_params,
+          const AxisRotation &shoot_base_rotation, uint current_node_number,
+          float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_params,
           const ShootParameters &shoot_params, std::vector<Shoot> *shoot_tree_ptr, helios::Context *context_ptr);
 
-    int addPhytomer(PhytomerParameters &params, const AxisRotation &shoot_base_rotation);
+    int addPhytomer(PhytomerParameters &params, const AxisRotation &shoot_base_rotation,
+                    float phytomer_scale_factor_fraction);
 
     uint current_node_number;
 
@@ -421,10 +426,10 @@ public:
     explicit PlantArchitecture( helios::Context* context_ptr );
 
     uint addShoot(int parentID, uint parent_node, uint rank, uint current_node_number, const helios::vec3 &base_position,
-             const AxisRotation &base_rotation, const ShootParameters &shoot_params);
+             const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const ShootParameters &shoot_params);
 
     uint addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation,
-                       const ShootParameters &shoot_params);
+                       float phytomer_scale_factor_fraction, const ShootParameters &shoot_params);
 
     int addPhytomerToShoot(uint shootID, PhytomerParameters phytomer_parameters,
                            float scale_factor_fraction);

@@ -106,6 +106,12 @@ void PhytomerParameters::seedRandomGenerator(uint seed ){
 ShootParameters::ShootParameters() {
     max_nodes = 5;
     shoot_internode_taper = 0.5;
+
+    phyllochron = 0.0001;
+    growth_rate = 0;
+
+    bud_probability = 0;
+    bud_time = 0;
 }
 
 helios::vec3 Phytomer::getInternodeAxisVector(float stem_fraction) const{
@@ -153,7 +159,7 @@ float Phytomer::getPetioleLength() const{
 
 }
 
-int Shoot::addPhytomer(PhytomerParameters &params, const AxisRotation &shoot_base_rotation) {
+int Shoot::addPhytomer(PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float phytomer_scale_factor_fraction) {
 
     vec3 parent_internode_axis;
     vec3 parent_petiole_axis;
@@ -170,7 +176,7 @@ int Shoot::addPhytomer(PhytomerParameters &params, const AxisRotation &shoot_bas
         parent_petiole_axis = phytomers.back().getPetioleAxisVector(0.f);
     }
 
-    Phytomer phytomer(params, phytomers.size(), parent_internode_axis, parent_petiole_axis, shoot_base_rotation, 1, rank, context_ptr);
+    Phytomer phytomer(params, phytomers.size(), parent_internode_axis, parent_petiole_axis, shoot_base_rotation, 0.5, rank, context_ptr);
 
     phytomers.emplace_back(phytomer);
 
@@ -180,9 +186,7 @@ int Shoot::addPhytomer(PhytomerParameters &params, const AxisRotation &shoot_bas
 
 Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const helios::vec3 &parent_internode_axis,
                    const helios::vec3 &parent_petiole_axis, const AxisRotation &shoot_base_rotation, float scale,
-                   uint rank,
-                   helios::Context *context_ptr)
-        : phytomer_parameters(params), context_ptr(context_ptr), rank(rank) {
+                   uint rank, helios::Context *context_ptr) : phytomer_parameters(params), context_ptr(context_ptr), rank(rank) {
 
     //Number of longitudinal segments for internode and petiole
     //if Ndiv=0, use Ndiv=1 (but don't add any primitives to Context)
@@ -190,10 +194,10 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
     uint Ndiv_petiole = std::max(uint(1), phytomer_parameters.petiole.tube_subdivisions);
 
     //Length of longitudinal segments
-    internode_length = phytomer_parameters.internode.length.val();
-    float dr_internode = scale * internode_length / float(phytomer_parameters.internode.tube_subdivisions);
-    petiole_length = phytomer_parameters.petiole.length.val();
-    float dr_petiole = scale * petiole_length / float(phytomer_parameters.petiole.tube_subdivisions);
+    internode_length = scale * phytomer_parameters.internode.length.val();
+    float dr_internode = internode_length / float(phytomer_parameters.internode.tube_subdivisions);
+    petiole_length = scale * phytomer_parameters.petiole.length.val();
+    float dr_petiole = petiole_length / float(phytomer_parameters.petiole.tube_subdivisions);
 
     float internode_pitch = phytomer_parameters.internode.pitch.val();
 
@@ -203,9 +207,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
     petiole_vertices.resize(Ndiv_petiole+1 );
 
     internode_radii.resize( Ndiv_internode+1 );
-    internode_radii.at(0) = phytomer_parameters.internode.radius;
+    internode_radii.at(0) = scale * phytomer_parameters.internode.radius;
     petiole_radii.resize( Ndiv_petiole+1 );
-    petiole_radii.at(0) = phytomer_parameters.petiole.radius.val();
+    petiole_radii.at(0) = scale * phytomer_parameters.petiole.radius.val();
 
     internode_colors.resize( Ndiv_internode+1 );
     internode_colors.at(0) = phytomer_parameters.internode.color;
@@ -270,7 +274,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
         internode_vertices.at(i) = internode_vertices.at(i - 1) + dr_internode * internode_axis;
 
-        internode_radii.at(i) = phytomer_parameters.internode.radius;
+        internode_radii.at(i) = scale * phytomer_parameters.internode.radius;
         internode_colors.at(i) = phytomer_parameters.internode.color;
 
     }
@@ -310,7 +314,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
             petiole_vertices.at(j) = petiole_vertices.at(j - 1) + dr_petiole * petiole_axis;
 
-            petiole_radii.at(j) = phytomer_parameters.petiole.radius.val()*( 1.f-phytomer_parameters.petiole.taper.val()/float(Ndiv_petiole-1)*float(j) );
+            petiole_radii.at(j) = scale * phytomer_parameters.petiole.radius.val()*( 1.f-phytomer_parameters.petiole.taper.val()/float(Ndiv_petiole-1)*float(j) );
             petiole_colors.at(j) = phytomer_parameters.internode.color;
 
         }
@@ -331,7 +335,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
             // -- scaling -- //
 
-            vec3 leaf_scale = phytomer_parameters.leaf.prototype_scale;
+            vec3 leaf_scale = scale * phytomer_parameters.leaf.prototype_scale;
             if( phytomer_parameters.petiole.leaves_per_petiole>0 && phytomer_parameters.leaf.leaflet_scale.val()!=1.f && ind_from_tip!=0 ){
                 leaf_scale = powf(phytomer_parameters.leaf.leaflet_scale.val(),fabs(ind_from_tip))*leaf_scale;
             }
@@ -387,7 +391,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
             vec3 leaf_base = petiole_vertices.back();
             if( phytomer_parameters.petiole.leaves_per_petiole>1 && phytomer_parameters.leaf.leaflet_offset.val()>0 ){
                 if( ind_from_tip != 0 ) {
-                    float offset = (fabs(ind_from_tip) - 0.5f) * phytomer_parameters.leaf.leaflet_offset.val() * phytomer_parameters.petiole.length.val();
+                    float offset = scale * (fabs(ind_from_tip) - 0.5f) * phytomer_parameters.leaf.leaflet_offset.val() * phytomer_parameters.petiole.length.val();
                     leaf_base = interpolateTube(petiole_vertices, 1.f - offset / phytomer_parameters.petiole.length.val() );
                 }
             }
@@ -658,7 +662,9 @@ void Phytomer::setPhytomerScale( float scale_factor_fraction ) {
 }
 
 uint PlantArchitecture::addShoot(int parentID, uint parent_node, uint rank, uint current_node_number,
-                                 const helios::vec3 &base_position, const AxisRotation &base_rotation, const ShootParameters &shoot_params) {
+                                 const helios::vec3 &base_position,
+                                 const AxisRotation &base_rotation, float phytomer_scale_factor_fraction,
+                                 const ShootParameters &shoot_params) {
 
     int shootID = (int)shoot_tree.size();
 
@@ -668,7 +674,8 @@ uint PlantArchitecture::addShoot(int parentID, uint parent_node, uint rank, uint
         throw( std::runtime_error("ERROR (PlantArchitecture::addShoot): Cannot add shoot with " + std::to_string(current_node_number) + " nodes since the specified max node number is " + std::to_string(shoot_params.max_nodes) + ".") );
     }
 
-    Shoot shoot(shootID, parentID, parent_node, rank, base_position, base_rotation, current_node_number, phytomer_parameters_current,  shoot_params, &shoot_tree, context_ptr);
+    Shoot shoot(shootID, parentID, parent_node, rank, base_position, base_rotation, current_node_number, phytomer_scale_factor_fraction,
+                phytomer_parameters_current, shoot_params, &shoot_tree, context_ptr);
 
     shoot_tree.emplace_back(shoot);
 
@@ -677,7 +684,8 @@ uint PlantArchitecture::addShoot(int parentID, uint parent_node, uint rank, uint
 }
 
 Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin,
-             const AxisRotation &shoot_base_rotation, uint current_node_number, const PhytomerParameters &phytomer_params,
+             const AxisRotation &shoot_base_rotation, uint current_node_number,
+             float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_params,
              const ShootParameters &shoot_params, std::vector<Shoot> *shoot_tree_ptr, helios::Context *context_ptr) :
         ID(ID), parentID(parentID), parentNode(parent_node), rank(rank), origin(origin), base_rotation(shoot_base_rotation), current_node_number(current_node_number), shoot_parameters(shoot_params), shoot_tree_ptr(shoot_tree_ptr), context_ptr(context_ptr)
 {
@@ -693,7 +701,7 @@ Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::ve
 
         phytomer_parameters.internode.radius = phytomer_params.internode.radius*(1.f-shoot_params.shoot_internode_taper*float(i)/float(shoot_params.max_nodes) );
 
-        int pID = addPhytomer(phytomer_parameters, shoot_base_rotation);
+        int pID = addPhytomer(phytomer_parameters, shoot_base_rotation, phytomer_scale_factor_fraction);
 
         Phytomer *phytomer = &phytomers.at(pID);
 
@@ -712,7 +720,9 @@ Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::ve
 
 }
 
-uint PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, const ShootParameters &shoot_params) {
+uint PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint current_node_number,
+                                      const AxisRotation &base_rotation,
+                                      float phytomer_scale_factor_fraction, const ShootParameters &shoot_params) {
 
     if( parentID<-1 || parentID>=shoot_tree.size() ){
         throw( std::runtime_error("ERROR (PlantArchitecture::addChildShoot): Parent with ID of " + std::to_string(parentID) + " does not exist.") );
@@ -738,7 +748,8 @@ uint PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint curre
 
     }
 
-    uint childID = addShoot(parentID, parent_node, parent_rank + 1, current_node_number, node_position, base_rotation, shoot_params);
+    uint childID = addShoot(parentID, parent_node, parent_rank + 1, current_node_number, node_position, base_rotation,
+                            phytomer_scale_factor_fraction, shoot_params);
 
     shoot_tree.at(parentID).childIDs.push_back(childID);
 
@@ -746,7 +757,8 @@ uint PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint curre
 
 }
 
-int PlantArchitecture::addPhytomerToShoot(uint shootID, PhytomerParameters phytomer_params, float scale_factor_fraction) {
+int
+PlantArchitecture::addPhytomerToShoot(uint shootID, PhytomerParameters phytomer_params, float scale_factor_fraction) {
 
     if( shootID>=shoot_tree.size() ){
         throw( std::runtime_error("ERROR (PlantArchitecture::addPhytomerToShoot): Parent shoot with ID of " + std::to_string(shootID) + " does not exist.") );
@@ -754,17 +766,17 @@ int PlantArchitecture::addPhytomerToShoot(uint shootID, PhytomerParameters phyto
 
     Shoot* parent_shoot = &shoot_tree.at(shootID);
 
-    PhytomerParameters phytomer_parameters = phytomer_params;
+    PhytomerParameters phytomer_parameters = phytomer_parameters;
 
     phytomer_parameters.internode.origin = parent_shoot->phytomers.back().internode_vertices.back();
 
-    phytomer_parameters.internode.radius = phytomer_params.internode.radius*(1.f-parent_shoot->shoot_parameters.shoot_internode_taper*float(parent_shoot->current_node_number)/float(parent_shoot->shoot_parameters.max_nodes) );
+    phytomer_parameters.internode.radius = phytomer_parameters.internode.radius * (1.f - parent_shoot->shoot_parameters.shoot_internode_taper * float(parent_shoot->current_node_number) / float(parent_shoot->shoot_parameters.max_nodes) );
 
-    int pID = parent_shoot->addPhytomer( phytomer_parameters, parent_shoot->base_rotation );
+    int pID = parent_shoot->addPhytomer(phytomer_parameters, parent_shoot->base_rotation, scale_factor_fraction);
 
     parent_shoot->current_node_number ++;
 
-    setPhytomerScale( shootID, parent_shoot->current_node_number-1, scale_factor_fraction );
+//    setPhytomerScale( shootID, parent_shoot->current_node_number-1, scale_factor_fraction );
 
     return pID;
 
@@ -1003,28 +1015,28 @@ void PlantArchitecture::advanceTime( float dt ){
 
     for( auto &shoot : shoot_tree ){
 
-        std::cout << "Shoot: " << shoot.current_node_number << " " << shoot.shoot_parameters.max_nodes << std::endl;
-
         if( shoot.current_node_number >= shoot.shoot_parameters.max_nodes ){
             continue;
         }
 
-        if( shoot.phytomers.back().age < shoot.shoot_parameters.phyllochron && shoot.phytomers.back().age+dt >= shoot.shoot_parameters.phyllochron ){
-            int pID = addPhytomerToShoot(shoot.ID, phytomer_parameters_current, 0.01);
-            context_ptr->setObjectColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}), RGB::red );
-            context_ptr->overrideObjectTextureColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}) );
-        }
+        // -- Add new phytomer based on the phyllochron -- //
+//        if( shoot.phytomers.back().age < 1.f/shoot.shoot_parameters.phyllochron && shoot.phytomers.back().age+dt >= 1.f/shoot.shoot_parameters.phyllochron ){
+//            int pID = addPhytomerToShoot(shoot.ID, phytomer_parameters_current, 0.01);
+//            context_ptr->setObjectColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}), RGB::red );
+//            context_ptr->overrideObjectTextureColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}) );
+//        }
 
         int node_number = 0;
         for( auto &phytomer : shoot.phytomers ){
 
-            float dL = dt*shoot.shoot_parameters.growth_rate;
+            // Scale phytomers based on the growth rate
 
-            std::cout << "dL: " << dL << ", " << phytomer.current_internode_scale_factor << std::endl;
+            float dL = dt*shoot.shoot_parameters.growth_rate;
 
             //internode
             if( phytomer.current_internode_scale_factor<1 ){
                 float scale = fmin(1.f,(phytomer.internode_length+dL)/phytomer.phytomer_parameters.internode.length.val());
+                std::cout << "dL: " << dL << ", " << phytomer.current_internode_scale_factor << " " << scale << " " << phytomer.internode_length << " " << phytomer.phytomer_parameters.internode.length.val() << std::endl;
                 phytomer.setInternodeScale(scale);
             }
 
@@ -1042,6 +1054,20 @@ void PlantArchitecture::advanceTime( float dt ){
 
 //            context_ptr->setObjectColor( flatten({phytomer.internode_objIDs,flatten(phytomer.petiole_objIDs),phytomer.leaf_objIDs}), RGB::blue );
 //            context_ptr->overrideObjectTextureColor( flatten({phytomer.internode_objIDs,flatten(phytomer.petiole_objIDs),phytomer.leaf_objIDs}) );
+
+            // -- Add buds based on bud probability -- //
+            if( shoot.shoot_parameters.bud_probability>0 ){
+
+//                if( phytomer.age<shoot.shoot_parameters.bud_time && phytomer.age+dt>=shoot.shoot_parameters.bud_time ){
+//                    if( context_ptr->randu()<shoot.shoot_parameters.bud_probability ){ //\todo There should be one centrally managed random number generator to draw from, not the Context one
+//                        addChildShoot(shoot.ID, node_number, 1, make_AxisRotation(-0.15 * M_PI, 0.6 * M_PI, -0. * M_PI),
+//                                      0.01, shoot.shoot_parameters);
+//                        std::cout << "Adding bud to phytomer " << node_number << std::endl;
+//                     }
+//                }
+
+            }
+
 
             phytomer.age += dt;
 
