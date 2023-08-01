@@ -47,6 +47,10 @@ void Context::seedRandomGenerator(uint seed){
     generator.seed(seed);
 }
 
+std::minstd_rand0* Context::getRandomGenerator(){
+    return &generator;
+}
+
 void Context::addTexture( const char* texture_file ){
     if( textures.find(texture_file)==textures.end() ){//texture has not already been added
         Texture text( texture_file );

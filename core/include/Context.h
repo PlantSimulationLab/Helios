@@ -1887,6 +1887,12 @@ public:
      * \param[in] "seed" uint used to seed the generator
      */
     void seedRandomGenerator(uint seed);
+
+    //! Get the random number generator engine
+    /**
+     * \return std::minstd_rand0 random number generator engine
+     */
+    std::minstd_rand0* getRandomGenerator();
     
     //! Mark the Context geometry as ``clean", meaning that the geometry has not been modified since last set as clean
     /** \sa \ref markGeometryDirty(), \ref isGeometryDirty() */

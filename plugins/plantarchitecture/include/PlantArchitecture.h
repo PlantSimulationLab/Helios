@@ -33,81 +33,67 @@ public:
         sampled = false;
     }
 
-    explicit RandomParameter_float(float a_val, std::minstd_rand0 *rand_generator) : constval(a_val){
-        distribution = "constant";
-        generator = rand_generator;
-        sampled = false;
-    }
-
     void initialize( float a_val, std::minstd_rand0 *rand_generator){
         constval = a_val;
         generator = rand_generator;
+        sampled = false;
     }
 
     void initialize( std::minstd_rand0 *rand_generator){
         constval = 1.f;
         generator = rand_generator;
+        sampled = false;
     }
 
     RandomParameter_float& operator=(float a){
         this->constval = a;
+        this->sampled = false;
         return *this;
     }
 
     void uniformDistribution( float minval, float maxval ){
         distribution = "uniform";
         distribution_parameters = {minval, maxval};
+        sampled = false;
     }
 
     void normalDistribution( float mean, float std_dev ){
         distribution = "normal";
         distribution_parameters = {mean, std_dev};
+        sampled = false;
     }
 
     void weibullDistribution( float shape, float scale ){
         distribution = "normal";
         distribution_parameters = {shape, scale};
+        sampled = false;
     }
 
     float val(){
-        if( distribution=="constant" ) {
-            return constval;
-        }else if( distribution=="uniform" ) {
-            if( generator== nullptr ){
-                throw(std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
-            }
-            if( !sampled ) {
-                std::uniform_real_distribution<float> unif_distribution;
-                constval = distribution_parameters.at(0) + unif_distribution(*generator) * (distribution_parameters.at(1) - distribution_parameters.at(0));
-            }
-            return constval;
-        }else if( distribution=="normal" ) {
-            if( generator== nullptr ){
-                throw(std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
-            }
-            if( !sampled ) {
-                std::normal_distribution<float> norm_distribution(distribution_parameters.at(0),distribution_parameters.at(1));
-                constval = norm_distribution(*generator);
-            }
-            return constval;
-        }else if( distribution=="weibull" ){
-            if( generator== nullptr ){
-                throw(std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
-            }
-            if( !sampled ) {
-                std::weibull_distribution<float> wbull_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
-                constval = wbull_distribution(*generator);
-            }
-            return constval;
-        }else {
-            assert(1);
+        if( !sampled ){
+            constval = resample();
         }
-        sampled = true;
-        return 0;
+        return constval;
     }
 
-    bool isnull() const{
-        return distribution=="constant" && constval==0;
+    float resample(){
+        sampled = true;
+        if( distribution!="constant" ) {
+            if (generator == nullptr) {
+                throw (std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
+            }
+            if (distribution == "uniform") {
+                std::uniform_real_distribution<float> unif_distribution;
+                constval = distribution_parameters.at(0) + unif_distribution(*generator) * (distribution_parameters.at(1) - distribution_parameters.at(0));
+            } else if (distribution == "normal") {
+                std::normal_distribution<float> norm_distribution(distribution_parameters.at(0),distribution_parameters.at(1));
+                constval = norm_distribution(*generator);
+            } else if (distribution == "weibull") {
+                std::weibull_distribution<float> wbull_distribution(distribution_parameters.at(0),distribution_parameters.at(1));
+                constval = wbull_distribution(*generator);
+            }
+        }
+        return constval;
     }
 
 private:
@@ -128,51 +114,48 @@ public:
         sampled = false;
     }
 
-    explicit RandomParameter_int(int a_val, std::minstd_rand0 *rand_generator) : constval(a_val){
-        distribution = "constant";
-        generator = rand_generator;
-        sampled = false;
-    }
-
     void initialize(int a_val, std::minstd_rand0 *rand_generator){
         constval = a_val;
         generator = rand_generator;
+        sampled = false;
     }
 
     void initialize( std::minstd_rand0 *rand_generator){
         constval = 1;
         generator = rand_generator;
+        sampled = false;
     }
 
     RandomParameter_int& operator=(int a){
         this->constval = a;
+        this->sampled = false;
         return *this;
     }
 
     void uniformDistribution( int minval, int maxval ){
         distribution = "uniform";
         distribution_parameters = {minval, maxval};
+        sampled = false;
     }
 
     int val(){
-        if( distribution=="constant" ) {
-            return constval;
-        }else if( distribution=="uniform" ) {
+        if( !sampled ){
+            constval = resample();
+        }
+        return constval;
+    }
+
+    int resample(){
+        sampled = true;
+        if( distribution!="constant" ) {
             if (generator == nullptr) {
                 throw (std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
             }
-            if( !sampled ) {
+            if (distribution == "uniform") {
                 constval = distribution_parameters.at(0) + unif_distribution(*generator) * (distribution_parameters.at(1) - distribution_parameters.at(0));
             }
-            return constval;
-        }else{
-            assert(1);
         }
-        return 0;
-    }
-
-    bool isnull() const{
-        return distribution=="constant" && constval==0;
+        return constval;
     }
 
 private:
@@ -203,45 +186,11 @@ public:
     float yaw;
     float roll;
 
-//    AxisRotation operator+(const AxisRotation& a) const;
-//    AxisRotation operator-(const AxisRotation& a) const;
-//    AxisRotation operator*( float a) const;
-//    AxisRotation operator/( float a) const;
-//    bool operator==(const AxisRotation& a) const;
-//
-//    friend std::ostream &operator<<(std::ostream &os, AxisRotation const &vec) {
-//        return os << "AxisRotation<" << vec.pitch_static << ", " << vec.yaw_static << ", " << vec.roll_static << ">";
-//    }
-
 };
 
 inline AxisRotation make_AxisRotation( float a_pitch, float a_yaw, float a_roll ) {
     return {a_pitch,a_yaw,a_roll};
 }
-
-//inline AxisRotation AxisRotation::operator+(const AxisRotation& a) const{
-//    return  {a.pitch+pitch,a.yaw+yaw,a.roll+roll};
-//}
-//
-//inline AxisRotation AxisRotation::operator-(const AxisRotation& a) const{
-//    return  {pitch-a.pitch,yaw-a.yaw,roll-a.roll};
-//}
-//
-//inline AxisRotation AxisRotation::operator*(const float a) const{
-//    return  {pitch*a,yaw*a,roll*a};
-//}
-//
-//inline AxisRotation operator*(const float a, const AxisRotation& v) {
-//    return {a * v.pitch, a * v.yaw, a * v.roll};
-//}
-//
-//inline AxisRotation AxisRotation::operator/(const float a) const{
-//    return {pitch/a,yaw/a,roll/a};
-//}
-//
-//inline bool AxisRotation::operator==(const AxisRotation& a) const{
-//    return pitch == a.pitch && yaw == a.yaw && roll == a.roll;
-//}
 
 struct PhytomerParameters{
 private:
@@ -255,6 +204,20 @@ private:
         uint petioles_per_internode;
         helios::RGBcolor color;
         uint tube_subdivisions;
+        InternodeParameters& operator=(const InternodeParameters &a){
+            this->origin = a.origin;
+            this->pitch = a.pitch;
+            this->pitch.resample();
+            this->radius = a.radius;
+            this->length = a.length;
+            this->length.resample();
+            this->curvature = a.curvature;
+            this->curvature.resample();
+            this->petioles_per_internode = a.petioles_per_internode;
+            this->color = a.color;
+            this->tube_subdivisions = a.tube_subdivisions;
+            return *this;
+        }
     };
 
     struct PetioleParameters{
@@ -267,6 +230,24 @@ private:
         RandomParameter_float taper;
         uint tube_subdivisions;
         int leaves_per_petiole;
+        PetioleParameters& operator=(const PetioleParameters &a){
+            this->pitch = a.pitch;
+            this->pitch.resample();
+            this->yaw = a.yaw;
+            this->yaw.resample();
+            this->roll = a.roll;
+            this->roll.resample();
+            this->radius = a.radius;
+            this->radius.resample();
+            this->length = a.length;
+            this->length.resample();
+            this->curvature = a.curvature;
+            this->curvature.resample();
+            this->taper = a.taper;
+            this->taper.resample();
+            this->tube_subdivisions = a.tube_subdivisions;
+            this->leaves_per_petiole = a.leaves_per_petiole;
+        }
     };
 
     struct LeafParameters{
@@ -277,6 +258,20 @@ private:
         RandomParameter_float leaflet_scale;
         helios::vec3 prototype_scale;
         uint(*prototype_function)( helios::Context*, uint subdivisions, int flag );
+        LeafParameters& operator=(const LeafParameters &a){
+            this->pitch = a.pitch;
+            this->pitch.resample();
+            this->yaw = a.yaw;
+            this->yaw.resample();
+            this->roll = a.roll;
+            this->roll.resample();
+            this->leaflet_offset = a.leaflet_offset;
+            this->leaflet_offset.resample();
+            this->leaflet_scale = a.leaflet_scale;
+            this->leaflet_scale.resample();
+            this->prototype_scale = a.prototype_scale;
+            this->prototype_function = a.prototype_function;
+        }
     };
 
     struct InflorescenceParameters{
@@ -292,13 +287,23 @@ private:
         helios::vec3 fruit_prototype_scale;
         uint(*fruit_prototype_function)( helios::Context*, uint subdivisions, int flag );
         uint(*flower_prototype_function)( helios::Context*, uint subdivisions, int flag );
+        InflorescenceParameters& operator=(const InflorescenceParameters &a){
+            this->reproductive_state = a.reproductive_state;
+            this->length = a.length;
+            this->fruit_per_inflorescence = a.fruit_per_inflorescence;
+            this->fruit_offset = a.fruit_offset;
+            this->rachis_radius = a.rachis_radius;
+            this->curvature = a.curvature;
+            this->fruit_arrangement_pattern = a.fruit_arrangement_pattern;
+            this->tube_subdivisions = a.tube_subdivisions;
+            this->fruit_rotation = a.fruit_rotation;
+            this->fruit_prototype_scale = a.fruit_prototype_scale;
+            this->fruit_prototype_function = a.fruit_prototype_function;
+            this->flower_prototype_function = a.flower_prototype_function;
+        }
     };
 
-    std::minstd_rand0 generator;
-
 public:
-
-    PhytomerParameters();
 
     InternodeParameters internode;
 
@@ -308,7 +313,24 @@ public:
 
     InflorescenceParameters inflorescence;
 
-    void seedRandomGenerator( uint seed );
+    //! Default constructor - does not set random number generator
+    PhytomerParameters();
+
+    //! Constructor - sets random number generator
+    PhytomerParameters( std::minstd_rand0 *generator );
+
+    //! Copy constructor
+    PhytomerParameters( const PhytomerParameters& parameters_copy );
+
+    //! Set the random number generator
+//    void setRandomGenerator( std::minstd_rand0 *generator );
+
+    PhytomerParameters operator=(const PhytomerParameters& a){
+        internode = a.internode;
+        petiole = a.petiole;
+        leaf = a.leaf;
+        inflorescence = a.inflorescence;
+    }
 
 };
 
@@ -395,8 +417,7 @@ struct Shoot{
           float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_params,
           const ShootParameters &shoot_params, std::vector<Shoot> *shoot_tree_ptr, helios::Context *context_ptr);
 
-    int addPhytomer(PhytomerParameters &params, const AxisRotation &shoot_base_rotation,
-                    float phytomer_scale_factor_fraction);
+    int addPhytomer( PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float phytomer_scale_factor_fraction);
 
     uint current_node_number;
 
@@ -425,18 +446,14 @@ public:
 
     explicit PlantArchitecture( helios::Context* context_ptr );
 
-    uint addShoot(int parentID, uint parent_node, uint rank, uint current_node_number, const helios::vec3 &base_position,
-             const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const ShootParameters &shoot_params);
+    uint addShoot(int parentID, uint parent_node, uint rank, uint current_node_number, const helios::vec3 &base_position, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction,
+                  const PhytomerParameters &phytomer_parameters, const ShootParameters &shoot_params);
 
-    uint addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation,
-                       float phytomer_scale_factor_fraction, const ShootParameters &shoot_params);
+    uint addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_parameters, const ShootParameters &shoot_params);
 
-    int addPhytomerToShoot(uint shootID, PhytomerParameters phytomer_parameters,
-                           float scale_factor_fraction);
+    int addPhytomerToShoot(uint shootID, PhytomerParameters phytomer_parameters, float scale_factor_fraction);
 
-    void setCurrentPhytomerParameters( const PhytomerParameters &phytomer_parameters_new );
-
-    void setCurrentPhytomerParameters( const std::string &phytomer_label );
+    PhytomerParameters getPhytomerParametersFromLibrary( const std::string &phytomer_label );
 
     void scalePhytomerInternode( uint shootID, uint node_number, float girth_scale_factor, float length_scale_factor );
 
@@ -448,10 +465,7 @@ public:
 
     void advanceTime( float dt );
 
-    PhytomerParameters phytomer_parameters_current;
-
     static std::vector<uint> makeTubeFromCones(uint Ndivs, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
-
 
     //Primary data structure containing all phytomers for the plant
     // \todo should be private - keeping here for debugging
@@ -460,6 +474,8 @@ public:
 private:
 
     helios::Context* context_ptr;
+
+    std::minstd_rand0 *generator = nullptr;
 
 };
 

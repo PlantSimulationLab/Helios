@@ -55,33 +55,35 @@ helios::vec3 interpolateTube( const std::vector<vec3> &P, float frac ){
 }
 
 PlantArchitecture::PlantArchitecture( helios::Context* context_ptr ) : context_ptr(context_ptr){
-
+    generator = context_ptr->getRandomGenerator();
 }
 
-PhytomerParameters::PhytomerParameters() {
+PhytomerParameters::PhytomerParameters() : PhytomerParameters(nullptr){}
+
+PhytomerParameters::PhytomerParameters( std::minstd_rand0 *generator ) {
 
     internode.origin = make_vec3(0,0,0);
-    internode.pitch.initialize( 0.1*M_PI, &generator );
+    internode.pitch.initialize( 0.1*M_PI, generator );
     internode.radius = 0.005;
     internode.color = RGB::forestgreen;
-    internode.length.initialize(0.05,&generator);
+    internode.length.initialize(0.05,generator);
     internode.tube_subdivisions = 1;
-    internode.curvature.initialize( 0, &generator );
+    internode.curvature.initialize( 0, generator );
     internode.petioles_per_internode = 1;
 
-    petiole.pitch.initialize( 0.5*M_PI, &generator );
-    petiole.roll.initialize( 0, &generator );
-    petiole.radius.initialize( 0.001, &generator );
-    petiole.length.initialize( 0.05, &generator );
-    petiole.curvature.initialize(0, &generator);
-    petiole.taper.initialize( 0, &generator );
+    petiole.pitch.initialize( 0.5*M_PI, generator );
+    petiole.roll.initialize( 0, generator );
+    petiole.radius.initialize( 0.001, generator );
+    petiole.length.initialize( 0.05, generator );
+    petiole.curvature.initialize(0, generator);
+    petiole.taper.initialize( 0, generator );
     petiole.tube_subdivisions = 1;
     petiole.leaves_per_petiole = 1;
 
-    leaf.pitch.initialize( 0, &generator );
-    leaf.yaw.initialize( 0, &generator );
-    leaf.roll.initialize( 0, &generator );
-    leaf.leaflet_offset.initialize( 0, &generator );
+    leaf.pitch.initialize( 0, generator );
+    leaf.yaw.initialize( 0, generator );
+    leaf.roll.initialize( 0, generator );
+    leaf.leaflet_offset.initialize( 0, generator );
     leaf.leaflet_scale = 1;
     leaf.prototype_scale = make_vec3(0.05,0.025, 1.f);
 
@@ -99,9 +101,9 @@ PhytomerParameters::PhytomerParameters() {
 
 }
 
-void PhytomerParameters::seedRandomGenerator(uint seed ){
-    generator.seed(seed);
-}
+//void PhytomerParameters::setRandomGenerator( std::minstd_rand0 *a_generator ){
+//    generator = a_generator;
+//}
 
 ShootParameters::ShootParameters() {
     max_nodes = 5;
@@ -664,10 +666,8 @@ void Phytomer::setPhytomerScale( float scale_factor_fraction ) {
 
 }
 
-uint PlantArchitecture::addShoot(int parentID, uint parent_node, uint rank, uint current_node_number,
-                                 const helios::vec3 &base_position,
-                                 const AxisRotation &base_rotation, float phytomer_scale_factor_fraction,
-                                 const ShootParameters &shoot_params) {
+uint PlantArchitecture::addShoot(int parentID, uint parent_node, uint rank, uint current_node_number, const helios::vec3 &base_position, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction,
+                                 const PhytomerParameters &phytomer_parameters, const ShootParameters &shoot_params) {
 
     int shootID = (int)shoot_tree.size();
 
@@ -677,8 +677,7 @@ uint PlantArchitecture::addShoot(int parentID, uint parent_node, uint rank, uint
         throw( std::runtime_error("ERROR (PlantArchitecture::addShoot): Cannot add shoot with " + std::to_string(current_node_number) + " nodes since the specified max node number is " + std::to_string(shoot_params.max_nodes) + ".") );
     }
 
-    Shoot shoot(shootID, parentID, parent_node, rank, base_position, base_rotation, current_node_number, phytomer_scale_factor_fraction,
-                phytomer_parameters_current, shoot_params, &shoot_tree, context_ptr);
+    Shoot shoot(shootID, parentID, parent_node, rank, base_position, base_rotation, current_node_number, phytomer_scale_factor_fraction,phytomer_parameters, shoot_params, &shoot_tree, context_ptr);
 
     shoot_tree.emplace_back(shoot);
 
@@ -723,9 +722,8 @@ Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::ve
 
 }
 
-uint PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint current_node_number,
-                                      const AxisRotation &base_rotation,
-                                      float phytomer_scale_factor_fraction, const ShootParameters &shoot_params) {
+uint
+PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_parameters, const ShootParameters &shoot_params) {
 
     if( parentID<-1 || parentID>=shoot_tree.size() ){
         throw( std::runtime_error("ERROR (PlantArchitecture::addChildShoot): Parent with ID of " + std::to_string(parentID) + " does not exist.") );
@@ -752,7 +750,7 @@ uint PlantArchitecture::addChildShoot(int parentID, uint parent_node, uint curre
     }
 
     uint childID = addShoot(parentID, parent_node, parent_rank + 1, current_node_number, node_position, base_rotation,
-                            phytomer_scale_factor_fraction, shoot_params);
+                            phytomer_scale_factor_fraction, <#initializer#>, shoot_params);
 
     shoot_tree.at(parentID).childIDs.push_back(childID);
 
@@ -783,11 +781,9 @@ PlantArchitecture::addPhytomerToShoot(uint shootID, PhytomerParameters phytomer_
 
 }
 
-void PlantArchitecture::setCurrentPhytomerParameters( const PhytomerParameters &phytomer_parameters_new ){
-    phytomer_parameters_current = phytomer_parameters_new;
-}
+PhytomerParameters PlantArchitecture::getPhytomerParametersFromLibrary( const std::string &phytomer_label ){
 
-void PlantArchitecture::setCurrentPhytomerParameters( const std::string &phytomer_label ){
+    PhytomerParameters phytomer_parameters_current(generator);
     
     if( phytomer_label=="bean" ){
 
@@ -937,6 +933,8 @@ void PlantArchitecture::setCurrentPhytomerParameters( const std::string &phytome
     }else{
         throw( std::runtime_error("ERROR (PlantArchitecture::setCurrentPhytomerParameters): " + phytomer_label + " is not a valid phytomer in the library.") );
     }
+
+    return phytomer_parameters_current;
     
 }
 
@@ -1021,11 +1019,10 @@ void PlantArchitecture::advanceTime( float dt ){
         }
 
         // -- Add new phytomer based on the phyllochron -- //
-        //\todo I'm not sure why the check is needed for an empty phytomer vector. I don't know what would cause it to add a shoot with no phytomers.
-        if( !shoot.phytomers.empty() && shoot.phytomers.back().age < 1.f/shoot.shoot_parameters.phyllochron && shoot.phytomers.back().age+dt >= 1.f/shoot.shoot_parameters.phyllochron ){
+        if( shoot.phytomers.empty() || ( shoot.phytomers.back().age < 1.f/shoot.shoot_parameters.phyllochron && shoot.phytomers.back().age+dt >= 1.f/shoot.shoot_parameters.phyllochron ) ){
             int pID = addPhytomerToShoot(shoot.ID, phytomer_parameters_current, 0.01);
-            context_ptr->setObjectColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}), RGB::red );
-            context_ptr->overrideObjectTextureColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}) );
+//            context_ptr->setObjectColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}), RGB::red );
+//            context_ptr->overrideObjectTextureColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}) );
         }
 
         int node_number = 0;
@@ -1065,7 +1062,7 @@ void PlantArchitecture::advanceTime( float dt ){
 
                 if( phytomer.age<shoot.shoot_parameters.bud_time && phytomer.age+dt>=shoot.shoot_parameters.bud_time ){
                     if( context_ptr->randu()<shoot.shoot_parameters.bud_probability ){ //\todo There should be one centrally managed random number generator to draw from, not the Context one
-                        uint childID = addChildShoot(shoot.ID, node_number, 1, make_AxisRotation(-0.15 * M_PI, 0.6 * M_PI, -0. * M_PI),0.01, shoot.shoot_parameters);
+                        uint childID = addChildShoot(shoot.ID, node_number, 1, make_AxisRotation(-0.15 * M_PI, 0.6 * M_PI, -0. * M_PI), 0.01, <#initializer#>, shoot.shoot_parameters);
                         std::cout << "Adding bud to phytomer " << node_number << std::endl;
                      }
                 }
