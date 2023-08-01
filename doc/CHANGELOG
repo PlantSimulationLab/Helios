@@ -1357,3 +1357,11 @@
 
 *Radiation*
 - Upgrading to CUDA 12.0+ caused build errors. Users with GPU compute capability of 3.5 now need to enable the OPTIX_VERSION_LEGACY build option.
+
+[1.2.66] 2023-XX-XX
+
+*Context*
+- Method added to get the random number generator from the Context, such that it can be used by other plug-ins. This keeps the seed consistent across plugins.
+
+*Visualizer*
+- Issue fixed that caused glfw3.dll to not be properly copied after build on Windows platforms.
