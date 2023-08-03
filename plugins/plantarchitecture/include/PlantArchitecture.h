@@ -247,6 +247,7 @@ private:
             this->taper.resample();
             this->tube_subdivisions = a.tube_subdivisions;
             this->leaves_per_petiole = a.leaves_per_petiole;
+            return *this;
         }
     };
 
@@ -257,7 +258,7 @@ private:
         RandomParameter_float leaflet_offset;
         RandomParameter_float leaflet_scale;
         helios::vec3 prototype_scale;
-        uint(*prototype_function)( helios::Context*, uint subdivisions, int flag );
+        uint(*prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
         LeafParameters& operator=(const LeafParameters &a){
             this->pitch = a.pitch;
             this->pitch.resample();
@@ -271,6 +272,7 @@ private:
             this->leaflet_scale.resample();
             this->prototype_scale = a.prototype_scale;
             this->prototype_function = a.prototype_function;
+            return *this;
         }
     };
 
@@ -285,8 +287,8 @@ private:
         uint tube_subdivisions;
         AxisRotation fruit_rotation;
         helios::vec3 fruit_prototype_scale;
-        uint(*fruit_prototype_function)( helios::Context*, uint subdivisions, int flag );
-        uint(*flower_prototype_function)( helios::Context*, uint subdivisions, int flag );
+        uint(*fruit_prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
+        uint(*flower_prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
         InflorescenceParameters& operator=(const InflorescenceParameters &a){
             this->reproductive_state = a.reproductive_state;
             this->length = a.length;
@@ -300,6 +302,7 @@ private:
             this->fruit_prototype_scale = a.fruit_prototype_scale;
             this->fruit_prototype_function = a.fruit_prototype_function;
             this->flower_prototype_function = a.flower_prototype_function;
+            return *this;
         }
     };
 
@@ -317,19 +320,17 @@ public:
     PhytomerParameters();
 
     //! Constructor - sets random number generator
-    PhytomerParameters( std::minstd_rand0 *generator );
+    explicit PhytomerParameters( std::minstd_rand0 *generator );
 
     //! Copy constructor
     PhytomerParameters( const PhytomerParameters& parameters_copy );
 
-    //! Set the random number generator
-//    void setRandomGenerator( std::minstd_rand0 *generator );
-
-    PhytomerParameters operator=(const PhytomerParameters& a){
-        internode = a.internode;
-        petiole = a.petiole;
-        leaf = a.leaf;
-        inflorescence = a.inflorescence;
+    PhytomerParameters& operator=(const PhytomerParameters& a){
+        this->internode = a.internode;
+        this->petiole = a.petiole;
+        this->leaf = a.leaf;
+        this->inflorescence = a.inflorescence;
+        return *this;
     }
 
 };
@@ -417,7 +418,7 @@ struct Shoot{
           float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_params,
           const ShootParameters &shoot_params, std::vector<Shoot> *shoot_tree_ptr, helios::Context *context_ptr);
 
-    int addPhytomer( PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float phytomer_scale_factor_fraction);
+    int addPhytomer(const PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float phytomer_scale_factor_fraction);
 
     uint current_node_number;
 
@@ -451,9 +452,9 @@ public:
 
     uint addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_parameters, const ShootParameters &shoot_params);
 
-    int addPhytomerToShoot(uint shootID, PhytomerParameters phytomer_parameters, float scale_factor_fraction);
+    int addPhytomerToShoot(uint shootID, const PhytomerParameters &phytomer_params, float scale_factor_fraction);
 
-    PhytomerParameters getPhytomerParametersFromLibrary( const std::string &phytomer_label );
+    PhytomerParameters getPhytomerParametersFromLibrary(const std::string &phytomer_label );
 
     void scalePhytomerInternode( uint shootID, uint node_number, float girth_scale_factor, float length_scale_factor );
 
@@ -478,8 +479,6 @@ private:
     std::minstd_rand0 *generator = nullptr;
 
 };
-
-extern PhytomerParameters BeanPhytomerParameters;
 
 
 #endif //PLANT_ARCHITECTURE
