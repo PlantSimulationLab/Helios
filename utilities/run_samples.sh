@@ -138,7 +138,7 @@ for i in "${SAMPLES[@]}"; do
 
   echo -ne "Building sample ${i}..."
 
-  cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" &>/dev/null
+  cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" #&>/dev/null
 
   if (($? == 0)); then
     echo -e "\r\x1B[32mBuilding sample ${i}...done.\x1B[39m"
@@ -152,7 +152,7 @@ for i in "${SAMPLES[@]}"; do
 
   echo -ne "Compiling sample ${i}..."
 
-  cmake --build ./ --target "${i}" --config "${BUILD_TYPE}" &>/dev/null
+  cmake --build ./ --target "${i}" --config "${BUILD_TYPE}" #&>/dev/null
 
   if (($? == 0)); then
     if [ -e "${i}" ]; then
