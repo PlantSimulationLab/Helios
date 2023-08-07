@@ -9,7 +9,7 @@ int main(){
   Context context;
 
   float D = 50; //width of the ground surface
-  vec2 dx(1,1); //lenght and width of chess board squares and grass patches
+  vec2 dx(1,1); //length and width of chess board squares and grass patches
   int2 size(floor(D/dx.x),floor(D/dx.y));
 
   if( size.x%2 == 0 ){

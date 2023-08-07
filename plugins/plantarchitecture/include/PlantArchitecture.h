@@ -35,17 +35,20 @@ public:
 
     void initialize( float a_val, std::minstd_rand0 *rand_generator){
         constval = a_val;
+        distribution = "constant";
         generator = rand_generator;
         sampled = false;
     }
 
     void initialize( std::minstd_rand0 *rand_generator){
         constval = 1.f;
+        distribution = "constant";
         generator = rand_generator;
         sampled = false;
     }
 
     RandomParameter_float& operator=(float a){
+        distribution = "constant";
         this->constval = a;
         this->sampled = false;
         return *this;
@@ -116,17 +119,20 @@ public:
 
     void initialize(int a_val, std::minstd_rand0 *rand_generator){
         constval = a_val;
+        distribution = "constant";
         generator = rand_generator;
         sampled = false;
     }
 
     void initialize( std::minstd_rand0 *rand_generator){
         constval = 1;
+        distribution = "constant";
         generator = rand_generator;
         sampled = false;
     }
 
     RandomParameter_int& operator=(int a){
+        distribution = "constant";
         this->constval = a;
         this->sampled = false;
         return *this;
@@ -191,6 +197,8 @@ public:
 inline AxisRotation make_AxisRotation( float a_pitch, float a_yaw, float a_roll ) {
     return {a_pitch,a_yaw,a_roll};
 }
+
+std::vector<uint> makeTubeFromCones(uint Ndivs, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
 
 struct PhytomerParameters{
 private:
@@ -339,6 +347,8 @@ struct ShootParameters{
 
     ShootParameters();
 
+    PhytomerParameters phytomer_parameters;
+
     uint max_nodes;
 
     float shoot_internode_taper;
@@ -348,6 +358,8 @@ struct ShootParameters{
 
     float bud_probability;
     float bud_time;  //days
+
+    std::vector<float> blind_nodes;
 
 };
 
@@ -442,10 +454,9 @@ struct Shoot{
 
 };
 
-class PlantArchitecture{
-public:
+struct Plant{
 
-    explicit PlantArchitecture( helios::Context* context_ptr );
+    Plant( helios::Context* context_ptr );
 
     uint addShoot(int parentID, uint parent_node, uint rank, uint current_node_number, const helios::vec3 &base_position, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction,
                   const PhytomerParameters &phytomer_parameters, const ShootParameters &shoot_params);
@@ -453,8 +464,6 @@ public:
     uint addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_parameters, const ShootParameters &shoot_params);
 
     int addPhytomerToShoot(uint shootID, const PhytomerParameters &phytomer_params, float scale_factor_fraction);
-
-    PhytomerParameters getPhytomerParametersFromLibrary(const std::string &phytomer_label );
 
     void scalePhytomerInternode( uint shootID, uint node_number, float girth_scale_factor, float length_scale_factor );
 
@@ -464,19 +473,52 @@ public:
 
     void setPhytomerScale( uint shootID, uint node_number, float scale_factor );
 
-    void advanceTime( float dt );
+    std::vector<Shoot> getShootTree() const;
 
-    static std::vector<uint> makeTubeFromCones(uint Ndivs, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
+protected:
+
+    std::map<std::string, ShootParameters> shoot_types;
 
     //Primary data structure containing all phytomers for the plant
-    // \todo should be private - keeping here for debugging
     std::vector<Shoot> shoot_tree;
+
+    helios::Context *context_ptr;
+
+};
+
+class PlantArchitecture{
+public:
+
+    explicit PlantArchitecture( helios::Context* context_ptr );
+
+    void definePlantType( const std::string &plant_type_label );
+
+    void defineShootType( const std::string &plant_type_label, const std::string &shoot_type_label, const ShootParameters &shoot_params );
+
+    void setBaseShootType( const std::string &plant_type_label, const std::string &shoot_type_label );
+
+    void addPlantInstance( const std::string &plant_type_label, const helios::vec3 &base_position, float current_age );
+
+    PhytomerParameters getPhytomerParametersFromLibrary(const std::string &phytomer_label );
+
+    void advanceTime( float dt );
 
 private:
 
     helios::Context* context_ptr;
 
     std::minstd_rand0 *generator = nullptr;
+
+    std::map<std::string,Plant> plant_types;
+
+    struct PlantInstance{
+        PlantInstance( const std::string &plant_type_label, const helios::vec3 &base_position, float current_age ) : plant_type_label(plant_type_label), base_position(base_position), current_age(current_age) {}
+        std::string plant_type_label;
+        helios::vec3 base_position;
+        float current_age;
+    };
+
+    std::vector<PlantInstance> plant_instances;
 
 };
 
