@@ -457,6 +457,8 @@ struct Plant{
 
     explicit Plant( helios::Context* context_ptr ) : context_ptr(context_ptr) {};
 
+    Plant( const Plant& plant_copy );
+
     uint addShoot(int parentID, uint parent_node, uint rank, uint current_node_number, const helios::vec3 &base_position, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const ShootParameters &shoot_params);
 
     uint addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const ShootParameters &shoot_params);
@@ -471,7 +473,7 @@ struct Plant{
 
     void setPhytomerScale( uint shootID, uint node_number, float scale_factor );
 
-    std::vector<Shoot> getShootTree() const;
+    std::vector<Shoot>* getShootTree();
 
     void setBasePosition( const helios::vec3 &base_position );
 
