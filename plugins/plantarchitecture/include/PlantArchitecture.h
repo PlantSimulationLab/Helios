@@ -426,8 +426,7 @@ public:
 struct Shoot{
 
     Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin,
-          const AxisRotation &shoot_base_rotation, uint current_node_number,
-          float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_params,
+          const AxisRotation &shoot_base_rotation, uint current_node_number, float phytomer_scale_factor_fraction,
           const ShootParameters &shoot_params, std::vector<Shoot> *shoot_tree_ptr, helios::Context *context_ptr);
 
     int addPhytomer(const PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float phytomer_scale_factor_fraction);
@@ -456,12 +455,11 @@ struct Shoot{
 
 struct Plant{
 
-    Plant( helios::Context* context_ptr );
+    explicit Plant( helios::Context* context_ptr ) : context_ptr(context_ptr) {};
 
-    uint addShoot(int parentID, uint parent_node, uint rank, uint current_node_number, const helios::vec3 &base_position, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction,
-                  const PhytomerParameters &phytomer_parameters, const ShootParameters &shoot_params);
+    uint addShoot(int parentID, uint parent_node, uint rank, uint current_node_number, const helios::vec3 &base_position, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const ShootParameters &shoot_params);
 
-    uint addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const PhytomerParameters &phytomer_parameters, const ShootParameters &shoot_params);
+    uint addChildShoot(int parentID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, float phytomer_scale_factor_fraction, const ShootParameters &shoot_params);
 
     int addPhytomerToShoot(uint shootID, const PhytomerParameters &phytomer_params, float scale_factor_fraction);
 
@@ -475,12 +473,20 @@ struct Plant{
 
     std::vector<Shoot> getShootTree() const;
 
+    void setBasePosition( const helios::vec3 &base_position );
+
+    void setCurrentAge( float current_age );
+
 protected:
 
     std::map<std::string, ShootParameters> shoot_types;
 
     //Primary data structure containing all phytomers for the plant
     std::vector<Shoot> shoot_tree;
+
+    helios::vec3 base_position;
+
+    float current_age = 0;
 
     helios::Context *context_ptr;
 
@@ -491,13 +497,11 @@ public:
 
     explicit PlantArchitecture( helios::Context* context_ptr );
 
-    void definePlantType( const std::string &plant_type_label );
-
     void defineShootType( const std::string &plant_type_label, const std::string &shoot_type_label, const ShootParameters &shoot_params );
 
     void setBaseShootType( const std::string &plant_type_label, const std::string &shoot_type_label );
 
-    void addPlantInstance( const std::string &plant_type_label, const helios::vec3 &base_position, float current_age );
+    void addPlantInstance( const Plant &plant, const helios::vec3 &base_position, float current_age );
 
     PhytomerParameters getPhytomerParametersFromLibrary(const std::string &phytomer_label );
 
@@ -509,16 +513,7 @@ private:
 
     std::minstd_rand0 *generator = nullptr;
 
-    std::map<std::string,Plant> plant_types;
-
-    struct PlantInstance{
-        PlantInstance( const std::string &plant_type_label, const helios::vec3 &base_position, float current_age ) : plant_type_label(plant_type_label), base_position(base_position), current_age(current_age) {}
-        std::string plant_type_label;
-        helios::vec3 base_position;
-        float current_age;
-    };
-
-    std::vector<PlantInstance> plant_instances;
+    std::vector<Plant> plant_instances;
 
 };
 
