@@ -4259,13 +4259,9 @@ float RadiationModel::calculateGtheta(helios::Context* context, vec3 view_direct
   
 }
 
-void RadiationModel::setColorCalibration(CameraCalibration *CameraCalibration){
-    cameracalibration = CameraCalibration;
-}
-
 void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels_raw,
-                                             const std::vector<std::string>& cameraresponselabels, vec2 &wavelengthrange,
-                                             const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark) {
+                                          const std::vector<std::string>& cameraresponselabels, vec2 &wavelengthrange,
+                                          const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark) {
 
     std::vector<std::string> objectlabels;
     vec2 wavelengthrange_c = wavelengthrange;
@@ -4404,7 +4400,7 @@ void RadiationModel::runRadiationImaging(const std::string& cameralabel, const s
         for (int iband=1;iband<bandlabels.size();iband++){
             RadiationModel::copyRadiationBand(bandlabels.at(iband-1), bandlabels.at(iband), wavelengthrange.x, wavelengthrange.y);
             for( uint ID =0; ID<radiation_sources.size();ID++ ) {
-                    RadiationModel::setSourceFlux(ID, bandlabels.at(iband), (1 - diffusefactor) * sources_fluxes.at(ID) * fluxscale);
+                RadiationModel::setSourceFlux(ID, bandlabels.at(iband), (1 - diffusefactor) * sources_fluxes.at(ID) * fluxscale);
             }
             RadiationModel::setDiffuseRadiationFlux(bandlabels.at(iband), diffusefactor * sources_fluxsum );
         }
@@ -4416,63 +4412,6 @@ void RadiationModel::runRadiationImaging(const std::string& cameralabel, const s
 
     RadiationModel::updateGeometry();
     RadiationModel::runBand(bandlabels);
-}
-
-float RadiationModel::getRadiationCameraValue(const std::vector<std::string>& cameralabels, const std::string& sourcelabel,const std::string& bandlabel,
-                                       const std::string& cameraresponselabel,  const std::string& filename){
-
-    RadiationModel::setSourceSpectrum(0, sourcelabel.c_str());
-    RadiationModel::addRadiationBand(bandlabel, 500, 502);
-    RadiationModel::setDiffuseRayCount(bandlabel,0);
-    RadiationModel::disableEmission(bandlabel);
-    RadiationModel::setSourceFlux(0, bandlabel,1);  //try large source flux
-    RadiationModel::setScatteringDepth(bandlabel, 1);
-// brfop   1000 rays, 100 flux, 20 depth
-    RadiationModel::setDiffuseRadiationFlux(bandlabel,0);
-    RadiationModel::setDiffuseRadiationExtinctionCoeff(bandlabel, 0.f, make_vec3(-0.5, 0.5, 1) );
-
-    for (auto cameralabel:cameralabels){
-        RadiationModel::setCameraSpectralResponse(cameralabel, bandlabel, cameraresponselabel);
-    }
-    RadiationModel::updateGeometry();
-    RadiationModel::runBand(bandlabel);
-
-    float cameravalue;
-    std::vector<float> camera_data;
-    std::vector<uint> camera_UUID;
-//    std::ofstream soil_data("brf_results/"+filename+"_soil.txt");
-//    std::ofstream all_data("brf_results/"+filename+".txt");
-    for (auto cameralabel:cameralabels){
-        std::string global_data_label = "camera_" + cameralabel + "_" + bandlabel;  //_pixel_UUID
-        std::string global_UUID = "camera_" + cameralabel + "_pixel_UUID";
-        context->getGlobalData(global_data_label.c_str(), camera_data);
-        context->getGlobalData(global_UUID.c_str(), camera_UUID);
-        float camera_all_data=0;
-        float camera_soil_data=0;
-        float numvalipxl = 0;
-        float cosUI;
-
-        for (int i=0; i<camera_data.size();i++){
-            uint iUUID = camera_UUID.at(i)-1;
-            if (camera_data.at(i)>0 && context->doesPrimitiveExist(iUUID)){
-                    if(context->doesPrimitiveDataExist(iUUID,"sphericalposition")) {
-                        camera_all_data += camera_data.at(i);
-                        numvalipxl += 1;
-                    } else {
-                        camera_soil_data+=camera_data.at(i);
-                    }
-            }
-        }
-        cameravalue = camera_all_data;
-        std::cout<<cameravalue<<std::endl;
-//        soil_data << camera_soil_data << "\n";
-//        all_data << camera_all_data << "\n";
-        RadiationModel::writeCameraImage(cameralabel, {"SW"}, "CheckBoard", "", 1000);
-    }
-
-//    soil_data.close();
-//    all_data.close();
-    return cameravalue;
 }
 
 float RadiationModel::getCameraResponseScale(const std::string &orginalcameralabel, const std::vector<std::string>& cameraresponselabels,
@@ -4496,6 +4435,136 @@ float RadiationModel::getCameraResponseScale(const std::string &orginalcameralab
     float camerascale = cameracalibration->getCameraResponseScale(cameralabel, cameraproperties.camera_resolution, bandlabels, truevalues);
     return camerascale;
 }
+
+
+void RadiationModel::writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, HeliosDataType datatype, float padvalue){
+
+    //Get image UUID labels
+    std::vector<uint> camera_UUIDs;
+    std::string global_data_label = "camera_" + cameralabel + "_pixel_UUID";
+    context->getGlobalData(global_data_label.c_str(), camera_UUIDs);
+    std::vector<uint> pixel_UUIDs = camera_UUIDs;
+    int2 camera_resolution = cameras.at(cameralabel).resolution;
+
+    //Output label image in ".txt" format
+    std::ofstream pixel_data(filename);
+
+    for (uint j = 0; j < camera_resolution.y; j++) {
+        for (uint i = 0; i < camera_resolution.x; i++) {
+            uint UUID =pixel_UUIDs.at(j * camera_resolution.x + i)-1;
+            if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID,labelname.c_str())){
+
+                if( datatype == HELIOS_TYPE_FLOAT ){
+                    float labeldata;
+                    context->getPrimitiveData(UUID,labelname.c_str(),labeldata);
+                    pixel_data << labeldata << " ";
+                }
+                else if (datatype == HELIOS_TYPE_UINT){
+                    uint labeldata;
+                    context->getPrimitiveData(UUID,labelname.c_str(),labeldata);
+                    pixel_data << labeldata << " ";
+                }
+                else if (datatype == HELIOS_TYPE_INT){
+                    int labeldata;
+                    context->getPrimitiveData(UUID,labelname.c_str(),labeldata);
+                    pixel_data << labeldata << " ";
+                }
+                else if (datatype == HELIOS_TYPE_DOUBLE){
+                    double labeldata;
+                    context->getPrimitiveData(UUID,labelname.c_str(),labeldata);
+                    pixel_data << labeldata << " ";
+                }
+            }
+            else{
+                pixel_data << padvalue << " ";
+            }
+        }
+        pixel_data << "\n";
+    }
+    pixel_data.close();
+}
+
+void RadiationModel::writeDepthImage(const std::string &cameralabel, const std::string &filename) {
+
+    //Get image UUID labels
+    std::vector<uint> camera_UUIDs;
+    std::string global_data_label = "camera_" + cameralabel + "_pixel_UUID";
+    context->getGlobalData(global_data_label.c_str(), camera_UUIDs);
+    std::vector<uint> pixel_UUIDs = camera_UUIDs;
+    helios::vec3 camera_position = cameras.at(cameralabel).position;
+    helios::vec3 camera_lookat = cameras.at(cameralabel).lookat;
+
+    // Set depth for all primitives
+    float maxdepth = 0;
+    float mindepth = -1;
+    for( uint UUIDr : pixel_UUIDs ){
+        uint UUID = UUIDr-1;
+        if (context->doesPrimitiveExist(UUID)) {
+            std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);//Centre
+            vec3 vertex = vertices.at(0) - camera_position;
+            vec3 cameraplane_direct = camera_lookat - camera_position;
+            float dotproductvc = vertex * cameraplane_direct;
+            float cam_norm = cameraplane_direct.magnitude();
+            float depth = dotproductvc / cam_norm;
+            if (depth > maxdepth) {
+                maxdepth = depth;
+            }
+            if (mindepth == -1) {
+                mindepth = depth;
+            } else if (depth < mindepth) {
+                mindepth = depth;
+            }
+            context->setPrimitiveData(UUID, "depth", depth);
+        }
+    }
+
+    for (uint UUIDr : pixel_UUIDs ){
+        uint UUID = UUIDr-1;
+        if (context->doesPrimitiveExist(UUID)){
+            float depth;
+            context->getPrimitiveData(UUID,"depth",depth);
+            float depth_norm = (depth-mindepth)/(maxdepth-mindepth);
+            context->setPrimitiveData(UUID,"depth_norm",depth_norm);
+        }
+    }
+
+    // Output depth image in ".txt" format
+    RadiationModel::writeBasicLabel(cameralabel, filename, "depth_norm", HELIOS_TYPE_FLOAT,1);
+}
+
+void RadiationModel::calibrateCamera(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels,
+                                     const std::vector<std::string>& cameraresplabels_raw, const std::vector<std::string> &bandlabels, const float scalefactor,
+                                     const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark, float learningrate) {
+
+
+
+    CameraCalibration cameracalibration_(context);
+    cameracalibration = &cameracalibration_;
+    vec3 centrelocation =make_vec3(0,0,0.2); // Location of color board
+    vec3 rotationrad =make_vec3(0,0,1.5705); // Rotation angle of color board
+    cameracalibration->addDefaultColorboard(centrelocation, rotationrad,0.1);
+    cameracalibration->responseupdateparameters.learningrate = learningrate;
+    vec2 wavelengthrange = make_vec2(300,2500);
+
+    // Calibrated camera response labels
+    std::vector<std::string> cameraresplabels_cal(cameraresplabels_raw.size());
+
+    for (int iband=0;iband<bandlabels.size();iband++){
+        cameraresplabels_cal.at(iband) = calibratedmark + "_" + cameraresplabels_raw.at(iband);
+    }
+
+    RadiationModel::runRadiationImaging(orginalcameralabel, sourcelabels, bandlabels, cameraresplabels_raw, wavelengthrange, 0.035, 0);
+    // Update camera responses
+    RadiationModel::updateCameraResponse(orginalcameralabel, sourcelabels, cameraresplabels_raw, wavelengthrange, truevalues, calibratedmark);
+
+    float camerascale = RadiationModel::getCameraResponseScale(orginalcameralabel, cameraresplabels_cal, bandlabels,sourcelabels, wavelengthrange, truevalues);
+
+    std::cout << "Camera response scale: " << camerascale << std::endl;
+    // Scale and write calibrated camera responses
+    cameracalibration_.writeCalibratedCameraResponses(cameraresplabels_raw, calibratedmark, camerascale*scalefactor);
+
+}
+
 
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line)
 {

@@ -193,6 +193,9 @@ protected:
              {helios::make_RGBcolor(0.828,0.573,0.651), helios::make_RGBcolor(1,1,0), helios::make_RGBcolor(0.9569,0.6,0.0078)},
              {helios::make_RGBcolor(0.984,0.977,0.988), helios::make_RGBcolor(1,0.1255,0), helios::make_RGBcolor(0.7294,0.0118,0.1216)}};
 
+//    const std::vector<std::vector<helios::RGBcolor>> colorassignment_default_reverse=
+//            {{helios::make_RGBcolor(0.9961,0.6667,0.5569), helios::make_RGBcolor(0.1882,0.2314,0.3608),
+
 };
 
 #endif //HELIOS_CAMERACALIBRATION_H

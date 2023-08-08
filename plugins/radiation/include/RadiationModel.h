@@ -711,8 +711,6 @@ public:
     */
     float calculateGtheta(helios::Context* context, helios::vec3 view_direction );
 
-    void setColorCalibration(CameraCalibration *CameraCalibration);
-
     //! Update the camera response for a given camera based on color board
     /**
      * \param[in] "orginalcameralabel" Label of camera to be used for simulation
@@ -723,8 +721,8 @@ public:
      * \param[in] "calibratedmark" Mark of the calibrated camera
     */
     void updateCameraResponse(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels_raw,
-                                 const std::vector<std::string>& cameraresponselabels, helios::vec2 &wavelengthrange,
-                                 const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark);
+                              const std::vector<std::string>& cameraresponselabels, helios::vec2 &wavelengthrange,
+                              const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark);
 
     //! Get the scale factor of the camera response for a given camera
     /**
@@ -753,11 +751,40 @@ public:
     */
     void runRadiationImaging(const std::string& cameralabel, const std::vector<std::string>& sourcelabels, const std::vector<std::string>& bandlabels,
                              const std::vector<std::string>& cameraresponselabels, helios::vec2 wavelengthrange,
-                             float fluxscale = 1, float diffusefactor = 0.0005, uint scatteringdepth = 3);
+                             float fluxscale = 1, float diffusefactor = 0.0005, uint scatteringdepth = 4);
 
-    //! Specifically used for ROMC verification
-    float getRadiationCameraValue(const std::vector<std::string>& cameralabels, const std::string& sourcelabel,const std::string& bandlabels,
-                                                 const std::string& cameraresponselabel,  const std::string& filename);
+    //! Write image labels to file
+    /**
+     * \param[in] "cameralabel" Label of target camera
+     * \param[in] "filename" Filename of the output file
+     * \param[in] "labelname" Name of the label
+     * \param[in] "datatype" Data type of the label
+     * \param[in] "padvalue" Pad value for the empty pixels
+    */
+    void writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname,
+                         helios::HeliosDataType datatype, float padvalue = NAN);
+
+    //! Write depth image to file
+    /**
+     * \param[in] "cameralabel" Label of target camera
+     * \param[in] "filename" Filename of the output file
+    */
+    void writeDepthImage(const std::string &cameralabel, const std::string &filename);
+
+    //! Calibrate camera based on default color board
+    /**
+     * \param[in] "orginalcameralabel" Label of camera to be used for simulation
+     * \param[in] "sourcelabels" Labels of source fluxes
+     * \param[in] "cameraresponselabels" Labels of camera spectral responses
+     * \param[in] "bandlabels" Labels of radiation bands
+     * \param[in] "scalefactor" Scale factor for calibrated camera spectral response
+     * \param[in] "truevalues" True image values of the color board
+     * \param[in] "calibratedmark" Mark of the calibrated camera spectral response
+     * \param[in] "learningrate" Learning rate for calibration
+    */
+    void calibrateCamera(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels,
+                         const std::vector<std::string>& cameraresponselabels, const std::vector<std::string> &bandlabels, const float scalefactor,
+                         const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark, float learningrate=0.8);
 
 
 

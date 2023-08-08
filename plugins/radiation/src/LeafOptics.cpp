@@ -89,7 +89,7 @@ void LeafOptics::run(std::vector<uint> &UUIDs ,const LeafOpticsProperties &leafp
 
 
 void LeafOptics::prospect(float numberlayers, float chlorophyllcontent, float carotenoidcontent, float anthocyancontent, float brownpigments,
-                          float watermass,  float drymass, float protein, float carbonconstituents, std::vector<float> &reflectivities_fit, std::vector<float> &transmissivities_fit )
+                          float watermass,  float drymass, float protein, float carbonconstituents, std::vector<float> &reflectivities_fit, std::vector<float> &transmissivities_fit)
 // Implementation of Prospect-PRO, port of public available matlab code
 {
     double k;
@@ -270,133 +270,19 @@ float LeafOptics::transmittance(double k) {
 
 void LeafOptics::setProperties(std::vector<uint> UUIDs,  const LeafOpticsProperties &leafproperties) {
 
-        context->setPrimitiveData(UUIDs, "chlorophyll", leafproperties.chlorophyllcontent);
-        context->setPrimitiveData(UUIDs, "carotenoid", leafproperties.carotenoidcontent);
-        context->setPrimitiveData(UUIDs, "anthocyanin", leafproperties.anthocyancontent);
-        if (leafproperties.brownpigments > 0.0){
-            context->setPrimitiveData(UUIDs, "brown", leafproperties.brownpigments);
-        }
-        context->setPrimitiveData(UUIDs, "water", leafproperties.watermass);
-        if (leafproperties.drymass > 0.0) {
-            context->setPrimitiveData(UUIDs, "drymass", leafproperties.drymass);
-        }
-        else {
-            context->setPrimitiveData(UUIDs, "protein", leafproperties.protein);
-            context->setPrimitiveData(UUIDs, "cellulose", leafproperties.carbonconstituents);
-        }
+    context->setPrimitiveData(UUIDs, "chlorophyll", leafproperties.chlorophyllcontent);
+    context->setPrimitiveData(UUIDs, "carotenoid", leafproperties.carotenoidcontent);
+    context->setPrimitiveData(UUIDs, "anthocyanin", leafproperties.anthocyancontent);
+    if (leafproperties.brownpigments > 0.0){
+        context->setPrimitiveData(UUIDs, "brown", leafproperties.brownpigments);
+    }
+    context->setPrimitiveData(UUIDs, "water", leafproperties.watermass);
+    if (leafproperties.drymass > 0.0) {
+        context->setPrimitiveData(UUIDs, "drymass", leafproperties.drymass);
+    }
+    else {
+        context->setPrimitiveData(UUIDs, "protein", leafproperties.protein);
+        context->setPrimitiveData(UUIDs, "cellulose", leafproperties.carbonconstituents);
+    }
 }
 
-void LeafOptics::inializeProperties(uint UUID ) {
-
-    float isgrass = 0.0;
-    if (context->doesPrimitiveDataExist(UUID, "Isgrass")) {
-        context->getPrimitiveData(UUID, "Isgrass", isgrass);
-    }
-    else {
-        context->setPrimitiveData(UUID, "Isgrass", isgrass);
-    }
-
-    float CHL;
-    if (context->doesPrimitiveDataExist(UUID, "Chlorophyll")) {
-        context->getPrimitiveData(UUID, "Chlorophyll", CHL);
-    }
-    else {
-        if (isgrass>=0.999) {
-            CHL = chlorophyll_default_grass;
-        }
-        else {
-            CHL = chlorophyll_default;
-        }
-        context->setPrimitiveData(UUID, "Chlorophyll", CHL);
-
-    }
-
-    float CAR;
-    if (context->doesPrimitiveDataExist(UUID, "Carotenoid")) {
-        context->getPrimitiveData(UUID, "Carotenoid", CAR);
-    }
-    else
-    {
-        if (isgrass>=0.999) {
-            CAR = CHL * carotenoid2chlorophyll_grass;
-        }
-        else {
-            CAR = CHL * carotenoid2chlorophyll;
-        }
-        context->setPrimitiveData(UUID, "Carotenoid", CAR);
-    }
-
-    float ANT;
-    if (context->doesPrimitiveDataExist(UUID, "Anthocyanin")) {
-        context->getPrimitiveData(UUID, "Anthocyanin", ANT);
-    }
-    else
-    {
-        if (isgrass>=0.999) {
-            ANT = CAR * anthocyanin2carotenoid_grass;
-        }
-        else {
-            ANT = CAR * anthocyanin2carotenoid;
-        }
-        context->setPrimitiveData(UUID, "Anthocyanin", ANT);
-    }
-
-    float LMA;
-    if (context->doesPrimitiveDataExist(UUID, "LMA")) {
-        context->getPrimitiveData(UUID, "LMA", LMA);
-    }
-    else
-    {
-        if (isgrass>=0.999) {
-            LMA = CHL * drymass2chlorophyll_grass;
-        }
-        else {
-            LMA = CHL * drymass2chlorophyll;
-        }
-        context->setPrimitiveData(UUID, "LMA", LMA);
-    }
-
-    float WCh;
-    if (context->doesPrimitiveDataExist(UUID, "watercontent")) {
-        context->getPrimitiveData(UUID, "watercontent", WCh );
-    }
-    else
-    {
-        WCh = LeafOptics::watercontent;
-        context->setPrimitiveData(UUID, "watercontent", WCh);
-    }
-
-
-    float EWT;
-    if (context->doesPrimitiveDataExist(UUID, "EWT")) {
-        context->getPrimitiveData(UUID, "EWT", EWT);
-    }
-    else
-    {
-        EWT = LMA/(1.0/WCh-1.0);
-        context->setPrimitiveData(UUID, "EWT", EWT);
-    }
-
-    float N;
-    if (context->doesPrimitiveDataExist(UUID, "N-Prospect")) {
-        context->getPrimitiveData(UUID, "N-Prospect", N);
-    }
-    else
-    {
-        if (isgrass>=0.999) {
-            N = 1.163 + 68.53*LMA;
-        }
-        else {
-            N = 1.25  + 63.44*LMA;
-        }
-        context->setPrimitiveData(UUID, "N-Prospect", N);
-    }
-
-    float Brown = 0.0;
-    if (context->doesPrimitiveDataExist(UUID, "brown")) {
-        context->getPrimitiveData(UUID, "brown", Brown);
-    }
-    else {
-        context->setPrimitiveData(UUID, "brown", Brown);
-    }
-}

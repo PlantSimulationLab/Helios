@@ -3,6 +3,7 @@
 **/
 
 #include "Context.h"
+#include <vector>
 
 //! LeafOptics model class
 /** Prospect-D & PRO based computation of spectral total reflectance and transmittance with dimension reduction */
@@ -58,7 +59,7 @@ public:
      * \param[in] protein: protein content in the leaf
      * \param[in] carbonconstituents: carbon constituents in the leaf
      */
-     void prospect(float numberlayers, float Chlorophyllcontent, float carotenoidcontent, float anthocyancontent,
+    void prospect(float numberlayers, float Chlorophyllcontent, float carotenoidcontent, float anthocyancontent,
                   float brownpigments, float watermass, float drymass, float protein, float carbonconstituents, std::vector<float> &reflectivities_fit, std::vector<float> &transmissivities_fit );
 
     //! Get the leaf spectra
@@ -106,7 +107,5 @@ private:
     void surface(float degree, std::vector<float> &reflectivities);
     // Computes surface reflectances for normal and diffuse light incidence
 
-    void  inializeProperties(uint UUID);
-    // Check and prepare all necessary inputs to run Prospect-D
 
 };

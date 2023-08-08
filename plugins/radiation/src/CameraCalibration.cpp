@@ -9,7 +9,7 @@ CameraCalibration::CameraCalibration(helios::Context *context):context(context){
 }
 
 std::vector<uint> CameraCalibration::addCheckboard(const helios::int2 &boardsidesize, const float &patchsize, const vec3 &centrelocation,
-                                      const vec3 &rotationrad, bool firstblack) {
+                                                   const vec3 &rotationrad, bool firstblack) {
     helios::vec2 patchfullsize = make_vec2(patchsize,patchsize); //size of each patch
     std::vector<float> bwv(2,0);
     float bw;
@@ -153,36 +153,36 @@ std::vector<uint> CameraCalibration::getColorBoardUUIDs(){
 
 bool CameraCalibration::writeSpectralXMLfile(const std::string &filename, const std::string &note, const std::string &label, std::vector<vec2> *spectrum){
 
-        std::ofstream newspectraldata(filename);
+    std::ofstream newspectraldata(filename);
 
-        if (newspectraldata.is_open()) {
+    if (newspectraldata.is_open()) {
 
-            newspectraldata << "<helios>\n\n";
-            newspectraldata << "\t<!-- ";
-            newspectraldata << note;
-            newspectraldata << " -->\n";
-            newspectraldata << "\t<globaldata_vec2 label=\"";
-            newspectraldata << label;
-            newspectraldata << "\">";
+        newspectraldata << "<helios>\n\n";
+        newspectraldata << "\t<!-- ";
+        newspectraldata << note;
+        newspectraldata << " -->\n";
+        newspectraldata << "\t<globaldata_vec2 label=\"";
+        newspectraldata << label;
+        newspectraldata << "\">";
 
-            for (int i = 0; i < spectrum->size(); ++i) {
-                newspectraldata <<"\n\t\t";
-                newspectraldata << spectrum->at(i).x;
-                newspectraldata << " ";
-                newspectraldata << std::to_string(spectrum->at(i).y);
-            }
+        for (int i = 0; i < spectrum->size(); ++i) {
+            newspectraldata <<"\n\t\t";
+            newspectraldata << spectrum->at(i).x;
+            newspectraldata << " ";
+            newspectraldata << std::to_string(spectrum->at(i).y);
+        }
 //            spectrum->clear();
-            newspectraldata <<"\n\t</globaldata_vec2>\n";
-            newspectraldata <<"\n</helios>";
-            newspectraldata.close();
-            return true;
-        }
+        newspectraldata <<"\n\t</globaldata_vec2>\n";
+        newspectraldata <<"\n</helios>";
+        newspectraldata.close();
+        return true;
+    }
 
-        else{
-            std::cerr << "\n(CameraCalibration::writeSpectralXMLfile) Unable to open file";
-            return false;
+    else{
+        std::cerr << "\n(CameraCalibration::writeSpectralXMLfile) Unable to open file";
+        return false;
 
-        }
+    }
 }
 
 // Load XML file and save data in spectral vectors containing both wavelengths and spectral values
@@ -310,13 +310,14 @@ std::vector<float> CameraCalibration::updateCameraResponseSpectra(const std::vec
     // Update expanded camera response spectra
     std::vector<float> loss;
     loss.reserve(maxiteration);
+    float stopiteration = 0;
     for (int iloop=0; iloop < maxiteration; ++iloop){
         float iloss = CameraCalibration::GradientDescent(&expandedcameraspectra, expandedinputspectra, learningrate, truevalues) / float(bandsnumber);
         loss.push_back(iloss);
         if (iloss<minloss){
+            stopiteration = iloop;
             break;
         }
-        std::cout<<iloss<<std::endl;
     }
 
     // Get the calibrated camera response spectra
@@ -334,6 +335,7 @@ std::vector<float> CameraCalibration::updateCameraResponseSpectra(const std::vec
 
     // Calculate the final loss
     float iloss = CameraCalibration::GradientDescent(&expandedcameraspectra, expandedinputspectra, learningrate, truevalues) / float(bandsnumber);
+    std::cout<<"The final loss after " << stopiteration << " iteration is: "<<iloss <<std::endl;
     loss.push_back(iloss);
     return loss;
 }
@@ -351,15 +353,6 @@ void CameraCalibration::writeCalibratedCameraResponses(const std::vector<std::st
         CameraCalibration::writeSpectralXMLfile(calibratedlabel + ".xml", "", calibratedlabel, &cameraresponsespectrum);
     }
 }
-
-//void CameraCalibration::resetCameraResponses(std::string camerareponselabels, float scale) {
-//    std::vector<vec2> cameraresponsespectrum;
-//    context->getGlobalData(camerareponselabels.c_str(),cameraresponsespectrum);
-//    for (int ispec = 0; ispec < cameraresponsespectrum.size(); ispec ++){
-//        cameraresponsespectrum.at(ispec).y= cameraresponsespectrum.at(ispec).y * scale;
-//    }
-//    context->setGlobalData(camerareponselabels.c_str(),HELIOS_TYPE_VEC2,cameraresponsespectrum.size(),&cameraresponsespectrum[0]);
-//}
 
 //void CameraCalibration::distortImage(const std::string& cameralabel, const std::vector<std::string>& bandlabels,
 //                                     const helios::vec2 &focalxy, std::vector<double> &distCoeffs, helios::int2 cameraresolution,
@@ -584,7 +577,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
 }
 
 float CameraCalibration::getCameraResponseScale(const std::string &cameralabel, const helios::int2 cameraresolution, const std::vector<std::string> &bandlabels,
-                                      const std::vector<std::vector<float>> &truevalues) {
+                                                const std::vector<std::vector<float>> &truevalues) {
 
     std::vector<uint> camera_UUIDs;
     std::string global_UUID_label = "camera_" + cameralabel + "_pixel_UUID";
