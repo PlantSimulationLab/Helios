@@ -182,6 +182,7 @@ int main(void){
 
             float chl_content = 25 + 20*context.randu(); // Random chlorophyll content between 25 and 45
             leafproperties.chlorophyllcontent = chl_content;
+            leafproperties.carotenoidcontent = chl_content/4.5f;
             std::vector<uint> UUIDs_ileaf = ileaf_UUIDs.at(ileaf);
 
             // Set net photosynthesis coefficients based on chlorophyll content
