@@ -29,6 +29,7 @@ typedef unsigned int uint;
 #include <cassert>
 #include <stdexcept>
 #include <exception>
+#include <iomanip>
 
 //! Vector data structures
 /**
