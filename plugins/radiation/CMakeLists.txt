@@ -11,7 +11,7 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(radiation STATIC "src/RadiationModel.cpp;src/selfTest.cpp;src/CameraCalibration.cpp;src/Annotation.cpp;src/LeafOptics.cpp")
+add_library(radiation STATIC "src/RadiationModel.cpp;src/selfTest.cpp;src/CameraCalibration.cpp;src/LeafOptics.cpp")
 
 find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
