@@ -174,8 +174,8 @@ int helios::Date::JulianDay() const{
   int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
   int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
   int* skips;
-  
-  if( (year-2000)%4 == 0 ){  //leap year
+
+  if( isLeapYear() ){  //leap year
     skips=skips_leap;
   }else{                 //non-leap year
     skips=skips_nonleap;
@@ -183,6 +183,27 @@ int helios::Date::JulianDay() const{
   
   return skips[month-1]+day;
 
+}
+
+void helios::Date::incrementDay() {
+    int JD = Calendar2Julian( *this );
+    if( JD<365 || ( JD==356 && isLeapYear() ) ) {
+        Date cal = Julian2Calendar(JD + 1, year);
+        day = cal.day;
+        month = cal.month;
+    }else{ //it is last day of the year
+        day = 1;
+        month = 1;
+        year ++;
+    }
+}
+
+bool helios::Date::isLeapYear() const {
+    if( (year-2000)%4 == 0 ){  //leap year
+        return true;
+    }else{                 //non-leap year
+        return false;
+    }
 }
 
 float helios::randu(){
@@ -818,6 +839,28 @@ std::string helios::trim_whitespace(const std::string &input){
   outstring = (end == std::string::npos) ? "" : outstring.substr(0, end + 1);
 
   return outstring;
+
+}
+
+std::vector<std::string> helios::separate_string_by_delimiter( const std::string &inputstring, const std::string &delimiter ){
+
+    std::vector<std::string> separated_string;
+
+    if( inputstring.find(delimiter, 0)==std::string::npos ){
+        return separated_string;
+    }
+
+    size_t p = 0;
+    size_t p0 = 0;
+    while ( p<inputstring.size()-1 ) {
+
+        p = inputstring.find(delimiter, p0);
+        separated_string.push_back( trim_whitespace(inputstring.substr(p0, p - p0)) );
+
+        p0=p+1;
+    }
+
+    return separated_string;
 
 }
 

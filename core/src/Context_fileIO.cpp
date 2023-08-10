@@ -4455,3 +4455,287 @@ void Context::writePrimitiveData( std::string filename, const std::vector<std::s
   file.close();
 
 }
+
+void Context::loadTabularTimeseriesData( const std::string &data_file, const std::vector<std::string> &col_labels, const std::string &a_delimeter, const std::string &a_date_string_format, uint headerlines ){
+
+    std::ifstream datafile(data_file); //open the file
+
+    if(!datafile.is_open()){ //check that file exists
+        throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Weather data file '" + data_file + "' does not exist.") );
+    }
+
+    int yearcol=-1;
+    int DOYcol=-1;
+    int datestrcol=-1;
+    int hourcol=-1;
+    int minutecol=-1;
+    int secondcol=-1;
+    int timestrcol=-1;
+    std::map<std::string,int> datacols;
+
+    size_t Ncolumns = 0;
+
+    size_t row = headerlines;
+
+    std::vector<std::string> column_labels = col_labels;
+    std::string delimiter = a_delimeter;
+    std::string date_string_format = a_date_string_format;
+
+    // pre-defined labels for CIMIS weather data files
+    if( col_labels.size()==1 && ( col_labels.front()=="CIMIS" || col_labels.front()=="cimis" ) ) {
+        column_labels = {"", "", "", "date", "hour", "DOY", "ETo", "", "precipitation", "",
+                         "net_radiation", "", "vapor_pressure", "", "air_temperature", "",
+                         "air_humidity", "", "dew_point", "", "wind_speed", "", "wind_direction",
+                         "", "soil_temperature", ""};
+        headerlines = 1;
+        delimiter = ",";
+        date_string_format = "MMDDYYYY";
+
+    }
+
+    //If user specified column labels as an argument, parse them
+    if( !column_labels.empty() ) {
+
+        int col = 0;
+        for (auto &label: column_labels) {
+
+            if (label == "year" || label == "Year") {
+                yearcol = col;
+            } else if (label == "DOY" || label == "Jul" ) {
+                DOYcol = col;
+            } else if (label == "date" || label == "Date") {
+                datestrcol = col;
+            } else if (label == "hour" || label == "Hour") {
+                hourcol = col;
+            } else if (label == "minute" || label == "Minute") {
+                minutecol = col;
+            } else if (label == "second" || label == "Second") {
+                secondcol = col;
+            }else if ( !label.empty() ){
+                if( datacols.find(label)==datacols.end() ) {
+                    datacols[label] = col;
+                }else{
+                    datacols[label+"_dup"] = col;
+                }
+            }
+
+            col++;
+        }
+
+        Ncolumns = column_labels.size();
+
+    // If column labels were not provided, read the first line of the text file and parse it for labels
+    }else{
+
+        if( headerlines==0 ){
+            std::cout << "WARNING (Context::loadTabularTimeseriesData): ""headerlines"" argument was specified as zero, and no column label information was given. Attempting to read the first line to see if it contains label information." << std::endl;
+            headerlines++;
+        }
+
+        std::string line;
+        if( std::getline(datafile, line) ){
+
+            std::vector<std::string> line_parsed = separate_string_by_delimiter( line, delimiter );
+
+            if( line_parsed.empty() ){
+                throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but it did not contain the specified delimiter.") );
+            }
+
+            Ncolumns = line_parsed.size();
+
+            for( int col=0; col<Ncolumns; col++ ){
+
+                std::string label = line_parsed.at(col);
+
+                if (label == "year" || label == "Year") {
+                    yearcol = col;
+                } else if (label == "DOY" || label == "Jul" ) {
+                    DOYcol = col;
+                } else if (label == "date" || label == "Date") {
+                    datestrcol = col;
+                } else if (label == "hour" || label == "Hour") {
+                    hourcol = col;
+                } else if (label == "minute" || label == "Minute") {
+                    minutecol = col;
+                } else if (label == "second" || label == "Second") {
+                    secondcol = col;
+                }else if ( !label.empty() ) {
+                    if( datacols.find(label)==datacols.end() ) {
+                        datacols[label] = col;
+                    }else{
+                        datacols[label+"_dup"] = col;
+                    }
+                }
+
+            }
+
+            headerlines --;
+
+        }else{
+            throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but read failed.") );
+        }
+
+        if( yearcol==-1 && DOYcol==-1 && datestrcol==-1 ){
+            throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but could not find valid label information.") );
+        }
+
+    }
+
+    if( datestrcol<0 && (yearcol<0 || DOYcol<0) ){
+        throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): The date must be specified by either a column labeled ""date"", or by two columns labeled ""year"" and ""DOY"".") );
+    }else if( hourcol<0 ){
+        throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): At a minimum, the time must be specified by a column labeled ""hour""." ) );
+    }else if( datacols.empty() ){
+        throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): No columns were found containing data variables (e.g., temperature, humidity, wind speed).") );
+    }
+
+    std::string line;
+
+    //skip header lines
+    //note: if we read labels from the first header line above, we don't need to skip another line
+    for (int i = 0; i < headerlines; i++) {
+        std::getline(datafile, line);
+    }
+
+    while ( std::getline(datafile, line) ) { //loop through file to read data
+        row++;
+
+        if( trim_whitespace(line).empty() && row>1 ){
+            break;
+        }
+
+        //separate the line by delimiter
+        std::vector<std::string> line_separated = separate_string_by_delimiter( line, delimiter );
+
+        if( line_separated.size()!=Ncolumns ){
+            throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Line " + std::to_string(row) + " had " + std::to_string(line_separated.size()) + " lines, but was expecting " + std::to_string(Ncolumns) ) );
+        }
+
+        //compile date
+        Date date;
+        if( yearcol>=0 && DOYcol>=0 ){
+            int DOY;
+            parse_int(line_separated.at(DOYcol), DOY);
+            if( DOY<1 || DOY>366 ){
+                throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date specified on line " + std::to_string(row) + ".") );
+            }
+            int year;
+            parse_int(line_separated.at( yearcol ), year);
+            if( year<1000 ){
+                throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid year specified on line " + std::to_string(row) + ".") );
+            }
+            date = make_Date( DOY, year );
+        }else if( datestrcol>=0 ){
+            //parse date string. expecting format YYYY-MM-DD with delimiter '-' or '/'
+            std::string datestr = line_separated.at(datestrcol);
+
+            //try parsing date string based on '-' delimiter
+            std::vector<std::string> thisdatestr = separate_string_by_delimiter( datestr, "-" );
+
+            if( thisdatestr.size()!=3 ){
+                //try parsing date string based on '/' delimiter
+                thisdatestr = separate_string_by_delimiter( datestr, "/" );
+            }
+
+            if( thisdatestr.size()!=3 ){
+                throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + ". It should be in the format YYYY-MM-DD, delimited by either ""-"" or ""/""." ) );
+            }
+
+            //convert parsed date strings into a vector of integers
+            std::vector<int> thisdate(3);
+            for( int i=0; i<3; i++ ){
+                if( !parse_int( thisdatestr.at(i), thisdate.at(i) ) ){
+                    throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + ". It should be in the format YYYY-MM-DD, delimited by either ""-"" or ""/""." ) );
+                }
+            }
+
+            //figure out ordering of values
+            int year;
+            int month;
+            int day;
+            if( date_string_format=="YYYYMMDD" ){
+                year = thisdate.at(0);
+                month = thisdate.at(1);
+                day = thisdate.at(2);
+            }else if( date_string_format=="YYYYDDMM" ){
+                year = thisdate.at(0);
+                month = thisdate.at(2);
+                day = thisdate.at(1);
+            }else if( date_string_format=="DDMMYYYY" ){
+                year = thisdate.at(2);
+                month = thisdate.at(1);
+                day = thisdate.at(0);
+            }else if( date_string_format=="MMDDYYYY" ){
+                year = thisdate.at(2);
+                month = thisdate.at(0);
+                day = thisdate.at(1);
+            }else{
+                throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date string format: " + date_string_format + ". Must be one of ""YYYYMMDD"", ""YYYYDDMM"", ""DDMMYYYY"", or ""MMDDYYYY"".  Check that the date string does not include a delimiter (i.e., should be MMDDYYYY not MM/DD/YYYY).") );
+            }
+
+            if( year<1000 || month<1 || month>12 || day<1 || day>31 ){
+                throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + ". It should be in the format YYYY-MM-DD, delimited by either ""-"" or ""/""." ) );
+            }
+
+            date = make_Date( day, month, year );
+        }else{
+            assert(1); //shouldn't be here
+        }
+
+        //compile time
+        Time time;
+        int hour = 0;
+        int minute = 0;
+        int second = 0;
+
+        if( !parse_int( line_separated.at(hourcol), hour ) ){
+            throw( std::runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse hour string on line " + std::to_string(row) + "." ) );
+        }
+        if( hour>24 && minutecol<0 && secondcol<0 ){
+            int hr_min = hour;
+            hour = std::floor( hr_min/100 );
+            minute = hr_min - hour*100;
+        }
+        if( hour==24 ){
+            hour = 0;
+            date.incrementDay();
+        }
+        if( minutecol>=0 ){
+            if( !parse_int( line_separated.at(minutecol), minute ) ){
+                minute = 0;
+                std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse minute string on line " << row << ". Setting minute equal to 0." << std::endl;
+            }
+        }
+        if( secondcol>=0 ){
+            if( !parse_int( line_separated.at(secondcol), minute ) ){
+                second = 0;
+                std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse second string on line " << row << ". Setting second equal to 0." << std::endl;
+            }
+        }
+        time = make_Time( hour, minute, second );
+
+        //compile data values
+        for( auto &dat : datacols ){
+
+            std::string label = dat.first;
+            int col = dat.second;
+
+            float dataval;
+            if( !parse_float( line_separated.at(col), dataval ) ){
+                std::cout << "WARNING (Context::loadTabularTimeseriesData): Failed to parse data value as ""float"" on line " << row << ", column "<<col+1 << ". Skipping this value..." << std::endl;
+                continue;
+            }
+
+            if( label=="air_humidity" && col_labels.size()==1 && ( col_labels.front()=="CIMIS" || col_labels.front()=="cimis" ) ) {
+                dataval = dataval/100.f;
+            }
+
+            addTimeseriesData( label.c_str(), dataval, date, time );
+
+        }
+
+    }
+
+    datafile.close();
+
+}

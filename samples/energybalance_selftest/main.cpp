@@ -4,6 +4,10 @@ using namespace helios;
 
 int main(){
 
-  return EnergyBalanceModel::selfTest();
+    Context context;
+
+    EnergyBalanceModel energybalance( &context );
+
+    return energybalance.selfTest();
 
 }

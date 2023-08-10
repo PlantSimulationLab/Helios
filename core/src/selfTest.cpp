@@ -865,6 +865,30 @@ int Context::selfTest(){
 
     context_ts.queryTimeseriesData( "timeseries", date_ts, make_Time(time0_ts.hour,time0_ts.minute,time0_ts.second+10) );
 
+    Context context_ts2;
+
+    context_ts2.loadTabularTimeseriesData("lib/testdata/weather_data.csv", {"date", "hour", "temperature"}, ",", "MMDDYYYY", 1);
+
+    Date date_ts2 = make_Date( 2, 1, 2020 );
+    Time time_ts2 = make_Time( 13, 00, 00 );
+    float T = context_ts2.queryTimeseriesData( "temperature", date_ts2, time_ts2 );
+
+    if( T != 35.32343f ){
+        std::cerr << "failed: Load of tabular weather data failed." << std::endl;
+        error_count++;
+    }
+
+    context_ts2.loadTabularTimeseriesData("lib/testdata/cimis.csv", {"cimis"}, "," );
+
+    date_ts2 = make_Date( 18, 7, 2023 );
+    time_ts2 = make_Time( 13, 00, 00 );
+    float rh = context_ts2.queryTimeseriesData( "air_humidity", date_ts2, time_ts2 );
+
+    if( rh != 0.42f ){
+        std::cerr << "failed: Load of CIMIS weather data failed." << std::endl;
+        error_count++;
+    }
+
     //------- XML I/O --------//
 
     Context context_io;
