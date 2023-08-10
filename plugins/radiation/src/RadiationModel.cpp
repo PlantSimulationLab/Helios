@@ -4382,8 +4382,8 @@ void RadiationModel::runRadiationImaging(const std::string& cameralabel, const s
         std::vector<vec2> Source_spectrum;
         context->getGlobalData(sourcelabels.at(ID).c_str(), Source_spectrum);
         sources_fluxes.push_back(RadiationModel::integrateSpectrum(Source_spectrum, wavelengthrange.x, wavelengthrange.y));
-        RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
         RadiationModel::setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
+        RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
         sources_fluxsum += sources_fluxes.at(ID);
     }
 

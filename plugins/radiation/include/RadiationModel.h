@@ -20,7 +20,6 @@
 #include "Context.h"
 #include "CameraCalibration.h"
 #include "LeafOptics.h"
-#include "Annotation.h"
 
 //NVIDIA OptiX Includes
 #include <optix.h>
