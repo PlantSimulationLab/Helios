@@ -1389,3 +1389,10 @@
 
 *Stomatal Conductance*
 - Changed selfTest() back to non-static because it could cause issues running it outside of the class.
+
+[1.2.68] 2023-XX-XX
+
+* Added new error handling function 'helios_runtime_error', which allows for greater control over error messages. If running in debug mode, it will output the error message to stderr as well as throwing an exception.
+
+*Context*
+- Incorporated new error handling function 'helios_runtime_error' into all Context-related files.

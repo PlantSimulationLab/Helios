@@ -71,23 +71,25 @@ typedef unsigned int uint;
 
 namespace helios{
 
+    void helios_runtime_error( const std::string &error_message );
+
 //--------------------- HELPER FUNCTIONS -----------------------------------//
 
 //! Construct a rotation matrix to perform rotation about the x-, y-, or z-axis.
 /** 4x4 Affine rotation matrix 
-    \param[in] "rotation" Rotation angle about axis in radians.
-    \param[in] "axis" Axis about which to rotate (one of 'x', 'y', or 'z').
-    \param[out] "transform" Transformation matrix in a 1D array
-    \ingroup functions
+    * \param[in] "rotation" Rotation angle about axis in radians.
+    * \param[in] "axis" Axis about which to rotate (one of 'x', 'y', or 'z').
+    * \param[out] "transform" Transformation matrix in a 1D array
+    * \ingroup functions
 */
 void makeRotationMatrix( float rotation, const char* axis, float (&transform)[16] );
 
 //! Construct a rotation matrix to perform rotation about an arbitrary axis passing through the origin.
 /** 4x4 Affine rotation matrix 
-    \param[in] "rotation" Rotation angle about axis in radians.
-    \param[in] "axis" Vector describing axis about which to perform rotation.
-    \param[out] "transform" Transformation matrix in a 1D array
-    \ingroup functions
+    * \param[in] "rotation" Rotation angle about axis in radians.
+    * \param[in] "axis" Vector describing axis about which to perform rotation.
+    * \param[out] "transform" Transformation matrix in a 1D array
+    * \ingroup functions
 */
 void makeRotationMatrix( float rotation, const helios::vec3& axis, float (&transform)[16] );
 
@@ -103,17 +105,17 @@ void makeRotationMatrix( float rotation, const helios::vec3& origin, const helio
 
 //! Construct translation matrix
 /** 4x4 Affine translation matrix 
-    \param[in] "translation" Distance to translate in x, y, and z directions.
-    \param[out] "transform" Transformation matrix in a 1D array
-    \ingroup functions
+    * \param[in] "translation" Distance to translate in x, y, and z directions.
+    * \param[out] "transform" Transformation matrix in a 1D array
+    * \ingroup functions
 */
 void makeTranslationMatrix( const helios::vec3& translation, float (&transform)[16] );
 
  //! Construct matrix to scale
 /** 4x4 Affine scaling matrix 
-    \param[in] "scale" Scaling factor to apply in x, y, and z directions.
-    \param[out] "transform" Transformation matrix in a 1D array
-    \ingroup functions
+    * \param[in] "scale" Scaling factor to apply in x, y, and z directions.
+    * \param[out] "transform" Transformation matrix in a 1D array
+    * \ingroup functions
 */
 void makeScaleMatrix( const helios::vec3& scale, float (&T)[16] );
 
@@ -130,62 +132,79 @@ void vecmult( const float M[16], const float v[3], float (&result)[3] );
  void makeIdentityMatrix( float (&T)[16] );
 
 //! Convert degrees to radians
-/** \param deg angle in degrees
-    \return angle in radians
-    \sa rad2deg()
-    \ingroup functions
+/**
+ * \param deg angle in degrees
+ * \return angle in radians
+ * \sa rad2deg()
+ * \ingroup functions
 */
- float deg2rad( const float& deg );
+ float deg2rad( float deg );
 
 //! Convert radians to degrees
-/** \param rad angle in radians
-    \return angle in degrees
-    \sa deg2rad()
-    \ingroup functions
+/**
+ * \param rad angle in radians
+ * \return angle in degrees
+ * \sa deg2rad()
+ * \ingroup functions
 */
- float rad2deg( const float& rad );
+ float rad2deg( float rad );
 
 //! Four quadrant arc tangent between 0 and 2*pi
-/** \note atan2_2pi(0,1) = 0, atan2_2pi(1,0) = pi/2, etc.
-    \ingroup functions */
- float atan2_2pi( const float& y, const float& x);
+/**
+ * \note atan2_2pi(0,1) = 0, atan2_2pi(1,0) = pi/2, etc.
+ * \ingroup functions */
+ float atan2_2pi(float y, float x);
 
  //! Convert Cartesian coordinates to spherical coordinates
-/** \param[in] "Cartesian" (x,y,z) Cartesian coordinates
-    \returns SphericalCoord vector.
-    \sa \ref sphere2cart(), \ref SphericalCoord
+/**
+ * \param[in] "Cartesian" (x,y,z) Cartesian coordinates
+ * \returns SphericalCoord vector.
+ * \sa sphere2cart(), SphericalCoord
 */
  SphericalCoord cart2sphere( const vec3& Cartesian );
 
 //! Convert Spherical coordinates to Cartesian coordinates
-/** \param[in] "Spherical" (radius,elevation,azimuth) \ref SphericalCoord vector
-    \returns vec3 vector of Cartesian coordinates
-    \sa \ref cart2sphere()
+/**
+ * \param[in] "Spherical" (radius,elevation,azimuth) SphericalCoord vector
+ * \returns vec3 vector of Cartesian coordinates
+ * \sa cart2sphere()
 */
  vec3 sphere2cart( const SphericalCoord& Spherical );
 
 //! Convert a space-delimited string into a vec2 vector
-/** \ingroup functions */
+/**
+ * \ingroup functions
+ */
 vec2 string2vec2( const char* str );
 
 //! Convert a space-delimited string into a vec3 vector
-/** \ingroup functions */
+/**
+ * \ingroup functions
+ */
 vec3 string2vec3( const char* str );
 
 //! Convert a space-delimited string into a vec4 vector
-/** \ingroup functions */
+/**
+ * \ingroup functions
+ */
 vec4 string2vec4( const char* str );
 
 //! Convert a space-delimited string into an int2 vector
-/** \ingroup functions */
+/**
+ * \ingroup functions
+ */
 int2 string2int2( const char* str );
 
 //! Convert a space-delimited string into an int3 vector
-/** \ingroup functions */
+/**
+ * \ingroup functions
+ */
 int3 string2int3( const char* str );
 
 //! Convert a space-delimited string into an int4 vector
-/** \ingroup functions */
+/**
+ * \ingroup functions
+ */
 int4 string2int4( const char* str );
 
 //! Convert a string into a float with error checking
@@ -345,12 +364,13 @@ template <typename anytype>
 void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, uint Nx, uint Ny, uint Nz );
 
 //! Resize 4D C++ vector
-/** \param[in] "vec" C++ vector
-    \param[in] "Nx" Size of vector in x-direction, i.e., vec[0][0][0].size()
-    \param[in] "Ny" Size of vector in y-direction, i.e., vec[0][0].size()
-    \param[in] "Nz" Size of vector in y-direction, i.e., vec[0].size()
-    \param[in] "Nw" Size of vector in y-direction, i.e., vec.size()
-    \ingroup functions
+/**
+ * \param[in] "vec" C++ vector
+ * \param[in] "Nx" Size of vector in x-direction, i.e., vec[0][0][0].size()
+ * \param[in] "Ny" Size of vector in y-direction, i.e., vec[0][0].size()
+ * \param[in] "Nz" Size of vector in y-direction, i.e., vec[0].size()
+ * \param[in] "Nw" Size of vector in y-direction, i.e., vec.size()
+ * \ingroup functions
 */
 template <typename anytype>
 void resize_vector( std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, uint Nx, uint Ny, uint Nz, uint Nw );
@@ -372,64 +392,68 @@ RGBcolor blend( RGBcolor color0, RGBcolor color1, float weight );
 RGBAcolor blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight );
 
 //! Function to rotate a 3D vector given spherical angles elevation and azimuth
-/** \param[in] "position" 3D coordinate of point to be rotated.
-    \param[in] "rotation" Spherical rotation angles (elevation,azimuth)
-    \ingroup functions
+/**
+ * \param[in] "position" 3D coordinate of point to be rotated.
+ * \param[in] "rotation" Spherical rotation angles (elevation,azimuth)
+ * \ingroup functions
 */
 vec3 rotatePoint(const vec3& position, const SphericalCoord& rotation );
 
 //! Function to rotate a 3D vector given spherical angles elevation and azimuth
-/** \param[in] "position" 3D coordinate of point to be rotated.
-    \param[in] "theta" elevation angle of rotation.
-    \param[in] "phi" azimuthal angle of rotation. 
-    \ingroup functions
+/**
+ * \param[in] "position" 3D coordinate of point to be rotated.
+ * \param[in] "theta" elevation angle of rotation.
+ * \param[in] "phi" azimuthal angle of rotation.
+ * \ingroup functions
 */
 vec3 rotatePoint(const vec3& position, float theta, float phi);
 
 //! Rotate a 3D vector about an arbitrary line
-/** \param[in] "point" 3D coordinate of point to be rotated
-    \param[in] "line_base" Point through which line passes
-    \param[in] "line_direction" Unit vector pointing in the direction of the line
-    \param[in] "theta" Rotation angle in radians
+/**
+ * \param[in] "point" 3D coordinate of point to be rotated
+ * \param[in] "line_base" Point through which line passes
+ * \param[in] "line_direction" Unit vector pointing in the direction of the line
+ * \param[in] "theta" Rotation angle in radians
 */
  vec3 rotatePointAboutLine(const vec3& point, const vec3& line_base, const vec3& line_direction, float theta);
 
 //! Calculate the area of a triangle given its three vertices
-/** \param[in] "v0" (x,y,z) coordinate of first vertex
-    \param[in] "v1" (x,y,z) coordinate of second vertex
-    \param[in] "v2" (x,y,z) coordinate of third vertex
-    \return One-sided surface area of triangle
-    \ingroup functions
+/**
+ * \param[in] "v0" (x,y,z) coordinate of first vertex
+ * \param[in] "v1" (x,y,z) coordinate of second vertex
+ * \param[in] "v2" (x,y,z) coordinate of third vertex
+ * \return One-sided surface area of triangle
+ * \ingroup functions
 */
 float calculateTriangleArea( const vec3& v0, const vec3& v1, const vec3& v2 );
 
 //! Convert Julian day to calendar day (day,month,year)
-/** 
-    \param[in] "Julian_day" Julian day of year (1-366)
-    \return \ref int3, with \ref int3::x = day, \ref int3::y = month, \ref int3::z = year
-    \sa \ref JulianDay()
-    \ingroup sun
+/**
+ * \param[in] "Julian_day" Julian day of year (1-366)
+ * \return int3, with int3::x = day, int3::y = month, int3::z = year
+ * \sa JulianDay()
+ * \ingroup sun
 */
 Date CalendarDay( int Julian_day, int year );
 
 //! Convert calendar day (day,month,year) to Julian day
 /**
-   \param[in] "day" Day of month (1-31)
-   \param[in] "month" Month of year (1-12)
-   \param[in] "year" Year in YYYY format
-   \return Julian day of year
-   \sa \ref CalendarDay()
-   \ingroup sun
+ * \param[in] "day" Day of month (1-31)
+ * \param[in] "month" Month of year (1-12)
+ * \param[in] "year" Year in YYYY format
+ * \return Julian day of year
+ * \sa CalendarDay()
+ * \ingroup sun
 */
 int JulianDay( int day, int month, int year );
 
 //! Convert calendar day (day,month,year) to Julian day
 /**
-   \param[in] "date" Date vector
-   \return Julian day of year
-   \sa \ref CalendarDay()
-   \ingroup functions
-   \ingroup sun
+ * \param[in] "date" Date vector
+ * \return Julian day of year
+ * \sa CalendarDay()
+ * \ingroup functions
+ * \ingroup sun
 */
 int JulianDay( const Date& date );
 
@@ -478,8 +502,7 @@ public:
   */
   double toc( const char* message ) const {
       if (!running) {
-          std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..."
-                    << std::endl;
+          std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..." << std::endl;
           return 0;
       }
 
@@ -499,19 +522,22 @@ private:
 };
 
 //! Wait/sleep for a specified amount of time
-/** \param[in] "seconds" Number of seconds to wait
-    \ingroup functions
+/**
+ * \param[in] "seconds" Number of seconds to wait
+ * \ingroup functions
 */
 void wait( float seconds );
 
  //! Check whether PNG image file has an alpha/transparency channel
- /** \param[in] "filename" Name of the PNG image file
+ /**
+  * \param[in] "filename" Name of the PNG image file
   */
  bool PNGHasAlpha( const char* filename );
 
  //! Function to read the alpha channel from a PNG image
- /** \param[in] "filename" Name of the PNG image file
-       \return 2D mask, where false denotes no material
+ /**
+  * \param[in] "filename" Name of the PNG image file
+  * \return 2D mask, where false denotes no material
  */
  std::vector<std::vector<bool> > readPNGAlpha(const std::string &filename );
 
@@ -665,68 +691,79 @@ void writePNG( const std::string &filename, uint width, uint height, const std::
   helios::vec3 spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end );
 
   //! Function to load and convert a field in a pugi XML node into a float
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   float XMLloadfloat( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into an int
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   int XMLloadint( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into a string
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   std::string XMLloadstring( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into a vec2
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   helios::vec2 XMLloadvec2( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into a vec3
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   helios::vec3 XMLloadvec3( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into a vec4
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   helios::vec4 XMLloadvec4( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into a vec2
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   helios::int2 XMLloadint2( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into a int3
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   helios::int3 XMLloadint3( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into a int4
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   helios::int4 XMLloadint4( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into an RGB color vector
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   helios::RGBcolor XMLloadrgb( pugi::xml_node node, const char* field );
 
   //! Function to load and convert a field in a pugi XML node into an RGBA color vector
-  /** \param[in] "node" Pugi XML node
-      \param[in] "field" String corresponding to field value to be read
+  /**
+   * \param[in] "node" Pugi XML node
+   * \param[in] "field" String corresponding to field value to be read
   */
   helios::RGBAcolor XMLloadrgba( pugi::xml_node node, const char* field );
 
@@ -747,13 +784,13 @@ void writePNG( const std::string &filename, uint width, uint height, const std::
  */
   float interp1( const std::vector<helios::vec2> &points, float x );
 
-    //! Function to calculate the distance between two points
-    /**
-        * \param[in] "p1" first point (vec3)
-        * \param[in] "p2" second point (vec3)
-        * \return distance between p1 and p2 in three dimensions
-        */
-    float point_distance( const helios::vec3 &p1 , const helios::vec3 &p2);
+  //! Function to calculate the distance between two points
+  /**
+   * \param[in] "p1" first point (vec3)
+   * \param[in] "p2" second point (vec3)
+   * \return distance between p1 and p2 in three dimensions
+   */
+  float point_distance( const helios::vec3 &p1 , const helios::vec3 &p2);
 
 //! Parse a file string to get the extension
 /**

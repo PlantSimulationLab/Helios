@@ -27,6 +27,13 @@
 
 using namespace helios;
 
+void helios::helios_runtime_error( const std::string &error_message ){
+#ifdef _DEBUG
+    std::cerr << error_message << std::endl;
+#endif
+    throw(std::runtime_error(error_message));
+}
+
 RGBcolor RGB::red = make_RGBcolor( 1.f, 0.f, 0.f );
 RGBcolor RGB::blue = make_RGBcolor( 0.f, 0.f, 1.f );
 RGBcolor RGB::green = make_RGBcolor( 0.f, 0.6f, 0.f );
@@ -341,7 +348,7 @@ void helios::makeRotationMatrix( float rotation, const char* axis, float (&T)[16
     T[10] = 1.f;//(2,2)
     T[11] = 0.f;//(2,3)
   }else{
-    throw(std::runtime_error("ERROR (makeRotationMatrix): Rotation axis should be one of x, y, or z."));
+    helios_runtime_error("ERROR (makeRotationMatrix): Rotation axis should be one of x, y, or z.");
   }
   T[12]=T[13]=T[14]=0.f;
   T[15]=1.f;
@@ -538,15 +545,15 @@ void helios::makeIdentityMatrix( float (&T)[16] ){
 
 }
 
-float helios::deg2rad( const float& deg ){
+float helios::deg2rad( float deg ){
   return deg*float(M_PI)/180.f;
 }
 
-float helios::rad2deg( const float& rad ){
+float helios::rad2deg( float rad ){
   return rad*180.f/float(M_PI);
 }
 
-float helios::atan2_2pi( const float& y, const float& x){
+float helios::atan2_2pi(float y, float x){
 
   float v=0;
 
@@ -882,7 +889,7 @@ template uint helios::clamp<uint>(uint,uint,uint);
 float helios::mean( const std::vector<float>& vect ){
 
   if( vect.empty() ){
-    throw(std::runtime_error("ERROR (mean): Vector is empty."));
+    helios_runtime_error("ERROR (mean): Vector is empty.");
   }
 
   float m = 0;
@@ -898,7 +905,7 @@ float helios::mean( const std::vector<float>& vect ){
 float helios::min( const std::vector<float>& vect ){
 
   if( vect.empty() ){
-    throw(std::runtime_error("ERROR (min): Vector is empty."));
+    helios_runtime_error("ERROR (min): Vector is empty.");
   }
 
   return *std::min_element(vect.begin(),vect.end());
@@ -908,7 +915,7 @@ float helios::min( const std::vector<float>& vect ){
 int helios::min( const std::vector<int>& vect ){
 
   if( vect.empty() ){
-      throw(std::runtime_error("ERROR (min): Vector is empty."));
+      helios_runtime_error("ERROR (min): Vector is empty.");
   }
 
   return *std::min_element(vect.begin(),vect.end());
@@ -918,7 +925,7 @@ int helios::min( const std::vector<int>& vect ){
 vec3 helios::min( const std::vector<vec3>& vect ){
 
   if( vect.empty() ){
-      throw(std::runtime_error("ERROR (min): Vector is empty."));
+      helios_runtime_error("ERROR (min): Vector is empty.");
   }
 
   vec3 vmin = vect.at(0);
@@ -944,7 +951,7 @@ vec3 helios::min( const std::vector<vec3>& vect ){
 float helios::max( const std::vector<float>& vect ){
 
   if( vect.empty() ){
-      throw(std::runtime_error("ERROR (max): Vector is empty."));
+      helios_runtime_error("ERROR (max): Vector is empty.");
   }
 
   return *std::max_element(vect.begin(),vect.end());
@@ -954,7 +961,7 @@ float helios::max( const std::vector<float>& vect ){
 int helios::max( const std::vector<int>& vect ){
 
   if( vect.empty() ){
-      throw(std::runtime_error("ERROR (max): Vector is empty."));
+      helios_runtime_error("ERROR (max): Vector is empty.");
   }
 
   return *std::max_element(vect.begin(),vect.end());
@@ -964,7 +971,7 @@ int helios::max( const std::vector<int>& vect ){
 vec3 helios::max( const std::vector<vec3>& vect ){
 
   if( vect.empty() ){
-      throw(std::runtime_error("ERROR (max): Vector is empty."));
+      helios_runtime_error("ERROR (max): Vector is empty.");
   }
 
   vec3 vmax = vect.at(0);
@@ -990,7 +997,7 @@ vec3 helios::max( const std::vector<vec3>& vect ){
 float helios::stdev( const std::vector<float> &vect ){
 
     if( vect.empty() ){
-        throw(std::runtime_error("ERROR (stdev): Vector is empty."));
+        helios_runtime_error("ERROR (stdev): Vector is empty.");
     }
 
     size_t size = vect.size();
@@ -1012,7 +1019,7 @@ float helios::stdev( const std::vector<float> &vect ){
 float helios::median( std::vector<float> vect ){
 
     if( vect.empty() ){
-        throw(std::runtime_error("ERROR (median): Vector is empty."));
+        helios_runtime_error("ERROR (median): Vector is empty.");
     }
 
     size_t size = vect.size();
@@ -1105,9 +1112,9 @@ template void helios::resize_vector<helios::int4>( std::vector<std::vector<std::
 Date helios::CalendarDay( int Julian_day, int year ){
 
   if( Julian_day<1 || Julian_day>366 ){
-      throw(std::runtime_error("ERROR (CalendarDay): Julian day out of range."));
+      helios_runtime_error("ERROR (CalendarDay): Julian day out of range.");
   }else if( year<1000 ){
-      throw(std::runtime_error("ERROR (CalendarDay): Year should be specified in YYYY format."));
+      helios_runtime_error("ERROR (CalendarDay): Year should be specified in YYYY format.");
   }
 
   int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 214, 244, 274, 305, 335};
@@ -1158,11 +1165,11 @@ int helios::JulianDay( const Date& date ){
   int year = date.year;
 
   if( day<1 || day>31 ){
-      throw(std::runtime_error("ERROR (JulianDay): Day of month is out of range (day of " + std::to_string(day) + " was given)."));
+      helios_runtime_error("ERROR (JulianDay): Day of month is out of range (day of " + std::to_string(day) + " was given).");
   }else if( month<1 || month>12){
-      throw(std::runtime_error("ERROR (JulianDay): Month of year is out of range (month of " + std::to_string(month) + " was given)."));
+      helios_runtime_error("ERROR (JulianDay): Month of year is out of range (month of " + std::to_string(month) + " was given).");
   }else if( year<1000 ){
-      throw(std::runtime_error("ERROR (JulianDay): Year should be specified in YYYY format."));
+      helios_runtime_error("ERROR (JulianDay): Year should be specified in YYYY format.");
   }
 
   int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 214, 244, 274, 305, 335};
@@ -1233,7 +1240,7 @@ bool helios::PNGHasAlpha( const char* filename ){
 
     std::string fn = filename;
     if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ) {
-        throw( std::runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.") );
+        helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.");
     }
 
   uint Nchannels;
@@ -1246,7 +1253,7 @@ bool helios::PNGHasAlpha( const char* filename ){
   /* open file and test for it being a png */
   FILE *fp = fopen(filename, "rb");
   if (!fp){
-      throw(std::runtime_error("ERROR (PNGHasAlpha): File " + std::string(filename) + " could not be opened for reading. The file either does not exist or you do not have permission to read it."));
+      helios_runtime_error("ERROR (PNGHasAlpha): File " + std::string(filename) + " could not be opened for reading. The file either does not exist or you do not have permission to read it.");
   }
   size_t result=fread(header, 1, 8, fp);
   
@@ -1254,16 +1261,16 @@ bool helios::PNGHasAlpha( const char* filename ){
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
   if (!png_ptr){
-      throw(std::runtime_error("ERROR (read_png_alpha): png_create_read_struct failed."));
+      helios_runtime_error("ERROR (read_png_alpha): png_create_read_struct failed.");
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr){
-      throw(std::runtime_error("ERROR (read_png_alpha): png_create_info_struct failed."));
+      helios_runtime_error("ERROR (read_png_alpha): png_create_info_struct failed.");
   }
   
   if (setjmp(png_jmpbuf(png_ptr))){
-      throw(std::runtime_error("ERROR (read_png_alpha): init_io failed."));
+      helios_runtime_error("ERROR (read_png_alpha): init_io failed.");
   }  
 
   png_init_io(png_ptr, fp);
@@ -1287,7 +1294,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
 
     std::string fn = filename;
     if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ) {
-        throw( std::runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.") );
+        helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.");
     }
 
   int y;
@@ -1304,7 +1311,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
   /* open file and test for it being a png */
   FILE *fp = fopen(filename.c_str(), "rb");
   if (!fp){
-      throw(std::runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading."));
+      helios_runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading.");
   }
   size_t result=fread(header, 1, 8, fp);
   // if (png_sig_cmp(header, 0, 8)){
@@ -1316,16 +1323,16 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
   if (!png_ptr){
-      throw(std::runtime_error("ERROR (readPNGAlpha): png_create_read_struct failed."));
+      helios_runtime_error("ERROR (readPNGAlpha): png_create_read_struct failed.");
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr){
-      throw(std::runtime_error("ERROR (readPNGAlpha): png_create_info_struct failed."));
+      helios_runtime_error("ERROR (readPNGAlpha): png_create_info_struct failed.");
   }
   
   if (setjmp(png_jmpbuf(png_ptr))){
-      throw(std::runtime_error("ERROR (readPNGAlpha): init_io failed."));
+      helios_runtime_error("ERROR (readPNGAlpha): init_io failed.");
   }  
 
   png_init_io(png_ptr, fp);
@@ -1348,7 +1355,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr))){
-      throw(std::runtime_error("ERROR (read_png_alpha): read_image failed."));
+      helios_runtime_error("ERROR (read_png_alpha): read_image failed.");
   }
 
   row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
@@ -1386,7 +1393,7 @@ void helios::readPNG( const std::string &filename, uint & width, uint & height, 
 
   std::string fn = filename;
   if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ){
-    throw( std::runtime_error("ERROR (readPNG): File " + fn + " is not PNG format.") );
+    helios_runtime_error("ERROR (readPNG): File " + fn + " is not PNG format.");
   }
 
   int x, y;
@@ -1404,7 +1411,7 @@ void helios::readPNG( const std::string &filename, uint & width, uint & height, 
   /* open file and test for it being a png */
   FILE *fp = fopen(filename.c_str(), "rb");
   if (!fp){
-    throw(std::runtime_error("ERROR (readPNG): File " + filename + "could not be opened for reading."));
+    helios_runtime_error("ERROR (readPNG): File " + filename + "could not be opened for reading.");
    }
    size_t result=fread(header, 1, 8, fp);
 
@@ -1412,16 +1419,16 @@ void helios::readPNG( const std::string &filename, uint & width, uint & height, 
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
   if (!png_ptr){
-    throw(std::runtime_error("ERROR (readPNG): failed to create PNG read structure."));
+    helios_runtime_error("ERROR (readPNG): failed to create PNG read structure.");
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr){
-    throw(std::runtime_error("ERROR (readPNG): failed to create PNG inof structure."));
+    helios_runtime_error("ERROR (readPNG): failed to create PNG inof structure.");
   }
 
   if (setjmp(png_jmpbuf(png_ptr))){
-    throw(std::runtime_error("ERROR (readPNG): init_io failed."));
+    helios_runtime_error("ERROR (readPNG): init_io failed.");
   }
 
   png_init_io(png_ptr, fp);
@@ -1439,7 +1446,7 @@ void helios::readPNG( const std::string &filename, uint & width, uint & height, 
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr))){
-    throw(std::runtime_error("ERROR (readPNG): PNG read failed."));
+    helios_runtime_error("ERROR (readPNG): PNG read failed.");
   }
 
   row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
@@ -1476,21 +1483,21 @@ void helios::writePNG( const std::string &filename, uint width, uint height, con
 
   FILE *fp = fopen(filename.c_str(), "wb");
   if(!fp){
-    throw(std::runtime_error("ERROR (writePNG): failed to open image file."));
+    helios_runtime_error("ERROR (writePNG): failed to open image file.");
   }
 
   png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
   if (!png){
-    throw(std::runtime_error("ERROR (writePNG): failed to create PNG write structure."));
+    helios_runtime_error("ERROR (writePNG): failed to create PNG write structure.");
   }
 
   png_infop info = png_create_info_struct(png);
   if (!info){
-    throw(std::runtime_error("ERROR (writePNG): failed to create PNG info structure."));
+    helios_runtime_error("ERROR (writePNG): failed to create PNG info structure.");
   }
 
   if (setjmp(png_jmpbuf(png))){
-    throw(std::runtime_error("ERROR (writePNG): init_io failed."));
+    helios_runtime_error("ERROR (writePNG): init_io failed.");
   }
 
   png_init_io(png, fp);
@@ -1613,7 +1620,7 @@ void helios::writeJPEG( const std::string &a_filename, uint width, uint height, 
     }
 
     if( pixel_data.size()!=width*height ){
-        throw( std::runtime_error("ERROR (Context::writeJPEG): Pixel data does not have size of width*height.") );
+        helios_runtime_error("ERROR (Context::writeJPEG): Pixel data does not have size of width*height.");
     }
 
     const uint bsize = 3 * width * height;
@@ -1642,7 +1649,7 @@ void helios::writeJPEG( const std::string &a_filename, uint width, uint height, 
     jpeg_create_compress(&cinfo);
 
     if ((outfile = fopen(filename.c_str(), "wb")) == nullptr ) {
-        throw (std::runtime_error("ERROR (Context::writeJPEG): File " + filename + " could not be opened. Check that the file path is correct you have permission to write to it."));
+        helios_runtime_error("ERROR (Context::writeJPEG): File " + filename + " could not be opened. Check that the file path is correct you have permission to write to it.");
     }
     jpeg_stdio_dest(&cinfo, outfile);
 
@@ -2759,9 +2766,9 @@ float helios::interp1( const std::vector<helios::vec2> &points, float x ) {
         float deltaX{std::abs(points[i].x - points[i - 1].x)};
         if (deltaX < EPSILON) {
             if (deltaX > -EPSILON) {
-                throw (std::runtime_error("ERROR (interp1): Adjacent X points cannot be equal."));
+                helios_runtime_error("ERROR (interp1): Adjacent X points cannot be equal.");
             } else {
-                throw (std::runtime_error("ERROR (interp1): X points must increase monotonically."));
+                helios_runtime_error("ERROR (interp1): X points must increase monotonically.");
             }
         }
     }
@@ -2875,7 +2882,7 @@ std::vector<float> helios::importVectorFromFile(const std::string &filepath){
   std::ifstream stream(filepath.c_str());
 
   if( !stream.is_open() ){
-    throw(std::runtime_error("ERROR (helios::importVectorFromFile): File " + filepath + " could not be opened for reading. Check that it exists and that you have permission to read it."));
+    helios_runtime_error("ERROR (helios::importVectorFromFile): File " + filepath + " could not be opened for reading. Check that it exists and that you have permission to read it.");
   }
 
   std::istream_iterator<float> start(stream), end;
