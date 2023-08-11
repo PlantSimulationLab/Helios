@@ -487,6 +487,7 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
             std::vector<vec2> spectrum;
             context->getGlobalData("solar_spectrum_ASTMG173",spectrum);
             radiation_sources.at(source_ID).source_spectrum = spectrum;
+            radiation_sources.at(source_ID).source_spectrum_label = spectrum_label;
         }
     }else{
         if( !context->doesGlobalDataExist(spectrum_label.c_str()) ) {
@@ -495,6 +496,7 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
             std::vector<vec2> spectrum;
             context->getGlobalData(spectrum_label.c_str(),spectrum);
             radiation_sources.at(source_ID).source_spectrum = spectrum;
+            radiation_sources.at(source_ID).source_spectrum_label = spectrum_label;
         }
     }
 
@@ -3214,8 +3216,7 @@ void RadiationModel::addBuffer( const char* name, RTbuffer& buffer, RTvariable& 
   }else if( dimension==2 ){
     zeroBuffer2D( buffer, optix::make_int2(1,1) );
   }else{
-    std::cerr << "ERROR (RadiationModel::addBuffer): invalid buffer dimension of " << dimension << ", must be 1 or 2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw( std::runtime_error( "ERROR (RadiationModel::addBuffer): invalid buffer dimension of " + std::to_string(dimension) + ", must be 1 or 2." ));
   }
   
 }
@@ -3316,8 +3317,7 @@ void RadiationModel::zeroBuffer1D(RTbuffer &buffer, size_t bsize ){
     
     initializeBuffer1Dbool( buffer, array );
   }else{
-    std::cerr << "ERROR (RadiationModel::zeroBuffer1D): Buffer type not supported." << std::endl;
-    exit(EXIT_FAILURE);
+    throw( std::runtime_error("ERROR (RadiationModel::zeroBuffer1D): Buffer type not supported.") );
   }
     
 }
@@ -4379,9 +4379,8 @@ void RadiationModel::runRadiationImaging(const std::string& cameralabel, const s
     float sources_fluxsum = 0;
     std::vector<float> sources_fluxes;
     for (uint ID = 0; ID < sourcelabels.size(); ID++){
-        std::vector<vec2> Source_spectrum;
-        context->getGlobalData(sourcelabels.at(ID).c_str(), Source_spectrum);
-        sources_fluxes.push_back(RadiationModel::integrateSpectrum(Source_spectrum, wavelengthrange.x, wavelengthrange.y));
+        std::vector<vec2> source_spectrum = radiation_sources.at(ID).source_spectrum;
+        sources_fluxes.push_back(RadiationModel::integrateSpectrum(source_spectrum, wavelengthrange.x, wavelengthrange.y));
         RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
         RadiationModel::setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
         sources_fluxsum += sources_fluxes.at(ID);
@@ -4532,9 +4531,13 @@ void RadiationModel::writeDepthImage(const std::string &cameralabel, const std::
     RadiationModel::writeBasicLabel(cameralabel, filename, "depth_norm", HELIOS_TYPE_FLOAT,1);
 }
 
-void RadiationModel::calibrateCamera(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels,
-                                     const std::vector<std::string>& cameraresplabels_raw, const std::vector<std::string> &bandlabels, const float scalefactor,
-                                     const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark, float learningrate) {
+void RadiationModel::calibrateCamera(const std::string &originalcameralabel, float scalefactor, const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark, float learningrate) {
+
+    if( cameras.find(originalcameralabel) == cameras.end() ){
+        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): Camera " + originalcameralabel + " does not exist.") );
+    }else if( radiation_sources.empty() ){
+        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): No radiation sources were added to the radiation model. Cannot perform calibration.") );
+    }
 
 
 
@@ -4544,20 +4547,48 @@ void RadiationModel::calibrateCamera(const std::string &orginalcameralabel, cons
     vec3 rotationrad =make_vec3(0,0,1.5705); // Rotation angle of color board
     cameracalibration->addDefaultColorboard(centrelocation, rotationrad,0.1);
     cameracalibration->responseupdateparameters.learningrate = learningrate;
-    vec2 wavelengthrange = make_vec2(300,2500);
+    //vec2 wavelengthrange = make_vec2(300,2500);
 
-    // Calibrated camera response labels
-    std::vector<std::string> cameraresplabels_cal(cameraresplabels_raw.size());
+    // Get camera response spectra labels from camera
+    std::vector<std::string> cameraresplabels_cal(cameras.at(originalcameralabel).band_spectral_response.size() );
+    std::vector<std::string> cameraresplabels_raw = cameraresplabels_cal;
 
-    for (int iband=0;iband<bandlabels.size();iband++){
-        cameraresplabels_cal.at(iband) = calibratedmark + "_" + cameraresplabels_raw.at(iband);
+    int iband = 0;
+    for( auto &band : cameras.at(originalcameralabel).band_spectral_response ){
+        cameraresplabels_raw.at(iband) = band.second;
+        cameraresplabels_cal.at(iband) = calibratedmark + "_" + band.second;
+        iband++;
     }
 
-    RadiationModel::runRadiationImaging(orginalcameralabel, sourcelabels, bandlabels, cameraresplabels_raw, wavelengthrange, 0.035, 0);
-    // Update camera responses
-    RadiationModel::updateCameraResponse(orginalcameralabel, sourcelabels, cameraresplabels_raw, wavelengthrange, truevalues, calibratedmark);
+    // Get labels of radiation sources from camera
+    std::vector<std::string> sourcelabels(radiation_sources.size());
+    int isource = 0;
+    for( auto &source : radiation_sources ){
+        sourcelabels.at(isource) = source.source_spectrum_label;
+        isource++;
+    }
 
-    float camerascale = RadiationModel::getCameraResponseScale(orginalcameralabel, cameraresplabels_cal, bandlabels,sourcelabels, wavelengthrange, truevalues);
+    // Figure out wavelength range for all sources
+    vec2 wavelengthrange = make_vec2(100000,-100000);
+    for( auto &source : radiation_sources ){
+        if( source.source_spectrum.empty() ){
+            throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): A spectral distribution was not specified for source " + source.source_spectrum_label + ". Cannot perform camera calibration.") );
+        }
+        if( source.source_spectrum.front().x < wavelengthrange.x ){
+            wavelengthrange.x = source.source_spectrum.front().x;
+        }
+        if( source.source_spectrum.back().x > wavelengthrange.y ){
+            wavelengthrange.y = source.source_spectrum.back().x;
+        }
+    }
+
+    std::vector<std::string> bandlabels = cameras.at(originalcameralabel).band_labels;
+
+    RadiationModel::runRadiationImaging(originalcameralabel, sourcelabels, bandlabels, cameraresplabels_raw, wavelengthrange, 0.035, 0);
+    // Update camera responses
+    RadiationModel::updateCameraResponse(originalcameralabel, sourcelabels, cameraresplabels_raw, wavelengthrange, truevalues, calibratedmark);
+
+    float camerascale = RadiationModel::getCameraResponseScale(originalcameralabel, cameraresplabels_cal, bandlabels, sourcelabels, wavelengthrange, truevalues);
 
     std::cout << "Camera response scale: " << camerascale << std::endl;
     // Scale and write calibrated camera responses

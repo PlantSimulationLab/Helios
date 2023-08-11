@@ -8,7 +8,7 @@
 #include <fstream>
 //
 struct CameraCalibration{
-    CameraCalibration(helios::Context *context);
+    explicit CameraCalibration(helios::Context *context);
 
     //! Add check board geometry into context
     /**
@@ -18,12 +18,12 @@ struct CameraCalibration{
      * \param[in] rotationrad: radians of rotaion (vec3 on coordinates x,y,z)
      * \param[in] firstblack: initial the color of first square patch (black or white)
     */
-    std::vector<uint> addCheckboard(const helios::int2 &boardsidesize, const float &patchsize, const helios::vec3 &centrelocation,
-                       const helios::vec3 &rotationrad, bool firstblack = true);
+    std::vector<uint> addCheckerboard(const helios::int2 &boardsidesize, const float &patchsize, const helios::vec3 &centrelocation,
+                                      const helios::vec3 &rotationrad, bool firstblack = true);
 
 
-    std::vector<uint> addDefaultCheckboard(const helios::vec3 &centrelocation,
-                                    const helios::vec3 &rotationrad);
+    std::vector<uint> addDefaultCheckerboard(const helios::vec3 &centrelocation,
+                                             const helios::vec3 &rotationrad);
 
     //! Add color board geometry into context
     /**
