@@ -544,27 +544,42 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Inputting raw measured surface spectra and camera spectral response specified by the manufacturer will typically result in simulated camera images that look quite different than those of the real camera due to errors in measurements, internal camera corrections, and lens effects. As such, a calibration is generally needed to achieve acceptable image results.
 
- The color calibration is performed using real images taken of a DKK Color Calibration Chart (<a href="https://www.bhphotovideo.com/c/product/1014557-REG/dgk_color_tools_dkk_set_of_2_dkk_poly_bag_2.html">DGK Color Tools</a>). Steps for calibration are as follows:
+ Pre-calibrated camera responses are available for a few cameras and light source combinations to use when direct calibration data is not available. These are for a Nikon D700 camera with the ASTMG173 solar spectrum or CREE 6500K LED. These calibrated camera spectra can be found in the included camera spectral library ("plugins/radiation/spectral_data/camera_spectral_library.xml") and has labels "calibrated_ASTMG173_NikonD700_spectral_response_[*]" or "calibrated_CREE6500K_NikonD700_spectral_response_[*]", where [*] is one of "red", "green", or "blue". These calibrated camera spectra can be used in place of the raw camera spectral response data, as illustrated below:
 
- 1. Collect one or more images of the color calibration card using the desired camera. It is best to use lighting conditions similar to what will be simulated using the radiation model.
- 2. Extract normalized (0-1) pixel values for each channel of the camera image, and for each color patch on the color calibration card. Currently, this is a manual process, and can be done using a variety of approaches such as using the <a href="https://www.youtube.com/watch?v=MQqntlvhGLg">build-in color picker on Mac</a>, or the <a href="https://learn.microsoft.com/en-us/windows/powertoys/color-picker">color picker on PC</a>. These utilities typically give 8-bit color values between 0 and 255, and thus you should divide the resulting color values by 255 to normalize them. It is best to increase the averaging size (or aperture) of the color picker to as large as possible such that it will still fit inside a single square in the color card image. Values should be specified as a 2D vector, where the first index is the channel of the image, and the second index is a vector of 18 elements giving the normalized color value for each color patch on the board for that channel following the pattern shown in the image below. The code for entering the patch values is also given below.
+ <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
+ <pre><code> Context context;
+ context.loadXML("plugins/radiation/spectral_data/camera_spectral_library.xml");
+
+ \c// Assuming radiation model and camera have already been set up here //
+
+ radiationmodel.setCameraSpectralResponse("visible", "red", "calibrated_ASTMG173_NikonD700_spectral_response_red");
+ radiationmodel.setCameraSpectralResponse("visible", "green", "calibrated_ASTMG173_NikonD700_spectral_response_green");
+ radiationmodel.setCameraSpectralResponse("visible", "blue", "calibrated_ASTMG173_NikonD700_spectral_response_blue");</code></pre></div>
+ </code></pre></div>
+
+ Ideally, a camera calibration should be performed for the particular camera and lighting conditions of your scene. The color calibration is performed using real images taken of a DKK Color Calibration Chart (<a href="https://www.bhphotovideo.com/c/product/1014557-REG/dgk_color_tools_dkk_set_of_2_dkk_poly_bag_2.html">DGK Color Tools</a>). Steps for calibration are as follows:
+
+ 1\. Collect one or more images of the color calibration card using the desired camera. It is best to use lighting conditions similar to what will be simulated using the radiation model.
+
+ 2\. Extract normalized (0-1) pixel values for each channel of the camera image, and for each color patch on the color calibration card. Currently, this is a manual process, and can be done using a variety of approaches such as using the <a href="https://www.youtube.com/watch?v=MQqntlvhGLg">built-in color picker on Mac</a>, or the <a href="https://learn.microsoft.com/en-us/windows/powertoys/color-picker">color picker on PC</a>. These utilities typically give 8-bit color values between 0 and 255, and thus you should divide the resulting color values by 255 to normalize them. It is best to increase the averaging size (or aperture) of the color picker to as large as possible such that it will still fit inside a single square in the color card image. Values should be specified as a 2D vector, where the first index is the channel of the image, and the second index is a vector of 18 elements giving the normalized color value for each color patch on the board for that channel following the pattern shown in the image below. The code for entering the patch values is also given below.
 
  \image html color_card_values.png
 
+
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> std::vector<std::vector<float>> truevalues(3);
-  // red channel
-  truevalues.at(0) = {1.0, 0.69, 0.58, 0.47, 0.35, 0.0, 0.85, 0.99, 0.50, 0.30, 0.02, 0.85, 0.63, 0.77, 0.24, 0.69, 0.76, 0.69};
-  // green channel
-  truevalues.at(1) = {1.0, 0.71, 0.59, 0.47, 0.35, 0.0, 0.22, 0.95, 0.73, 0.67, 0.10, 0.18, 0.24, 0.51, 0.53, 0.36, 0.63, 0.58};
-  // blue channel
-  truevalues.at(2) = {1.0, 0.71, 0.60, 0.48, 0.36, 0.0, 0.20, 0.31, 0.35, 0.91, 0.31, 0.54, 0.24, 0.24, 0.63, 0.57, 0.56, 0.50};</code></pre></div>
+ <pre><code> std::vector<std::vector<float>> truevalues(3);
+ // red channel
+ truevalues.at(0) = {1.0, 0.69, 0.58, 0.47, 0.35, 0.0, 0.85, 0.99, 0.50, 0.30, 0.02, 0.85, 0.63, 0.77, 0.24, 0.69, 0.76, 0.69};
+ // green channel
+ truevalues.at(1) = {1.0, 0.71, 0.59, 0.47, 0.35, 0.0, 0.22, 0.95, 0.73, 0.67, 0.10, 0.18, 0.24, 0.51, 0.53, 0.36, 0.63, 0.58};
+ // blue channel
+ truevalues.at(2) = {1.0, 0.71, 0.60, 0.48, 0.36, 0.0, 0.20, 0.31, 0.35, 0.91, 0.31, 0.54, 0.24, 0.24, 0.63, 0.57, 0.56, 0.50};</code></pre></div>
 
  It is preferable to use more significant digits for the color values for increased precision. The above example used only two significant digits for simplicity.
 
- 3. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations.
+ 3\. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using \ref RadiationModel::setSourceSpectrum(), and specify an initial guess for the camera channel spectral distribution(s) using \ref RadiationModel::setCameraSpectralResponse().
 
- 4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method \ref ColorCalibration::addDefaultColorboard(), or a custom color board \ref ColorCalibration::addCustomColorboard().
+ 4\. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method \ref CameraCalibration::addDefaultColorboard(), or a custom color board \ref CameraCalibration::addCustomColorboard().
 
  \subsubsection RadCamCalibDist Radiation Camera Distortion Calibration
 

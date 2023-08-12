@@ -112,7 +112,7 @@ struct RadiationCamera{
 struct RadiationBand{
 public:
 
-    //! Default constructor
+    //! Constructor
     explicit RadiationBand( std::string a_label ) : label(std::move(a_label)) {
         directRayCount = directRayCount_default;
         diffuseRayCount = diffuseRayCount_default;
@@ -261,6 +261,8 @@ public:
 
     //! Spectral distribution of radiation source. Each element of the vector is a wavelength band, where .x is the wavelength in nm and .y is the spectral flux in W/m^2/nm.
     std::vector<helios::vec2> source_spectrum;
+
+    std::string source_spectrum_label = "none";
 
     //! Widths for each radiation source (N/A for collimated sources)
     helios::vec2 source_width;
@@ -781,9 +783,7 @@ public:
      * \param[in] "calibratedmark" Mark of the calibrated camera spectral response
      * \param[in] "learningrate" Learning rate for calibration
     */
-    void calibrateCamera(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels,
-                         const std::vector<std::string>& cameraresponselabels, const std::vector<std::string> &bandlabels, const float scalefactor,
-                         const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark, float learningrate=0.8);
+    void calibrateCamera(const std::string &originalcameralabel, float scalefactor, const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark, float learningrate);
 
 
 

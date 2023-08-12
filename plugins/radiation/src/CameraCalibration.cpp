@@ -8,8 +8,8 @@ using namespace helios;
 CameraCalibration::CameraCalibration(helios::Context *context):context(context){
 }
 
-std::vector<uint> CameraCalibration::addCheckboard(const helios::int2 &boardsidesize, const float &patchsize, const vec3 &centrelocation,
-                                                   const vec3 &rotationrad, bool firstblack) {
+std::vector<uint> CameraCalibration::addCheckerboard(const helios::int2 &boardsidesize, const float &patchsize, const helios::vec3 &centrelocation,
+                                                     const helios::vec3 &rotationrad, bool firstblack) {
     helios::vec2 patchfullsize = make_vec2(patchsize,patchsize); //size of each patch
     std::vector<float> bwv(2,0);
     float bw;
@@ -62,11 +62,11 @@ std::vector<uint> CameraCalibration::addCheckboard(const helios::int2 &boardside
     return UUIDs;
 }
 
-std::vector<uint> CameraCalibration::addDefaultCheckboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad){
+std::vector<uint> CameraCalibration::addDefaultCheckerboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad){
     helios::int2 boardsidesize = make_int2(10,7);
     float patchsize = 0.029;
     bool firstblack = true;
-    std::vector<uint> UUID_checkboard =CameraCalibration::addCheckboard(boardsidesize, patchsize, centrelocation, rotationrad, firstblack);
+    std::vector<uint> UUID_checkboard = CameraCalibration::addCheckerboard(boardsidesize, patchsize, centrelocation, rotationrad, firstblack);
     return UUID_checkboard;
 
 }
@@ -189,7 +189,7 @@ bool CameraCalibration::writeSpectralXMLfile(const std::string &filename, const 
 bool CameraCalibration::loadXMLlabeldata(const std::string &filename,const std::string &labelname,std::vector<vec2> &spectraldata){
 
     Context context_temporary;
-    context_temporary.loadXML(filename.c_str());
+    context_temporary.loadXML(filename.c_str(), true);
 
     if (context_temporary.doesGlobalDataExist(labelname.c_str())){
         context_temporary.getGlobalData(labelname.c_str(),spectraldata);

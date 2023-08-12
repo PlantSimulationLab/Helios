@@ -487,6 +487,7 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
             std::vector<vec2> spectrum;
             context->getGlobalData("solar_spectrum_ASTMG173",spectrum);
             radiation_sources.at(source_ID).source_spectrum = spectrum;
+            radiation_sources.at(source_ID).source_spectrum_label = spectrum_label;
         }
     }else{
         if( !context->doesGlobalDataExist(spectrum_label.c_str()) ) {
@@ -495,6 +496,7 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
             std::vector<vec2> spectrum;
             context->getGlobalData(spectrum_label.c_str(),spectrum);
             radiation_sources.at(source_ID).source_spectrum = spectrum;
+            radiation_sources.at(source_ID).source_spectrum_label = spectrum_label;
         }
     }
 
@@ -3214,8 +3216,7 @@ void RadiationModel::addBuffer( const char* name, RTbuffer& buffer, RTvariable& 
   }else if( dimension==2 ){
     zeroBuffer2D( buffer, optix::make_int2(1,1) );
   }else{
-    std::cerr << "ERROR (RadiationModel::addBuffer): invalid buffer dimension of " << dimension << ", must be 1 or 2." << std::endl;
-    exit(EXIT_FAILURE);
+    throw( std::runtime_error( "ERROR (RadiationModel::addBuffer): invalid buffer dimension of " + std::to_string(dimension) + ", must be 1 or 2." ));
   }
   
 }
@@ -3316,8 +3317,7 @@ void RadiationModel::zeroBuffer1D(RTbuffer &buffer, size_t bsize ){
     
     initializeBuffer1Dbool( buffer, array );
   }else{
-    std::cerr << "ERROR (RadiationModel::zeroBuffer1D): Buffer type not supported." << std::endl;
-    exit(EXIT_FAILURE);
+    throw( std::runtime_error("ERROR (RadiationModel::zeroBuffer1D): Buffer type not supported.") );
   }
     
 }
@@ -4382,8 +4382,8 @@ void RadiationModel::runRadiationImaging(const std::string& cameralabel, const s
         std::vector<vec2> Source_spectrum;
         context->getGlobalData(sourcelabels.at(ID).c_str(), Source_spectrum);
         sources_fluxes.push_back(RadiationModel::integrateSpectrum(Source_spectrum, wavelengthrange.x, wavelengthrange.y));
-        RadiationModel::setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
         RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
+        RadiationModel::setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
         sources_fluxsum += sources_fluxes.at(ID);
     }
 

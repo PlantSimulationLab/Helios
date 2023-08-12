@@ -221,98 +221,125 @@ bool parse_int( const std::string &input_string, int &converted_int );
 bool parse_uint( const std::string &input_string, uint &converted_uint );
 
 //! Convert a space-delimited string into an RGBcolor vector
-/** \ingroup functions */
+/**
+ * \ingroup functions
+ */
 RGBAcolor string2RGBcolor( const char* str );
 
 //! Remove all whitespace from character array
-/** \ingroup functions */
+/**
+ * \ingroup functions
+ */
 std::string deblank(const char* input);
 
 //! Remove all whitespace from a string
-/** \ingroup functions */
+/**
+ * \ingroup functions
+ */
 std::string deblank(const std::string &input);
 
 //! Remove leading and trailing whitespace from a string
 /** \ingroup functions */
 std::string trim_whitespace(const std::string &input);
 
+//! Separate string by delimiter and store into a vector
+/**
+ * \param[in] "inputstring" String to be separated
+ * \param[in] "delimiter" Delimiter character for separation
+ * \return Vector of substrings. If inputstring does not contain delimiter, empty vector is returned
+ * \ingroup functions
+ */
+std::vector<std::string> separate_string_by_delimiter( const std::string &inputstring, const std::string &delimiter );
+
 //! Clamp value to be within some specified bounds
-/** \param[in] "value" Value to be clamped
-    \param[in] "min" Lower bound
-    \param[in] "max" Upper bound
-    \ingroup functions */
+/**
+ * \param[in] "value" Value to be clamped
+ * \param[in] "min" Lower bound
+ * \param[in] "max" Upper bound
+ * \ingroup functions */
 template <typename anytype>
 anytype clamp( anytype value, anytype min, anytype max );
 
 //! Mean value of a vector of floats
-/** \param[in] "vect" C++ vector of floats 
- \ingroup functions
+/**
+ * \param[in] "vect" C++ vector of floats
+ * \ingroup functions
 */
 float mean( const std::vector<float>& vect );
 
 //! Minimum value of a vector of floats
-/** \param[in] "vect" C++ vector of floats 
- \ingroup functions
+/**
+ * \param[in] "vect" C++ vector of floats
+ * \ingroup functions
 */
 float min( const std::vector<float>& vect );
 
 //! Minimum value of a vector of ints
-/** \param[in] "vect" C++ vector of ints 
- \ingroup functions
+/**
+ * \param[in] "vect" C++ vector of ints
+ * \ingroup functions
 */
 int min( const std::vector<int>& vect );
 
 //! Minimum value of a vector of vec3's
-/** \param[in] "vect" C++ vector of vec3's 
- \ingroup functions
+/**
+ * \param[in] "vect" C++ vector of vec3's
+ * \ingroup functions
 */
 vec3 min( const std::vector<vec3>& vect );
 
 //! Maximum value of a vector of floats
-/** \param[in] "vect" C++ vector of floats
-\ingroup functions
+/**
+ * \param[in] "vect" C++ vector of floats
+ * \ingroup functions
 */
 float max( const std::vector<float>& vect );
 
 //! Maximum value of a vector of ints
-/** \param[in] "vect" C++ vector of ints
-\ingroup functions
+/**
+ * \param[in] "vect" C++ vector of ints
+ * \ingroup functions
 */
 int max( const std::vector<int>& vect );
 
 //! Maximum value of a vector of vec3's
-/** \param[in] "vect" C++ vector of vec3's
-\ingroup functions
+/**
+ * \param[in] "vect" C++ vector of vec3's
+ * \ingroup functions
 */
 vec3 max( const std::vector<vec3>& vect );
 
 //! Standard deviation of a vector of floats
-/** \param[in] "vect" C++ vector of floats
- \ingroup functions
+/**
+ * \param[in] "vect" C++ vector of floats
+ * \ingroup functions
  */
 float stdev( const std::vector<float> &vect );
 
 //! Median of a vector of floats
-/** \param[in] "vect" C++ vector of floats
- \ingroup functions
+/**
+ * \param[in] "vect" C++ vector of floats
+ * \ingroup functions
  */
 float median( std::vector<float> vect );
 
 //! Resize 2D C++ vector
-/** \param[in] "vec" C++ vector
-    \param[in] "Nx" Size of vector in x-direction, i.e., vec.at(0).size()
-    \param[in] "Ny" Size of vector in y-direction, i.e., vec.size()
-    \ingroup functions
+/**
+ * \param[in] "vec" C++ vector
+ * \param[in] "Nx" Size of vector in x-direction, i.e., vec.at(0).size()
+ * \param[in] "Ny" Size of vector in y-direction, i.e., vec.size()
+ * \ingroup functions
 */
 template <typename anytype>
 void resize_vector( std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny );
 
 //! Resize 3D C++ vector
-/** \param[in] "vec" C++ vector
-    \param[in] "Nx" Size of vector in x-direction, i.e., vec[0][0].size()
-    \param[in] "Ny" Size of vector in y-direction, i.e., vec[0].size()
-    \param[in] "Nz" Size of vector in y-direction, i.e., vec.size()
-    \ingroup functions
+/**
+ * \param[in] "vec" C++ vector
+ * \param[in] "Nx" Size of vector in x-direction, i.e., vec[0][0].size()
+ * \param[in] "Ny" Size of vector in y-direction, i.e., vec[0].size()
+ * \param[in] "Nz" Size of vector in y-direction, i.e., vec.size()
+ * \ingroup functions
 */
 template <typename anytype>
 void resize_vector( std::vector<std::vector<std::vector<anytype> > > &vec, uint Nx, uint Ny, uint Nz );
