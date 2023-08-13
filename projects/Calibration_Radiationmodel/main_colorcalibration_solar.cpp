@@ -55,7 +55,7 @@ int main(void){
                                                 calibratedmark + "_" + "NikonD700_spectral_response_blue"};
 
     // Update camera responses
-    radiation.calibrateCamera(orginalcameralabel, sourcelabels, cameraresponselabels, bandlabels, 1, truevalues, calibratedmark);
+    radiation.calibrateCamera(orginalcameralabel, sourcelabels, cameraresponselabels, bandlabels, 1.3, truevalues, calibratedmark);
 
     // Write color board image using final calibrated camera responses
     std::string cameralabel3 = "Nikon_solar_cal";
