@@ -71,9 +71,9 @@ std::vector<uint> CameraCalibration::addDefaultCheckerboard(const helios::vec3 &
 
 }
 
-void CameraCalibration::addColorboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad, std::vector<uint> &UUIDs,
+std::vector<uint> CameraCalibration::addColorboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad,
                                       const std::vector<std::vector<helios::RGBcolor>> &colorassignment, const float patchsize){
-
+    std::vector<uint> UUIDs;
     helios::vec2 boardfullsize;
     boardfullsize.x=float(colorassignment.size());
     boardfullsize.y=float(colorassignment.back().size());
@@ -93,6 +93,7 @@ void CameraCalibration::addColorboard(const helios::vec3 &centrelocation, const 
     context->rotatePrimitive(UUIDs,rotationrad.y, make_vec3(0,1,0));
     context->rotatePrimitive(UUIDs,rotationrad.z, make_vec3(0,0,1));
     UUIDs_colorboard = UUIDs;
+    return UUIDs;
 
 }
 
@@ -114,8 +115,7 @@ std::vector<uint> CameraCalibration::addDefaultColorboard(const helios::vec3 &ce
         std::cout << "WARNING: Default color board has been reset"<< std::endl;
     }
 
-    std::vector<uint> UUIDs;
-    CameraCalibration::addColorboard(centrelocation, rotationrad, UUIDs,colorassignment_default,patchsize);
+    std::vector<uint> UUIDs = CameraCalibration::addColorboard(centrelocation, rotationrad ,colorassignment_default,patchsize);
 
     CameraCalibration::setDefaultColorBoardSpectra();
 
@@ -293,7 +293,6 @@ std::vector<float> CameraCalibration::updateCameraResponseSpectra(const std::vec
 
     // Get the highest value of color board by using the original camera response used for normalization
     float normvalue = normalizevalue(cameraresponsespectra, simulatedinputspectra);
-//    std::cout<<"The normal value is: "<<normvalue <<std::endl;
 
     std::vector<std::vector<float>> expandedcameraspectra;
     uint bandsnumber = cameraresponsespectra.size();
@@ -309,14 +308,22 @@ std::vector<float> CameraCalibration::updateCameraResponseSpectra(const std::vec
 
     // Update expanded camera response spectra
     std::vector<float> loss;
+    float initialloss;
     loss.reserve(maxiteration);
-    float stopiteration = 0;
+    float stopiteration = maxiteration;
     for (int iloop=0; iloop < maxiteration; ++iloop){
         float iloss = CameraCalibration::GradientDescent(&expandedcameraspectra, expandedinputspectra, learningrate, truevalues) / float(bandsnumber);
         loss.push_back(iloss);
         if (iloss<minloss){
             stopiteration = iloop;
             break;
+        }
+        // Automatically change learning rate
+        if (iloop==0){
+            initialloss = iloss;
+        }
+        else if(iloss>0.5*initialloss){
+            learningrate = learningrate * 2;
         }
     }
 
@@ -354,9 +361,6 @@ void CameraCalibration::writeCalibratedCameraResponses(const std::vector<std::st
     }
 }
 
-//void CameraCalibration::distortImage(const std::string& cameralabel, const std::vector<std::string>& bandlabels,
-//                                     const helios::vec2 &focalxy, std::vector<double> &distCoeffs, helios::int2 cameraresolution,
-//                                     helios::int2 camerareoslutionR) {
 void CameraCalibration::distortImage(const std::string& cameralabel, const std::vector<std::string>& bandlabels,
                                      const helios::vec2 &focalxy, std::vector<double> &distCoeffs, helios::int2 cameraresolution) {
 
@@ -507,7 +511,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
             if (context->doesGlobalDataExist(spectralreflectivitylabel.c_str())) {
                 if (std::find(objectlabels.begin(), objectlabels.end(), spectralreflectivitylabel) == objectlabels.end()) {
                     objectlabels.push_back(spectralreflectivitylabel);
-                    std::cout << "WARNING: Spectrum (" << spectralreflectivitylabel << ") has been added to UUID (" << UUID << ") but is not in the provided object spectral labels" << std::endl;
+//                    std::cout << "WARNING: Spectrum (" << spectralreflectivitylabel << ") has been added to UUID (" << UUID << ") but is not in the provided object spectral labels" << std::endl;
                     std::vector<vec2> Object_spectrum;
                     context->getGlobalData(spectralreflectivitylabel.c_str(), Object_spectrum);
                     Object_spectra.emplace(spectralreflectivitylabel, Object_spectrum);

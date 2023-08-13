@@ -112,7 +112,7 @@ struct RadiationCamera{
 struct RadiationBand{
 public:
 
-    //! Constructor
+    //! Default constructor
     explicit RadiationBand( std::string a_label ) : label(std::move(a_label)) {
         directRayCount = directRayCount_default;
         diffuseRayCount = diffuseRayCount_default;
@@ -279,6 +279,8 @@ public:
     //! Fluxes of radiation source for all bands
     std::map<std::string,float> source_fluxes;
 
+    //! Pre-calculate source_integral
+    float source_integral = 0.f;
 };
 
 //! Radiation transport model plugin
@@ -630,7 +632,7 @@ public:
      * \param[in] camera_label Label for the camera to be set.
      * \param[in] position Cartesian coordinate of camera position.
      */
-     void setCameraPosition( const std::string &camera_label, const helios::vec3& position );
+    void setCameraPosition( const std::string &camera_label, const helios::vec3& position );
 
     //! Set the position the radiation camera is pointed toward (used to calculate camera orientation)
     /**
@@ -712,6 +714,8 @@ public:
     */
     float calculateGtheta(helios::Context* context, helios::vec3 view_direction );
 
+    void setCameraCalibration(CameraCalibration *CameraCalibration);
+
     //! Update the camera response for a given camera based on color board
     /**
      * \param[in] "orginalcameralabel" Label of camera to be used for simulation
@@ -762,8 +766,7 @@ public:
      * \param[in] "datatype" Data type of the label
      * \param[in] "padvalue" Pad value for the empty pixels
     */
-    void writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname,
-                         helios::HeliosDataType datatype, float padvalue = NAN);
+    void writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
 
     //! Write depth image to file
     /**
@@ -772,7 +775,15 @@ public:
     */
     void writeDepthImage(const std::string &cameralabel, const std::string &filename);
 
-    //! Calibrate camera based on default color board
+    //! Set padding value for pixels do not have valid values
+    /**
+     * \param[in] "cameralabel" Label of target camera
+     * \param[in] "bandlabels" Vector of labels of radiation bands to be used for simulation
+     * \param[in] "padvalues" Vector of padding values for each band
+    */
+    void setPadValue(const std::string &cameralabel, const std::vector<std::string> &bandlabels, const std::vector<float> &padvalues);
+
+    //! Calibrate camera
     /**
      * \param[in] "orginalcameralabel" Label of camera to be used for simulation
      * \param[in] "sourcelabels" Labels of source fluxes
@@ -783,7 +794,20 @@ public:
      * \param[in] "calibratedmark" Mark of the calibrated camera spectral response
      * \param[in] "learningrate" Learning rate for calibration
     */
-    void calibrateCamera(const std::string &originalcameralabel, float scalefactor, const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark, float learningrate);
+    void calibrateCamera(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels,
+                         const std::vector<std::string>& cameraresponselabels, const std::vector<std::string> &bandlabels, const float scalefactor,
+                         const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark);
+
+    //! Calibrate camera
+    /**
+     * \param[in] "orginalcameralabel" Label of camera to be used for simulation
+     * \param[in] "scalefactor" Scale factor for calibrated camera spectral response
+     * \param[in] "truevalues" True image values of the color board
+     * \param[in] "calibratedmark" Mark of the calibrated camera spectral response
+     * \param[in] "learningrate" Learning rate for calibration
+    */
+    void calibrateCamera(const std::string &originalcameralabel, const float scalefactor,
+                         const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark);
 
 
 
@@ -796,6 +820,7 @@ protected:
     helios::Context* context;
 
     CameraCalibration *cameracalibration;
+    bool calibration_flag = false;
 
     //! Pointers to current primitive geometry
     std::vector<uint> primitiveID;
@@ -913,8 +938,6 @@ protected:
         \note \ref updateRadiativeProperties() must be called before simulation can be run
     */
     void updateRadiativeProperties( const std::vector<std::string> &labels );
-
-    void updateFluxesFromSpectra( uint SourceID );
 
     //! Get 1D array of data for an OptiX buffer of floats
     /**

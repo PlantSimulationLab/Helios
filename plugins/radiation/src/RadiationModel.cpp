@@ -20,62 +20,62 @@ using namespace helios;
 
 RadiationModel::RadiationModel( helios::Context* context_a ){
 
-  context = context_a;
+    context = context_a;
 
-  // All default values set here
+    // All default values set here
 
-  message_flag = true;
+    message_flag = true;
 
-  rho_default = 0.f;
-  tau_default = 0.f;
-  eps_default = 1.f;
+    rho_default = 0.f;
+    tau_default = 0.f;
+    eps_default = 1.f;
 
-  kappa_default = 1.f;
-  sigmas_default = 0.f;
+    kappa_default = 1.f;
+    sigmas_default = 0.f;
 
-  temperature_default = 300;
+    temperature_default = 300;
 
-  periodic_flag = make_vec2(0,0);
+    periodic_flag = make_vec2(0,0);
 
-  initializeOptiX();
+    initializeOptiX();
 
 }
 
 RadiationModel::~RadiationModel(){
-  RT_CHECK_ERROR( rtContextDestroy( OptiX_Context ) );
+    RT_CHECK_ERROR( rtContextDestroy( OptiX_Context ) );
 }
 
 void RadiationModel::disableMessages() {
-  message_flag=false;
+    message_flag=false;
 }
 
 void RadiationModel::enableMessages() {
-  message_flag=true;
+    message_flag=true;
 }
 
 void RadiationModel::setDirectRayCount( const std::string &label, size_t N ){
-  if( !doesBandExist(label) ){
-    throw( std::runtime_error("ERROR (RadiationModel::setDirectRayCount): Cannot set ray count for band " + label + " because it is not a valid band.") );
-  }
-  radiation_bands.at(label).directRayCount = N;
+    if( !doesBandExist(label) ){
+        throw( std::runtime_error("ERROR (RadiationModel::setDirectRayCount): Cannot set ray count for band " + label + " because it is not a valid band.") );
+    }
+    radiation_bands.at(label).directRayCount = N;
 }
 
 void RadiationModel::setDiffuseRayCount( const std::string &label, size_t N ){
-  if( !doesBandExist(label) ){
-    throw( std::runtime_error("ERROR (RadiationModel::setDiffuseRayCount): Cannot set ray count for band " + label + " because it is not a valid band." ) );
-  }
-  radiation_bands.at(label).diffuseRayCount = N;
+    if( !doesBandExist(label) ){
+        throw( std::runtime_error("ERROR (RadiationModel::setDiffuseRayCount): Cannot set ray count for band " + label + " because it is not a valid band." ) );
+    }
+    radiation_bands.at(label).diffuseRayCount = N;
 }
 
 void RadiationModel::setDiffuseRadiationFlux( const std::string &label, float flux ){
-  if( !doesBandExist(label) ){
-      throw( std::runtime_error("ERROR (RadiationModel::setDiffuseRadiationFlux): Cannot set flux value for band " + label + " because it is not a valid band." ));
-  }
-  radiation_bands.at(label).diffuseFlux = flux;
+    if( !doesBandExist(label) ){
+        throw( std::runtime_error("ERROR (RadiationModel::setDiffuseRadiationFlux): Cannot set flux value for band " + label + " because it is not a valid band." ));
+    }
+    radiation_bands.at(label).diffuseFlux = flux;
 }
 
 void RadiationModel::setDiffuseRadiationExtinctionCoeff(const std::string &label, float K, const SphericalCoord &peak_dir ){
-  setDiffuseRadiationExtinctionCoeff( label,K,sphere2cart(peak_dir) );
+    setDiffuseRadiationExtinctionCoeff( label,K,sphere2cart(peak_dir) );
 }
 
 void RadiationModel::setDiffuseRadiationExtinctionCoeff( const std::string &label, float K, const vec3 &peak_dir ){
@@ -149,10 +149,8 @@ void RadiationModel::addRadiationBand( const std::string &label, float wavelengt
         source.source_fluxes[label] = 0.f;
     }
 
-    //set the flux for all current bands and sources based on the integral of any source spectra that have been specified
-    for( uint ID = 0; ID<radiation_sources.size(); ID++ ) {
-        updateFluxesFromSpectra(ID);
-    }
+
+
 
 
 }
@@ -197,11 +195,11 @@ bool RadiationModel::doesBandExist( const std::string &label ) const{
 
 void RadiationModel::disableEmission( const std::string &label ){
 
-  if( !doesBandExist(label) ){
-    throw( std::runtime_error("ERROR (RadiationModel::disableEmission): Cannot disable emission for band " + label + " because it is not a valid band." ));
-  }
-  
-  radiation_bands.at(label).emissionFlag = false;
+    if( !doesBandExist(label) ){
+        throw( std::runtime_error("ERROR (RadiationModel::disableEmission): Cannot disable emission for band " + label + " because it is not a valid band." ));
+    }
+
+    radiation_bands.at(label).emissionFlag = false;
 
 }
 
@@ -217,12 +215,12 @@ void RadiationModel::enableEmission( const std::string &label ){
 
 uint RadiationModel::addCollimatedRadiationSource() {
 
-  return addCollimatedRadiationSource( make_vec3(0,0,1) );
-  
+    return addCollimatedRadiationSource( make_vec3(0,0,1) );
+
 }
 
 uint RadiationModel::addCollimatedRadiationSource(const SphericalCoord &direction ){
-  return addCollimatedRadiationSource( sphere2cart(direction) );
+    return addCollimatedRadiationSource( sphere2cart(direction) );
 }
 
 uint RadiationModel::addCollimatedRadiationSource(const vec3 &direction ){
@@ -294,11 +292,11 @@ void RadiationModel::addSphereRadiationSource(const uint &sourceID, const helios
 }
 
 uint RadiationModel::addSunSphereRadiationSource() {
-  return addSunSphereRadiationSource( make_vec3(0,0,1) );
+    return addSunSphereRadiationSource( make_vec3(0,0,1) );
 }
 
 uint RadiationModel::addSunSphereRadiationSource(const SphericalCoord &sun_direction ){
-  return addSunSphereRadiationSource( sphere2cart(sun_direction) );
+    return addSunSphereRadiationSource( sphere2cart(sun_direction) );
 }
 
 uint RadiationModel::addSunSphereRadiationSource(const vec3 &sun_direction ){
@@ -370,20 +368,15 @@ uint RadiationModel::addDiskRadiationSource( const vec3 &position, float radius,
 
 }
 
-void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_integral){
+void RadiationModel::setSourceSpectrumIntegral( uint source_ID, float source_integral){
 
     if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
+        throw( std::runtime_error("ERROR (RadiationModel::setSourceIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
     }else if( source_integral<0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source integral must be non-negative." ));
-    }else if( radiation_sources.at(source_ID).source_spectrum.empty() ){
-        std::cout << "WARNING (RadiationModel::setSourceSpectrumIntegral): Spectral distribution has not been set for radiation source. Cannot set its integral." << std::endl;
-        return;
+        throw( std::runtime_error("ERROR (RadiationModel::setSourceIntegral): Source integral must be non-negative." ));
     }
 
-    RadiationSource &source = radiation_sources.at(source_ID);
-
-    setSourceSpectrumIntegral( source_ID, source_integral, source.source_spectrum.front().x, source.source_spectrum.back().x);
+    radiation_sources.at(source_ID).source_integral = source_integral;
 
 }
 
@@ -406,8 +399,7 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
         wavelength.y *= source_integral/old_integral;
     }
 
-    //set the flux for all current bands based on the spectrum's integral
-    updateFluxesFromSpectra( source_ID );
+
 
 }
 
@@ -471,7 +463,8 @@ void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios
     source.source_spectrum = spectrum;
 
     //set the flux for all current bands based on the spectrum's integral
-    updateFluxesFromSpectra( source_ID );
+
+
 
 }
 
@@ -500,8 +493,8 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
         }
     }
 
-    //set the flux for all current bands based on the spectrum's integral
-    updateFluxesFromSpectra( source_ID );
+
+
 
 }
 
@@ -533,18 +526,23 @@ float RadiationModel::integrateSpectrum( uint source_ID, const std::vector<helio
 
     float E = 0;
     float Etot=0;
+    if (radiation_sources.at(source_ID).source_integral!=0){
+        Etot = radiation_sources.at(source_ID).source_integral;
+    }
     for( auto i=istart; i<iend; i++ ){
 
         float x0 = object_spectrum.at(i).x;
         float Esource0 = interp1( source_spectrum, object_spectrum.at(i).x);
         float Eobject0 = object_spectrum.at(i).y;
-        
+
         float x1 = object_spectrum.at(i+1).x;
         float Eobject1 = object_spectrum.at(i+1).y;
         float Esource1 = interp1( source_spectrum, object_spectrum.at(i+1).x);
-        
+
         E += 0.5f*(Eobject0*Esource0+Eobject1*Esource1)*(x1-x0);
-        Etot += 0.5f*(Esource1+Esource0)*(x1-x0);
+        if (radiation_sources.at(source_ID).source_integral==0){
+            Etot += 0.5f*(Esource1+Esource0)*(x1-x0);
+        }
     }
 
     return E/Etot;
@@ -605,6 +603,9 @@ float RadiationModel::integrateSpectrum(uint source_ID, const std::vector<helios
 
     float E = 0;
     float Etot=0;
+    if (radiation_sources.at(source_ID).source_integral!=0){
+        Etot = radiation_sources.at(source_ID).source_integral;
+    }
 
     for( auto i=1; i<object_spectrum.size(); i++ ){
 
@@ -626,7 +627,9 @@ float RadiationModel::integrateSpectrum(uint source_ID, const std::vector<helios
         float Ecamera0 = interp1( camera_spectrum, x0);
 
         E += 0.5f*((Eobject1*Esource1*Ecamera1)+(Eobject0*Ecamera0*Esource0))*(x1-x0);
-        Etot += 0.5f*(Esource1+Esource0)*(x1-x0);
+        if (radiation_sources.at(source_ID).source_integral==0){
+            Etot += 0.5f*(Esource1+Esource0)*(x1-x0);
+        }
     }
 
 
@@ -692,42 +695,42 @@ helios::vec3 RadiationModel::getSourcePosition( uint source_ID )const {
 
 void RadiationModel::setScatteringDepth( const std::string &label, uint depth ){
 
-  if( !doesBandExist(label) ){
-      throw( std::runtime_error( "ERROR (RadiationModel::setScatteringDepth): Cannot set scattering depth for band " + label + " because it is not a valid band.") );
-  }
-  radiation_bands.at(label).scatteringDepth = depth;
-  
+    if( !doesBandExist(label) ){
+        throw( std::runtime_error( "ERROR (RadiationModel::setScatteringDepth): Cannot set scattering depth for band " + label + " because it is not a valid band.") );
+    }
+    radiation_bands.at(label).scatteringDepth = depth;
+
 }
 
 void RadiationModel::setMinScatterEnergy(const std::string &label, uint energy ){
 
-  if( !doesBandExist(label) ){
-      throw( std::runtime_error( "ERROR (setMinScatterEnergy): Cannot set minimum scattering energy for band " + label + " because it is not a valid band."));
-  }
-  radiation_bands.at(label).minScatterEnergy = energy;
-  
+    if( !doesBandExist(label) ){
+        throw( std::runtime_error( "ERROR (setMinScatterEnergy): Cannot set minimum scattering energy for band " + label + " because it is not a valid band."));
+    }
+    radiation_bands.at(label).minScatterEnergy = energy;
+
 }
 
 void RadiationModel::enforcePeriodicBoundary(const std::string &boundary ){
 
-  if( boundary=="x" ){
- 
-    periodic_flag.x = 1;
-    
-  }else if( boundary=="y" ){
- 
-    periodic_flag.y = 1;
-    
-  }else if( boundary=="xy" ){
+    if( boundary=="x" ){
 
-    periodic_flag.x = 1;
-    periodic_flag.y = 1;
+        periodic_flag.x = 1;
 
-  }else{
+    }else if( boundary=="y" ){
 
-    std::cout << "WARNING (RadiationModel::enforcePeriodicBoundary()): unknown boundary of """ << boundary << """. Possible choices are ""x"", ""y"", or ""xy""." << std::endl;
+        periodic_flag.y = 1;
 
-  }
+    }else if( boundary=="xy" ){
+
+        periodic_flag.x = 1;
+        periodic_flag.y = 1;
+
+    }else{
+
+        std::cout << "WARNING (RadiationModel::enforcePeriodicBoundary()): unknown boundary of """ << boundary << """. Possible choices are ""x"", ""y"", or ""xy""." << std::endl;
+
+    }
 
 }
 
@@ -924,490 +927,490 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
 }
 
 void RadiationModel::initializeOptiX() {
-    
-  /* Context */
-  RT_CHECK_ERROR( rtContextCreate( &OptiX_Context ) );
-  RT_CHECK_ERROR( rtContextSetPrintEnabled( OptiX_Context, 1 ) );
-
-  RT_CHECK_ERROR( rtContextSetRayTypeCount( OptiX_Context, 4 ) );
-  //ray types are:
-  // 0: direct_ray_type
-  // 1: diffuse_ray_type
-  // 2: camera_ray_type
-  // 3: pixel_label_ray_type
-
-  RT_CHECK_ERROR( rtContextSetEntryPointCount( OptiX_Context, 4 ) );
-  //ray entery points are
-  // 0: direct_raygen
-  // 1: diffuse_raygen
-  // 2: camera_raygen
-  // 3: pixel_label_raygen
-
-  /* Ray Types */
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "direct_ray_type", &direct_ray_type_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( direct_ray_type_RTvariable, RAYTYPE_DIRECT ) );
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "diffuse_ray_type", &diffuse_ray_type_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( diffuse_ray_type_RTvariable, RAYTYPE_DIFFUSE ) );
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_ray_type", &camera_ray_type_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( camera_ray_type_RTvariable, RAYTYPE_CAMERA ) );
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "pixel_label_ray_type", &pixel_label_ray_type_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( pixel_label_ray_type_RTvariable, RAYTYPE_PIXEL_LABEL ) );
-
-  /* Ray Generation Program */
-
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx", "direct_raygen", &direct_raygen ) );
-  RT_CHECK_ERROR( rtContextSetRayGenerationProgram( OptiX_Context, RAYTYPE_DIRECT, direct_raygen ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx", "diffuse_raygen", &diffuse_raygen ) );
-  RT_CHECK_ERROR( rtContextSetRayGenerationProgram( OptiX_Context, RAYTYPE_DIFFUSE, diffuse_raygen ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx", "camera_raygen", &camera_raygen ) );
-  RT_CHECK_ERROR( rtContextSetRayGenerationProgram( OptiX_Context, RAYTYPE_CAMERA, camera_raygen ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx", "pixel_label_raygen", &pixel_label_raygen ) );
-  RT_CHECK_ERROR( rtContextSetRayGenerationProgram( OptiX_Context, RAYTYPE_PIXEL_LABEL, pixel_label_raygen ) );
-
-  /* Declare Buffers and Variables */
-
-  //primitive reflectivity buffer
-  addBuffer( "rho", rho_RTbuffer, rho_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-  //primitive transmissivity buffer
-  addBuffer( "tau", tau_RTbuffer, tau_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-
-  //primitive reflectivity buffer
-  addBuffer( "rho_cam", rho_cam_RTbuffer, rho_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-  //primitive transmissivity buffer
-  addBuffer( "tau_cam", tau_cam_RTbuffer, tau_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-
-  //primitive transformation matrix buffer
-  addBuffer( "transform_matrix", transform_matrix_RTbuffer, transform_matrix_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 2 );
-
-  //primitive type buffer
-  addBuffer( "primitive_type", primitive_type_RTbuffer, primitive_type_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-
-  //primitive area buffer
-  addBuffer( "primitive_area", primitive_area_RTbuffer, primitive_area_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-
-  //primitive UUID buffers
-  addBuffer( "patch_UUID", patch_UUID_RTbuffer, patch_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-  addBuffer( "triangle_UUID", triangle_UUID_RTbuffer, triangle_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-  addBuffer( "disk_UUID", disk_UUID_RTbuffer, disk_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-  addBuffer( "tile_UUID", tile_UUID_RTbuffer, tile_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-  addBuffer( "voxel_UUID", voxel_UUID_RTbuffer, voxel_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-
-  //Object ID Buffer
-  addBuffer( "objectID", objectID_RTbuffer, objectID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-
-  //Primitive ID Buffer
-  addBuffer( "primitiveID", primitiveID_RTbuffer, primitiveID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-
-  //primitive two-sided flag buffer
-  addBuffer( "twosided_flag", twosided_flag_RTbuffer, twosided_flag_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_BYTE, 1 );
-
-  //patch buffers
-  addBuffer( "patch_vertices", patch_vertices_RTbuffer, patch_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
-  
-  //triangle buffers
-  addBuffer( "triangle_vertices", triangle_vertices_RTbuffer, triangle_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
-
-  //disk buffers
-  addBuffer( "disk_centers", disk_centers_RTbuffer, disk_centers_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
-  addBuffer( "disk_radii", disk_radii_RTbuffer, disk_radii_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-  addBuffer( "disk_normals", disk_normals_RTbuffer, disk_normals_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
-
-  //tile buffers
-  addBuffer( "tile_vertices", tile_vertices_RTbuffer, tile_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
-
-  //voxel buffers
-  addBuffer( "voxel_vertices", voxel_vertices_RTbuffer, voxel_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
-
-  //object buffers
-  addBuffer( "object_subdivisions", object_subdivisions_RTbuffer, object_subdivisions_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT2, 1 );
-
-  //radiation energy rate data buffers
-  // - in - //
-  addBuffer( "radiation_in", radiation_in_RTbuffer, radiation_in_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-  // - out,top - //
-  addBuffer( "radiation_out_top", radiation_out_top_RTbuffer, radiation_out_top_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-  // - out,bottom - //
-  addBuffer( "radiation_out_bottom", radiation_out_bottom_RTbuffer, radiation_out_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-  // - camera - //
-  addBuffer( "radiation_in_camera", radiation_in_camera_RTbuffer, radiation_in_camera_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-  addBuffer( "camera_pixel_label", camera_pixel_label_RTbuffer, camera_pixel_label_RTvariable, RT_BUFFER_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-
-  //primitive scattering buffers
-  // - top - //
-  addBuffer( "scatter_buff_top", scatter_buff_top_RTbuffer, scatter_buff_top_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-  // - bottom - //
-  addBuffer( "scatter_buff_bottom", scatter_buff_bottom_RTbuffer, scatter_buff_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-
-  //Energy absorbed by "sky"
-  addBuffer( "Rsky", Rsky_RTbuffer, Rsky_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-
-  //number of external radiation sources
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Nsources", &Nsources_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( Nsources_RTvariable,0 ) );
-
-  //External radiation source positions
-  addBuffer( "source_positions", source_positions_RTbuffer, source_positions_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
-
-  //External radiation source widths
-  addBuffer( "source_widths", source_widths_RTbuffer, source_widths_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 1 );
-
-  //External radiation source rotations
-  addBuffer( "source_rotations", source_rotations_RTbuffer, source_rotations_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
-
-  //External radiation source types
-  addBuffer( "source_types", source_types_RTbuffer, source_types_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-
-  //External radiation source fluxes
-  addBuffer( "source_fluxes", source_fluxes_RTbuffer, source_fluxes_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-
-  //number of radiation bands
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Nbands", &Nbands_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( Nbands_RTvariable,0 ) );
-
-  //flag to disable launches for certain bands
-  addBuffer( "band_launch_flag", band_launch_flag_RTbuffer, band_launch_flag_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_BYTE, 1 );
-
-  //number of Context primitives
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Nprimitives", &Nprimitives_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( Nprimitives_RTvariable,0 ) );
-
-  //Flux of diffuse radiation
-  addBuffer( "diffuse_flux", diffuse_flux_RTbuffer, diffuse_flux_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-
-  //Diffuse distribution extinction coefficient of ambient diffuse radiation
-  addBuffer( "diffuse_extinction", diffuse_extinction_RTbuffer, diffuse_extinction_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-
-  //Direction of peak diffuse radiation
-  addBuffer( "diffuse_peak_dir", diffuse_peak_dir_RTbuffer, diffuse_peak_dir_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
-
-  //Diffuse distribution normalization factor
-  addBuffer( "diffuse_dist_norm", diffuse_dist_norm_RTbuffer, diffuse_dist_norm_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-
-  //Bounding sphere radius and center
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "bound_sphere_radius", &bound_sphere_radius_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1f( bound_sphere_radius_RTvariable, 0.f ));
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "bound_sphere_center", &bound_sphere_center_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet3f( bound_sphere_center_RTvariable, 0.f, 0.f, 0.f ));
-
-  //Bounding Box
-  addBuffer( "bbox_UUID", bbox_UUID_RTbuffer, bbox_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-  addBuffer( "bbox_vertices", bbox_vertices_RTbuffer, bbox_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
-  
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "periodic_flag", &periodic_flag_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet2f( periodic_flag_RTvariable, 0.f, 0.f ));
-
-  //Texture mask data
-  RT_CHECK_ERROR( rtBufferCreate( OptiX_Context, RT_BUFFER_INPUT, &maskdata_RTbuffer ) );
-  RT_CHECK_ERROR( rtBufferSetFormat( maskdata_RTbuffer, RT_FORMAT_BYTE ) );
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "maskdata", &maskdata_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSetObject( maskdata_RTvariable, maskdata_RTbuffer ) );
-  std::vector<std::vector<std::vector<bool> > > dummydata;
-  initializeBuffer3D( maskdata_RTbuffer, dummydata );
-
-  //Texture mask size
-  addBuffer( "masksize", masksize_RTbuffer, masksize_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT2, 1 );
-
-  //Texture mask ID
-  addBuffer( "maskID", maskID_RTbuffer, maskID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT, 1 );
-
-  //Texture u,v data
-  addBuffer( "uvdata", uvdata_RTbuffer, uvdata_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 1 );
-
-  //Texture u,v ID
-  addBuffer( "uvID", uvID_RTbuffer, uvID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT, 1 );
-
-  // Radiation Camera Variables
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_position", &camera_position_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet3f( camera_position_RTvariable, 0.f, 0.f, 0.f ));
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_direction", &camera_direction_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet2f( camera_direction_RTvariable, 0.f, 0.f ));
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_lens_diameter", &camera_lens_diameter_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1f( camera_lens_diameter_RTvariable, 0.f ));
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "sensor_size", &sensor_size_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet2f( sensor_size_RTvariable, 0.f, 0.f ));
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_focal_length", &camera_focal_length_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1f( camera_focal_length_RTvariable, 0.f ));
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_viewplane_length", &camera_viewplane_length_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1f( camera_viewplane_length_RTvariable, 0.f ));
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Ncameras", &Ncameras_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( Ncameras_RTvariable, 0 ));
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_ID", &camera_ID_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( camera_ID_RTvariable, 0 ));
-
-  // primitive scattering buffers (cameras)
-  addBuffer( "scatter_buff_top_cam", scatter_buff_top_cam_RTbuffer, scatter_buff_top_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-  addBuffer( "scatter_buff_bottom_cam", scatter_buff_bottom_cam_RTbuffer, scatter_buff_bottom_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-
-  /* Hit Programs */
-  RTprogram closest_hit_direct;
-  RTprogram closest_hit_diffuse;
-  RTprogram closest_hit_camera;
-  RTprogram closest_hit_pixel_label;
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_direct", &closest_hit_direct ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_diffuse", &closest_hit_diffuse ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_camera", &closest_hit_camera ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_pixel_label", &closest_hit_pixel_label ) );
-
-  /* Initialize Patch Geometry */
-
-  RTprogram  patch_intersection_program;
-  RTprogram  patch_bounding_box_program;
-
-  RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &patch ) );
-
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "rectangle_bounds", &patch_bounding_box_program ) );
-  RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( patch, patch_bounding_box_program ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "rectangle_intersect", &patch_intersection_program ) );
-  RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( patch, patch_intersection_program ) );
-
-  /* Create Patch Material */
-  
-  RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &patch_material ) );
-  
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( patch_material, RAYTYPE_DIRECT, closest_hit_direct ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( patch_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( patch_material, RAYTYPE_CAMERA, closest_hit_camera ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( patch_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
-
-  /* Initialize Triangle Geometry */
-
-  RTprogram  triangle_intersection_program;
-  RTprogram  triangle_bounding_box_program;
-
-  RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &triangle ) );
-
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "triangle_bounds", &triangle_bounding_box_program ) );
-  RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( triangle, triangle_bounding_box_program ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "triangle_intersect", &triangle_intersection_program ) );
-  RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( triangle, triangle_intersection_program ) );
-
-  /* Create Triangle Material */
-  
-  RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &triangle_material ) );
-  
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( triangle_material, RAYTYPE_DIRECT, closest_hit_direct ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( triangle_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( triangle_material, RAYTYPE_CAMERA, closest_hit_camera ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( triangle_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
-
-  /* Initialize Disk Geometry */
-
-  RTprogram  disk_intersection_program;
-  RTprogram  disk_bounding_box_program;
-
-  RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &disk ) );
-
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "disk_bounds", &disk_bounding_box_program ) );
-  RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( disk, disk_bounding_box_program ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "disk_intersect", &disk_intersection_program ) );
-  RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( disk, disk_intersection_program ) );
-
-  /* Create Disk Material */
-  
-  RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &disk_material ) );
-  
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_DIRECT, closest_hit_direct ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_CAMERA, closest_hit_camera ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
-
-  /* Initialize Tile Geometry */
-
-  RTprogram  tile_intersection_program;
-  RTprogram  tile_bounding_box_program;
-
-  RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &tile ) );
-
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "tile_bounds", &tile_bounding_box_program ) );
-  RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( tile, tile_bounding_box_program ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "tile_intersect", &tile_intersection_program ) );
-  RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( tile, tile_intersection_program ) );
-
-  /* Create Tile Material */
-  
-  RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &tile_material ) );
-  
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_DIRECT, closest_hit_direct ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_CAMERA, closest_hit_camera) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
-
-  /* Initialize Voxel Geometry */
-
-  RTprogram  voxel_intersection_program;
-  RTprogram  voxel_bounding_box_program;
-
-  RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &voxel ) );
-
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "voxel_bounds", &voxel_bounding_box_program ) );
-  RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( voxel, voxel_bounding_box_program ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "voxel_intersect", &voxel_intersection_program ) );
-  RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( voxel, voxel_intersection_program ) );
-
-  /* Create Voxel Material */
-  
-  RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &voxel_material ) );
-  
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_DIRECT, closest_hit_direct ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_CAMERA, closest_hit_camera ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
-
-  /* Initialize Bounding Box Geometry */
-
-  RTprogram  bbox_intersection_program;
-  RTprogram  bbox_bounding_box_program;
-
-  RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &bbox ) );
-
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "bbox_bounds", &bbox_bounding_box_program ) );
-  RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( bbox, bbox_bounding_box_program ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "bbox_intersect", &bbox_intersection_program ) );
-  RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( bbox, bbox_intersection_program ) );
-
-  /* Create Bounding Box Material */
-  
-  RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &bbox_material ) );
-  
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_DIRECT, closest_hit_direct ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_CAMERA, closest_hit_camera ) );
-  RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
-
-  /* Miss Program */
-  RTprogram miss_program_direct;
-  RTprogram miss_program_diffuse;
-  RTprogram miss_program_camera;
-  RTprogram miss_program_pixel_label;
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_direct", &miss_program_direct ) );
-  RT_CHECK_ERROR( rtContextSetMissProgram( OptiX_Context, RAYTYPE_DIRECT, miss_program_direct ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_diffuse", &miss_program_diffuse ) );  
-  RT_CHECK_ERROR( rtContextSetMissProgram( OptiX_Context, RAYTYPE_DIFFUSE, miss_program_diffuse ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_camera", &miss_program_camera ) );
-  RT_CHECK_ERROR( rtContextSetMissProgram( OptiX_Context, RAYTYPE_CAMERA, miss_program_camera ) );
-  RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_pixel_label", &miss_program_pixel_label ) );
-  RT_CHECK_ERROR( rtContextSetMissProgram( OptiX_Context, RAYTYPE_PIXEL_LABEL, miss_program_pixel_label ) );
-
-  /* Create OptiX Geometry Structures */
-
-  RTtransform transform;
-
-  RTgeometrygroup geometry_group;
-
-  RTgeometryinstance patch_instance;
-  RTgeometryinstance triangle_instance;
-  RTgeometryinstance disk_instance;
-  RTgeometryinstance tile_instance;
-  RTgeometryinstance voxel_instance;
-  RTgeometryinstance bbox_instance;
-
-  /* Create top level group and associated (dummy) acceleration */
-  RT_CHECK_ERROR( rtGroupCreate( OptiX_Context, &top_level_group ) );
-  RT_CHECK_ERROR( rtGroupSetChildCount( top_level_group, 1 ) );
-   
-  RT_CHECK_ERROR( rtAccelerationCreate( OptiX_Context, &top_level_acceleration ) );
-  RT_CHECK_ERROR( rtAccelerationSetBuilder(top_level_acceleration,"NoAccel") );
-  RT_CHECK_ERROR( rtAccelerationSetTraverser(top_level_acceleration,"NoAccel") );
-  RT_CHECK_ERROR( rtGroupSetAcceleration( top_level_group, top_level_acceleration) );
-   
-  /* mark acceleration as dirty */
-  RT_CHECK_ERROR( rtAccelerationMarkDirty( top_level_acceleration ) );
-
-  /* Create transform node */
-  RT_CHECK_ERROR( rtTransformCreate( OptiX_Context, &transform ) );
-  float m[16];
-  m[0] = 1.f; m[1] = 0; m[2] = 0; m[3] = 0;
-  m[4] = 0.f; m[5] = 1.f; m[6] = 0; m[7] = 0;
-  m[8] = 0.f; m[9] = 0; m[10] = 1.f; m[11] = 0;
-  m[12] = 0.f; m[13] = 0; m[14] = 0; m[15] = 1.f;
-  RT_CHECK_ERROR( rtTransformSetMatrix( transform, 0, m, nullptr ) );
-  RT_CHECK_ERROR( rtGroupSetChild( top_level_group, 0, transform ) );
-  
-  /* Create geometry group and associated acceleration*/
-  RT_CHECK_ERROR( rtGeometryGroupCreate( OptiX_Context, &geometry_group ) );
-  RT_CHECK_ERROR( rtGeometryGroupSetChildCount( geometry_group, 6 ) );
-  RT_CHECK_ERROR( rtTransformSetChild( transform, geometry_group ) );
-
-  //create acceleration object for group and specify some build hints
-  RT_CHECK_ERROR( rtAccelerationCreate(OptiX_Context,&geometry_acceleration) );
-  RT_CHECK_ERROR( rtAccelerationSetBuilder(geometry_acceleration,"Trbvh") );
-  RT_CHECK_ERROR( rtAccelerationSetTraverser(geometry_acceleration,"Bvh") );
-  RT_CHECK_ERROR( rtGeometryGroupSetAcceleration( geometry_group, geometry_acceleration) );
-  RT_CHECK_ERROR( rtAccelerationMarkDirty( geometry_acceleration ) );
-
-  /* Create geometry instances */
-  //patches
-  RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &patch_instance ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( patch_instance, patch ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( patch_instance, 1 ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( patch_instance, 0, patch_material ) );
-  RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 0, patch_instance ) );
-  //triangles
-  RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &triangle_instance ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( triangle_instance, triangle ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( triangle_instance, 1 ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( triangle_instance, 0, triangle_material ) );
-  RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 1, triangle_instance ) );
-  //disks
-  RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &disk_instance ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( disk_instance, disk ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( disk_instance, 1 ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( disk_instance, 0, disk_material ) );
-  RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 2, disk_instance ) );
-  //tiles
-  RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &tile_instance ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( tile_instance, tile ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( tile_instance, 1 ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( tile_instance, 0, tile_material ) );
-  RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 3, tile_instance ) );
-  //voxels
-  RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &voxel_instance ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( voxel_instance, voxel ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( voxel_instance, 1 ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( voxel_instance, 0, voxel_material ) );
-  RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 4, voxel_instance ) );
-
-  //voxels
-  RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &bbox_instance ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( bbox_instance, bbox ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( bbox_instance, 1 ) );
-  RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( bbox_instance, 0, bbox_material ) );
-  RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 5, bbox_instance ) );
-  
-  /* Set the top_object variable */
-  //NOTE: Not sure exactly where this has to be set
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "top_object", &top_object ) );
-  RT_CHECK_ERROR( rtVariableSetObject( top_object, top_level_group ) );
-
-  //random number seed
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "random_seed", &random_seed_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( random_seed_RTvariable, std::chrono::system_clock::now().time_since_epoch().count() ) );
-
-  //launch offset
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "launch_offset", &launch_offset_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, 0 ) );
-
-  //maximum scattering depth
-  RT_CHECK_ERROR( rtBufferCreate( OptiX_Context, RT_BUFFER_INPUT, &max_scatters_RTbuffer ) );
-  RT_CHECK_ERROR( rtBufferSetFormat( max_scatters_RTbuffer, RT_FORMAT_UNSIGNED_INT ) );
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "max_scatters", &max_scatters_RTvariable ) );
-  RT_CHECK_ERROR( rtVariableSetObject( max_scatters_RTvariable, max_scatters_RTbuffer ) );
-  zeroBuffer1D( max_scatters_RTbuffer, 1 );
-
-  // RTsize device_memory;
-  // RT_CHECK_ERROR( rtContextGetAttribute( OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &device_memory ) );
-
-  // device_memory *= 1e-6; 
-  // if( device_memory < 1000 ){
-  //   printf("available device memory at end of OptiX initialization: %6.3f MB\n",device_memory);
-  // }else{
-  //   printf("available device memory at end of OptiX initialization: %6.3f GB\n",device_memory*1e-3);
-  // }
-  
+
+    /* Context */
+    RT_CHECK_ERROR( rtContextCreate( &OptiX_Context ) );
+    RT_CHECK_ERROR( rtContextSetPrintEnabled( OptiX_Context, 1 ) );
+
+    RT_CHECK_ERROR( rtContextSetRayTypeCount( OptiX_Context, 4 ) );
+    //ray types are:
+    // 0: direct_ray_type
+    // 1: diffuse_ray_type
+    // 2: camera_ray_type
+    // 3: pixel_label_ray_type
+
+    RT_CHECK_ERROR( rtContextSetEntryPointCount( OptiX_Context, 4 ) );
+    //ray entery points are
+    // 0: direct_raygen
+    // 1: diffuse_raygen
+    // 2: camera_raygen
+    // 3: pixel_label_raygen
+
+    /* Ray Types */
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "direct_ray_type", &direct_ray_type_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( direct_ray_type_RTvariable, RAYTYPE_DIRECT ) );
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "diffuse_ray_type", &diffuse_ray_type_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( diffuse_ray_type_RTvariable, RAYTYPE_DIFFUSE ) );
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_ray_type", &camera_ray_type_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( camera_ray_type_RTvariable, RAYTYPE_CAMERA ) );
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "pixel_label_ray_type", &pixel_label_ray_type_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( pixel_label_ray_type_RTvariable, RAYTYPE_PIXEL_LABEL ) );
+
+    /* Ray Generation Program */
+
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx", "direct_raygen", &direct_raygen ) );
+    RT_CHECK_ERROR( rtContextSetRayGenerationProgram( OptiX_Context, RAYTYPE_DIRECT, direct_raygen ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx", "diffuse_raygen", &diffuse_raygen ) );
+    RT_CHECK_ERROR( rtContextSetRayGenerationProgram( OptiX_Context, RAYTYPE_DIFFUSE, diffuse_raygen ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx", "camera_raygen", &camera_raygen ) );
+    RT_CHECK_ERROR( rtContextSetRayGenerationProgram( OptiX_Context, RAYTYPE_CAMERA, camera_raygen ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx", "pixel_label_raygen", &pixel_label_raygen ) );
+    RT_CHECK_ERROR( rtContextSetRayGenerationProgram( OptiX_Context, RAYTYPE_PIXEL_LABEL, pixel_label_raygen ) );
+
+    /* Declare Buffers and Variables */
+
+    //primitive reflectivity buffer
+    addBuffer( "rho", rho_RTbuffer, rho_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+    //primitive transmissivity buffer
+    addBuffer( "tau", tau_RTbuffer, tau_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+
+    //primitive reflectivity buffer
+    addBuffer( "rho_cam", rho_cam_RTbuffer, rho_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+    //primitive transmissivity buffer
+    addBuffer( "tau_cam", tau_cam_RTbuffer, tau_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+
+    //primitive transformation matrix buffer
+    addBuffer( "transform_matrix", transform_matrix_RTbuffer, transform_matrix_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 2 );
+
+    //primitive type buffer
+    addBuffer( "primitive_type", primitive_type_RTbuffer, primitive_type_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+
+    //primitive area buffer
+    addBuffer( "primitive_area", primitive_area_RTbuffer, primitive_area_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+
+    //primitive UUID buffers
+    addBuffer( "patch_UUID", patch_UUID_RTbuffer, patch_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+    addBuffer( "triangle_UUID", triangle_UUID_RTbuffer, triangle_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+    addBuffer( "disk_UUID", disk_UUID_RTbuffer, disk_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+    addBuffer( "tile_UUID", tile_UUID_RTbuffer, tile_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+    addBuffer( "voxel_UUID", voxel_UUID_RTbuffer, voxel_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+
+    //Object ID Buffer
+    addBuffer( "objectID", objectID_RTbuffer, objectID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+
+    //Primitive ID Buffer
+    addBuffer( "primitiveID", primitiveID_RTbuffer, primitiveID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+
+    //primitive two-sided flag buffer
+    addBuffer( "twosided_flag", twosided_flag_RTbuffer, twosided_flag_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_BYTE, 1 );
+
+    //patch buffers
+    addBuffer( "patch_vertices", patch_vertices_RTbuffer, patch_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
+
+    //triangle buffers
+    addBuffer( "triangle_vertices", triangle_vertices_RTbuffer, triangle_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
+
+    //disk buffers
+    addBuffer( "disk_centers", disk_centers_RTbuffer, disk_centers_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
+    addBuffer( "disk_radii", disk_radii_RTbuffer, disk_radii_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+    addBuffer( "disk_normals", disk_normals_RTbuffer, disk_normals_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
+
+    //tile buffers
+    addBuffer( "tile_vertices", tile_vertices_RTbuffer, tile_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
+
+    //voxel buffers
+    addBuffer( "voxel_vertices", voxel_vertices_RTbuffer, voxel_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
+
+    //object buffers
+    addBuffer( "object_subdivisions", object_subdivisions_RTbuffer, object_subdivisions_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT2, 1 );
+
+    //radiation energy rate data buffers
+    // - in - //
+    addBuffer( "radiation_in", radiation_in_RTbuffer, radiation_in_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
+    // - out,top - //
+    addBuffer( "radiation_out_top", radiation_out_top_RTbuffer, radiation_out_top_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
+    // - out,bottom - //
+    addBuffer( "radiation_out_bottom", radiation_out_bottom_RTbuffer, radiation_out_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
+    // - camera - //
+    addBuffer( "radiation_in_camera", radiation_in_camera_RTbuffer, radiation_in_camera_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
+    addBuffer( "camera_pixel_label", camera_pixel_label_RTbuffer, camera_pixel_label_RTvariable, RT_BUFFER_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+
+    //primitive scattering buffers
+    // - top - //
+    addBuffer( "scatter_buff_top", scatter_buff_top_RTbuffer, scatter_buff_top_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
+    // - bottom - //
+    addBuffer( "scatter_buff_bottom", scatter_buff_bottom_RTbuffer, scatter_buff_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
+
+    //Energy absorbed by "sky"
+    addBuffer( "Rsky", Rsky_RTbuffer, Rsky_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
+
+    //number of external radiation sources
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Nsources", &Nsources_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( Nsources_RTvariable,0 ) );
+
+    //External radiation source positions
+    addBuffer( "source_positions", source_positions_RTbuffer, source_positions_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
+
+    //External radiation source widths
+    addBuffer( "source_widths", source_widths_RTbuffer, source_widths_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 1 );
+
+    //External radiation source rotations
+    addBuffer( "source_rotations", source_rotations_RTbuffer, source_rotations_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
+
+    //External radiation source types
+    addBuffer( "source_types", source_types_RTbuffer, source_types_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+
+    //External radiation source fluxes
+    addBuffer( "source_fluxes", source_fluxes_RTbuffer, source_fluxes_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+
+    //number of radiation bands
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Nbands", &Nbands_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( Nbands_RTvariable,0 ) );
+
+    //flag to disable launches for certain bands
+    addBuffer( "band_launch_flag", band_launch_flag_RTbuffer, band_launch_flag_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_BYTE, 1 );
+
+    //number of Context primitives
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Nprimitives", &Nprimitives_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( Nprimitives_RTvariable,0 ) );
+
+    //Flux of diffuse radiation
+    addBuffer( "diffuse_flux", diffuse_flux_RTbuffer, diffuse_flux_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+
+    //Diffuse distribution extinction coefficient of ambient diffuse radiation
+    addBuffer( "diffuse_extinction", diffuse_extinction_RTbuffer, diffuse_extinction_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+
+    //Direction of peak diffuse radiation
+    addBuffer( "diffuse_peak_dir", diffuse_peak_dir_RTbuffer, diffuse_peak_dir_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1 );
+
+    //Diffuse distribution normalization factor
+    addBuffer( "diffuse_dist_norm", diffuse_dist_norm_RTbuffer, diffuse_dist_norm_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+
+    //Bounding sphere radius and center
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "bound_sphere_radius", &bound_sphere_radius_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1f( bound_sphere_radius_RTvariable, 0.f ));
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "bound_sphere_center", &bound_sphere_center_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet3f( bound_sphere_center_RTvariable, 0.f, 0.f, 0.f ));
+
+    //Bounding Box
+    addBuffer( "bbox_UUID", bbox_UUID_RTbuffer, bbox_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+    addBuffer( "bbox_vertices", bbox_vertices_RTbuffer, bbox_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2 );
+
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "periodic_flag", &periodic_flag_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet2f( periodic_flag_RTvariable, 0.f, 0.f ));
+
+    //Texture mask data
+    RT_CHECK_ERROR( rtBufferCreate( OptiX_Context, RT_BUFFER_INPUT, &maskdata_RTbuffer ) );
+    RT_CHECK_ERROR( rtBufferSetFormat( maskdata_RTbuffer, RT_FORMAT_BYTE ) );
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "maskdata", &maskdata_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSetObject( maskdata_RTvariable, maskdata_RTbuffer ) );
+    std::vector<std::vector<std::vector<bool> > > dummydata;
+    initializeBuffer3D( maskdata_RTbuffer, dummydata );
+
+    //Texture mask size
+    addBuffer( "masksize", masksize_RTbuffer, masksize_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT2, 1 );
+
+    //Texture mask ID
+    addBuffer( "maskID", maskID_RTbuffer, maskID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT, 1 );
+
+    //Texture u,v data
+    addBuffer( "uvdata", uvdata_RTbuffer, uvdata_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 1 );
+
+    //Texture u,v ID
+    addBuffer( "uvID", uvID_RTbuffer, uvID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT, 1 );
+
+    // Radiation Camera Variables
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_position", &camera_position_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet3f( camera_position_RTvariable, 0.f, 0.f, 0.f ));
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_direction", &camera_direction_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet2f( camera_direction_RTvariable, 0.f, 0.f ));
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_lens_diameter", &camera_lens_diameter_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1f( camera_lens_diameter_RTvariable, 0.f ));
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "sensor_size", &sensor_size_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet2f( sensor_size_RTvariable, 0.f, 0.f ));
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_focal_length", &camera_focal_length_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1f( camera_focal_length_RTvariable, 0.f ));
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_viewplane_length", &camera_viewplane_length_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1f( camera_viewplane_length_RTvariable, 0.f ));
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Ncameras", &Ncameras_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( Ncameras_RTvariable, 0 ));
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_ID", &camera_ID_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( camera_ID_RTvariable, 0 ));
+
+    // primitive scattering buffers (cameras)
+    addBuffer( "scatter_buff_top_cam", scatter_buff_top_cam_RTbuffer, scatter_buff_top_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
+    addBuffer( "scatter_buff_bottom_cam", scatter_buff_bottom_cam_RTbuffer, scatter_buff_bottom_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
+
+    /* Hit Programs */
+    RTprogram closest_hit_direct;
+    RTprogram closest_hit_diffuse;
+    RTprogram closest_hit_camera;
+    RTprogram closest_hit_pixel_label;
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_direct", &closest_hit_direct ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_diffuse", &closest_hit_diffuse ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_camera", &closest_hit_camera ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_pixel_label", &closest_hit_pixel_label ) );
+
+    /* Initialize Patch Geometry */
+
+    RTprogram  patch_intersection_program;
+    RTprogram  patch_bounding_box_program;
+
+    RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &patch ) );
+
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "rectangle_bounds", &patch_bounding_box_program ) );
+    RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( patch, patch_bounding_box_program ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "rectangle_intersect", &patch_intersection_program ) );
+    RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( patch, patch_intersection_program ) );
+
+    /* Create Patch Material */
+
+    RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &patch_material ) );
+
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( patch_material, RAYTYPE_DIRECT, closest_hit_direct ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( patch_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( patch_material, RAYTYPE_CAMERA, closest_hit_camera ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( patch_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
+
+    /* Initialize Triangle Geometry */
+
+    RTprogram  triangle_intersection_program;
+    RTprogram  triangle_bounding_box_program;
+
+    RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &triangle ) );
+
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "triangle_bounds", &triangle_bounding_box_program ) );
+    RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( triangle, triangle_bounding_box_program ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "triangle_intersect", &triangle_intersection_program ) );
+    RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( triangle, triangle_intersection_program ) );
+
+    /* Create Triangle Material */
+
+    RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &triangle_material ) );
+
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( triangle_material, RAYTYPE_DIRECT, closest_hit_direct ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( triangle_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( triangle_material, RAYTYPE_CAMERA, closest_hit_camera ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( triangle_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
+
+    /* Initialize Disk Geometry */
+
+    RTprogram  disk_intersection_program;
+    RTprogram  disk_bounding_box_program;
+
+    RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &disk ) );
+
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "disk_bounds", &disk_bounding_box_program ) );
+    RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( disk, disk_bounding_box_program ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "disk_intersect", &disk_intersection_program ) );
+    RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( disk, disk_intersection_program ) );
+
+    /* Create Disk Material */
+
+    RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &disk_material ) );
+
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_DIRECT, closest_hit_direct ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_CAMERA, closest_hit_camera ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( disk_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
+
+    /* Initialize Tile Geometry */
+
+    RTprogram  tile_intersection_program;
+    RTprogram  tile_bounding_box_program;
+
+    RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &tile ) );
+
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "tile_bounds", &tile_bounding_box_program ) );
+    RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( tile, tile_bounding_box_program ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "tile_intersect", &tile_intersection_program ) );
+    RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( tile, tile_intersection_program ) );
+
+    /* Create Tile Material */
+
+    RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &tile_material ) );
+
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_DIRECT, closest_hit_direct ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_CAMERA, closest_hit_camera) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( tile_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
+
+    /* Initialize Voxel Geometry */
+
+    RTprogram  voxel_intersection_program;
+    RTprogram  voxel_bounding_box_program;
+
+    RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &voxel ) );
+
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "voxel_bounds", &voxel_bounding_box_program ) );
+    RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( voxel, voxel_bounding_box_program ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "voxel_intersect", &voxel_intersection_program ) );
+    RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( voxel, voxel_intersection_program ) );
+
+    /* Create Voxel Material */
+
+    RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &voxel_material ) );
+
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_DIRECT, closest_hit_direct ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_CAMERA, closest_hit_camera ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( voxel_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
+
+    /* Initialize Bounding Box Geometry */
+
+    RTprogram  bbox_intersection_program;
+    RTprogram  bbox_bounding_box_program;
+
+    RT_CHECK_ERROR( rtGeometryCreate( OptiX_Context, &bbox ) );
+
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "bbox_bounds", &bbox_bounding_box_program ) );
+    RT_CHECK_ERROR( rtGeometrySetBoundingBoxProgram( bbox, bbox_bounding_box_program ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "bbox_intersect", &bbox_intersection_program ) );
+    RT_CHECK_ERROR( rtGeometrySetIntersectionProgram( bbox, bbox_intersection_program ) );
+
+    /* Create Bounding Box Material */
+
+    RT_CHECK_ERROR( rtMaterialCreate( OptiX_Context, &bbox_material ) );
+
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_DIRECT, closest_hit_direct ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_DIFFUSE, closest_hit_diffuse ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_CAMERA, closest_hit_camera ) );
+    RT_CHECK_ERROR( rtMaterialSetClosestHitProgram( bbox_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label ) );
+
+    /* Miss Program */
+    RTprogram miss_program_direct;
+    RTprogram miss_program_diffuse;
+    RTprogram miss_program_camera;
+    RTprogram miss_program_pixel_label;
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_direct", &miss_program_direct ) );
+    RT_CHECK_ERROR( rtContextSetMissProgram( OptiX_Context, RAYTYPE_DIRECT, miss_program_direct ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_diffuse", &miss_program_diffuse ) );
+    RT_CHECK_ERROR( rtContextSetMissProgram( OptiX_Context, RAYTYPE_DIFFUSE, miss_program_diffuse ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_camera", &miss_program_camera ) );
+    RT_CHECK_ERROR( rtContextSetMissProgram( OptiX_Context, RAYTYPE_CAMERA, miss_program_camera ) );
+    RT_CHECK_ERROR( rtProgramCreateFromPTXFile( OptiX_Context, "plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_pixel_label", &miss_program_pixel_label ) );
+    RT_CHECK_ERROR( rtContextSetMissProgram( OptiX_Context, RAYTYPE_PIXEL_LABEL, miss_program_pixel_label ) );
+
+    /* Create OptiX Geometry Structures */
+
+    RTtransform transform;
+
+    RTgeometrygroup geometry_group;
+
+    RTgeometryinstance patch_instance;
+    RTgeometryinstance triangle_instance;
+    RTgeometryinstance disk_instance;
+    RTgeometryinstance tile_instance;
+    RTgeometryinstance voxel_instance;
+    RTgeometryinstance bbox_instance;
+
+    /* Create top level group and associated (dummy) acceleration */
+    RT_CHECK_ERROR( rtGroupCreate( OptiX_Context, &top_level_group ) );
+    RT_CHECK_ERROR( rtGroupSetChildCount( top_level_group, 1 ) );
+
+    RT_CHECK_ERROR( rtAccelerationCreate( OptiX_Context, &top_level_acceleration ) );
+    RT_CHECK_ERROR( rtAccelerationSetBuilder(top_level_acceleration,"NoAccel") );
+    RT_CHECK_ERROR( rtAccelerationSetTraverser(top_level_acceleration,"NoAccel") );
+    RT_CHECK_ERROR( rtGroupSetAcceleration( top_level_group, top_level_acceleration) );
+
+    /* mark acceleration as dirty */
+    RT_CHECK_ERROR( rtAccelerationMarkDirty( top_level_acceleration ) );
+
+    /* Create transform node */
+    RT_CHECK_ERROR( rtTransformCreate( OptiX_Context, &transform ) );
+    float m[16];
+    m[0] = 1.f; m[1] = 0; m[2] = 0; m[3] = 0;
+    m[4] = 0.f; m[5] = 1.f; m[6] = 0; m[7] = 0;
+    m[8] = 0.f; m[9] = 0; m[10] = 1.f; m[11] = 0;
+    m[12] = 0.f; m[13] = 0; m[14] = 0; m[15] = 1.f;
+    RT_CHECK_ERROR( rtTransformSetMatrix( transform, 0, m, nullptr ) );
+    RT_CHECK_ERROR( rtGroupSetChild( top_level_group, 0, transform ) );
+
+    /* Create geometry group and associated acceleration*/
+    RT_CHECK_ERROR( rtGeometryGroupCreate( OptiX_Context, &geometry_group ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChildCount( geometry_group, 6 ) );
+    RT_CHECK_ERROR( rtTransformSetChild( transform, geometry_group ) );
+
+    //create acceleration object for group and specify some build hints
+    RT_CHECK_ERROR( rtAccelerationCreate(OptiX_Context,&geometry_acceleration) );
+    RT_CHECK_ERROR( rtAccelerationSetBuilder(geometry_acceleration,"Trbvh") );
+    RT_CHECK_ERROR( rtAccelerationSetTraverser(geometry_acceleration,"Bvh") );
+    RT_CHECK_ERROR( rtGeometryGroupSetAcceleration( geometry_group, geometry_acceleration) );
+    RT_CHECK_ERROR( rtAccelerationMarkDirty( geometry_acceleration ) );
+
+    /* Create geometry instances */
+    //patches
+    RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &patch_instance ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( patch_instance, patch ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( patch_instance, 1 ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( patch_instance, 0, patch_material ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 0, patch_instance ) );
+    //triangles
+    RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &triangle_instance ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( triangle_instance, triangle ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( triangle_instance, 1 ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( triangle_instance, 0, triangle_material ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 1, triangle_instance ) );
+    //disks
+    RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &disk_instance ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( disk_instance, disk ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( disk_instance, 1 ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( disk_instance, 0, disk_material ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 2, disk_instance ) );
+    //tiles
+    RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &tile_instance ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( tile_instance, tile ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( tile_instance, 1 ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( tile_instance, 0, tile_material ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 3, tile_instance ) );
+    //voxels
+    RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &voxel_instance ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( voxel_instance, voxel ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( voxel_instance, 1 ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( voxel_instance, 0, voxel_material ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 4, voxel_instance ) );
+
+    //voxels
+    RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &bbox_instance ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( bbox_instance, bbox ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( bbox_instance, 1 ) );
+    RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( bbox_instance, 0, bbox_material ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 5, bbox_instance ) );
+
+    /* Set the top_object variable */
+    //NOTE: Not sure exactly where this has to be set
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "top_object", &top_object ) );
+    RT_CHECK_ERROR( rtVariableSetObject( top_object, top_level_group ) );
+
+    //random number seed
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "random_seed", &random_seed_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( random_seed_RTvariable, std::chrono::system_clock::now().time_since_epoch().count() ) );
+
+    //launch offset
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "launch_offset", &launch_offset_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, 0 ) );
+
+    //maximum scattering depth
+    RT_CHECK_ERROR( rtBufferCreate( OptiX_Context, RT_BUFFER_INPUT, &max_scatters_RTbuffer ) );
+    RT_CHECK_ERROR( rtBufferSetFormat( max_scatters_RTbuffer, RT_FORMAT_UNSIGNED_INT ) );
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "max_scatters", &max_scatters_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSetObject( max_scatters_RTvariable, max_scatters_RTbuffer ) );
+    zeroBuffer1D( max_scatters_RTbuffer, 1 );
+
+    // RTsize device_memory;
+    // RT_CHECK_ERROR( rtContextGetAttribute( OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &device_memory ) );
+
+    // device_memory *= 1e-6;
+    // if( device_memory < 1000 ){
+    //   printf("available device memory at end of OptiX initialization: %6.3f MB\n",device_memory);
+    // }else{
+    //   printf("available device memory at end of OptiX initialization: %6.3f GB\n",device_memory*1e-3);
+    // }
+
 }
 
 void RadiationModel::updateGeometry() {
-  updateGeometry( context->getAllUUIDs() );
+    updateGeometry( context->getAllUUIDs() );
 }
 
 void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
@@ -2040,7 +2043,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         context->getGlobalData(spectrum_label.c_str(), data);
                         surface_spectra_rho.emplace(spectrum_label, data);
 
-                     }
+                    }
 
                 }
 
@@ -2114,7 +2117,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                 if( radiation_bands.at(band).wavebandBounds.x != 0 && radiation_bands.at(band).wavebandBounds.y != 0 && !spectrum.second.empty() ) {
                     if (!radiation_sources.at(s).source_spectrum.empty()) {
                         rho_unique.at(spectrum.first).at(b).at(s) = integrateSpectrum(s, spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y);
-                     } else {
+                    } else {
                         //source spectrum not provided, assume source intensity is constant over the band
                         rho_unique.at(spectrum.first).at(b).at(s) = integrateSpectrum(spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y)/(radiation_bands.at(band).wavebandBounds.y-radiation_bands.at(band).wavebandBounds.x);
                     }
@@ -2220,7 +2223,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
 
         helios::PrimitiveType type = context->getPrimitiveType(UUID);
 
-            if (type == helios::PRIMITIVE_TYPE_VOXEL) {
+        if (type == helios::PRIMITIVE_TYPE_VOXEL) {
 
 //                // NOTE: This is a little confusing - for volumes of participating media, we're going to use the "rho" variable to store the absorption coefficient and use the "tau" variable to store the scattering coefficient.  This is to save on memory so we don't have to define separate arrays.
 //
@@ -2278,188 +2281,188 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
 //                    }
 //                }
 
-            } else { //other than voxels
+        } else { //other than voxels
 
-                // Reflectivity
+            // Reflectivity
 
-                //check for primitive data of form "reflectivity_spectrum" that can be used to calculate reflectivity
-                std::string spectrum_label;
-                if (context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
-                    if (context->getPrimitiveDataType(UUID, "reflectivity_spectrum") == HELIOS_TYPE_STRING) {
-                        context->getPrimitiveData(UUID, "reflectivity_spectrum", spectrum_label);
-                    }
+            //check for primitive data of form "reflectivity_spectrum" that can be used to calculate reflectivity
+            std::string spectrum_label;
+            if (context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
+                if (context->getPrimitiveDataType(UUID, "reflectivity_spectrum") == HELIOS_TYPE_STRING) {
+                    context->getPrimitiveData(UUID, "reflectivity_spectrum", spectrum_label);
+                }
+            }
+
+            uint b = 0;
+            for (const auto &band: labels) {
+
+                //check for primitive data of form "reflectivity_bandname"
+                prop = "reflectivity_" + band;
+
+                float rho_s = rho_default;
+                if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
+                    context->getPrimitiveData(UUID, prop.c_str(), rho_s);
                 }
 
-                uint b = 0;
-                for (const auto &band: labels) {
+                for (uint s = 0; s < Nsources; s++) {
+                    if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
 
-                    //check for primitive data of form "reflectivity_bandname"
-                    prop = "reflectivity_" + band;
+                        rho.at(s).at(u).at(b) = rho_unique.at(spectrum_label).at(b).at(s);
 
-                    float rho_s = rho_default;
-                    if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
-                        context->getPrimitiveData(UUID, prop.c_str(), rho_s);
-                    }
-
-                    for (uint s = 0; s < Nsources; s++) {
-                        if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
-
-                            rho.at(s).at(u).at(b) = rho_unique.at(spectrum_label).at(b).at(s);
-
-                            //cameras
-                            for( uint cam=0; cam<Ncameras; cam++ ){
-                                rho_cam.at(s).at(u).at(b).at(cam) = rho_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
-                            }
+                        //cameras
+                        for( uint cam=0; cam<Ncameras; cam++ ){
+                            rho_cam.at(s).at(u).at(b).at(cam) = rho_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
+                        }
 
                         //assign default value if there is no primitive data or spectral data
-                        } else {
-                            rho.at(s).at(u).at(b) = rho_s;
-
-                            //cameras
-                            for( uint cam=0; cam<Ncameras; cam++ ){
-                                rho_cam.at(s).at(u).at(b).at(cam) = rho_s;
-                            }
-                        }
-
-                        //error checking
-                        if (rho.at(s).at(u).at(b) < 0) {
-                            rho.at(s).at(u).at(b) = 0.f;
-                            if (message_flag) {
-                                std::cout << "WARNING (RadiationModel): reflectivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::flush;
-                            }
-                        } else if (rho.at(s).at(u).at(b) > 1.f) {
-                            rho.at(s).at(u).at(b) = 1.f;
-                            if (message_flag) {
-                                std::cout << "WARNING (RadiationModel): reflectivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::flush;
-                            }
-                        }
-                        if( rho.at(s).at(u).at(b)!=0 ){
-                            scattering_iterations_needed.at(b) = true;
-                        }
-
-                    }
-                    b++;
-                }
-
-                // Transmissivity
-
-                //check for primitive data of form "transmissivity_spectrum" that can be used to calculate transmissivity
-                spectrum_label.resize(0);
-                if (context->doesPrimitiveDataExist(UUID, "transmissivity_spectrum")) {
-                    if (context->getPrimitiveDataType(UUID, "transmissivity_spectrum") == HELIOS_TYPE_STRING) {
-                        context->getPrimitiveData(UUID, "transmissivity_spectrum", spectrum_label);
-                    }
-                }
-
-                b = 0;
-                for ( const auto &band: labels ) {
-
-                    //check for primitive data of form "transmissivity_bandname"
-                    prop = "transmissivity_" + band;
-
-                    float tau_s = tau_default;
-                    if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
-                        context->getPrimitiveData(UUID, prop.c_str(), tau_s);
-                    }
-
-                    for (uint s = 0; s < Nsources; s++) {
-                        if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
-                            tau.at(s).at(u).at(b) = tau_unique.at(spectrum_label).at(b).at(s);
-
-                            //cameras
-                            for( uint cam=0; cam<Ncameras; cam++ ){
-                                tau_cam.at(s).at(u).at(b).at(cam) = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
-                            }
-
-                        //assign default value if there is no primitive data or spectral data
-                        } else {
-                            tau.at(s).at(u).at(b) = tau_default;
-
-                            //cameras
-                            for( uint cam=0; cam<Ncameras; cam++ ){
-                                tau_cam.at(s).at(u).at(b).at(cam) = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
-                            }
-                        }
-
-                        //error checking
-                        if (tau.at(s).at(u).at(b) < 0) {
-                            tau.at(s).at(u).at(b) = 0.f;
-                            if (message_flag) {
-                                std::cout << "WARNING (RadiationModel): transmissivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
-                            }
-                        } else if (tau.at(s).at(u).at(b) > 1.f) {
-                            tau.at(s).at(u).at(b) = 1.f;
-                            if (message_flag) {
-                                std::cout << "WARNING (RadiationModel): transmissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
-                            }
-                        }
-                        if( tau.at(s).at(u).at(b)!=0 ){
-                            scattering_iterations_needed.at(b) = true;
-                        }
-                    }
-                    b++;
-                }
-
-                // Emissivity (only for error checking)
-
-                b = 0;
-                for (const auto &band: labels) {
-
-                    prop = "emissivity_" + band;
-
-                    if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
-                        context->getPrimitiveData(UUID, prop.c_str(), eps);
                     } else {
-                        eps = eps_default;
+                        rho.at(s).at(u).at(b) = rho_s;
+
+                        //cameras
+                        for( uint cam=0; cam<Ncameras; cam++ ){
+                            rho_cam.at(s).at(u).at(b).at(cam) = rho_s;
+                        }
                     }
 
-                    if (eps < 0) {
-                        eps = 0.f;
+                    //error checking
+                    if (rho.at(s).at(u).at(b) < 0) {
+                        rho.at(s).at(u).at(b) = 0.f;
                         if (message_flag) {
-                            std::cout << "WARNING (RadiationModel): emissivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
+                            std::cout << "WARNING (RadiationModel): reflectivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::flush;
                         }
-                    } else if (eps > 1.f) {
-                        eps = 1.f;
+                    } else if (rho.at(s).at(u).at(b) > 1.f) {
+                        rho.at(s).at(u).at(b) = 1.f;
                         if (message_flag) {
-                            std::cout << "WARNING (RadiationModel): emissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
+                            std::cout << "WARNING (RadiationModel): reflectivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::flush;
                         }
                     }
-                    if( eps!=1 ){
+                    if( rho.at(s).at(u).at(b)!=0 ){
                         scattering_iterations_needed.at(b) = true;
                     }
 
-                    assert(doesBandExist(band));
+                }
+                b++;
+            }
 
-                    for (uint s = 0; s < Nsources; s++) {
-                        if (radiation_bands.at(band).emissionFlag) { //emission enabled
-                            if (eps != 1.f && rho.at(s).at(u).at(b) == 0 && tau.at(s).at(u).at(b) == 0) {
-                                rho.at(s).at(u).at(b) = 1.f - eps;
-                            } else if (eps + tau.at(s).at(u).at(b) + rho.at(s).at(u).at(b) != 1.f && eps > 0.f) {
-                                throw (std::runtime_error(
-                                        "ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " +
-                                        band + ", Primitive #" + std::to_string(UUID) + ": eps=" +
-                                        std::to_string(eps) + ", tau=" + std::to_string(tau.at(s).at(u).at(b)) +
-                                        ", rho=" + std::to_string(rho.at(s).at(u).at(b)) +
-                                        ". It is also possible that you forgot to disable emission for this band."));
-                            } else if (radiation_bands.at(band).scatteringDepth == 0 && eps != 1.f) {
-                                //std::cout << "WARNING (RadiationModel): emissivity must be 1 if the number of scattering iterations is set to 0" << std::endl;
-                                eps = 1.f;
-                                rho.at(s).at(u).at(b) = 0.f;
-                                tau.at(s).at(u).at(b) = 0.f;
-                            }
-                        } else if (tau.at(s).at(u).at(b) + rho.at(s).at(u).at(b) > 1.f) {
+            // Transmissivity
+
+            //check for primitive data of form "transmissivity_spectrum" that can be used to calculate transmissivity
+            spectrum_label.resize(0);
+            if (context->doesPrimitiveDataExist(UUID, "transmissivity_spectrum")) {
+                if (context->getPrimitiveDataType(UUID, "transmissivity_spectrum") == HELIOS_TYPE_STRING) {
+                    context->getPrimitiveData(UUID, "transmissivity_spectrum", spectrum_label);
+                }
+            }
+
+            b = 0;
+            for ( const auto &band: labels ) {
+
+                //check for primitive data of form "transmissivity_bandname"
+                prop = "transmissivity_" + band;
+
+                float tau_s = tau_default;
+                if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
+                    context->getPrimitiveData(UUID, prop.c_str(), tau_s);
+                }
+
+                for (uint s = 0; s < Nsources; s++) {
+                    if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
+                        tau.at(s).at(u).at(b) = tau_unique.at(spectrum_label).at(b).at(s);
+
+                        //cameras
+                        for( uint cam=0; cam<Ncameras; cam++ ){
+                            tau_cam.at(s).at(u).at(b).at(cam) = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
+                        }
+
+                        //assign default value if there is no primitive data or spectral data
+                    } else {
+                        tau.at(s).at(u).at(b) = tau_default;
+
+                        //cameras
+                        for( uint cam=0; cam<Ncameras; cam++ ){
+                            tau_cam.at(s).at(u).at(b).at(cam) = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
+                        }
+                    }
+
+                    //error checking
+                    if (tau.at(s).at(u).at(b) < 0) {
+                        tau.at(s).at(u).at(b) = 0.f;
+                        if (message_flag) {
+                            std::cout << "WARNING (RadiationModel): transmissivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
+                        }
+                    } else if (tau.at(s).at(u).at(b) > 1.f) {
+                        tau.at(s).at(u).at(b) = 1.f;
+                        if (message_flag) {
+                            std::cout << "WARNING (RadiationModel): transmissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
+                        }
+                    }
+                    if( tau.at(s).at(u).at(b)!=0 ){
+                        scattering_iterations_needed.at(b) = true;
+                    }
+                }
+                b++;
+            }
+
+            // Emissivity (only for error checking)
+
+            b = 0;
+            for (const auto &band: labels) {
+
+                prop = "emissivity_" + band;
+
+                if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
+                    context->getPrimitiveData(UUID, prop.c_str(), eps);
+                } else {
+                    eps = eps_default;
+                }
+
+                if (eps < 0) {
+                    eps = 0.f;
+                    if (message_flag) {
+                        std::cout << "WARNING (RadiationModel): emissivity cannot be less than 0.  Clamping to 0 for band " << band << "." << std::endl;
+                    }
+                } else if (eps > 1.f) {
+                    eps = 1.f;
+                    if (message_flag) {
+                        std::cout << "WARNING (RadiationModel): emissivity cannot be greater than 1.  Clamping to 1 for band " << band << "." << std::endl;
+                    }
+                }
+                if( eps!=1 ){
+                    scattering_iterations_needed.at(b) = true;
+                }
+
+                assert(doesBandExist(band));
+
+                for (uint s = 0; s < Nsources; s++) {
+                    if (radiation_bands.at(band).emissionFlag) { //emission enabled
+                        if (eps != 1.f && rho.at(s).at(u).at(b) == 0 && tau.at(s).at(u).at(b) == 0) {
+                            rho.at(s).at(u).at(b) = 1.f - eps;
+                        } else if (eps + tau.at(s).at(u).at(b) + rho.at(s).at(u).at(b) != 1.f && eps > 0.f) {
                             throw (std::runtime_error(
-                                    "ERROR (RadiationModel): transmissivity and reflectivity cannot sum to greater than 1 ensure energy conservation. Band " +
+                                    "ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " +
                                     band + ", Primitive #" + std::to_string(UUID) + ": eps=" +
                                     std::to_string(eps) + ", tau=" + std::to_string(tau.at(s).at(u).at(b)) +
                                     ", rho=" + std::to_string(rho.at(s).at(u).at(b)) +
                                     ". It is also possible that you forgot to disable emission for this band."));
+                        } else if (radiation_bands.at(band).scatteringDepth == 0 && eps != 1.f) {
+                            //std::cout << "WARNING (RadiationModel): emissivity must be 1 if the number of scattering iterations is set to 0" << std::endl;
+                            eps = 1.f;
+                            rho.at(s).at(u).at(b) = 0.f;
+                            tau.at(s).at(u).at(b) = 0.f;
                         }
+                    } else if (tau.at(s).at(u).at(b) + rho.at(s).at(u).at(b) > 1.f) {
+                        throw (std::runtime_error(
+                                "ERROR (RadiationModel): transmissivity and reflectivity cannot sum to greater than 1 ensure energy conservation. Band " +
+                                band + ", Primitive #" + std::to_string(UUID) + ": eps=" +
+                                std::to_string(eps) + ", tau=" + std::to_string(tau.at(s).at(u).at(b)) +
+                                ", rho=" + std::to_string(rho.at(s).at(u).at(b)) +
+                                ". It is also possible that you forgot to disable emission for this band."));
                     }
-                    b++;
                 }
+                b++;
             }
         }
+    }
 
     initializeBuffer1Df(rho_RTbuffer, flatten(rho));
     initializeBuffer1Df(tau_RTbuffer, flatten(tau));
@@ -2469,26 +2472,6 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
 
     if( message_flag ) {
         std::cout << "done\n";
-    }
-
-}
-
-void RadiationModel::updateFluxesFromSpectra( uint SourceID ){
-
-    if( SourceID>=radiation_sources.size() ){
-        throw(std::runtime_error("ERROR (RadiationModel::updateFluxesFromSpectra): Source does not exist."));
-    }
-
-    RadiationSource &source = radiation_sources.at(SourceID);
-    uint b=0;
-    for( auto &band : radiation_bands ){
-        if( band.second.wavebandBounds.x==0 && band.second.wavebandBounds.y==0 ){
-            continue;
-        }
-        float lmin = band.second.wavebandBounds.x;
-        float lmax = band.second.wavebandBounds.y;
-        source.source_fluxes.at(band.first) = RadiationModel::integrateSpectrum(source.source_spectrum,lmin,lmax)*source.source_flux_scaling_factor;
-        b++;
     }
 
 }
@@ -2845,7 +2828,7 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
                                 }
                             }
                         }
-                     }
+                    }
                 }
             }
             if( Ncameras>0 ){
@@ -3105,82 +3088,82 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
 float RadiationModel::getSkyEnergy() {
 
-  std::vector<float> Rsky_SW;
-  Rsky_SW=getOptiXbufferData( Rsky_RTbuffer );
-  float Rsky=0.f;
-  for( size_t i=0; i<Rsky_SW.size(); i++ ){
-    Rsky += Rsky_SW.at(i);
-  }
-  return Rsky;
-  
+    std::vector<float> Rsky_SW;
+    Rsky_SW=getOptiXbufferData( Rsky_RTbuffer );
+    float Rsky=0.f;
+    for( size_t i=0; i<Rsky_SW.size(); i++ ){
+        Rsky += Rsky_SW.at(i);
+    }
+    return Rsky;
+
 }
 
 std::vector<float> RadiationModel::getTotalAbsorbedFlux() {
 
-  std::vector<float> total_flux;
-  total_flux.resize(context->getPrimitiveCount(),0.f);
+    std::vector<float> total_flux;
+    total_flux.resize(context->getPrimitiveCount(),0.f);
 
-  for( const auto &band : radiation_bands ){
+    for( const auto &band : radiation_bands ){
 
-    std::string label = band.first;
+        std::string label = band.first;
 
-    for( size_t u=0; u<context_UUIDs.size(); u++ ){
+        for( size_t u=0; u<context_UUIDs.size(); u++ ){
 
-      uint p = context_UUIDs.at(u);
-      
-      std::string str = "radiation_flux_" + label;
+            uint p = context_UUIDs.at(u);
 
-      float R;
-      context->getPrimitiveData( p, str.c_str(), R );
-      total_flux.at(u) += R;
+            std::string str = "radiation_flux_" + label;
+
+            float R;
+            context->getPrimitiveData( p, str.c_str(), R );
+            total_flux.at(u) += R;
+
+        }
 
     }
 
-  }
+    return total_flux;
 
-  return total_flux;
-  
 }
 
 std::vector<float> RadiationModel::getOptiXbufferData( RTbuffer buffer ){
 
-  void* _data_;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &_data_ ) );
-  float* data_ptr = (float*)_data_;
+    void* _data_;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &_data_ ) );
+    float* data_ptr = (float*)_data_;
 
-  RTsize size;
-  RT_CHECK_ERROR( rtBufferGetSize1D( buffer, &size ) );
+    RTsize size;
+    RT_CHECK_ERROR( rtBufferGetSize1D( buffer, &size ) );
 
-  std::vector<float> data_vec;
-  data_vec.resize(size);
-  for( int i=0; i<size; i++ ){
-    data_vec.at(i)=data_ptr[i];
-  }
+    std::vector<float> data_vec;
+    data_vec.resize(size);
+    for( int i=0; i<size; i++ ){
+        data_vec.at(i)=data_ptr[i];
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
-  return data_vec;
+    return data_vec;
 
 }
 
 std::vector<double> RadiationModel::getOptiXbufferData_d( RTbuffer buffer ){
 
-  void* _data_;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &_data_ ) );
-  double* data_ptr = (double*)_data_;
+    void* _data_;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &_data_ ) );
+    double* data_ptr = (double*)_data_;
 
-  RTsize size;
-  RT_CHECK_ERROR( rtBufferGetSize1D( buffer, &size ) );
+    RTsize size;
+    RT_CHECK_ERROR( rtBufferGetSize1D( buffer, &size ) );
 
-  std::vector<double> data_vec;
-  data_vec.resize(size);
-  for( int i=0; i<size; i++ ){
-    data_vec.at(i)=data_ptr[i];
-  }
+    std::vector<double> data_vec;
+    data_vec.resize(size);
+    for( int i=0; i<size; i++ ){
+        data_vec.at(i)=data_ptr[i];
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
-  return data_vec;
+    return data_vec;
 
 }
 
@@ -3207,252 +3190,254 @@ std::vector<uint> RadiationModel::getOptiXbufferData_ui( RTbuffer buffer ){
 
 void RadiationModel::addBuffer( const char* name, RTbuffer& buffer, RTvariable& variable, RTbuffertype type, RTformat format, size_t dimension ){
 
-  RT_CHECK_ERROR( rtBufferCreate( OptiX_Context, type, &buffer ) );
-  RT_CHECK_ERROR( rtBufferSetFormat( buffer, format ) );
-  RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, name, &variable ) );
-  RT_CHECK_ERROR( rtVariableSetObject( variable, buffer ) );
-  if( dimension==1 ){
-    zeroBuffer1D( buffer, 1 );
-  }else if( dimension==2 ){
-    zeroBuffer2D( buffer, optix::make_int2(1,1) );
-  }else{
-    throw( std::runtime_error( "ERROR (RadiationModel::addBuffer): invalid buffer dimension of " + std::to_string(dimension) + ", must be 1 or 2." ));
-  }
-  
+    RT_CHECK_ERROR( rtBufferCreate( OptiX_Context, type, &buffer ) );
+    RT_CHECK_ERROR( rtBufferSetFormat( buffer, format ) );
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, name, &variable ) );
+    RT_CHECK_ERROR( rtVariableSetObject( variable, buffer ) );
+    if( dimension==1 ){
+        zeroBuffer1D( buffer, 1 );
+    }else if( dimension==2 ){
+        zeroBuffer2D( buffer, optix::make_int2(1,1) );
+    }else{
+        std::cerr << "ERROR (RadiationModel::addBuffer): invalid buffer dimension of " << dimension << ", must be 1 or 2." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
 }
 
 void RadiationModel::zeroBuffer1D(RTbuffer &buffer, size_t bsize ){
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format==RT_FORMAT_USER ){//Note: for now, assume user format means it's a double
-  
-    std::vector<double> array;
-    array.resize(bsize);
-    for( int i=0; i<bsize; i++ ){
-      array.at(i)=0.f;
-    }
-    
-    initializeBuffer1Dd( buffer, array );
+    if( format==RT_FORMAT_USER ){//Note: for now, assume user format means it's a double
 
-  }else if( format==RT_FORMAT_FLOAT ){
-      
-    std::vector<float> array;
-    array.resize(bsize);
-    for( int i=0; i<bsize; i++ ){
-      array.at(i)=0.f;
-    }
-    
-    initializeBuffer1Df( buffer, array );
+        std::vector<double> array;
+        array.resize(bsize);
+        for( int i=0; i<bsize; i++ ){
+            array.at(i)=0.f;
+        }
 
-  }else if( format==RT_FORMAT_FLOAT2 ){
-  
-    std::vector<optix::float2> array;
-    array.resize(bsize);
-    for( int i=0; i<bsize; i++ ){
-      array.at(i)=optix::make_float2(0,0);
-    }
-    
-    initializeBuffer1Dfloat2( buffer, array );
+        initializeBuffer1Dd( buffer, array );
 
-  }else if( format==RT_FORMAT_FLOAT3 ){
-  
-    std::vector<optix::float3> array;
-    array.resize(bsize);
-    for( int i=0; i<bsize; i++ ){
-      array.at(i)=optix::make_float3(0,0,0);
-    }
-    
-    initializeBuffer1Dfloat3( buffer, array );
+    }else if( format==RT_FORMAT_FLOAT ){
 
-  }else if( format==RT_FORMAT_INT ){
-  
-    std::vector<int> array;
-    array.resize(bsize);
-    for( int i=0; i<bsize; i++ ){
-      array.at(i)=0;
-    }
-    
-    initializeBuffer1Di( buffer, array );
+        std::vector<float> array;
+        array.resize(bsize);
+        for( int i=0; i<bsize; i++ ){
+            array.at(i)=0.f;
+        }
 
-  }else if( format==RT_FORMAT_INT2 ){
-  
-    std::vector<optix::int2> array;
-    array.resize(bsize);
-    for( int i=0; i<bsize; i++ ){
-      array.at(i)=optix::make_int2(0,0);
-    }
-    
-    initializeBuffer1Dint2( buffer, array );
+        initializeBuffer1Df( buffer, array );
 
-  }else if( format==RT_FORMAT_INT3 ){
-  
-    std::vector<optix::int3> array;
-    array.resize(bsize);
-    for( int i=0; i<bsize; i++ ){
-      array.at(i)=optix::make_int3(0,0,0);
-    }
-    
-    initializeBuffer1Dint3( buffer, array );
+    }else if( format==RT_FORMAT_FLOAT2 ){
 
-  }else if( format==RT_FORMAT_UNSIGNED_INT ){
-  
-    std::vector<uint> array;
-    array.resize(bsize);
-    for( int i=0; i<bsize; i++ ){
-      array.at(i)=0;
-    }
-    
-    initializeBuffer1Dui( buffer, array );
+        std::vector<optix::float2> array;
+        array.resize(bsize);
+        for( int i=0; i<bsize; i++ ){
+            array.at(i)=optix::make_float2(0,0);
+        }
 
-  }else if( format==RT_FORMAT_BYTE ){
-  
-    std::vector<bool> array;
-    array.resize(bsize);
-    for( int i=0; i<bsize; i++ ){
-      array.at(i)=false;
+        initializeBuffer1Dfloat2( buffer, array );
+
+    }else if( format==RT_FORMAT_FLOAT3 ){
+
+        std::vector<optix::float3> array;
+        array.resize(bsize);
+        for( int i=0; i<bsize; i++ ){
+            array.at(i)=optix::make_float3(0,0,0);
+        }
+
+        initializeBuffer1Dfloat3( buffer, array );
+
+    }else if( format==RT_FORMAT_INT ){
+
+        std::vector<int> array;
+        array.resize(bsize);
+        for( int i=0; i<bsize; i++ ){
+            array.at(i)=0;
+        }
+
+        initializeBuffer1Di( buffer, array );
+
+    }else if( format==RT_FORMAT_INT2 ){
+
+        std::vector<optix::int2> array;
+        array.resize(bsize);
+        for( int i=0; i<bsize; i++ ){
+            array.at(i)=optix::make_int2(0,0);
+        }
+
+        initializeBuffer1Dint2( buffer, array );
+
+    }else if( format==RT_FORMAT_INT3 ){
+
+        std::vector<optix::int3> array;
+        array.resize(bsize);
+        for( int i=0; i<bsize; i++ ){
+            array.at(i)=optix::make_int3(0,0,0);
+        }
+
+        initializeBuffer1Dint3( buffer, array );
+
+    }else if( format==RT_FORMAT_UNSIGNED_INT ){
+
+        std::vector<uint> array;
+        array.resize(bsize);
+        for( int i=0; i<bsize; i++ ){
+            array.at(i)=0;
+        }
+
+        initializeBuffer1Dui( buffer, array );
+
+    }else if( format==RT_FORMAT_BYTE ){
+
+        std::vector<bool> array;
+        array.resize(bsize);
+        for( int i=0; i<bsize; i++ ){
+            array.at(i)=false;
+        }
+
+        initializeBuffer1Dbool( buffer, array );
+    }else{
+        std::cerr << "ERROR (RadiationModel::zeroBuffer1D): Buffer type not supported." << std::endl;
+        exit(EXIT_FAILURE);
     }
-    
-    initializeBuffer1Dbool( buffer, array );
-  }else{
-    throw( std::runtime_error("ERROR (RadiationModel::zeroBuffer1D): Buffer type not supported.") );
-  }
-    
+
 }
 
 void RadiationModel::copyBuffer1D( RTbuffer &buffer, RTbuffer &buffer_copy ){
 
   /* \todo Add support for all data types (currently only works for float and float3)*/
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  //get buffer size
-  RTsize bsize;
-  rtBufferGetSize1D( buffer, &bsize );
+    //get buffer size
+    RTsize bsize;
+    rtBufferGetSize1D( buffer, &bsize );
 
-  rtBufferSetSize1D( buffer_copy, bsize );
+    rtBufferSetSize1D( buffer_copy, bsize );
 
-  if( format==RT_FORMAT_FLOAT ){
+    if( format==RT_FORMAT_FLOAT ){
 
-    void* ptr;
-    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-    float* data = (float*)ptr;
-    
-    void* ptr_copy;
-    RT_CHECK_ERROR( rtBufferMap( buffer_copy, &ptr_copy ) );
-    float* data_copy = (float*)ptr_copy;
+        void* ptr;
+        RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+        float* data = (float*)ptr;
 
-    for( size_t i = 0; i <bsize; i++ ) {
-      data_copy[i] = data[i];
+        void* ptr_copy;
+        RT_CHECK_ERROR( rtBufferMap( buffer_copy, &ptr_copy ) );
+        float* data_copy = (float*)ptr_copy;
+
+        for( size_t i = 0; i <bsize; i++ ) {
+            data_copy[i] = data[i];
+        }
+
+    }else if( format==RT_FORMAT_FLOAT3 ){
+
+        void* ptr;
+        RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+        optix::float3* data = (optix::float3*)ptr;
+
+        void* ptr_copy;
+        RT_CHECK_ERROR( rtBufferMap( buffer_copy, &ptr_copy ) );
+        optix::float3* data_copy = (optix::float3*)ptr_copy;
+
+        for( size_t i = 0; i <bsize; i++ ) {
+            data_copy[i] = data[i];
+        }
+
     }
 
-  }else if( format==RT_FORMAT_FLOAT3 ){
-  
-    void* ptr;
-    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-    optix::float3* data = (optix::float3*)ptr;
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer_copy ) );
 
-    void* ptr_copy;
-    RT_CHECK_ERROR( rtBufferMap( buffer_copy, &ptr_copy ) );
-    optix::float3* data_copy = (optix::float3*)ptr_copy;
-
-    for( size_t i = 0; i <bsize; i++ ) {
-      data_copy[i] = data[i];
-    }
-
-  }
-
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
-  RT_CHECK_ERROR( rtBufferUnmap( buffer_copy ) );
-  
 }
 
 void RadiationModel::initializeBuffer1Dd(RTbuffer &buffer, const std::vector<double> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_USER ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Dd): Buffer must have type double." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_USER ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dd): Buffer must have type double." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  double* data = (double*)ptr;
+    double* data = (double*)ptr;
 
-  for( size_t i = 0; i <bsize; i++ ) {
-    data[i] = array[i];
-  }
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i] = array[i];
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer1Df(RTbuffer &buffer, const std::vector<float> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_FLOAT ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Df): Buffer must have type float." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_FLOAT ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Df): Buffer must have type float." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  float* data = (float*)ptr;
+    float* data = (float*)ptr;
 
-  for( size_t i = 0; i <bsize; i++ ) {
-    data[i] = array[i];
-  }
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i] = array[i];
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer1Dfloat2(RTbuffer &buffer, const std::vector<optix::float2> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_FLOAT2 ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Dfloat2): Buffer must have type float2." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_FLOAT2 ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dfloat2): Buffer must have type float2." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  optix::float2* data = (optix::float2*)ptr;
+    optix::float2* data = (optix::float2*)ptr;
 
     for( size_t i = 0; i <bsize; i++ ) {
-      data[i].x = array[i].x;
-      data[i].y = array[i].y;
+        data[i].x = array[i].x;
+        data[i].y = array[i].y;
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -3461,802 +3446,807 @@ void RadiationModel::initializeBuffer1Dfloat2(RTbuffer &buffer, const std::vecto
 
 void RadiationModel::initializeBuffer1Dfloat3(RTbuffer &buffer, const std::vector<optix::float3> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_FLOAT3 ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Dfloat3): Buffer must have type float3." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_FLOAT3 ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dfloat3): Buffer must have type float3." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  optix::float3* data = (optix::float3*)ptr;
+    optix::float3* data = (optix::float3*)ptr;
 
-  for( size_t i = 0; i <bsize; i++ ) {
-    data[i].x = array[i].x;
-    data[i].y = array[i].y;
-    data[i].z = array[i].z;
-  }
-  
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i].x = array[i].x;
+        data[i].y = array[i].y;
+        data[i].z = array[i].z;
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer1Dfloat4(RTbuffer &buffer, const std::vector<optix::float4> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_FLOAT4 ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Dfloat4): Buffer must have type float4." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_FLOAT4 ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dfloat4): Buffer must have type float4." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  optix::float4* data = (optix::float4*)ptr;
+    optix::float4* data = (optix::float4*)ptr;
 
-  for( size_t i = 0; i <bsize; i++ ) {
-    data[i].x = array[i].x;
-    data[i].y = array[i].y;
-    data[i].z = array[i].z;
-    data[i].w = array[i].w;
-  }
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i].x = array[i].x;
+        data[i].y = array[i].y;
+        data[i].z = array[i].z;
+        data[i].w = array[i].w;
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer1Di(RTbuffer &buffer, const std::vector<int> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_INT ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Di): Buffer must have type int." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_INT ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Di): Buffer must have type int." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  int* data = (int*)ptr;
+    int* data = (int*)ptr;
 
-  for( size_t i = 0; i <bsize; i++ ) {
-    data[i] = array[i];
-  }
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i] = array[i];
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer1Dui(RTbuffer &buffer, const std::vector<uint> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_UNSIGNED_INT ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Dui): Buffer must have type unsigned int." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_UNSIGNED_INT ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dui): Buffer must have type unsigned int." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  uint* data = (uint*)ptr;
+    uint* data = (uint*)ptr;
 
-  for( size_t i = 0; i <bsize; i++ ) {
-    data[i] = array[i];
-  }
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i] = array[i];
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer1Dint2(RTbuffer &buffer, const std::vector<optix::int2> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_INT2 ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Dint2): Buffer must have type int2." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_INT2 ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dint2): Buffer must have type int2." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  optix::int2* data = (optix::int2*)ptr;
+    optix::int2* data = (optix::int2*)ptr;
 
-  for( size_t i = 0; i <bsize; i++ ) {
-    data[i] = array[i];
-  }
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i] = array[i];
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer1Dint3(RTbuffer &buffer, const std::vector<optix::int3> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_INT3 ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Dint3): Buffer must have type int3." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_INT3 ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dint3): Buffer must have type int3." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  optix::int3* data = (optix::int3*)ptr;
+    optix::int3* data = (optix::int3*)ptr;
 
-  for( size_t i = 0; i <bsize; i++ ) {
-    data[i] = array[i];
-  }
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i] = array[i];
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer1Dbool(RTbuffer &buffer, const std::vector<bool> &array ){
 
-  size_t bsize = array.size();
+    size_t bsize = array.size();
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize1D( buffer, bsize ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  if( format!=RT_FORMAT_BYTE ){
-    std::cerr << "ERROR (RadiationModel::initializeBuffer1Dbool): Buffer must have type bool." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    if( format!=RT_FORMAT_BYTE ){
+        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dbool): Buffer must have type bool." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  bool* data = (bool*)ptr;
+    bool* data = (bool*)ptr;
 
-  for( size_t i = 0; i <bsize; i++ ) {
-    data[i] = array[i];
-  }
+    for( size_t i = 0; i <bsize; i++ ) {
+        data[i] = array[i];
+    }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::zeroBuffer2D(RTbuffer &buffer, optix::int2 bsize ){
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-  
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
 
-  if( format==RT_FORMAT_USER ){//Note: for now we'll assume this means it's a double
-    std::vector<std::vector<double> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	array.at(j).at(i)=0.f;
-      }
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    if( format==RT_FORMAT_USER ){//Note: for now we'll assume this means it's a double
+        std::vector<std::vector<double> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i)=0.f;
+            }
+        }
+        initializeBuffer2Dd( buffer, array );
+    }else if( format==RT_FORMAT_FLOAT ){
+        std::vector<std::vector<float> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i)=0.f;
+            }
+        }
+        initializeBuffer2Df( buffer, array );
+    }else if( format==RT_FORMAT_FLOAT2 ){
+        std::vector<std::vector<optix::float2> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i).x=0.f;
+                array.at(j).at(i).y=0.f;
+            }
+        }
+        initializeBuffer2Dfloat2( buffer, array );
+    }else if( format==RT_FORMAT_FLOAT3 ){
+        std::vector<std::vector<optix::float3> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i).x=0.f;
+                array.at(j).at(i).y=0.f;
+                array.at(j).at(i).z=0.f;
+            }
+        }
+        initializeBuffer2Dfloat3( buffer, array );
+    }else if( format==RT_FORMAT_FLOAT4 ){
+        std::vector<std::vector<optix::float4> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i).x=0.f;
+                array.at(j).at(i).y=0.f;
+                array.at(j).at(i).z=0.f;
+                array.at(j).at(i).w=0.f;
+            }
+        }
+        initializeBuffer2Dfloat4( buffer, array );
+    }else if( format==RT_FORMAT_INT ){
+        std::vector<std::vector<int> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i)=0;
+            }
+        }
+        initializeBuffer2Di( buffer, array );
+    }else if( format==RT_FORMAT_UNSIGNED_INT ){
+        std::vector<std::vector<uint> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i)=0;
+            }
+        }
+        initializeBuffer2Dui( buffer, array );
+    }else if( format==RT_FORMAT_INT2 ){
+        std::vector<std::vector<optix::int2> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i).x=0;
+                array.at(j).at(i).y=0;
+            }
+        }
+        initializeBuffer2Dint2( buffer, array );
+    }else if( format==RT_FORMAT_INT3 ){
+        std::vector<std::vector<optix::int3> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i).x=0;
+                array.at(j).at(i).y=0;
+                array.at(j).at(i).z=0;
+            }
+        }
+        initializeBuffer2Dint3( buffer, array );
+    }else if( format==RT_FORMAT_BYTE ){
+        std::vector<std::vector<bool> > array;
+        array.resize(bsize.y);
+        for( int j=0; j<bsize.y; j++ ){
+            array.at(j).resize(bsize.x);
+            for( int i=0; i<bsize.x; i++ ){
+                array.at(j).at(i)=false;
+            }
+        }
+        initializeBuffer2Dbool( buffer, array );
+    }else{
+        std::cerr << "ERROR (RadiationModel::zeroBuffer2D): unknown buffer format." << std::endl;
+        exit(EXIT_FAILURE);
     }
-    initializeBuffer2Dd( buffer, array );
-  }else if( format==RT_FORMAT_FLOAT ){
-    std::vector<std::vector<float> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	array.at(j).at(i)=0.f;
-      }
-    }
-    initializeBuffer2Df( buffer, array );
-  }else if( format==RT_FORMAT_FLOAT2 ){
-    std::vector<std::vector<optix::float2> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	    array.at(j).at(i).x=0.f;
-	    array.at(j).at(i).y=0.f;
-      }
-    }
-    initializeBuffer2Dfloat2( buffer, array );
-  }else if( format==RT_FORMAT_FLOAT3 ){
-    std::vector<std::vector<optix::float3> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	array.at(j).at(i).x=0.f;
-	array.at(j).at(i).y=0.f;
-	array.at(j).at(i).z=0.f;
-      }
-    }
-    initializeBuffer2Dfloat3( buffer, array );
-  }else if( format==RT_FORMAT_FLOAT4 ){
-    std::vector<std::vector<optix::float4> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	array.at(j).at(i).x=0.f;
-	array.at(j).at(i).y=0.f;
-	array.at(j).at(i).z=0.f;
-	array.at(j).at(i).w=0.f;
-      }
-    }
-    initializeBuffer2Dfloat4( buffer, array );
-  }else if( format==RT_FORMAT_INT ){
-    std::vector<std::vector<int> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	array.at(j).at(i)=0;
-      }
-    }
-    initializeBuffer2Di( buffer, array );
-  }else if( format==RT_FORMAT_UNSIGNED_INT ){
-    std::vector<std::vector<uint> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	array.at(j).at(i)=0;
-      }
-    }
-    initializeBuffer2Dui( buffer, array );
-  }else if( format==RT_FORMAT_INT2 ){
-    std::vector<std::vector<optix::int2> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	array.at(j).at(i).x=0;
-	array.at(j).at(i).y=0;
-      }
-    }
-    initializeBuffer2Dint2( buffer, array );
-  }else if( format==RT_FORMAT_INT3 ){
-    std::vector<std::vector<optix::int3> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	array.at(j).at(i).x=0;
-	array.at(j).at(i).y=0;
-	array.at(j).at(i).z=0;
-      }
-    }
-    initializeBuffer2Dint3( buffer, array );
-  }else if( format==RT_FORMAT_BYTE ){
-    std::vector<std::vector<bool> > array;
-    array.resize(bsize.y);
-    for( int j=0; j<bsize.y; j++ ){
-      array.at(j).resize(bsize.x);
-      for( int i=0; i<bsize.x; i++ ){
-	array.at(j).at(i)=false;
-      }
-    }
-    initializeBuffer2Dbool( buffer, array );
-  }else{
-    std::cerr << "ERROR (RadiationModel::zeroBuffer2D): unknown buffer format." << std::endl;
-    exit(EXIT_FAILURE);
-  }	
 
 }
 
 void RadiationModel::initializeBuffer2Dd(RTbuffer &buffer, const std::vector<std::vector<double>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_USER ){
-    double* data = (double*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x] = array[j][i];
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Dd): Buffer does not have format 'RT_FORMAT_USER'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_USER ){
+        double* data = (double*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x] = array[j][i];
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dd): Buffer does not have format 'RT_FORMAT_USER'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer2Df(RTbuffer &buffer, const std::vector<std::vector<float>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_FLOAT ){
-    float* data = (float*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x] = array[j][i];
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Df): Buffer does not have format 'RT_FORMAT_FLOAT'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_FLOAT ){
+        float* data = (float*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x] = array[j][i];
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Df): Buffer does not have format 'RT_FORMAT_FLOAT'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer2Dfloat2(RTbuffer &buffer, const std::vector<std::vector<optix::float2>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_FLOAT2 ){
-    optix::float2* data = (optix::float2*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x].x = array[j][i].x;
-	data[i+j*bsize.x].y = array[j][i].y;
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Dfloat2): Buffer does not have format 'RT_FORMAT_FLOAT2'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_FLOAT2 ){
+        optix::float2* data = (optix::float2*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x].x = array[j][i].x;
+                data[i+j*bsize.x].y = array[j][i].y;
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dfloat2): Buffer does not have format 'RT_FORMAT_FLOAT2'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer2Dfloat3(RTbuffer &buffer, const std::vector<std::vector<optix::float3>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_FLOAT3 ){
-    optix::float3* data = (optix::float3*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x].x = array.at(j).at(i).x;
-	data[i+j*bsize.x].y = array.at(j).at(i).y;
-	data[i+j*bsize.x].z = array.at(j).at(i).z;
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Dfloat3): Buffer does not have format 'RT_FORMAT_FLOAT3'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_FLOAT3 ){
+        optix::float3* data = (optix::float3*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x].x = array.at(j).at(i).x;
+                data[i+j*bsize.x].y = array.at(j).at(i).y;
+                data[i+j*bsize.x].z = array.at(j).at(i).z;
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dfloat3): Buffer does not have format 'RT_FORMAT_FLOAT3'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer2Dfloat4(RTbuffer &buffer, const std::vector<std::vector<optix::float4>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_FLOAT4 ){
-    optix::float4* data = (optix::float4*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x].x = array[j][i].x;
-	data[i+j*bsize.x].y = array[j][i].y;
-	data[i+j*bsize.x].z = array[j][i].z;
-	data[i+j*bsize.x].w = array[j][i].w;
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Dfloat4): Buffer does not have format 'RT_FORMAT_FLOAT4'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_FLOAT4 ){
+        optix::float4* data = (optix::float4*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x].x = array[j][i].x;
+                data[i+j*bsize.x].y = array[j][i].y;
+                data[i+j*bsize.x].z = array[j][i].z;
+                data[i+j*bsize.x].w = array[j][i].w;
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dfloat4): Buffer does not have format 'RT_FORMAT_FLOAT4'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer2Di(RTbuffer &buffer, const std::vector<std::vector<int>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_INT ){
-    int* data = (int*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x] = array[j][i];
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Di): Buffer does not have format 'RT_FORMAT_INT'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_INT ){
+        int* data = (int*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x] = array[j][i];
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Di): Buffer does not have format 'RT_FORMAT_INT'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer2Dui(RTbuffer &buffer, const std::vector<std::vector<uint>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_UNSIGNED_INT ){
-    uint* data = (uint*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x] = array[j][i];
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Dui): Buffer does not have format 'RT_FORMAT_UNSIGNED_INT'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_UNSIGNED_INT ){
+        uint* data = (uint*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x] = array[j][i];
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dui): Buffer does not have format 'RT_FORMAT_UNSIGNED_INT'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer2Dint2(RTbuffer &buffer, const std::vector<std::vector<optix::int2>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_INT2 ){
-    optix::int2* data = (optix::int2*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x].x = array[j][i].x;
-	data[i+j*bsize.x].y = array[j][i].y;
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Dint2): Buffer does not have format 'RT_FORMAT_INT2'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_INT2 ){
+        optix::int2* data = (optix::int2*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x].x = array[j][i].x;
+                data[i+j*bsize.x].y = array[j][i].y;
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dint2): Buffer does not have format 'RT_FORMAT_INT2'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer2Dint3(RTbuffer &buffer, const std::vector<std::vector<optix::int3>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_INT3 ){
-    optix::int3* data = (optix::int3*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x].x = array[j][i].x;
-	data[i+j*bsize.x].y = array[j][i].y;
-	data[i+j*bsize.x].z = array[j][i].z;
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Dint3): Buffer does not have format 'RT_FORMAT_INT3'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_INT3 ){
+        optix::int3* data = (optix::int3*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x].x = array[j][i].x;
+                data[i+j*bsize.x].y = array[j][i].y;
+                data[i+j*bsize.x].z = array[j][i].z;
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dint3): Buffer does not have format 'RT_FORMAT_INT3'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 void RadiationModel::initializeBuffer2Dbool(RTbuffer &buffer, const std::vector<std::vector<bool>> &array ){
 
-  optix::int2 bsize;
-  bsize.y = array.size();
-  if( bsize.y==0 ){
-    bsize.x = 0;
-  }else{
-    bsize.x = array.front().size();
-  }
-
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
-
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
-
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
-
-  if( format==RT_FORMAT_BYTE ){
-    bool* data = (bool*)ptr;
-    for( size_t j = 0; j<bsize.y; j++ ) {
-      for( size_t i = 0; i<bsize.x; i++ ) {
-	data[i+j*bsize.x] = array[j][i];
-      }
+    optix::int2 bsize;
+    bsize.y = array.size();
+    if( bsize.y==0 ){
+        bsize.x = 0;
+    }else{
+        bsize.x = array.front().size();
     }
-  }else{
-    std::cerr << "ERROR (RadiationModel::initializeBuffer2Dbool): Buffer does not have format 'RT_FORMAT_BYTE'." << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
+
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+
+    if( format==RT_FORMAT_BYTE ){
+        bool* data = (bool*)ptr;
+        for( size_t j = 0; j<bsize.y; j++ ) {
+            for( size_t i = 0; i<bsize.x; i++ ) {
+                data[i+j*bsize.x] = array[j][i];
+            }
+        }
+    }else{
+        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dbool): Buffer does not have format 'RT_FORMAT_BYTE'." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
 
 }
 
 template <typename anytype>
 void RadiationModel::initializeBuffer3D(RTbuffer &buffer, const std::vector<std::vector<std::vector<anytype>>> &array ){
 
-  optix::int3 bsize;
-  bsize.z = array.size();
-  if( bsize.z==0 ){
-    bsize.y=0;
-    bsize.x=0;
-  }else{
-    bsize.y=array.front().size();
-    if( bsize.y==0 ){
-      bsize.x=0;
+    optix::int3 bsize;
+    bsize.z = array.size();
+    if( bsize.z==0 ){
+        bsize.y=0;
+        bsize.x=0;
     }else{
-      bsize.x = array.front().front().size();
+        bsize.y=array.front().size();
+        if( bsize.y==0 ){
+            bsize.x=0;
+        }else{
+            bsize.x = array.front().front().size();
+        }
     }
-  }
 
-  //set buffer size
-  RT_CHECK_ERROR( rtBufferSetSize3D( buffer, bsize.x, bsize.y, bsize.z ) );
+    //set buffer size
+    RT_CHECK_ERROR( rtBufferSetSize3D( buffer, bsize.x, bsize.y, bsize.z ) );
 
-  //get buffer format
-  RTformat format;
-  RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
+    //get buffer format
+    RTformat format;
+    RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
-  //zero out buffer
-  void* ptr;
-  RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
+    //zero out buffer
+    void* ptr;
+    RT_CHECK_ERROR( rtBufferMap( buffer, &ptr ) );
 
-  if( format==RT_FORMAT_FLOAT ){
-    float* data = (float*)ptr;
-    for( size_t k = 0; k<bsize.z; k++ ) {
-      for( size_t j = 0; j<bsize.y; j++ ) {
-	for( size_t i = 0; i<bsize.x; i++ ) {
-	  data[i+j*bsize.x+k*bsize.y*bsize.x] = array[k][j][i];
-	}
-      }
+    if( format==RT_FORMAT_FLOAT ){
+        float* data = (float*)ptr;
+        for( size_t k = 0; k<bsize.z; k++ ) {
+            for( size_t j = 0; j<bsize.y; j++ ) {
+                for( size_t i = 0; i<bsize.x; i++ ) {
+                    data[i+j*bsize.x+k*bsize.y*bsize.x] = array[k][j][i];
+                }
+            }
+        }
+    }else if( format==RT_FORMAT_INT ){
+        int* data = (int*)ptr;
+        for( size_t k = 0; k<bsize.z; k++ ) {
+            for( size_t j = 0; j<bsize.y; j++ ) {
+                for( size_t i = 0; i<bsize.x; i++ ) {
+                    data[i+j*bsize.x+k*bsize.y*bsize.x] = array[k][j][i];
+                }
+            }
+        }
+    }else if( format==RT_FORMAT_UNSIGNED_INT ){
+        uint* data = (uint*)ptr;
+        for( size_t k = 0; k<bsize.z; k++ ) {
+            for( size_t j = 0; j<bsize.y; j++ ) {
+                for( size_t i = 0; i<bsize.x; i++ ) {
+                    data[i+j*bsize.x+k*bsize.y*bsize.x] = array[k][j][i];
+                }
+            }
+        }
+    }else if( format==RT_FORMAT_BYTE ){
+        bool* data = (bool*)ptr;
+        for( size_t k = 0; k<bsize.z; k++ ) {
+            for( size_t j = 0; j<bsize.y; j++ ) {
+                for( size_t i = 0; i<bsize.x; i++ ) {
+                    data[i+j*bsize.x+k*bsize.y*bsize.x] = array[k][j][i];
+                }
+            }
+        }
+    }else{
+        std::cerr<< "ERROR (RadiationModel::initializeBuffer3D): unsupported buffer format." << std::endl;
+
     }
-  }else if( format==RT_FORMAT_INT ){
-    int* data = (int*)ptr;
-    for( size_t k = 0; k<bsize.z; k++ ) {
-      for( size_t j = 0; j<bsize.y; j++ ) {
-	for( size_t i = 0; i<bsize.x; i++ ) {
-	  data[i+j*bsize.x+k*bsize.y*bsize.x] = array[k][j][i];
-	}
-      }
-    }
-  }else if( format==RT_FORMAT_UNSIGNED_INT ){
-    uint* data = (uint*)ptr;
-    for( size_t k = 0; k<bsize.z; k++ ) {
-      for( size_t j = 0; j<bsize.y; j++ ) {
-	for( size_t i = 0; i<bsize.x; i++ ) {
-	  data[i+j*bsize.x+k*bsize.y*bsize.x] = array[k][j][i];
-	}
-      }
-    }
-  }else if( format==RT_FORMAT_BYTE ){
-    bool* data = (bool*)ptr;
-    for( size_t k = 0; k<bsize.z; k++ ) {
-      for( size_t j = 0; j<bsize.y; j++ ) {
-	for( size_t i = 0; i<bsize.x; i++ ) {
-	  data[i+j*bsize.x+k*bsize.y*bsize.x] = array[k][j][i];
-	}
-      }
-    }
-  }else{
-    std::cerr<< "ERROR (RadiationModel::initializeBuffer3D): unsupported buffer format." << std::endl;
-    
-  }
 
-  RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
-  
+    RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
+
 
 }
 
 float RadiationModel::calculateGtheta(helios::Context* context, vec3 view_direction ){
 
-  vec3 dir = view_direction;
-  dir.normalize();
+    vec3 dir = view_direction;
+    dir.normalize();
 
-  float Gtheta = 0;
-  float total_area = 0;
-  for( std::size_t u=0; u<primitiveID.size(); u++ ){
+    float Gtheta = 0;
+    float total_area = 0;
+    for( std::size_t u=0; u<primitiveID.size(); u++ ){
 
-      uint UUID = context_UUIDs.at(primitiveID.at(u));
+        uint UUID = context_UUIDs.at(primitiveID.at(u));
 
-    vec3 normal = context->getPrimitiveNormal(UUID);
-    float area = context->getPrimitiveArea(UUID);
+        vec3 normal = context->getPrimitiveNormal(UUID);
+        float area = context->getPrimitiveArea(UUID);
 
-    Gtheta += fabsf(normal*dir)*area;
+        Gtheta += fabsf(normal*dir)*area;
 
-    total_area += area;
-    
-  }
+        total_area += area;
 
-  return Gtheta/total_area;
-  
+    }
+
+    return Gtheta/total_area;
+
+}
+
+void RadiationModel::setCameraCalibration(CameraCalibration *CameraCalibration){
+    cameracalibration = CameraCalibration;
+    calibration_flag = true;
 }
 
 void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels_raw,
@@ -4437,7 +4427,7 @@ float RadiationModel::getCameraResponseScale(const std::string &orginalcameralab
 }
 
 
-void RadiationModel::writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, HeliosDataType datatype, float padvalue){
+void RadiationModel::writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue){
 
     //Get image UUID labels
     std::vector<uint> camera_UUIDs;
@@ -4453,7 +4443,7 @@ void RadiationModel::writeBasicLabel(const std::string &cameralabel, const std::
         for (uint i = 0; i < camera_resolution.x; i++) {
             uint UUID =pixel_UUIDs.at(j * camera_resolution.x + i)-1;
             if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID,labelname.c_str())){
-
+                HeliosDataType datatype = context->getPrimitiveDataType(UUID,labelname.c_str());
                 if( datatype == HELIOS_TYPE_FLOAT ){
                     float labeldata;
                     context->getPrimitiveData(UUID,labelname.c_str(),labeldata);
@@ -4529,22 +4519,50 @@ void RadiationModel::writeDepthImage(const std::string &cameralabel, const std::
     }
 
     // Output depth image in ".txt" format
-    RadiationModel::writeBasicLabel(cameralabel, filename, "depth_norm", HELIOS_TYPE_FLOAT,1);
+    RadiationModel::writeBasicLabel(cameralabel, filename, "depth_norm",1);
 }
 
-void RadiationModel::calibrateCamera(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels,
+void RadiationModel::setPadValue(const std::string &cameralabel, const std::vector<std::string> &bandlabels, const std::vector<float> &padvalues) {
+    for (uint b = 0; b < bandlabels.size(); b++) {
+        std::string bandlabel = bandlabels.at(b);
+
+        std::string image_value_label = "camera_" + cameralabel + "_" + bandlabel;
+        std::vector<float> cameradata;
+        context->getGlobalData(image_value_label.c_str(), cameradata);
+
+        std::vector<uint> camera_UUIDs;
+        std::string image_UUID_label = "camera_" + cameralabel + "_pixel_UUID";
+        context->getGlobalData(image_UUID_label.c_str(), camera_UUIDs);
+
+        for (uint i = 0; i < cameradata.size(); i++) {
+            uint UUID = camera_UUIDs.at(i)-1;
+            if (!context->doesPrimitiveExist(UUID)) {
+                cameradata.at(i) = padvalues.at(b);
+            }
+        }
+        context->setGlobalData(image_value_label.c_str(), HELIOS_TYPE_FLOAT, cameradata.size(), &cameradata[0]);
+    }
+}
+
+void RadiationModel::calibrateCamera(const std::string &originalcameralabel, const std::vector<std::string> &sourcelabels,
                                      const std::vector<std::string>& cameraresplabels_raw, const std::vector<std::string> &bandlabels, const float scalefactor,
-                                     const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark, float learningrate) {
+                                     const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark) {
 
-
+    if( cameras.find(originalcameralabel) == cameras.end() ){
+        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): Camera " + originalcameralabel + " does not exist.") );
+    }else if( radiation_sources.empty() ){
+        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): No radiation sources were added to the radiation model. Cannot perform calibration.") );
+    }
 
     CameraCalibration cameracalibration_(context);
-    cameracalibration = &cameracalibration_;
-    vec3 centrelocation =make_vec3(0,0,0.2); // Location of color board
-    vec3 rotationrad =make_vec3(0,0,1.5705); // Rotation angle of color board
-    cameracalibration->addDefaultColorboard(centrelocation, rotationrad,0.1);
-    cameracalibration->responseupdateparameters.learningrate = learningrate;
-    vec2 wavelengthrange = make_vec2(300,2500);
+    if (!calibration_flag){
+        std::cout<< "No color board added, use default color calibration." <<std::endl;
+        cameracalibration = &cameracalibration_;
+        vec3 centrelocation =make_vec3(0,0,0.2); // Location of color board
+        vec3 rotationrad =make_vec3(0,0,1.5705); // Rotation angle of color board
+        cameracalibration->addDefaultColorboard(centrelocation, rotationrad,0.1);
+    }
+    vec2 wavelengthrange = make_vec2(-10000,10000);
 
     // Calibrated camera response labels
     std::vector<std::string> cameraresplabels_cal(cameraresplabels_raw.size());
@@ -4553,34 +4571,91 @@ void RadiationModel::calibrateCamera(const std::string &orginalcameralabel, cons
         cameraresplabels_cal.at(iband) = calibratedmark + "_" + cameraresplabels_raw.at(iband);
     }
 
-    RadiationModel::runRadiationImaging(orginalcameralabel, sourcelabels, bandlabels, cameraresplabels_raw, wavelengthrange, 0.035, 0);
+    RadiationModel::runRadiationImaging(originalcameralabel, sourcelabels, bandlabels, cameraresplabels_raw, wavelengthrange, 1, 0);
     // Update camera responses
-    RadiationModel::updateCameraResponse(orginalcameralabel, sourcelabels, cameraresplabels_raw, wavelengthrange, truevalues, calibratedmark);
+    RadiationModel::updateCameraResponse(originalcameralabel, sourcelabels, cameraresplabels_raw, wavelengthrange, truevalues, calibratedmark);
 
-    float camerascale = RadiationModel::getCameraResponseScale(orginalcameralabel, cameraresplabels_cal, bandlabels,sourcelabels, wavelengthrange, truevalues);
+    float camerascale = RadiationModel::getCameraResponseScale(originalcameralabel, cameraresplabels_cal, bandlabels,sourcelabels, wavelengthrange, truevalues);
 
     std::cout << "Camera response scale: " << camerascale << std::endl;
     // Scale and write calibrated camera responses
-    cameracalibration_.writeCalibratedCameraResponses(cameraresplabels_raw, calibratedmark, camerascale*scalefactor);
+    cameracalibration->writeCalibratedCameraResponses(cameraresplabels_raw, calibratedmark, camerascale*scalefactor);
+
+}
+
+void RadiationModel::calibrateCamera(const std::string &originalcameralabel, const float scalefactor, const std::vector<std::vector<float>> &truevalues,
+                                     const std::string &calibratedmark) {
+
+    if( cameras.find(originalcameralabel) == cameras.end() ){
+        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): Camera " + originalcameralabel + " does not exist.") );
+    }else if( radiation_sources.empty() ){
+        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): No radiation sources were added to the radiation model. Cannot perform calibration.") );
+    }
+
+    CameraCalibration cameracalibration_(context);
+    if (!calibration_flag){
+        std::cout<< "No color board added, use default color calibration." <<std::endl;
+        vec3 centrelocation =make_vec3(0,0,0.2); // Location of color board
+        vec3 rotationrad =make_vec3(0,0,1.5705); // Rotation angle of color board
+        cameracalibration_.addDefaultColorboard(centrelocation, rotationrad,0.1);
+        RadiationModel::setCameraCalibration(&cameracalibration_);
+    }
+
+    vec2 wavelengthrange = make_vec2(-10000,10000);
+
+    std::vector<std::string> bandlabels = cameras.at(originalcameralabel).band_labels;
+
+    // Get camera response spectra labels from camera
+    std::vector<std::string> cameraresplabels_cal(cameras.at(originalcameralabel).band_spectral_response.size() );
+    std::vector<std::string> cameraresplabels_raw = cameraresplabels_cal;
+
+    int iband = 0;
+    for( auto &band : cameras.at(originalcameralabel).band_spectral_response ){
+        cameraresplabels_raw.at(iband) = band.second;
+        cameraresplabels_cal.at(iband) = calibratedmark + "_" + band.second;
+        iband++;
+    }
+
+    // Get labels of radiation sources from camera
+    std::vector<std::string> sourcelabels(radiation_sources.size());
+    int isource = 0;
+    for( auto &source : radiation_sources ){
+        if( source.source_spectrum.empty() ){
+            throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): A spectral distribution was not specified for source " + source.source_spectrum_label + ". Cannot perform camera calibration.") );
+        }
+        sourcelabels.at(isource) = source.source_spectrum_label;
+        isource++;
+    }
+
+    RadiationModel::updateGeometry();
+    RadiationModel::runBand(bandlabels);
+    // Update camera responses
+    RadiationModel::updateCameraResponse(originalcameralabel, sourcelabels, cameraresplabels_raw, wavelengthrange, truevalues, calibratedmark);
+
+    float camerascale = RadiationModel::getCameraResponseScale(originalcameralabel, cameraresplabels_cal, bandlabels,sourcelabels, wavelengthrange, truevalues);
+
+    std::cout << "Camera response scale: " << camerascale << std::endl;
+    // Scale and write calibrated camera responses
+    cameracalibration->writeCalibratedCameraResponses(cameraresplabels_raw, calibratedmark, camerascale*scalefactor);
 
 }
 
 
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line)
 {
-  const char* message;
-  char s[2048];
-  rtContextGetErrorString(context, code, &message);
-  sprintf(s, "%s\n(%s:%d)", message, file, line);
-  sutilReportError( s );
-  exit(1);
+    const char* message;
+    char s[2048];
+    rtContextGetErrorString(context, code, &message);
+    sprintf(s, "%s\n(%s:%d)", message, file, line);
+    sutilReportError( s );
+    exit(1);
 }
 
 void sutilReportError(const char* message)
 {
-  fprintf( stderr, "OptiX Error: %s\n", message );
+    fprintf( stderr, "OptiX Error: %s\n", message );
 #if defined(_WIN32) && defined(RELEASE_PUBLIC)
-  {
+    {
     char s[2048];
     sprintf( s, "OptiX Error: %s", message );
     MessageBox( 0, s, "OptiX Error", MB_OK|MB_ICONWARNING|MB_SYSTEMMODAL );

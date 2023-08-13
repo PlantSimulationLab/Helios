@@ -33,7 +33,7 @@ struct CameraCalibration{
      * \param[in] colorassignment: color of each patch and size of color board
      * \param[in] patchsize: size of each square patch
     */
-    void addColorboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad, std::vector<uint> &UUIDs,
+    std::vector<uint> addColorboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad,
                        const std::vector<std::vector<helios::RGBcolor>> &colorassignment, float patchsize);
 
     //! Set reflectivity for a specific UUID
@@ -61,7 +61,7 @@ struct CameraCalibration{
     /**
      * \param[in] filename: Name with path of XML file
      * \param[in] note: Note to write in XML file
-     * \param[in] label: Label of spectral data to write in XML file
+     * \param[in] label: Label of spectral data to write in XML filecalibration_flag
      * \param[in] spectrum: Pointer of spectrum to write in XML file
     */
     bool writeSpectralXMLfile(const std::string &filename, const std::string &note, const std::string &label, std::vector<helios::vec2> *spectrum);
@@ -102,8 +102,8 @@ struct CameraCalibration{
     //! Parameter struct for gradient descent.
     struct GradientDescentParameters
     {
-        float learningrate=0.8;
-        int maxiteration = 200;
+        float learningrate=0.000001;
+        int maxiteration = 1500;
         float minloss = 0.01;
         std::vector<float> camerarescales = {1,1,1};
         GradientDescentParameters() = default;

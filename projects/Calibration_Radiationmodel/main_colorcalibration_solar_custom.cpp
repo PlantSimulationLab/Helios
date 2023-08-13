@@ -37,6 +37,40 @@ int main(void){
     std::string orginalcameralabel = "Nikon_solar_raw";
     radiation.addRadiationCamera(orginalcameralabel, bandlabels, camera_position, camera_lookat, cameraproperties,20);
 
+    CameraCalibration cameracalibration(&context);
+
+    // Size and RGB values (used for virtualization) of default color board
+    std::vector<std::vector<helios::RGBcolor>> colorassignment_default=
+            {{helios::make_RGBcolor(0.161,0.141,0.169), helios::make_RGBcolor(1,0,0.5647), helios::make_RGBcolor(0.898,0.596,0.4784)},
+             {helios::make_RGBcolor(0.31,0.282,0.314), helios::make_RGBcolor(0.1882,0.2314,0.3608),helios::make_RGBcolor(0.9961,0.6667,0.5569)},
+             {helios::make_RGBcolor(0.463,0.416,0.463), helios::make_RGBcolor(0,0.5647,1), helios::make_RGBcolor(0.8784,0.0039,0.6039)},
+             {helios::make_RGBcolor(0.647,0.573,0.651), helios::make_RGBcolor(0.4118,0.7490,0.2706),helios::make_RGBcolor(0,0.4549,0.7412)},
+             {helios::make_RGBcolor(0.828,0.573,0.651), helios::make_RGBcolor(1,1,0), helios::make_RGBcolor(0.9569,0.6,0.0078)},
+             {helios::make_RGBcolor(0.984,0.977,0.988), helios::make_RGBcolor(1,0.1255,0), helios::make_RGBcolor(0.7294,0.0118,0.1216)}};
+    float patchsize = 0.1;
+    vec3 centrelocation =make_vec3(0,0,0.2); // Location of color board
+    vec3 rotationrad =make_vec3(0,0,1.5705); // Rotation angle of color board
+
+    std::vector<uint> UUIDs_colorboard = cameracalibration.addColorboard(centrelocation, rotationrad,colorassignment_default,patchsize);
+
+    uint colornumber=colorassignment_default.size()*colorassignment_default.at(0).size();
+
+    std::string numberstr;
+    std::string filename;
+    std::string labelname;
+
+    // Assign spectra to color board
+    for (uint UUID:UUIDs_colorboard){
+        numberstr = std::to_string(colornumber);
+        if (numberstr.size() < 2) {
+            numberstr = "0" + numberstr;
+        }
+        filename= "plugins/radiation/spectral_data/color_board/ColorReference_"+numberstr+".xml";
+        labelname= "ColorReference_"+numberstr;
+        cameracalibration.setColorboardReflectivity(UUID, filename, labelname);
+        colornumber=colornumber-1;
+    }
+    radiation.setCameraCalibration(&cameracalibration);
     std::vector<std::vector<float>> truevalues(3);
 
 // red

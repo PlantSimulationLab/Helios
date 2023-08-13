@@ -14,11 +14,24 @@ int main(void){
     context.loadXML("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml" );
 
     std::vector<std::string> sourcelabels = {"solar_spectrum_ASTMG173"}; // Sun intensity spectrum
-//    std::vector<std::string> sourcelabels = {"CREE_XLamp_XHP70p2_6500K","CREE_XLamp_XHP70p2_6500K","CREE_XLamp_XHP70p2_6500K"}; // LED intensity spectra
+    std::vector<std::string> sourcelabels_led = {"CREE_XLamp_XHP70p2_6500K","CREE_XLamp_XHP70p2_6500K","CREE_XLamp_XHP70p2_6500K"}; // LED intensity spectra
     std::vector<std::string> cameraresponselabels = {"NikonD700_spectral_response_red","NikonD700_spectral_response_green","NikonD700_spectral_response_blue"};
+
+
+
 
     RadiationModel radiation(&context);
     radiation.disableMessages();
+
+    std::vector<vec2> solorspectest;
+    context.getGlobalData(sourcelabels.at(0).c_str(),solorspectest);
+    float testsun = radiation.integrateSpectrum(solorspectest,300,800);
+    std::cout<< 1/testsun << std::endl;
+
+    std::vector<vec2> ledspectest;
+    context.getGlobalData(sourcelabels_led.at(0).c_str(),ledspectest);
+    float testled = radiation.integrateSpectrum(ledspectest,300,800);
+    std::cout<< 1/testled << std::endl;
 
     CameraProperties cameraproperties;
     cameraproperties.HFOV = 10.f;
@@ -36,6 +49,42 @@ int main(void){
     //Write the color board image using uncalibrated camera responses
     std::string orginalcameralabel = "Nikon_solar_raw";
     radiation.addRadiationCamera(orginalcameralabel, bandlabels, camera_position, camera_lookat, cameraproperties,20);
+
+    float sources_fluxsum = 0;
+    std::vector<float> sources_fluxes;
+    for (uint ID = 0; ID < sourcelabels.size(); ID++){
+        std::vector<vec2> Source_spectrum;
+        context.getGlobalData(sourcelabels.at(ID).c_str(), Source_spectrum);
+        sources_fluxes.push_back(radiation.integrateSpectrum(Source_spectrum, wavelengthrange.x, wavelengthrange.y));
+        radiation.setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
+        radiation.setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
+        sources_fluxsum += sources_fluxes.at(ID);
+    }
+
+    radiation.addRadiationBand(bandlabels.at(0), wavelengthrange.x, wavelengthrange.y);
+    radiation.disableEmission(bandlabels.at(0));
+    for( uint ID =0; ID<sourcelabels.size();ID++ ) {
+        radiation.setSourceFlux(ID, bandlabels.at(0), (1 - 0) * sources_fluxes.at(ID) * 0.035);
+    }
+    radiation.setScatteringDepth(bandlabels.at(0), 4);
+    radiation.setDiffuseRadiationFlux(bandlabels.at(0), 0 * sources_fluxsum );
+    radiation.setDiffuseRadiationExtinctionCoeff(bandlabels.at(0), 1.f, make_vec3(-0.5, 0.5, 1) );
+
+    if (bandlabels.size()>1){
+        for (int iband=1;iband<bandlabels.size();iband++){
+            radiation.copyRadiationBand(bandlabels.at(iband-1), bandlabels.at(iband), wavelengthrange.x, wavelengthrange.y);
+            for( uint ID =0; ID<sourcelabels.size();ID++ ) {
+                radiation.setSourceFlux(ID, bandlabels.at(iband), (1 - 0) * sources_fluxes.at(ID) * 0.035);
+            }
+            radiation.setDiffuseRadiationFlux(bandlabels.at(iband), 0 * sources_fluxsum );
+        }
+    }
+
+    for (int iband=0;iband<bandlabels.size();iband++){
+        radiation.setCameraSpectralResponse(orginalcameralabel, bandlabels.at(iband), cameraresponselabels.at(iband));
+    }
+
+
 
     std::vector<std::vector<float>> truevalues(3);
 
@@ -55,7 +104,7 @@ int main(void){
                                                 calibratedmark + "_" + "NikonD700_spectral_response_blue"};
 
     // Update camera responses
-    radiation.calibrateCamera(orginalcameralabel, sourcelabels, cameraresponselabels, bandlabels, 1, truevalues, calibratedmark);
+    radiation.calibrateCamera(orginalcameralabel, 1, truevalues, calibratedmark);
 
     // Write color board image using final calibrated camera responses
     std::string cameralabel3 = "Nikon_solar_cal";
