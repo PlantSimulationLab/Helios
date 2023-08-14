@@ -368,10 +368,10 @@ uint RadiationModel::addDiskRadiationSource( const vec3 &position, float radius,
 
 }
 
-void RadiationModel::setSourceSpectrumIntegral( uint source_ID, float source_integral){
+void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_integral){
 
     if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
+        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
     }else if( source_integral<0 ){
         throw( std::runtime_error("ERROR (RadiationModel::setSourceIntegral): Source integral must be non-negative." ));
     }
@@ -4372,8 +4372,8 @@ void RadiationModel::runRadiationImaging(const std::string& cameralabel, const s
         std::vector<vec2> Source_spectrum;
         context->getGlobalData(sourcelabels.at(ID).c_str(), Source_spectrum);
         sources_fluxes.push_back(RadiationModel::integrateSpectrum(Source_spectrum, wavelengthrange.x, wavelengthrange.y));
-        RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
         RadiationModel::setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
+        RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
         sources_fluxsum += sources_fluxes.at(ID);
     }
 

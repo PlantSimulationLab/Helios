@@ -112,7 +112,7 @@ struct RadiationCamera{
 struct RadiationBand{
 public:
 
-    //! Default constructor
+    //! Constructor
     explicit RadiationBand( std::string a_label ) : label(std::move(a_label)) {
         directRayCount = directRayCount_default;
         diffuseRayCount = diffuseRayCount_default;
@@ -632,7 +632,7 @@ public:
      * \param[in] camera_label Label for the camera to be set.
      * \param[in] position Cartesian coordinate of camera position.
      */
-    void setCameraPosition( const std::string &camera_label, const helios::vec3& position );
+     void setCameraPosition( const std::string &camera_label, const helios::vec3& position );
 
     //! Set the position the radiation camera is pointed toward (used to calculate camera orientation)
     /**
@@ -938,6 +938,8 @@ protected:
         \note \ref updateRadiativeProperties() must be called before simulation can be run
     */
     void updateRadiativeProperties( const std::vector<std::string> &labels );
+
+    ///void updateFluxesFromSpectra( uint SourceID );
 
     //! Get 1D array of data for an OptiX buffer of floats
     /**
