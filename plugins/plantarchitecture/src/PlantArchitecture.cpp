@@ -105,6 +105,9 @@ PhytomerParameters::PhytomerParameters( std::minstd_rand0 *generator ) {
 PhytomerParameters::PhytomerParameters( const PhytomerParameters& parameters_copy ){
     inflorescence = parameters_copy.inflorescence;
     internode = parameters_copy.internode;
+    if( parameters_copy.internode.length.distribution=="uniform" ){
+        assert( !parameters_copy.internode.length.distribution_parameters.empty() );
+    }
     petiole = parameters_copy.petiole;
     leaf = parameters_copy.leaf;
 }
@@ -165,7 +168,7 @@ float Phytomer::getPetioleLength() const{
     return 0;
 }
 
-int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float phytomer_scale_factor_fraction) {
+int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction, float leaf_scale_factor_fraction) {
 
     vec3 parent_internode_axis;
     vec3 parent_petiole_axis;
@@ -183,7 +186,7 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &sho
         parent_petiole_axis = phytomers.back().getPetioleAxisVector(0.f);
     }
 
-    Phytomer phytomer(params, phytomers.size(), parent_internode_axis, parent_petiole_axis, shoot_base_rotation, phytomer_scale_factor_fraction, rank, context_ptr);
+    Phytomer phytomer(params, phytomers.size(), parent_internode_axis, parent_petiole_axis, shoot_base_rotation, internode_scale_factor_fraction, leaf_scale_factor_fraction, rank, context_ptr);
 
     phytomers.emplace_back(phytomer);
 
@@ -191,22 +194,25 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &sho
 
 }
 
-Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const helios::vec3 &parent_internode_axis,
-                   const helios::vec3 &parent_petiole_axis, const AxisRotation &shoot_base_rotation, float scale,
-                   uint rank, helios::Context *context_ptr) : phytomer_parameters(params), context_ptr(context_ptr), rank(rank) {
+Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction,
+                   float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr) : phytomer_parameters(params), context_ptr(context_ptr), rank(rank) {
+
+    if( params.internode.length.distribution=="uniform" ){
+        assert( !params.internode.length.distribution_parameters.empty() );
+    }
 
     //Number of longitudinal segments for internode and petiole
     //if Ndiv=0, use Ndiv=1 (but don't add any primitives to Context)
     uint Ndiv_internode = std::max(uint(1), phytomer_parameters.internode.tube_subdivisions);
     uint Ndiv_petiole = std::max(uint(1), phytomer_parameters.petiole.tube_subdivisions);
 
-    current_internode_scale_factor = scale;
-    current_leaf_scale_factor = scale;
+    current_internode_scale_factor = internode_scale_factor_fraction;
+    current_leaf_scale_factor = leaf_scale_factor_fraction;
 
     //Length of longitudinal segments
-    internode_length = scale * phytomer_parameters.internode.length.val();
+    internode_length = internode_scale_factor_fraction * phytomer_parameters.internode.length.val();
     float dr_internode = internode_length / float(phytomer_parameters.internode.tube_subdivisions);
-    petiole_length = scale * phytomer_parameters.petiole.length.val();
+    petiole_length = leaf_scale_factor_fraction * phytomer_parameters.petiole.length.val();
     float dr_petiole = petiole_length / float(phytomer_parameters.petiole.tube_subdivisions);
 
     float internode_pitch = phytomer_parameters.internode.pitch.val();
@@ -217,9 +223,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
     petiole_vertices.resize(Ndiv_petiole+1 );
 
     internode_radii.resize( Ndiv_internode+1 );
-    internode_radii.at(0) = scale * phytomer_parameters.internode.radius;
+    internode_radii.at(0) = internode_scale_factor_fraction * phytomer_parameters.internode.radius;
     petiole_radii.resize( Ndiv_petiole+1 );
-    petiole_radii.at(0) = scale * phytomer_parameters.petiole.radius.val();
+    petiole_radii.at(0) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val();
 
     internode_colors.resize( Ndiv_internode+1 );
     internode_colors.at(0) = phytomer_parameters.internode.color;
@@ -284,7 +290,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
         internode_vertices.at(i) = internode_vertices.at(i - 1) + dr_internode * internode_axis;
 
-        internode_radii.at(i) = scale * phytomer_parameters.internode.radius;
+        internode_radii.at(i) = internode_scale_factor_fraction * phytomer_parameters.internode.radius;
         internode_colors.at(i) = phytomer_parameters.internode.color;
 
     }
@@ -324,7 +330,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
             petiole_vertices.at(j) = petiole_vertices.at(j - 1) + dr_petiole * petiole_axis;
 
-            petiole_radii.at(j) = scale * phytomer_parameters.petiole.radius.val()*( 1.f-phytomer_parameters.petiole.taper.val()/float(Ndiv_petiole-1)*float(j) );
+            petiole_radii.at(j) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val() * (1.f - phytomer_parameters.petiole.taper.val() / float(Ndiv_petiole - 1) * float(j) );
             petiole_colors.at(j) = phytomer_parameters.internode.color;
 
         }
@@ -345,7 +351,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 
             // -- scaling -- //
 
-            vec3 leaf_scale = scale * phytomer_parameters.leaf.prototype_scale;
+            vec3 leaf_scale = leaf_scale_factor_fraction * phytomer_parameters.leaf.prototype_scale;
             if( phytomer_parameters.petiole.leaves_per_petiole>0 && phytomer_parameters.leaf.leaflet_scale.val()!=1.f && ind_from_tip!=0 ){
                 leaf_scale = powf(phytomer_parameters.leaf.leaflet_scale.val(),fabs(ind_from_tip))*leaf_scale;
             }
@@ -404,7 +410,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
             vec3 leaf_base = petiole_vertices.back();
             if( phytomer_parameters.petiole.leaves_per_petiole>1 && phytomer_parameters.leaf.leaflet_offset.val()>0 ){
                 if( ind_from_tip != 0 ) {
-                    float offset = scale * (fabs(ind_from_tip) - 0.5f) * phytomer_parameters.leaf.leaflet_offset.val() * phytomer_parameters.petiole.length.val();
+                    float offset = leaf_scale_factor_fraction * (fabs(ind_from_tip) - 0.5f) * phytomer_parameters.leaf.leaflet_offset.val() * phytomer_parameters.petiole.length.val();
                     leaf_base = interpolateTube(petiole_vertices, 1.f - offset / phytomer_parameters.petiole.length.val() );
                 }
             }
@@ -597,18 +603,18 @@ void Phytomer::setPhytomerBase( const helios::vec3 &base_position ){
 
 }
 
-void Phytomer::setInternodeScale( float scale_factor_fraction ){
+void Phytomer::setInternodeScale( float internode_scale_factor_fraction ){
 
-    assert(scale_factor_fraction >= 0 && scale_factor_fraction <= 1 );
+    assert(internode_scale_factor_fraction >= 0 && internode_scale_factor_fraction <= 1 );
 
-    if(scale_factor_fraction == current_internode_scale_factor ){
+    if(internode_scale_factor_fraction == current_internode_scale_factor ){
         return;
     }
 
-    float delta_scale = scale_factor_fraction / current_internode_scale_factor;
+    float delta_scale = internode_scale_factor_fraction / current_internode_scale_factor;
 
     internode_length = internode_length*delta_scale;
-    current_internode_scale_factor = scale_factor_fraction;
+    current_internode_scale_factor = internode_scale_factor_fraction;
 
     int node = 0;
     vec3 last_base = internode_vertices.front();
@@ -629,18 +635,18 @@ void Phytomer::setInternodeScale( float scale_factor_fraction ){
 
 }
 
-void Phytomer::setLeafScale( float scale_factor_fraction ){
+void Phytomer::setLeafScale( float leaf_scale_factor_fraction ){
 
-    assert(scale_factor_fraction >= 0 && scale_factor_fraction <= 1 );
+    assert(leaf_scale_factor_fraction >= 0 && leaf_scale_factor_fraction <= 1 );
 
-    if(scale_factor_fraction == current_leaf_scale_factor ){
+    if(leaf_scale_factor_fraction == current_leaf_scale_factor ){
         return;
     }
 
-    float delta_scale = scale_factor_fraction / current_leaf_scale_factor;
+    float delta_scale = leaf_scale_factor_fraction / current_leaf_scale_factor;
 
     petiole_length *= delta_scale;
-    current_leaf_scale_factor = scale_factor_fraction;
+    current_leaf_scale_factor = leaf_scale_factor_fraction;
 
     //scale the petiole
     int node = 0;
@@ -667,10 +673,11 @@ void Phytomer::setLeafScale( float scale_factor_fraction ){
 
 }
 
-void Phytomer::setPhytomerScale( float scale_factor_fraction ) {
+void Phytomer::setPhytomerScale(float internode_scale_factor_fraction, float leaf_scale_factor_fraction) {
 
-    setInternodeScale(scale_factor_fraction );
-    setLeafScale(scale_factor_fraction );
+    setInternodeScale(internode_scale_factor_fraction );
+    setLeafScale(leaf_scale_factor_fraction );
+
 
 }
 
@@ -681,6 +688,10 @@ Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::ve
 
     PhytomerParameters phytomer_parameters(shoot_params.phytomer_parameters);
 
+    if( phytomer_parameters.internode.length.distribution=="uniform" ){
+        assert( !phytomer_parameters.internode.length.distribution_parameters.empty() );
+    }
+
     for( int i=0; i<current_node_number; i++ ) {
 
         if( i==0 ){ //first phytomer on shoot
@@ -690,7 +701,7 @@ Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::ve
 
         phytomer_parameters.internode.radius = shoot_params.phytomer_parameters.internode.radius*(1.f-shoot_params.shoot_internode_taper*float(i)/float(shoot_params.max_nodes) );
 
-        int pID = addPhytomer(phytomer_parameters, shoot_base_rotation, 1.f);
+        int pID = addPhytomer(phytomer_parameters, shoot_base_rotation, 1.f, 1.f);
 
         Phytomer *phytomer = &phytomers.at(pID);
 
@@ -796,7 +807,7 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
 
     }
 
-    uint childID = shoot_tree_ptr->size()-1;
+    uint childID = shoot_tree_ptr->size();
 
     Shoot shoot(childID, parent_shoot_ID, parent_node, parent_rank+1, node_position, base_rotation, current_node_number, shoot_params, shoot_tree_ptr, context_ptr);
 
@@ -808,7 +819,7 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
 
 }
 
-int PlantArchitecture::addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float scale_factor_fraction) {
+int PlantArchitecture::addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float internode_scale_factor_fraction, float leaf_scale_factor_fraction) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         throw( std::runtime_error("ERROR (PlantArchitecture::addPhytomerToShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.") );
@@ -828,7 +839,7 @@ int PlantArchitecture::addPhytomerToShoot(uint plantID, uint shootID, const Phyt
 
     phytomer_parameters.internode.radius = phytomer_parameters.internode.radius * (1.f - parent_shoot->shoot_parameters.shoot_internode_taper * float(parent_shoot->current_node_number) / float(parent_shoot->shoot_parameters.max_nodes) );
 
-    int pID = parent_shoot->addPhytomer(phytomer_parameters, parent_shoot->base_rotation, scale_factor_fraction);
+    int pID = parent_shoot->addPhytomer(phytomer_parameters, parent_shoot->base_rotation, internode_scale_factor_fraction, leaf_scale_factor_fraction);
 
     parent_shoot->current_node_number ++;
 
@@ -869,7 +880,7 @@ void PlantArchitecture::scalePhytomerInternode(uint plantID, uint shootID, uint 
 
 }
 
-void PlantArchitecture::setPhytomerInternodeScale(uint plantID, uint shootID, uint node_number, float scale_factor) {
+void PlantArchitecture::setPhytomerInternodeScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         throw( std::runtime_error("ERROR (PlantArchitecture::setPhytomerInternodeScale): Plant with ID of " + std::to_string(plantID) + " does not exist.") );
@@ -882,12 +893,12 @@ void PlantArchitecture::setPhytomerInternodeScale(uint plantID, uint shootID, ui
     }else if( node_number>=parent_shoot->current_node_number ){
         throw( std::runtime_error("ERROR (PlantArchitecture::setPhytomerInternodeScale): Cannot scale internode " + std::to_string(node_number) + " because there are only " + std::to_string(parent_shoot->current_node_number) + " nodes in this shoot.") );
     }
-    if( scale_factor<0 || scale_factor>1 ){
+    if(internode_scale_factor_fraction < 0 || internode_scale_factor_fraction > 1 ){
         std::cout << "WARNING (PlantArchitecture::setPhytomerInternodeScale): Internode scaling factor was outside the range of 0 to 1. No scaling was applied." << std::endl;
         return;
     }
 
-    parent_shoot->phytomers.at(node_number).setInternodeScale(scale_factor);
+    parent_shoot->phytomers.at(node_number).setInternodeScale(internode_scale_factor_fraction);
 
     //shift all downstream phytomers
     for( int node=node_number+1; node<parent_shoot->phytomers.size(); node++ ){
@@ -897,7 +908,7 @@ void PlantArchitecture::setPhytomerInternodeScale(uint plantID, uint shootID, ui
 
 }
 
-void PlantArchitecture::setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float scale_factor) {
+void PlantArchitecture::setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         throw( std::runtime_error("ERROR (PlantArchitecture::setPhytomerInternodeScale): Plant with ID of " + std::to_string(plantID) + " does not exist.") );
@@ -910,23 +921,23 @@ void PlantArchitecture::setPhytomerLeafScale(uint plantID, uint shootID, uint no
     }else if( node_number>=parent_shoot->current_node_number ){
         throw( std::runtime_error("ERROR (PlantArchitecture::setPhytomerLeafScale): Cannot scale leaf " + std::to_string(node_number) + " because there are only " + std::to_string(parent_shoot->current_node_number) + " nodes in this shoot.") );
     }
-    if( scale_factor<0 || scale_factor>1 ){
+    if(leaf_scale_factor_fraction < 0 || leaf_scale_factor_fraction > 1 ){
         std::cout << "WARNING (PlantArchitecture::setPhytomerLeafScale): Leaf scaling factor was outside the range of 0 to 1. No scaling was applied." << std::endl;
         return;
     }
 
-    parent_shoot->phytomers.at(node_number).setLeafScale(scale_factor);
+    parent_shoot->phytomers.at(node_number).setLeafScale(leaf_scale_factor_fraction);
 
 }
 
-void PlantArchitecture::setPhytomerScale(uint plantID, uint shootID, uint node_number, float scale_factor) {
+void PlantArchitecture::setPhytomerScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction, float leaf_scale_factor_fraction) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         throw( std::runtime_error("ERROR (PlantArchitecture::setPhytomerScale): Plant with ID of " + std::to_string(plantID) + " does not exist.") );
     }
 
-    setPhytomerInternodeScale(plantID, shootID, node_number, scale_factor);
-    setPhytomerLeafScale(plantID, shootID, node_number, scale_factor);
+    setPhytomerInternodeScale(plantID, shootID, node_number, internode_scale_factor_fraction);
+    setPhytomerLeafScale(plantID, shootID, node_number, leaf_scale_factor_fraction);
 
 }
 
@@ -1001,7 +1012,7 @@ PhytomerParameters PlantArchitecture::getPhytomerParametersFromLibrary(const std
     if( phytomer_label=="bean" ){
 
         phytomer_parameters_current.internode.pitch = 0.1 * M_PI; //pitch>0 creates zig-zagging
-        phytomer_parameters_current.internode.radius = 0.0025;
+        phytomer_parameters_current.internode.radius = 0.002;
         phytomer_parameters_current.internode.length = 0.015;
         phytomer_parameters_current.internode.curvature = -100;
         phytomer_parameters_current.internode.petioles_per_internode = 1;
@@ -1190,13 +1201,17 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
 
     //add the first shoot
     Shoot first_shoot = plant_shoot_tree->at(0);
+    first_shoot.base_rotation.roll += context_ptr->randu(0.f,2.f*M_PI);
     addBaseShoot(plantID_new, first_shoot.current_node_number, first_shoot.base_rotation, first_shoot.shoot_parameters);
 
     for( auto &shoot: *plant_shoot_tree ){
         if( shoot.parentID==-1 ){
             continue;
         }
-        appendShoot(plantID_new, shoot.parentID, shoot.current_node_number, shoot.base_rotation, shoot.shoot_parameters);
+        uint sID = appendShoot(plantID_new, shoot.parentID, shoot.current_node_number, shoot.base_rotation+make_AxisRotation(0,context_ptr->randu(0.f,2.f*M_PI), context_ptr->randu(0.f,2.f*M_PI)), shoot.shoot_parameters);
+        for( int i=0; i<shoot.current_node_number; i++ ){
+            setPhytomerScale(plantID_new, sID, i, shoot.phytomers.at(i).current_internode_scale_factor, shoot.phytomers.at(i).current_leaf_scale_factor);
+        }
     }
 
     return plantID_new;
@@ -1220,7 +1235,7 @@ void PlantArchitecture::advanceTime( float dt ) {
 
             // -- Add new phytomer based on the phyllochron -- //
             if (!shoot.phytomers.empty() && shoot.phytomers.back().age < 1.f / shoot.shoot_parameters.phyllochron && shoot.phytomers.back().age + dt >= 1.f / shoot.shoot_parameters.phyllochron) {
-                 int pID = addPhytomerToShoot(plantID, shoot.ID, shoot.phytomers.back().phytomer_parameters, 0.01);
+                 int pID = addPhytomerToShoot(plantID, shoot.ID, shoot.phytomers.back().phytomer_parameters, 0.01, 0.01);
 //            context_ptr->setObjectColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}), RGB::red );
 //            context_ptr->overrideObjectTextureColor( flatten({shoot.phytomers.at(pID).internode_objIDs,flatten(shoot.phytomers.at(pID).petiole_objIDs),shoot.phytomers.at(pID).leaf_objIDs}) );
             }
@@ -1259,8 +1274,8 @@ void PlantArchitecture::advanceTime( float dt ) {
 
                     if (phytomer.age < shoot.shoot_parameters.bud_time && phytomer.age + dt >= shoot.shoot_parameters.bud_time) {
                         if (context_ptr->randu() < shoot.shoot_parameters.bud_probability) {
-                            uint childID = addChildShoot(plantID, shoot.ID, node_number, 1, make_AxisRotation(-0.15 * M_PI, 0.6 * M_PI, -0. * M_PI), shoot.shoot_parameters);
-                            setPhytomerScale(plantID, childID, 0, 0.01);
+                            uint childID = addChildShoot(plantID, shoot.ID, node_number, 1, make_AxisRotation(-0.15 * M_PI, context_ptr->randu(0.f, 2.f*M_PI), -0. * M_PI), shoot.shoot_parameters);
+                            setPhytomerScale(plantID, childID, 0, 0.01, 0.01);
                             std::cout << "Adding child shoot to phytomer " << node_number << std::endl;
                         }
                     }

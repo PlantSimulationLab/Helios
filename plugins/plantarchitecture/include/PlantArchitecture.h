@@ -48,9 +48,21 @@ public:
     }
 
     RandomParameter_float& operator=(float a){
-        distribution = "constant";
+        this->distribution = "constant";
         this->constval = a;
         this->sampled = false;
+        return *this;
+    }
+
+    RandomParameter_float& operator=(const RandomParameter_float &a){
+        this->distribution = a.distribution;
+        this->constval = a.constval;
+        this->sampled = a.sampled;
+        this->distribution_parameters = a.distribution_parameters;
+        this->generator = a.generator;
+        if( this->distribution=="uniform" ){
+            assert( !this->distribution_parameters.empty() );
+        }
         return *this;
     }
 
@@ -67,7 +79,7 @@ public:
     }
 
     void weibullDistribution( float shape, float scale ){
-        distribution = "normal";
+        distribution = "weibull";
         distribution_parameters = {shape, scale};
         sampled = false;
     }
@@ -99,11 +111,14 @@ public:
         return constval;
     }
 
+    std::string distribution;
+    std::vector<float> distribution_parameters;
+
 private:
     bool sampled;
     float constval;
-    std::string distribution;
-    std::vector<float> distribution_parameters;
+
+
     std::minstd_rand0 *generator;
 };
 
@@ -132,7 +147,7 @@ public:
     }
 
     RandomParameter_int& operator=(int a){
-        distribution = "constant";
+        this->distribution = "constant";
         this->constval = a;
         this->sampled = false;
         return *this;
@@ -192,10 +207,21 @@ public:
     float yaw;
     float roll;
 
+    AxisRotation operator+(const AxisRotation& a) const;
+    AxisRotation operator-(const AxisRotation& a) const;
+
 };
 
 inline AxisRotation make_AxisRotation( float a_pitch, float a_yaw, float a_roll ) {
     return {a_pitch,a_yaw,a_roll};
+}
+
+inline AxisRotation AxisRotation::operator+(const AxisRotation& a) const{
+    return {a.pitch+pitch, a.yaw+yaw, a.roll+roll};
+}
+
+inline AxisRotation AxisRotation::operator-(const AxisRotation& a) const{
+    return {a.pitch-pitch, a.yaw-yaw, a.roll-roll};
 }
 
 std::vector<uint> makeTubeFromCones(uint Ndivs, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
@@ -334,7 +360,13 @@ public:
     PhytomerParameters( const PhytomerParameters& parameters_copy );
 
     PhytomerParameters& operator=(const PhytomerParameters& a){
+        if( a.internode.length.distribution=="uniform" ){
+            assert( !a.internode.length.distribution_parameters.empty() );
+        }
         this->internode = a.internode;
+        if( this->internode.length.distribution=="uniform" ){
+            assert( !this->internode.length.distribution_parameters.empty() );
+        }
         this->petiole = a.petiole;
         this->leaf = a.leaf;
         this->inflorescence = a.inflorescence;
@@ -366,9 +398,8 @@ struct ShootParameters{
 struct Phytomer {
 public:
 
-    Phytomer(const PhytomerParameters &params, uint phytomer_index, const helios::vec3 &parent_internode_axis,
-             const helios::vec3 &parent_petiole_axis, const AxisRotation &shoot_base_rotation, float scale, uint rank,
-             helios::Context *context_ptr);
+    Phytomer(const PhytomerParameters &params, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction,
+             float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr);
 
     helios::vec3 getInternodeAxisVector( float stem_fraction ) const;
 
@@ -384,11 +415,11 @@ public:
 
     void scaleInternode( float girth_scale_factor, float length_scale_factor );
 
-    void setInternodeScale( float scale_factor_fraction );
+    void setInternodeScale( float internode_scale_factor_fraction );
 
-    void setLeafScale( float scale_factor_fraction );
+    void setLeafScale( float leaf_scale_factor_fraction );
 
-    void setPhytomerScale( float scale_factor_fraction );
+    void setPhytomerScale(float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     void setPetioleBase( const helios::vec3 &base_position );
 
@@ -428,7 +459,7 @@ struct Shoot{
     Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number,
           const ShootParameters &shoot_params, std::vector<Shoot> *shoot_tree_ptr, helios::Context *context_ptr);
 
-    int addPhytomer(const PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float phytomer_scale_factor_fraction);
+    int addPhytomer(const PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     uint current_node_number;
 
@@ -475,15 +506,15 @@ public:
 
     uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, const ShootParameters &shoot_params);
 
-    int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float scale_factor_fraction);
+    int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     void scalePhytomerInternode(uint plantID, uint shootID, uint node_number, float girth_scale_factor, float length_scale_factor);
 
-    void setPhytomerInternodeScale(uint plantID, uint shootID, uint node_number, float scale_factor);
+    void setPhytomerInternodeScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction);
 
-    void setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float scale_factor);
+    void setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction);
 
-    void setPhytomerScale(uint plantID, uint shootID, uint node_number, float scale_factor);
+    void setPhytomerScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     void setPlantBasePosition(uint plantID, const helios::vec3 &base_position);
 

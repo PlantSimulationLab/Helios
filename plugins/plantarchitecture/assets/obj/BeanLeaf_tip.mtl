@@ -1,4 +1,4 @@
-# Blender 3.4.1 MTL File: 'BeanLeaf_tip.blend'
+# Blender 3.3.0 MTL File: 'BeanLeaf_tip.blend'
 # www.blender.org
 
 newmtl Material.001
@@ -8,8 +8,8 @@ Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 2
-map_Kd ../textures/BeanLeaf_tip.png
-map_d ../textures/BeanLeaf_tip.png
+map_Kd /Users/bnbailey/Dropbox/Helios/plugins/plantarchitecture/assets/textures/BeanLeaf_tip.png
+map_d /Users/bnbailey/Dropbox/Helios/plugins/plantarchitecture/assets/textures/BeanLeaf_tip.png
 
 newmtl Material.002
 Ns 250.000000
