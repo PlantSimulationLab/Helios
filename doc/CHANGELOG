@@ -1389,3 +1389,20 @@
 
 *Stomatal Conductance*
 - Changed selfTest() back to non-static because it could cause issues running it outside of the class.
+
+[1.2.68] 2023-08-17
+
+* Added new error handling function 'helios_runtime_error', which allows for greater control over error messages. If running in debug mode, it will output the error message to stderr as well as throwing an exception.
+
+*Context*
+- Incorporated new error handling function 'helios_runtime_error' into all Context-related files.
+- Polymesh objects were not being properly written to XML files (Context::writeXML()). The \<polymesh\> tag was not being closed properly.
+- The overloaded += operator for helios vector types were changed to return a reference to the object instead of void, which allows for chaining of operations.
+- If a material was not specified in an OBJ file (Context::loadOBJ()), the default material was not being applied to the object and an error would be thrown.
+
+*LiDAR*
+- References to laszip in CMakeLists.txt completely commented out for now, as this was causing build errors on some Windows systems.
+- Check added to LiDARcloud::loadASCIIfile() to automatically compute hit direction if it is not specified in the ASCII file. Without this, an assertion error is thrown since v1.2.60.
+
+*Boundary-Layer Conductance*
+- Fixed UUID indexing error.

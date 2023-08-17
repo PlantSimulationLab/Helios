@@ -63,6 +63,6 @@ var searchData=
   ['areobjectprimitivescomplete_60',['areObjectPrimitivesComplete',['../classhelios_1_1_context.html#ad1ad7d600c2d436ae48d218c1aa19668',1,'helios::Context']]],
   ['areprimitivescomplete_61',['arePrimitivesComplete',['../classhelios_1_1_compound_object.html#a74e4a36175853a8e14153678c035accb',1,'helios::CompoundObject']]],
   ['asin_5fsafe_62',['asin_safe',['../global_8h.html#ac400d6d37ff2494ec592a9f0a17ee9ab',1,'helios']]],
-  ['atan2_5f2pi_63',['atan2_2pi',['../group__functions.html#gaf4680ffb7d739bfa527e5b64fe624c54',1,'helios']]],
+  ['atan2_5f2pi_63',['atan2_2pi',['../group__functions.html#ga37a64a73b3318125a778bb77c29f7dcf',1,'helios']]],
   ['azimuth_64',['azimuth',['../structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59',1,'helios::SphericalCoord']]]
 ];

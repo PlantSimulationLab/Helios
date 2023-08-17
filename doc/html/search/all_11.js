@@ -1,7 +1,7 @@
 var searchData=
 [
   ['r_0',['r',['../structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df',1,'helios::RGBAcolor::r()'],['../structhelios_1_1_r_g_bcolor.html#a3e16659a90c69e6043c33c113b2fffe8',1,'helios::RGBcolor::r()']]],
-  ['rad2deg_1',['rad2deg',['../group__functions.html#ga66681ffeb5bd130ce5fb14c93c801120',1,'helios']]],
+  ['rad2deg_1',['rad2deg',['../group__functions.html#ga0b9a2dac200293044d7e2ae1c03a3140',1,'helios']]],
   ['radiation_20model_20plugin_20documentation_2',['Radiation Model Plugin Documentation',['../_radiation_doc.html',1,'PlugIns']]],
   ['radiationmodel_3',['RadiationModel',['../class_radiation_model.html',1,'RadiationModel'],['../class_radiation_model.html#acfcbd32e59e2b2728dabde1c7fa74329',1,'RadiationModel::RadiationModel()']]],
   ['radiationmodel_2ecpp_4',['RadiationModel.cpp',['../_radiation_model_8cpp.html',1,'']]],
