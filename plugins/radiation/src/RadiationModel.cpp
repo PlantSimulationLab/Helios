@@ -1114,7 +1114,7 @@ void RadiationModel::initializeOptiX() {
     addBuffer( "maskID", maskID_RTbuffer, maskID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT, 1 );
 
     //Texture u,v data
-    addBuffer( "uvdata", uvdata_RTbuffer, uvdata_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 1 );
+    addBuffer( "uvdata", uvdata_RTbuffer, uvdata_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 2 );
 
     //Texture u,v ID
     addBuffer( "uvID", uvID_RTbuffer, uvID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT, 1 );
@@ -1979,7 +1979,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
 
                     if( !context->doesGlobalDataExist(camera_response.c_str()) ){
                         if( camera_response!="uniform" ) {
-                            std::cerr << "WARNING (RadiationModel::runBand): Camera spectral response \"" << camera_response << "\" does not exist. Assuming a uniform spectral response..." << std::flush;
+                            std::cerr << "WARNING (RadiationModel::updateRadiativeProperties): Camera spectral response \"" << camera_response << "\" does not exist. Assuming a uniform spectral response..." << std::flush;
                         }
                     }else if ( context->getGlobalDataType(camera_response.c_str()) == helios::HELIOS_TYPE_VEC2) {
 
@@ -2006,6 +2006,9 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         else{data_crop = data;};
                         camera_response_unique.at(cam).at(b) = data_crop;
 
+                    }else if ( context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_STRING ) {
+                        camera_response.clear();
+                        std::cout << "WARNING (RadiationModel::runBand): Camera spectral response \"" << camera_response << "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral response..." << std::flush;
                     }
 
                 }
@@ -2043,6 +2046,9 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         context->getGlobalData(spectrum_label.c_str(), data);
                         surface_spectra_rho.emplace(spectrum_label, data);
 
+                    }else if ( context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_STRING ) {
+                        spectrum_label.clear();
+                        std::cout << "WARNING (RadiationModel::runBand): Object spectral reflectivity \"" << spectrum_label << "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral distribution..." << std::flush;
                     }
 
                 }
@@ -2069,6 +2075,9 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         context->getGlobalData(spectrum_label.c_str(), data);
                         surface_spectra_tau.emplace(spectrum_label, data);
 
+                    }else if ( context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_STRING ) {
+                        spectrum_label.clear();
+                        std::cout << "WARNING (RadiationModel::runBand): Object spectral transmissivity \"" << spectrum_label << "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral distribution..." << std::flush;
                     }
                 }
 
@@ -2376,11 +2385,11 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
 
                         //assign default value if there is no primitive data or spectral data
                     } else {
-                        tau.at(s).at(u).at(b) = tau_default;
+                        tau.at(s).at(u).at(b) = tau_s;
 
                         //cameras
                         for( uint cam=0; cam<Ncameras; cam++ ){
-                            tau_cam.at(s).at(u).at(b).at(cam) = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
+                            tau_cam.at(s).at(u).at(b).at(cam) = tau_s;
                         }
                     }
 
