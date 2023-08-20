@@ -33,7 +33,7 @@ BLConductanceModel::BLConductanceModel( helios::Context* __context ){
 
 }
 
-int BLConductanceModel::selfTest( void ){
+int BLConductanceModel::selfTest(){
 
   std::cout << "Running boundary-layer conductance model self-test..." << std::flush;
 
@@ -74,7 +74,7 @@ int BLConductanceModel::selfTest( void ){
   context_1.getPrimitiveData( UUID_1.at(2), "boundarylayer_conductance", gH.at(2) );
   context_1.getPrimitiveData( UUID_1.at(3), "boundarylayer_conductance", gH.at(3) );
 
-  if( fabs(gH.at(0)-0.104571f)/gH.at(0)>err_tol || fabs(gH.at(1)-0.133763f)/gH.at(1)>err_tol || fabs(gH.at(2)-0.087149f)/gH.at(2)>err_tol || fabs(gH.at(3)-0.465472f)/gH.at(3)>err_tol ){
+  if( fabs(gH.at(0)-0.20914112f)/gH.at(0)>err_tol || fabs(gH.at(1)-0.133763f)/gH.at(1)>err_tol || fabs(gH.at(2)-0.087149f)/gH.at(2)>err_tol || fabs(gH.at(3)-0.465472f)/gH.at(3)>err_tol ){
     std::cout << "failed boundary-layer conductance model check #1." << std::endl;
     return 1;
   }
@@ -119,8 +119,8 @@ void BLConductanceModel::setBoundaryLayerModel(const std::vector<uint> &UUIDs, c
     return;
   }
 
-  for( uint p=0; p<UUIDs.size(); p++ ){
-    boundarylayer_model[UUIDs.at(p)] = model;
+  for( uint UUID : UUIDs ){
+    boundarylayer_model[UUID] = model;
   }
 
 }
@@ -133,9 +133,7 @@ void BLConductanceModel::run(){
 
 void BLConductanceModel::run(const std::vector<uint> &UUIDs ){
 
-  for( uint p=0; p<UUIDs.size(); p++ ){
-
-      uint UUID = UUIDs.at(p);
+  for( uint UUID : UUIDs ){
 
     float U;
     if( context->doesPrimitiveDataExist( UUID, "wind_speed" ) ){
@@ -173,9 +171,9 @@ void BLConductanceModel::run(const std::vector<uint> &UUIDs ){
 
     //Number of primitive faces
     char Nsides = 2; //default is 2
-    if( context->doesPrimitiveDataExist(p,"twosided_flag") && context->getPrimitiveDataType(p,"twosided_flag")==HELIOS_TYPE_UINT ){
+    if( context->doesPrimitiveDataExist(UUID,"twosided_flag") && context->getPrimitiveDataType(UUID,"twosided_flag")==HELIOS_TYPE_UINT ){
       uint flag;
-      context->getPrimitiveData(p,"twosided_flag",flag);
+      context->getPrimitiveData(UUID,"twosided_flag",flag);
       if( flag==0 ){
         Nsides=1;
       }
@@ -184,7 +182,7 @@ void BLConductanceModel::run(const std::vector<uint> &UUIDs ){
     vec3 norm = context->getPrimitiveNormal(UUID);
     float inclination = cart2sphere( norm ).zenith;
 
-    float gH = calculateBoundaryLayerConductance( boundarylayer_model[UUIDs.at(p)], U, L, Nsides, inclination, T, Ta );
+    float gH = calculateBoundaryLayerConductance( boundarylayer_model[UUID], U, L, Nsides, inclination, T, Ta );
 
     context->setPrimitiveData( UUID, "boundarylayer_conductance", gH );
 

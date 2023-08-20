@@ -1345,3 +1345,64 @@
 - Increment operator added for Helios vector types int2, int3, int4, vec2, vec3, vec4, and general improvements to helios_vector_types.h
 - Overloaded versions of Context::overridePrimitiveTextureColor() and Context::usePrimitiveTextureColor() added to accept a vector of primitive UUIDs.
 - Overloaded versions of Context::overrideObjectTextureColor() and Context::useObjectTextureColor() added to accept a vector of object IDs.
+
+[1.2.65] 2023-07-25
+
+*Context*
+- Added Context::loadTabularTimeseriesData() method to directly load a tabular text file containing weather data.
+- Self-test added for Context::loadTabularTimeseriesData().
+- Output streams to print a 'Date' or 'Time' vector modified to print leading zero for month, day, minute, and second.
+- Added Date::incrementDay() method to date vector to increment date by one day.
+- Added helios::separate_string_by_delimiter() function to separate a delimited string into a vector of strings.
+
+*Radiation*
+- Upgrading to CUDA 12.0+ caused build errors. Users with GPU compute capability of 3.5 now need to enable the OPTIX_VERSION_LEGACY build option.
+
+[1.2.66] 2023-08-03
+
+*Context*
+- Method added to get the random number generator from the Context, such that it can be used by other plug-ins. This keeps the seed consistent across plugins.
+
+*Visualizer*
+- Issue fixed that caused glfw3.dll to not be properly copied after build on Windows platforms.
+
+[1.2.67] 2023-08-08
+
+* Changed core/CMake_project.txt to set CMAKE_RUNTIME_OUTPUT_DIRECTORY and CMAKE_LIBRARY_OUTPUT_DIRECTORY variables, which seems to resolve some intermittent issues with not finding .dll locations on Windows.
+* <iomanip> header added to helios_vector_types.h, as it can be needed in some cases.
+
+*Aerial LiDAR*
+- Updated CMakeLists.txt to deprecate compute capability 3.5.
+
+*Energy Balance*
+- Updated CMakeLists.txt to deprecate compute capability 3.5.
+- Changed selfTest() back to non-static because it could cause issues running it outside of the class.
+
+*LiDAR*
+- Updated CMakeLists.txt to deprecate compute capability 3.5.
+
+*Voxel Intersection*
+- Updated CMakeLists.txt to deprecate compute capability 3.5.
+
+*Photosynthesis*
+- Changed selfTest() back to non-static because it could cause issues running it outside of the class.
+
+*Stomatal Conductance*
+- Changed selfTest() back to non-static because it could cause issues running it outside of the class.
+
+[1.2.68] 2023-08-17
+
+* Added new error handling function 'helios_runtime_error', which allows for greater control over error messages. If running in debug mode, it will output the error message to stderr as well as throwing an exception.
+
+*Context*
+- Incorporated new error handling function 'helios_runtime_error' into all Context-related files.
+- Polymesh objects were not being properly written to XML files (Context::writeXML()). The \<polymesh\> tag was not being closed properly.
+- The overloaded += operator for helios vector types were changed to return a reference to the object instead of void, which allows for chaining of operations.
+- If a material was not specified in an OBJ file (Context::loadOBJ()), the default material was not being applied to the object and an error would be thrown.
+
+*LiDAR*
+- References to laszip in CMakeLists.txt completely commented out for now, as this was causing build errors on some Windows systems.
+- Check added to LiDARcloud::loadASCIIfile() to automatically compute hit direction if it is not specified in the ASCII file. Without this, an assertion error is thrown since v1.2.60.
+
+*Boundary-Layer Conductance*
+- Fixed UUID indexing error.

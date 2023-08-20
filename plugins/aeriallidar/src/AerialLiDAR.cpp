@@ -343,8 +343,7 @@ void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xy
 
   //error checking
   if( scanID>=scans.size() ){
-    cerr << "ERROR (addHitPoint): Hit point cannot be added to scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
-    exit(EXIT_FAILURE);
+    helios_runtime_error("ERROR (AerialLiDARcloud::addHitPoint): Hit point cannot be added to scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
 
   AerialScanMetadata scan = scans.at(scanID);
@@ -358,8 +357,7 @@ void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xy
 void AerialLiDARcloud::deleteHitPoint( const uint index ){
 
   if( index>=hits.size() ){
-    cerr << "ERROR (deleteHitPoint): Hit point #" << index << " cannot be deleted from the scan because there have only been " << hits.size() << " hit points added." << endl;
-    exit(EXIT_FAILURE);
+      helios_runtime_error("ERROR (AerialLiDARcloud::deleteHitPoint): Hit point #" + std::to_string(index) + " cannot be deleted from the scan because there have only been " + std::to_string(hits.size()) +" hit points added.");
   }
   
   AerialHitPoint hit = hits.at(index);
@@ -378,48 +376,42 @@ uint AerialLiDARcloud::getHitCount( void ) const{
 
 helios::vec3 AerialLiDARcloud::getScanCenter( const uint scanID ) const{
   if( scanID>=scans.size() ){
-    cerr << "ERROR (getScanCenter): Cannot get center of scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
-    exit(EXIT_FAILURE);
+      helios_runtime_error("ERROR (AerialLiDARcloud::getScanCenter): Cannot get center of scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).center;
 }
 
 helios::vec2 AerialLiDARcloud::getScanExtent( const uint scanID ) const{
   if( scanID>=scans.size() ){
-    cerr << "ERROR (getScanExtent): Cannot get extent for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
-    exit(EXIT_FAILURE);
+      helios_runtime_error("ERROR (AerialLiDARcloud::getScanExtent): Cannot get extent for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).extent;
 }
 
 float AerialLiDARcloud::getScanConeAngle( const uint scanID ) const{
   if( scanID>=scans.size() ){
-    cerr << "ERROR (getScanConeAngle): Cannot get cone angle for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
-    exit(EXIT_FAILURE);
+      helios_runtime_error("ERROR (AerialLiDARcloud::getScanConeAngle): Cannot get cone angle for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).coneangle;
 }
 
 float AerialLiDARcloud::getScanDensity( const uint scanID ) const{
   if( scanID>=scans.size() ){
-    cerr << "ERROR (getScanDensity): Cannot get point density for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
-    exit(EXIT_FAILURE);
+      helios_runtime_error("ERROR (AerialLiDARcloud::getScanDensity): Cannot get point density for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).scandensity;
 }
 
 float AerialLiDARcloud::getScanBeamExitDiameter( const uint scanID ) const{
   if( scanID>=scans.size() ){
-    cerr << "ERROR (getScanBeamExitDiameter): Cannot get exit diameter for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
-    exit(EXIT_FAILURE);
+      helios_runtime_error("ERROR (AerialLiDARcloud::getScanBeamExitDiameter): Cannot get exit diameter for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).exitDiameter;
 }
 
 float AerialLiDARcloud::getScanBeamDivergence( const uint scanID ) const{
   if( scanID>=scans.size() ){
-    cerr << "ERROR (getScanBeamDivergence): Cannot get beam divergence for scan #" << scanID << " because there have only been " << scans.size() << " scans added." << endl;
-    exit(EXIT_FAILURE);
+      helios_runtime_error("ERROR (AerialLiDARcloud::getScanBeamDivergence): Cannot get beam divergence for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).beamDivergence;
 }
@@ -427,8 +419,7 @@ float AerialLiDARcloud::getScanBeamDivergence( const uint scanID ) const{
 helios::vec3 AerialLiDARcloud::getHitXYZ( const uint index ) const{
 
   if( index>=hits.size() ){
-    cerr << "ERROR (getHitXYZ): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
-    exit(EXIT_FAILURE);
+      helios_runtime_error("ERROR (AerialLiDARcloud::getHitXYZ): Hit point index out of bounds. Requesting hit #" + index + " but scan only has " + hits.size() + " hits." << endl;
   }
 
   return hits.at(index).position;

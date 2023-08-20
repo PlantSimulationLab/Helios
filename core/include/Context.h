@@ -1893,7 +1893,7 @@ public:
      * \return std::minstd_rand0 random number generator engine
      */
     std::minstd_rand0* getRandomGenerator();
-    
+
     //! Mark the Context geometry as ``clean", meaning that the geometry has not been modified since last set as clean
     /** \sa \ref markGeometryDirty(), \ref isGeometryDirty() */
     void markGeometryClean();
@@ -5125,6 +5125,9 @@ public:
      * \ingroup timeseries
      */
     uint getTimeseriesLength( const char* label ) const;
+
+    //! Load tabular weather data from text file into timeseries
+    void loadTabularTimeseriesData( const std::string &data_file, const std::vector<std::string> &column_labels, const std::string &delimiter, const std::string &date_string_format="YYYYMMDD", uint headerlines=0 );
     
     //! Get a box that bounds all primitives in the domain
     /**

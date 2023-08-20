@@ -29,6 +29,7 @@ typedef unsigned int uint;
 #include <cassert>
 #include <stdexcept>
 #include <exception>
+#include <iomanip>
 
 //! Vector data structures
 /**
@@ -71,7 +72,7 @@ public:
   //! Add two int2 vectors
   int2 operator+(const int2& a) const;
   //! Increment int2 vector
-  void operator+=(const int2& a);
+  int2& operator+=(const int2& a);
   //! Subtract two int2 vectors
   int2 operator-(const int2& a) const;
   //! Equality for all elements
@@ -106,9 +107,10 @@ inline int2 int2::operator+(const int2& a) const{
   return {a.x+x, a.y+y};
 }
 
-inline void int2::operator+=(const int2& a){
-    x += a.x;
-    y += a.y;
+inline int2& int2::operator+=(const int2& a){
+    this->x += a.x;
+    this->y += a.y;
+    return *this;
 }
 
 inline int2 int2::operator-(const int2& a) const{
@@ -153,7 +155,7 @@ public:
   //! Add two int3 vectors
   int3 operator+(const int3& a) const;
   //! Increment int3 vector
-  void operator+=(const int3& a);
+  int3& operator+=(const int3& a);
   //! Subtract two int3 vectors
   int3 operator-(const int3& a) const;
   //! Equality for all elements
@@ -179,10 +181,11 @@ inline int3 int3::operator+(const int3& a) const{
   return {a.x+x, a.y+y, a.z+z};
 }
 
-inline void int3::operator+=(const int3& a){
-    x += a.x;
-    y += a.y;
-    z += a.z;
+inline int3& int3::operator+=(const int3& a){
+    this->x += a.x;
+    this->y += a.y;
+    this->z += a.z;
+    return *this;
 }
 
 inline int3 int3::operator-(const int3& a) const{
@@ -231,7 +234,7 @@ public:
   //! Add two int4 vectors
   int4 operator+(const int4& a) const;
   //! Increment int4 vector
-  void operator+=(const int4& a);
+  int4& operator+=(const int4& a);
   //! Subtract two int4 vectors
   int4 operator-(const int4& a) const;
   //! Equality for all elements
@@ -257,11 +260,12 @@ inline int4 int4::operator+(const int4& a) const{
   return {a.x+x, a.y+y, a.z+z, a.w+w};
 }
 
-inline void int4::operator+=(const int4& a){
-    x += a.x;
-    y += a.y;
-    z += a.z;
-    w += a.w;
+inline int4& int4::operator+=(const int4& a){
+    this->x += a.x;
+    this->y += a.y;
+    this->z += a.z;
+    this->w += a.w;
+    return *this;
 }
 
 inline int4 int4::operator-(const int4& a) const{
@@ -320,7 +324,7 @@ public:
   //! Sum of two vec2 vectors
   vec2 operator+(const vec2& a) const;
   //! Increment vec2 vector
-  void operator+=(const vec2& a);
+  vec2& operator+=(const vec2& a);
   //! Difference of two vec2 vectors
   vec2 operator-(const vec2& a) const;
   //! Multiply each element by scalar (scalar is multiplied on right: vec2*a)
@@ -364,9 +368,10 @@ inline vec2 vec2::operator+(const vec2& a) const{
   return  {a.x+x,a.y+y};
 }
 
-inline void vec2::operator+=(const vec2& a){
-    x += a.x;
-    y += a.y;
+inline vec2& vec2::operator+=(const vec2& a){
+    this->x += a.x;
+    this->y += a.y;
+    return *this;
 }
 
 inline vec2 vec2::operator+(const float a) const {
@@ -457,7 +462,7 @@ public:
   //! Sum of two vec3 vectors
   vec3 operator+(const vec3& a) const;
   //! Increment vec3 vector
-  void operator+=(const vec3& a);
+  vec3& operator+=(const vec3& a);
   //! Difference of two vec3 vectors
   vec3 operator-(const vec3& a) const;
   //! Multiply each element by scalar (scalar is multiplied on right: vec3*a)
@@ -507,10 +512,11 @@ inline vec3 vec3::operator+(const vec3& a) const{
   return  {a.x+x,a.y+y,a.z+z};
 }
 
-inline void vec3::operator+=(const vec3& a){
-    x += a.x;
-    y += a.y;
-    z += a.z;
+inline vec3& vec3::operator+=(const vec3& a){
+    this->x += a.x;
+    this->y += a.y;
+    this->z += a.z;
+    return *this;
 }
 
 inline vec3 vec3::operator+(const float a) const{
@@ -605,7 +611,7 @@ public:
   //! Sum of two vec4 vectors
   vec4 operator+(const vec4& a) const;
   //! Increment vec4 vector
-  void operator+=(const vec4& a);
+  vec4& operator+=(const vec4& a);
   //! Difference of two vec4 vectors
   vec4 operator-(const vec4& a) const;
   //! Multiply each element by scalar (scalar is multiplied on right: vec4*a)
@@ -650,11 +656,12 @@ inline vec4 vec4::operator+(const vec4& a) const{
   return  {a.x+x,a.y+y,a.z+z,a.w+w};
 }
 
-inline void vec4::operator+=(const vec4& a){
-     x += a.x;
-     y += a.y;
-     z += a.z;
-     w += a.w;
+inline vec4& vec4::operator+=(const vec4& a){
+    this->x += a.x;
+    this->y += a.y;
+    this->z += a.z;
+    this->w += a.w;
+    return *this;
  }
 
 inline vec4 vec4::operator+(const float a) const{
@@ -1026,10 +1033,22 @@ public:
   }
 
   //! Convert to Julian day
+  /**
+   * \return Julian day of the year
+   */
   int JulianDay() const;
 
+  //! Increment Date vector by one day
+  void incrementDay();
+
+  //! Check whether it is a leap year
+  /**
+   * \return True if it is a leap year, false if not
+   */
+  bool isLeapYear() const;
+
   friend std::ostream &operator<<(std::ostream &os, helios::Date const &d) {
-    return os << d.year << "-" << d.month << "-" << d.day;
+    return os << d.year << "-" << std::setfill('0') << std::setw(2) << d.month << "-" << std::setfill('0') << std::setw(2) << d.day;
   }
 
 };
@@ -1203,7 +1222,7 @@ struct Time{
   }
 
   friend std::ostream &operator<<(std::ostream &os, helios::Time const &t) {
-    return os << t.hour << ":" << t.minute << ":" << t.second;
+    return os << t.hour << ":" << std::setfill('0') << std::setw(2) << t.minute << ":" << std::setfill('0') << std::setw(2) << t.second;
   }
 
 };

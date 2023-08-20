@@ -521,7 +521,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<int> datav;
     if( XMLparser::parse_data_int(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -538,7 +538,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<uint> datav;
     if( XMLparser::parse_data_uint(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_uint> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_uint> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -555,7 +555,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<float> datav;
     if( XMLparser::parse_data_float(data,datav)!=0  || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_float> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_float> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -572,7 +572,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<double> datav;
     if( XMLparser::parse_data_double(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_double> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_double> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -589,7 +589,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<vec2> datav;
     if( XMLparser::parse_data_vec2(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_vec2> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_vec2> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -606,7 +606,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<vec3> datav;
     if( XMLparser::parse_data_vec3(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_vec3> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_vec3> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -623,7 +623,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<vec4> datav;
     if( XMLparser::parse_data_vec4(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_vec4> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_vec4> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -640,7 +640,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<int2> datav;
     if( XMLparser::parse_data_int2(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int2> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int2> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -657,7 +657,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<int3> datav;
     if( XMLparser::parse_data_int3(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int3> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int3> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -674,7 +674,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<int4> datav;
     if( XMLparser::parse_data_int4(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int4> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_int4> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -691,7 +691,7 @@ void Context::loadPData( pugi::xml_node p, uint UUID ){
 
     std::vector<std::string> datav;
     if( XMLparser::parse_data_string(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Primitive data tag <data_string> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Primitive data tag <data_string> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -714,7 +714,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<int> datav;
     if( XMLparser::parse_data_int(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_int> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_int> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -731,7 +731,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<uint> datav;
     if( XMLparser::parse_data_uint(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_uint> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_uint> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -748,7 +748,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<float> datav;
     if( XMLparser::parse_data_float(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_float> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_float> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -765,7 +765,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<double> datav;
     if( XMLparser::parse_data_double(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_double> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_double> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -782,7 +782,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<vec2> datav;
     if( XMLparser::parse_data_vec2(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_vec2> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_vec2> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -799,7 +799,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<vec3> datav;
     if( XMLparser::parse_data_vec3(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_vec3> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_vec3> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -816,7 +816,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<vec4> datav;
     if( XMLparser::parse_data_vec4(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_vec4> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_vec4> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -833,7 +833,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<int2> datav;
     if( XMLparser::parse_data_int2(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_int2> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_int2> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -850,7 +850,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<int3> datav;
     if( XMLparser::parse_data_int3(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_int3> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_int3> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -867,7 +867,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<int4> datav;
     if( XMLparser::parse_data_int4(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_int4> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_int4> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -884,7 +884,7 @@ void Context::loadOData( pugi::xml_node p, uint ID ){
 
     std::vector<std::string> datav;
     if( XMLparser::parse_data_string(data,datav)!=0 || datav.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Object data tag <data_string> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Object data tag <data_string> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -919,7 +919,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<int> datav;
       if( XMLparser::parse_data_int(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -947,7 +947,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<uint> datav;
       if( XMLparser::parse_data_uint(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_uint> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_uint> with label " + std::string(label) + " contained invalid data.");
       }
 
       if (doesPrimitiveExist(prim_UUIDs.at(u))) {
@@ -975,7 +975,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<float> datav;
       if( XMLparser::parse_data_float(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_float> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_float> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1003,7 +1003,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<double> datav;
       if( XMLparser::parse_data_double(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_double> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_double> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1031,7 +1031,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<vec2> datav;
       if( XMLparser::parse_data_vec2(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec2> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec2> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1059,7 +1059,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<vec3> datav;
       if( XMLparser::parse_data_vec3(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec3> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec3> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1087,7 +1087,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<vec4> datav;
       if( XMLparser::parse_data_vec4(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec4> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec4> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1115,7 +1115,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<int2> datav;
       if( XMLparser::parse_data_int2(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int2> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int2> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1143,7 +1143,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<int3> datav;
       if( XMLparser::parse_data_int3(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int3> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int3> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1171,7 +1171,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<int4> datav;
       if( XMLparser::parse_data_int4(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int4> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int4> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1199,7 +1199,7 @@ void Context::loadOsubPData( pugi::xml_node p, uint ID ){
 
       std::vector<std::string> datav;
       if( XMLparser::parse_data_string(data,datav)!=0 || datav.empty() ){
-        throw(std::runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_string> with label " + std::string(label) + " contained invalid data."));
+        helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_string> with label " + std::string(label) + " contained invalid data.");
       }
 
       if( doesPrimitiveExist(prim_UUIDs.at(u)) ) {
@@ -1224,7 +1224,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   std::string fn = filename;
   std::string ext = getFileExtension(filename);
   if( ext != ".xml" && ext != ".XML" ) {
-    throw( std::runtime_error("failed.\n File " + fn + " is not XML format.") );
+    helios_runtime_error("failed.\n File " + fn + " is not XML format.");
   }
 
   XMLfiles.emplace_back( filename );
@@ -1242,7 +1242,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
   //error checking
   if (!load_result){
-    throw( std::runtime_error("failed.\n XML [" + std::string(filename) + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() + "\nError offset: " + std::to_string(load_result.offset) + " (error at [..." + (filename + load_result.offset) + "]\n"));
+    helios_runtime_error("failed.\n XML [" + std::string(filename) + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() + "\nError offset: " + std::to_string(load_result.offset) + " (error at [..." + (filename + load_result.offset) + "]\n");
   }
 
   pugi::xml_node helios = xmldoc.child("helios");
@@ -1251,7 +1251,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     if( !quiet ) {
       std::cout << "failed." << std::endl;
     }
-    throw( std::runtime_error("ERROR (Context::loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags."));
+    helios_runtime_error("ERROR (Context::loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags.");
   }
 
   //if primitives are added that belong to an object, store their UUIDs here so that we can make sure their UUIDs are consistent
@@ -1265,21 +1265,21 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     const char* year_str = year_node.child_value();
     int year;
     if( !parse_int( year_str, year ) ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Year given in 'date' block must be an integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Year given in 'date' block must be an integer value.");
     }
 
     pugi::xml_node month_node = p.child("month");
     const char* month_str = month_node.child_value();
     int month;
     if( !parse_int( month_str, month ) ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Month given in 'date' block must be an integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Month given in 'date' block must be an integer value.");
     }
 
     pugi::xml_node day_node = p.child("day");
     const char* day_str = day_node.child_value();
     int day;
     if( !parse_int( day_str, day ) ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Day given in 'date' block must be an integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Day given in 'date' block must be an integer value.");
     }
 
     setDate( day, month, year );
@@ -1292,21 +1292,21 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     const char* hour_str = hour_node.child_value();
     int hour;
     if( !parse_int( hour_str, hour ) ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Hour given in 'time' block must be an integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Hour given in 'time' block must be an integer value.");
     }
 
     pugi::xml_node minute_node = p.child("minute");
     const char* minute_str = minute_node.child_value();
     int minute;
     if( !parse_int( minute_str, minute ) ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Minute given in 'time' block must be an integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Minute given in 'time' block must be an integer value.");
     }
 
     pugi::xml_node second_node = p.child("second");
     const char* second_str = second_node.child_value();
     int second;
     if( !parse_int( second_str, second ) ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Second given in 'time' block must be an integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Second given in 'time' block must be an integer value.");
     }
 
     setTime( second, minute, hour );
@@ -1319,16 +1319,16 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Patch Object ID * //
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'patch' block must be a non-negative integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'patch' block must be a non-negative integer value.");
     }
 
     // * Patch Transformation Matrix * //
     float transform[16];
     int result = XMLparser::parse_transform(p,transform);
     if( result==3 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Patch <transform> node contains less than 16 data values.") );
+      helios_runtime_error("ERROR (Context::loadXML): Patch <transform> node contains less than 16 data values.");
     }else if( result==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Patch <transform> node contains invalid data.") );
+      helios_runtime_error("ERROR (Context::loadXML): Patch <transform> node contains invalid data.");
     }
 
     // * Patch Texture * //
@@ -1338,13 +1338,13 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Patch Texture (u,v) Coordinates * //
     std::vector<vec2> uv;
     if( XMLparser::parse_textureUV(p,uv)==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): (u,v) coordinates given in 'patch' block contain invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): (u,v) coordinates given in 'patch' block contain invalid data.");
     }
 
     // * Patch Solid Fraction * //
     float solid_fraction = 1;
     if( XMLparser::parse_solid_fraction(p,solid_fraction)==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Solid fraction given in 'patch' block contains invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'patch' block contains invalid data.");
     }
 
     // * Patch Diffuse Colors * //
@@ -1402,16 +1402,16 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Triangle Object ID * //
     uint objID=0;
     if( XMLparser::parse_objID(tri,objID)>1 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'triangle' block must be a non-negative integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'triangle' block must be a non-negative integer value.");
     }
 
     // * Triangle Transformation Matrix * //
     float transform[16];
     int result = XMLparser::parse_transform(tri,transform);
     if( result==3 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Triangle <transform> node contains less than 16 data values.") );
+      helios_runtime_error("ERROR (Context::loadXML): Triangle <transform> node contains less than 16 data values.");
     }else if( result==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Triangle <transform> node contains invalid data.") );
+      helios_runtime_error("ERROR (Context::loadXML): Triangle <transform> node contains invalid data.");
     }
 
     // * Triangle Texture * //
@@ -1421,13 +1421,13 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Triangle Texture (u,v) Coordinates * //
     std::vector<vec2> uv;
     if( XMLparser::parse_textureUV(tri,uv)==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): (u,v) coordinates given in 'triangle' block contain invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): (u,v) coordinates given in 'triangle' block contain invalid data.");
     }
 
     // * Triangle Solid Fraction * //
     float solid_fraction = 1;
     if( XMLparser::parse_solid_fraction(tri,solid_fraction)==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Solid fraction given in 'triangle' block contains invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'triangle' block contains invalid data.");
     }
 
     // * Triangle Diffuse Colors * //
@@ -1485,22 +1485,22 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Voxel Object ID * //
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'voxel' block must be a non-negative integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'voxel' block must be a non-negative integer value.");
     }
 
     // * Voxel Transformation Matrix * //
     float transform[16];
     int result = XMLparser::parse_transform(p,transform);
     if( result==3 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Voxel <transform> node contains less than 16 data values.") );
+      helios_runtime_error("ERROR (Context::loadXML): Voxel <transform> node contains less than 16 data values.");
     }else if( result==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Voxel <transform> node contains invalid data.") );
+      helios_runtime_error("ERROR (Context::loadXML): Voxel <transform> node contains invalid data.");
     }
 
     // * Voxel Solid Fraction * //
     float solid_fraction = 1;
     if( XMLparser::parse_solid_fraction(p,solid_fraction)==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Solid fraction given in 'voxel' block contains invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'voxel' block contains invalid data.");
     }
 
     // * Voxel Diffuse Colors * //
@@ -1540,16 +1540,16 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Tile Object ID * //
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tile' block must be a non-negative integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tile' block must be a non-negative integer value.");
     }
 
     // * Tile Transformation Matrix * //
     float transform[16];
     int result = XMLparser::parse_transform(p,transform);
     if( result==3 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Tile <transform> node contains less than 16 data values.") );
+      helios_runtime_error("ERROR (Context::loadXML): Tile <transform> node contains less than 16 data values.");
     }else if( result==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Tile <transform> node contains invalid data.") );
+      helios_runtime_error("ERROR (Context::loadXML): Tile <transform> node contains invalid data.");
     }
 
     // * Tile Texture * //
@@ -1559,7 +1559,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Tile Texture (u,v) Coordinates * //
     std::vector<vec2> uv;
     if( XMLparser::parse_textureUV(p,uv)==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): (u,v) coordinates given in 'tile' block contain invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): (u,v) coordinates given in 'tile' block contain invalid data.");
     }
 
     // * Tile Diffuse Colors * //
@@ -1578,7 +1578,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       std::cerr << "WARNING (Context::loadXML): Number of subdivisions for tile was not provided. Assuming 1x1." << std::endl;
       subdiv = make_int2(1,1);
     } else if( result_subdiv==2 ) {
-      throw( std::runtime_error("ERROR (Context::loadXML): Tile <subdivisions> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Tile <subdivisions> node contains invalid data. ");
     }
 
     //Create a dummy patch in order to get the center, size, and rotation based on transformation matrix
@@ -1641,7 +1641,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Sphere Object ID * //
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'sphere' block must be a non-negative integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'sphere' block must be a non-negative integer value.");
     }
 
     if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
@@ -1655,9 +1655,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     float transform[16];
     int result = XMLparser::parse_transform(p,transform);
     if( result==3 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Sphere <transform> node contains less than 16 data values.") );
+      helios_runtime_error("ERROR (Context::loadXML): Sphere <transform> node contains less than 16 data values.");
     }else if( result==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Sphere <transform> node contains invalid data.") );
+      helios_runtime_error("ERROR (Context::loadXML): Sphere <transform> node contains invalid data.");
     }
 
     // * Sphere Texture * //
@@ -1680,7 +1680,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       std::cerr << "WARNING (Context::loadXML): Number of subdivisions for sphere was not provided. Assuming 1x1." << std::endl;
       subdiv = 5;
     } else if( result_subdiv==2 ) {
-      throw( std::runtime_error("ERROR (Context::loadXML): Sphere <subdivisions> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Sphere <subdivisions> node contains invalid data. ");
     }
 
     //Create a dummy sphere in order to get the center and radius based on transformation matrix
@@ -1730,7 +1730,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Tube Object ID * //
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tube' block must be a non-negative integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tube' block must be a non-negative integer value.");
     }
 
     if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
@@ -1744,9 +1744,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     float transform[16];
     int result = XMLparser::parse_transform(p,transform);
     if( result==3 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Tube <transform> node contains less than 16 data values.") );
+      helios_runtime_error("ERROR (Context::loadXML): Tube <transform> node contains less than 16 data values.");
     }else if( result==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Tube <transform> node contains invalid data.") );
+      helios_runtime_error("ERROR (Context::loadXML): Tube <transform> node contains invalid data.");
     }
 
     // * Tube Texture * //
@@ -1760,21 +1760,21 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       std::cerr << "WARNING (Context::loadXML): Number of subdivisions for tube was not provided. Assuming 1x1." << std::endl;
       subdiv = 5;
     } else if( result_subdiv==2 ) {
-      throw( std::runtime_error("ERROR (Context::loadXML): Tube <subdivisions> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Tube <subdivisions> node contains invalid data. ");
     }
 
     // * Tube Nodes * //
     std::vector<vec3> nodes;
     pugi::xml_node nodes_node = p.child("nodes");
     if( XMLparser::parse_data_vec3(nodes_node,nodes)!=0 || nodes.size()<2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Tube <nodes> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Tube <nodes> node contains invalid data. ");
     }
 
     // * Tube Radius * //
     std::vector<float> radii;
     pugi::xml_node radii_node = p.child("radius");
     if( XMLparser::parse_data_float(radii_node,radii)!=0 || radii.size()<2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Tube <radius> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Tube <radius> node contains invalid data. ");
     }
 
     // * Tube Color * //
@@ -1837,7 +1837,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Box Object ID * //
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'box' block must be a non-negative integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'box' block must be a non-negative integer value.");
     }
 
     if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
@@ -1851,9 +1851,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     float transform[16];
     int result = XMLparser::parse_transform(p,transform);
     if( result==3 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Box <transform> node contains less than 16 data values.") );
+      helios_runtime_error("ERROR (Context::loadXML): Box <transform> node contains less than 16 data values.");
     }else if( result==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Box <transform> node contains invalid data.") );
+      helios_runtime_error("ERROR (Context::loadXML): Box <transform> node contains invalid data.");
     }
 
     // * Box Texture * //
@@ -1876,7 +1876,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       std::cerr << "WARNING (Context::loadXML): Number of subdivisions for box was not provided. Assuming 1x1." << std::endl;
       subdiv = make_int3(1,1,1);
     } else if( result_subdiv==2 ) {
-      throw( std::runtime_error("ERROR (Context::loadXML): Box <subdivisions> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Box <subdivisions> node contains invalid data. ");
     }
 
     //Create a dummy box in order to get the center and size based on transformation matrix
@@ -1926,7 +1926,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Disk Object ID * //
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'disk' block must be a non-negative integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'disk' block must be a non-negative integer value.");
     }
 
     if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
@@ -1940,9 +1940,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     float transform[16];
     int result = XMLparser::parse_transform(p,transform);
     if( result==3 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Disk <transform> node contains less than 16 data values.") );
+      helios_runtime_error("ERROR (Context::loadXML): Disk <transform> node contains less than 16 data values.");
     }else if( result==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Disk <transform> node contains invalid data.") );
+      helios_runtime_error("ERROR (Context::loadXML): Disk <transform> node contains invalid data.");
     }
 
     // * Disk Texture * //
@@ -1965,7 +1965,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       std::cerr << "WARNING (Context::loadXML): Number of subdivisions for disk was not provided. Assuming 1x1." << std::endl;
       subdiv = make_int2(5,1);
     } else if( result_subdiv==2 ) {
-      throw( std::runtime_error("ERROR (Context::loadXML): Disk <subdivisions> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Disk <subdivisions> node contains invalid data. ");
     }
 
     //Create a dummy disk in order to get the center and size based on transformation matrix
@@ -2015,7 +2015,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     // * Cone Object ID * //
     uint objID=0;
     if( XMLparser::parse_objID(p,objID)>1 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'cone' block must be a non-negative integer value."));
+      helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'cone' block must be a non-negative integer value.");
     }
 
     if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
@@ -2029,9 +2029,9 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     float transform[16];
     int result = XMLparser::parse_transform(p,transform);
     if( result==3 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Cone <transform> node contains less than 16 data values.") );
+      helios_runtime_error("ERROR (Context::loadXML): Cone <transform> node contains less than 16 data values.");
     }else if( result==2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Cone <transform> node contains invalid data.") );
+      helios_runtime_error("ERROR (Context::loadXML): Cone <transform> node contains invalid data.");
     }
 
     // * Cone Texture * //
@@ -2054,21 +2054,21 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       std::cerr << "WARNING (Context::loadXML): Number of subdivisions for cone was not provided. Assuming 1x1." << std::endl;
       subdiv = 5;
     } else if( result_subdiv==2 ) {
-      throw( std::runtime_error("ERROR (Context::loadXML): Cone <subdivisions> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Cone <subdivisions> node contains invalid data. ");
     }
 
     // * Cone Nodes * //
     std::vector<vec3> nodes;
     pugi::xml_node nodes_node = p.child("nodes");
     if( XMLparser::parse_data_vec3(nodes_node,nodes)!=0 || nodes.size()!=2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Cone <nodes> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Cone <nodes> node contains invalid data. ");
     }
 
     // * Cone Radius * //
     std::vector<float> radii;
     pugi::xml_node radii_node = p.child("radius");
     if( XMLparser::parse_data_float(radii_node,radii)!=0 || radii.size()!=2 ){
-      throw( std::runtime_error("ERROR (Context::loadXML): Cone <radius> node contains invalid data. ") );
+      helios_runtime_error("ERROR (Context::loadXML): Cone <radius> node contains invalid data. ");
     }
 
     // * Add the Cone * //
@@ -2113,7 +2113,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<int> datav;
     if( XMLparser::parse_data_int(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2130,7 +2130,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<uint> datav;
     if( XMLparser::parse_data_uint(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_uint> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_uint> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2147,7 +2147,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<float> datav;
     if( XMLparser::parse_data_float(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_float> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_float> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2164,7 +2164,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<double> datav;
     if( XMLparser::parse_data_double(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_double> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_double> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2181,7 +2181,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<vec2> datav;
     if( XMLparser::parse_data_vec2(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_vec2> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_vec2> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2198,7 +2198,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<vec3> datav;
     if( XMLparser::parse_data_vec3(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_vec3> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_vec3> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2215,7 +2215,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<vec4> datav;
     if( XMLparser::parse_data_vec4(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_vec4> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_vec4> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2232,7 +2232,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<int2> datav;
     if( XMLparser::parse_data_int2(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int2> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int2> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2249,7 +2249,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<int3> datav;
     if( XMLparser::parse_data_int3(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int3> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int3> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2266,7 +2266,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<int4> datav;
     if( XMLparser::parse_data_int4(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int4> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_int4> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2283,7 +2283,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
 
     std::vector<std::string> datav;
     if( XMLparser::parse_data_string(data,datav)!=0 ){
-      throw(std::runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_string> with label " + std::string(label) + " contained invalid data."));
+      helios_runtime_error("ERROR (Context::loadXML): Global data tag <globaldata_string> with label " + std::string(label) + " contained invalid data.");
     }
 
     if( datav.size()==1 ){
@@ -2307,15 +2307,15 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       if( strlen(time_str)>0 ){
         int3 time_ = string2int3(time_str);
         if( time_.x<0 || time_.x>23 ){
-          throw( std::runtime_error("ERROR (loadXML): Invalid hour of " + std::to_string(time_.x) + " given in timeseries. Hour must be positive and not greater than 23."));
+          helios_runtime_error("ERROR (Context::loadXML): Invalid hour of " + std::to_string(time_.x) + " given in timeseries. Hour must be positive and not greater than 23.");
         }else if( time_.y<0 || time_.y>59 ){
-          throw( std::runtime_error("ERROR (loadXML): Invalid minute of " + std::to_string(time_.y) + " given in timeseries. Minute must be positive and not greater than 59."));
+          helios_runtime_error("ERROR (Context::loadXML): Invalid minute of " + std::to_string(time_.y) + " given in timeseries. Minute must be positive and not greater than 59.");
         }else if( time_.z<0 || time_.z>59 ){
-          throw( std::runtime_error("ERROR (loadXML): Invalid second of " + std::to_string(time_.z) + " given in timeseries. Second must be positive and not greater than 59."));
+          helios_runtime_error("ERROR (Context::loadXML): Invalid second of " + std::to_string(time_.z) + " given in timeseries. Second must be positive and not greater than 59.");
         }
         time = make_Time(time_.x, time_.y,time_.z);
       }else{
-        throw( std::runtime_error("ERROR (loadXML): No time was specified for timeseries datapoint."));
+        helios_runtime_error("ERROR (Context::loadXML): No time was specified for timeseries datapoint.");
       }
 
       Date date;
@@ -2326,11 +2326,11 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       if( strlen(date_str)>0 ){
         int3 date_ = string2int3(date_str);
         if( date_.x<1 || date_.x>31 ){
-          throw( std::runtime_error("ERROR (loadXML): Invalid day of month " + std::to_string(date_.x) + " given in timeseries. Day must be greater than zero and not greater than 31."));
+          helios_runtime_error("ERROR (Context::loadXML): Invalid day of month " + std::to_string(date_.x) + " given in timeseries. Day must be greater than zero and not greater than 31.");
         }else if( date_.y<1 || date_.y>12 ){
-          throw( std::runtime_error("ERROR (loadXML): Invalid month of " + std::to_string(date_.y) + " given in timeseries. Month must be greater than zero and not greater than 12."));
+          helios_runtime_error("ERROR (Context::loadXML): Invalid month of " + std::to_string(date_.y) + " given in timeseries. Month must be greater than zero and not greater than 12.");
         }else if( date_.z<1000 || date_.z>10000 ){
-          throw( std::runtime_error("ERROR (loadXML): Invalid year of " + std::to_string(date_.z) + " given in timeseries. Year should be in YYYY format."));
+          helios_runtime_error("ERROR (Context::loadXML): Invalid year of " + std::to_string(date_.z) + " given in timeseries. Year should be in YYYY format.");
         }
         date = make_Date(date_.x, date_.y, date_.z );
         date_flag=true;
@@ -2341,16 +2341,16 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       if( strlen(Jdate_str)>0 ){
         int2 date_ = string2int2(Jdate_str);
         if( date_.x<1 || date_.x>366 ){
-          throw( std::runtime_error("ERROR (loadXML): Invalid Julian day of year " + std::to_string(date_.x) + " given in timeseries. Julian day must be greater than zero and not greater than 366."));
+          helios_runtime_error("ERROR (Context::loadXML): Invalid Julian day of year " + std::to_string(date_.x) + " given in timeseries. Julian day must be greater than zero and not greater than 366.");
         }else if( date_.y<1000 || date_.y>10000 ){
-          throw( std::runtime_error("ERROR (loadXML): Invalid year of " + std::to_string(date_.y) + " given in timeseries. Year should be in YYYY format."));
+          helios_runtime_error("ERROR (Context::loadXML): Invalid year of " + std::to_string(date_.y) + " given in timeseries. Year should be in YYYY format.");
         }
         date = Julian2Calendar( date_.x, date_.y );
         date_flag=true;
       }
 
       if( !date_flag ){
-        throw( std::runtime_error("ERROR (loadXML): No date was specified for timeseries datapoint."));
+        helios_runtime_error("ERROR (Context::loadXML): No date was specified for timeseries datapoint.");
       }
 
       float value;
@@ -2358,10 +2358,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       const char* value_str = value_node.child_value();
       if( strlen(value_str)>0 ){
         if( !parse_float( value_str, value ) ){
-          throw( std::runtime_error("ERROR (Context::loadXML): Datapoint value in 'timeseries' block must be a float value."));
+          helios_runtime_error("ERROR (Context::loadXML): Datapoint value in 'timeseries' block must be a float value.");
         }
       }else{
-        throw( std::runtime_error("ERROR (Context::loadXML): No value was specified for timeseries datapoint."));
+        helios_runtime_error("ERROR (Context::loadXML): No value was specified for timeseries datapoint.");
       }
 
       addTimeseriesData(label,value,date,time);
@@ -2399,7 +2399,7 @@ void Context::writeDataToXMLstream( const char* data_group, const std::vector<st
       dsize = getGlobalDataSize(label.c_str());
       dtype = getGlobalDataType(label.c_str());
     } else {
-      throw( std::runtime_error( "ERROR (writeDataToXMLstream): unknown data group argument of " + std::string(data_group) + ". Must be one of primitive, object, or global."));
+      helios_runtime_error( "ERROR (Context::writeDataToXMLstream): unknown data group argument of " + std::string(data_group) + ". Must be one of primitive, object, or global.");
     }
 
     if (dtype == HELIOS_TYPE_UINT) {
@@ -2604,7 +2604,7 @@ void Context::writeXML( const char* filename, bool quiet ) const {
 void Context::writeXML_byobject( const char* filename, const std::vector<uint> &objIDs, bool quiet ) const {
     for( uint objID : objIDs ){
         if( !doesObjectExist(objID) ){
-            throw( std::runtime_error("ERROR (Context::writeXML_byobject): Object with ID of " + std::to_string(objID) + " does not exist.") );
+            helios_runtime_error("ERROR (Context::writeXML_byobject): Object with ID of " + std::to_string(objID) + " does not exist.");
         }
     }
     writeXML(filename, getObjectPrimitiveUUIDs(objIDs), quiet);
@@ -2662,9 +2662,9 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
 
     if( !doesPrimitiveExist(p) ){
         if( doesObjectExist(p) ){
-            throw( std::runtime_error("ERROR (Context::writeXML): Primitive with UUID of " + std::to_string(p) + " does not exist. There is a compound object with this ID - did you mean to call Context::writeXML_byobject()?") );
+            helios_runtime_error("ERROR (Context::writeXML): Primitive with UUID of " + std::to_string(p) + " does not exist. There is a compound object with this ID - did you mean to call Context::writeXML_byobject()?");
         }else{
-            throw( std::runtime_error("ERROR (Context::writeXML): Primitive with UUID of " + std::to_string(p) + " does not exist.") );
+            helios_runtime_error("ERROR (Context::writeXML): Primitive with UUID of " + std::to_string(p) + " does not exist.");
         }
     }
 
@@ -3146,6 +3146,11 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
 
       outfile << "   </cone>" << std::endl;
 
+      //Polymesh
+    }else if( obj->getObjectType()==OBJECT_TYPE_POLYMESH ) {
+
+        outfile << "   </polymesh>" << std::endl;
+
     }
 
   }
@@ -3325,11 +3330,11 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
   std::string fn = filename;
   std::string ext = getFileExtension(filename);
   if( ext != ".ply" && ext != ".PLY" ) {
-    throw( std::runtime_error("ERROR (Context::loadPLY): File " + fn + " is not PLY format.") );
+    helios_runtime_error("ERROR (Context::loadPLY): File " + fn + " is not PLY format.");
   }
 
   if( upaxis!="XUP" && upaxis!="YUP" && upaxis!="ZUP" ){
-    throw( std::runtime_error("ERROR (Context::loadPLY): " + upaxis + " is not a valid up-axis. Please specify a value of XUP, YUP, or ZUP.") );
+    helios_runtime_error("ERROR (Context::loadPLY): " + upaxis + " is not a valid up-axis. Please specify a value of XUP, YUP, or ZUP.");
   }
 
   std::string line, prop;
@@ -3347,7 +3352,7 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
   inputPly.open(filename);
 
   if (!inputPly.is_open()) {
-    throw( std::runtime_error("ERROR (Context::loadPLY): Couldn't open " + std::string(filename) ));
+    helios_runtime_error("ERROR (Context::loadPLY): Couldn't open " + std::string(filename) );
   }
 
   //--- read header info -----//
@@ -3355,18 +3360,18 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
   //first line should always be 'ply'
   inputPly>>line;
   if( "ply"!=line ){
-    throw( std::runtime_error("ERROR (Context::loadPLY): " + std::string(filename) + " is not a PLY file."));
+    helios_runtime_error("ERROR (Context::loadPLY): " + std::string(filename) + " is not a PLY file.");
   }
 
   //read format
   inputPly>>line;
   if( "format"!=line ){
-    throw( std::runtime_error("ERROR (Context::loadPLY): could not determine data format of " + std::string(filename) ));
+    helios_runtime_error("ERROR (Context::loadPLY): could not determine data format of " + std::string(filename) );
   }
 
   inputPly>>line;
   if( "ascii"!=line ){
-    throw( std::runtime_error("ERROR (Context::loadPLY): Only ASCII data types are supported."));
+    helios_runtime_error("ERROR (Context::loadPLY): Only ASCII data types are supported.");
   }
 
   std::string temp_string;
@@ -3385,12 +3390,12 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
       if( "vertex"==line ){
         inputPly>>temp_string;
         if( !parse_uint(temp_string,vertexCount) ){
-          throw( std::runtime_error("ERROR (Context::loadPLY): PLY file read failed. Vertex count value should be a non-negative integer.") );
+          helios_runtime_error("ERROR (Context::loadPLY): PLY file read failed. Vertex count value should be a non-negative integer.");
         }
       }else if( "face"==line ){
         inputPly>>temp_string;
         if( !parse_uint(temp_string,faceCount) ){
-          throw( std::runtime_error("ERROR (Context::loadPLY): PLY file read failed. Face count value should be a non-negative integer.") );
+          helios_runtime_error("ERROR (Context::loadPLY): PLY file read failed. Face count value should be a non-negative integer.");
         }
       }
 
@@ -3432,7 +3437,7 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
         inputPly >> temp_string;
         float x;
         if( !parse_float(temp_string,x) ){
-          throw( std::runtime_error("ERROR (Context::loadPLY): X value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+          helios_runtime_error("ERROR (Context::loadPLY): X value for vertex " + std::to_string(row) + " is invalid and could not be read.");
         }
         if( upaxis=="XUP"){
           vertices.at(row).z = x;
@@ -3445,7 +3450,7 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
         inputPly >> temp_string;
         float y;
         if( !parse_float(temp_string,y) ){
-          throw( std::runtime_error("ERROR (Context::loadPLY): Y value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+          helios_runtime_error("ERROR (Context::loadPLY): Y value for vertex " + std::to_string(row) + " is invalid and could not be read.");
         }
         if( upaxis=="XUP"){
           vertices.at(row).x = y;
@@ -3458,7 +3463,7 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
         inputPly >> temp_string;
         float z;
         if( !parse_float(temp_string,z) ){
-          throw( std::runtime_error("ERROR (Context::loadPLY): Z value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+          helios_runtime_error("ERROR (Context::loadPLY): Z value for vertex " + std::to_string(row) + " is invalid and could not be read.");
         }
         if( upaxis=="XUP"){
           vertices.at(row).y = z;
@@ -3470,19 +3475,19 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
       }else if( property=="red" ){
         inputPly >> temp_string;
         if( !parse_float(temp_string,colors.at(row).r) ){
-          throw( std::runtime_error("ERROR (Context::loadPLY): red color value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+          helios_runtime_error("ERROR (Context::loadPLY): red color value for vertex " + std::to_string(row) + " is invalid and could not be read.");
         }
         colors.at(row).r /= 255.f;
       }else if( property=="green" ){
         inputPly >> temp_string;
         if( !parse_float(temp_string,colors.at(row).g) ){
-          throw( std::runtime_error("ERROR (Context::loadPLY): green color value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+          helios_runtime_error("ERROR (Context::loadPLY): green color value for vertex " + std::to_string(row) + " is invalid and could not be read.");
         }
         colors.at(row).g /= 255.f;
       }else if( property=="blue" ){
         inputPly >> temp_string;
         if( !parse_float(temp_string,colors.at(row).b) ){
-          throw( std::runtime_error("ERROR (Context::loadPLY): blue color value for vertex " + std::to_string(row) + " is invalid and could not be read."));
+          helios_runtime_error("ERROR (Context::loadPLY): blue color value for vertex " + std::to_string(row) + " is invalid and could not be read.");
         }
         colors.at(row).b /= 255.f;
       }else{
@@ -3491,7 +3496,7 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
     }
 
     if( inputPly.eof() ){
-      throw( std::runtime_error("ERROR (Context::loadPLY): Read past end of file while reading vertices. Vertex count specified in header may be incorrect."));
+      helios_runtime_error("ERROR (Context::loadPLY): Read past end of file while reading vertices. Vertex count specified in header may be incorrect.");
     }
 
   }
@@ -3549,7 +3554,7 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
     inputPly >> temp_string;
 
     if( !parse_uint(temp_string,v) ){
-      throw( std::runtime_error("ERROR (Context::loadPLY): Vertex count for face " + std::to_string(row) + " should be a non-negative integer."));
+      helios_runtime_error("ERROR (Context::loadPLY): Vertex count for face " + std::to_string(row) + " should be a non-negative integer.");
     }
 
     faces.at(row).resize(v);
@@ -3557,7 +3562,7 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
     for( uint i=0; i<v; i++ ){
       inputPly >> temp_string;
       if( !parse_int(temp_string,faces.at(row).at(i)) ){
-        throw( std::runtime_error("ERROR (Context::loadPLY): Vertex index for face " + std::to_string(row) + " is invalid and could not be read."));
+        helios_runtime_error("ERROR (Context::loadPLY): Vertex index for face " + std::to_string(row) + " is invalid and could not be read.");
       }
     }
 
@@ -3587,7 +3592,7 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
     }
 
     if( inputPly.eof() ){
-      throw( std::runtime_error("ERROR (Context::loadPLY): Read past end of file while reading faces. Face count specified in header may be incorrect."));
+      helios_runtime_error("ERROR (Context::loadPLY): Read past end of file while reading faces. Face count specified in header may be incorrect.");
     }
 
   }
@@ -3681,11 +3686,11 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
   std::string fn = filename;
   std::string ext = getFileExtension(filename);
   if( ext != ".obj" && ext != ".OBJ" ) {
-    throw( std::runtime_error("ERROR (Context::loadOBJ): File " + fn + " is not OBJ format.") );
+    helios_runtime_error("ERROR (Context::loadOBJ): File " + fn + " is not OBJ format.");
   }
 
   if( strcmp(upaxis,"XUP") != 0 && strcmp(upaxis,"YUP") != 0 && strcmp(upaxis,"ZUP") != 0 ){
-    throw(std::runtime_error("ERROR (Context::loadOBJ): Up axis of " + std::string(upaxis) + " is not valid.  Should be one of 'XUP', 'YUP', or 'ZUP'."));
+    helios_runtime_error("ERROR (Context::loadOBJ): Up axis of " + std::string(upaxis) + " is not valid.  Should be one of 'XUP', 'YUP', or 'ZUP'.");
   }
 
   std::string line, prop;
@@ -3703,7 +3708,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
   inputOBJ.open(filename);
 
   if (!inputOBJ.is_open()) {
-    throw(std::runtime_error("ERROR (Context::loadOBJ): Couldn't open " + std::string(filename) ));
+    helios_runtime_error("ERROR (Context::loadOBJ): Couldn't open " + std::string(filename) );
   }
 
   //determine the base file path for 'filename'
@@ -3800,14 +3805,14 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
         if( !digitf.empty() ) {
           int face;
           if( !parse_int( digitf, face ) ){
-            throw( std::runtime_error("ERROR (Context::loadOBJ): Face index on line " + std::to_string(lineno) + " must be a non-negative integer value."));
+            helios_runtime_error("ERROR (Context::loadOBJ): Face index on line " + std::to_string(lineno) + " must be a non-negative integer value.");
           }
           f.push_back(face);
         }
         if( !digitu.empty() ){
           int uv;
           if( !parse_int( digitu, uv ) ){
-            throw( std::runtime_error("ERROR (Context::loadOBJ): u,v index on line " + std::to_string(lineno) + " must be a non-negative integer value."));
+            helios_runtime_error("ERROR (Context::loadOBJ): u,v index on line " + std::to_string(lineno) + " must be a non-negative integer value.");
           }
           u.push_back( uv );
         }
@@ -3853,13 +3858,19 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
 
     std::string materialname = iter->first;
 
-    assert( materials.find(materialname)!=materials.end() );
+      std::string texture;
+      RGBcolor color = default_color;
+      bool textureColorIsOverridden = false;
 
-    OBJmaterial mat = materials.at(materialname);
+      if( materials.find(materialname)!=materials.end() ) {
 
-    std::string texture = mat.texture;
-    RGBcolor color = mat.color;
-    bool textureColorIsOverridden = mat.textureColorIsOverridden;
+          OBJmaterial mat = materials.at(materialname);
+
+          texture = mat.texture;
+          color = mat.color;
+          textureColorIsOverridden = mat.textureColorIsOverridden;
+
+      }
 
     for( size_t i=0; i<face_inds.at(materialname).size(); i++ ){
 
@@ -3943,11 +3954,11 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
       }
     }
     if( file.empty() ){
-      throw(std::runtime_error("ERROR (Context::loadMTL): Material file does not have correct file extension (.mtl)."));
+      helios_runtime_error("ERROR (Context::loadMTL): Material file does not have correct file extension (.mtl).");
     }
     inputMTL.open( file.c_str() );
     if( !inputMTL.is_open() ){
-      throw(std::runtime_error("ERROR (Context::loadMTL): Material file " + std::string(file) + " given in .obj file cannot be found."));
+      helios_runtime_error("ERROR (Context::loadMTL): Material file " + std::string(file) + " given in .obj file cannot be found.");
     }
   }
 
@@ -4453,5 +4464,289 @@ void Context::writePrimitiveData( std::string filename, const std::vector<std::s
   }
 
   file.close();
+
+}
+
+void Context::loadTabularTimeseriesData( const std::string &data_file, const std::vector<std::string> &col_labels, const std::string &a_delimeter, const std::string &a_date_string_format, uint headerlines ){
+
+    std::ifstream datafile(data_file); //open the file
+
+    if(!datafile.is_open()){ //check that file exists
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Weather data file '" + data_file + "' does not exist.");
+    }
+
+    int yearcol=-1;
+    int DOYcol=-1;
+    int datestrcol=-1;
+    int hourcol=-1;
+    int minutecol=-1;
+    int secondcol=-1;
+    int timestrcol=-1;
+    std::map<std::string,int> datacols;
+
+    size_t Ncolumns = 0;
+
+    size_t row = headerlines;
+
+    std::vector<std::string> column_labels = col_labels;
+    std::string delimiter = a_delimeter;
+    std::string date_string_format = a_date_string_format;
+
+    // pre-defined labels for CIMIS weather data files
+    if( col_labels.size()==1 && ( col_labels.front()=="CIMIS" || col_labels.front()=="cimis" ) ) {
+        column_labels = {"", "", "", "date", "hour", "DOY", "ETo", "", "precipitation", "",
+                         "net_radiation", "", "vapor_pressure", "", "air_temperature", "",
+                         "air_humidity", "", "dew_point", "", "wind_speed", "", "wind_direction",
+                         "", "soil_temperature", ""};
+        headerlines = 1;
+        delimiter = ",";
+        date_string_format = "MMDDYYYY";
+
+    }
+
+    //If user specified column labels as an argument, parse them
+    if( !column_labels.empty() ) {
+
+        int col = 0;
+        for (auto &label: column_labels) {
+
+            if (label == "year" || label == "Year") {
+                yearcol = col;
+            } else if (label == "DOY" || label == "Jul" ) {
+                DOYcol = col;
+            } else if (label == "date" || label == "Date") {
+                datestrcol = col;
+            } else if (label == "hour" || label == "Hour") {
+                hourcol = col;
+            } else if (label == "minute" || label == "Minute") {
+                minutecol = col;
+            } else if (label == "second" || label == "Second") {
+                secondcol = col;
+            }else if ( !label.empty() ){
+                if( datacols.find(label)==datacols.end() ) {
+                    datacols[label] = col;
+                }else{
+                    datacols[label+"_dup"] = col;
+                }
+            }
+
+            col++;
+        }
+
+        Ncolumns = column_labels.size();
+
+    // If column labels were not provided, read the first line of the text file and parse it for labels
+    }else{
+
+        if( headerlines==0 ){
+            std::cout << "WARNING (Context::loadTabularTimeseriesData): ""headerlines"" argument was specified as zero, and no column label information was given. Attempting to read the first line to see if it contains label information." << std::endl;
+            headerlines++;
+        }
+
+        std::string line;
+        if( std::getline(datafile, line) ){
+
+            std::vector<std::string> line_parsed = separate_string_by_delimiter( line, delimiter );
+
+            if( line_parsed.empty() ){
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but it did not contain the specified delimiter.");
+            }
+
+            Ncolumns = line_parsed.size();
+
+            for( int col=0; col<Ncolumns; col++ ){
+
+                std::string label = line_parsed.at(col);
+
+                if (label == "year" || label == "Year") {
+                    yearcol = col;
+                } else if (label == "DOY" || label == "Jul" ) {
+                    DOYcol = col;
+                } else if (label == "date" || label == "Date") {
+                    datestrcol = col;
+                } else if (label == "hour" || label == "Hour") {
+                    hourcol = col;
+                } else if (label == "minute" || label == "Minute") {
+                    minutecol = col;
+                } else if (label == "second" || label == "Second") {
+                    secondcol = col;
+                }else if ( !label.empty() ) {
+                    if( datacols.find(label)==datacols.end() ) {
+                        datacols[label] = col;
+                    }else{
+                        datacols[label+"_dup"] = col;
+                    }
+                }
+
+            }
+
+            headerlines --;
+
+        }else{
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but read failed.");
+        }
+
+        if( yearcol==-1 && DOYcol==-1 && datestrcol==-1 ){
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but could not find valid label information.");
+        }
+
+    }
+
+    if( datestrcol<0 && (yearcol<0 || DOYcol<0) ){
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): The date must be specified by either a column labeled ""date"", or by two columns labeled ""year"" and ""DOY"".");
+    }else if( hourcol<0 ){
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): At a minimum, the time must be specified by a column labeled ""hour""." );
+    }else if( datacols.empty() ){
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): No columns were found containing data variables (e.g., temperature, humidity, wind speed).");
+    }
+
+    std::string line;
+
+    //skip header lines
+    //note: if we read labels from the first header line above, we don't need to skip another line
+    for (int i = 0; i < headerlines; i++) {
+        std::getline(datafile, line);
+    }
+
+    while ( std::getline(datafile, line) ) { //loop through file to read data
+        row++;
+
+        if( trim_whitespace(line).empty() && row>1 ){
+            break;
+        }
+
+        //separate the line by delimiter
+        std::vector<std::string> line_separated = separate_string_by_delimiter( line, delimiter );
+
+        if( line_separated.size()!=Ncolumns ){
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Line " + std::to_string(row) + " had " + std::to_string(line_separated.size()) + " lines, but was expecting " + std::to_string(Ncolumns) );
+        }
+
+        //compile date
+        Date date;
+        if( yearcol>=0 && DOYcol>=0 ){
+            int DOY;
+            parse_int(line_separated.at(DOYcol), DOY);
+            if( DOY<1 || DOY>366 ){
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date specified on line " + std::to_string(row) + ".");
+            }
+            int year;
+            parse_int(line_separated.at( yearcol ), year);
+            if( year<1000 ){
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid year specified on line " + std::to_string(row) + ".");
+            }
+            date = make_Date( DOY, year );
+        }else if( datestrcol>=0 ){
+            //parse date string. expecting format YYYY-MM-DD with delimiter '-' or '/'
+            std::string datestr = line_separated.at(datestrcol);
+
+            //try parsing date string based on '-' delimiter
+            std::vector<std::string> thisdatestr = separate_string_by_delimiter( datestr, "-" );
+
+            if( thisdatestr.size()!=3 ){
+                //try parsing date string based on '/' delimiter
+                thisdatestr = separate_string_by_delimiter( datestr, "/" );
+            }
+
+            if( thisdatestr.size()!=3 ){
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + ". It should be in the format YYYY-MM-DD, delimited by either ""-"" or ""/""." );
+            }
+
+            //convert parsed date strings into a vector of integers
+            std::vector<int> thisdate(3);
+            for( int i=0; i<3; i++ ){
+                if( !parse_int( thisdatestr.at(i), thisdate.at(i) ) ){
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + ". It should be in the format YYYY-MM-DD, delimited by either ""-"" or ""/""." );
+                }
+            }
+
+            //figure out ordering of values
+            int year;
+            int month;
+            int day;
+            if( date_string_format=="YYYYMMDD" ){
+                year = thisdate.at(0);
+                month = thisdate.at(1);
+                day = thisdate.at(2);
+            }else if( date_string_format=="YYYYDDMM" ){
+                year = thisdate.at(0);
+                month = thisdate.at(2);
+                day = thisdate.at(1);
+            }else if( date_string_format=="DDMMYYYY" ){
+                year = thisdate.at(2);
+                month = thisdate.at(1);
+                day = thisdate.at(0);
+            }else if( date_string_format=="MMDDYYYY" ){
+                year = thisdate.at(2);
+                month = thisdate.at(0);
+                day = thisdate.at(1);
+            }else{
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date string format: " + date_string_format + ". Must be one of ""YYYYMMDD"", ""YYYYDDMM"", ""DDMMYYYY"", or ""MMDDYYYY"".  Check that the date string does not include a delimiter (i.e., should be MMDDYYYY not MM/DD/YYYY).");
+            }
+
+            if( year<1000 || month<1 || month>12 || day<1 || day>31 ){
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + ". It should be in the format YYYY-MM-DD, delimited by either ""-"" or ""/""." );
+            }
+
+            date = make_Date( day, month, year );
+        }else{
+            assert(1); //shouldn't be here
+        }
+
+        //compile time
+        Time time;
+        int hour = 0;
+        int minute = 0;
+        int second = 0;
+
+        if( !parse_int( line_separated.at(hourcol), hour ) ){
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse hour string on line " + std::to_string(row) + "." );
+        }
+        if( hour>24 && minutecol<0 && secondcol<0 ){
+            int hr_min = hour;
+            hour = std::floor( hr_min/100 );
+            minute = hr_min - hour*100;
+        }
+        if( hour==24 ){
+            hour = 0;
+            date.incrementDay();
+        }
+        if( minutecol>=0 ){
+            if( !parse_int( line_separated.at(minutecol), minute ) ){
+                minute = 0;
+                std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse minute string on line " << row << ". Setting minute equal to 0." << std::endl;
+            }
+        }
+        if( secondcol>=0 ){
+            if( !parse_int( line_separated.at(secondcol), minute ) ){
+                second = 0;
+                std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse second string on line " << row << ". Setting second equal to 0." << std::endl;
+            }
+        }
+        time = make_Time( hour, minute, second );
+
+        //compile data values
+        for( auto &dat : datacols ){
+
+            std::string label = dat.first;
+            int col = dat.second;
+
+            float dataval;
+            if( !parse_float( line_separated.at(col), dataval ) ){
+                std::cout << "WARNING (Context::loadTabularTimeseriesData): Failed to parse data value as ""float"" on line " << row << ", column "<<col+1 << ". Skipping this value..." << std::endl;
+                continue;
+            }
+
+            if( label=="air_humidity" && col_labels.size()==1 && ( col_labels.front()=="CIMIS" || col_labels.front()=="cimis" ) ) {
+                dataval = dataval/100.f;
+            }
+
+            addTimeseriesData( label.c_str(), dataval, date, time );
+
+        }
+
+    }
+
+    datafile.close();
 
 }

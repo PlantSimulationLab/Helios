@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['rad2deg_0',['rad2deg',['../group__functions.html#ga66681ffeb5bd130ce5fb14c93c801120',1,'helios']]],
+  ['rad2deg_0',['rad2deg',['../group__functions.html#ga0b9a2dac200293044d7e2ae1c03a3140',1,'helios']]],
   ['radiationmodel_1',['RadiationModel',['../class_radiation_model.html#acfcbd32e59e2b2728dabde1c7fa74329',1,'RadiationModel']]],
   ['randn_2',['randn',['../classhelios_1_1_context.html#a903aa1e3e016c522cac528c0377c0fe4',1,'helios::Context::randn(float mean, float stddev)'],['../classhelios_1_1_context.html#a1792e2ad0a31efec76fecd1554e0aa07',1,'helios::Context::randn()']]],
   ['randu_3',['randu',['../classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc',1,'helios::Context::randu()'],['../classhelios_1_1_context.html#a2f7842a2902bce8a8978a19aa9862a70',1,'helios::Context::randu(float min, float max)'],['../classhelios_1_1_context.html#a4dfca3b6d71d2016661da51c38cac565',1,'helios::Context::randu(int min, int max)'],['../group__functions.html#gad8ccb7b3d22876e477b80d5c2bdb94c1',1,'helios::randu(int imin, int imax)'],['../group__functions.html#ga06cb0bc53a3903c6c487dd524bc2315e',1,'helios::randu()']]],

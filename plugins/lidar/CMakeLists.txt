@@ -15,7 +15,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 
 find_package(CUDA REQUIRED)
 
-set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --use_fast_math --gpu-architecture=compute_35 -Wno-deprecated-gpu-targets" )
+if( OPTIX_VERSION_LEGACY )
+     set( GPU_COMPUTE "compute_35" )
+else()
+     set( GPU_COMPUTE "compute_50" )
+endif()
+
+set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --use_fast_math --gpu-architecture=${GPU_COMPUTE} -Wno-deprecated-gpu-targets" )
 
 if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
      set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -g -O0" )
@@ -41,8 +47,8 @@ target_link_libraries( lidar ${CUDA_LIBRARIES} )
 target_link_libraries( lidar visualizer )
 add_dependencies( lidar visualizer )
 
-add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip" )
-include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip/include" )
+#add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip" )
+#include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip/include" )
 
 #set( WITH_LASZIP FALSE )
 #set( WITH_UTILITIES FALSE )

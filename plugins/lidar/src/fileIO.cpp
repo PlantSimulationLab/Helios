@@ -486,7 +486,12 @@ size_t LiDARcloud::loadASCIIFile( uint scanID, ScanMetadata &scandata ){
       throw( std::runtime_error("ERROR (LiDARcloud::loadASCIIFile): z-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID) ) );
     }
 
-    //add hit point to the scan
+    //direction
+      if( temp_direction.elevation==-9999 || temp_direction.azimuth==-9999 ){
+          temp_direction = cart2sphere( temp_xyz - scandata.origin );
+      }
+
+      //add hit point to the scan
     addHitPoint( scanID, temp_xyz, temp_direction, temp_rgb, data );
 
     hit_count++;
