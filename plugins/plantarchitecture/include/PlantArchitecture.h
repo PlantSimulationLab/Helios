@@ -60,9 +60,6 @@ public:
         this->sampled = a.sampled;
         this->distribution_parameters = a.distribution_parameters;
         this->generator = a.generator;
-        if( this->distribution=="uniform" ){
-            assert( !this->distribution_parameters.empty() );
-        }
         return *this;
     }
 
@@ -360,13 +357,7 @@ public:
     PhytomerParameters( const PhytomerParameters& parameters_copy );
 
     PhytomerParameters& operator=(const PhytomerParameters& a){
-        if( a.internode.length.distribution=="uniform" ){
-            assert( !a.internode.length.distribution_parameters.empty() );
-        }
         this->internode = a.internode;
-        if( this->internode.length.distribution=="uniform" ){
-            assert( !this->internode.length.distribution_parameters.empty() );
-        }
         this->petiole = a.petiole;
         this->leaf = a.leaf;
         this->inflorescence = a.inflorescence;
@@ -457,7 +448,9 @@ public:
 struct Shoot{
 
     Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number,
-          const ShootParameters &shoot_params, std::vector<Shoot> *shoot_tree_ptr, helios::Context *context_ptr);
+          ShootParameters shoot_params, std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr, helios::Context *context_ptr);
+
+    void initializePhytomer();
 
     int addPhytomer(const PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
@@ -475,9 +468,9 @@ struct Shoot{
 
     ShootParameters shoot_parameters;
 
-    std::vector<Phytomer> phytomers;
+    std::vector<std::shared_ptr<Phytomer> > phytomers;
 
-    std::vector<Shoot> *shoot_tree_ptr;
+    std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr;
 
     helios::Context *context_ptr;
 
@@ -537,8 +530,8 @@ private:
     uint plant_count = 0;
 
     struct PlantInstance{
-        PlantInstance( const std::vector<Shoot> &a_shoot_tree, const helios::vec3 &a_base_position, float a_current_age ) : shoot_tree(a_shoot_tree), base_position(a_base_position), current_age(a_current_age) {};
-        std::vector<Shoot> shoot_tree;
+        PlantInstance(const helios::vec3 &a_base_position, float a_current_age) : base_position(a_base_position), current_age(a_current_age) {};
+        std::vector<std::shared_ptr<Shoot> > shoot_tree;
         helios::vec3 base_position;
         float current_age;
     };
