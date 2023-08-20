@@ -4436,11 +4436,18 @@ float RadiationModel::getCameraResponseScale(const std::string &orginalcameralab
 }
 
 
-void RadiationModel::writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue){
+void RadiationModel::writePrimitiveDataLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue){
+
+    if( cameras.find(cameralabel)==cameras.end() ){
+        throw( std::runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabel): Camera '" + cameralabel + "' does not exist." ) );
+    }
 
     //Get image UUID labels
     std::vector<uint> camera_UUIDs;
     std::string global_data_label = "camera_" + cameralabel + "_pixel_UUID";
+    if( !context->doesGlobalDataExist(global_data_label.c_str() ) ){
+        throw( std::runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabel): Pixel labels for camera '" + cameralabel + "' do not exist. Was the radiation model run to generate labels?" ) );
+    }
     context->getGlobalData(global_data_label.c_str(), camera_UUIDs);
     std::vector<uint> pixel_UUIDs = camera_UUIDs;
     int2 camera_resolution = cameras.at(cameralabel).resolution;

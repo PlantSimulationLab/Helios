@@ -666,7 +666,7 @@ public:
      * \param[in] camera Label for camera to be queried
      * \param[in] bands Vector of labels for radiative bands to be written
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path Path to directory where images should be saved
+     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
      * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      */
     void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
@@ -766,7 +766,7 @@ public:
      * \param[in] "datatype" Data type of the label
      * \param[in] "padvalue" Pad value for the empty pixels
     */
-    void writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
+    void writePrimitiveDataLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
 
     //! Write depth image to file
     /**
