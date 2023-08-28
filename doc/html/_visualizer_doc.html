@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.68</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.69</span>
    </div>
   </td>
  </tr>
@@ -177,12 +177,12 @@ Visualization Window</h2>
 <p >In order to actually display a window for visualization, we must issue a comand to plot the geometry. There are different comands to produce a visualization window depending on the intended output:</p>
 <ul>
 <li>
-<a class="el" href="class_visualizer.html#ad927cedbc49aa632c0f24e5d444990ba">plotInteractive()</a> - Open an interactive visualization window that allows for user input control. This type of visualization allows for one to, for example, rotate the view or zoom in/out. This will cause the program to wait until the window is closed by the user to continue. </li>
+<a class="el" href="class_visualizer.html#ab4858ed12fa78fe451569f4bbc27cd7c">plotInteractive()</a> - Open an interactive visualization window that allows for user input control. This type of visualization allows for one to, for example, rotate the view or zoom in/out. This will cause the program to wait until the window is closed by the user to continue. </li>
 <li>
-<a class="el" href="class_visualizer.html#ae056b735b1b9c154b981f07ba93d0a3a">plotUpdate()</a> - Open a window and update it with the current visualization, then continue the program. This does not allow for any user input, since it continues on without checking for input. This is useful when generating a large number of visualization images for a movie. <br  />
+<a class="el" href="class_visualizer.html#aa87c684dd84db8d1ae0d12872b1dda22">plotUpdate()</a> - Open a window and update it with the current visualization, then continue the program. This does not allow for any user input, since it continues on without checking for input. This is useful when generating a large number of visualization images for a movie. <br  />
  </li>
 </ul>
-<p >If <a class="el" href="class_visualizer.html#ae056b735b1b9c154b981f07ba93d0a3a">plotUpdate()</a> is issued, another command <a class="el" href="class_visualizer.html#ab42f12bed91baa9f2d8532cbe804be5b">printWindow()</a> can be used to output the current visualization to file (JPEG files only).</p>
+<p >If <a class="el" href="class_visualizer.html#aa87c684dd84db8d1ae0d12872b1dda22">plotUpdate()</a> is issued, another command <a class="el" href="class_visualizer.html#a2db00c518bf610fdcb70e0ec5a5a0e32">printWindow()</a> can be used to output the current visualization to file (JPEG files only).</p>
 <p >The current window can be closed using the <a class="el" href="class_visualizer.html#a6b7be76387563b2981bba995a7578d78">closeWindow()</a> command.</p>
 <p >Below is an example of opening a window (blank), exporting its contents to file, then closing the window:</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"> <pre><code> #include "Visualizer.h"
@@ -258,7 +258,7 @@ Visualizer::addVoxelByCenter( const helios::vec3 &amp;center, const helios::vec3
 </ul>
 </td></tr>
 <tr>
-<td>Sphere </td><td>Tesselated sphere composed of triangles. </td><td><ul>
+<td>Sphere </td><td>Tessellated sphere composed of triangles. </td><td><ul>
 <li>
 Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag ) </li>
 <li>
@@ -268,7 +268,7 @@ Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndi
 <tr>
 <td>Line </td><td>Linear segment between two points. </td><td><ul>
 <li>
-Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBcolor &amp;olor, uint linewidth, CoordinateSystem coordFlag ) </li>
+Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBcolor &amp;color, uint linewidth, CoordinateSystem coordFlag ) </li>
 <li>
 Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBAcolor &amp;color, uint linewidth, CoordinateSystem coordFlag ) </li>
 </ul>
@@ -300,9 +300,9 @@ Automatically importing Context geometry</h3>
 <tr>
 <th>Command </th><th>Description  </th></tr>
 <tr>
-<td><a class="el" href="class_visualizer.html#a32f4b1bcbbac176591bd7c1892668d7a">buildContextGeometry( Context* context )</a> </td><td>Add all primitives in the Context to the Visualizer.  </td></tr>
+<td><a class="el" href="class_visualizer.html#a4834cddbcc01696bf0b1ef1b0a2cde0c">buildContextGeometry( Context* context )</a> </td><td>Add all primitives in the Context to the Visualizer.  </td></tr>
 <tr>
-<td><a class="el" href="class_visualizer.html#ad62c53e12eb49f2cf788241995178688">buildContextGeometry( Context* context, std::vector&lt;uint&gt; UUIDs )</a> </td><td>Add a subset of primitives in the Context to the Visualizer.  </td></tr>
+<td><a class="el" href="class_visualizer.html#ada78ef51373f63718a95841f564a83ef">buildContextGeometry( Context* context, std::vector&lt;uint&gt; UUIDs )</a> </td><td>Add a subset of primitives in the Context to the Visualizer.  </td></tr>
 </table>
 <p >The example below shows how to add all Context geometry to the visualizer.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.1"> <pre><code> #include "Context.h"
@@ -478,9 +478,9 @@ Colorbar</h3>
 <tr>
 <th>Function </th><th>Description  </th></tr>
 <tr>
-<td><a class="el" href="class_visualizer.html#a46882cfd66cc85dee4300e0e48b2302e">enableColorbar(void)</a> </td><td>Make the colorbar visible.  </td></tr>
+<td><a class="el" href="class_visualizer.html#a050807f8462ca95bde2fd737b26830c4">enableColorbar(void)</a> </td><td>Make the colorbar visible.  </td></tr>
 <tr>
-<td><a class="el" href="class_visualizer.html#a5c8d26d18bd0bea73272834e8ed1bbe2">disableColorbar(void)</a> </td><td>Make the colorbar invisible.  </td></tr>
+<td><a class="el" href="class_visualizer.html#a3580188fe9f0daf71e1c434fe7f14103">disableColorbar(void)</a> </td><td>Make the colorbar invisible.  </td></tr>
 <tr>
 <td><a class="el" href="class_visualizer.html#ad0a19f3097299a4407919d6fd9c5fefe">setColorbarPosition( vec3 position )</a> </td><td>Set the position of the colorbar. Note that position.z gives the depth of the colorbar.  </td></tr>
 <tr>
@@ -488,7 +488,7 @@ Colorbar</h3>
 <tr>
 <td><a class="el" href="class_visualizer.html#ac41ea2148985f9797ca84a3affa35da9">setColorbarRange( float cmin, float cmax )</a>  </td><td>Set the range of data values for the colorbar/colormap.  </td></tr>
 <tr>
-<td><a class="el" href="class_visualizer.html#a4938f3b70283e785c53e674358b3f03a">setColorbarTicks( std::vector&lt;float&gt; ticks )</a>  </td><td>Set locations of data tick along colorbar.  </td></tr>
+<td>setColorbarTicks( std::vector&lt;float&gt; ticks )  </td><td>Set locations of data tick along colorbar.  </td></tr>
 <tr>
 <td><a class="el" href="class_visualizer.html#ae30cb19cb7d003ebbc0851c51c45d8a8">setColorbarTitle( const char* title )</a>  </td><td>Set the title text displayed above the colorbar.  </td></tr>
 <tr>

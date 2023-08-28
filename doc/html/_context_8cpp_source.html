@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.68</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.69</span>
    </div>
   </td>
  </tr>
@@ -2867,9 +2867,9 @@ $(function() {
 <div class="line"><a id="l02803" name="l02803"></a><span class="lineno"> 2803</span>    {</div>
 <div class="line"><a id="l02804" name="l02804"></a><span class="lineno"> 2804</span>        <span class="comment">//create a template object for the current texture</span></div>
 <div class="line"><a id="l02805" name="l02805"></a><span class="lineno"> 2805</span>        uint object_template = <a class="code hl_function" href="group__compoundobjects.html#gae5c1fa3bae1ff170c14a4378fb8abd95">addTileObject</a>(<a class="code hl_function" href="helios__vector__types_8h.html#a35b1ff50d62c80cf63426e25ee814ca9">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga34e381a53377fbe8682d89d8a9c24cc5">make_vec2</a>(1,1), nullrotation, new_subdiv, tex.at(j).c_str());</div>
-<div class="line"><a id="l02806" name="l02806"></a><span class="lineno"> 2806</span>        object_templates.push_back(object_template);</div>
+<div class="line"><a id="l02806" name="l02806"></a><span class="lineno"> 2806</span>        object_templates.emplace_back(object_template);</div>
 <div class="line"><a id="l02807" name="l02807"></a><span class="lineno"> 2807</span>        std::vector&lt;uint&gt; object_primitives = <a class="code hl_function" href="classhelios_1_1_context.html#ad2b762dd7b31126150c6e6dc350a3914">getTileObjectPointer</a>(object_template)-&gt;<a class="code hl_function" href="classhelios_1_1_compound_object.html#ab3973a7c8ccb1aa0ce3f21ffe461ef7b">getPrimitiveUUIDs</a>();</div>
-<div class="line"><a id="l02808" name="l02808"></a><span class="lineno"> 2808</span>        template_primitives.push_back(object_primitives);</div>
+<div class="line"><a id="l02808" name="l02808"></a><span class="lineno"> 2808</span>        template_primitives.emplace_back(object_primitives);</div>
 <div class="line"><a id="l02809" name="l02809"></a><span class="lineno"> 2809</span>    }</div>
 <div class="line"><a id="l02810" name="l02810"></a><span class="lineno"> 2810</span>    </div>
 <div class="line"><a id="l02811" name="l02811"></a><span class="lineno"> 2811</span>    <span class="comment">//keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time</span></div>
@@ -3054,9 +3054,9 @@ $(function() {
 <div class="line"><a id="l02990" name="l02990"></a><span class="lineno"> 2990</span>        </div>
 <div class="line"><a id="l02991" name="l02991"></a><span class="lineno"> 2991</span>        <span class="comment">//create a template object for the current texture</span></div>
 <div class="line"><a id="l02992" name="l02992"></a><span class="lineno"> 2992</span>        uint object_template = <a class="code hl_function" href="group__compoundobjects.html#gae5c1fa3bae1ff170c14a4378fb8abd95">addTileObject</a>(<a class="code hl_function" href="helios__vector__types_8h.html#a35b1ff50d62c80cf63426e25ee814ca9">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga34e381a53377fbe8682d89d8a9c24cc5">make_vec2</a>(1,1), nullrotation, new_subdiv, tex.at(j).c_str());</div>
-<div class="line"><a id="l02993" name="l02993"></a><span class="lineno"> 2993</span>        object_templates.push_back(object_template);</div>
+<div class="line"><a id="l02993" name="l02993"></a><span class="lineno"> 2993</span>        object_templates.emplace_back(object_template);</div>
 <div class="line"><a id="l02994" name="l02994"></a><span class="lineno"> 2994</span>        std::vector&lt;uint&gt; object_primitives = <a class="code hl_function" href="classhelios_1_1_context.html#ad2b762dd7b31126150c6e6dc350a3914">getTileObjectPointer</a>(object_template)-&gt;<a class="code hl_function" href="classhelios_1_1_compound_object.html#ab3973a7c8ccb1aa0ce3f21ffe461ef7b">getPrimitiveUUIDs</a>();</div>
-<div class="line"><a id="l02995" name="l02995"></a><span class="lineno"> 2995</span>        template_primitives.push_back(object_primitives);</div>
+<div class="line"><a id="l02995" name="l02995"></a><span class="lineno"> 2995</span>        template_primitives.emplace_back(object_primitives);</div>
 <div class="line"><a id="l02996" name="l02996"></a><span class="lineno"> 2996</span>    }</div>
 <div class="line"><a id="l02997" name="l02997"></a><span class="lineno"> 2997</span>    </div>
 <div class="line"><a id="l02998" name="l02998"></a><span class="lineno"> 2998</span>    <span class="comment">//keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time</span></div>
@@ -4089,7 +4089,7 @@ $(function() {
 <div class="line"><a id="l04025" name="l04025"></a><span class="lineno"> 4025</span>            <span class="keyword">auto</span>* patch_new = (<span class="keyword">new</span> Patch( texturefile, uv,  textures, 0, currentUUID ));</div>
 <div class="line"><a id="l04026" name="l04026"></a><span class="lineno"> 4026</span> </div>
 <div class="line"><a id="l04027" name="l04027"></a><span class="lineno"> 4027</span>            <span class="keywordflow">if</span>( patch_new-&gt;getSolidFraction()==0 ){</div>
-<div class="line"><a id="l04028" name="l04028"></a><span class="lineno"> 4028</span>              free(patch_new);</div>
+<div class="line"><a id="l04028" name="l04028"></a><span class="lineno"> 4028</span>              <span class="keyword">delete</span> patch_new;</div>
 <div class="line"><a id="l04029" name="l04029"></a><span class="lineno"> 4029</span>              <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l04030" name="l04030"></a><span class="lineno"> 4030</span>            }</div>
 <div class="line"><a id="l04031" name="l04031"></a><span class="lineno"> 4031</span> </div>
@@ -5324,7 +5324,7 @@ $(function() {
 <div class="line"><a id="l05260" name="l05260"></a><span class="lineno"> 5260</span>            <span class="keyword">auto</span>* patch_new = (<span class="keyword">new</span> Patch( texturefile, uv, textures, 0, currentUUID ));</div>
 <div class="line"><a id="l05261" name="l05261"></a><span class="lineno"> 5261</span> </div>
 <div class="line"><a id="l05262" name="l05262"></a><span class="lineno"> 5262</span>            <span class="keywordflow">if</span>( patch_new-&gt;getSolidFraction()==0 ){</div>
-<div class="line"><a id="l05263" name="l05263"></a><span class="lineno"> 5263</span>              free(patch_new);</div>
+<div class="line"><a id="l05263" name="l05263"></a><span class="lineno"> 5263</span>                <span class="keyword">delete</span> patch_new;</div>
 <div class="line"><a id="l05264" name="l05264"></a><span class="lineno"> 5264</span>              <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l05265" name="l05265"></a><span class="lineno"> 5265</span>            }</div>
 <div class="line"><a id="l05266" name="l05266"></a><span class="lineno"> 5266</span> </div>

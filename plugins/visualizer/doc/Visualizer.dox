@@ -193,7 +193,7 @@
    </tr>
    <tr>	
       <td>Sphere</td>
-      <td>Tesselated sphere composed of triangles.</td>
+      <td>Tessellated sphere composed of triangles.</td>
       <td><ul>
 	  <li>\ref Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
 	  <li>\ref Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
@@ -204,7 +204,7 @@
       <td>Line</td>
       <td>Linear segment between two points.</td>
        <td><ul>
-	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &olor, uint linewidth, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, uint linewidth, CoordinateSystem coordFlag )</li>
 	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, uint linewidth, CoordinateSystem coordFlag )</li>
 	</ul>
       </td>

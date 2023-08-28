@@ -2803,9 +2803,9 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
     {
         //create a template object for the current texture
         uint object_template = addTileObject(make_vec3(0,0,0), make_vec2(1,1), nullrotation, new_subdiv, tex.at(j).c_str());
-        object_templates.push_back(object_template);
+        object_templates.emplace_back(object_template);
         std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
-        template_primitives.push_back(object_primitives);
+        template_primitives.emplace_back(object_primitives);
     }
     
     //keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
@@ -2990,9 +2990,9 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
         
         //create a template object for the current texture
         uint object_template = addTileObject(make_vec3(0,0,0), make_vec2(1,1), nullrotation, new_subdiv, tex.at(j).c_str());
-        object_templates.push_back(object_template);
+        object_templates.emplace_back(object_template);
         std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
-        template_primitives.push_back(object_primitives);
+        template_primitives.emplace_back(object_primitives);
     }
     
     //keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
@@ -4025,7 +4025,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
             auto* patch_new = (new Patch( texturefile, uv,  textures, 0, currentUUID ));
 
             if( patch_new->getSolidFraction()==0 ){
-              free(patch_new);
+              delete patch_new;
               continue;
             }
 
@@ -5260,7 +5260,7 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
             auto* patch_new = (new Patch( texturefile, uv, textures, 0, currentUUID ));
 
             if( patch_new->getSolidFraction()==0 ){
-              free(patch_new);
+                delete patch_new;
               continue;
             }
 

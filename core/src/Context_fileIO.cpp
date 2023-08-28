@@ -1232,8 +1232,6 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
   uint ID;
   std::vector<uint> UUID;
 
-  std::map<uint,uint> remapped_ObjIDs;
-
   // Using "pugixml" parser.  See pugixml.org
   pugi::xml_document xmldoc;
 
@@ -1644,9 +1642,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'sphere' block must be a non-negative integer value.");
     }
 
-    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
-        objID = remapped_ObjIDs.at(objID);
-    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+    if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
         objID = currentObjectID;
         currentObjectID++;
     }
@@ -1733,9 +1729,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tube' block must be a non-negative integer value.");
     }
 
-    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
-        objID = remapped_ObjIDs.at(objID);
-    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+    if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
         objID = currentObjectID;
         currentObjectID++;
     }
@@ -1840,9 +1834,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'box' block must be a non-negative integer value.");
     }
 
-    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
-        objID = remapped_ObjIDs.at(objID);
-    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+    if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
         objID = currentObjectID;
         currentObjectID++;
     }
@@ -1929,9 +1921,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'disk' block must be a non-negative integer value.");
     }
 
-    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
-        objID = remapped_ObjIDs.at(objID);
-    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+    if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
         objID = currentObjectID;
         currentObjectID++;
     }
@@ -2018,9 +2008,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'cone' block must be a non-negative integer value.");
     }
 
-    if( remapped_ObjIDs.find(objID) != remapped_ObjIDs.end() ){ //check that this object ID was not already re-mapped
-        objID = remapped_ObjIDs.at(objID);
-    }else if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+    if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
         objID = currentObjectID;
         currentObjectID++;
     }
@@ -2104,6 +2092,37 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     UUID.insert( UUID.end(), childUUIDs.begin(), childUUIDs.end() );
 
   }//end cones
+
+  //-------------- POLYMESH ---------------//
+  for (pugi::xml_node p = helios.child("polymesh"); p; p = p.next_sibling("polymesh")) {
+
+      // * Polymesh Object ID * //
+      uint objID=0;
+      if( XMLparser::parse_objID(p,objID)>1 ){
+          helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'polymesh' block must be a non-negative integer value.");
+      }
+
+      if( doesObjectExist(objID) ){ //if this object ID is already in use, assign a new one
+          objID = currentObjectID;
+          currentObjectID++;
+      }
+
+      ID = addPolymeshObject(object_prim_UUIDs.at(objID));
+
+      setPrimitiveParentObjectID( object_prim_UUIDs.at(objID), ID );
+
+      // * Polymesh Sub-Primitive Data * //
+
+      loadOsubPData(p,ID);
+
+      // * Polymesh Object Data * //
+
+      loadOData(p,ID);
+
+      std::vector<uint> childUUIDs = object_prim_UUIDs.at(objID);
+      UUID.insert( UUID.end(), childUUIDs.begin(), childUUIDs.end() );
+
+    }//end polymesh
 
   //-------------- GLOBAL DATA ---------------//
 
@@ -3977,7 +3996,7 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
       getline(inputMTL, line);
       std::string material_name = trim_whitespace(line);
       OBJmaterial mat(RGB::red,"",0);
-      materials.emplace( std::make_pair(material_name,mat) );
+      materials.emplace( material_name,mat );
 
       std::string map_Kd, map_d;
 

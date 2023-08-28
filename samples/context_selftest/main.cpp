@@ -2,7 +2,7 @@
 
 using namespace helios;
 
-int main(void){
+int main(){
 
   //Declare and initialize the Helios context
   //note that since we have used the `helios' namespace above, we do not need to declare the context as: helios::Context

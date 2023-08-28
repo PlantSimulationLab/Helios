@@ -108,9 +108,9 @@ void LiDARcloud::loadXML( const char* filename, bool load_grid_only ){
       
       SphericalCoord rotation_sphere;
       if( strlen(rotation_str)>0 ){
-	vec3 rotation = string2vec3( rotation_str ); //note: pugi loads xml data as a character.  need to separate it into 3 floats
-	rotation = rotation*M_PI/180.f;
-	rotation_sphere = cart2sphere(rotation);
+	    vec2 rotation = string2vec2( rotation_str ); //note: pugi loads xml data as a character.  need to separate it into 2 floats
+	    rotation = rotation*M_PI/180.f;
+	    rotation_sphere = make_SphericalCoord(rotation.x,rotation.y);
       }
       
       // ----- thetaMin ------//
@@ -265,7 +265,7 @@ void LiDARcloud::loadXML( const char* filename, bool load_grid_only ){
         if( translation.magnitude()>0.f ){
           coordinateShift( scanID, translation );
         }
-        if( rotation_sphere.elevation>0.f && rotation_sphere.azimuth>0.f ){
+        if( rotation_sphere.elevation!=0 || rotation_sphere.azimuth!=0 ){
           coordinateRotation( scanID, rotation_sphere );
         }
 
