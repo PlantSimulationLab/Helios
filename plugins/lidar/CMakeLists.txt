@@ -47,8 +47,8 @@ target_link_libraries( lidar ${CUDA_LIBRARIES} )
 target_link_libraries( lidar visualizer )
 add_dependencies( lidar visualizer )
 
-add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip" )
-include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip/include" )
+#add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip" )
+#include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip/include" )
 
 #set( WITH_LASZIP FALSE )
 #set( WITH_UTILITIES FALSE )

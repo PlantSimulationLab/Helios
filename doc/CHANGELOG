@@ -1389,3 +1389,44 @@
 
 *Stomatal Conductance*
 - Changed selfTest() back to non-static because it could cause issues running it outside of the class.
+
+[1.2.68] 2023-08-17
+
+* Added new error handling function 'helios_runtime_error', which allows for greater control over error messages. If running in debug mode, it will output the error message to stderr as well as throwing an exception.
+
+*Context*
+- Incorporated new error handling function 'helios_runtime_error' into all Context-related files.
+- Polymesh objects were not being properly written to XML files (Context::writeXML()). The \<polymesh\> tag was not being closed properly.
+- The overloaded += operator for helios vector types were changed to return a reference to the object instead of void, which allows for chaining of operations.
+- If a material was not specified in an OBJ file (Context::loadOBJ()), the default material was not being applied to the object and an error would be thrown.
+
+*LiDAR*
+- References to laszip in CMakeLists.txt completely commented out for now, as this was causing build errors on some Windows systems.
+- Check added to LiDARcloud::loadASCIIfile() to automatically compute hit direction if it is not specified in the ASCII file. Without this, an assertion error is thrown since v1.2.60.
+
+*Boundary-Layer Conductance*
+- Fixed UUID indexing error.
+
+[1.2.69] 2023-08-28
+
+* utilities/create_project.sh will now figure out the current directory name and use it as the executable name if run inside the project directory.
+* Memory leak checking option added to utilities/run_samples.sh for Linux and MacOS.
+* Added documentation about setting Timeout Delay (TDR) on Windows systems to avoid GPU timeout errors.
+
+*Context*
+- Polymeshes were not implemented in Context::loadXML().
+- Removed 'remapped_ObjIDs' variable from Context::loadXML() function, as this was not used.
+- Memory leak when creating Tile objects fixed.
+- Changed push_back() to emplace_back() in Context::getTileObjectAreaRatio() and Context::setTileObjectSubdivisionCount() methods.
+- Context copy constructor and assignment operator deleted to prevent copying of the Context.
+
+*LiDAR*
+- Point cloud rotations specified in input XML or ScanMetadata was not working correctly.
+
+*Visualizer*
+- Visualizer::setColormap() with custom colormaps was not working correctly.
+- Visualizer now uses helios_runtime_error() for error handling.
+- Cleaning of the Visualizer code throughout.
+
+*Energy Balance*
+- Energy balance now uses helios_runtime_error() for error handling.

@@ -568,7 +568,7 @@ public:
     Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, const char *a_texturefile, helios::Context *a_context);
     
     //! Tile destructor
-    ~Tile() override= default;
+    ~Tile() override = default;
     
     //! Get the dimensions of the entire tile object
     helios::vec2 getSize() const;
@@ -1875,6 +1875,12 @@ public:
     
     //! Context destructor
     ~Context();
+
+    //! Deleted copy constructor to prevent copying of Context
+    Context( const Context& ) = delete;
+
+    //! Deleted assignment operator to prevent copying of Context
+    void operator=( const Context& ) = delete;
     
     //! Run a self-test of the Context. The Context self-test runs through validation checks of Context-related methods to ensure they are working properly.
     /**

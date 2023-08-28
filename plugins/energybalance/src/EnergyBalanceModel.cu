@@ -140,7 +140,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     uint Nprimitives = UUIDs.size();
 
     if( Nprimitives==0 ){
-        std::cerr << "ERROR (EnergyBalanceModel): No primitives have been added to the context.  There is nothing to simulate. Exiting..." << std::endl;
+        std::cerr << "WARNING (EnergyBalanceModel::run): No primitives have been added to the context.  There is nothing to simulate. Exiting..." << std::endl;
         return;
     }
 
@@ -149,8 +149,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     // Look through all flux primitive data in the context and sum them up in vector Rn.  Each element of Rn corresponds to a primitive.
 
     if( radiation_bands.size()==0 ){
-        std::cerr << "ERROR (EnergyBalanceModel): No radiation bands were found." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (EnergyBalanceModel::run): No radiation bands were found.");
     }
 
     std::vector<float> Rn;
@@ -169,9 +168,9 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
             char str[50];
             sprintf(str,"radiation_flux_%s",radiation_bands.at(b).c_str());
             if( !context->doesPrimitiveDataExist(p,str) ) {
-                throw( std::runtime_error("ERROR (EnergyBalanceModel::run): No radiation was found in the context for band " + std::string(radiation_bands.at(b)) + ". Did you run the radiation model for this band?"));
+                helios_runtime_error("ERROR (EnergyBalanceModel::run): No radiation was found in the context for band " + std::string(radiation_bands.at(b)) + ". Did you run the radiation model for this band?"));
             }else if( context->getPrimitiveDataType(p,str)!=HELIOS_TYPE_FLOAT ){
-                throw( std::runtime_error("ERROR (EnergyBalanceModel::run): Radiation primitive data for band " + std::string(radiation_bands.at(b)) + " does not have the correct type of ''float'"));
+                helios_runtime_error("ERROR (EnergyBalanceModel::run): Radiation primitive data for band " + std::string(radiation_bands.at(b)) + " does not have the correct type of ''float'"));
             }
             float R;
             context->getPrimitiveData(p,str,R);

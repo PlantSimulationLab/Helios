@@ -1,9 +1,8 @@
-#include "Context.h"
 #include "RadiationModel.h"
 
 using namespace helios;
 
-int main(int argc, char* argv[])
+int main()
 {
   
   Context context;
