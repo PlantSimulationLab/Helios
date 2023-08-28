@@ -1,6 +1,17 @@
-/** \file   "LeafOptics.cpp"  plugin declarations.
-    \author Jan Graefe, Tong Lei
-   */
+/** \file "LeafOptics.cpp" Routines for performing synthetic radiation camera calibration.
+
+    Copyright (C) 2016-2023  Brian Bailey
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, version 2.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+*/
 
 #include "LeafOptics.h"
 using namespace std;
@@ -16,47 +27,74 @@ LeafOptics::LeafOptics( helios::Context* __context ){
 
     // Load leaf refraction index -  refractiveindex (n)
     std::vector<helios::vec2> data;
+    if( !context->doesGlobalDataExist("refraction_index" ) ){
+        helios_runtime_error("Refraction index data was not loaded properly from the prospect_spectral_library.xml file.");
+    }
     context->getGlobalData("refraction_index", data);
     for(int i=0; i<nw; i++) {
         refractiveindex.push_back(data.at(i).y);
         wave_length.push_back(data.at(i).x);
     }
     // Load specific absorption coefficient (per elementary layer depth)  for total chlorophyll  -  absorption_chlorophyll (cm^2/micro_g)
+    if( !context->doesGlobalDataExist("absorption_chlorophyll" ) ){
+        helios_runtime_error("Chlorophyll absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
+    }
     context->getGlobalData("absorption_chlorophyll", data);
     for(int i=0; i<nw; i++) {
         absorption_chlorophyll.push_back(data.at(i).y);}
 
     // Load specific absorption coefficient for total carotenoids  -  absorption_carotenoid (cm^2/micro_g)
+    if( !context->doesGlobalDataExist("absorption_carotenoid" ) ){
+        helios_runtime_error("Carotenoid absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
+    }
     context->getGlobalData("absorption_carotenoid", data);
     for(int i=0; i<nw; i++) {
         absorption_carotenoid.push_back(data.at(i).y);}
 
     // Load specific absorption coefficient for anthocyans  -  sac_an (cm^2/micro_g)
+    if( !context->doesGlobalDataExist("absorption_anthocyanin" ) ){
+        helios_runtime_error("Anothocyanin absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
+    }
     context->getGlobalData("absorption_anthocyanin", data);
     for(int i=0; i<nw; i++) {
         absorption_anthocyanin.push_back(data.at(i).y);}
 
     // Load specific absorption coefficient for specific brown pigments (phenols during leaf death)   -  absorption_brown (arbitrary unit)
+    if( !context->doesGlobalDataExist("absorption_brown" ) ){
+        helios_runtime_error("Brown pigment absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
+    }
     context->getGlobalData("absorption_brown", data);
     for(int i=0; i<nw; i++) {
         absorption_brown.push_back(data.at(i).y);}
 
 // Load specific absorption coefficient for mass of water per leaf area (EWT)-  absorption_water (1/cm or cm^2/g)
+    if( !context->doesGlobalDataExist("absorption_water" ) ){
+        helios_runtime_error("Water absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
+    }
     context->getGlobalData("absorption_water", data);
     for(int i=0; i<nw; i++) {
         absorption_water.push_back(data.at(i).y);}
 
 // Load specific absorption coefficient for dry mass per leaf area (LMA)-  absorption_drymass (cm^2/g)
+    if( !context->doesGlobalDataExist("absorption_drymass" ) ){
+        helios_runtime_error("Dry mass absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
+    }
     context->getGlobalData("absorption_drymass", data);
     for(int i=0; i<nw; i++) {
         absorption_drymass.push_back(data.at(i).y);}
 
     // Load specific absorption coefficient for proteins- absorption_proteins (cm2.g-1)
+    if( !context->doesGlobalDataExist("absorption_proteins" ) ){
+        helios_runtime_error("Protein absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
+    }
     context->getGlobalData("absorption_proteins", data);
     for(int i=0; i<nw; i++) {
         absorption_protein.push_back(data.at(i).y);}
 
     // Load specific absorption coefficient for carbon based constituents-  absorption_carbonconstituents (cm^2/g)
+    if( !context->doesGlobalDataExist("absorption_carbonconstituents" ) ){
+        helios_runtime_error("Carbon constituent absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
+    }
     context->getGlobalData("absorption_carbonconstituents", data);
     for(int i=0; i<nw; i++) {
         absorption_carbonconstituents.push_back(data.at(i).y);}

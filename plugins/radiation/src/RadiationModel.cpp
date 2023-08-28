@@ -1,7 +1,6 @@
 /** \file "RadiationModel.cpp" Primary source file for radiation transport model.
-    \author Brian Bailey
 
-    Copyright (C) 2016-2021  Brian Bailey
+    Copyright (C) 2016-2023  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -62,14 +61,14 @@ void RadiationModel::setDirectRayCount( const std::string &label, size_t N ){
 
 void RadiationModel::setDiffuseRayCount( const std::string &label, size_t N ){
     if( !doesBandExist(label) ){
-        throw( std::runtime_error("ERROR (RadiationModel::setDiffuseRayCount): Cannot set ray count for band " + label + " because it is not a valid band." ) );
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseRayCount): Cannot set ray count for band " + label + " because it is not a valid band." ) );
     }
     radiation_bands.at(label).diffuseRayCount = N;
 }
 
 void RadiationModel::setDiffuseRadiationFlux( const std::string &label, float flux ){
     if( !doesBandExist(label) ){
-        throw( std::runtime_error("ERROR (RadiationModel::setDiffuseRadiationFlux): Cannot set flux value for band " + label + " because it is not a valid band." ));
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationFlux): Cannot set flux value for band " + label + " because it is not a valid band." ));
     }
     radiation_bands.at(label).diffuseFlux = flux;
 }
@@ -80,7 +79,7 @@ void RadiationModel::setDiffuseRadiationExtinctionCoeff(const std::string &label
 
 void RadiationModel::setDiffuseRadiationExtinctionCoeff( const std::string &label, float K, const vec3 &peak_dir ){
     if( !doesBandExist(label) ){
-        throw( std::runtime_error("ERROR (RadiationModel::setDiffuseRadiationExtinctionCoeff): Cannot set diffuse extinction value for band " + label + " because it is not a valid band."));
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationExtinctionCoeff): Cannot set diffuse extinction value for band " + label + " because it is not a valid band."));
     }
 
     vec3 dir = peak_dir;
@@ -158,7 +157,7 @@ void RadiationModel::addRadiationBand( const std::string &label, float wavelengt
 void RadiationModel::copyRadiationBand( const std::string &old_label, const std::string &new_label ) {
 
     if( !doesBandExist(old_label) ){
-        throw( std::runtime_error("ERROR (RadiationModel::copyRadiationBand): Cannot copy band " + old_label + " because it does not exist."));
+        helios_runtime_error("ERROR (RadiationModel::copyRadiationBand): Cannot copy band " + old_label + " because it does not exist."));
     }
 
     vec2 waveBounds = radiation_bands.at(old_label).wavebandBounds;
@@ -169,7 +168,7 @@ void RadiationModel::copyRadiationBand( const std::string &old_label, const std:
 void RadiationModel::copyRadiationBand(const std::string &old_label, const std::string &new_label, float wavelength_min, float wavelength_max ){
 
     if( !doesBandExist(old_label) ){
-        throw( std::runtime_error("ERROR (RadiationModel::copyRadiationBand): Cannot copy band " + old_label + " because it does not exist."));
+        helios_runtime_error("ERROR (RadiationModel::copyRadiationBand): Cannot copy band " + old_label + " because it does not exist.");
     }
 
     RadiationBand band = radiation_bands.at(old_label);
@@ -196,7 +195,7 @@ bool RadiationModel::doesBandExist( const std::string &label ) const{
 void RadiationModel::disableEmission( const std::string &label ){
 
     if( !doesBandExist(label) ){
-        throw( std::runtime_error("ERROR (RadiationModel::disableEmission): Cannot disable emission for band " + label + " because it is not a valid band." ));
+        helios_runtime_error("ERROR (RadiationModel::disableEmission): Cannot disable emission for band " + label + " because it is not a valid band." );
     }
 
     radiation_bands.at(label).emissionFlag = false;
@@ -206,7 +205,7 @@ void RadiationModel::disableEmission( const std::string &label ){
 void RadiationModel::enableEmission( const std::string &label ){
 
     if( !doesBandExist(label) ){
-        throw( std::runtime_error("ERROR (RadiationModel::enableEmission): Cannot disable emission for band " + label + " because it is not a valid band." ));
+        helios_runtime_error("ERROR (RadiationModel::enableEmission): Cannot disable emission for band " + label + " because it is not a valid band." );
     }
 
     radiation_bands.at(label).emissionFlag = true;
@@ -226,12 +225,12 @@ uint RadiationModel::addCollimatedRadiationSource(const SphericalCoord &directio
 uint RadiationModel::addCollimatedRadiationSource(const vec3 &direction ){
 
     if( direction.magnitude()==0 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addCollimatedRadiationSource): Invalid collimated source direction. Direction vector should not have length of zero."));
+        throw(std::runtime_error("ERROR (RadiationModel::addCollimatedRadiationSource): Invalid collimated source direction. Direction vector should not have length of zero.");
     }
 
     uint Nsources = radiation_sources.size()+1;
     if( Nsources>256 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addCollimatedRadiationSource): A maximum of 256 radiation sources are allowed."));
+        helios_runtime_error("ERROR (RadiationModel::addCollimatedRadiationSource): A maximum of 256 radiation sources are allowed.");
     }
 
     RadiationSource collimated_source( direction );
@@ -250,12 +249,12 @@ uint RadiationModel::addCollimatedRadiationSource(const vec3 &direction ){
 uint RadiationModel::addSphereRadiationSource( const vec3 &position, float radius ){
 
     if( radius<=0 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addSphereRadiationSource): Spherical radiation source radius must be positive."));
+        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): Spherical radiation source radius must be positive."));
     }
 
     uint Nsources = radiation_sources.size()+1;
     if( Nsources>256 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addSphereRadiationSource): A maximum of 256 radiation sources are allowed."));
+        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): A maximum of 256 radiation sources are allowed."));
     }
 
     RadiationSource sphere_source( position, 2.f*fabsf(radius) );
@@ -274,11 +273,11 @@ uint RadiationModel::addSphereRadiationSource( const vec3 &position, float radiu
 void RadiationModel::addSphereRadiationSource(const uint &sourceID, const helios::vec3 &position, float radius){
     // Replace the existing radiation source with ID of "sourceID"
     if( radius<=0 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addSphereRadiationSource): Spherical radiation source radius must be positive."));
+        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): Spherical radiation source radius must be positive.");
     }
 
     if( sourceID>256 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addSphereRadiationSource): A maximum of 256 radiation sources are allowed."));
+        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): A maximum of 256 radiation sources are allowed.");
     }
 
     RadiationSource sphere_source( position, 2.f*fabsf(radius) );
@@ -303,7 +302,7 @@ uint RadiationModel::addSunSphereRadiationSource(const vec3 &sun_direction ){
 
     uint Nsources = radiation_sources.size()+1;
     if( Nsources>256 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addSunSphereRadiationSource): A maximum of 256 radiation sources are allowed."));
+        helios_runtime_error("ERROR (RadiationModel::addSunSphereRadiationSource): A maximum of 256 radiation sources are allowed.");
     }
 
     RadiationSource sphere_source( 150e9*sun_direction/sun_direction.magnitude(), 150e9, 2.f*695.5e6, sigma*powf(5700,4)/1288.437f );
@@ -322,12 +321,12 @@ uint RadiationModel::addSunSphereRadiationSource(const vec3 &sun_direction ){
 uint RadiationModel::addRectangleRadiationSource( const vec3 &position, const vec2 &size, const vec3& rotation ){
 
     if( size.x<=0 || size.y<=0 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addRectangleRadiationSource): Radiation source size must be positive."));
+        helios_runtime_error("ERROR (RadiationModel::addRectangleRadiationSource): Radiation source size must be positive.");
     }
 
     uint Nsources = radiation_sources.size()+1;
     if( Nsources>256 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addRectangleRadiationSource): A maximum of 256 radiation sources are allowed."));
+        helios_runtime_error("ERROR (RadiationModel::addRectangleRadiationSource): A maximum of 256 radiation sources are allowed.");
     }
 
     RadiationSource rectangle_source( position, size, rotation );
@@ -346,12 +345,12 @@ uint RadiationModel::addRectangleRadiationSource( const vec3 &position, const ve
 uint RadiationModel::addDiskRadiationSource( const vec3 &position, float radius, const vec3& rotation ){
 
     if( radius<=0 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addDiskRadiationSource): Disk radiation source radius must be positive."));
+        helios_runtime_error("ERROR (RadiationModel::addDiskRadiationSource): Disk radiation source radius must be positive.");
     }
 
     uint Nsources = radiation_sources.size()+1;
     if( Nsources>256 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addDiskRadiationSource): A maximum of 256 radiation sources are allowed."));
+        helios_runtime_error("ERROR (RadiationModel::addDiskRadiationSource): A maximum of 256 radiation sources are allowed.");
     }
 
     RadiationSource disk_source( position, radius, rotation );
@@ -371,9 +370,9 @@ uint RadiationModel::addDiskRadiationSource( const vec3 &position, float radius,
 void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_integral){
 
     if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
+        helios_runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
     }else if( source_integral<0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceIntegral): Source integral must be non-negative." ));
+        helios_runtime_error("ERROR (RadiationModel::setSourceIntegral): Source integral must be non-negative." ));
     }
 
     radiation_sources.at(source_ID).source_integral = source_integral;
@@ -383,9 +382,9 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
 void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_integral, float wavelength1, float wavelength2){
 
     if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
+        helios_runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
     }else if( source_integral<0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source integral must be non-negative." ));
+        helios_runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source integral must be non-negative." );
     }else if( radiation_sources.at(source_ID).source_spectrum.empty() ){
         std::cout << "WARNING (RadiationModel::setSourceSpectrumIntegral): Spectral distribution has not been set for radiation source. Cannot set its integral." << std::endl;
         return;
@@ -406,11 +405,11 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
 void RadiationModel::setSourceFlux( uint source_ID, const std::string &label, float flux ){
 
     if( !doesBandExist(label) ){
-        throw( std::runtime_error( "ERROR (RadiationModel::setSourceFlux): Cannot add radiation source for band " + label + " because it is not a valid band.") );
+        helios_runtime_error( "ERROR (RadiationModel::setSourceFlux): Cannot add radiation source for band " + label + " because it is not a valid band.");
     }else if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
+        helios_runtime_error("ERROR (RadiationModel::setSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
     }else if( flux<0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceFlux): Source flux must be non-negative." ));
+        helios_runtime_error("ERROR (RadiationModel::setSourceFlux): Source flux must be non-negative." );
     }
 
     radiation_sources.at(source_ID).source_fluxes[label] = flux * radiation_sources.at(source_ID).source_flux_scaling_factor;
@@ -419,15 +418,15 @@ void RadiationModel::setSourceFlux( uint source_ID, const std::string &label, fl
 
 float RadiationModel::getSourceFlux( uint source_ID, const std::string &label )const{
     if( !doesBandExist(label) ){
-        throw( std::runtime_error( "ERROR (RadiationModel::getSourceFlux): Cannot add radiation source for band " + label + " because it is not a valid band.") );
+        helios_runtime_error( "ERROR (RadiationModel::getSourceFlux): Cannot add radiation source for band " + label + " because it is not a valid band.");
     }else if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." ));
+        helios_runtime_error("ERROR (RadiationModel::setSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
     }
 
     if( radiation_sources.at(source_ID).source_fluxes.find(label) == radiation_sources.at(source_ID).source_fluxes.end() ) {
-        throw (std::runtime_error(
+        helios_runtime_error(
                 "ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) +
-                " because radiative band " + label + " does not exist."));
+                " because radiative band " + label + " does not exist.");
     }else {
         return radiation_sources.at(source_ID).source_fluxes.at(label);
     }
@@ -437,7 +436,7 @@ float RadiationModel::getSourceFlux( uint source_ID, const std::string &label )c
 void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios::vec2> &spectrum ){
 
     if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Cannot add radiation spectra for this source because it is not a valid radiation source ID.\n") );
+        helios_runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Cannot add radiation spectra for this source because it is not a valid radiation source ID.\n");
     }
 
     //validate spectrum
@@ -445,16 +444,16 @@ void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios
         //check that wavelengths are monotonic
         if( s>0 ) {
             if( spectrum.at(s).x<=spectrum.at(s-1).x ) {
-                throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrum): Source spectral data validation failed. Wavelengths must increase monotonically.") );
+                helios_runtime_error("ERROR (RadiationModel::setSourceSpectrum): Source spectral data validation failed. Wavelengths must increase monotonically.");
             }
         }
         //check that wavelength is within a reasonable range
         if( spectrum.at(s).x<0 || spectrum.at(s).x>100000 ) {
-            throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrum): Source spectral data validation failed. Wavelength value of " + std::to_string(spectrum.at(s).x) + " appears to be erroneous."));
+            helios_runtime_error("ERROR (RadiationModel::setSourceSpectrum): Source spectral data validation failed. Wavelength value of " + std::to_string(spectrum.at(s).x) + " appears to be erroneous.");
         }
         //check that flux is non-negative
         if( spectrum.at(s).y<0 ) {
-            throw( std::runtime_error("ERROR (RadiationModel::setSourceSpectrum): Source spectral data validation failed. Flux value at wavelength of " + std::to_string(spectrum.at(s).x) + " appears is negative."));
+            helios_runtime_error("ERROR (RadiationModel::setSourceSpectrum): Source spectral data validation failed. Flux value at wavelength of " + std::to_string(spectrum.at(s).x) + " appears is negative.");
         }
     }
 
@@ -471,11 +470,11 @@ void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios
 void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectrum_label ){
 
     if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Cannot add radiation spectra for this source because it is not a valid radiation source ID.\n") );
+        helios_runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Cannot add radiation spectra for this source because it is not a valid radiation source ID.\n");
     }else if( spectrum_label == "ASTMG173" || spectrum_label == "solar_spectrum_ASTMG173" ) {
         context->loadXML("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml", true);
         if( !context->doesGlobalDataExist("solar_spectrum_ASTMG173") ){
-            throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): The file ""plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml"" could not be loaded.") );
+            helios_runtime_error( "ERROR (RadiationModel::setSourceSpectrum): The file ""plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml"" could not be loaded.");
         }else {
             std::vector<vec2> spectrum;
             context->getGlobalData("solar_spectrum_ASTMG173",spectrum);
@@ -484,7 +483,7 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
         }
     }else{
         if( !context->doesGlobalDataExist(spectrum_label.c_str()) ) {
-            throw( std::runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Global data " + std::string(spectrum_label) + " does not exist and thus source spectrum cannot be set."));
+            helios_runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Global data " + std::string(spectrum_label) + " does not exist and thus source spectrum cannot be set.");
         }else{
             std::vector<vec2> spectrum;
             context->getGlobalData(spectrum_label.c_str(),spectrum);
@@ -501,11 +500,11 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
 float RadiationModel::integrateSpectrum( uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2 ) const{
 
     if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error( "ERROR (RadiationModel::integrateSpectrum): Radiation spectrum was not set for source ID. Make sure to set its spectrum using setSourceSpectrum() function."));
+        helios_runtime_error( "ERROR (RadiationModel::integrateSpectrum): Radiation spectrum was not set for source ID. Make sure to set its spectrum using setSourceSpectrum() function.");
     }else if( object_spectrum.size()<2 ){
-        throw( std::runtime_error( "ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths."));
+        helios_runtime_error( "ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths.");
     }else if( wavelength1>wavelength2 || wavelength1==wavelength2 ){
-        throw( std::runtime_error( "ERROR (RadiationModel::integrateSpectrum): Lower wavelength bound must be less than the upper wavelength bound." ) );
+        helios_runtime_error( "ERROR (RadiationModel::integrateSpectrum): Lower wavelength bound must be less than the upper wavelength bound." );
     }
 
     std::vector<helios::vec2> source_spectrum = radiation_sources.at(source_ID).source_spectrum;
@@ -552,9 +551,9 @@ float RadiationModel::integrateSpectrum( uint source_ID, const std::vector<helio
 float RadiationModel::integrateSpectrum( const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2 ) const{
 
     if( object_spectrum.size()<2 ){
-        throw( std::runtime_error( "ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths."));
+        helios_runtime_error( "ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths.");
     }else if( wavelength1>wavelength2 || wavelength1==wavelength2 ){
-        throw( std::runtime_error( "ERROR (RadiationModel::integrateSpectrum): Lower wavelength bound must be less than the upper wavelength bound." ) );
+        helios_runtime_error( "ERROR (RadiationModel::integrateSpectrum): Lower wavelength bound must be less than the upper wavelength bound." );
     }
 
     int istart = 1;
@@ -594,9 +593,9 @@ float RadiationModel::integrateSpectrum( const std::vector<helios::vec2> &object
 float RadiationModel::integrateSpectrum(uint source_ID, const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum ) const{
 
     if( source_ID >= radiation_sources.size() ){
-        throw( std::runtime_error( "ERROR (RadiationModel::integrateSpectrum): Radiation spectrum was not set for source ID. Make sure to set its spectrum using setSourceSpectrum() function."));
+        helios_runtime_error( "ERROR (RadiationModel::integrateSpectrum): Radiation spectrum was not set for source ID. Make sure to set its spectrum using setSourceSpectrum() function.");
     }else if( object_spectrum.size()<2 ) {
-        throw (std::runtime_error("ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths."));
+        helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths.");
     }
 
     std::vector<helios::vec2> source_spectrum = radiation_sources.at(source_ID).source_spectrum;
@@ -640,7 +639,7 @@ float RadiationModel::integrateSpectrum(uint source_ID, const std::vector<helios
 float RadiationModel::integrateSpectrum( const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum ) const{
 
     if( object_spectrum.size()<2 ) {
-        throw (std::runtime_error("ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths."));
+        helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths.");
     }
 
     float E = 0;
@@ -675,7 +674,7 @@ float RadiationModel::integrateSpectrum( const std::vector<helios::vec2> &object
 void RadiationModel::setSourcePosition( uint source_ID, const vec3 &position ){
 
     if( source_ID >= radiation_sources.size() ){
-        throw(std::runtime_error("ERROR (RadiationModel::setSourcePosition): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources."));
+        helios_runtime_error("ERROR (RadiationModel::setSourcePosition): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources.");
     }
 
     if( radiation_sources.at(source_ID).source_type == RADIATION_SOURCE_TYPE_SPHERE ) {
@@ -688,7 +687,7 @@ void RadiationModel::setSourcePosition( uint source_ID, const vec3 &position ){
 
 helios::vec3 RadiationModel::getSourcePosition( uint source_ID )const {
     if( source_ID >= radiation_sources.size() ){
-        throw(std::runtime_error("ERROR (RadiationModel::getSourcePosition): Source ID does not exist."));
+        helios_runtime_error("ERROR (RadiationModel::getSourcePosition): Source ID does not exist.");
     }
     return radiation_sources.at(source_ID).source_position;
 }
@@ -696,7 +695,7 @@ helios::vec3 RadiationModel::getSourcePosition( uint source_ID )const {
 void RadiationModel::setScatteringDepth( const std::string &label, uint depth ){
 
     if( !doesBandExist(label) ){
-        throw( std::runtime_error( "ERROR (RadiationModel::setScatteringDepth): Cannot set scattering depth for band " + label + " because it is not a valid band.") );
+        helios_runtime_error( "ERROR (RadiationModel::setScatteringDepth): Cannot set scattering depth for band " + label + " because it is not a valid band.");
     }
     radiation_bands.at(label).scatteringDepth = depth;
 
@@ -705,7 +704,7 @@ void RadiationModel::setScatteringDepth( const std::string &label, uint depth ){
 void RadiationModel::setMinScatterEnergy(const std::string &label, uint energy ){
 
     if( !doesBandExist(label) ){
-        throw( std::runtime_error( "ERROR (setMinScatterEnergy): Cannot set minimum scattering energy for band " + label + " because it is not a valid band."));
+        helios_runtime_error( "ERROR (setMinScatterEnergy): Cannot set minimum scattering energy for band " + label + " because it is not a valid band.");
     }
     radiation_bands.at(label).minScatterEnergy = energy;
 
@@ -737,13 +736,13 @@ void RadiationModel::enforcePeriodicBoundary(const std::string &boundary ){
 void RadiationModel::addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::vec3 &lookat, float lens_diameter, const helios::vec2 &sensor_size, float focal_plane_distance, float HFOV_degrees, uint antialiasing_samples, const helios::int2 &resolution) {
 
     if( sensor_size.x<=0 || sensor_size.y<=0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): Sensor size must be greater than 0.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Sensor size must be greater than 0.");
     }else if( antialiasing_samples==0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): The model requires at least 1 antialiasing sample to run.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): The model requires at least 1 antialiasing sample to run.");
     }else if( resolution.x<=0 || resolution.y<=0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.") );
     }else if( HFOV_degrees<0 || HFOV_degrees>180.f ){
-        throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horzontal field of view must be between 0 and 180 degrees.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horzontal field of view must be between 0 and 180 degrees.");
     }
 
     RadiationCamera camera(camera_label, band_label, position, lookat, resolution, lens_diameter, sensor_size, focal_plane_distance, HFOV_degrees, antialiasing_samples );
@@ -763,13 +762,13 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
 void RadiationModel::addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::vec3 &lookat, const CameraProperties &camera_properties, uint antialiasing_samples) {
 
     if( camera_properties.sensor_size.x<=0 || camera_properties.sensor_size.y<=0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): Sensor size must be greater than 0.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Sensor size must be greater than 0.");
     }else if( antialiasing_samples==0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): The model requires at least 1 antialiasing sample to run.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): The model requires at least 1 antialiasing sample to run.");
     }else if( camera_properties.camera_resolution.x<=0 || camera_properties.camera_resolution.y<=0 ){
-        throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.") );
     }else if( camera_properties.HFOV<0 || camera_properties.HFOV>180.f ){
-        throw( std::runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horizontal field of view must be between 0 and 180 degrees.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horizontal field of view must be between 0 and 180 degrees.");
     }
 
     RadiationCamera camera(camera_label, band_label, position, lookat, camera_properties.camera_resolution, camera_properties.lens_diameter, camera_properties.sensor_size, camera_properties.focal_plane_distance, camera_properties.HFOV, antialiasing_samples );
@@ -794,7 +793,7 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
 
 void RadiationModel::setCameraSpectralResponse( const std::string &camera_label, const std::string &band_label, const std::string &global_data ){
     if(cameras.find(camera_label) == cameras.end() ){
-        throw( std::runtime_error("ERROR (setCameraSpectralResponse): Camera """ + camera_label + """ does not exist."));
+        helios_runtime_error("ERROR (setCameraSpectralResponse): Camera """ + camera_label + """ does not exist.");
     }
 
     cameras.at(camera_label).band_spectral_response[band_label] = global_data;
@@ -803,7 +802,7 @@ void RadiationModel::setCameraSpectralResponse( const std::string &camera_label,
 
 void RadiationModel::setCameraPosition( const std::string &camera_label, const helios::vec3& position ){
     if(cameras.find(camera_label) == cameras.end() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setCameraPosition): Camera """ + camera_label + """ does not exist."));
+        helios_runtime_error("ERROR (RadiationModel::setCameraPosition): Camera """ + camera_label + """ does not exist.");
     }
 
     cameras.at(camera_label).position = position;
@@ -811,7 +810,7 @@ void RadiationModel::setCameraPosition( const std::string &camera_label, const h
 
 void RadiationModel::setCameraLookat( const std::string &camera_label, const helios::vec3& lookat ){
     if(cameras.find(camera_label) == cameras.end() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setCameraLookat): Camera """ + camera_label + """ does not exist."));
+        helios_runtime_error("ERROR (RadiationModel::setCameraLookat): Camera """ + camera_label + """ does not exist.");
     }
 
     cameras.at(camera_label).lookat = lookat;
@@ -819,7 +818,7 @@ void RadiationModel::setCameraLookat( const std::string &camera_label, const hel
 
 void RadiationModel::setCameraOrientation( const std::string &camera_label, const helios::vec3& direction ){
     if(cameras.find(camera_label) == cameras.end() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setCameraOrientation): Camera """ + camera_label + """ does not exist."));
+        helios_runtime_error("ERROR (RadiationModel::setCameraOrientation): Camera """ + camera_label + """ does not exist.");
     }
 
     cameras.at(camera_label).lookat = cameras.at(camera_label).position + direction;
@@ -827,7 +826,7 @@ void RadiationModel::setCameraOrientation( const std::string &camera_label, cons
 
 void RadiationModel::setCameraOrientation( const std::string &camera_label, const helios::SphericalCoord& direction ){
     if(cameras.find(camera_label) == cameras.end() ){
-        throw( std::runtime_error("ERROR (RadiationModel::setCameraOrientation): Camera """ + camera_label + """ does not exist."));
+        helios_runtime_error("ERROR (RadiationModel::setCameraOrientation): Camera """ + camera_label + """ does not exist.");
     }
 
     cameras.at(camera_label).lookat = cameras.at(camera_label).position + sphere2cart(direction);
@@ -2447,25 +2446,24 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         if (eps != 1.f && rho.at(s).at(u).at(b) == 0 && tau.at(s).at(u).at(b) == 0) {
                             rho.at(s).at(u).at(b) = 1.f - eps;
                         } else if (eps + tau.at(s).at(u).at(b) + rho.at(s).at(u).at(b) != 1.f && eps > 0.f) {
-                            throw (std::runtime_error(
+                            helios_runtime_error(
                                     "ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " +
                                     band + ", Primitive #" + std::to_string(UUID) + ": eps=" +
                                     std::to_string(eps) + ", tau=" + std::to_string(tau.at(s).at(u).at(b)) +
                                     ", rho=" + std::to_string(rho.at(s).at(u).at(b)) +
-                                    ". It is also possible that you forgot to disable emission for this band."));
+                                    ". It is also possible that you forgot to disable emission for this band.");
                         } else if (radiation_bands.at(band).scatteringDepth == 0 && eps != 1.f) {
-                            //std::cout << "WARNING (RadiationModel): emissivity must be 1 if the number of scattering iterations is set to 0" << std::endl;
                             eps = 1.f;
                             rho.at(s).at(u).at(b) = 0.f;
                             tau.at(s).at(u).at(b) = 0.f;
                         }
                     } else if (tau.at(s).at(u).at(b) + rho.at(s).at(u).at(b) > 1.f) {
-                        throw (std::runtime_error(
+                        helios_runtime_error(
                                 "ERROR (RadiationModel): transmissivity and reflectivity cannot sum to greater than 1 ensure energy conservation. Band " +
                                 band + ", Primitive #" + std::to_string(UUID) + ": eps=" +
                                 std::to_string(eps) + ", tau=" + std::to_string(tau.at(s).at(u).at(b)) +
                                 ", rho=" + std::to_string(rho.at(s).at(u).at(b)) +
-                                ". It is also possible that you forgot to disable emission for this band."));
+                                ". It is also possible that you forgot to disable emission for this band.");
                     }
                 }
                 b++;
@@ -2507,7 +2505,7 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
     for( const std::string &band : label ){
         if( !doesBandExist(band) ){
-            throw( std::runtime_error("ERROR (RadiationModel::runBand): Cannot run band " + band + " because it is not a valid band. Use addRadiationBand() function to add the band."));
+            helios_runtime_error("ERROR (RadiationModel::runBand): Cannot run band " + band + " because it is not a valid band. Use addRadiationBand() function to add the band.");
         }
     }
 
@@ -4436,17 +4434,17 @@ float RadiationModel::getCameraResponseScale(const std::string &orginalcameralab
 }
 
 
-void RadiationModel::writePrimitiveDataLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue){
+void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue){
 
     if( cameras.find(cameralabel)==cameras.end() ){
-        throw( std::runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabel): Camera '" + cameralabel + "' does not exist." ) );
+        helios_runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabelMap): Camera '" + cameralabel + "' does not exist." );
     }
 
     //Get image UUID labels
     std::vector<uint> camera_UUIDs;
     std::string global_data_label = "camera_" + cameralabel + "_pixel_UUID";
     if( !context->doesGlobalDataExist(global_data_label.c_str() ) ){
-        throw( std::runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabel): Pixel labels for camera '" + cameralabel + "' do not exist. Was the radiation model run to generate labels?" ) );
+        helios_runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabelMap): Pixel labels for camera '" + cameralabel + "' do not exist. Was the radiation model run to generate labels?" );
     }
     context->getGlobalData(global_data_label.c_str(), camera_UUIDs);
     std::vector<uint> pixel_UUIDs = camera_UUIDs;
@@ -4565,9 +4563,9 @@ void RadiationModel::calibrateCamera(const std::string &originalcameralabel, con
                                      const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark) {
 
     if( cameras.find(originalcameralabel) == cameras.end() ){
-        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): Camera " + originalcameralabel + " does not exist.") );
+        helios_runtime_error("ERROR (RadiationModel::calibrateCamera): Camera " + originalcameralabel + " does not exist.");
     }else if( radiation_sources.empty() ){
-        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): No radiation sources were added to the radiation model. Cannot perform calibration.") );
+        helios_runtime_error("ERROR (RadiationModel::calibrateCamera): No radiation sources were added to the radiation model. Cannot perform calibration.");
     }
 
     CameraCalibration cameracalibration_(context);
@@ -4603,9 +4601,9 @@ void RadiationModel::calibrateCamera(const std::string &originalcameralabel, con
                                      const std::string &calibratedmark) {
 
     if( cameras.find(originalcameralabel) == cameras.end() ){
-        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): Camera " + originalcameralabel + " does not exist.") );
+        helios_runtime_error("ERROR (RadiationModel::calibrateCamera): Camera " + originalcameralabel + " does not exist.");
     }else if( radiation_sources.empty() ){
-        throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): No radiation sources were added to the radiation model. Cannot perform calibration.") );
+        helios_runtime_error("ERROR (RadiationModel::calibrateCamera): No radiation sources were added to the radiation model. Cannot perform calibration.");
     }
 
     CameraCalibration cameracalibration_(context);
@@ -4637,7 +4635,7 @@ void RadiationModel::calibrateCamera(const std::string &originalcameralabel, con
     int isource = 0;
     for( auto &source : radiation_sources ){
         if( source.source_spectrum.empty() ){
-            throw( std::runtime_error("ERROR (RadiationModel::calibrateCamera): A spectral distribution was not specified for source " + source.source_spectrum_label + ". Cannot perform camera calibration.") );
+            helios_runtime_error("ERROR (RadiationModel::calibrateCamera): A spectral distribution was not specified for source " + source.source_spectrum_label + ". Cannot perform camera calibration.");
         }
         sourcelabels.at(isource) = source.source_spectrum_label;
         isource++;

@@ -1,7 +1,6 @@
 /** \file "RadiationModel.h" Primary header file for radiation transport model.
-    \author Brian Bailey
     
-    Copyright (C) 2016-2021  Brian Bailey
+    Copyright (C) 2016-2023  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +18,6 @@
 
 #include "Context.h"
 #include "CameraCalibration.h"
-#include "LeafOptics.h"
 
 //NVIDIA OptiX Includes
 #include <optix.h>
@@ -766,7 +764,7 @@ public:
      * \param[in] "datatype" Data type of the label
      * \param[in] "padvalue" Pad value for the empty pixels
     */
-    void writePrimitiveDataLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
+    void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
 
     //! Write depth image to file
     /**

@@ -1,7 +1,6 @@
 /** \file "selfTest.cpp" Source file for radiation transport model unit tests.
-    \author Brian Bailey
 
-    Copyright (C) 2016-2021  Brian Bailey
+    Copyright (C) 2016-2023  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
