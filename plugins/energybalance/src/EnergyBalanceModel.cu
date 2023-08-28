@@ -168,9 +168,9 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
             char str[50];
             sprintf(str,"radiation_flux_%s",radiation_bands.at(b).c_str());
             if( !context->doesPrimitiveDataExist(p,str) ) {
-                helios_runtime_error("ERROR (EnergyBalanceModel::run): No radiation was found in the context for band " + std::string(radiation_bands.at(b)) + ". Did you run the radiation model for this band?"));
+                helios_runtime_error("ERROR (EnergyBalanceModel::run): No radiation was found in the context for band " + std::string(radiation_bands.at(b)) + ". Did you run the radiation model for this band?");
             }else if( context->getPrimitiveDataType(p,str)!=HELIOS_TYPE_FLOAT ){
-                helios_runtime_error("ERROR (EnergyBalanceModel::run): Radiation primitive data for band " + std::string(radiation_bands.at(b)) + " does not have the correct type of ''float'"));
+                helios_runtime_error("ERROR (EnergyBalanceModel::run): Radiation primitive data for band " + std::string(radiation_bands.at(b)) + " does not have the correct type of ''float'");
             }
             float R;
             context->getPrimitiveData(p,str,R);
