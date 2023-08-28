@@ -14,7 +14,7 @@ fi
 DIRPATH=${1}
 UTILPATH="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-if [ ! -e ${DIRPATH} ]; then
+if [ ! -e "${DIRPATH}" ]; then
     echo "Directory ""${DIRPATH}"" does not exist.";
     exit 1;
 fi
@@ -31,7 +31,8 @@ HEADERS=("EnergyBalanceModel.h" "LiDAR.h" "AerialLiDAR.h" "PhotosynthesisModel.h
 FILEBASE=`basename $DIRPATH`
 
 if [ "${FILEBASE}" == '.' ]; then
-    FILEBASE="executable";
+  FILEBASE=`pwd .`
+  FILEBASE=`basename $FILEBASE`
 fi
 
 #----- build the CMakeLists.txt file ------#

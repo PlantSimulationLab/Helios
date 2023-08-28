@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.2.68</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.2.69</span>
    </div>
   </td>
  </tr>
@@ -77,7 +77,9 @@ $(function() {
 <ul><li class="level1"><a href="#IDE">Using an Interactive Development Environment (IDE)</a></li>
 <li class="level1"><a href="#SetupPC">Set-up on Windows PC</a><ul><li class="level2"><a href="#SetupPCMSVC">Install Microsoft Visual Studio C++ compiler tools</a></li>
 <li class="level2"><a href="#SetupPCCLion">Setting up basic build functionality</a></li>
-<li class="level2"><a href="#SetupPCCUDA">Setting up NVIDIA CUDA</a></li>
+<li class="level2"><a href="#SetupPCCUDA">Setting up NVIDIA CUDA</a><ul><li class="level3"><a href="#TdrDelay">Increasing Timout Detection (TDR) Delay</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="level1"><a href="#SetupLinux">Set-up on Linux</a><ul><li class="level2"><a href="#SetupLinuxCLion">Setting up basic build functionality</a></li>
@@ -124,6 +126,16 @@ Setting up NVIDIA CUDA</h2>
 <p >The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a> (note that if you installed Visual Studio 2019 instead of 2022, you'll need to install CUDA 10.2 instead of the latest version). Download the base CUDA Toolkit installer for your Windows OS. Installing from the "exe (network)" type will result in a smaller file being downloaded. Click through the installer and accept all the default options. By default, it should have installed to 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\', where v1X.X is the version that you installed. You can verify this installation location using the file browser.</p>
 <p >In order to use CUDA within CLion, you need to tell it where to find the CUDA toolkit. To do this, open up the settings in CLion, and go to "Build, Execution, Deployment" and then to CMake. Click the icon next to the "Environment" field to edit environmental variables. Find the variable named "Path", and double click to edit it. At the end of the list of directories, add the path to the CUDA bin folder, i.e., 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v1X.X\bin;'. Make sure there is a semicolon before and after the path, and that you replace the v1X.X with your actual CUDA version. It is important to hit the return key, which should cause the Path variable list to turn blue. When you hit OK, the Path variable should be listed under the Environment field.</p>
 <p >Once that is done, you can test it by building and running the self-test for a CUDA-based plug-in such as the energy balance model following similar steps above for the context_selftest. If you get a CMake error that asks you to 'Specify CUDA_TOOLKIT_ROOT_DIR', it can't find your CUDA install, and most likely you set the "Path" variable incorrectly.</p>
+<h3><a class="anchor" id="TdrDelay"></a>
+Increasing Timout Detection (TDR) Delay</h3>
+<p >The Windows timeout detection (TDR) mechanism can erroneously detect that the GPU has stopped responding while it is performing calculations, resulting in a "Display driver stopped responding and has recovered" error. The TDR can be disabled by following the instructions here: <a href="https://docs.nvidia.com/deploy/pdf/CUDA_TDR_delay.pdf">https://docs.nvidia.com/deploy/pdf/CUDA_TDR_delay.pdf</a>. The instructions are also given below:</p>
+<ol type="1">
+<li>Open the registry editor by typing "regedit" in the Windows search bar.</li>
+<li>Navigate to the following registry subkey: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers.</li>
+<li>If the TdrDelay key does not exist, right-click the GraphicsDrivers key, select New, and then select DWORD (32-bit) Value. Name the new value TdrDelay.</li>
+<li>Double-click TdrDelay and add 600 for the Value data and make it a Decimal (instead of Hexadecimal). Click OK. If you encounter the same "Display driver stopped responding and has recovered" error in the future, increase the value.</li>
+<li>Close the registry editor and restart the computer for the changes to take effect.</li>
+</ol>
 <h1><a class="anchor" id="SetupLinux"></a>
 Set-up on Linux</h1>
 <h2><a class="anchor" id="SetupLinuxCLion"></a>

@@ -25,9 +25,9 @@ var searchData=
   ['parse_5fuint_22',['parse_uint',['../global_8h.html#a51430e9e359c2aad9d22d41650b2221a',1,'helios']]],
   ['parse_5fvertices_23',['parse_vertices',['../classhelios_1_1_x_m_lparser.html#a55fb303199e0eb9c81614439dddfa26e',1,'helios::XMLparser']]],
   ['photosynthesismodel_24',['PhotosynthesisModel',['../class_photosynthesis_model.html#a2cfdf33f994c6b6cb84432dcb7e57b3b',1,'PhotosynthesisModel']]],
-  ['plotdepthmap_25',['plotDepthMap',['../class_visualizer.html#a5640bb4984f2947bda0d7d6dea34ce75',1,'Visualizer']]],
-  ['plotinteractive_26',['plotInteractive',['../class_visualizer.html#ad927cedbc49aa632c0f24e5d444990ba',1,'Visualizer']]],
-  ['plotupdate_27',['plotUpdate',['../class_visualizer.html#ae0e0842c47a897070da7a53da8eed34b',1,'Visualizer::plotUpdate(const bool hide_window)'],['../class_visualizer.html#ae056b735b1b9c154b981f07ba93d0a3a',1,'Visualizer::plotUpdate(void)']]],
+  ['plotdepthmap_25',['plotDepthMap',['../class_visualizer.html#a133187767033ad1f89c312a2d6f4a533',1,'Visualizer']]],
+  ['plotinteractive_26',['plotInteractive',['../class_visualizer.html#ab4858ed12fa78fe451569f4bbc27cd7c',1,'Visualizer']]],
+  ['plotupdate_27',['plotUpdate',['../class_visualizer.html#a0c0af4bbebf814a6220f8876f5b13fc3',1,'Visualizer::plotUpdate(bool hide_window)'],['../class_visualizer.html#aa87c684dd84db8d1ae0d12872b1dda22',1,'Visualizer::plotUpdate()']]],
   ['pnghasalpha_28',['PNGHasAlpha',['../global_8h.html#a07b0dda8b9aee4100e9f6332dbfe7f64',1,'helios']]],
   ['point_5fdistance_29',['point_distance',['../global_8h.html#a4d55bb8abc86cb7dabab1d4e6201a754',1,'helios']]],
   ['pointinpolygon_30',['pointInPolygon',['../global_8h.html#aaa7da223bd02271d4f037b9e5305c023',1,'helios']]],
@@ -36,5 +36,5 @@ var searchData=
   ['printdefaultvaluereport_33',['printDefaultValueReport',['../class_energy_balance_model.html#a058d24583430bffdf78b53a8f9a5a851',1,'EnergyBalanceModel::printDefaultValueReport() const'],['../class_energy_balance_model.html#aa8f66c144733765289f7748dee193d5e',1,'EnergyBalanceModel::printDefaultValueReport(const std::vector&lt; uint &gt; &amp;UUIDs) const'],['../class_photosynthesis_model.html#ab4ed6afbb715d143cedf136ff355c1b3',1,'PhotosynthesisModel::printDefaultValueReport() const'],['../class_photosynthesis_model.html#a5de185fd3e46ef009c362b116e3d7771',1,'PhotosynthesisModel::printDefaultValueReport(const std::vector&lt; uint &gt; &amp;UUIDs) const'],['../class_stomatal_conductance_model.html#a66e680118d189c0ed79ca45636262a35',1,'StomatalConductanceModel::printDefaultValueReport() const'],['../class_stomatal_conductance_model.html#a28c60dbd86a0aa2c3b8a90704205abde',1,'StomatalConductanceModel::printDefaultValueReport(const std::vector&lt; uint &gt; &amp;UUIDs) const']]],
   ['printobjectinfo_34',['printObjectInfo',['../classhelios_1_1_context.html#a963fbdd1d4c3d270d2eb8f49a22b274a',1,'helios::Context']]],
   ['printprimitiveinfo_35',['printPrimitiveInfo',['../classhelios_1_1_context.html#a355617da1f3faa4d01ca4d95425e9c0b',1,'helios::Context']]],
-  ['printwindow_36',['printWindow',['../class_visualizer.html#ab42f12bed91baa9f2d8532cbe804be5b',1,'Visualizer::printWindow(void)'],['../class_visualizer.html#a1840b4285caa645e6b8b28144478cfe1',1,'Visualizer::printWindow(const char *outfile)']]]
+  ['printwindow_36',['printWindow',['../class_visualizer.html#a2db00c518bf610fdcb70e0ec5a5a0e32',1,'Visualizer::printWindow()'],['../class_visualizer.html#a1840b4285caa645e6b8b28144478cfe1',1,'Visualizer::printWindow(const char *outfile)']]]
 ];
