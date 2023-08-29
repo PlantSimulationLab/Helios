@@ -139,8 +139,8 @@ void SyntheticAnnotation::setWindowSize( const uint __window_width, const uint _
 }
 
 void SyntheticAnnotation::setCameraPosition(const helios::vec3 &__camera_position, const helios::vec3 &__camera_lookat) {
-    std::vector<vec3> position = {camera_position};
-    std::vector<vec3> lookat = {camera_lookat};
+    std::vector<vec3> position = {__camera_position};
+    std::vector<vec3> lookat = {__camera_lookat};
     setCameraPosition( position, lookat );
 }
 

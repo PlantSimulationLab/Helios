@@ -7,6 +7,11 @@ include_directories( "${BASE_DIRECTORY}/core/include" )
 include_directories( "${BASE_DIRECTORY}/plugins/visualizer/include" )
 include_directories( "${BASE_DIRECTORY}/plugins/visualizer/lib/glm" )
 
+include_directories(include)
+include_directories(../../core/include)
+include_directories(../../plugins/visualizer/include)
+include_directories(../../plugins/visualizer/lib/glm)
+
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
      set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 endif()
