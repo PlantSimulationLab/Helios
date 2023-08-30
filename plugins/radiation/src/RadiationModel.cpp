@@ -54,21 +54,21 @@ void RadiationModel::enableMessages() {
 
 void RadiationModel::setDirectRayCount( const std::string &label, size_t N ){
     if( !doesBandExist(label) ){
-        throw( std::runtime_error("ERROR (RadiationModel::setDirectRayCount): Cannot set ray count for band " + label + " because it is not a valid band.") );
+        helios_runtime_error("ERROR (RadiationModel::setDirectRayCount): Cannot set ray count for band " + label + " because it is not a valid band.");
     }
     radiation_bands.at(label).directRayCount = N;
 }
 
 void RadiationModel::setDiffuseRayCount( const std::string &label, size_t N ){
     if( !doesBandExist(label) ){
-        helios_runtime_error("ERROR (RadiationModel::setDiffuseRayCount): Cannot set ray count for band " + label + " because it is not a valid band." ) );
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseRayCount): Cannot set ray count for band " + label + " because it is not a valid band." );
     }
     radiation_bands.at(label).diffuseRayCount = N;
 }
 
 void RadiationModel::setDiffuseRadiationFlux( const std::string &label, float flux ){
     if( !doesBandExist(label) ){
-        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationFlux): Cannot set flux value for band " + label + " because it is not a valid band." ));
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationFlux): Cannot set flux value for band " + label + " because it is not a valid band." );
     }
     radiation_bands.at(label).diffuseFlux = flux;
 }
@@ -79,7 +79,7 @@ void RadiationModel::setDiffuseRadiationExtinctionCoeff(const std::string &label
 
 void RadiationModel::setDiffuseRadiationExtinctionCoeff( const std::string &label, float K, const vec3 &peak_dir ){
     if( !doesBandExist(label) ){
-        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationExtinctionCoeff): Cannot set diffuse extinction value for band " + label + " because it is not a valid band."));
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationExtinctionCoeff): Cannot set diffuse extinction value for band " + label + " because it is not a valid band.");
     }
 
     vec3 dir = peak_dir;
@@ -157,7 +157,7 @@ void RadiationModel::addRadiationBand( const std::string &label, float wavelengt
 void RadiationModel::copyRadiationBand( const std::string &old_label, const std::string &new_label ) {
 
     if( !doesBandExist(old_label) ){
-        helios_runtime_error("ERROR (RadiationModel::copyRadiationBand): Cannot copy band " + old_label + " because it does not exist."));
+        helios_runtime_error("ERROR (RadiationModel::copyRadiationBand): Cannot copy band " + old_label + " because it does not exist.");
     }
 
     vec2 waveBounds = radiation_bands.at(old_label).wavebandBounds;
@@ -225,7 +225,7 @@ uint RadiationModel::addCollimatedRadiationSource(const SphericalCoord &directio
 uint RadiationModel::addCollimatedRadiationSource(const vec3 &direction ){
 
     if( direction.magnitude()==0 ){
-        throw(std::runtime_error("ERROR (RadiationModel::addCollimatedRadiationSource): Invalid collimated source direction. Direction vector should not have length of zero.");
+        helios_runtime_error("ERROR (RadiationModel::addCollimatedRadiationSource): Invalid collimated source direction. Direction vector should not have length of zero.");
     }
 
     uint Nsources = radiation_sources.size()+1;
@@ -249,12 +249,12 @@ uint RadiationModel::addCollimatedRadiationSource(const vec3 &direction ){
 uint RadiationModel::addSphereRadiationSource( const vec3 &position, float radius ){
 
     if( radius<=0 ){
-        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): Spherical radiation source radius must be positive."));
+        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): Spherical radiation source radius must be positive.");
     }
 
     uint Nsources = radiation_sources.size()+1;
     if( Nsources>256 ){
-        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): A maximum of 256 radiation sources are allowed."));
+        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): A maximum of 256 radiation sources are allowed.");
     }
 
     RadiationSource sphere_source( position, 2.f*fabsf(radius) );
@@ -372,7 +372,7 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
     if( source_ID >= radiation_sources.size() ){
         helios_runtime_error("ERROR (RadiationModel::setSourceSpectrumIntegral): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
     }else if( source_integral<0 ){
-        helios_runtime_error("ERROR (RadiationModel::setSourceIntegral): Source integral must be non-negative." ));
+        helios_runtime_error("ERROR (RadiationModel::setSourceIntegral): Source integral must be non-negative." );
     }
 
     radiation_sources.at(source_ID).source_integral = source_integral;
@@ -421,16 +421,11 @@ float RadiationModel::getSourceFlux( uint source_ID, const std::string &label )c
         helios_runtime_error( "ERROR (RadiationModel::getSourceFlux): Cannot add radiation source for band " + label + " because it is not a valid band.");
     }else if( source_ID >= radiation_sources.size() ){
         helios_runtime_error("ERROR (RadiationModel::setSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
+    }else if( radiation_sources.at(source_ID).source_fluxes.find(label) == radiation_sources.at(source_ID).source_fluxes.end() ) {
+        helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) + " because radiative band " + label + " does not exist.");
     }
 
-    if( radiation_sources.at(source_ID).source_fluxes.find(label) == radiation_sources.at(source_ID).source_fluxes.end() ) {
-        helios_runtime_error(
-                "ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) +
-                " because radiative band " + label + " does not exist.");
-    }else {
-        return radiation_sources.at(source_ID).source_fluxes.at(label);
-    }
-
+    return radiation_sources.at(source_ID).source_fluxes.at(label);
 }
 
 void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios::vec2> &spectrum ){
@@ -740,7 +735,7 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
     }else if( antialiasing_samples==0 ){
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): The model requires at least 1 antialiasing sample to run.");
     }else if( resolution.x<=0 || resolution.y<=0 ){
-        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.");
     }else if( HFOV_degrees<0 || HFOV_degrees>180.f ){
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horzontal field of view must be between 0 and 180 degrees.");
     }
@@ -766,7 +761,7 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
     }else if( antialiasing_samples==0 ){
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): The model requires at least 1 antialiasing sample to run.");
     }else if( camera_properties.camera_resolution.x<=0 || camera_properties.camera_resolution.y<=0 ){
-        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.") );
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.");
     }else if( camera_properties.HFOV<0 || camera_properties.HFOV>180.f ){
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horizontal field of view must be between 0 and 180 degrees.");
     }
@@ -842,9 +837,7 @@ std::vector<std::string> RadiationModel::getAllCameraLabels(){
     return labels;
 }
 
-void RadiationModel::writeCameraImage(const std::string &camera, const std::vector<std::string> &bands,
-                                      const std::string &imagefile_base,
-                                      const std::string &image_path, int frame) {
+void RadiationModel::writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame, float flux_to_pixel_conversion) {
 
     //check if camera exists
     if( cameras.find(camera)==cameras.end() ){
@@ -3206,8 +3199,7 @@ void RadiationModel::addBuffer( const char* name, RTbuffer& buffer, RTvariable& 
     }else if( dimension==2 ){
         zeroBuffer2D( buffer, optix::make_int2(1,1) );
     }else{
-        std::cerr << "ERROR (RadiationModel::addBuffer): invalid buffer dimension of " << dimension << ", must be 1 or 2." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::addBuffer): invalid buffer dimension of " + std::to_string(dimension) + ", must be 1 or 2.");
     }
 
 }
@@ -3308,8 +3300,7 @@ void RadiationModel::zeroBuffer1D(RTbuffer &buffer, size_t bsize ){
 
         initializeBuffer1Dbool( buffer, array );
     }else{
-        std::cerr << "ERROR (RadiationModel::zeroBuffer1D): Buffer type not supported." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::zeroBuffer1D): Buffer type not supported.");
     }
 
 }
@@ -3375,8 +3366,7 @@ void RadiationModel::initializeBuffer1Dd(RTbuffer &buffer, const std::vector<dou
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_USER ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dd): Buffer must have type double." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Dd): Buffer must have type double.");
     }
 
     void* ptr;
@@ -3404,8 +3394,7 @@ void RadiationModel::initializeBuffer1Df(RTbuffer &buffer, const std::vector<flo
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_FLOAT ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Df): Buffer must have type float." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Df): Buffer must have type float.");
     }
 
     void* ptr;
@@ -3433,8 +3422,7 @@ void RadiationModel::initializeBuffer1Dfloat2(RTbuffer &buffer, const std::vecto
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_FLOAT2 ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dfloat2): Buffer must have type float2." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Dfloat2): Buffer must have type float2.");
     }
 
     void* ptr;
@@ -3463,8 +3451,7 @@ void RadiationModel::initializeBuffer1Dfloat3(RTbuffer &buffer, const std::vecto
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_FLOAT3 ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dfloat3): Buffer must have type float3." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Dfloat3): Buffer must have type float3.");
     }
 
     void* ptr;
@@ -3494,8 +3481,7 @@ void RadiationModel::initializeBuffer1Dfloat4(RTbuffer &buffer, const std::vecto
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_FLOAT4 ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dfloat4): Buffer must have type float4." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Dfloat4): Buffer must have type float4.");
     }
 
     void* ptr;
@@ -3526,8 +3512,7 @@ void RadiationModel::initializeBuffer1Di(RTbuffer &buffer, const std::vector<int
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_INT ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Di): Buffer must have type int." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Di): Buffer must have type int.");
     }
 
     void* ptr;
@@ -3555,8 +3540,7 @@ void RadiationModel::initializeBuffer1Dui(RTbuffer &buffer, const std::vector<ui
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_UNSIGNED_INT ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dui): Buffer must have type unsigned int." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Dui): Buffer must have type unsigned int.");
     }
 
     void* ptr;
@@ -3584,8 +3568,7 @@ void RadiationModel::initializeBuffer1Dint2(RTbuffer &buffer, const std::vector<
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_INT2 ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dint2): Buffer must have type int2." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Dint2): Buffer must have type int2.");
     }
 
     void* ptr;
@@ -3613,8 +3596,7 @@ void RadiationModel::initializeBuffer1Dint3(RTbuffer &buffer, const std::vector<
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_INT3 ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dint3): Buffer must have type int3." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Dint3): Buffer must have type int3.");
     }
 
     void* ptr;
@@ -3642,8 +3624,7 @@ void RadiationModel::initializeBuffer1Dbool(RTbuffer &buffer, const std::vector<
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
     if( format!=RT_FORMAT_BYTE ){
-        std::cerr << "ERROR (RadiationModel::initializeBuffer1Dbool): Buffer must have type bool." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer1Dbool): Buffer must have type bool.");
     }
 
     void* ptr;
@@ -3778,8 +3759,7 @@ void RadiationModel::zeroBuffer2D(RTbuffer &buffer, optix::int2 bsize ){
         }
         initializeBuffer2Dbool( buffer, array );
     }else{
-        std::cerr << "ERROR (RadiationModel::zeroBuffer2D): unknown buffer format." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::zeroBuffer2D): unknown buffer format.");
     }
 
 }
@@ -3797,7 +3777,7 @@ void RadiationModel::initializeBuffer2Dd(RTbuffer &buffer, const std::vector<std
     //set buffer size
     RT_CHECK_ERROR( rtBufferSetSize2D( buffer, bsize.x, bsize.y ) );
 
-    //get buffer format
+    //get buffer formatsyn
     RTformat format;
     RT_CHECK_ERROR( rtBufferGetFormat( buffer, &format ) );
 
@@ -3812,8 +3792,7 @@ void RadiationModel::initializeBuffer2Dd(RTbuffer &buffer, const std::vector<std
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dd): Buffer does not have format 'RT_FORMAT_USER'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Dd): Buffer does not have format 'RT_FORMAT_USER'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -3848,8 +3827,7 @@ void RadiationModel::initializeBuffer2Df(RTbuffer &buffer, const std::vector<std
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Df): Buffer does not have format 'RT_FORMAT_FLOAT'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Df): Buffer does not have format 'RT_FORMAT_FLOAT'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -3885,8 +3863,7 @@ void RadiationModel::initializeBuffer2Dfloat2(RTbuffer &buffer, const std::vecto
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dfloat2): Buffer does not have format 'RT_FORMAT_FLOAT2'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Dfloat2): Buffer does not have format 'RT_FORMAT_FLOAT2'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -3923,8 +3900,7 @@ void RadiationModel::initializeBuffer2Dfloat3(RTbuffer &buffer, const std::vecto
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dfloat3): Buffer does not have format 'RT_FORMAT_FLOAT3'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Dfloat3): Buffer does not have format 'RT_FORMAT_FLOAT3'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -3962,8 +3938,7 @@ void RadiationModel::initializeBuffer2Dfloat4(RTbuffer &buffer, const std::vecto
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dfloat4): Buffer does not have format 'RT_FORMAT_FLOAT4'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Dfloat4): Buffer does not have format 'RT_FORMAT_FLOAT4'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -3998,8 +3973,7 @@ void RadiationModel::initializeBuffer2Di(RTbuffer &buffer, const std::vector<std
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Di): Buffer does not have format 'RT_FORMAT_INT'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Di): Buffer does not have format 'RT_FORMAT_INT'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -4034,8 +4008,7 @@ void RadiationModel::initializeBuffer2Dui(RTbuffer &buffer, const std::vector<st
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dui): Buffer does not have format 'RT_FORMAT_UNSIGNED_INT'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Dui): Buffer does not have format 'RT_FORMAT_UNSIGNED_INT'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -4071,8 +4044,7 @@ void RadiationModel::initializeBuffer2Dint2(RTbuffer &buffer, const std::vector<
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dint2): Buffer does not have format 'RT_FORMAT_INT2'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Dint2): Buffer does not have format 'RT_FORMAT_INT2'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -4109,8 +4081,7 @@ void RadiationModel::initializeBuffer2Dint3(RTbuffer &buffer, const std::vector<
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dint3): Buffer does not have format 'RT_FORMAT_INT3'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Dint3): Buffer does not have format 'RT_FORMAT_INT3'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -4145,8 +4116,7 @@ void RadiationModel::initializeBuffer2Dbool(RTbuffer &buffer, const std::vector<
             }
         }
     }else{
-        std::cerr << "ERROR (RadiationModel::initializeBuffer2Dbool): Buffer does not have format 'RT_FORMAT_BYTE'." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (RadiationModel::initializeBuffer2Dbool): Buffer does not have format 'RT_FORMAT_BYTE'.");
     }
 
     RT_CHECK_ERROR( rtBufferUnmap( buffer ) );
@@ -4533,7 +4503,7 @@ void RadiationModel::writeDepthImage(const std::string &cameralabel, const std::
     }
 
     // Output depth image in ".txt" format
-    RadiationModel::writeBasicLabel(cameralabel, filename, "depth_norm",1);
+    RadiationModel::writePrimitiveDataLabelMap(cameralabel, filename, "depth_norm",1);
 }
 
 void RadiationModel::setPadValue(const std::string &cameralabel, const std::vector<std::string> &bandlabels, const std::vector<float> &padvalues) {

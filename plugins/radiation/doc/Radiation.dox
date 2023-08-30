@@ -165,7 +165,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  The end output of the radiation model is absorbed radiative fluxes for primitives or camera pixels for one or more wavelength bands. Radiative bands are defined by the total radiative fluxes emitted by any radiative sources, surface radiative properties integrated over the band (reflectivity, transmissivity, and emissivity). These source fluxes and surface radiative properties can be manually specified for each band, or can be automatically calculated based on spectral data input to the model.
 
- Each wavelength band is given a label that is defined by the user (e.g., 'PAR').  Each band has the possibility of having components of direct, diffuse, and emission, each of which are specified when adding the band.  The \ref RadiationModel::addRadiationBand() "addRadiationBand()" command is used to add each band, which takes one argument, which is a user-defined label for the band (e.g, 'PAR').
+ Each wavelength band is given a label that is defined by the user (e.g., 'PAR').  Each band has the possibility of having components of direct, diffuse, and emission, each of which are specified when adding the band.
 
  Radiation bands are defined in the model by calling the \ref RadiationModel::addRadiationBand() method. At a minimum, the user must provide an arbitrary label for the band to be added (e.g., "PAR"), which will be used to reference it later. The actual value of the label does not matter - calling a band "PAR" for example doesn't mean anything itself, it's just a label.
 
@@ -221,7 +221,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Radiative properties (reflectivity, transmissivity, emissivity) are defined for each band for each primitive.  Their reflectivity or transmissivity values can be set directly via primitive data, or they can be calculated from spectral data. The emissivity is always a constant and cannot be set from spectral data.
 
- 1. Setting reflectivity and transmissivity manually to a constant value for each band and primitive
+ 1\. Setting reflectivity and transmissivity manually to a constant value for each band and primitive
 
  By setting the value of primitive data "reflectivity_[*]" or "transmissivity_[*]", where "[*]" is the name of a radiative band that has been created, this sets a constant reflectivity or transmissivity value for the given band and primitive. And example is given below.
 
@@ -242,7 +242,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  If reflectivity or transmissivity primitive data does not exist for a primitive, a default value of 0 is assumed. If radiative properties are changed from default values, the number of scattering iterations needs to be increased from the default value of 0 (see \ref RadScatter). If radiative properties are changed, but the number of scattering iterations is set to the default value of 0, the modified radiative property values are overridden and set back to their default values (black surface).
 
- 2. Specifying reflectivity and transmissivity based on spectral data
+ 2\. Specifying reflectivity and transmissivity based on spectral data
 
  Spectral reflectivity or transmissivity data can be associated with a primitive, such that the radiative properties for a given band can be calculated automatically. At a minimum, two things must be set in order for this to happen: a) the radiation band must have been created with a defined wavelength range (see above and method \ref RadiationModel::addRadiationBand( const std::string&, float, float) ); b) primitive data with label "reflectivity_spectrum" and/or "transmissivity_spectrum" must be set for the primitive, and the value (a string) must reference a valid spectral dataset that has been loaded into the Context.
 
@@ -536,11 +536,11 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to \ref RadiationModel::addBand().
 
- By default, it is assumed that the spectral sensitivity is 100\% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the \ref RadiationModel::setCameraSpectralResponse() method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of
+ \subsubsection RadCamCalibColor Radiation Camera Color Calibration
+
+ By default, it is assumed that the spectral sensitivity is 100\% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the \ref RadiationModel::setCameraSpectralResponse() method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of wavelength and intensity values.
 
  \image html CameraSpectralResponse.png
-
- \subsubsection RadCamCalibColor Radiation Camera Color Calibration
 
  Inputting raw measured surface spectra and camera spectral response specified by the manufacturer will typically result in simulated camera images that look quite different than those of the real camera due to errors in measurements, internal camera corrections, and lens effects. As such, a calibration is generally needed to achieve acceptable image results.
 
@@ -556,6 +556,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  radiationmodel.setCameraSpectralResponse("visible", "green", "calibrated_ASTMG173_NikonD700_spectral_response_green");
  radiationmodel.setCameraSpectralResponse("visible", "blue", "calibrated_ASTMG173_NikonD700_spectral_response_blue");</code></pre></div>
  </code></pre></div>
+
+ When using a calibrated camera spectral response, you should set the source flux equal to 1.0 for all bands. This is because the calibrated camera spectral response is calibrated based on the actual intensity of the light source.
 
  Ideally, a camera calibration should be performed for the particular camera and lighting conditions of your scene. The color calibration is performed using real images taken of a DKK Color Calibration Chart (<a href="https://www.bhphotovideo.com/c/product/1014557-REG/dgk_color_tools_dkk_set_of_2_dkk_poly_bag_2.html">DGK Color Tools</a>). Steps for calibration are as follows:
 
@@ -580,8 +582,6 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  3\. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using \ref RadiationModel::setSourceSpectrum(), and specify an initial guess for the camera channel spectral distribution(s) using \ref RadiationModel::setCameraSpectralResponse().
 
  4\. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method \ref CameraCalibration::addDefaultColorboard(), or a custom color board \ref CameraCalibration::addCustomColorboard().
-
- \subsubsection RadCamCalibDist Radiation Camera Distortion Calibration
 
  \subsection RadRun Running Simulations
 
@@ -757,10 +757,15 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  Below is example code of writing a grayscale image (1 spectral band).
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> %RadiationModel radiationmodel(&context);
+ <pre><code>
 
- radiationmodel.addRadiationBand("PAR");
- radiationmodel.addRadiationBand("NIR");
+     %RadiationModel radiationmodel(&context);
+
+ radiationmodel.addRadiationBand("red");
+ radiationmodel.disableEmission("red");
+ radiationmodel.setSourceFlux("red", 1.f);
+ radiationmodel.setScatteringIterations("red", 3);
+ radiationmodel.addRadiationBand("green");
 
  radiationmodel.updateGeometry();
 
@@ -774,7 +779,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  radiationmodel.runBand("PAR);
 
- // writing a grayscale image of only the "PAR" band
+ \c// writing a grayscale image of only the "PAR" band
  radiationmodel.writeCameraImage("mycamera", {"PAR"}, "myimage" );
  </code></pre></div>
 

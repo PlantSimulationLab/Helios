@@ -57,5 +57,5 @@ var searchData=
   ['printobjectinfo_54',['printObjectInfo',['../classhelios_1_1_context.html#a963fbdd1d4c3d270d2eb8f49a22b274a',1,'helios::Context']]],
   ['printprimitiveinfo_55',['printPrimitiveInfo',['../classhelios_1_1_context.html#a355617da1f3faa4d01ca4d95425e9c0b',1,'helios::Context']]],
   ['printwindow_56',['printWindow',['../class_visualizer.html#a2db00c518bf610fdcb70e0ec5a5a0e32',1,'Visualizer::printWindow()'],['../class_visualizer.html#a1840b4285caa645e6b8b28144478cfe1',1,'Visualizer::printWindow(const char *outfile)']]],
-  ['prospect_57',['prospect',['../class_leaf_optics.html#a0263c0b6fb26af56acca04cc81e1d4ae',1,'LeafOptics']]]
+  ['prospect_57',['PROSPECT',['../class_leaf_optics.html#a8af86e8cce4d721230ddc746580b7dcf',1,'LeafOptics']]]
 ];

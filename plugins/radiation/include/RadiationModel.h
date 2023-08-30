@@ -666,8 +666,9 @@ public:
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
      * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
      * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] flux_to_pixel_conversion OPTIONAL: A factor to convert radiative flux to 8-bit pixel values (0-255). By default, this value is 1.0, which means that the pixel values will be equal to the radiative flux. If the radiative flux is very large or very small, it may be necessary to scale the flux to a more appropriate range for the image.
      */
-    void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
+    void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float flux_to_pixel_conversion = 1.f);
 
     //! Adds all geometric primitives from the Context to OptiX
     /**

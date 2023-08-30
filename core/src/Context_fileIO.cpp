@@ -2107,6 +2107,10 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
           currentObjectID++;
       }
 
+      if( object_prim_UUIDs.find(objID) == object_prim_UUIDs.end() ){
+          helios_runtime_error("ERROR (Context::loadXML): Something went wrong with reading polymesh object with ID of " + std::to_string(objID) + ". No primitives exist with this parent object ID.");
+      }
+
       ID = addPolymeshObject(object_prim_UUIDs.at(objID));
 
       setPrimitiveParentObjectID( object_prim_UUIDs.at(objID), ID );

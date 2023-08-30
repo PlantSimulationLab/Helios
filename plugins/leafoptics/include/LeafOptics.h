@@ -45,7 +45,7 @@ struct LeafOpticsProperties{
 
 class LeafOptics{
 public:
-    LeafOptics( helios::Context* context );
+    LeafOptics( helios::Context* a_context );
     //! Constructor
 
 
@@ -53,9 +53,9 @@ public:
     /**
       * \param[in] UUIDs: UUIDs for primitives that should be included in LeafOptics calculations.
       * \param[in] leafproperties: LeafOptics properties.
-      * \param[in] label: mark of spectra (e.g., chl_20).
+      * \param[in] label: label of spectra (e.g., chl_20).
      */
-    void run( std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties, const std::string &label);
+    void run(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties, const std::string &label);
 
     //! LeafOptics model kernel
     /**
@@ -69,26 +69,35 @@ public:
      * \param[in] protein: protein content in the leaf
      * \param[in] carbonconstituents: carbon constituents in the leaf
      */
-    void prospect(float numberlayers, float Chlorophyllcontent, float carotenoidcontent, float anthocyancontent,
+    void PROSPECT(float numberlayers, float Chlorophyllcontent, float carotenoidcontent, float anthocyancontent,
                   float brownpigments, float watermass, float drymass, float protein, float carbonconstituents, std::vector<float> &reflectivities_fit, std::vector<float> &transmissivities_fit );
 
     //! Get the leaf spectra
     /**
-     * \param[inout] reflectivities_fit: reflectivities of the leaf
-     * \param[inout] transmissivities_fit: transmissivities of the leaf
+     * \param[in] leafproperties: LeafOptics properties.
+     * \param[out] reflectivities_fit: reflectivities of the leaf
+     * \param[out] transmissivities_fit: transmissivities of the leaf
+     */
+    void getLeafSpectra(const LeafOpticsProperties &leafproperties, std::vector<helios::vec2> &reflectivities_fit, std::vector<helios::vec2> &transmissivities_fit);
+
+    //! Set leaf optical properties for a set of primitives
+    /**
+     * \param[in] UUIDs: UUIDs for primitives for which optical properties should be set.
      * \param[in] leafproperties: LeafOptics properties.
      */
-    void getLeafSpectra(std::vector<helios::vec2> &reflectivities_fit, std::vector<helios::vec2> &transmissivities_fit, const LeafOpticsProperties &leafproperties);
+    void setProperties(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties);
 
-    void setProperties(std::vector<uint> UUIDs,  const LeafOpticsProperties &leafproperties);
+    //! Disable command-line output messages from this plug-in
+    void disableMessages();
 
-
+    //! Enable command-line output messages from this plug-in
+    void enableMessages();
 
 private:
 
     std::vector<float> R_spec_normal, R_spec_diffuse, wave_length, Rtotal, Ttotal ;
 
-    //!  400...2500 nm fixed wavelength range of input spectra specifing refractive index,...,absorption_drymass
+    //!  400...2500 nm fixed wavelength range of input spectra specifying refractive index,...,absorption_drymass
     const uint nw  = 2101;
 
     //! Copy of a pointer to the context
@@ -117,5 +126,6 @@ private:
     void surface(float degree, std::vector<float> &reflectivities);
     // Computes surface reflectances for normal and diffuse light incidence
 
+    bool message_flag = true;
 
 };

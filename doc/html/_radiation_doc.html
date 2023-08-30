@@ -103,7 +103,6 @@ $(function() {
 <li class="level2"><a href="#RadPeriodic">Periodic Boundary Conditions</a></li>
 <li class="level2"><a href="#RadCam">Radiation Cameras</a><ul><li class="level3"><a href="#RadCamAdd">Adding a Radiation Camera</a></li>
 <li class="level3"><a href="#RadCamCalibColor">Radiation Camera Color Calibration</a></li>
-<li class="level3"><a href="#RadCamCalibDist">Radiation Camera Distortion Calibration</a></li>
 </ul>
 </li>
 <li class="level2"><a href="#RadRun">Running Simulations</a></li>
@@ -209,7 +208,7 @@ Area Basis for Calculating Fluxes</h2>
 <h2><a class="anchor" id="RadBands"></a>
 Defining Wavelength Bands</h2>
 <p >The end output of the radiation model is absorbed radiative fluxes for primitives or camera pixels for one or more wavelength bands. Radiative bands are defined by the total radiative fluxes emitted by any radiative sources, surface radiative properties integrated over the band (reflectivity, transmissivity, and emissivity). These source fluxes and surface radiative properties can be manually specified for each band, or can be automatically calculated based on spectral data input to the model.</p>
-<p >Each wavelength band is given a label that is defined by the user (e.g., 'PAR'). Each band has the possibility of having components of direct, diffuse, and emission, each of which are specified when adding the band. The <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">addRadiationBand()</a> command is used to add each band, which takes one argument, which is a user-defined label for the band (e.g, 'PAR').</p>
+<p >Each wavelength band is given a label that is defined by the user (e.g., 'PAR'). Each band has the possibility of having components of direct, diffuse, and emission, each of which are specified when adding the band.</p>
 <p >Radiation bands are defined in the model by calling the <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a> method. At a minimum, the user must provide an arbitrary label for the band to be added (e.g., "PAR"), which will be used to reference it later. The actual value of the label does not matter - calling a band "PAR" for example doesn't mean anything itself, it's just a label.</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>radiationmodel.addRadiationBand( "PAR" ); //Add band 'PAR'</code></pre></div><p >When a band is added in this way, we will need to manually specify source fluxes and surface radiative properties. These values are what would actually make the band "PAR", or "NIR", or "shortwave", for example. We would set source fluxes and radiative properties consistent with that particular band.</p>
 <p >If we have source flux spectral data, or surface spectral radiative properties, we can input this into the model and have it automatically calculate source fluxes and radiative properties. The procedure for actually inputting this spectral data is described in detail below, but in this case we need to specify the wavelength range for our band when we create it:</p>
@@ -236,9 +235,7 @@ Input Spectral Data</h2>
 <h2><a class="anchor" id="RadProps"></a>
 Radiative Properties</h2>
 <p >Radiative properties (reflectivity, transmissivity, emissivity) are defined for each band for each primitive. Their reflectivity or transmissivity values can be set directly via primitive data, or they can be calculated from spectral data. The emissivity is always a constant and cannot be set from spectral data.</p>
-<ol type="1">
-<li>Setting reflectivity and transmissivity manually to a constant value for each band and primitive</li>
-</ol>
+<p >1. Setting reflectivity and transmissivity manually to a constant value for each band and primitive</p>
 <p >By setting the value of primitive data "reflectivity_[*]" or "transmissivity_[*]", where "[*]" is the name of a radiative band that has been created, this sets a constant reflectivity or transmissivity value for the given band and primitive. And example is given below.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  <code></code>// Initialize the Context
   Context context;
@@ -252,9 +249,7 @@ Radiative Properties</h2>
   float tau = 0.1; //transmissivity value
   context.setPrimitiveData( UUID, "transmissivity_PAR", tau);</code></pre></div><p >Note that absorptivity is not directly set, rather it is calculated as <img class="formulaInl" alt="$1-\rho-\tau$" src="form_139.png" width="60" height="14"/>. If <img class="formulaInl" alt="$1-\rho-\tau$" src="form_139.png" width="60" height="14"/> is calculated to be negative or greater than 1, an error is thrown.</p>
 <p >If reflectivity or transmissivity primitive data does not exist for a primitive, a default value of 0 is assumed. If radiative properties are changed from default values, the number of scattering iterations needs to be increased from the default value of 0 (see <a class="el" href="_radiation_doc.html#RadScatter">Scattering Iterations</a>). If radiative properties are changed, but the number of scattering iterations is set to the default value of 0, the modified radiative property values are overridden and set back to their default values (black surface).</p>
-<ol type="1">
-<li>Specifying reflectivity and transmissivity based on spectral data</li>
-</ol>
+<p >2. Specifying reflectivity and transmissivity based on spectral data</p>
 <p >Spectral reflectivity or transmissivity data can be associated with a primitive, such that the radiative properties for a given band can be calculated automatically. At a minimum, two things must be set in order for this to happen: a) the radiation band must have been created with a defined wavelength range (see above and method <a class="el" href="class_radiation_model.html#a066dd10dcf1ebd8902b197bb6812b5e1">RadiationModel::addRadiationBand( const std::string&amp;, float, float)</a> ); b) primitive data with label "reflectivity_spectrum" and/or "transmissivity_spectrum" must be set for the primitive, and the value (a string) must reference a valid spectral dataset that has been loaded into the Context.</p>
 <p >Below is a code example for specifying the reflectivity and transmissivity for a primitive based on spectral data. In this case, the model will assume the source spectral distribution is constant over all wave bands, and thus total reflectivity/transmissivity is just the integral of the spectral reflectivity/transmissivity. If there was a radiative source with a specified spectral distribution, the total reflectivity/transmissivity would be calculated by integrating the product of the reflectivity/transmissivity and source spectral intensity (example given for reflectivity only):</p>
 <p class="formulaDsp">
@@ -432,12 +427,12 @@ Adding a Radiation Camera</h3>
  uint antialiasing_samples = 100;
 
  radiationmodel.addRadiationCamera("visible", {"red","green","blue"}, camera_position, camera_lookat, properties, antialiasing_samples );</code></pre></div><p >This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to RadiationModel::addBand().</p>
-<p >By default, it is assumed that the spectral sensitivity is 100% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the <a class="el" href="class_radiation_model.html#a1ea2acedb464217f1acc38f0e05d353f">RadiationModel::setCameraSpectralResponse()</a> method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of</p>
+<h3><a class="anchor" id="RadCamCalibColor"></a>
+Radiation Camera Color Calibration</h3>
+<p >By default, it is assumed that the spectral sensitivity is 100% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the <a class="el" href="class_radiation_model.html#a1ea2acedb464217f1acc38f0e05d353f">RadiationModel::setCameraSpectralResponse()</a> method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of wavelength and intensity values.</p>
 <div class="image">
 <img src="CameraSpectralResponse.png" alt=""/>
 </div>
-<h3><a class="anchor" id="RadCamCalibColor"></a>
-Radiation Camera Color Calibration</h3>
 <p >Inputting raw measured surface spectra and camera spectral response specified by the manufacturer will typically result in simulated camera images that look quite different than those of the real camera due to errors in measurements, internal camera corrections, and lens effects. As such, a calibration is generally needed to achieve acceptable image results.</p>
 <p >Pre-calibrated camera responses are available for a few cameras and light source combinations to use when direct calibration data is not available. These are for a Nikon D700 camera with the ASTMG173 solar spectrum or CREE 6500K LED. These calibrated camera spectra can be found in the included camera spectral library ("plugins/radiation/spectral_data/camera_spectral_library.xml") and has labels "calibrated_ASTMG173_NikonD700_spectral_response_[*]" or "calibrated_CREE6500K_NikonD700_spectral_response_[*]", where [*] is one of "red", "green", or "blue". These calibrated camera spectra can be used in place of the raw camera spectral response data, as illustrated below:</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> Context context;
@@ -447,7 +442,8 @@ Radiation Camera Color Calibration</h3>
 
  radiationmodel.setCameraSpectralResponse("visible", "red", "calibrated_ASTMG173_NikonD700_spectral_response_red");
  radiationmodel.setCameraSpectralResponse("visible", "green", "calibrated_ASTMG173_NikonD700_spectral_response_green");
- radiationmodel.setCameraSpectralResponse("visible", "blue", "calibrated_ASTMG173_NikonD700_spectral_response_blue");</code></pre></div> <p >Ideally, a camera calibration should be performed for the particular camera and lighting conditions of your scene. The color calibration is performed using real images taken of a DKK Color Calibration Chart (<a href="https://www.bhphotovideo.com/c/product/1014557-REG/dgk_color_tools_dkk_set_of_2_dkk_poly_bag_2.html">DGK Color Tools</a>). Steps for calibration are as follows:</p>
+ radiationmodel.setCameraSpectralResponse("visible", "blue", "calibrated_ASTMG173_NikonD700_spectral_response_blue");</code></pre></div> <p >When using a calibrated camera spectral response, you should set the source flux equal to 1.0 for all bands. This is because the calibrated camera spectral response is calibrated based on the actual intensity of the light source.</p>
+<p >Ideally, a camera calibration should be performed for the particular camera and lighting conditions of your scene. The color calibration is performed using real images taken of a DKK Color Calibration Chart (<a href="https://www.bhphotovideo.com/c/product/1014557-REG/dgk_color_tools_dkk_set_of_2_dkk_poly_bag_2.html">DGK Color Tools</a>). Steps for calibration are as follows:</p>
 <p >1. Collect one or more images of the color calibration card using the desired camera. It is best to use lighting conditions similar to what will be simulated using the radiation model.</p>
 <p >2. Extract normalized (0-1) pixel values for each channel of the camera image, and for each color patch on the color calibration card. Currently, this is a manual process, and can be done using a variety of approaches such as using the <a href="https://www.youtube.com/watch?v=MQqntlvhGLg">built-in color picker on Mac</a>, or the <a href="https://learn.microsoft.com/en-us/windows/powertoys/color-picker">color picker on PC</a>. These utilities typically give 8-bit color values between 0 and 255, and thus you should divide the resulting color values by 255 to normalize them. It is best to increase the averaging size (or aperture) of the color picker to as large as possible such that it will still fit inside a single square in the color card image. Values should be specified as a 2D vector, where the first index is the channel of the image, and the second index is a vector of 18 elements giving the normalized color value for each color patch on the board for that channel following the pattern shown in the image below. The code for entering the patch values is also given below.</p>
 <div class="image">
@@ -462,8 +458,6 @@ blue channel
  truevalues.at(2) = {1.0, 0.71, 0.60, 0.48, 0.36, 0.0, 0.20, 0.31, 0.35, 0.91, 0.31, 0.54, 0.24, 0.24, 0.63, 0.57, 0.56, 0.50};</code></pre></div><p >It is preferable to use more significant digits for the color values for increased precision. The above example used only two significant digits for simplicity.</p>
 <p >3. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using <a class="el" href="class_radiation_model.html#a790ce56ed07f2f40b80be9676fa02c05">RadiationModel::setSourceSpectrum()</a>, and specify an initial guess for the camera channel spectral distribution(s) using <a class="el" href="class_radiation_model.html#a1ea2acedb464217f1acc38f0e05d353f">RadiationModel::setCameraSpectralResponse()</a>.</p>
 <p >4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method <a class="el" href="struct_camera_calibration.html#ac24587a354b9faba7394ab169bf5db18">CameraCalibration::addDefaultColorboard()</a>, or a custom color board CameraCalibration::addCustomColorboard().</p>
-<h3><a class="anchor" id="RadCamCalibDist"></a>
-Radiation Camera Distortion Calibration</h3>
 <h2><a class="anchor" id="RadRun"></a>
 Running Simulations</h2>
 <p >Before simulations are run, we must update the context geometry within the radiation model using the <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a> command. The geometry update can be somewhat costly, so it should only be done whenever geometry changes.</p>
@@ -606,7 +600,7 @@ Integrating Fluxes</h3>
 <h3><a class="anchor" id="RadCamOut"></a>
 Writing Camera Images to File</h3>
 <p >Simulated camera data can be written to file as a JPEG image, or the raw pixel data can be queried from the Context.</p>
-<p >JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the <a class="el" href="class_radiation_model.html#a505e92bc952af8078bcdabaabfea9b67">RadiationModel::writeCameraImage()</a> method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">RadiationModel::addRadiationCamera()</a> method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the directory where the executable is being run (usually the build directory), and the numerical identifier is omitted unless a value is provided.</p>
+<p >JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the <a class="el" href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de">RadiationModel::writeCameraImage()</a> method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">RadiationModel::addRadiationCamera()</a> method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the directory where the executable is being run (usually the build directory), and the numerical identifier is omitted unless a value is provided.</p>
 <p >Below is example code of writing a grayscale image (1 spectral band).</p>
 <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> RadiationModel radiationmodel(&amp;context);
 
@@ -625,7 +619,7 @@ Writing Camera Images to File</h3>
 
  radiationmodel.runBand("PAR);
 
-writing a grayscale image of only the "PAR" band
+ \c// writing a grayscale image of only the "PAR" band
  radiationmodel.writeCameraImage("mycamera", {"PAR"}, "myimage" );
  &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 

@@ -76,7 +76,7 @@ var searchData=
   ['gethitscanid_73',['getHitScanID',['../class_li_d_a_rcloud.html#a5510b2a0d0a878930e9f11331494bf41',1,'LiDARcloud::getHitScanID()'],['../class_aerial_li_d_a_rcloud.html#aaa2bbd15dad66355175fb733630456a4',1,'AerialLiDARcloud::getHitScanID()']]],
   ['gethitxyz_74',['getHitXYZ',['../class_li_d_a_rcloud.html#ac5f234b6200419f10fe82c9abe409cbd',1,'LiDARcloud::getHitXYZ()'],['../class_aerial_li_d_a_rcloud.html#a3363ac3ffff1bbdd164b6074010d75ba',1,'AerialLiDARcloud::getHitXYZ()']]],
   ['getjuliandate_75',['getJulianDate',['../classhelios_1_1_context.html#a23f2611ed71eeefe8cf772cab98de4d4',1,'helios::Context']]],
-  ['getleafspectra_76',['getLeafSpectra',['../class_leaf_optics.html#ad63337e271236cb4e333078333a73041',1,'LeafOptics']]],
+  ['getleafspectra_76',['getLeafSpectra',['../class_leaf_optics.html#a6b9fa9b6fb34fe7738e425b19118005a',1,'LeafOptics']]],
   ['getleafuuids_77',['getLeafUUIDs',['../class_canopy_generator.html#a3509012720b5fd256a14bc2924a3b164',1,'CanopyGenerator::getLeafUUIDs(uint PlantID)'],['../class_canopy_generator.html#a73680976a2826f0b5dbf567551fd5593',1,'CanopyGenerator::getLeafUUIDs()'],['../class_weber_penn_tree.html#af4368c1f900503f6d72f0c0e569fe8e5',1,'WeberPennTree::getLeafUUIDs()']]],
   ['getlength_78',['getLength',['../classhelios_1_1_cone.html#ada36b3fe4850f16c4dfa58c38a8da80c',1,'helios::Cone']]],
   ['getloadedxmlfiles_79',['getLoadedXMLFiles',['../classhelios_1_1_context.html#a48a8a843b99c36ad357dba13ee6f1774',1,'helios::Context']]],

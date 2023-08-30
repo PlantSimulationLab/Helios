@@ -17,10 +17,12 @@
 using namespace std;
 using namespace helios;
 
-LeafOptics::LeafOptics( helios::Context* __context ){
-    std::cout << "Initializing LeafOptics model..." << std::flush;
+LeafOptics::LeafOptics( helios::Context* a_context ){
+    if( message_flag ){
+        std::cout << "Initializing LeafOptics model..." << std::flush;
+    }
 
-    context = __context; //just copying the pointer to the context
+    context = a_context; //just copying the pointer to the context
 
     // Load leaf refraction index and specific absorption coefficients  (400,401,...2500 nm)
     context->loadXML("plugins/radiation/spectral_data/prospect_spectral_library.xml", true);
@@ -31,73 +33,118 @@ LeafOptics::LeafOptics( helios::Context* __context ){
         helios_runtime_error("Refraction index data was not loaded properly from the prospect_spectral_library.xml file.");
     }
     context->getGlobalData("refraction_index", data);
+    if( data.size() != nw ){
+        helios_runtime_error("Size of refraction index data loaded from the prospect_spectral_library.xml file was not correct.");
+    }
+    refractiveindex.resize(nw);
+    wave_length.resize(nw);
     for(int i=0; i<nw; i++) {
-        refractiveindex.push_back(data.at(i).y);
-        wave_length.push_back(data.at(i).x);
+        refractiveindex.at(i) = data.at(i).y;
+        wave_length.at(i) = data.at(i).x;
     }
     // Load specific absorption coefficient (per elementary layer depth)  for total chlorophyll  -  absorption_chlorophyll (cm^2/micro_g)
     if( !context->doesGlobalDataExist("absorption_chlorophyll" ) ){
         helios_runtime_error("Chlorophyll absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
     }
     context->getGlobalData("absorption_chlorophyll", data);
+    if( data.size() != nw ){
+        helios_runtime_error("Size of chlorophyll absorption spectral data loaded from the prospect_spectral_library.xml file was not correct.");
+    }
+    absorption_chlorophyll.resize(nw);
     for(int i=0; i<nw; i++) {
-        absorption_chlorophyll.push_back(data.at(i).y);}
+        absorption_chlorophyll.at(i) = data.at(i).y;
+    }
 
     // Load specific absorption coefficient for total carotenoids  -  absorption_carotenoid (cm^2/micro_g)
     if( !context->doesGlobalDataExist("absorption_carotenoid" ) ){
         helios_runtime_error("Carotenoid absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
     }
     context->getGlobalData("absorption_carotenoid", data);
+    if( data.size() != nw ){
+        helios_runtime_error("Size of carotenoid absorption spectral data loaded from the prospect_spectral_library.xml file was not correct.");
+    }
+    absorption_carotenoid.resize(nw);
     for(int i=0; i<nw; i++) {
-        absorption_carotenoid.push_back(data.at(i).y);}
+        absorption_carotenoid.at(i) = data.at(i).y;
+    }
 
-    // Load specific absorption coefficient for anthocyans  -  sac_an (cm^2/micro_g)
+    // Load specific absorption coefficient for anthocyanins  -  sac_an (cm^2/micro_g)
     if( !context->doesGlobalDataExist("absorption_anthocyanin" ) ){
         helios_runtime_error("Anothocyanin absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
     }
     context->getGlobalData("absorption_anthocyanin", data);
+    if( data.size() != nw ){
+        helios_runtime_error("Size of anthocyanin absorption spectral data loaded from the prospect_spectral_library.xml file was not correct.");
+    }
+    absorption_anthocyanin.resize(nw);
     for(int i=0; i<nw; i++) {
-        absorption_anthocyanin.push_back(data.at(i).y);}
+        absorption_anthocyanin.at(i) = data.at(i).y;
+    }
 
     // Load specific absorption coefficient for specific brown pigments (phenols during leaf death)   -  absorption_brown (arbitrary unit)
     if( !context->doesGlobalDataExist("absorption_brown" ) ){
         helios_runtime_error("Brown pigment absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
     }
     context->getGlobalData("absorption_brown", data);
+    if( data.size() != nw ){
+        helios_runtime_error("Size of brown pigment absorption spectral data loaded from the prospect_spectral_library.xml file was not correct.");
+    }
+    absorption_brown.resize(nw);
     for(int i=0; i<nw; i++) {
-        absorption_brown.push_back(data.at(i).y);}
+        absorption_brown.at(i) = data.at(i).y;
+    }
 
-// Load specific absorption coefficient for mass of water per leaf area (EWT)-  absorption_water (1/cm or cm^2/g)
+    // Load specific absorption coefficient for mass of water per leaf area (EWT)-  absorption_water (1/cm or cm^2/g)
     if( !context->doesGlobalDataExist("absorption_water" ) ){
         helios_runtime_error("Water absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
     }
     context->getGlobalData("absorption_water", data);
+    if( data.size() != nw ){
+        helios_runtime_error("Size of water absorption spectral data loaded from the prospect_spectral_library.xml file was not correct.");
+    }
+    absorption_water.resize(nw);
     for(int i=0; i<nw; i++) {
-        absorption_water.push_back(data.at(i).y);}
+        absorption_water.at(i) = data.at(i).y;
+    }
 
-// Load specific absorption coefficient for dry mass per leaf area (LMA)-  absorption_drymass (cm^2/g)
+    // Load specific absorption coefficient for dry mass per leaf area (LMA)-  absorption_drymass (cm^2/g)
     if( !context->doesGlobalDataExist("absorption_drymass" ) ){
         helios_runtime_error("Dry mass absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
     }
     context->getGlobalData("absorption_drymass", data);
+    if( data.size() != nw ){
+        helios_runtime_error("Size of dry mass absorption spectral data loaded from the prospect_spectral_library.xml file was not correct.");
+    }
+    absorption_drymass.resize(nw);
     for(int i=0; i<nw; i++) {
-        absorption_drymass.push_back(data.at(i).y);}
+        absorption_drymass.at(i) = data.at(i).y;
+    }
 
     // Load specific absorption coefficient for proteins- absorption_proteins (cm2.g-1)
     if( !context->doesGlobalDataExist("absorption_proteins" ) ){
         helios_runtime_error("Protein absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
     }
     context->getGlobalData("absorption_proteins", data);
+    if( data.size() != nw ){
+        helios_runtime_error("Size of protein absorption spectral data loaded from the prospect_spectral_library.xml file was not correct.");
+    }
+    absorption_protein.resize(nw);
     for(int i=0; i<nw; i++) {
-        absorption_protein.push_back(data.at(i).y);}
+        absorption_protein.at(i) = data.at(i).y;
+    }
 
     // Load specific absorption coefficient for carbon based constituents-  absorption_carbonconstituents (cm^2/g)
     if( !context->doesGlobalDataExist("absorption_carbonconstituents" ) ){
         helios_runtime_error("Carbon constituent absorption spectral data was not loaded properly from the prospect_spectral_library.xml file.");
     }
     context->getGlobalData("absorption_carbonconstituents", data);
+    if( data.size() != nw ){
+        helios_runtime_error("Size of carbon constituent absorption spectral data loaded from the prospect_spectral_library.xml file was not correct.");
+    }
+    absorption_carbonconstituents.resize(nw);
     for(int i=0; i<nw; i++) {
-        absorption_carbonconstituents.push_back(data.at(i).y);}
+        absorption_carbonconstituents.at(i) = data.at(i).y;
+    }
 
     LeafOptics::surface( 40.0, R_spec_normal);
     // get surface (i.e. fresnel)  reflectances for usage within Prospect function, relation from Stern
@@ -106,14 +153,16 @@ LeafOptics::LeafOptics( helios::Context* __context ){
     LeafOptics::surface( 90.0, R_spec_diffuse);
     // 0..90° degrees range from the vertical = diffuse incidence on a perfectly smooth leaf
 
-    std::cout << "done." << std::endl;
+    if( message_flag ) {
+        std::cout << "done." << std::endl;
+    }
 }
 
 // Loop prospect over a list of UUIDs
-void LeafOptics::run(std::vector<uint> &UUIDs ,const LeafOpticsProperties &leafproperties, const std::string &label) {
+void LeafOptics::run(const std::vector<uint> &UUIDs , const LeafOpticsProperties &leafproperties, const std::string &label) {
     std::vector<vec2> reflectivities_fit;
     std::vector<vec2> transmissivities_fit;
-    LeafOptics::getLeafSpectra(reflectivities_fit, transmissivities_fit,leafproperties);
+    getLeafSpectra(leafproperties, reflectivities_fit, transmissivities_fit);
 
     std::string leaf_reflectivity_label = "leaf_reflectivity"+label;
     std::string leaf_transmissivity_label = "leaf_transmissivity"+label;
@@ -122,12 +171,12 @@ void LeafOptics::run(std::vector<uint> &UUIDs ,const LeafOpticsProperties &leafp
     context->setGlobalData(leaf_reflectivity_label.c_str(),HELIOS_TYPE_VEC2,reflectivities_fit.size(),&reflectivities_fit[0]);
     context->setGlobalData(leaf_transmissivity_label.c_str(),HELIOS_TYPE_VEC2,transmissivities_fit.size(),&transmissivities_fit[0]);
 
-    LeafOptics::setProperties(UUIDs, leafproperties);
+    setProperties(UUIDs, leafproperties);
 }
 
 
-void LeafOptics::prospect(float numberlayers, float chlorophyllcontent, float carotenoidcontent, float anthocyancontent, float brownpigments,
-                          float watermass,  float drymass, float protein, float carbonconstituents, std::vector<float> &reflectivities_fit, std::vector<float> &transmissivities_fit)
+void LeafOptics::PROSPECT(float numberlayers, float Chlorophyllcontent, float carotenoidcontent, float anthocyancontent, float brownpigments,
+                          float watermass, float drymass, float protein, float carbonconstituents, std::vector<float> &reflectivities_fit, std::vector<float> &transmissivities_fit)
 // Implementation of Prospect-PRO, port of public available matlab code
 {
     double k;
@@ -135,9 +184,9 @@ void LeafOptics::prospect(float numberlayers, float chlorophyllcontent, float ca
     // Loop over wavelength, might be a way to be vectorized at least partly
     for(int i=0; i<LeafOptics::nw; i++) {
         // k: the mean absorption coefficient of each elementary layer.
-        k = (chlorophyllcontent * absorption_chlorophyll.at(i) + carotenoidcontent * absorption_carotenoid.at(i) + anthocyancontent * absorption_anthocyanin.at(i)
+        k = (Chlorophyllcontent * absorption_chlorophyll.at(i) + carotenoidcontent * absorption_carotenoid.at(i) + anthocyancontent * absorption_anthocyanin.at(i)
              + brownpigments * absorption_brown.at(i) + watermass * absorption_water.at(i) + drymass * absorption_drymass.at(i)
-             +  protein * absorption_protein.at(i)+carbonconstituents * absorption_carbonconstituents.at(i)) / numberlayers;
+             +  protein * absorption_protein.at(i) +carbonconstituents * absorption_carbonconstituents.at(i)) / numberlayers;
 
         // diffuse transmittance through elementary layer, this integral needs more effort in C++
         tau = transmittance(k);
@@ -194,8 +243,7 @@ void LeafOptics::prospect(float numberlayers, float chlorophyllcontent, float ca
     }
 }
 
-void LeafOptics::getLeafSpectra(std::vector<vec2> &reflectivities_fit, std::vector<vec2> &transmissivities_fit,
-                                const LeafOpticsProperties &leafproperties){
+void LeafOptics::getLeafSpectra(const LeafOpticsProperties &leafproperties, std::vector<helios::vec2> &reflectivities_fit, std::vector<helios::vec2> &transmissivities_fit) {
 
     std::vector<float> reflectivities_fit_y, transmissivities_fit_y;
 
@@ -217,8 +265,8 @@ void LeafOptics::getLeafSpectra(std::vector<vec2> &reflectivities_fit, std::vect
     else{
         drymass = 0;
     }
-    LeafOptics::prospect(numberlayers, chlorophyllcontent,  carotenoidcontent,  anthocyancontent,  brownpigments,  watermass,
-                         drymass, protein, carbonconstituents, reflectivities_fit_y, transmissivities_fit_y);
+    PROSPECT(numberlayers, chlorophyllcontent, carotenoidcontent, anthocyancontent, brownpigments, watermass,
+             drymass, protein, carbonconstituents, reflectivities_fit_y, transmissivities_fit_y);
 
     // Convert float to vec2
     for(int iwave=0; iwave<nw; iwave++) {
@@ -306,7 +354,7 @@ float LeafOptics::transmittance(double k) {
     return 0.0;
 }
 
-void LeafOptics::setProperties(std::vector<uint> UUIDs,  const LeafOpticsProperties &leafproperties) {
+void LeafOptics::setProperties(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties) {
 
     context->setPrimitiveData(UUIDs, "chlorophyll", leafproperties.chlorophyllcontent);
     context->setPrimitiveData(UUIDs, "carotenoid", leafproperties.carotenoidcontent);
@@ -322,5 +370,13 @@ void LeafOptics::setProperties(std::vector<uint> UUIDs,  const LeafOpticsPropert
         context->setPrimitiveData(UUIDs, "protein", leafproperties.protein);
         context->setPrimitiveData(UUIDs, "cellulose", leafproperties.carbonconstituents);
     }
+}
+
+void LeafOptics::disableMessages(){
+    message_flag = false;
+}
+
+void LeafOptics::enableMessages(){
+    message_flag = true;
 }
 
