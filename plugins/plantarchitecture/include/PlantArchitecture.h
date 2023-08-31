@@ -54,15 +54,6 @@ public:
         return *this;
     }
 
-    RandomParameter_float& operator=(const RandomParameter_float &a){
-        this->distribution = a.distribution;
-        this->constval = a.constval;
-        this->sampled = a.sampled;
-        this->distribution_parameters = a.distribution_parameters;
-        this->generator = a.generator;
-        return *this;
-    }
-
     void uniformDistribution( float minval, float maxval ){
         distribution = "uniform";
         distribution_parameters = {minval, maxval};
@@ -356,14 +347,6 @@ public:
     //! Copy constructor
     PhytomerParameters( const PhytomerParameters& parameters_copy );
 
-    PhytomerParameters& operator=(const PhytomerParameters& a){
-        this->internode = a.internode;
-        this->petiole = a.petiole;
-        this->leaf = a.leaf;
-        this->inflorescence = a.inflorescence;
-        return *this;
-    }
-
 };
 
 struct ShootParameters{
@@ -464,7 +447,9 @@ struct Shoot{
     int parentID;
     uint parentNode;
     uint rank;
-    std::vector<int> childIDs;
+
+    //map of node number to ID of shoot child
+    std::map<int,int> childIDs;
 
     ShootParameters shoot_parameters;
 
@@ -521,6 +506,8 @@ public:
 
     std::vector<uint> getAllPlantUUIDs(uint PlantID) const;
 
+    std::string getLSystemsString(uint plantID) const;
+
 private:
 
     helios::Context* context_ptr;
@@ -537,6 +524,8 @@ private:
     };
 
     std::map<uint,PlantInstance> plant_instances;
+
+    std::string makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> & shoot_tree) const;
 
 };
 
