@@ -1,26 +1,16 @@
-/** \file "CameraCalibration.h" Primary header file for synthetic radiation camera calibration.
-
-    Copyright (C) 2016-2021  Brian Bailey
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-*/
+//
+// Created by luyaz999 on 9/1/2022.
+//
 
 #ifndef HELIOS_CAMERACALIBRATION_H
 #define HELIOS_CAMERACALIBRATION_H
 #include "Context.h"
-
+#include <fstream>
+//
 struct CameraCalibration{
     explicit CameraCalibration(helios::Context *context);
 
-    //! Add custom checker board geometry into context
+    //! Add check board geometry into context
     /**
      * \param[in] boardsidesize: size of check board
      * \param[in] patchsize: size of each square patch
@@ -32,21 +22,16 @@ struct CameraCalibration{
                                       const helios::vec3 &rotationrad, bool firstblack = true);
 
 
-    //! Add default checker board geometry into context
-    /**
-     * \param[in] centrelocation: location of the board (vec3 on coordinates x,y,z)
-     * \param[in] rotationrad: radians of rotaion (vec3 on coordinates x,y,z)
-    */
     std::vector<uint> addDefaultCheckerboard(const helios::vec3 &centrelocation,
                                              const helios::vec3 &rotationrad);
 
     //! Add color board geometry into context
     /**
      * \param[in] centrelocation: location of the board (vec3 on coordinates x,y,z)
-     * \param[in] rotationrad: radians of rotation (vec3 on coordinates x,y,z)
+     * \param[in] rotationrad: radians of rotaion (vec3 on coordinates x,y,z)
+     * \param[inout] UUIDs: Empty vector of UUIDs
      * \param[in] colorassignment: color of each patch and size of color board
      * \param[in] patchsize: size of each square patch
-     * \return A vector of color board UUIDs.
     */
     std::vector<uint> addColorboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad,
                        const std::vector<std::vector<helios::RGBcolor>> &colorassignment, float patchsize);
@@ -57,7 +42,7 @@ struct CameraCalibration{
      * \param[in] filename: name with path of XML file
      * \param[in] labelname: label name of data
     */
-    void setColorboardReflectivity(uint UUID, const std::string &filename, const std::string &labelname);
+    void setColorboardReflectivity(const uint &UUID, const std::string &filename, const std::string &labelname);
 
     //! Add default color board (DKC-RPO) with spectral reflectivity values
     /**
@@ -118,7 +103,7 @@ struct CameraCalibration{
     struct GradientDescentParameters
     {
         float learningrate=0.000001;
-        int maxiteration = 1500;
+        int maxiteration = 500;
         float minloss = 0.01;
         std::vector<float> camerarescales = {1,1,1};
         GradientDescentParameters() = default;

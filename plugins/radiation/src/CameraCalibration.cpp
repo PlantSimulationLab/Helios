@@ -1,18 +1,6 @@
-/** \file "CameraCalibration.cpp" Routines for performing synthetic radiation camera calibration.
-
-    Copyright (C) 2016-2023  Brian Bailey
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-*/
-
+//
+// Created by luyaz999 on 8/29/2022.
+//
 #include "CameraCalibration.h"
 
 using namespace helios;
@@ -110,13 +98,15 @@ std::vector<uint> CameraCalibration::addColorboard(const helios::vec3 &centreloc
 }
 
 // Set reflectivity for a specific UUID
-void CameraCalibration::setColorboardReflectivity(uint UUID, const std::string &filename, const std::string &labelname) {
+void CameraCalibration::setColorboardReflectivity(const uint &UUID, const std::string &filename, const std::string &labelname) {
     std::vector<vec2> spectraldata;
     CameraCalibration::loadXMLlabeldata(filename,labelname,spectraldata);
     context->setPrimitiveData(UUID, "reflectivity_spectrum", labelname);
+    context->setPrimitiveData(UUID, "reflectivity_spectrum_raw", labelname+"_raw");
     context->setPrimitiveData(UUID, "transmissivity_spectrum", "");
     context->setPrimitiveData(UUID, "twosided_flag", uint(0) );
     context->setGlobalData(labelname.c_str(),HELIOS_TYPE_VEC2,spectraldata.size(),&spectraldata[0]);
+    context->setGlobalData((labelname+"_raw").c_str(),HELIOS_TYPE_VEC2,spectraldata.size(),&spectraldata[0]);
 }
 
 // Add default color board (DKC-RPO) with spectral reflectivity values

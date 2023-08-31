@@ -1,6 +1,7 @@
 /** \file "RadiationModel.h" Primary header file for radiation transport model.
+    \author Brian Bailey
     
-    Copyright (C) 2016-2023  Brian Bailey
+    Copyright (C) 2016-2021  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,6 +19,7 @@
 
 #include "Context.h"
 #include "CameraCalibration.h"
+#include "LeafOptics.h"
 
 //NVIDIA OptiX Includes
 #include <optix.h>
@@ -120,7 +122,7 @@ public:
         diffuseExtinction = 0.f;
         diffuseDistNorm = 1.f;
         emissionFlag = true;
-        wavebandBounds = helios::make_vec2(0,0);
+        wavebandBounds = helios::make_vec2(-10000,10000);
         radiativepropertiesinitialized = false;
     }
 
@@ -430,6 +432,8 @@ public:
     */
     uint addSunSphereRadiationSource(const helios::SphericalCoord &sun_direction );
 
+    void addSunSphereRadiationSource(uint sourceID, const helios::SphericalCoord &sun_direction );
+
     //! Add a sphere radiation source that models the sun
     /**
      * \param[in] "sun_direction" Unit vector pointing towards the sun
@@ -664,11 +668,13 @@ public:
      * \param[in] camera Label for camera to be queried
      * \param[in] bands Vector of labels for radiative bands to be written
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] image_path Path to directory where images should be saved
      * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
-     * \param[in] flux_to_pixel_conversion OPTIONAL: A factor to convert radiative flux to 8-bit pixel values (0-255). By default, this value is 1.0, which means that the pixel values will be equal to the radiative flux. If the radiative flux is very large or very small, it may be necessary to scale the flux to a more appropriate range for the image.
      */
-    void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float flux_to_pixel_conversion = 1.f);
+    void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
+
+    //! Write normalized camera data (maximum value is 1) for one or more bands to a JPEG image
+    void writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
     //! Adds all geometric primitives from the Context to OptiX
     /**
@@ -757,6 +763,21 @@ public:
                              const std::vector<std::string>& cameraresponselabels, helios::vec2 wavelengthrange,
                              float fluxscale = 1, float diffusefactor = 0.0005, uint scatteringdepth = 4);
 
+    //! Run radiation imaging simulation
+    /**
+     * \param[in] "cameralabels" Vector of camera labels to be used for simulation
+     * \param[in] "sourcelabels" Vector of labels of source spectra to be used for simulation
+     * \param[in] "bandlabels" Vector of labels of radiation bands to be used for simulation
+     * \param[in] "cameraresponselabels" Vector of labels of camera spectral responses
+     * \param[in] "wavelengthrange" Wavelength range of spectra
+     * \param[in] "fluxscale" Scale factor for source flux
+     * \param[in] "diffusefactor" Diffuse factor for diffuse radiation
+     * \param[in] "scatteringdepth" Number of scattering events to simulate
+    */
+    void runRadiationImaging(const std::vector<std::string>& cameralabels, const std::vector<std::string>& sourcelabels, const std::vector<std::string>& bandlabels,
+                             const std::vector<std::string>& cameraresponselabels, helios::vec2 wavelengthrange,
+                             float fluxscale = 1, float diffusefactor = 0.0005, uint scatteringdepth = 4);
+
     //! Write image labels to file
     /**
      * \param[in] "cameralabel" Label of target camera
@@ -765,7 +786,7 @@ public:
      * \param[in] "datatype" Data type of the label
      * \param[in] "padvalue" Pad value for the empty pixels
     */
-    void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
+    void writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
 
     //! Write depth image to file
     /**
