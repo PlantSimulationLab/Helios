@@ -544,7 +544,9 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Inputting raw measured surface spectra and camera spectral response specified by the manufacturer will typically result in simulated camera images that look quite different than those of the real camera due to errors in measurements, internal camera corrections, and lens effects. As such, a calibration is generally needed to achieve acceptable image results.
 
- Pre-calibrated camera responses are available for a few cameras and light source combinations to use when direct calibration data is not available. These are for a Nikon D700 camera with the ASTMG173 solar spectrum or CREE 6500K LED. These calibrated camera spectra can be found in the included camera spectral library ("plugins/radiation/spectral_data/camera_spectral_library.xml") and has labels "calibrated_ASTMG173_NikonD700_spectral_response_[*]" or "calibrated_CREE6500K_NikonD700_spectral_response_[*]", where [*] is one of "red", "green", or "blue". These calibrated camera spectra can be used in place of the raw camera spectral response data, as illustrated below:
+ Pre-calibrated camera responses are available for a few cameras and light source combinations to use when direct calibration data is not available. These are for a Nikon B500 camera with the ASTMG173 solar spectrum or CREE 6500K LED. These calibrated camera spectra can be found in the included camera spectral library ("plugins/radiation/spectral_data/camera_spectral_library.xml") and has labels "calibrated_sun_NikonB500_spectral_response_[*]" or "calibrated_CREE6500K_NikonD700_spectral_response_[*]", where [*] is one of "red", "green", or "blue". These calibrated camera spectra can be used in place of the raw camera spectral response data, as illustrated below:
+
+ By convention, the intensity spectra all sources other than the sun are normalized to 1.0. So when using camera calibrations based on these types of sources, you should set the source fluxes for each radiative band equal to 1.0. For solar sources, set the source flux for each band equal to the total solar flux integrated over all wavelengths.
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code> Context context;
@@ -754,36 +756,69 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the \ref RadiationModel::writeCameraImage() method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the \ref RadiationModel::addRadiationCamera() method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the directory where the executable is being run (usually the build directory), and the numerical identifier is omitted unless a value is provided.
 
- Below is example code of writing a grayscale image (1 spectral band).
+ Below is example code of writing an RGB image (3 spectral bands).
 
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>
+ <pre><code>int main(){
 
-     %RadiationModel radiationmodel(&context);
+    %Context context;
 
- radiationmodel.addRadiationBand("red");
- radiationmodel.disableEmission("red");
- radiationmodel.setSourceFlux("red", 1.f);
- radiationmodel.setScatteringIterations("red", 3);
- radiationmodel.addRadiationBand("green");
+    std::vector<uint> UUIDs_bunny = context.loadPLY( "../../../PLY/StanfordBunny.ply", nullorigin, 1.f );
 
- radiationmodel.updateGeometry();
+    std::vector<uint> UUIDs_ground = context.addTile( nullorigin, make_vec2(3,3), nullrotation, make_int2(200,200) );
 
- %CameraProperties properties;
+    \c// Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil
+    context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
+    context.setPrimitiveData( UUIDs_bunny, "reflectivity_spectrum", "grape_leaf_reflectivity_0000" );
+    context.setPrimitiveData( UUIDs_ground, "reflectivity_spectrum", "soil_reflectivity_0000" );
 
- vec3 camera_position(0,0,3);
- vec3 camera_lookat(0,0,0);
- uint antialiasing_samples = 100;
+    %RadiationModel radiationmodel(&context);
 
- radiationmodel.addRadiationCamera("mycamera", {"PAR","NIR"}, camera_position, camera_lookat, properties, antialiasing_samples );
+    \c// Add a sun sphere radiation source
+    uint source = radiationmodel.addSunSphereRadiationSource(make_SphericalCoord(deg2rad(90-50), deg2rad(40)));
+    \c// Set the solar spectrum to ASTMG173 from the library
+    context.loadXML( "plugins/radiation/spectral_data/light_spectral_library.xml" );
+    radiationmodel.setSourceSpectrum( source, "solar_spectrum_ASTMG173" );
 
- radiationmodel.runBand("PAR);
+    float solar_flux = 900.f; //flux from sun, W/m2
 
- \c// writing a grayscale image of only the "PAR" band
- radiationmodel.writeCameraImage("mycamera", {"PAR"}, "myimage" );
- </code></pre></div>
+    \c// Add bands red, green, and blue
+    radiationmodel.addRadiationBand("red");
+    radiationmodel.disableEmission("red");
+    radiationmodel.setSourceFlux(source, "red", solar_flux);
+    radiationmodel.setScatteringDepth("red", 3);
 
- The above code would produce an image in the build directory called "camera_PAR_myimage.jpeg". Note that the above example assumes that the Context was declared and had some geometry added, and inputs defining details of the radiative bands were not specified for brevity (more code would be needed for a typical simulation).
+    radiationmodel.copyRadiationBand("red", "green");
+    radiationmodel.copyRadiationBand("red", "blue");
+
+    radiationmodel.updateGeometry();
+
+    %CameraProperties properties; //default camera properties
+    properties.focal_plane_distance = 1.25;
+
+    vec3 camera_position(0,0,2);
+    vec3 camera_lookat(0,0,0);
+    uint antialiasing_samples = 100;
+
+    radiationmodel.addRadiationCamera("visible", {"red","green","blue"}, camera_position, camera_lookat, properties, antialiasing_samples );
+
+    \c// Load and set calibrated camera spectral response for Nikon B500 camera and ASTMG173 solar spectrum
+    context.loadXML("plugins/radiation/spectral_data/camera_spectral_library.xml");
+    std::string camera_spectrum_base = "calibrated_sun_NikonB500_spectral_response";
+    radiationmodel.setCameraSpectralResponse("visible", "red", camera_spectrum_base+"_red");
+    radiationmodel.setCameraSpectralResponse("visible", "green", camera_spectrum_base+"_green");
+    radiationmodel.setCameraSpectralResponse("visible", "blue", camera_spectrum_base+"_blue");
+
+    radiationmodel.runBand({"red","green","blue"});
+
+    \c// writing output image
+    radiationmodel.writeCameraImage("visible", {"red","green","blue"}, "myimage" );
+
+ }</code></pre></div>
+
+ The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below.
+
+ \image html camera_visible_myimage.jpeg
 
 
 */

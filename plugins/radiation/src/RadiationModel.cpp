@@ -442,7 +442,7 @@ float RadiationModel::getSourceFlux( uint source_ID, const std::string &label )c
     }else {
         return radiation_sources.at(source_ID).source_fluxes.at(label);
     }
-
+    return 0;
 }
 
 void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios::vec2> &spectrum ){
