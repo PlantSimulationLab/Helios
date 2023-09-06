@@ -1,35 +1,49 @@
-//
-// Created by luyaz999 on 9/1/2022.
-//
+/** \file "CameraCalibration.h" Primary header file for synthetic radiation camera calibration.
+
+    Copyright (C) 2016-2023  Brian Bailey
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, version 2.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+*/
 
 #ifndef HELIOS_CAMERACALIBRATION_H
 #define HELIOS_CAMERACALIBRATION_H
 #include "Context.h"
-#include <fstream>
-//
+
 struct CameraCalibration{
     explicit CameraCalibration(helios::Context *context);
 
-    //! Add check board geometry into context
+    //! Add checker board geometry into context
     /**
      * \param[in] boardsidesize: size of check board
      * \param[in] patchsize: size of each square patch
      * \param[in] centrelocation: location of the board (vec3 on coordinates x,y,z)
-     * \param[in] rotationrad: radians of rotaion (vec3 on coordinates x,y,z)
+     * \param[in] rotationrad: radians of rotation (vec3 on coordinates x,y,z)
      * \param[in] firstblack: initial the color of first square patch (black or white)
     */
     std::vector<uint> addCheckerboard(const helios::int2 &boardsidesize, const float &patchsize, const helios::vec3 &centrelocation,
                                       const helios::vec3 &rotationrad, bool firstblack = true);
 
 
+    //! Add default checker board geometry into context
+    /**
+     * \param[in] centrelocation: location of the board (vec3 on coordinates x,y,z)
+     * \param[in] rotationrad: radians of rotation (vec3 on coordinates x,y,z)
+    */
     std::vector<uint> addDefaultCheckerboard(const helios::vec3 &centrelocation,
                                              const helios::vec3 &rotationrad);
 
     //! Add color board geometry into context
     /**
      * \param[in] centrelocation: location of the board (vec3 on coordinates x,y,z)
-     * \param[in] rotationrad: radians of rotaion (vec3 on coordinates x,y,z)
-     * \param[inout] UUIDs: Empty vector of UUIDs
+     * \param[in] rotationrad: radians of rotation (vec3 on coordinates x,y,z)
      * \param[in] colorassignment: color of each patch and size of color board
      * \param[in] patchsize: size of each square patch
     */

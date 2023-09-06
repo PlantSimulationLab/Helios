@@ -261,10 +261,12 @@ RT_PROGRAM void closest_hit_diffuse() {
                         atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); //reflection
                         atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); //transmission
                     }
-                    if( Ncameras>0 ) {
-                        size_t indc = prd.source_ID*Nprimitives*Nbands*Ncameras + origin_UUID*Nbands*Ncameras + b*Ncameras + camera_ID;
-                        float t_rho_cam = rho_cam[ indc ];
-                        float t_tau_cam = tau_cam[ indc ];
+                }
+                if( Ncameras>0 ) {
+                    size_t indc = prd.source_ID*Nprimitives*Nbands*Ncameras + origin_UUID*Nbands*Ncameras + b*Ncameras + camera_ID;
+                    float t_rho_cam = rho_cam[ indc ];
+                    float t_tau_cam = tau_cam[ indc ];
+                    if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
                         if (prd.face) {//reflection from top, transmission from bottom
                             atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_rho_cam); //reflection
                             atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_tau_cam); //transmission
@@ -274,7 +276,6 @@ RT_PROGRAM void closest_hit_diffuse() {
                         }
                     }
                 }
-
             }
 
             // if( primitive_type[UUID] == 4 ){ //if we hit a voxel, reduce strength and launch another ray
@@ -521,10 +522,12 @@ RT_PROGRAM void miss_direct(){
                 atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); //reflection
                 atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); //transmission
             }
-            if( Ncameras>0 ) {
-                size_t indc = prd.source_ID*Nprimitives*Nbands*Ncameras + prd.origin_UUID*Nbands*Ncameras + b*Ncameras + camera_ID;
-                float t_rho_cam = rho_cam[ indc ];
-                float t_tau_cam = tau_cam[ indc ];
+        }
+        if( Ncameras>0 ) {
+            size_t indc = prd.source_ID*Nprimitives*Nbands*Ncameras + prd.origin_UUID*Nbands*Ncameras + b*Ncameras + camera_ID;
+            float t_rho_cam = rho_cam[ indc ];
+            float t_tau_cam = tau_cam[ indc ];
+            if ( (t_rho_cam > 0 || t_tau_cam > 0) && strength>0 ) {
                 if (prd.face) {//reflection from top, transmission from bottom
                     atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_rho_cam); //reflection
                     atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_tau_cam); //transmission
@@ -598,10 +601,12 @@ RT_PROGRAM void miss_diffuse() {
                         atomicFloatAdd(&scatter_buff_bottom[ind_origin], prd.strength * t_rho); //reflection
                         atomicFloatAdd(&scatter_buff_top[ind_origin], prd.strength * t_tau); //transmission
                     }
-                    if( Ncameras>0 ) {
-                        size_t indc = prd.source_ID*Nprimitives*Nbands*Ncameras + prd.origin_UUID*Nbands*Ncameras + b*Ncameras + camera_ID;
-                        float t_rho_cam = rho_cam[ indc ];
-                        float t_tau_cam = tau_cam[ indc ];
+                }
+                if( Ncameras>0 ) {
+                    size_t indc = prd.source_ID*Nprimitives*Nbands*Ncameras + prd.origin_UUID*Nbands*Ncameras + b*Ncameras + camera_ID;
+                    float t_rho_cam = rho_cam[ indc ];
+                    float t_tau_cam = tau_cam[ indc ];
+                    if ( (t_rho_cam > 0 || t_tau_cam > 0) && prd.strength>0 ) {
                         if (prd.face) {//reflection from top, transmission from bottom
                             atomicFloatAdd(&scatter_buff_top_cam[ind_origin], prd.strength * t_rho_cam); //reflection
                             atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], prd.strength * t_tau_cam); //transmission
@@ -611,7 +616,6 @@ RT_PROGRAM void miss_diffuse() {
                         }
                     }
                 }
-
             }
 
         }

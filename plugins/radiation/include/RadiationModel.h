@@ -1,7 +1,6 @@
 /** \file "RadiationModel.h" Primary header file for radiation transport model.
-    \author Brian Bailey
     
-    Copyright (C) 2016-2021  Brian Bailey
+    Copyright (C) 2016-2023  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +18,6 @@
 
 #include "Context.h"
 #include "CameraCalibration.h"
-#include "LeafOptics.h"
 
 //NVIDIA OptiX Includes
 #include <optix.h>
@@ -122,7 +120,7 @@ public:
         diffuseExtinction = 0.f;
         diffuseDistNorm = 1.f;
         emissionFlag = true;
-        wavebandBounds = helios::make_vec2(-10000,10000);
+        wavebandBounds = helios::make_vec2(0,0);
         radiativepropertiesinitialized = false;
     }
 
@@ -483,6 +481,14 @@ public:
     */
     void setSourceFlux(uint source_ID, const std::string &band_label, float flux );
 
+    //! Set the flux of multiple radiation sources for this band.
+    /**
+     * \param[in] "source_ID" Vector of radiation source identifiers
+     * \param[in] "band_label" Label used to reference the band
+     * \param[in] "flux" Radiative flux normal to the direction of radiation propagation
+    */
+    void setSourceFlux(const std::vector<uint> &source_ID, const std::string &band_label, float flux );
+
     //! Get the flux of radiation source for this band
     /**
      * \param[in] "sourceID" Identifier of radiation source
@@ -512,12 +518,26 @@ public:
      */
     void setSourceSpectrum(uint source_ID, const std::vector<helios::vec2> &spectrum );
 
+    //! Set the spectral distribution of multiple radiation sources according to a vector of wavelength-intensity pairs.
+    /**
+     * \param[in] "ID" Vector of radiation source identifiers.
+     * \param[in] "spectrum" Vector containing spectral intensity data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity (.y).
+     */
+    void setSourceSpectrum(const std::vector<uint> &source_ID, const std::vector<helios::vec2> &spectrum );
+
     //! Set the spectral distribution of a radiation source based on global data of wavelength-intensity pairs.
     /**
       * \param[in] "ID" Identifier of radiation source.
       * \param[in] "spectrum_label" Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
     */
     void setSourceSpectrum(uint source_ID, const std::string &spectrum_label );
+
+    //! Set the spectral distribution of multiple radiation sources based on global data of wavelength-intensity pairs.
+    /**
+      * \param[in] "ID" Vector of radiation source identifers.
+      * \param[in] "spectrum_label" Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
+    */
+    void setSourceSpectrum(const std::vector<uint> &source_ID, const std::string &spectrum_label );
 
     //! Integrate a spectral distribution between two wavelength bounds
     /**
@@ -668,12 +688,20 @@ public:
      * \param[in] camera Label for camera to be queried
      * \param[in] bands Vector of labels for radiative bands to be written
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] flux_to_pixel_conversion OPTIONAL: A factor to convert radiative flux to 8-bit pixel values (0-255). By default, this value is 1.0, which means that the pixel values will be equal to the radiative flux. If the radiative flux is very large or very small, it may be necessary to scale the flux to a more appropriate range for the image.
+     */
+    void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float flux_to_pixel_conversion = 1.f);
+
+    //! Write normalized camera data (maximum value is 1) for one or more bands to a JPEG image
+    /**
+     * \param[in] camera Label for camera to be queried
+     * \param[in] bands Vector of labels for radiative bands to be written
+     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
      * \param[in] image_path Path to directory where images should be saved
      * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      */
-    void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
-
-    //! Write normalized camera data (maximum value is 1) for one or more bands to a JPEG image
     void writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
     //! Adds all geometric primitives from the Context to OptiX
@@ -786,7 +814,8 @@ public:
      * \param[in] "datatype" Data type of the label
      * \param[in] "padvalue" Pad value for the empty pixels
     */
-    void writeBasicLabel(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
+    void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
+
 
     //! Write depth image to file
     /**
@@ -921,6 +950,8 @@ protected:
 
     //! Primitive spectral transmissivity data references
     std::map<std::string,std::vector<uint>> spectral_transmissivity_data;
+
+    std::vector<helios::vec2> generateGaussianCameraResponse(float FWHM, float mu, float centrawavelength, const helios::int2 &wavebanrange);
 
     // --- Constants and Defaults --- //
 

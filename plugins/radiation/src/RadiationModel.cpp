@@ -135,6 +135,11 @@ void RadiationModel::addRadiationBand( const std::string &label, float wavelengt
     if( radiation_bands.find(label)!=radiation_bands.end() ){
         std::cerr << "ERROR (RadiationModel::addRadiationBand): Radiation band " << label << " has already been added. Skipping this call to addRadiationBand()." << std::endl;
         return;
+    }else if( wavelength1>wavelength2 ){
+        helios_runtime_error("ERROR (RadiationModel::addRadiationBand): The upper wavelength bound for a band must be greater than the lower bound.");
+    }else if( wavelength2-wavelength1<1 ){
+        helios_runtime_error("ERROR (RadiationModel::addRadiationBand): The waveband range of a radiation band must be at least 1 nm.");
+
     }
 
     RadiationBand band(label);
@@ -398,7 +403,7 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
         wavelength.y *= source_integral/old_integral;
     }
 
-
+    radiation_sources.at(source_ID).source_integral = source_integral;
 
 }
 
@@ -416,6 +421,12 @@ void RadiationModel::setSourceFlux( uint source_ID, const std::string &label, fl
 
 }
 
+void RadiationModel::setSourceFlux(const std::vector<uint> &source_ID, const std::string &band_label, float flux ){
+    for( auto ID : source_ID ){
+        setSourceFlux( ID, band_label, flux );
+    }
+}
+
 float RadiationModel::getSourceFlux( uint source_ID, const std::string &label )const{
     if( !doesBandExist(label) ){
         helios_runtime_error( "ERROR (RadiationModel::getSourceFlux): Cannot add radiation source for band " + label + " because it is not a valid band.");
@@ -425,7 +436,13 @@ float RadiationModel::getSourceFlux( uint source_ID, const std::string &label )c
         helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) + " because radiative band " + label + " does not exist.");
     }
 
-    return radiation_sources.at(source_ID).source_fluxes.at(label);
+    if( radiation_sources.at(source_ID).source_fluxes.find(label) == radiation_sources.at(source_ID).source_fluxes.end() ) {
+        helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) +
+                " because radiative band " + label + " does not exist.");
+    }else {
+        return radiation_sources.at(source_ID).source_fluxes.at(label);
+    }
+
 }
 
 void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios::vec2> &spectrum ){
@@ -462,6 +479,12 @@ void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios
 
 }
 
+void RadiationModel::setSourceSpectrum(const std::vector<uint> &source_ID, const std::vector<helios::vec2> &spectrum ) {
+    for (auto ID: source_ID) {
+        setSourceSpectrum(ID, spectrum);
+    }
+}
+
 void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectrum_label ){
 
     if( source_ID >= radiation_sources.size() ){
@@ -487,9 +510,12 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
         }
     }
 
+}
 
-
-
+void RadiationModel::setSourceSpectrum(const std::vector<uint> &source_ID, const std::string &spectrum_label ){
+    for (auto ID: source_ID) {
+        setSourceSpectrum(ID, spectrum_label);
+    }
 }
 
 float RadiationModel::integrateSpectrum( uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2 ) const{
@@ -916,6 +942,35 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
 
     writeJPEG( outfile.str(), camera_resolution.x, camera_resolution.y, pixel_data );
 
+}
+
+void RadiationModel::writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame){
+    float maxval = 0;
+    // Find maximum mean value over all bands
+    for (const std::string& band: bands){
+        float maxval_band = 0;
+        std::string global_data_label = "camera_" + camera + "_" + band;
+        std::vector<float> cameradata;
+        context->getGlobalData(global_data_label.c_str(), cameradata);
+        for (float val: cameradata){
+            if (val > maxval){
+                maxval_band = val;
+            }
+        }
+        maxval += maxval_band/bands.size();
+    }
+    // Normalize all bands
+    for (const std::string& band: bands) {
+        std::string global_data_label = "camera_" + camera + "_" + band;
+        std::vector<float> cameradata;
+        context->getGlobalData(global_data_label.c_str(), cameradata);
+        for (float &val: cameradata) {
+            val = val / maxval;
+        }
+        context->setGlobalData(global_data_label.c_str(), HELIOS_TYPE_FLOAT, cameradata.size(), &cameradata[0]);
+    }
+
+    RadiationModel::writeCameraImage(camera, bands, imagefile_base, image_path, frame);
 }
 
 void RadiationModel::initializeOptiX() {
@@ -1975,28 +2030,10 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         }
                     }else if ( context->getGlobalDataType(camera_response.c_str()) == helios::HELIOS_TYPE_VEC2) {
 
-                        float wavelength1 = radiation_bands.at(labels.at(b)).wavebandBounds.x;
-                        float wavelength2 = radiation_bands.at(labels.at(b)).wavebandBounds.y;
-
                         std::vector<helios::vec2> data;
                         context->getGlobalData(camera_response.c_str(), data);
 
-                        std::vector<helios::vec2> data_crop;
-                        if (data.size()>2){
-                            uint istart = 0;
-                            uint iend = data.size() - 1;
-                            for (uint lambda = 0; lambda < data.size() - 1; lambda++) {
-                                if (data.at(lambda).x <= wavelength1 && data.at(lambda + 1).x > wavelength1) {
-                                    istart = lambda;
-                                }
-                                if (data.at(lambda).x <= wavelength2 && data.at(lambda + 1).x > wavelength2) {
-                                    iend = lambda;
-                                }
-                            }
-                            data_crop.insert(data_crop.begin(), data.begin() + istart, data.begin() + iend);
-                        }
-                        else{data_crop = data;};
-                        camera_response_unique.at(cam).at(b) = data_crop;
+                        camera_response_unique.at(cam).at(b) = data;
 
                     }else if ( context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_STRING ) {
                         camera_response.clear();
@@ -2132,13 +2169,12 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                     for (const auto &camera: cameras) {
 
                         if( camera_response_unique.at(cam).at(b).empty() ){
-
                             rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = rho_unique.at(spectrum.first).at(b).at(s);
 
                         }else {
 
                             //integrate
-                            if( radiation_bands.at(band).wavebandBounds.x != 0 && radiation_bands.at(band).wavebandBounds.y != 0 && !spectrum.second.empty() ) {
+                            if( !spectrum.second.empty() ) {
                                 if (!radiation_sources.at(s).source_spectrum.empty()) {
                                     rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = integrateSpectrum(s, spectrum.second, camera_response_unique.at(cam).at(b));
                                 } else{
@@ -2196,7 +2232,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         }else {
 
                             //integrate
-                            if( radiation_bands.at(band).wavebandBounds.x!=0 && radiation_bands.at(band).wavebandBounds.y!=0 && !spectrum.second.empty() ) {
+                            if( !spectrum.second.empty() ) {
                                 if (!radiation_sources.at(s).source_spectrum.empty()) {
                                     tau_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = integrateSpectrum(s, spectrum.second, camera_response_unique.at(cam).at(b));
                                 } else{
@@ -4336,7 +4372,12 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
     // Update camera response spectra
     cameracalibration->updateCameraResponseSpectra(cameraresponselabels, calibratedmark ,simulatedcolorboardspectra, truevalues);
     // Reset color board spectra
-    cameracalibration->setDefaultColorBoardSpectra();
+    std::vector<uint> UUIDs_colorbd = cameracalibration->getColorBoardUUIDs();
+    for (uint UUID:UUIDs_colorbd){
+        std::string colorboardspectra;
+        context->getPrimitiveData(UUID, "reflectivity_spectrum", colorboardspectra);
+        context->setPrimitiveData(UUID, "reflectivity_spectrum", colorboardspectra+"_raw");
+    }
 }
 
 void RadiationModel::runRadiationImaging(const std::string& cameralabel, const std::vector<std::string>& sourcelabels, const std::vector<std::string>& bandlabels,
@@ -4376,6 +4417,51 @@ void RadiationModel::runRadiationImaging(const std::string& cameralabel, const s
     for (int iband=0;iband<bandlabels.size();iband++){
         RadiationModel::setCameraSpectralResponse(cameralabel, bandlabels.at(iband), cameraresponselabels.at(iband));
     }
+
+    RadiationModel::updateGeometry();
+    RadiationModel::runBand(bandlabels);
+}
+
+void RadiationModel::runRadiationImaging(const std::vector<std::string>& cameralabels, const std::vector<std::string>& sourcelabels, const std::vector<std::string>& bandlabels,
+                                         const std::vector<std::string>& cameraresponselabels, helios::vec2 wavelengthrange,
+                                         float fluxscale, float diffusefactor, uint scatteringdepth){
+
+    float sources_fluxsum = 0;
+    std::vector<float> sources_fluxes;
+    for (uint ID = 0; ID < sourcelabels.size(); ID++){
+        std::vector<vec2> Source_spectrum;
+        context->getGlobalData(sourcelabels.at(ID).c_str(), Source_spectrum);
+        sources_fluxes.push_back(RadiationModel::integrateSpectrum(Source_spectrum, wavelengthrange.x, wavelengthrange.y));
+        RadiationModel::setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
+        RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
+        sources_fluxsum += sources_fluxes.at(ID);
+    }
+
+    RadiationModel::addRadiationBand(bandlabels.at(0), wavelengthrange.x, wavelengthrange.y);
+    RadiationModel::disableEmission(bandlabels.at(0));
+    for( uint ID =0; ID<radiation_sources.size();ID++ ) {
+        RadiationModel::setSourceFlux(ID, bandlabels.at(0), (1 - diffusefactor) * sources_fluxes.at(ID) * fluxscale);
+    }
+    RadiationModel::setScatteringDepth(bandlabels.at(0), scatteringdepth);
+    RadiationModel::setDiffuseRadiationFlux(bandlabels.at(0), diffusefactor * sources_fluxsum );
+    RadiationModel::setDiffuseRadiationExtinctionCoeff(bandlabels.at(0), 1.f, make_vec3(-0.5, 0.5, 1) );
+
+    if (bandlabels.size()>1){
+        for (int iband=1;iband<bandlabels.size();iband++){
+            RadiationModel::copyRadiationBand(bandlabels.at(iband-1), bandlabels.at(iband), wavelengthrange.x, wavelengthrange.y);
+            for( uint ID =0; ID<radiation_sources.size();ID++ ) {
+                RadiationModel::setSourceFlux(ID, bandlabels.at(iband), (1 - diffusefactor) * sources_fluxes.at(ID) * fluxscale);
+            }
+            RadiationModel::setDiffuseRadiationFlux(bandlabels.at(iband), diffusefactor * sources_fluxsum );
+        }
+    }
+
+    for (int ic=0;ic<cameralabels.size();ic++){
+        for (int iband=0;iband<bandlabels.size();iband++){
+            RadiationModel::setCameraSpectralResponse(cameralabels.at(ic), bandlabels.at(iband), cameraresponselabels.at(iband));
+        }
+    }
+
 
     RadiationModel::updateGeometry();
     RadiationModel::runBand(bandlabels);
@@ -4624,6 +4710,27 @@ void RadiationModel::calibrateCamera(const std::string &originalcameralabel, con
 
 }
 
+std::vector<helios::vec2> RadiationModel::generateGaussianCameraResponse(float FWHM, float mu, float centrawavelength, const helios::int2 &wavebanrange){
+
+    // Convert FWHM to sigma
+    float sigma = FWHM / (2 * std::sqrt(2 * std::log(2)));
+
+    size_t lenspectra = wavebanrange.y - wavebanrange.x;
+    std::vector<helios::vec2> cameraresponse(lenspectra);
+
+
+    for (int i = 0; i < lenspectra; ++i) {
+        cameraresponse.at(i).x = float(wavebanrange.x + i);
+    }
+
+    // Gaussian function
+    for (size_t i = 0; i < lenspectra; ++i) {
+        cameraresponse.at(i).y = centrawavelength * std::exp(-std::pow((cameraresponse.at(i).x - mu), 2) / (2 * std::pow(sigma, 2)));
+    }
+
+
+    return cameraresponse;
+}
 
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line)
 {

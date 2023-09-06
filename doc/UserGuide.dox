@@ -211,7 +211,7 @@
 
   The Windows timeout detection (TDR) mechanism can erroneously detect that the GPU has stopped responding while it is performing calculations, resulting in a "Display driver stopped responding and has recovered" error.  The TDR can be disabled by following the instructions here: <a href="https://docs.nvidia.com/deploy/pdf/CUDA_TDR_delay.pdf">https://docs.nvidia.com/deploy/pdf/CUDA_TDR_delay.pdf</a>. The instructions are also given below:
 
-  1. Open the registry editor by typing "regedit" in the Windows search bar.
+  1. Open the registry editor by typing "regedit" in the Windows search bar. This should be run as administrator.
   2. Navigate to the following registry subkey: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers.
   3. If the TdrDelay key does not exist, right-click the GraphicsDrivers key, select New, and then select DWORD (32-bit) Value. Name the new value TdrDelay.
   4. Double-click TdrDelay and add 600 for the Value data and make it a Decimal (instead of Hexadecimal). Click OK. If you encounter the same "Display driver stopped responding and has recovered" error in the future, increase the value.
