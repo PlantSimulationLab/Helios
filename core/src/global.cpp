@@ -28,7 +28,7 @@
 using namespace helios;
 
 void helios::helios_runtime_error( const std::string &error_message ){
-#ifdef _DEBUG
+#ifdef HELIOS_DEBUG
     std::cerr << error_message << std::endl;
 #endif
     throw(std::runtime_error(error_message));

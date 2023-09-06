@@ -4737,7 +4737,7 @@ void Context::loadTabularTimeseriesData( const std::string &data_file, const std
             }
         }
         if( secondcol>=0 ){
-            if( !parse_int( line_separated.at(secondcol), minute ) ){
+            if( !parse_int( line_separated.at(secondcol), second ) ){
                 second = 0;
                 std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse second string on line " << row << ". Setting second equal to 0." << std::endl;
             }

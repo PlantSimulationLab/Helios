@@ -1430,3 +1430,15 @@
 
 *Energy Balance*
 - Energy balance now uses helios_runtime_error() for error handling.
+
+[1.2.70] 2023-09-05
+
+*Changed core/CMake_project.txt to set HELIOS_DEBUG variable instead of _DEBUG, which could cause build conflicts on Windows.
+*Set CMake policy CMP0079 to "NEW" in core/CMake_project.txt to allow for target_link_libraries() to be used with imported targets.
+*Add target_link_libraries() between all plug-ins and helios target in core/CMake_project.txt to avoid build errors on some systems.
+
+*Context*
+- Fixed error in Context::loadTabularTimeseriesData() that caused incorrect reading of 'minute' values.
+
+*Aerial LiDAR*
+- Fixed and error with implementation of helios_runtime_error() that caused a compile error.
