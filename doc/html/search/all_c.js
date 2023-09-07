@@ -10,7 +10,7 @@ var searchData=
   ['make_5fsphericalcoord_7',['make_SphericalCoord',['../helios__vector__types_8h.html#a5e22b15f114f64d31139874f9e3d6b07',1,'helios::make_SphericalCoord(float a_radius, float a_elevation, float a_azimuth)'],['../helios__vector__types_8h.html#a3251464aab839c05b993a999226bb2a1',1,'helios::make_SphericalCoord(float a_elevation, float a_azimuth)']]],
   ['make_5ftime_8',['make_Time',['../group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66',1,'helios::make_Time(int hour, int minute)'],['../group__vectors.html#ga57bfa5a4e5595e2e385d03883733f978',1,'helios::make_Time(int hour, int minute, int second)']]],
   ['make_5fvec2_9',['make_vec2',['../group__vectors.html#ga34e381a53377fbe8682d89d8a9c24cc5',1,'helios']]],
-  ['make_5fvec3_10',['make_vec3',['../helios__vector__types_8h.html#a35b1ff50d62c80cf63426e25ee814ca9',1,'helios::make_vec3(float X, float Y, float Z)'],['../helios__vector__types_8h.html#a7a7e3dfbb0f3b50e9a5992a25a913566',1,'helios::make_vec3(float X[3])']]],
+  ['make_5fvec3_10',['make_vec3',['../helios__vector__types_8h.html#a7a7e3dfbb0f3b50e9a5992a25a913566',1,'helios::make_vec3(float X[3])'],['../helios__vector__types_8h.html#a35b1ff50d62c80cf63426e25ee814ca9',1,'helios::make_vec3(float X, float Y, float Z)']]],
   ['make_5fvec4_11',['make_vec4',['../helios__vector__types_8h.html#a797d2ee9d38d23a6a7a3fa2b826b053b',1,'helios::make_vec4(float X[4])'],['../helios__vector__types_8h.html#ab90da9b5ba29d966547fcfe82de87ea5',1,'helios::make_vec4(float X, float Y, float Z, float W)']]],
   ['makeidentitymatrix_12',['makeIdentityMatrix',['../global_8h.html#ab044c22f6798031f34744e63d95ca614',1,'helios']]],
   ['makerotationmatrix_13',['makeRotationMatrix',['../group__functions.html#ga55a4cd9377af44ec86d945ffd72e1dc5',1,'helios::makeRotationMatrix(float rotation, const helios::vec3 &amp;origin, const helios::vec3 &amp;axis, float(&amp;transform)[16])'],['../group__functions.html#gaae1a72fb7a970c9bf65e10b26ab6fb51',1,'helios::makeRotationMatrix(float rotation, const helios::vec3 &amp;axis, float(&amp;transform)[16])'],['../group__functions.html#ga42c109f6c1a5b59ffcefc262ee78d291',1,'helios::makeRotationMatrix(float rotation, const char *axis, float(&amp;transform)[16])']]],
@@ -26,8 +26,9 @@ var searchData=
   ['median_23',['median',['../group__functions.html#ga461699c384fe606656ce1cc59618e727',1,'helios']]],
   ['min_24',['min',['../group__functions.html#ga522f5d4232ccb2c899ff620eafc744b5',1,'helios::min(const std::vector&lt; float &gt; &amp;vect)'],['../group__functions.html#gabdeaa8440597bcdcf1f43cd3a8f2383f',1,'helios::min(const std::vector&lt; int &gt; &amp;vect)'],['../group__functions.html#ga656494728a1221b22464a693936d41f5',1,'helios::min(const std::vector&lt; vec3 &gt; &amp;vect)']]],
   ['minpulsefilter_25',['minPulseFilter',['../class_li_d_a_rcloud.html#a530582b532eb13ca938d5e843d902327',1,'LiDARcloud']]],
-  ['minute_26',['minute',['../structhelios_1_1_time.html#a744b90da076192b90a3ee4ce2ff3743a',1,'helios::Time']]],
-  ['month_27',['month',['../structhelios_1_1_date.html#a5d75f8c8616d778e470a59e0b3e890a3',1,'helios::Date']]],
-  ['moptcoefficients_28',['MOPTcoefficients',['../struct_m_o_p_tcoefficients.html',1,'']]],
-  ['my_5ferror_5fmgr_29',['my_error_mgr',['../structmy__error__mgr.html',1,'']]]
+  ['minscatterenergy_26',['minScatterEnergy',['../struct_radiation_band.html#a2f54d84dc4a82db6bdd50ba3648cae59',1,'RadiationBand']]],
+  ['minute_27',['minute',['../structhelios_1_1_time.html#a744b90da076192b90a3ee4ce2ff3743a',1,'helios::Time']]],
+  ['month_28',['month',['../structhelios_1_1_date.html#a5d75f8c8616d778e470a59e0b3e890a3',1,'helios::Date']]],
+  ['moptcoefficients_29',['MOPTcoefficients',['../struct_m_o_p_tcoefficients.html',1,'']]],
+  ['my_5ferror_5fmgr_30',['my_error_mgr',['../structmy__error__mgr.html',1,'']]]
 ];

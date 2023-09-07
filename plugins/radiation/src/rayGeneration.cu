@@ -1,7 +1,6 @@
-/** \file "rayGeneration.cu" File containing OptiX ray generation programs 
-    \author Brian Bailey
+/** \file "rayGeneration.cu" File containing OptiX ray generation programs
 
-    Copyright (C) 2016-2023 Brian Bailey
+    Copyright (C) 2016-2023  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,9 +21,8 @@ using namespace optix;
 rtDeclareVariable(rtObject,      top_object, , );
 rtDeclareVariable(unsigned int,  direct_ray_type, , );
 rtDeclareVariable(unsigned int,  diffuse_ray_type, , );
-rtDeclareVariable(unsigned int,  direct_ray_type_MCRT, , );
-rtDeclareVariable(unsigned int,  diffuse_ray_type_MCRT, , );
-rtDeclareVariable(unsigned int,  emission_ray_type_MCRT, , );
+rtDeclareVariable(unsigned int,  camera_ray_type, , );
+rtDeclareVariable(unsigned int,  pixel_label_ray_type, , );
 rtDeclareVariable(unsigned int,  random_seed, , );
 rtDeclareVariable(unsigned int,  launch_offset, , );
 
@@ -42,12 +40,13 @@ rtBuffer<int, 1> uvID;
 rtBuffer<float, 2>  transform_matrix;
 rtBuffer<unsigned int, 1> primitive_type;
 rtBuffer<float, 1> primitive_area;
-rtBuffer<char, 1> twosided_flag;
+rtBuffer<bool, 1> twosided_flag;
 rtBuffer<float, 1>   radiation_out_top;
 rtBuffer<float, 1>   radiation_out_bottom;
 
 //Object ID for a primitive
 rtBuffer<uint,1> objectID;
+rtBuffer<int2, 1> object_subdivisions;
 
 //ID for first primitive in an object
 rtBuffer<uint,1> primitiveID;
@@ -56,24 +55,27 @@ rtBuffer<uint,1> primitiveID;
 rtDeclareVariable( unsigned int, Nsources, , );
 rtBuffer<float, 1> source_fluxes;
 rtBuffer<float3, 1> source_positions;
-rtBuffer<float, 1> source_widths;
+rtBuffer<float3, 1> source_rotations;
+rtBuffer<float2, 1> source_widths;
 rtBuffer<unsigned int, 1> source_types;
 
-rtDeclareVariable(float, diffuseFlux,, );
 
-rtDeclareVariable( float, bound_sphere_radius, , );
-rtDeclareVariable( float3, bound_sphere_center, , );
-
-rtBuffer<int2, 1> object_subdivisions;
+//Camera variables
+rtDeclareVariable( float3, camera_position, , );
+rtDeclareVariable( float2, camera_direction, , );
+rtDeclareVariable( float, camera_lens_diameter, , );
+rtDeclareVariable( float2, sensor_size, , );
+rtDeclareVariable( float, camera_focal_length, , );
+rtDeclareVariable( float, camera_viewplane_length, , );
 
 RT_PROGRAM void direct_raygen()
 {
 
-    uint dimx = launch_dim.x*launch_dim.y;
-    uint indx = launch_dim.x*launch_index.y + launch_index.x;
+    uint Nrays = launch_dim.x*launch_dim.y;
+    uint ray_index = launch_dim.x*launch_index.y + launch_index.x;
 
     PerRayData prd;
-    prd.seed = tea<16>(indx+dimx*launch_index.z,random_seed);
+    prd.seed = tea<16>(ray_index+Nrays*launch_index.z,random_seed);
 
     uint objID = launch_offset+launch_index.z;
 
@@ -95,9 +97,9 @@ RT_PROGRAM void direct_raygen()
     int NX = object_subdivisions[objID].x;
     int NY = object_subdivisions[objID].y;
     for( int jj=0; jj<NY; jj++ ){
-      for( int ii=0; ii<NX; ii++ ){
+        for( int ii=0; ii<NX; ii++ ){
 
-            uint origin_UUID = pID + jj*NX + ii;
+            uint UUID = pID + jj*NX + ii;
 
             //two random samples [0,1]
             float Rx = rnd(prd.seed);
@@ -116,7 +118,7 @@ RT_PROGRAM void direct_raygen()
                 sp.z = 0.f;
 
                 int ID = maskID[objID];
-                if( ID>=0 && primitive_area[origin_UUID]>0 ){//has texture transparency
+                if( ID>=0 && primitive_area[UUID]>0 ){//has texture transparency
 
                     int2 sz = masksize[ID];
                     uint3 ind;
@@ -149,13 +151,16 @@ RT_PROGRAM void direct_raygen()
                 }
 
                 //calculate rectangle normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m_trans,make_float3(1,0,0));
-                float3 v2 = d_transformPoint(m_trans,make_float3(0,1,0));
+                float3 v0 = make_float3(0,0,0);
+                d_transformPoint(m_trans,v0);
+                float3 v1 = make_float3(1,0,0);
+                d_transformPoint(m_trans,v1);
+                float3 v2 = make_float3(0,1,0);
+                d_transformPoint(m_trans,v2);
 
                 normal = normalize(cross(v1-v0,v2-v0));
 
-            }else if( primitive_type[objID] == 1 ){ //Triangle
+            }else if( ptype == 1 ){ //Triangle
 
                 // Map sample to triangle with vertices (0,0,0), (0,1,0), (1,1,0)
                 if( Rx<Ry ){
@@ -168,14 +173,17 @@ RT_PROGRAM void direct_raygen()
                 sp.z = 0;
 
                 //calculate triangle normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m_trans,make_float3(0,1,0));
-                float3 v2 = d_transformPoint(m_trans,make_float3(1,1,0));
+                float3 v0 = make_float3(0,0,0);
+                d_transformPoint(m_trans,v0);
+                float3 v1 = make_float3(0,1,0);
+                d_transformPoint(m_trans,v1);
+                float3 v2 = make_float3(1,1,0);
+                d_transformPoint(m_trans,v2);
 
                 normal = normalize(cross(v1-v0,v2-v1));
 
                 int ID = maskID[objID];
-                if( ID>=0 && primitive_area[origin_UUID]>0 ){//has texture transparency
+                if( ID>=0 && primitive_area[UUID]>0 ){//has texture transparency
 
                     int2 sz = masksize[ID];
 
@@ -192,7 +200,8 @@ RT_PROGRAM void direct_raygen()
                     while( !solid ){
                         count ++;
 
-                        float3 R = d_transformPoint(m_trans,sp);
+                        float3 R = sp;
+                        d_transformPoint(m_trans,R);
 
                         float c = R.x, g = R.y, k = R.z;
 
@@ -231,52 +240,21 @@ RT_PROGRAM void direct_raygen()
                     }
                 }
 
-            }else if( primitive_type[objID] == 2 ){ //Disk
+            }else if( ptype == 2 ){ //Disk
 
-                // Map Sample to disk - from Suffern (2007) "Ray tracing fom the ground up" Chap. 6
-
-                //first map sample point to rectangle [-1,1] [-1,1]
-                sp.x = -1.f + 2.f*Rx;
-                sp.y = -1.f + 2.f*Ry;
-
-                float r, p;
-
-                if( sp.x>-sp.y) {
-                    if( sp.x > sp.y ){
-                        r = sp.x;
-                        p = sp.y/sp.x;
-                    }else{
-                        r = sp.y;
-                        p = 2.f-sp.x/sp.y;
-                    }
-                }else{
-                    if( sp.x < sp.y ){
-                        r = -sp.x;
-                        p = 4.f + sp.y/sp.x;
-                    }else{
-                        r = -sp.y;
-                        if( sp.y!=0.f ){ //avoid division by zero at origin
-                            p = 6.f - sp.x/sp.y;
-                        }else{
-                            p = 0.f;
-                        }
-                    }
-                }
-                p*=0.25f*M_PI;
-
-                //find x,y point on unit disk
-                sp.x = r*cos(p);
-                sp.y = r*sin(p);
-                sp.z = 0.f;
+                d_sampleDisk( prd.seed, sp );
 
                 //calculate disk normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m_trans,make_float3(1,0,0));
-                float3 v2 = d_transformPoint(m_trans,make_float3(0,1,0));
+                float3 v0 = make_float3(0,0,0);
+                d_transformPoint(m_trans,v0);
+                float3 v1 = make_float3(1,0,0);
+                d_transformPoint(m_trans,v1);
+                float3 v2 = make_float3(0,1,0);
+                d_transformPoint(m_trans,v2);
 
                 normal = normalize(cross(v1-v0,v2-v0));
 
-            }else if( primitive_type[objID] == 4 ){ //Voxel
+            }else if( ptype == 4 ){ //Voxel
 
                 float Rz = rnd(prd.seed);
 
@@ -284,7 +262,8 @@ RT_PROGRAM void direct_raygen()
 
             //translate the ray to the location of the primitive
 
-            float3 ray_origin = d_transformPoint(m_trans,sp);
+            float3 ray_origin = sp;
+            d_transformPoint(m_trans,ray_origin);
 
             //Send a ray toward each source
             for( int rr=0; rr<Nsources; rr++ ){
@@ -295,13 +274,14 @@ RT_PROGRAM void direct_raygen()
                 if( source_types[rr]==0 ){ //collimated source
                     ray_direction = normalize(source_positions[rr]);
                     ray_magnitude = RT_DEFAULT_MAX;
-                    prd.strength = source_fluxes[rr]/float(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction));
-                }else{ //sphere source
+//                    prd.strength = source_fluxes[rr]/float(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction));
+                    prd.strength = 1./double(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction));
+                }else if( source_types[rr]==1 || source_types[rr]==2 ){ //sphere source
 
                     //sample point on surface of sphere
                     float theta_s = acos_safe(1.f-2.f*rnd(prd.seed));
                     float phi_s = rnd(prd.seed)*2.f*M_PI;
-                    float3 sphere_point = 0.5*source_widths[rr]*make_float3( sin(theta_s)*cos(phi_s), sin(theta_s)*sin(phi_s), cos(theta_s) );
+                    float3 sphere_point = 0.5*source_widths[rr].x*make_float3( sin(theta_s)*cos(phi_s), sin(theta_s)*sin(phi_s), cos(theta_s) );
 
                     ray_direction = sphere_point+source_positions[rr]-ray_origin;
 
@@ -315,19 +295,68 @@ RT_PROGRAM void direct_raygen()
                             float phi = (float(j)+0.5f)*2.f*M_PI/float(N);
                             float3 light_direction = make_float3( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
                             if( dot(light_direction,ray_direction)<0 ){
-                                prd.strength+=source_fluxes[rr]/float(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction))*fabs(dot(light_direction,ray_direction))/(ray_magnitude*ray_magnitude)/(N*N)*source_widths[rr]*source_widths[rr];
+//                                prd.strength+=source_fluxes[rr]/float(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction))*fabs(dot(light_direction,ray_direction))/(ray_magnitude*ray_magnitude)/(N*N)*source_widths[rr]*source_widths[rr];
+                                prd.strength+=1./double(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction))*fabs(dot(light_direction,ray_direction))/(ray_magnitude*ray_magnitude)/(N*N)*source_widths[rr].x*source_widths[rr].x;
                             }
                         }
                     }
+
+                }else if( source_types[rr]==3 ){ //rectangle source
+
+                    //transformation matrix
+                    float light_transform[16];
+                    d_makeTransformMatrix(source_rotations[rr],light_transform);
+
+                    //sample point on surface of disk
+                    float3 square_point;
+                    d_sampleSquare( prd.seed, square_point );
+                    square_point = make_float3(source_widths[rr].x*square_point.x,source_widths[rr].y*square_point.y,square_point.z);
+                    d_transformPoint( light_transform, square_point );
+
+                    float3 light_direction = make_float3(0,0,1);
+                    d_transformPoint( light_transform, light_direction );
+
+                    ray_direction = square_point+source_positions[rr]-ray_origin;
+
+                    if( dot(ray_direction,light_direction)>0.f ){ //don't emit from back side of light source (note that ray goes toward the source, so the dot produce is negative when light is pointed at primitive)
+                        continue;
+                    }
+
+                    ray_magnitude = d_magnitude(ray_direction);
+                    ray_direction = normalize( ray_direction );
+                    prd.strength = 1./double(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction))*fabs(dot(light_direction,ray_direction))/(ray_magnitude*ray_magnitude)*source_widths[rr].x*source_widths[rr].y/M_PI;
+
+                }else if( source_types[rr]==4 ){ //disk source
+
+                    //transformation matrix
+                    float light_transform[16];
+                    d_makeTransformMatrix(source_rotations[rr],light_transform);
+
+                    //sample point on surface of disk
+                    float3 disk_point;
+                    d_sampleDisk( prd.seed, disk_point );
+                    d_transformPoint( light_transform, disk_point );
+
+                    float3 light_direction = make_float3(0,0,1);
+                    d_transformPoint( light_transform, light_direction );
+
+                    ray_direction = source_widths[rr].x*disk_point+source_positions[rr]-ray_origin;
+
+                    if( dot(ray_direction,light_direction)>0.f ){ //don't emit from back side of light source (note that ray goes toward the source, so the dot produce is negative when light is pointed at primitive)
+                        continue;
+                    }
+
+                    ray_magnitude = d_magnitude(ray_direction);
+                    ray_direction = normalize( ray_direction );
+                    prd.strength = 1./double(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction))*fabs(dot(light_direction,ray_direction))/(ray_magnitude*ray_magnitude)*source_widths[rr].x*source_widths[rr].x;
 
                 }
 
                 optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, direct_ray_type, 1e-4, ray_magnitude);
 
-//                prd.origin_UUID = primitiveID[objID] + jj*NX + ii;
-                prd.origin_UUID = origin_UUID;
-
+                prd.origin_UUID = UUID;
                 prd.periodic_depth = 0;
+                prd.source_ID = rr;
 
                 if( dot( ray_direction, normal )>0 ){
                     prd.face = 1;
@@ -371,7 +400,7 @@ RT_PROGRAM void diffuse_raygen(){
     int NX = object_subdivisions[objID].x;
     int NY = object_subdivisions[objID].y;
     for( int jj=0; jj<NY; jj++ ){
-      for( int ii=0; ii<NX; ii++ ){
+        for( int ii=0; ii<NX; ii++ ){
 
             uint UUID = pID + jj*NX + ii;
 
@@ -390,9 +419,9 @@ RT_PROGRAM void diffuse_raygen(){
                 float3 s0 = make_float3(0,0,0);
                 float3 s1 = make_float3(1,0,0);
                 float3 s2 = make_float3(0,1,0);
-                s0 = d_transformPoint(m_trans,s0);
-                s1 = d_transformPoint(m_trans,s1);
-                s2 = d_transformPoint(m_trans,s2);
+                d_transformPoint(m_trans,s0);
+                d_transformPoint(m_trans,s1);
+                d_transformPoint(m_trans,s2);
                 area = primitive_area[UUID];
 
                 normal = normalize(cross(s1-s0,s2-s0));
@@ -435,7 +464,7 @@ RT_PROGRAM void diffuse_raygen(){
 
                 }
 
-            }else if( primitive_type[objID] == 1 ){ //Triangle
+            }else if( ptype == 1 ){ //Triangle
 
                 // Map sample to triangle with vertices (0,0,0), (0,1,0), (1,1,0)
                 if( Rx<Ry ){
@@ -451,9 +480,12 @@ RT_PROGRAM void diffuse_raygen(){
                 area = primitive_area[UUID];
 
                 //calculate triangle normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m_trans,make_float3(0,1,0));
-                float3 v2 = d_transformPoint(m_trans,make_float3(1,1,0));
+                float3 v0 = make_float3(0,0,0);
+                d_transformPoint(m_trans,v0);
+                float3 v1 = make_float3(0,1,0);
+                d_transformPoint(m_trans,v1);
+                float3 v2 = make_float3(1,1,0);
+                d_transformPoint(m_trans,v2);
 
                 normal = normalize(cross(v1-v0,v2-v1));
 
@@ -475,7 +507,8 @@ RT_PROGRAM void diffuse_raygen(){
                     while( !solid ){
                         count++;
 
-                        float3 R = d_transformPoint(m_trans,sp);
+                        float3 R = sp;
+                        d_transformPoint(m_trans,R);
 
                         float c = R.x, g = R.y, k = R.z;
 
@@ -554,12 +587,15 @@ RT_PROGRAM void diffuse_raygen(){
                 area = primitive_area[UUID];
 
                 //calculate disk normal vector (world coordinates)
-                float3 v0 = d_transformPoint(m_trans,make_float3(0,0,0));
-                float3 v1 = d_transformPoint(m_trans,make_float3(1,0,0));
-                float3 v2 = d_transformPoint(m_trans,make_float3(0,1,0));
+                float3 v0 = make_float3(0,0,0);
+                d_transformPoint(m_trans,v0);
+                float3 v1 = make_float3(1,0,0);
+                d_transformPoint(m_trans,v1);
+                float3 v2 = make_float3(0,1,0);
+                d_transformPoint(m_trans,v2);
                 normal = normalize(cross(v1-v0,v2-v0));
 
-            }else if( primitive_type[objID] == 4 ){ //Voxel
+            }else if( ptype == 4 ){ //Voxel
 
                 // Map sample to cube [-0.5,0.5] [-0.5,0.5] [-0.5,0.5]
                 sp.x = -0.5f + Rx;
@@ -577,7 +613,7 @@ RT_PROGRAM void diffuse_raygen(){
             Rp = (launch_index.y + rnd(prd.seed))/float(launch_dim.y);
 
             float t;
-            if( primitive_type[objID]==4 ){ //voxel
+            if( ptype==4 ){ //voxel
                 t = acos_safe(1.f-Rt);
             }else{ //other
                 t = asin_safe(sqrtf(Rt));
@@ -599,8 +635,10 @@ RT_PROGRAM void diffuse_raygen(){
                 prd.origin_UUID = UUID;
                 prd.face = 0;
                 prd.periodic_depth = 0;
+                prd.source_ID = 0;
 
-                ray_origin = d_transformPoint(m_trans,sp);
+                ray_origin = sp;
+                d_transformPoint(m_trans,ray_origin);
 
                 ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
                 rtTrace( top_object, ray, prd);
@@ -617,9 +655,11 @@ RT_PROGRAM void diffuse_raygen(){
                 prd.area = area;
                 prd.origin_UUID = UUID;
                 prd.periodic_depth = 0;
+                prd.source_ID = 0;
 
                 // ---- "top" surface launch -------
-                ray_origin = d_transformPoint(m_trans,sp);
+                ray_origin = sp;
+                d_transformPoint(m_trans,ray_origin);
                 ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
 
                 prd.face = 1;
@@ -627,8 +667,7 @@ RT_PROGRAM void diffuse_raygen(){
                 rtTrace( top_object, ray, prd);
 
                 // ---- "bottom" surface launch -------
-                if( twosided_flag[objID]==1 ){
-                    //ray_origin = d_transformPoint(m,sp);
+                if( twosided_flag[objID] ){
                     ray_direction = -ray_direction;
                     ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
 
@@ -645,477 +684,146 @@ RT_PROGRAM void diffuse_raygen(){
 
 }
 
-RT_PROGRAM void direct_raygen_MCRT()
-{
+RT_PROGRAM void camera_raygen(){
 
-    uint dimx = launch_dim.x*launch_dim.y;
+    uint dimx = launch_dim.x*launch_dim.y;  // x number of ray, y width, z length
     uint indx = launch_dim.x*launch_index.y + launch_index.x;
 
-    PerRayData_MCRT prd;
+    optix::int2 camera_resolution = optix::make_int2( launch_dim.y, launch_dim.z );
+
+    PerRayData prd;
     prd.seed = tea<16>(indx+dimx*launch_index.z,random_seed);
 
-    //Launch rays from each source
-    for( int r=0; r<Nsources; r++ ){
-
-        if( source_types[r]==0 ){ //collimated source
-
-            // Map Sample to disk - from Suffern (2007) "Ray tracing fom the ground up" Chap. 6
-
-            float3 sp;
-
-            float Rx = rnd(prd.seed);
-            float Ry = rnd(prd.seed);
-
-            //first map sample point to rectangle [-1,1] [-1,1]
-            sp.x = -1.f + 2.f*Rx;
-            sp.y = -1.f + 2.f*Ry;
-
-            float r, p;
-            if( sp.x>-sp.y) {
-                if( sp.x > sp.y ){
-                    r = sp.x;
-                    p = sp.y/sp.x;
-                }else{
-                    r = sp.y;
-                    p = 2.f-sp.x/sp.y;
-                }
-            }else{
-                if( sp.x < sp.y ){
-                    r = -sp.x;
-                    p = 4.f + sp.y/sp.x;
-                }else{
-                    r = -sp.y;
-                    if( sp.y!=0.f ){ //avoid division by zero at origin
-                        p = 6.f - sp.x/sp.y;
-                    }else{
-                        p = 0.f;
-                    }
-                }
-            }
-            p*=0.25f*M_PI;
-
-            //find x,y point on unit disk
-            sp.x = r*cosf(p)*bound_sphere_radius;
-            sp.y = r*sinf(p)*bound_sphere_radius;
-            sp.z = 0.f;
-
-            float3 ray_origin = bound_sphere_center + sp;
-
-            //set the ray direction
-            float3 ray_direction;
-            ray_direction = normalize(source_positions[r]);
-            prd.strength = source_fluxes[r]/float(launch_dim.x*launch_dim.y)*fabs(dot(make_float3(0,0,1),ray_direction))*M_PI*bound_sphere_radius*bound_sphere_radius;
-
-            //rotate
-            ray_origin = d_rotatePoint( ray_origin, acos_safe(ray_direction.z), atan2(ray_direction.y,ray_direction.x) );
-            //translate
-            ray_origin = ray_origin - ray_direction*bound_sphere_radius*100.f;
-
-            optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, direct_ray_type_MCRT, 1e-4, RT_DEFAULT_MAX);
-
-            prd.scatter_depth = 0;
-            prd.origin_UUID = 0;
-
-            rtTrace( top_object, ray, prd);
-
-        }else{ //point source
-
-            uint Nphi = launch_dim.y;
-            uint Ntheta = launch_dim.x;
-
-            uint i= launch_index.x;
-            uint j = launch_index.y;
-
-            float dt = 1.f/float(Ntheta);
-            float dp = 1.f/float(Nphi);
-
-            float Rt = i*dt + rnd(prd.seed)*dt;
-            float Rp = j*dp + rnd(prd.seed)*dp;
-
-            float t = acos_safe(1.f-2.f*Rt);
-            float p = 2.f*M_PI*Rp;
-
-            float3 ray_direction;
-            ray_direction.x = sin(t)*cos(p);
-            ray_direction.y = sin(t)*sin(p);
-            ray_direction.z = cos(t);
-
-            float3 ray_origin = source_positions[r] + 1e-3*ray_direction;
-
-            optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, direct_ray_type_MCRT, 1e-4, RT_DEFAULT_MAX);
-
-            prd.strength = source_fluxes[r]/float(launch_dim.x*launch_dim.y)*2.f;
-
-            prd.scatter_depth = 0;
-            prd.origin_UUID = 0;
-
-            rtTrace( top_object, ray, prd);
-
-        }
-
-    }
-
-}
-
-RT_PROGRAM void diffuse_raygen_MCRT(){
-
-
-    uint dimx = launch_dim.x*launch_dim.y;
-    uint indx = launch_dim.x*launch_index.y + launch_index.x;
-
-    PerRayData_MCRT prd;
-    prd.seed = tea<16>(indx+dimx*launch_index.z,random_seed);
-
-    uint Nphi = launch_dim.y;
-    uint Ntheta = launch_dim.x;
-
-    //method #2//
-    // float Rx = rnd(prd.seed);
-    // float Ry = rnd(prd.seed);
-
-    // //find x,y point on upper boundary
-    // float3 sp;
-    // sp.x = bound_box_x.x+Rx*(bound_box_x.y-bound_box_x.x);
-    // sp.y = bound_box_y.x+Ry*(bound_box_y.y-bound_box_y.x);
-    // sp.z = bound_box_z.y;
-
-    // //Choose random hemispherical direction - map samples to hemisphere (from Suffern (2007) "Ray tracing fom the ground up" Chap. 6)
-
-    // uint i= launch_index.x;
-    // uint j = launch_index.y;
-
-    // float dt = 1.f/float(Ntheta);
-    // float dp = 1.f/float(Nphi);
-
-    // float Rt = i*dt + rnd(prd.seed)*dt;
-    // float Rp = j*dp + rnd(prd.seed)*dp;
-
-    // float theta = sinf(sqrtf(Rt));
-    // //float theta = acos_safe(1.f-2.f*Rt);
-    // float phi = 2.f*M_PI*Rp;
-
-    // float3 ray_direction;
-    // ray_direction.x = -sin(theta)*cos(phi);
-    // ray_direction.y = -sin(theta)*sin(phi);
-    // ray_direction.z = -cos(theta);
-
-    // float3 ray_origin = sp;
-    //method #2//
-
-    uint i= launch_index.x;
-    uint j = launch_index.y;
-
-    float dt = 1.f/float(Ntheta);
-    float dp = 1.f/float(Nphi);
-
-    float Rt = i*dt + rnd(prd.seed)*dt;
-    float Rp = j*dp + rnd(prd.seed)*dp;
-
-    float theta1 = acos_safe(1.f-2.f*Rt);
-    float phi1 = 2.f*M_PI*Rp;
-
-    float theta2 = acos_safe(1.f-2.f*rnd(prd.seed));
-    float phi2 = 2.f*M_PI*rnd(prd.seed);
-
-    float3 ray_origin, ray_end;
-
-    ray_origin.x = bound_sphere_radius*sin(theta1)*cos(phi1)+bound_sphere_center.x;
-    ray_origin.y = bound_sphere_radius*sin(theta1)*sin(phi1)+bound_sphere_center.y;
-    ray_origin.z = bound_sphere_radius*cos(theta1)+bound_sphere_center.z;
-
-
-    ray_end.x = bound_sphere_radius*sin(theta2)*cos(phi2)+bound_sphere_center.x;
-    ray_end.y = bound_sphere_radius*sin(theta2)*sin(phi2)+bound_sphere_center.y;
-    ray_end.z =  bound_sphere_radius*cos(theta2)+bound_sphere_center.z;
-
-    float3 ray_direction;
-    ray_direction = ray_end-ray_origin;
-    ray_direction = normalize(ray_direction);
-
-    // ---- launch -------
-
-    optix::Ray ray;
-
-    ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type_MCRT, 1e-4, RT_DEFAULT_MAX);
-
-    prd.scatter_depth = 0;
-    prd.origin_UUID = 0;
-    prd.strength = diffuseFlux/float(Ntheta*Nphi)*4.f*M_PI*bound_sphere_radius*bound_sphere_radius;
-    //method #2//
-    //prd.strength = diffuseFlux/float(Ntheta*Nphi)*(bound_box_x.y-bound_box_x.x)*(bound_box_y.y-bound_box_y.x);
-    //method #2//
-
-    rtTrace( top_object, ray, prd);
-
-    //method #2//
-    // ray_origin.z = bound_box_z.x;
-    // ray = optix::make_Ray(ray_origin, -ray_direction, diffuse_ray_type_MCRT, 1e-4, RT_DEFAULT_MAX);
-    // rtTrace( top_object, ray, prd);
-    //method #2//
-
-}
-
-RT_PROGRAM void emission_raygen_MCRT(){
-
-    uint dimx = launch_dim.x*launch_dim.y;
-    uint indx = launch_dim.x*launch_index.y + launch_index.x;
-
-    PerRayData_MCRT prd;
-    prd.seed = tea<16>(indx+dimx*launch_index.z,random_seed);
-
-    //Primitive UUID for this launch
-    uint UUID = launch_offset+launch_index.z;
-
-    //transformation matrix
-    float m[16];
-    for( uint i=0; i<16; i++ ){
-        m[i] = transform_matrix[ optix::make_uint2(i,UUID) ];
-    }
-
+    float3 sp;
+
+    uint ii = launch_index.y; //x-pixel
+    uint jj = launch_index.z; //y-pixel
+    size_t origin_ID = jj*launch_dim.y + ii; //global pixel index
+
+
+    // distortion
+//    float PPointsRatiox =1.052f;
+//    float PPointsRatioy =0.999f;
+//    float sensorxscale = 1.0054;
+//    float focalxy = 710;
+//    double x =(float(ii)-camera_resolution.x/2 * PPointsRatiox)/focalxy*sensorxscale;// / focalxy;   cam_res.y = 712
+//    double y = (float(jj)-camera_resolution.y/2 * PPointsRatioy )/focalxy; /// focalxy;   cam_res.x = 1072
+//    double r2 = x*x + y*y;
+//    double distCoeffs[4] = {-0.3535674,0.17298, 0, 0};
+//    double ii_d  = x * (1+ distCoeffs[0] * r2 + distCoeffs[1] * r2 * r2) + 2 * distCoeffs[2] * x * y + distCoeffs[3] * (r2 + 2 * x * x);
+//    double jj_d = y * (1+ distCoeffs[0] * r2 + distCoeffs[1] * r2 * r2) + 2 * distCoeffs[3] * x * y + distCoeffs[2] * (r2 + 2 * y * y);
+//    ii_d = ii_d*focalxy+float(camera_resolution.x)/2 * PPointsRatiox;
+//    jj_d = jj_d*focalxy+float(camera_resolution.y)/2 * PPointsRatioy;
+
+    // *** sample a point on the pixel (view direction coordinate aligned) *** //
+
+    float PPointsRatiox =1.f;
+    float PPointsRatioy =1.f;
     float Rx = rnd(prd.seed);
     float Ry = rnd(prd.seed);
+    //    float Rx = 0.5;
+    //    float Ry = 0.5;
 
-    float3 sp, normal;
+    // Map sample to pixel
+    sp.y = (-0.5f * PPointsRatioy + (ii+Rx)/float(camera_resolution.x))*sensor_size.x;
+    sp.z = (0.5f * PPointsRatiox - (jj+Ry)/float(camera_resolution.y))*sensor_size.y;
+    sp.x = camera_viewplane_length;
 
-    if( primitive_type[UUID] == 0 || primitive_type[UUID] == 3 ){ //Patch or AlphaMask
+    // *** Determine point 'p' on focal plane that passes through the lens center (0,0) and pixel sample (view direction coordinate aligned) *** //
 
-        //calculate rectangle normal vector (world coordinates)
-        float3 s0 = make_float3(0,0,0);
-        float3 s1 = make_float3(1,0,0);
-        float3 s2 = make_float3(0,1,0);
-        s0 = d_transformPoint(m,s0);
-        s1 = d_transformPoint(m,s1);
-        s2 = d_transformPoint(m,s2);
+    float3 p = make_float3(camera_focal_length,sp.y/camera_viewplane_length*camera_focal_length,sp.z/camera_viewplane_length*camera_focal_length);
 
-        normal = normalize(cross(s1-s0,s2-s0));
+    // *** Sample point on lens (view direction coordinate aligned *** //
 
-        // Map sample to rectangle [-0.5,0.5] [-0.5,0.5]
-        sp.x = -0.5f + Rx;
-        sp.y = -0.5f + Ry;
-        sp.z = 0.f;
-
-        int ID = maskID[UUID];
-        if( ID>=0 ){//has texture transparency
-
-            int2 sz = masksize[ID];
-            uint3 ind;
-
-            bool solid = false;
-            int count=0;
-            while( !solid ){
-                count++;
-
-                float2 uv = make_float2( sp.x+0.5f, 1.f-sp.y-0.5f );
-                if( uvID[UUID]==-1 ){//does not have custom (u,v) coordinates
-                    ind = make_uint3( roundf(float(sz.x-1)*uv.x), roundf(float(sz.y-1)*uv.y), ID );
-                }else{//has custom (u,v) coordinates
-                    float2 uvmin = uvdata[ make_uint2(3,uvID[UUID]) ];
-                    float2 duv;
-                    duv.x = uvdata[ make_uint2(1,uvID[UUID]) ].x - uvdata[ make_uint2(0,uvID[UUID]) ].x;
-                    duv.y = uvdata[ make_uint2(1,uvID[UUID]) ].y - uvdata[ make_uint2(2,uvID[UUID]) ].y;
-                    ind = make_uint3( roundf(float(sz.x-1)*(uvmin.x+uv.x*duv.x)), roundf(float(sz.y-1)*(uvmin.y+uv.y*duv.y)), ID );
-                }
-                solid = maskdata[ind];
-                if( !solid ){
-                    if( count>10 ){
-                        break;
-                    }
-                    sp.x = -0.5f + rnd(prd.seed);
-                    sp.y = -0.5f + rnd(prd.seed);
-                }
-            }
-
-        }
-
-    }else if( primitive_type[UUID] == 1 ){ //Triangle
-
-        // Map sample to triangle with vertices (0,0,0), (0,1,0), (1,1,0)
-        if( Rx<Ry ){
-            sp.x = Rx;
-            sp.y = Ry;
-        }else{
-            sp.x = Ry;
-            sp.y = Rx;
-        }
-        sp.z = 0;
-
-        //calculate triangle normal vector (world coordinates)
-        float3 v0 = d_transformPoint(m,make_float3(0,0,0));
-        float3 v1 = d_transformPoint(m,make_float3(0,1,0));
-        float3 v2 = d_transformPoint(m,make_float3(1,1,0));
-
-        normal = normalize(cross(v1-v0,v2-v1));
-
-        int ID = maskID[UUID];
-        if( ID>=0 ){//has texture transparency
-
-            int2 sz = masksize[ID];
-
-            float a = v0.x - v1.x, b = v0.x - v2.x, d = v0.x;
-            float e = v0.y - v1.y, f = v0.y - v2.y,  h = v0.y;
-            float i = v0.z - v1.z, j = v0.z - v2.z, l = v0.z;
-
-            bool solid = false;
-            int count=0;
-            while( !solid ){
-                count++;
-
-                float3 R = d_transformPoint(m,sp);
-
-                float c = R.x, g = R.y, k = R.z;
-
-                float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
-                float q = g * i - e * k, s = e * j - f * i;
-
-                float inv_denom  = 1.f / (a * m + b * q + c * s);
-
-                float e1 = d * m - b * n - c * p;
-                float beta = e1 * inv_denom;
-
-                float r = r = e * l - h * i;
-                float e2 = a * n + d * q + c * r;
-                float gamma = e2 * inv_denom;
-
-                float2 uv0 = uvdata[ make_uint2(0,uvID[UUID]) ];
-                float2 uv1 = uvdata[ make_uint2(1,uvID[UUID]) ];
-                float2 uv2 = uvdata[ make_uint2(2,uvID[UUID]) ];
-
-                float2 uv = uv0 + beta*(uv1-uv0) + gamma*(uv2-uv0);
-
-                uint3 ind = make_uint3( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)), ID );
-
-                solid = maskdata[ind];
-                if( !solid ){
-                    if( count>10 ){
-                        break;
-                    }
-                    Rx = rnd(prd.seed);
-                    Ry = rnd(prd.seed);
-                    if( Rx<Ry ){
-                        sp.x = Rx;
-                        sp.y = Ry;
-                    }else{
-                        sp.x = Ry;
-                        sp.y = Rx;
-                    }
-                }
-
-            }
-        }
-
-    }else if( primitive_type[UUID] == 2 ){ //Disk
-
-        // Map Sample to disk - from Suffern (2007) "Ray tracing fom the ground up" Chap. 6
-
-        //first map sample point to rectangle [-1,1] [-1,1]
-        sp.x = -1.f + 2.f*Rx;
-        sp.y = -1.f + 2.f*Ry;
-
-        float r, p;
-        if( sp.x>-sp.y) {
-            if( sp.x > sp.y ){
-                r = sp.x;
-                p = sp.y/sp.x;
-            }else{
-                r = sp.y;
-                p = 2.f-sp.x/sp.y;
-            }
-        }else{
-            if( sp.x < sp.y ){
-                r = -sp.x;
-                p = 4.f + sp.y/sp.x;
-            }else{
-                r = -sp.y;
-                if( sp.y!=0.f ){ //avoid division by zero at origin
-                    p = 6.f - sp.x/sp.y;
-                }else{
-                    p = 0.f;
-                }
-            }
-        }
-        p*=0.25f*M_PI;
-
-        //find x,y point on unit disk
-        sp.x = r*cosf(p);
-        sp.y = r*sinf(p);
-        sp.z = 0.f;
-
-        //calculate disk normal vector (world coordinates)
-        float3 v0 = d_transformPoint(m,make_float3(0,0,0));
-        float3 v1 = d_transformPoint(m,make_float3(1,0,0));
-        float3 v2 = d_transformPoint(m,make_float3(0,1,0));
-        normal = normalize(cross(v1-v0,v2-v0));
-
-    }else if( primitive_type[UUID] == 4 ){ //Voxel
-
-        float Rz = rnd(prd.seed);
-
-        normal = make_float3(0,0,1);
-
+    float3 ray_origin = make_float3(0,0,0);
+    if( camera_lens_diameter>0 ) {
+        float3 disk_sample;
+        d_sampleDisk(prd.seed, disk_sample);
+        ray_origin = make_float3(0.f,0.5f*disk_sample.x*camera_lens_diameter,0.5f*disk_sample.y*camera_lens_diameter);
     }
 
-    float area = primitive_area[UUID];
+    //*** ray direction is line from lens sample to p ***//
 
-    //Choose random hemispherical direction - map samples to hemisphere (from Suffern (2007) "Ray tracing fom the ground up" Chap. 6)
+    float3 ray_direction = p - ray_origin;
 
-    uint Nphi = launch_dim.y;
-    uint Ntheta = launch_dim.x;
+    //*** rotate ray origin and direction into the direction of the camera view *** //
 
-    uint i= launch_index.x;
-    uint j = launch_index.y;
+    ray_origin = d_rotatePoint( ray_origin, -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y ) + camera_position;
 
-    float dt = 1.f/float(Ntheta);
-    float dp = 1.f/float(Nphi);
+    ray_direction = d_rotatePoint( ray_direction, -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y );
+    ray_direction /= d_magnitude(ray_direction);
 
-    float Rt;
-    float Rp;
-
-    //Rt = rnd(prd.seed);
-    //Rp = rnd(prd.seed);
-    Rt = i*dt + rnd(prd.seed)*dt;
-    Rp = j*dp + rnd(prd.seed)*dp;
-
-    float t;
-    if( primitive_type[UUID]==4 ){ //voxel
-        t = acos_safe(1.f-Rt);
-    }else{ //other
-        t = asin_safe(sqrtf(Rt));
-    }
-    float p = 2.f*M_PI*Rp;
-
-    float3 ray_direction;
-    ray_direction.x = sin(t)*cos(p);
-    ray_direction.y = sin(t)*sin(p);
-    ray_direction.z = cos(t);
-
-    if( primitive_type[UUID]==4 ){ //voxel
-        ray_direction = ray_direction;
-    }else{ //other
-        ray_direction = d_rotatePoint( ray_direction, acos_safe(normal.z), atan2(normal.y,normal.x) );
-    }
-
-    float3 ray_origin;
     optix::Ray ray;
 
-    // ---- "top" surface launch -------
-    ray_origin = d_transformPoint(m,sp);
-    ray = optix::make_Ray(ray_origin, ray_direction, emission_ray_type_MCRT, 1e-4, RT_DEFAULT_MAX);
+    prd.strength = 1.f/float(launch_dim.x);
 
-    prd.scatter_depth = 0;
-    prd.origin_UUID = UUID;
-    prd.strength = radiation_out_top[UUID]/float(dimx)*primitive_area[UUID];
+    prd.area = 1.f/float(launch_dim.x);
+    prd.origin_UUID = origin_ID;
+    prd.periodic_depth = 0;
+    prd.face = 1;
+    prd.source_ID = 0;
+
+    ray = optix::make_Ray(ray_origin, ray_direction, camera_ray_type, 1e-5, RT_DEFAULT_MAX);
 
     rtTrace( top_object, ray, prd);
 
-    // ---- "bottom" surface launch -------
-    if( twosided_flag[UUID]==1 ){
-        ray_origin = d_transformPoint(m,sp);
-        ray = optix::make_Ray(ray_origin, -ray_direction, emission_ray_type_MCRT, 1e-4, RT_DEFAULT_MAX);
+}
 
-        prd.strength = radiation_out_bottom[UUID]/float(dimx)*primitive_area[UUID];
+RT_PROGRAM void pixel_label_raygen(){
 
-        rtTrace( top_object, ray, prd);
+    uint indx = launch_dim.y*launch_index.z + launch_index.y;
 
-    }
+    optix::int2 camera_resolution = optix::make_int2( launch_dim.y, launch_dim.z );
+
+    PerRayData prd;
+    prd.seed = tea<16>(indx,random_seed);
+
+    float3 sp;
+
+    uint ii = launch_index.y; //x-pixel
+
+    uint jj = launch_index.z; //y-pixel
+
+    size_t origin_ID = jj*launch_dim.y + ii; //global pixel index
+
+    // Map sample to center of pixel
+    sp.y = (-0.5f + (ii+0.5f)/float(camera_resolution.x))*sensor_size.x;
+    sp.z = (0.5f - (jj+0.5f)/float(camera_resolution.y))*sensor_size.y;
+    sp.x = camera_viewplane_length;
+
+
+
+    // *** Determine point 'p' on focal plane that passes through the lens center (0,0) and pixel sample (view direction coordinate aligned) *** //
+
+    float3 p = make_float3(camera_focal_length,sp.y/camera_viewplane_length*camera_focal_length,sp.z/camera_viewplane_length*camera_focal_length);
+
+    // *** Ray is launched from center of lens *** //
+
+    float3 ray_origin = make_float3(0,0,0);
+
+    //*** ray direction is line from ray origin to p ***//
+
+    float3 ray_direction = p;
+
+    //*** rotate ray origin and direction into the direction of the camera view *** //
+
+    ray_origin = d_rotatePoint( ray_origin, -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y ) + camera_position;
+
+    ray_direction = d_rotatePoint( ray_direction, -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y );
+    ray_direction /= d_magnitude(ray_direction);
+
+    optix::Ray ray;
+
+    prd.strength = 1.f;
+
+    prd.area = 1.f;
+    prd.origin_UUID = origin_ID;
+    prd.periodic_depth = 0;
+    prd.face = 1;
+    prd.source_ID = 0;
+
+    ray = optix::make_Ray(ray_origin, ray_direction, pixel_label_ray_type, 1e-5, RT_DEFAULT_MAX);
+
+    rtTrace( top_object, ray, prd);
 
 }

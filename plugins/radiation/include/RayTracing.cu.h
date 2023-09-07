@@ -1,5 +1,4 @@
-/** \file "RayTracing.cu.h" This file contains definitions and helper functions for CUDA/OptiX routines 
-    \author Brian Bailey
+/** \file "RayTracing.cu.h" This file contains definitions and helper functions for CUDA/OptiX routines
 
     Copyright (C) 2016-2023 Brian Bailey
 
@@ -38,21 +37,11 @@ struct PerRayData
   uint seed;
   //! Number of periodic boundary intersections for ray
   unsigned char periodic_depth;
-
-};
-
-/** OptiX ray payload - contains data for each ray traversal. */
-struct PerRayData_MCRT
-{
-
-  //! "strength" or amount of energy associated with the ray. 
-  double strength;  
-  //! Number of times ray has been scattered
-  uint scatter_depth;
-  //! UUID of primitive from which ray originated
-  uint origin_UUID;
-  //! Seed for curand random number generator
-  uint seed;
+  //! Numerical identifier for radiation source corresponding to each ray
+  /**
+   * \note The data type limits to a maximum of 256 radiation sources
+   */
+  unsigned char source_ID;
 
 };
 
@@ -79,6 +68,39 @@ __device__ __inline__ double atomicAdd(double* address, double val) {
   return __longlong_as_double(old);
 }
 #endif
+
+// -- random number generation -- //
+
+template<unsigned int N>
+static __host__ __device__ __inline__ unsigned int tea( unsigned int val0, unsigned int val1 )
+{
+    unsigned int v0 = val0;
+    unsigned int v1 = val1;
+    unsigned int s0 = 0;
+
+    for( unsigned int n = 0; n < N; n++ )
+    {
+        s0 += 0x9e3779b9;
+        v0 += ((v1<<4)+0xa341316c)^(v1+s0)^((v1>>5)+0xc8013ea4);
+        v1 += ((v0<<4)+0xad90777d)^(v0+s0)^((v0>>5)+0x7e95761e);
+    }
+
+    return v0;
+}
+
+static __host__ __device__ __inline__ unsigned int lcg(unsigned int &prev)
+{
+    const unsigned int LCG_A = 1664525u;
+    const unsigned int LCG_C = 1013904223u;
+    prev = (LCG_A * prev + LCG_C);
+    return prev & 0x00FFFFFF;
+}
+
+// Generate random float in [0, 1)
+static __host__ __device__ __inline__ float rnd(unsigned int &prev)
+{
+    return ((float) lcg(prev) / (float) 0x01000000);
+}
 
 /** Function to rotate a 3D vector given spherical angles elevation and azimuth ON THE GPU. */
 __device__ float3 d_rotatePoint(const float3 &position, const float &theta, const float &phi) {
@@ -136,6 +158,27 @@ __device__ float3 d_rotatePoint(const float3 &position, const float &theta, cons
   
   return tmp;
 	
+}
+
+__device__ void d_makeTransformMatrix( optix::float3 rotation, float (&T)[16] ){
+
+    T[0] = cosf(rotation.z)*cosf(rotation.y);
+    T[1] = cosf(rotation.z)*sinf(rotation.y)*sinf(rotation.x)-sinf(rotation.z)*cosf(rotation.x);
+    T[2] = cosf(rotation.z)*sinf(rotation.y)*cosf(rotation.x)+sinf(rotation.z)*sinf(rotation.x);
+    T[3] = 0.f;
+    T[4] = sinf(rotation.z)*cosf(rotation.y);
+    T[5] = sinf(rotation.z)*sinf(rotation.y)*sinf(rotation.x)+cosf(rotation.z)*cosf(rotation.x);
+    T[6] = sinf(rotation.z)*sinf(rotation.y)*cosf(rotation.x)-cosf(rotation.z)*sinf(rotation.x);
+    T[7] = 0.f;
+    T[8] = -sinf(rotation.y);
+    T[9] = cosf(rotation.y)*sinf(rotation.x);
+    T[10] = cosf(rotation.y)*cosf(rotation.x);
+    T[11] = 0.f;
+    T[12] = 0.f;
+    T[13] = 0.f;
+    T[14] = 0.f;
+    T[15] = 1.f;
+
 }
 
 __device__ void d_invertMatrix( const float* m, float* minv ){
@@ -270,7 +313,7 @@ __device__ void d_invertMatrix( const float* m, float* minv ){
 
 
 //! Function to transform a 3D point based on current affine transformation matrix on the GPU
-__device__ float3 d_transformPoint( const float* transform_matrix, const float3 &v ){
+__device__ void d_transformPoint( const float (&transform_matrix)[16], float3 &v ){
 
   float3 V;
 
@@ -278,7 +321,7 @@ __device__ float3 d_transformPoint( const float* transform_matrix, const float3 
   V.y = transform_matrix[4] * v.x + transform_matrix[5] * v.y + transform_matrix[6] * v.z + transform_matrix[7];
   V.z = transform_matrix[8] * v.x + transform_matrix[9] * v.y + transform_matrix[10] * v.z + transform_matrix[11];
 
-  return V;
+  v=V;
 
 }
 
@@ -288,23 +331,26 @@ __device__ float d_magnitude( const float3 v ){
 }
 
 //! Function to calculate the surface area of a primitive
-__device__ float d_calculatePrimitiveArea( const uint primitive_type, const float* transform_matrix ){
+__device__ float d_calculatePrimitiveArea( const uint primitive_type, const float (&transform_matrix)[16] ){
 
   if( primitive_type == 0 || primitive_type == 3 ){ //Patch or AlphaMask
 
     float3 s0 = make_float3(0,0,0);
     float3 s1 = make_float3(1,1,0);
     float3 s2 = make_float3(0,1,0);
-    s0 = d_transformPoint(transform_matrix,s0);
-    s1 = d_transformPoint(transform_matrix,s1);
-    s2 = d_transformPoint(transform_matrix,s2);
+    d_transformPoint(transform_matrix,s0);
+    d_transformPoint(transform_matrix,s1);
+    d_transformPoint(transform_matrix,s2);
     return d_magnitude(s2-s0)*d_magnitude(s2-s1);
 
   }else if( primitive_type == 1 ){ //Triangle
 
-    float3 v0 = d_transformPoint(transform_matrix,make_float3(0,0,0));
-    float3 v1 = d_transformPoint(transform_matrix,make_float3(0,1,0));
-    float3 v2 = d_transformPoint(transform_matrix,make_float3(1,1,0));
+    float3 v0 = make_float3(0,0,0);
+    d_transformPoint(transform_matrix,v0);
+    float3 v1 = make_float3(0,1,0);
+    d_transformPoint(transform_matrix,v1);
+    float3 v2 = make_float3(1,1,0);
+    d_transformPoint(transform_matrix,v2);
     float3 A(v1-v0);
     float3 B(v2-v0);
     float3 C(v2-v1);
@@ -358,37 +404,66 @@ __device__ void d_matMult44( float* ml, float* mr, float* m ){
 
 }
 
-// -- random number generation -- //
+__device__ void d_sampleDisk( uint& seed, optix::float3& sample ){
 
-template<unsigned int N>
-static __host__ __device__ __inline__ unsigned int tea( unsigned int val0, unsigned int val1 )
-{
-  unsigned int v0 = val0;
-  unsigned int v1 = val1;
-  unsigned int s0 = 0;
+    // Map Sample to disk - from Suffern (2007) "Ray tracing fom the ground up" Chap. 6
 
-  for( unsigned int n = 0; n < N; n++ )
-  {
-    s0 += 0x9e3779b9;
-    v0 += ((v1<<4)+0xa341316c)^(v1+s0)^((v1>>5)+0xc8013ea4);
-    v1 += ((v0<<4)+0xad90777d)^(v0+s0)^((v0>>5)+0x7e95761e);
-  }
+    optix::float3 sp;
 
-  return v0;
+    float Rx = rnd(seed);
+    float Ry = rnd(seed);
+
+    //first map sample point to rectangle [-1,1] [-1,1]
+    sp.x = -1.f + 2.f*Rx;
+    sp.y = -1.f + 2.f*Ry;
+
+    float r,p;
+
+    if( sp.x>-sp.y) {
+        if( sp.x > sp.y ){
+            r = sp.x;
+            p = sp.y/sp.x;
+        }else{
+            r = sp.y;
+            p = 2.f-sp.x/sp.y;
+        }
+    }else{
+        if( sp.x < sp.y ){
+            r = -sp.x;
+            p = 4.f + sp.y/sp.x;
+        }else{
+            r = -sp.y;
+            if( sp.y!=0.f ){ //avoid division by zero at origin
+                p = 6.f - sp.x/sp.y;
+            }else{
+                p = 0.f;
+            }
+        }
+    }
+    p*=0.25f*M_PI;
+
+    //find x,y point on unit disk
+    sp.x = r*cos(p);
+    sp.y = r*sin(p);
+    sp.z = 0.f;
+
+    sample = sp;
+
 }
 
-static __host__ __device__ __inline__ unsigned int lcg(unsigned int &prev)
-{
-  const unsigned int LCG_A = 1664525u;
-  const unsigned int LCG_C = 1013904223u;
-  prev = (LCG_A * prev + LCG_C);
-  return prev & 0x00FFFFFF;
-}
+__device__ void d_sampleSquare( uint& seed, optix::float3& sample ){
 
-// Generate random float in [0, 1)
-static __host__ __device__ __inline__ float rnd(unsigned int &prev)
-{
-  return ((float) lcg(prev) / (float) 0x01000000);
+    optix::float3 sp;
+
+    float Rx = rnd(seed);
+    float Ry = rnd(seed);
+
+    sp.x = -0.5f + Rx;
+    sp.y = -0.5f + Ry;
+    sp.z = 0.f;
+
+    sample = sp;
+
 }
 
 static __host__ __device__ __inline__ float acos_safe( float x )

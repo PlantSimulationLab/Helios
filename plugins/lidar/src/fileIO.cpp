@@ -106,7 +106,7 @@ void LiDARcloud::loadXML( const char* filename, bool load_grid_only ){
       // ----- scan rotation ------//
       const char* rotation_str = s.child_value("rotation");
       
-      SphericalCoord rotation_sphere;
+      SphericalCoord rotation_sphere(0,0,0);
       if( strlen(rotation_str)>0 ){
 	    vec2 rotation = string2vec2( rotation_str ); //note: pugi loads xml data as a character.  need to separate it into 2 floats
 	    rotation = rotation*M_PI/180.f;
