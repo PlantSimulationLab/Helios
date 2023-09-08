@@ -6,7 +6,7 @@ SAMPLES_NOGPU=("context_selftest" "visualizer_selftest" "solarposition_selftest"
 TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance"
 TEST_PLUGINS_NOGPU="photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance"
 
-cd ../samples
+cd ../samples || exit 1
 
 if [[ "${OSTYPE}" != "darwin"* ]] && [[ "${OSTYPE}" != "linux"* ]] && [[ "${OSTYPE}" != "msys"* ]];then
   echo "UNSUPPORTED OPERATING SYSTEM"
@@ -17,7 +17,7 @@ while [ $# -gt 0 ]; do
   case $1 in
   --checkout)
 
-    cd /tmp
+    cd /tmp || exit 1
 
     if [ -e "./helios_test" ]; then
       chmod -R 777 ./helios_test
@@ -32,7 +32,7 @@ while [ $# -gt 0 ]; do
     fi
 
     chmod -R 777 ./helios_test
-    cd ./helios_test/samples
+    cd ./helios_test/samples || exit 1
     ;;
 
   --nogpu)
@@ -44,9 +44,36 @@ while [ $# -gt 0 ]; do
     VISRUN="OFF"
     ;;
 
+  --memcheck)
+    MEMCHECK="ON"
+    #export MallocStackLogging=1
+    ;;
+
+  --debugbuild)
+    BUILD_TYPE="Debug"
+    ;;
+
   esac
   shift
 done
+
+if [ "${MEMCHECK}" == "ON" ];then
+  if [[ "${OSTYPE}" == "darwin"* ]];then
+    if [[ $(which leaks) == "" ]];then
+      echo "Leaks memory checker tool not installed...ignoring --memcheck argument."
+      MEMCHECK="OFF"
+    fi
+  elif [[ "${OSTYPE}" == "linux"* ]];then
+    if [[ $(which valgrind) == "" ]];then
+      echo "Valgrind memory checker tool not installed...ignoring --memcheck argument."
+      MEMCHECK="OFF"
+    fi
+  fi
+fi
+
+if [ "${MEMCHECK}" == "ON" ];then
+  BUILD_TYPE="Debug"
+fi
 
 ERROR_COUNT=0
 
@@ -62,7 +89,7 @@ if [ ! -e "../utilities/create_project.sh" ]; then
   rm -rf temp
 else
   ../utilities/create_project.sh temp ${TEST_PLUGINS}
-  cd temp
+  cd temp || exit 1
   if [ ! -e "main.cpp" ] || [ ! -e "CMakeLists.txt" ] || [ ! -e "build" ]; then
     echo -e "\r\x1B[31mProject creation script failed to create correct structure...failed.\x1B[39m"
     ERROR_COUNT=$((ERROR_COUNT + 1))
@@ -70,7 +97,7 @@ else
     rm -rf temp
   else
 
-    cd build
+    cd build || exit 1
 
     echo -ne "Building project creation script test..."
 
@@ -132,7 +159,7 @@ for i in "${SAMPLES[@]}"; do
     exit 1
   fi
 
-  cd "$i"/build
+  cd "$i"/build || exit 1
 
   rm -rf *
 
@@ -198,7 +225,37 @@ for i in "${SAMPLES[@]}"; do
     continue
   fi
 
-  rm -rf *
+  if [[ "${MEMCHECK}" == "ON" ]] && [[ "${OSTYPE}" != "msys"* ]];then
+
+    #there are memory leak issues on Linux associated with visualizer libraries
+    if [[ "${OSTYPE}" == "linux"* ]];then
+      if  grep -qi visualizer ../CMakeLists.txt ;then
+          cd ../..
+          continue
+      fi
+    fi
+
+    echo -ne "Running memcheck for sample ${i}..."
+
+    if [[ "${OSTYPE}" == "darwin"* ]];then
+      leaks --atExit -- "./${i}" &>/dev/null
+    else
+      valgrind --leak-check=full --error-exitcode=1 "./${i}" &>/dev/null
+    fi
+
+    if (($? == 0)); then
+      echo -e "\r\x1B[32mRunning memcheck for sample ${i}...passed.\x1B[39m"
+    else
+      echo -e "\r\x1B[31mRunning memcheck for sample ${i}...failed.\x1B[39m"
+      ERROR_COUNT=$((ERROR_COUNT + 1))
+      rm -rf "$i"/build/*
+      cd ../..
+      continue
+    fi
+
+  fi
+
+  rm -rf ./*glob*
 
   cd ../..
 

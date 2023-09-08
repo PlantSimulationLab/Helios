@@ -76,40 +76,51 @@ struct Shader{
 public:
     
   //! Disable texture maps and color fragments by interpolating vertex colors
-  void disableTextures( void ) const;
+  void disableTextures() const;
   
   //! Color fragments using an RGB texture map
-  /** \param[in] "texture" Handle to a texture map */
+  /**
+   * \param[in] "texture_file" Handle to a texture map
+   * \param[out] "textureID" Identifier of the texture map.
+   * \param[out] "texture_size" Size of the texture map in pixels.
+   */
   void setTextureMap( const char* texture_file, uint& textureID, helios::int2& texture_size );
 
   //! Enable texture maps and color fragments using an RGB texture map
-  void enableTextureMaps( void ) const;
+  void enableTextureMaps() const;
   
   //! Set fragment opacity using a Glyph (red channel)
-  /** \param[in] "texture" Handle to a texture map */
+  /**
+   * \param[in] "glyph" Pointer to Glyph object for texture mask
+   * \param[out] "textureID" Identifier of the texture map.
+   */
   void setTextureMask( const Glyph* glyph, uint& textureID );
 
   //! Set fragment opacity using a texture map file (red channel)
-  /** \param[in] "texture" Handle to a texture map */
+  /**
+   * \param[in] "texture_file" Handle to a texture map
+   * \param[out] "textureID" Identifier of the texture map.
+   * \param[out] "texture_size" Size of the texture map in pixels.
+   */
   void setTextureMask( const char* texture_file, uint& textureID, helios::int2& texture_size );
   
   //! Enable texture masks and color fragments by interpolating vertex colors
-  void enableTextureMasks( void ) const;
+  void enableTextureMasks() const;
 
   //! Set the shader transformation matrix, i.e., the Affine transformation applied to all vertices
-  void setTransformationMatrix( const glm::mat4 matrix );
+  void setTransformationMatrix(const glm::mat4 &matrix );
 
   //! Set the depth bias matrix for shadows
-  void setDepthBiasMatrix( const glm::mat4 matrix );
+  void setDepthBiasMatrix(const glm::mat4 &matrix );
 
   //! Set the direction of the light (sun)
-  void setLightDirection( const helios::vec3 direction );
+  void setLightDirection(const helios::vec3 &direction );
 
   //! Set the lighting model
-  void setLightingModel( const uint lightingmodel );
+  void setLightingModel( uint lightingmodel );
 
   //! Set shader as current
-  void useShader(void);
+  void useShader();
   
   //! Initialize the shader
   /**
@@ -145,108 +156,99 @@ private:
 struct Colormap{
 public:
 
-  Colormap( void ){};
+    Colormap() : cmapsize(0), minval(0.0f), maxval(1.0f) {};
 
-  Colormap( std::vector<helios::RGBcolor> ctable, std::vector<float> clocs, int size, float minval_, float maxval_ ){
+    Colormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &clocs, int size, float minval_, float maxval_ ) : cmapsize(size), minval(minval_), maxval(maxval_){
 
-    set( ctable, clocs, size, minval_, maxval_ );
+        set( ctable, clocs, size, minval_, maxval_ );
 
-  }
-
-  void set( std::vector<helios::RGBcolor> ctable, std::vector<float> clocs, int size, float minval_, float maxval_ ){
-
-    cmapsize = size;
-    minval=minval_;
-    maxval=maxval_;
-    
-    int Ncolors=ctable.size();
-    
-    if( clocs.size() != Ncolors ){
-      std::cerr << "ERROR: colormap - sizes of ctable and clocs must match." << std::endl;
-      exit(EXIT_FAILURE);
-    }else if( minval_==maxval_ || minval_>maxval_ ){
-        throw( std::runtime_error("ERROR(Colormap::set): Cannot initialize colormap because minimum colormap value must be less than the maximum value."));
-    }
-    
-    cmap.resize(Ncolors);
-    
-    float cmin,cmax;
-    std::vector<float> cinds;
-    cinds.resize(Ncolors);
-    
-    for( int i=0; i<Ncolors; i++ ){
-      cinds.at(i)=clocs.at(i)*(cmapsize-1);
-    }
-    
-    cmap.resize(cmapsize);
-    for( int c=0; c<Ncolors-1; c++ ){
-      
-      cmin=cinds.at(c);
-      cmax=cinds.at(c+1);
-      
-      for( int i=0; i<cmapsize; i++){
-	
-	if( i>=cmin && i<=cmax ){
-	  
-	  cmap.at(i).r=ctable.at(c).r+(float(i)-cmin)/(cmax-cmin)*(ctable.at(c+1).r-ctable.at(c).r);
-	  cmap.at(i).g=ctable.at(c).g+(float(i)-cmin)/(cmax-cmin)*(ctable.at(c+1).g-ctable.at(c).g);
-	  cmap.at(i).b=ctable.at(c).b+(float(i)-cmin)/(cmax-cmin)*(ctable.at(c+1).b-ctable.at(c).b);
-	  
-	}
-      }
     }
 
-  }
+    void set(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &clocs, int size, float minval_, float maxval_ ){
 
-  helios::RGBcolor query( float x ) const{
+        cmapsize = size;
+        minval = minval_;
+        maxval = maxval_;
 
-    if( cmapsize==0 || cmap.size()==0 ){
-      std::cerr << "ERROR: colormap was not initialized properly." << std::endl;
-      std::cout << cmapsize << " " << cmap.size() << std::endl;
-      exit(EXIT_FAILURE);
+        size_t Ncolors=ctable.size();
+
+        assert( clocs.size() == Ncolors && minval_<maxval_ );
+
+        cmap.resize(Ncolors);
+
+        float cmin,cmax;
+        std::vector<float> cinds;
+        cinds.resize(Ncolors);
+
+        for( int i=0; i<Ncolors; i++ ){
+            cinds.at(i)=clocs.at(i)*float(cmapsize-1);
+        }
+
+        cmap.resize(cmapsize);
+        for( int c=0; c<Ncolors-1; c++ ){
+
+            cmin=cinds.at(c);
+            cmax=cinds.at(c+1);
+
+            for( int i=0; i<cmapsize; i++){
+
+                if( float(i)>=cmin && float(i)<=cmax ){
+
+                    cmap.at(i).r=ctable.at(c).r+(float(i)-cmin)/(cmax-cmin)*(ctable.at(c+1).r-ctable.at(c).r);
+                    cmap.at(i).g=ctable.at(c).g+(float(i)-cmin)/(cmax-cmin)*(ctable.at(c+1).g-ctable.at(c).g);
+                    cmap.at(i).b=ctable.at(c).b+(float(i)-cmin)/(cmax-cmin)*(ctable.at(c+1).b-ctable.at(c).b);
+
+                }
+            }
+        }
+
     }
-    
-    helios::RGBcolor color;
 
-    int color_ind;
-    if( minval==maxval ){
-      color_ind=0;
-    }else{
-      color_ind=round( (x-minval)/(maxval-minval) * (cmapsize-1) );
+    helios::RGBcolor query( float x ) const{
+
+        assert( cmapsize>0 && !cmap.empty() );
+
+        helios::RGBcolor color;
+
+        int color_ind;
+        if( minval==maxval ){
+            color_ind=0;
+        }else{
+            color_ind=std::round( (x-minval)/(maxval-minval) * float(cmapsize-1) );
+        }
+
+        if(color_ind<0){color_ind=0;}
+        if(color_ind>cmapsize-1){color_ind=int(cmapsize-1);}
+        color.r=cmap.at(color_ind).r;
+        color.g=cmap.at(color_ind).g;
+        color.b=cmap.at(color_ind).b;
+
+        return color;
+
     }
 
-    if(color_ind<0){color_ind=0;}
-    if(color_ind>cmapsize-1){color_ind=cmapsize-1;}
-    color.r=cmap.at(color_ind).r;
-    color.g=cmap.at(color_ind).g;
-    color.b=cmap.at(color_ind).b;
-    
-    return color;
-    
-  }
+    void setRange( float min, float max ){
+        minval = min;
+        maxval = max;
+    }
 
-  void setRange( float min, float max ){
-    minval = min;
-    maxval = max;
-  }
+    helios::vec2 getRange() const{
+        return helios::make_vec2( minval, maxval );
+    }
 
-  helios::vec2 getRange( void ) const{
-    return helios::make_vec2( minval, maxval );
-  }
+    float getLowerLimit() const{
+        return minval;
+    }
 
-  float getLowerLimit( void ) const{
-    return minval;
-  }
-
-  float getUpperLimit( void ) const{
-    return maxval;
-  }
+    float getUpperLimit() const{
+        return maxval;
+    }
 
 private:
 
-  std::vector<helios::RGBcolor> cmap;
-  unsigned int cmapsize;
-  float minval, maxval;
+    std::vector<helios::RGBcolor> cmap;
+    unsigned int cmapsize;
+    float minval, maxval;
 
 };
 
@@ -255,34 +257,34 @@ class Visualizer{
 public:
 
   //! Visualizer constructor
-  /** 
-      \param[in] "Wdisplay" Width of the display window in pixels, and assumes default window aspect ratio of 1.25
+  /**
+   * \param[in] "Wdisplay" Width of the display window in pixels, and assumes default window aspect ratio of 1.25
   */
-  Visualizer( uint Wdisplay );
+  explicit Visualizer( uint Wdisplay );
 
   //! Visualizer constructor
-  /** 
-      \param[in] "Wdisplay" Width of the display window in pixels
-      \param[in] "Hdisplay" Height of the display window in pixels
+  /**
+   * \param[in] "Wdisplay" Width of the display window in pixels
+   * \param[in] "Hdisplay" Height of the display window in pixels
   */
   Visualizer( uint Wdisplay, uint Hdisplay );
 
   Visualizer( uint Wdisplay, uint Hdisplay, int aliasing_samples );
 
-  //! Visualizer constructior with option to remove window decorationos (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this function will likely be removed
+  //! Visualizer constructor with option to remove window decorations (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this function will likely be removed
   Visualizer( uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations );
 
   // !Visualizer destructor
-  ~Visualizer(void);
+  ~Visualizer();
 
   //! Visualizer self-test routine
-  int selfTest( void );
+  int selfTest();
 
   //! Enable standard output from this plug-in (default)
-  void enableMessages( void );
+  void enableMessages();
 
   //! Disable standard output from this plug-in
-  void disableMessages( void );
+  void disableMessages();
 
   /* //! Type of transformation applied to a geometric object */
   /* enum TransformationMethod {  */
@@ -325,32 +327,37 @@ public:
   };
 
   //! Set camera position
-  /** \param[in] "cameraPosition" (x,y,z) position of the camera, i.e., this is where the actual camera or `eye' is positioned.
-      \param[in] "lookAt" (x,y,z) position of where the camera is looking at.
+  /**
+   * \param[in] "cameraPosition" (x,y,z) position of the camera, i.e., this is where the actual camera or `eye' is positioned.
+   * \param[in] "lookAt" (x,y,z) position of where the camera is looking at.
   */
-  void setCameraPosition( helios::vec3 cameraPosition, helios::vec3 lookAt );
+  void setCameraPosition(const helios::vec3 &cameraPosition, const helios::vec3 &lookAt );
 
   //! Set camera position
-  /** \param[in] "cameraAngle" (elevation,azimuth) angle to the camera with respect to the `lookAt' position.
-      \param[in] "cameraRadius" Distance from the camera to the `lookAt' position.
-      \param[in] "lookAt" (x,y,z) position of where the camera is looking at.
+  /**
+   * \param[in] "cameraAngle" (elevation,azimuth) angle to the camera with respect to the `lookAt' position.
+   * \param[in] "cameraRadius" Distance from the camera to the `lookAt' position.
+   * \param[in] "lookAt" (x,y,z) position of where the camera is looking at.
   */
-  void setCameraPosition( helios::SphericalCoord cameraAngle, helios::vec3 lookAt );
+  void setCameraPosition(const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt );
 
   //! Set the camera field of view (angle width) in degrees. Default value is 45 degrees.
-  /** \param[in] "angle_FOV" Angle of camera field of view in degrees.
+  /**
+   * \param[in] "angle_FOV" Angle of camera field of view in degrees.
    */
-  void setCameraFieldOfView( const float angle_FOV );
+  void setCameraFieldOfView( float angle_FOV );
 
   //! Set the direction of the light source
-  /** \param[in] "direction" Vector pointing in the direction of the light source (vector starts at light source and points toward scene.) */
-  void setLightDirection( helios::vec3 direction );
+  /**
+   * \param[in] "direction" Vector pointing in the direction of the light source (vector starts at light source and points toward scene.)
+   */
+  void setLightDirection(const helios::vec3 &direction );
 
   //! Get a box that bounds all primitives in the domain
   void getDomainBoundingBox( helios::vec2& xbounds, helios::vec2& ybounds, helios::vec2& zbounds ) const;
 
   //! Get the radius of a sphere that bounds all primitives in the domain
-  float getDomainBoundingRadius( void ) const;
+  float getDomainBoundingRadius() const;
 
   //! Lighting model to use for shading primitives
   enum LightingModel { 
@@ -365,274 +372,298 @@ public:
   };
 
   //! Set the lighting model for shading of all primitives
-  /** \param[in] "lightingmodel" Lighting model to be used
-      \sa \ref LightingModel 
+  /**
+   * \param[in] "lightingmodel" Lighting model to be used
+   * \sa LightingModel
   */
-  void setLightingModel( LightingModel lightingmodel );
+  void setLightingModel(LightingModel lightingmodel );
 
   //! Set the background color for the visualizer window
-  /** \param[in] "color" Background color
+  /**
+   * \param[in] "color" Background color
    */
-  void setBackgroundColor( helios::RGBcolor color );
+  void setBackgroundColor(const helios::RGBcolor &color );
 
   //! Add a rectangle by giving the coordinates of its center
-  /** \param[in] "center" (x,y,z) location of the rectangle center
-      \param[in] "size" Size in the x- and y-directions
-      \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-      \param[in] "color" R-G-B color of the rectangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "center" (x,y,z) location of the rectangle center
+   * \param[in] "size" Size in the x- and y-directions
+   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
+   * \param[in] "color" R-G-B color of the rectangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its center
-  /** \param[in] "center" (x,y,z) location of the rectangle center
-      \param[in] "size" Size in the x- and y-directions
-      \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-      \param[in] "color" R-G-B-A color of the rectangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "center" (x,y,z) location of the rectangle center
+   * \param[in] "size" Size in the x- and y-directions
+   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
+   * \param[in] "color" R-G-B-A color of the rectangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a texture mapped rectangle by giving the coordinates of its center
-  /** \param[in] "center" (x,y,z) location of the rectangle center
-      \param[in] "size" Size in the x- and y-directions
-      \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-      \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "center" (x,y,z) location of the rectangle center
+   * \param[in] "size" Size in the x- and y-directions
+   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
+   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const char* texture_file, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its center - rectangle is colored by and RGB color value but is masked by the alpha channel of a PNG image file
-  /** \param[in] "center" (x,y,z) location of the rectangle center
-      \param[in] "size" Size in the x- and y-directions
-      \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-      \param[in] "color" R-G-B color of the rectangle
-      \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "center" (x,y,z) location of the rectangle center
+   * \param[in] "size" Size in the x- and y-directions
+   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
+   * \param[in] "color" R-G-B color of the rectangle
+   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag );
 
   //! Add a texture masked rectangle by giving the coordinates of its center
-  /** \param[in] "center" (x,y,z) location of the rectangle center
-      \param[in] "size" Size in the x- and y-directions
-      \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-      \param[in] "color" R-G-B color of the rectangle
-      \param[in] "glyph" Pixel map of true/false values for a transparency mask
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "center" (x,y,z) location of the rectangle center
+   * \param[in] "size" Size in the x- and y-directions
+   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
+   * \param[in] "color" R-G-B color of the rectangle
+   * \param[in] "glyph" Pixel map of true/false values for a transparency mask
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, const Glyph* glyph, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices
-  /** \param[in] "vertices" (x,y,z) coordinates of four vertices
-      \param[in] "color" R-G-B color of the rectangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertices" (x,y,z) coordinates of four vertices
+   * \param[in] "color" R-G-B color of the rectangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices
-  /** \param[in] "vertices" (x,y,z) coordinates of four vertices
-      \param[in] "color" R-G-B-A color of the rectangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertices" (x,y,z) coordinates of four vertices
+   * \param[in] "color" R-G-B-A color of the rectangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices
-  /** \param[in] "vertices" (x,y,z) coordinates of four vertices
-      \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertices" (x,y,z) coordinates of four vertices
+   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const char* texture_file, CoordinateSystem coordFlag );
   
   //! Add a rectangle by giving the coordinates of its four vertices and color by texture map
-  /** \param[in] "vertices" (x,y,z) coordinates of four vertices
-      \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-      \param[in] "uvs" u-v coordinates for rectangle vertices
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertices" (x,y,z) coordinates of four vertices
+   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
+   * \param[in] "uvs" u-v coordinates for rectangle vertices
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByVertices(const std::vector<helios::vec3>& vertices, const char* texture_file, const std::vector<helios::vec2> &uvs, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices and mask by texture map transparency channel, but color by R-G-B value
-  /** \param[in] "vertices" (x,y,z) coordinates of four vertices
-      \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-      \param[in] "uvs" u-v coordinates for rectangle vertices
-      \param[in] "color" R-G-B color of the rectangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertices" (x,y,z) coordinates of four vertices
+   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
+   * \param[in] "uvs" u-v coordinates for rectangle vertices
+   * \param[in] "color" R-G-B color of the rectangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, const std::vector<helios::vec2> &uvs, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices - rectangle is colored by an RGB color value but is masked by the alpha channel of a PNG image file
-  /** \param[in] "vertices" (x,y,z) coordinates of four vertices
-      \param[in] "color" R-G-B color of the rectangle
-      \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertices" (x,y,z) coordinates of four vertices
+   * \param[in] "color" R-G-B color of the rectangle
+   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag);
   
   //! Add a rectangle by giving the coordinates of its four vertices
-  /** \param[in] "vertices" (x,y,z) coordinates of four vertices
-      \param[in] "color" R-G-B color of the glyph
-      \param[in] "glyph" Glyph object used to render rectangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertices" (x,y,z) coordinates of four vertices
+   * \param[in] "color" R-G-B color of the glyph
+   * \param[in] "glyph" Glyph object used to render rectangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const Glyph* glyph, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices
-  /** \param[in] "vertices" (x,y,z) coordinates of four vertices
-      \param[in] "color" R-G-B-A color of the glyph
-      \param[in] "glyph" Glyph object used to render rectangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertices" (x,y,z) coordinates of four vertices
+   * \param[in] "color" R-G-B-A color of the glyph
+   * \param[in] "glyph" Glyph object used to render rectangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBAcolor &color, const Glyph* glyph, CoordinateSystem coordFlag );
   
   //! Add a triangle by giving the coordinates of its three vertices
-  /** \param[in] "vertex0" (x,y,z) location of first vertex
-      \param[in] "vertex1" (x,y,z) location of first vertex
-      \param[in] "vertex2" (x,y,z) location of first vertex
-      \param[in] "color" R-G-B color of the triangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertex0" (x,y,z) location of first vertex
+   * \param[in] "vertex1" (x,y,z) location of first vertex
+   * \param[in] "vertex2" (x,y,z) location of first vertex
+   * \param[in] "color" R-G-B color of the triangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a triangle by giving the coordinates of its three vertices
-  /** \param[in] "vertex0" (x,y,z) location of first vertex
-      \param[in] "vertex1" (x,y,z) location of first vertex
-      \param[in] "vertex2" (x,y,z) location of first vertex
-      \param[in] "color" R-G-B-A color of the triangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertex0" (x,y,z) location of first vertex
+   * \param[in] "vertex1" (x,y,z) location of first vertex
+   * \param[in] "vertex2" (x,y,z) location of first vertex
+   * \param[in] "color" R-G-B-A color of the triangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a triangle by giving the coordinates of its three vertices and color by texture map
-  /** \param[in] "vertex0" (x,y,z) location of first vertex
-      \param[in] "vertex1" (x,y,z) location of first vertex
-      \param[in] "vertex2" (x,y,z) location of first vertex
-      \param[in] "texture_file" File corresponding to the image to be used as a texture map
-      \param[in] "uv0" u-v texture coordinates of vertex0
-      \param[in] "uv1" u-v texture coordinates of vertex1
-      \param[in] "uv2" u-v texture coordinates of vertex2
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertex0" (x,y,z) location of first vertex
+   * \param[in] "vertex1" (x,y,z) location of first vertex
+   * \param[in] "vertex2" (x,y,z) location of first vertex
+   * \param[in] "texture_file" File corresponding to the image to be used as a texture map
+   * \param[in] "uv0" u-v texture coordinates of vertex0
+   * \param[in] "uv1" u-v texture coordinates of vertex1
+   * \param[in] "uv2" u-v texture coordinates of vertex2
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, CoordinateSystem coordFlag );
 
   //! Add a triangle by giving the coordinates of its three vertices and color by a constant color, but mask using transparency channel of texture map
-  /** \param[in] "vertex0" (x,y,z) location of first vertex
-      \param[in] "vertex1" (x,y,z) location of first vertex
-      \param[in] "vertex2" (x,y,z) location of first vertex
-      \param[in] "texture_file" File corresponding to the image to be used as a texture map
-      \param[in] "uv0" u-v texture coordinates of vertex0
-      \param[in] "uv1" u-v texture coordinates of vertex1
-      \param[in] "uv2" u-v texture coordinates of vertex2
-      \param[in] "color" R-G-B-A color of the triangle
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
+  /**
+   * \param[in] "vertex0" (x,y,z) location of first vertex
+   * \param[in] "vertex1" (x,y,z) location of first vertex
+   * \param[in] "vertex2" (x,y,z) location of first vertex
+   * \param[in] "texture_file" File corresponding to the image to be used as a texture map
+   * \param[in] "uv0" u-v texture coordinates of vertex0
+   * \param[in] "uv1" u-v texture coordinates of vertex1
+   * \param[in] "uv2" u-v texture coordinates of vertex2
+   * \param[in] "color" R-G-B-A color of the triangle
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a voxel by giving the coordinates of its center
-  /** \param[in] "size" Size in the x-, y- and z-directions
-      \param[in] "center" (x,y,z) location of the voxel center
-      \param[in] "color" R-G-B color of the voxel
+  /**
+   * \param[in] "size" Size in the x-, y- and z-directions
+   * \param[in] "center" (x,y,z) location of the voxel center
+   * \param[in] "color" R-G-B color of the voxel
   */
   void addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a voxel by giving the coordinates of its center
-  /** \param[in] "size" Size in the x-, y- and z-directions
-      \param[in] "center" (x,y,z) location of the voxel center
-      \param[in] "color" R-G-B-A color of the voxel
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the voxel.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the voxel, and physical dimensions are used.
+  /**
+   * \param[in] "size" Size in the x-, y- and z-directions
+   * \param[in] "center" (x,y,z) location of the voxel center
+   * \param[in] "color" R-G-B-A color of the voxel
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the voxel.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the voxel, and physical dimensions are used.
   */
   void addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a disk by giving the coordinates of its center
-  /** \param[in] "center" (x,y,z) location of the disk center
-      \param[in] "size" length of disk semi-major and semi-minor axes
-      \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
-      \param[in] "color" R-G-B color of the disk
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the disk.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the disk, and physical dimensions are used.
+  /**
+   * \param[in] "center" (x,y,z) location of the disk center
+   * \param[in] "size" length of disk semi-major and semi-minor axes
+   * \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
+   * \param[in] "color" R-G-B color of the disk
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the disk.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the disk, and physical dimensions are used.
   */
   void addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a disk by giving the coordinates of its center
-  /** \param[in] "center" (x,y,z) location of the disk center
-      \param[in] "size" length of disk semi-major and semi-minor axes
-      \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
-      \param[in] "color" R-G-B-A color of the disk
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the disk.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the disk, and physical dimensions are used.
+  /**
+   * \param[in] "center" (x,y,z) location of the disk center
+   * \param[in] "size" length of disk semi-major and semi-minor axes
+   * \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
+   * \param[in] "color" R-G-B-A color of the disk
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the disk.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the disk, and physical dimensions are used.
   */
   void addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a texture mapped disk by giving the coordinates of its center
-  /** \param[in] "center" (x,y,z) location of the disk center
-      \param[in] "size" length of disk semi-major and semi-minor axes
-      \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
-      \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the disk.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the disk, and physical dimensions are used.
+  /**
+   * \param[in] "center" (x,y,z) location of the disk center
+   * \param[in] "size" length of disk semi-major and semi-minor axes
+   * \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
+   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the disk.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the disk, and physical dimensions are used.
   */
   void addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag );
 
   //! Add Lines by giving the coordinates of points along the Lines
   /** 
-      \param[in] "start" (x,y,z) coordinates of line starting position
-      \param[in] "end" (x,y,z) coordinates of line ending position
-      \param[in] "color" R-G-B color of the line
-      \param[in] "linewidth" Width of the line in points
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
+   * \param[in] "start" (x,y,z) coordinates of line starting position
+   * \param[in] "end" (x,y,z) coordinates of line ending position
+   * \param[in] "color" R-G-B color of the line
+   * \param[in] "linewidth" Width of the line in points
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
   */
   void addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, uint linewidth, CoordinateSystem coordFlag );
 
   //! Add Lines by giving the coordinates of points along the Lines
   /** 
-      \param[in] "start" (x,y,z) coordinates of line starting position
-      \param[in] "end" (x,y,z) coordinates of line ending position
-      \param[in] "color" R-G-B-A color of the line
-      \param[in] "linewidth" Width of the line in points
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
+   * \param[in] "start" (x,y,z) coordinates of line starting position
+   * \param[in] "end" (x,y,z) coordinates of line ending position
+   * \param[in] "color" R-G-B-A color of the line
+   * \param[in] "linewidth" Width of the line in points
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
   */
   void addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, uint linewidth, CoordinateSystem coordFlag );
 
   //! Add a point by giving its coordinates and size
   /** 
-      \param[in] "position" (x,y,z) coordinates of Point
-      \param[in] "color" R-G-B color of the Point
-      \param[in] "size" Size of the point in font points
-      \param[in]  "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
+   * \param[in] "position" (x,y,z) coordinates of Point
+   * \param[in] "color" R-G-B color of the Point
+   * \param[in] "size" Size of the point in font points
+   * \param[in]  "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
   */
   void addPoint( const helios::vec3 &position, const helios::RGBcolor &color, uint pointsize,  CoordinateSystem coordFlag);
 
   //! Add a point by giving its coordinates and size
   /** 
-      \param[in] "position" (x,y,z) coordinates of Point
-      \param[in] "color" R-G-B-A color of the Point
-      \param[in] "size" Size of the point in font points
-      \param[in]  "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
+   * \param[in] "position" (x,y,z) coordinates of Point
+   * \param[in] "color" R-G-B-A color of the Point
+   * \param[in] "size" Size of the point in font points
+   * \param[in]  "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
   */
   void addPoint( const helios::vec3 &position, const helios::RGBAcolor &color, uint pointsize,  CoordinateSystem coordFlag );
   
   //! Add a sphere by giving the radius and center
   /** 
-      \param[in] "radius" Radius of the sphere
-      \param[in] "center" (x,y,z) location of sphere center
-      \param[in] "Ndivisions" Number of discrete divisions in making sphere
-      \param[in] "color" R-G-B color of the sphere
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the sphere, and physical dimensions are used.
+   * \param[in] "radius" Radius of the sphere
+   * \param[in] "center" (x,y,z) location of sphere center
+   * \param[in] "Ndivisions" Number of discrete divisions in making sphere
+   * \param[in] "color" R-G-B color of the sphere
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the sphere, and physical dimensions are used.
   */
   void addSphereByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a sphere by giving the radius and center
   /** 
-      \param[in] "radius" Radius of the sphere
-      \param[in] "center" (x,y,z) location of sphere center
-      \param[in] "Ndivisions" Number of discrete divisions in making sphere
-      \param[in] "color" R-G-B-A color of the sphere
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the sphere, and physical dimensions are used.
+   * \param[in] "radius" Radius of the sphere
+   * \param[in] "center" (x,y,z) location of sphere center
+   * \param[in] "Ndivisions" Number of discrete divisions in making sphere
+   * \param[in] "color" R-G-B-A color of the sphere
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the sphere, and physical dimensions are used.
   */
   void addSphereByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a Sky Dome, which is a hemispherical dome colored by a sky texture map
   /** 
-      \param[in] "radius" Radius of the dome
-      \param[in] "center" (x,y,z) location of dome center
-      \param[in] "Ndivisions" Number of discrete divisions in making hemisphere
-      \param[in] "texture_file" Name of the texture map file
+   * \param[in] "radius" Radius of the dome
+   * \param[in] "center" (x,y,z) location of dome center
+   * \param[in] "Ndivisions" Number of discrete divisions in making hemisphere
+   * \param[in] "texture_file" Name of the texture map file
   */
   void addSkyDomeByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const char* texture_file );
 
@@ -641,12 +672,13 @@ public:
   DEPRECATED( void addSkyDomeByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const char* texture_file, int layer ) );
 
   //! Add a text box by giving the coordinates of its center
-  /** \param[in] "textstring" String of text to display
-      \param[in] "center" (x,y,z) location of the text box center
-      \param[in] "rotation" Spherical rotation angle in radians (elevation,azimuth)
-      \param[in] "fontcolor" Color of the font
-      \param[in] "fontsize" Size of the text font in points
-      \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+  /**
+   * \param[in] "textstring" String of text to display
+   * \param[in] "center" (x,y,z) location of the text box center
+   * \param[in] "rotation" Spherical rotation angle in radians (elevation,azimuth)
+   * \param[in] "fontcolor" Color of the font
+   * \param[in] "fontsize" Size of the text font in points
+   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
   */
   void addTextboxByCenter( const char* textstring, const helios::vec3 &center, const helios::SphericalCoord &rotation, const helios::RGBcolor &fontcolor, uint fontsize, const char* fontname, CoordinateSystem coordFlag );
 
@@ -655,188 +687,211 @@ public:
 
   //! Add a coordinate axis
   /** 
-   \param[in] "origin" (x,y,z) location of the coordinate axes orign
-   \param[in] "length" length of coordinate axis lines from origin in each direction
-   \param[in] "sign" either "both" or "positive" should the axes be drawn in both positive and negative directions or just positive 
+    * \param[in] "origin" (x,y,z) location of the coordinate axes orign
+    * \param[in] "length" length of coordinate axis lines from origin in each direction
+    * \param[in] "sign" either "both" or "positive" should the axes be drawn in both positive and negative directions or just positive
    */
   void addCoordinateAxes(const helios::vec3 &origin, const helios::vec3 &length, const std::string &sign);
 
   //! Add a coordinate axis
   /** 
-   \param[in] "center" (x,y,z) location of the center of the grid
-   \param[in] "size" size of the grid in each direction
-   \param[in] "subdiv" number of grid subdivisions in each direction 
+    * \param[in] "center" (x,y,z) location of the center of the grid
+    * \param[in] "size" size of the grid in each direction
+    * \param[in] "subdiv" number of grid subdivisions in each direction
    */
-  void addGridWireFrame(const helios::vec3 center, const helios::vec3 size, const helios::int3 subdiv);
-  
-  
+  void addGridWireFrame(const helios::vec3 &center, const helios::vec3 &size, const helios::int3 &subdiv);
+
   //! Enable the colorbar
-  void enableColorbar( void );
+  void enableColorbar();
 
   //! Disable the colorbar
-  void disableColorbar( void );
+  void disableColorbar();
 
   //! Set the position of the colorbar in normalized window coordinates (0-1)
-  /** \param[in] "position" Position of the colorbar in normalized window coordinates
+  /**
+   * \param[in] "position" Position of the colorbar in normalized window coordinates
   */
   void setColorbarPosition( helios::vec3 position );
 
   //! Set the size of the colorbar in normalized window units (0-1)
-  /** \param[in] "size" Size of the colorbar in normalized window units (0-1)
+  /**
+   * \param[in] "size" Size of the colorbar in normalized window units (0-1)
   */
   void setColorbarSize( helios::vec2 size );
 
   //! Set the range of the Colorbar
-  /** \param[in] "cmin" Minimum value
-      \param[out] "cmax" Maximum value
+  /**
+   * \param[in] "cmin" Minimum value
+   * \param[out] "cmax" Maximum value
   */
   void setColorbarRange( float cmin, float cmax );
 
   //! Set the values in the colorbar where ticks and labels should be placed
-  /** \param[in] "ticks" Vector of values corresponding to ticks
-      \note If tick values are outside of the colorbar range (see \ref setColorBarRange()), the colorbar will be automatically expanded to fit the tick values.
+  /**
+   * \param[in] "ticks" Vector of values corresponding to ticks
+      \note If tick values are outside of the colorbar range (see setColorBarRange()), the colorbar will be automatically expanded to fit the tick values.
   */
-  void setColorbarTicks( std::vector<float> ticks );
+  void setColorbarTicks(const std::vector<float> &ticks );
 
   //! Set the title of the Colorbar
-  /** \param[in] "title" Colorbar title 
+  /**
+   * \param[in] "title" Colorbar title
   */
   void setColorbarTitle( const char* title );
 
   //! Set the RGB color of the colorbar text
-  /** \param[in] "color" Font color
+  /**
+   * \param[in] "color" Font color
   */
   void setColorbarFontColor( helios::RGBcolor color );
 
   //! Set the font size of the colorbar text
-  /** \param[in] "font_size" Font size
+  /**
+   * \param[in] "font_size" Font size
   */
   void setColorbarFontSize( uint font_size );
 
   //! Set the colormap used in Colorbar/visualization
-  /** \param[in] "colormap_name" Name of a colormap. Valid colormaps are "hot" and "lava". 
+  /**
+   * \param[in] "colormap_name" Name of a colormap. Valid colormaps are "hot" and "lava".
   */
   void setColormap( Ctable colormap_name );
 
   //! Set the colormap used in Colorbar/visualization
-  /** \param[in] "colormap_name" Name of a colormap. Valid colormaps are "hot" and "lava". 
+  /**
+   * \param[in] "colormap_name" Name of a colormap. Valid colormaps are "hot" and "lava".
   */
-  void setColormap( Ctable colormap_name, std::vector<helios::RGBcolor> colors, std::vector<float> divisions );
+  void setColormap(Ctable colormap_name, const std::vector<helios::RGBcolor> &colors, const std::vector<float> &divisions );
 
   //! Get the current colormap used in Colorbar/visualization
-  Colormap getCurrentColormap( void ) const;
+  Colormap getCurrentColormap() const;
   
   //! Add all geometry from the \ref Context to the visualizer
-  /** \param[in] "context" Pointer to the simulation context */
-  void buildContextGeometry( helios::Context* context );
+  /**
+   * \param[in] "context" Pointer to the simulation context
+   */
+  void buildContextGeometry( helios::Context* context_ptr );
 
   //! Add select geometry from the \ref Context to the visualizer by their UUIDs
-  /** \param[in] "context" Pointer to the simulation context 
-      \param[in] "UUIDs" UUIDs of Context primitives to be added to the visualizer
+  /**
+   * \param[in] "context" Pointer to the simulation context
+   * \param[in] "UUIDs" UUIDs of Context primitives to be added to the visualizer
   */
-  void buildContextGeometry( helios::Context* context, const std::vector<uint>& UUIDs );
+  void buildContextGeometry(helios::Context* context_ptr, const std::vector<uint>& UUIDs );
 
   //! Color primitives from Context by color mapping their `Primitive Data'
-  /** \param[in] "data_name" Name of `Primitive Data'
-      \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
+  /**
+   * \param[in] "data_name" Name of `Primitive Data'
+   * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
   */
   void colorContextPrimitivesByData( const char* data_name );
 
   //! Color primitives from Context by color mapping their `Primitive Data'
-  /** \param[in] "data_name" Name of `Primitive Data'
-      \param[in] "UUIDs" UUID's of primitives to be colored by data
-      \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
+  /**
+   * \param[in] "data_name" Name of `Primitive Data'
+   * \param[in] "UUIDs" UUID's of primitives to be colored by data
+   * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
   */
   void colorContextPrimitivesByData( const char* data_name, const std::vector<uint>& UUIDs );
 
   //! Color primitives from Context by color mapping their `Object Data'
-  /** \param[in] "data_name" Name of `Object Data'
-       \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
+  /**
+   * \param[in] "data_name" Name of `Object Data'
+   * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
   */
   void colorContextPrimitivesByObjectData( const char* data_name );
 
   //! Color primitives from Context by color mapping their `Object Data'
-  /** \param[in] "data_name" Name of `Object Data'
-      \param[in] "ObjIDs" Object ID's of primitives to be colored by object data
-      \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
+  /**
+   * \param[in] "data_name" Name of `Object Data'
+   * \param[in] "ObjIDs" Object ID's of primitives to be colored by object data
+   * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
   */
   void colorContextPrimitivesByObjectData( const char* data_name, const std::vector<uint>& ObjIDs );
 
   //! Color primitives from Context with a random color
-  /** \param[in] "UUIDs" Primitive UUIDs to color randomly  
-   \note Useful for visualizing individual primitives that are part of compound objects
+  /**
+   * \param[in] "UUIDs" Primitive UUIDs to color randomly
+   * \note Useful for visualizing individual primitives that are part of compound objects
    */
   void colorContextPrimitivesRandomly(const std::vector<uint>& UUIDs );
   
   //! Color primitives from Context with a random color
-  /** \note Useful for visualizing individual primitives that are part of compound objects
+  /**
+   * \note Useful for visualizing individual primitives that are part of compound objects
    */
   void colorContextPrimitivesRandomly();
   
   //! Color objects from Context with a random color
-  /** \note Useful for visualizing individual objects
+  /**
+   * \note Useful for visualizing individual objects
    */
   void colorContextObjectsRandomly(const std::vector<uint>& ObjIDs );
   
   //! Color objects from Context with a random color
-  /** \note Useful for visualizing individual objects
+  /**
+   * \note Useful for visualizing individual objects
    */
   void colorContextObjectsRandomly();
   
   
   //! Make Helios logo watermark invisible
-  void hideWatermark( void );
+  void hideWatermark();
 
   //! Make Helios logo watermark visible
-  void showWatermark( void );
+  void showWatermark();
 
   //! Plot current geometry into an interactive graphics window
-  std::vector<helios::vec3> plotInteractive(void);
+  std::vector<helios::vec3> plotInteractive();
 
   //! Plot the depth map (distance from camera to nearest object)
-  void plotDepthMap(void);
+  void plotDepthMap();
 
-  //! Update the graphics window based on current geometry, then continue the program
-  void plotUpdate(void);
-
+    //! Update the graphics window based on current geometry, then continue the program
+    void plotUpdate();
 
     //! Update the graphics window based on current geometry, then continue the program, with the option not to display the graphic window
-    /* If running a large number of renderings, or running remotely, it can be desirable to not open the graphic window.
+    /** If running a large number of renderings, or running remotely, it can be desirable to not open the graphic window.
      * \param[in] "hide_window" If false, do not display the graphic window.
      */
-    void plotUpdate( const bool hide_window );
+    void plotUpdate( bool hide_window );
 
   //! Print the current graphics window to a JPEG image file. File will be given a default filename and saved to the current directory from which the executable was run.
-  void printWindow( void );
+  void printWindow();
   
   //! Print the current graphics window to a JPEG image file
-  /** \param[in] "outfile" Path to file where image should be saved.
-      \note If outfile does not have extension `.jpg', it will be appended to the file name.
+  /**
+   * \param[in] "outfile" Path to file where image should be saved.
+   * \note If outfile does not have extension `.jpg', it will be appended to the file name.
   */
   void printWindow( const char* outfile );
 
   //! Get R-G-B pixel data in the current display window
-  /** \param[out] "buffer" Pixel data. The data is stored as r-g-b * column * row. So indices (0,1,2) would be the RGB values for row 0 and column 0, indices (3,4,5) would be RGB values for row 0 and column 1, and so on. Thus, buffer is of size 3*width*height.
+  /**
+   * \param[out] "buffer" Pixel data. The data is stored as r-g-b * column * row. So indices (0,1,2) would be the RGB values for row 0 and column 0, indices (3,4,5) would be RGB values for row 0 and column 1, and so on. Thus, buffer is of size 3*width*height.
    */
   void getWindowPixelsRGB( uint * buffer );
 
   //! Get depth buffer data for the current display window
-  /** \param[out] "buffer" Distance to nearest object from the camera location.
-      \note The function \ref plotDepthMap() must be called prior to \ref getDepthMap().
+  /**
+   * \param[out] "buffer" Distance to nearest object from the camera location.
+   * \note The function plotDepthMap() must be called prior to getDepthMap().
   */
   void getDepthMap( float * buffer );
 
   //! Get the size of the display window in pixels
-  /** \param[out] "width" Width of the display window in pixels
-      \param[out] "height" Height of the display window in pixels
+  /**
+   * \param[out] "width" Width of the display window in pixels
+   * \param[out] "height" Height of the display window in pixels
   */
-  void getWindowSize( uint &width, uint &height );
+  void getWindowSize( uint &width, uint &height ) const;
 
   //! Get the size of the framebuffer in pixels
-  /** \param[out] "width" Width of the framebuffer in pixels
-      \param[out] "height" Height of the framebuffer in pixels
+  /**
+   * \param[out] "width" Width of the framebuffer in pixels
+   * \param[out] "height" Height of the framebuffer in pixels
   */
-  void getFramebufferSize( uint &width, uint &height );
+  void getFramebufferSize( uint &width, uint &height ) const;
 
   //! Clear all geometry previously added to the visualizer
   void clearGeometry();
@@ -848,7 +903,7 @@ private:
 
     void openWindow();
 
-  void initialize( uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations );
+  void initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations );
 
   void render( bool shadow );
 
@@ -868,7 +923,7 @@ private:
   void getViewKeystrokes( helios::vec3& eye, helios::vec3& center );
 
   //! Add a Colorbar given its center position
-  void addColorbarByCenter( const char* title, const helios::vec2 size, const helios::vec3 center, const helios::RGBcolor font_color, const Colormap colormap );
+  void addColorbarByCenter(const char* title, const helios::vec2 &size, const helios::vec3 &center, const helios::RGBcolor &font_color, const Colormap &colormap );
 
   //! Width of the display window in screen coordinates
   uint Wdisplay;
@@ -887,10 +942,10 @@ private:
   void* window;
 
   //! (x,y,z) coordinates of location where the camera is looking
-  helios::vec3 center;
+  helios::vec3 camera_lookat_center;
 
   //! (x,y,z) coordinates of the camera (a.k.a. the `eye' location)
-  helios::vec3 eye;
+  helios::vec3 camera_eye_location;
 
   //! Handle to the OpenGL shader (primary)
   Shader primaryShader;
@@ -943,11 +998,11 @@ private:
   std::map<std::string,std::vector<float> > positionData, colorData, normalData, uvData;
   std::map<std::string,std::vector<int> > coordinateFlagData, textureFlagData, textureIDData;
 
-  void updatePerspectiveTransformation( const helios::vec3 center, const helios::vec3 eye );
+  void updatePerspectiveTransformation(const helios::vec3 &center, const helios::vec3 &eye );
 
   glm::mat4 perspectiveTransformationMatrix;
 
-  void updateCustomTransformation( const glm::mat4 matrix );
+  void updateCustomTransformation(const glm::mat4 &matrix );
 
   glm::mat4 customTransformationMatrix;
 
@@ -961,7 +1016,7 @@ private:
   helios::Context* context;
 
   //! Function to actually update Context geometry (if needed), which is called by the visualizer before plotting
-  void buildContextGeometry_private(void);
+  void buildContextGeometry_private();
 
   float colorbar_min;
   float colorbar_max;
@@ -993,7 +1048,7 @@ private:
 
 };
 
-int checkerrors( void );
+int checkerrors();
 
 
 #endif

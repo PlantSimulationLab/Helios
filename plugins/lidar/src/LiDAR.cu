@@ -915,8 +915,7 @@ void LiDARcloud::calculateLeafAreaGPU( int min_voxel_hits){
   }
     
   if( !triangulationcomputed ){
-    std::cerr << "ERROR (calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
-    exit(EXIT_FAILURE);
+    helios_runtime_error("ERROR (LiDARcloud::calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints().");
   }
 
   if( !hitgridcellcomputed ){
@@ -1374,8 +1373,7 @@ void LiDARcloud::calculateLeafAreaGPU_testing( int min_voxel_hits){
   }
     
   if( !triangulationcomputed ){
-    std::cerr << "ERROR (calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
-    exit(EXIT_FAILURE);
+    shelios_runtime_error("ERROR (LiDARcloud::calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints().");
   }
 
   if( !hitgridcellcomputed ){
@@ -1711,8 +1709,7 @@ void LiDARcloud::calculateLeafAreaGPU_synthetic( helios::Context* context, bool 
   }
   
   if( !triangulationcomputed ){
-    std::cerr << "ERROR (calculateLeafAreaGPU_synthetic): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
-    exit(EXIT_FAILURE);
+      helios_runtime_error("ERROR (LiDARcloud::calculateLeafAreaGPU_synthetic): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints().");
   }
   
   if( !hitgridcellcomputed ){
@@ -4081,8 +4078,7 @@ void LiDARcloud::calculateLeafAreaGPU_equal_weighting(bool beamoutput, bool fill
     }
 
     if( !triangulationcomputed ){
-        std::cerr << "ERROR (calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (LiDARcloud::calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints().");
     }
 
     if( !hitgridcellcomputed ){
@@ -4536,8 +4532,7 @@ void LiDARcloud::calculateLeafAreaGPU_equal_weighting(bool beamoutput, bool fill
     }
     
     if( !triangulationcomputed ){
-        std::cerr << "ERROR (calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints()." << std::endl;
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (LiDARcloud::calculateLeafAreaGPU): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints().");
     }
     
     if( !hitgridcellcomputed ){

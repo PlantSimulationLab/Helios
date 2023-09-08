@@ -1,5 +1,4 @@
 /** \file "SyntheticAnnotation.cpp" Primary source file for synthetic image annotation plug-in.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 
@@ -138,9 +137,9 @@ void SyntheticAnnotation::setWindowSize( const uint __window_width, const uint _
     window_height = __window_height;
 }
 
-void SyntheticAnnotation::setCameraPosition(const helios::vec3 &__camera_position, const helios::vec3 &__camera_lookat) {
-    std::vector<vec3> position = {camera_position};
-    std::vector<vec3> lookat = {camera_lookat};
+void SyntheticAnnotation::setCameraPosition(const helios::vec3 &a_camera_position, const helios::vec3 &a_camera_lookat) {
+    std::vector<vec3> position = {a_camera_position};
+    std::vector<vec3> lookat = {a_camera_lookat};
     setCameraPosition( position, lookat );
 }
 
@@ -168,14 +167,10 @@ void SyntheticAnnotation::disableInstanceSegmentation(){
     instancesegmentation_enabled = false;
 }
 
-void SyntheticAnnotation::setCameraPosition(const std::vector<helios::vec3> &__camera_position, const std::vector<helios::vec3> &__camera_lookat) {
+void SyntheticAnnotation::setCameraPosition(const std::vector<helios::vec3> &a_camera_position, const std::vector<helios::vec3> &a_camera_lookat) {
 
-    if( __camera_position.size()>__camera_lookat.size() ){
-        std::cerr << "ERROR (SyntheticAnnotation::setCameraPosition): the number of camera lookat coordinates specified is less than that of camera positions." << std::endl;
-        throw 1;
-    }else if( __camera_position.size()<__camera_lookat.size() ){
-        std::cerr << "ERROR (SyntheticAnnotation::setCameraPosition): the number of camera positions specified is less than that of camera lookat coordinates." << std::endl;
-        throw 1;
+    if( a_camera_position.size()!=a_camera_lookat.size() ){
+        helios_runtime_error("ERROR (SyntheticAnnotation::setCameraPosition): the number of camera lookat coordinates specified is less than that of camera positions.");
     }
     camera_position = __camera_position;
     camera_lookat = __camera_lookat;
@@ -188,9 +183,7 @@ void SyntheticAnnotation::render( const char* outputdir ) {
     int labelminpixels = 10;
 
     if (labelIDs.empty()) {
-        std::cerr
-                << "ERROR (SyntheticAnnotation::render): No primitives have been labeled. You must call labelPrimitives() before generating rendered images. Exiting..."
-                << std::endl;
+        std::cerr << "WARNING (SyntheticAnnotation::render): No primitives have been labeled. You must call labelPrimitives() before generating rendered images. Exiting..." << std::endl;
         return;
     }
 
@@ -212,12 +205,8 @@ void SyntheticAnnotation::render( const char* outputdir ) {
         }
     }
 
-    if( camera_position.size()>camera_lookat.size() ){
-        std::cerr << "ERROR (SyntheticAnnotation::render): the number of camera lookat coordinates specified in XML file is less than that of camera positions." << std::endl;
-        throw 1;
-    }else if( camera_position.size()<camera_lookat.size() ){
-        std::cerr << "ERROR (SyntheticAnnotation::render): the number of camera positions specified in XML file is less than that of camera lookat coordinates." << std::endl;
-        throw 1;
+    if( camera_position.size()!=camera_lookat.size() ){
+        helios_runtime_error("ERROR (SyntheticAnnotation::render): the number of camera lookat coordinates specified in XML file is less than that of camera positions.");
     }
 
     //get window size from global data if they were specified in a loaded XML
@@ -284,9 +273,7 @@ void SyntheticAnnotation::render( const char* outputdir ) {
     createdir += odir;
     int dir = system(createdir.c_str());
     if (dir < 0) {
-        std::cerr << "ERROR (SyntheticAnnotation::render): output directory " << outputdir
-                  << " could not be created. Exiting..." << std::endl;
-        return;
+        helios_runtime_error("ERROR (SyntheticAnnotation::render): output directory " + outputdir + " could not be created. Exiting...");
     }
     //create sub-directory structure for each view
     //std::string viewdir;
@@ -297,8 +284,7 @@ void SyntheticAnnotation::render( const char* outputdir ) {
       //std::snprintf(viewdir,createdir.size()+24,"%sview%05d/",createdir.c_str(),d);
       int dir = system( viewdir.str().c_str() );
       if (dir < 0) {
-        std::cerr << "ERROR (SyntheticAnnotation::render): view sub-directory could not be created. Exiting..." << std::endl;
-        return;
+        helios_runtime_error("ERROR (SyntheticAnnotation::render): view sub-directory could not be created. Exiting...");
       }
     }
 

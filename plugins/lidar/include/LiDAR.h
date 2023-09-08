@@ -1,5 +1,4 @@
 /** \file "LiDAR.h" Primary header file for LiDAR plug-in.
-    \author Brian Bailey, Eric Kent
 
     Copyright (C) 2016-2023 Brian Bailey
 
@@ -202,24 +201,6 @@ struct ScanMetadata{
   */
   ScanMetadata( const helios::vec3 &a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, const std::vector<std::string> &a_columnFormat);
 
-  //! Convert the (row,column) of hit point in a scan to a direction vector
-  /**
-   * \param[in] "row" Index of hit point in the theta (zenithal) direction.
-   * \param[in] "column" Index of hit point in the phi (azimuthal) direction.
-   * \return Spherical vector corresponding to the ray direction for the given hit point.
-  */
-  helios::SphericalCoord rc2direction(uint row, uint column ) const;
-  
-  //! Convert the scan ray direction into (row,column) table index
-  /**
-   * \param[in] "direction" Spherical vector corresponding to the ray direction for the given hit point.
-   * \return (row,column) table index for the given hit point
-  */
-  helios::int2 direction2rc(const helios::SphericalCoord &direction ) const;
-  
-  //! Total number of hits in the scan
-  uint Nhits;
-
   //! File containing hit point data
   std::string data_file;
   
@@ -266,6 +247,26 @@ struct ScanMetadata{
 
   //! Vector of strings specifying the columns of the scan ASCII file for input/output
   std::vector<std::string> columnFormat;
+
+private:
+
+    //! Convert the (row,column) of hit point in a scan to a direction vector
+    /**
+     * \param[in] "row" Index of hit point in the theta (zenithal) direction.
+     * \param[in] "column" Index of hit point in the phi (azimuthal) direction.
+     * \return Spherical vector corresponding to the ray direction for the given hit point.
+    */
+    helios::SphericalCoord rc2direction(uint row, uint column ) const;
+
+    //! Convert the scan ray direction into (row,column) table index
+    /**
+     * \param[in] "direction" Spherical vector corresponding to the ray direction for the given hit point.
+     * \return (row,column) table index for the given hit point
+    */
+    helios::int2 direction2rc(const helios::SphericalCoord &direction ) const;
+
+    //! Total number of hits in the scan
+    uint Nhits;
   
 };
 
@@ -1122,7 +1123,7 @@ d the last cell's index is Ncells-1.
   /**
    * \param[in] "source" the scan index
    */
-  void cropBeamsToGridAngleRange(const uint source);
+  void cropBeamsToGridAngleRange(uint source);
   
   
 };

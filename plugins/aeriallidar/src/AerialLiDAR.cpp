@@ -419,7 +419,7 @@ float AerialLiDARcloud::getScanBeamDivergence( const uint scanID ) const{
 helios::vec3 AerialLiDARcloud::getHitXYZ( const uint index ) const{
 
   if( index>=hits.size() ){
-      helios_runtime_error("ERROR (AerialLiDARcloud::getHitXYZ): Hit point index out of bounds. Requesting hit #" + index + " but scan only has " + hits.size() + " hits." << endl;
+      helios_runtime_error("ERROR (AerialLiDARcloud::getHitXYZ): Hit point index out of bounds. Requesting hit #" + std::to_string(index) + " but scan only has " + std::to_string(hits.size()) + " hits.");
   }
 
   return hits.at(index).position;

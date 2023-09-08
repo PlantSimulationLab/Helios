@@ -1,5 +1,4 @@
-/** \file primitiveIntersection.cu "File containing OptiX ray-primitive intersection and bounding-box programs" 
-    \author Brian Bailey
+/** \file primitiveIntersection.cu "File containing OptiX ray-primitive intersection and bounding-box programs"
 
     Copyright (C) 2016-2023 Brian Bailey
 
@@ -195,7 +194,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
   
   float e1 = d * m - b * n - c * p;
   float beta = e1 * inv_denom;
-  
+
   if (beta > 0.0){
 
     float r = r = e * l - h * i;
@@ -213,7 +212,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 
 	uint ID = objectID[U];
 
-	if( maskID[ID]==-1 ){ //no texture transparency
+    if( maskID[ID]==-1 ){ //no texture transparency
 	  if( rtPotentialIntersection( t ) ) {
 	    UUID = triangle_UUID[objID];
 	    rtReportIntersection(0);
@@ -227,7 +226,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 	  float2 uv2 = uvdata[ make_uint2(2,uvID[ID]) ];
 
 	  float2 uv = uv0 + beta*(uv1-uv0) + gamma*(uv2-uv0);
-	  uv.x = 1.f-uv.x;
+//	  uv.x = 1.f-uv.x;
 
 	  uint3 ind = make_uint3( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)), maskID[ID] );
 	  if( ind.x>=sz.x || ind.y>=sz.y ){

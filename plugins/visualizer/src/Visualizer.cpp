@@ -49,7 +49,7 @@ struct my_error_mgr {
 typedef struct my_error_mgr * my_error_ptr;
 METHODDEF(void) my_error_exit (j_common_ptr cinfo){
     /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
-    my_error_ptr myerr = (my_error_ptr) cinfo->err;
+    auto myerr = (my_error_ptr) cinfo->err;
 
     /* Always display the message. */
     /* We could postpone this until after returning, if we chose. */
@@ -62,8 +62,8 @@ METHODDEF(void) my_error_exit (j_common_ptr cinfo){
 int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, uint & height, uint & width){
 
     std::string fn = filename;
-    if( fn.substr(fn.find_last_of(".") + 1) != "jpg" && fn.substr(fn.find_last_of(".") + 1) != "jpeg" && fn.substr(fn.find_last_of(".") + 1) != "JPG" && fn.substr(fn.find_last_of(".") + 1) != "JPEG" ) {
-        throw( std::runtime_error("ERROR (read_JPEG_file): File " + fn + " is not JPEG format.") );
+    if( fn.substr(fn.find_last_of('.') + 1) != "jpg" && fn.substr(fn.find_last_of('.') + 1) != "jpeg" && fn.substr(fn.find_last_of('.') + 1) != "JPG" && fn.substr(fn.find_last_of('.') + 1) != "JPEG" ) {
+        helios_runtime_error("ERROR (read_JPEG_file): File " + fn + " is not JPEG format.");
     }
 
     struct jpeg_decompress_struct cinfo;
@@ -71,7 +71,7 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
     struct my_error_mgr jerr;
     FILE * infile;		/* source file */
     JSAMPARRAY buffer;		/*output row buffer */
-    int row_stride;
+    uint row_stride;
 
     if ((infile = fopen(filename, "rb")) == nullptr ) {
         fprintf(stderr, "can't open %s\n", filename);
@@ -101,10 +101,7 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
     width=cinfo.output_width;
     height=cinfo.output_height;
 
-    if(cinfo.output_components!=3){
-        std::cerr << "ERROR: texture does not have RGB components." << std::endl;
-        throw(1);
-    }
+    assert(cinfo.output_components==3);
 
     JSAMPLE* ba;
     while (cinfo.output_scanline < cinfo.output_height) {
@@ -130,7 +127,7 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
     return 0;
 }
 
-int write_JPEG_file ( const char* filename, const uint width, const uint height, void* _window ){
+int write_JPEG_file ( const char* filename, uint width, uint height, void* _window ){
 
     std::cout << "writing JPEG image: " << filename << std::endl;
 
@@ -139,7 +136,7 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
     screen_shot_trans.resize(bsize);
 
     glfwSwapBuffers((GLFWwindow*)_window);
-    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
+    glReadPixels(0, 0, GLsizei(width), GLsizei(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
 
     //depending on the active frame buffer, we may get all zero data and need to swap it again.
     bool zeros = true;
@@ -152,7 +149,7 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
 
         glfwSwapBuffers((GLFWwindow*)_window);
 
-        glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
+        glReadPixels(0, 0, GLsizei(width), GLsizei(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
 
     }
 
@@ -169,7 +166,7 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
     jpeg_create_compress(&cinfo);
 
     if ((outfile = fopen(filename, "wb")) == nullptr ) {
-        throw( std::runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename)));
+        helios_runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename));
     }
     jpeg_stdio_dest(&cinfo, outfile);
 
@@ -203,9 +200,7 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
 
 int write_JPEG_file ( const char* filename, const uint width, const uint height, const std::vector<helios::RGBcolor>& data ){
 
-    if( data.size()!=width*height ){
-        throw( std::runtime_error("ERROR (write_JPEG_file): Pixel data does not have size of width*height.") );
-    }
+    assert( data.size()==width*height );
 
     std::cout << "writing JPEG image: " << filename << std::endl;
 
@@ -215,9 +210,9 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
 
     size_t ii = 0;
     for( size_t i=0; i<width*height; i++ ){
-        screen_shot_trans.at(ii) = data.at(i).r*255;
-        screen_shot_trans.at(ii+1) = data.at(i).g*255;
-        screen_shot_trans.at(ii+2) = data.at(i).b*255;
+        screen_shot_trans.at(ii) = (unsigned char)data.at(i).r*255;
+        screen_shot_trans.at(ii+1) = (unsigned char)data.at(i).g*255;
+        screen_shot_trans.at(ii+2) = (unsigned char)data.at(i).b*255;
         ii+=3;
     }
 
@@ -234,7 +229,7 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
     jpeg_create_compress(&cinfo);
 
     if ((outfile = fopen(filename, "wb")) == nullptr ) {
-        throw( std::runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename)));
+        helios_runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename));
     }
     jpeg_stdio_dest(&cinfo, outfile);
 
@@ -269,8 +264,8 @@ int write_JPEG_file ( const char* filename, const uint width, const uint height,
 void read_png_file( const char* filename, std::vector<unsigned char> &texture, uint & height, uint & width){
 
     std::string fn = filename;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ){
-        throw( std::runtime_error("ERROR (read_PNG_file): File " + fn + " is not PNG format.") );
+    if( fn.substr(fn.find_last_of('.') + 1) != "png" && fn.substr(fn.find_last_of('.') + 1) != "PNG" ){
+        helios_runtime_error("ERROR (read_PNG_file): File " + fn + " is not PNG format.");
     }
 
     int x, y;
@@ -288,8 +283,7 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
     /* open file and test for it being a png */
     FILE *fp = fopen(filename, "rb");
     if (!fp){
-        std::cerr << "ERROR (read_png_file): File " << filename << " could not be opened for reading" << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (read_png_file): File " + std::string(filename) + " could not be opened for reading");
     }
     size_t sz = fread(header, 1, 8, fp);
     // if (png_sig_cmp(header, 0, 8)){
@@ -298,22 +292,19 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
     // }
 
     /* initialize stuff */
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
     if (!png_ptr){
-        std::cerr << "ERROR (read_png_file): png_create_read_struct failed." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (read_png_file): png_create_read_struct failed.");
     }
 
     info_ptr = png_create_info_struct(png_ptr);
     if (!info_ptr){
-        std::cerr << "ERROR (read_png_file): png_create_info_struct failed." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (read_png_file): png_create_info_struct failed.");
     }
 
     if (setjmp(png_jmpbuf(png_ptr))){
-        std::cerr << "ERROR (read_png_file): init_io failed." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (read_png_file): init_io failed.");
     }
 
     png_init_io(png_ptr, fp);
@@ -331,8 +322,7 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
 
     /* read file */
     if (setjmp(png_jmpbuf(png_ptr))){
-        std::cerr << "ERROR (read_png_file): read_image failed." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (read_png_file): read_image failed.");
     }
 
     row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
@@ -361,20 +351,20 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
 
 }
 
-Visualizer::Visualizer( uint __Wdisplay ){
-    initialize(__Wdisplay,__Wdisplay*0.8,16,true);
+Visualizer::Visualizer( uint Wdisplay ) : colormap_current(), colormap_lava(), colormap_rainbow(), colormap_gray(), colormap_cool(), colormap_parula(), colormap_hot() {
+    initialize(Wdisplay, uint(std::round(Wdisplay * 0.8)), 16, true);
 }
 
-Visualizer::Visualizer( uint __Wdisplay, uint __Hdisplay ){
-    initialize(__Wdisplay,__Hdisplay,16,true);
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay ) : colormap_lava(), colormap_current(), colormap_cool(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_hot() {
+    initialize(Wdisplay, Hdisplay, 16, true);
 }
 
-Visualizer::Visualizer( uint __Wdisplay, uint __Hdisplay, int aliasing_samples ){
-    initialize(__Wdisplay,__Hdisplay,aliasing_samples,true);
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples ) : colormap_lava(), colormap_cool(), colormap_rainbow(), colormap_current(), colormap_hot(), colormap_parula(), colormap_gray() {
+    initialize(Wdisplay, Hdisplay, aliasing_samples, true);
 }
 
-Visualizer::Visualizer( uint __Wdisplay, uint __Hdisplay, int aliasing_samples, bool window_decorations ){
-    initialize(__Wdisplay,__Hdisplay,aliasing_samples,window_decorations);
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations ) : colormap_current(), colormap_cool(), colormap_gray(), colormap_hot(), colormap_parula(), colormap_rainbow(), colormap_lava() {
+    initialize(Wdisplay, Hdisplay, aliasing_samples, window_decorations);
 }
 
 void Visualizer::openWindow(){
@@ -383,11 +373,12 @@ void Visualizer::openWindow(){
     GLFWwindow* _window;
     _window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", nullptr, nullptr);
     if( _window == nullptr ){
-        fprintf( stderr, "Failed to initialize graphics.\n" );
-        fprintf( stderr, "Common causes for this error:\n");
-        fprintf( stderr, "-- OSX\n  - Is XQuartz installed (xquartz.org) and configured as the default X11 window handler?  When running the visualizer, XQuartz should automatically open and appear in the dock, indicating it is working.\n" );
-        fprintf( stderr, "-- Linux\n  - Are you running this program remotely via SSH? Remote X11 graphics along with OpenGL are not natively supported.  Installing and using VirtualGL is a good solution for this (virtualgl.org).\n" );
-        throw(1);
+        std::string errorsrtring;
+        errorsrtring.append("ERROR(Visualizer): Failed to initialize graphics.\n");
+        errorsrtring.append("Common causes for this error:\n");
+        errorsrtring.append("-- OSX\n  - Is XQuartz installed (xquartz.org) and configured as the default X11 window handler?  When running the visualizer, XQuartz should automatically open and appear in the dock, indicating it is working.\n" );
+        errorsrtring.append("-- Linux\n  - Are you running this program remotely via SSH? Remote X11 graphics along with OpenGL are not natively supported.  Installing and using VirtualGL is a good solution for this (virtualgl.org).\n" );
+        helios_runtime_error(errorsrtring);
     }
     glfwMakeContextCurrent(_window);
 
@@ -419,8 +410,7 @@ void Visualizer::openWindow(){
     // Initialize GLEW
     glewExperimental=GL_TRUE; // Needed in core profile
     if (glewInit() != GLEW_OK) {
-        fprintf(stderr, "Failed to initialize GLEW\n");
-        throw(1);
+        helios_runtime_error("ERROR(Visualizer): Failed to initialize GLEW.");
     }
 
     //NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
@@ -428,10 +418,10 @@ void Visualizer::openWindow(){
 
 }
 
-void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samples, bool window_decorations ){
+void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations ){
 
-    Wdisplay = __Wdisplay;
-    Hdisplay = __Hdisplay;
+    Wdisplay = window_width_pixels;
+    Hdisplay = window_height_pixels;
 
     message_flag = true;
 
@@ -467,8 +457,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
 
     // Initialise GLFW
     if( !glfwInit() ){
-        fprintf( stderr, "Failed to initialize GLFW\n" );
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW" );
     }
 
     glfwWindowHint(GLFW_SAMPLES, std::max(0,aliasing_samples) ); // antialiasing
@@ -487,14 +476,13 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
     // Initialize GLEW
     glewExperimental=GL_TRUE; // Needed in core profile
     if (glewInit() != GLEW_OK) {
-        fprintf(stderr, "Failed to initialize GLEW\n");
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
     }
 
     //NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
     glGetError();
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     // Enable relevant parameters
 
@@ -518,21 +506,21 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
     glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     //glEnable(GL_TEXTURE1);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
     glDisable(GL_CULL_FACE);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
 
     primaryShader.initialize( "plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag" );
     depthShader.initialize( "plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag" );
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     primaryShader.useShader();
     //currentShader = &primaryShader;
@@ -548,7 +536,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
     glActiveTexture(GL_TEXTURE1);
     glGenTextures(1, &depthTexture);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 8192, 8192, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 8192, 8192, 0,GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     //glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 16384, 16384, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -559,7 +547,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
 
@@ -571,10 +559,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
     while( glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks<max_checks ){
         checks++;
     }
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-        std::cout << "Problem with framebuffer." << std::endl;
-        throw(1);
-    }
+    assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
 
     // Initialize transformation matrices
@@ -591,7 +576,7 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
     glGenBuffers(1, &textureFlagBuffer);
     glGenBuffers(1, &coordinateFlagBuffer);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     // Default values
 
@@ -601,102 +586,80 @@ void Visualizer::initialize( uint __Wdisplay, uint __Hdisplay, int aliasing_samp
 
     primaryLightingModel.push_back( Visualizer::LIGHTING_NONE );
 
-    center = make_vec3(0,0,0);
-    eye = center + sphere2cart( make_SphericalCoord(2.f,90.f*M_PI/180.f,0) );
+    camera_lookat_center = make_vec3(0,0,0);
+    camera_eye_location = camera_lookat_center + sphere2cart( make_SphericalCoord(2.f,90.f*M_PI/180.f,0) );
 
     backgroundColor = make_RGBcolor( 0.8, 0.8, 0.8 );
 
     //colormaps
 
     //HOT
-    std::vector<RGBcolor> ctable_c;
-    ctable_c.push_back( make_RGBcolor( 0.f, 0.f, 0.f ) );
-    ctable_c.push_back( make_RGBcolor( 0.5f, 0.f, 0.5f ) );
-    ctable_c.push_back( make_RGBcolor( 1.f, 0.f, 0.f ) );
-    ctable_c.push_back( make_RGBcolor( 1.f, 0.5f, 0.f ) );
-    ctable_c.push_back( make_RGBcolor( 1.f, 1.f, 0.f ) );
+    std::vector<RGBcolor> ctable_c{
+            make_RGBcolor(0.f, 0.f, 0.f),
+            make_RGBcolor(0.5f, 0.f, 0.5f),
+            make_RGBcolor( 1.f, 0.f, 0.f ),
+            make_RGBcolor( 1.f, 0.5f, 0.f ),
+            make_RGBcolor( 1.f, 1.f, 0.f )
+    };
 
-    std::vector<float> clocs_c;
-    clocs_c.push_back( 0.f );
-    clocs_c.push_back( 0.25f );
-    clocs_c.push_back( 0.5f );
-    clocs_c.push_back( 0.75f );
-    clocs_c.push_back( 1.f );
+    std::vector<float> clocs_c{0.f, 0.25f, 0.5f, 0.75f, 1.f};
 
     colormap_hot.set( ctable_c, clocs_c, 100, 0, 1 );
 
     //COOL
-    ctable_c.resize(0);
-    ctable_c.push_back( RGB::cyan );
-    ctable_c.push_back( RGB::magenta );
+    ctable_c = {RGB::cyan, RGB::magenta};
 
-    clocs_c.resize(0);
-    clocs_c.push_back( 0.f );
-    clocs_c.push_back( 1.f );
+    clocs_c = {0.f, 1.f};
 
     colormap_cool.set( ctable_c, clocs_c, 100, 0, 1 );
 
     //LAVA
-    ctable_c.resize(0);
-    ctable_c.push_back( make_RGBcolor( 0.f, 0.05f, 0.05f ) );
-    ctable_c.push_back( make_RGBcolor( 0.f, 0.6f, 0.6f ) );
-    ctable_c.push_back( make_RGBcolor( 1.f, 1.f, 1.f ) );
-    ctable_c.push_back( make_RGBcolor( 1.f, 0.f, 0.f ) );
-    ctable_c.push_back( make_RGBcolor( 0.5f, 0.f, 0.f ) );
+    ctable_c = {
+            make_RGBcolor(0.f, 0.05f, 0.05f),
+            make_RGBcolor( 0.f, 0.6f, 0.6f ),
+            make_RGBcolor( 1.f, 1.f, 1.f ),
+            make_RGBcolor( 1.f, 0.f, 0.f ),
+            make_RGBcolor( 0.5f, 0.f, 0.f )
+    };
 
-    clocs_c.resize(0);
-    clocs_c.push_back( 0.f );
-    clocs_c.push_back( 0.4f );
-    clocs_c.push_back( 0.5f );
-    clocs_c.push_back( 0.6f );
-    clocs_c.push_back( 1.f );
+    clocs_c = { 0.f, 0.4f, 0.5f, 0.6f, 1.f };
 
     colormap_lava.set( ctable_c, clocs_c, 100, 0, 1 );
 
     //RAINBOW
-    ctable_c.resize(0);
-    ctable_c.push_back( RGB::navy );
-    ctable_c.push_back( RGB::cyan );
-    ctable_c.push_back( RGB::yellow );
-    ctable_c.push_back( make_RGBcolor( 0.75f, 0.f, 0.f ) );
+    ctable_c = {
+            RGB::navy,
+            RGB::cyan,
+            RGB::yellow,
+            make_RGBcolor(0.75f, 0.f, 0.f)
+    };
 
-    clocs_c.resize(0);
-    clocs_c.push_back( 0.f );
-    clocs_c.push_back( 0.3f );
-    clocs_c.push_back( 0.7f );
-    clocs_c.push_back( 1.f );
+    clocs_c = {0, 0.3f, 0.7f, 1.f};
 
     colormap_rainbow.set( ctable_c, clocs_c, 100, 0, 1 );
 
     //PARULA
-    ctable_c.resize(0);
-    ctable_c.push_back( RGB::navy );
-    ctable_c.push_back( make_RGBcolor(0,0.6,0.6) );
-    ctable_c.push_back( RGB::goldenrod );
-    ctable_c.push_back( RGB::yellow );
+    ctable_c = {
+            RGB::navy,
+            make_RGBcolor(0,0.6,0.6),
+            RGB::goldenrod,
+            RGB::yellow
+    };
 
-    clocs_c.resize(0);
-    clocs_c.push_back( 0.f );
-    clocs_c.push_back( 0.4f );
-    clocs_c.push_back( 0.7f );
-    clocs_c.push_back( 1.f );
+    clocs_c = {0, 0.4f, 0.7f, 1.f};
 
     colormap_parula.set( ctable_c, clocs_c, 100, 0, 1 );
 
     //GRAY
-    ctable_c.resize(0);
-    ctable_c.push_back( RGB::black );
-    ctable_c.push_back( RGB::white );
+    ctable_c = { RGB::black, RGB::white };
 
-    clocs_c.resize(0);
-    clocs_c.push_back( 0.f );
-    clocs_c.push_back( 1.f );
+    clocs_c = {0.f, 1.f };
 
     colormap_gray.set( ctable_c, clocs_c, 100, 0, 1 );
 
     colormap_current = colormap_hot;
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     if( message_flag ){
         std::cout << "done." << std::endl;
@@ -714,10 +677,10 @@ Visualizer::~Visualizer(){
     glDeleteBuffers(1, &textureFlagBuffer);
     glDeleteBuffers(1, &coordinateFlagBuffer);
 
-    for( std::map<std::string,std::vector<int> >::iterator iter=textureIDData.begin(); iter!=textureIDData.end(); ++iter ){
+    for( auto iter=textureIDData.begin(); iter!=textureIDData.end(); ++iter ){
         std::vector<int> ID = textureIDData.at(iter->first);
-        for( int i=0; i<ID.size(); i++ ){
-            uint IDu = uint(ID.at(i));
+        for(int i : ID){
+            uint IDu = uint(i);
             glDeleteTextures(1, &IDu );
         }
     }
@@ -726,9 +689,11 @@ Visualizer::~Visualizer(){
     glfwTerminate();
 }
 
-int Visualizer::selfTest(){
+int Visualizer::selfTest() {
 
-    std::cout << "Running visualizer self-test..." << std::flush;
+    if( message_flag ){
+        std::cout << "Running visualizer self-test..." << std::flush;
+    }
 
     Visualizer visualizer( 1000 );
 
@@ -781,9 +746,9 @@ int Visualizer::selfTest(){
 
     //---- disks ----//
 
-    visualizer.addDiskByCenter( make_vec3(0,3,0), make_vec2(sqrt(2)/2.f,sqrt(2)/2.f), make_SphericalCoord(0,0), 50, RGB::blue, Visualizer::COORDINATES_CARTESIAN );
+    visualizer.addDiskByCenter( make_vec3(0,3,0), make_vec2(sqrtf(2)/2.f,sqrtf(2)/2.f), make_SphericalCoord(0,0), 50, RGB::blue, Visualizer::COORDINATES_CARTESIAN );
 
-    visualizer.addDiskByCenter( make_vec3(-3,3,0), make_vec2(sqrt(2)/2.f,sqrt(2)/2.f), make_SphericalCoord(0,0), 50, "plugins/visualizer/textures/compass.jpg", Visualizer::COORDINATES_CARTESIAN );
+    visualizer.addDiskByCenter( make_vec3(-3,3,0), make_vec2(sqrtf(2)/2.f,sqrtf(2)/2.f), make_SphericalCoord(0,0), 50, "plugins/visualizer/textures/compass.jpg", Visualizer::COORDINATES_CARTESIAN );
 
     //---- lines ----//
 
@@ -800,32 +765,31 @@ int Visualizer::selfTest(){
 
 }
 
-void Visualizer::enableMessages(void){
+void Visualizer::enableMessages() {
     message_flag = true;
 }
 
-void Visualizer::disableMessages(void){
+void Visualizer::disableMessages() {
     message_flag = false;
 }
 
-void Visualizer::setCameraPosition( vec3 cameraPosition, vec3 lookAt ){
-    eye = cameraPosition;
-    center = lookAt;
+void Visualizer::setCameraPosition(const helios::vec3 &cameraPosition, const helios::vec3 &lookAt ){
+    camera_eye_location = cameraPosition;
+    camera_lookat_center = lookAt;
 }
 
-void Visualizer::setCameraPosition( SphericalCoord cameraAngle, vec3 lookAt ){
-    center = lookAt;
-    eye = center + sphere2cart(cameraAngle);vec3 camvec = eye-center;
+void Visualizer::setCameraPosition(const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt ){
+    camera_lookat_center = lookAt;
+    camera_eye_location = camera_lookat_center + sphere2cart(cameraAngle);vec3 camvec = camera_eye_location-camera_lookat_center;
 }
 
-void Visualizer::setCameraFieldOfView( const float angle_FOV ){
+void Visualizer::setCameraFieldOfView( float angle_FOV ){
     camera_FOV = angle_FOV;
 }
 
-void Visualizer::setLightDirection( vec3 direction ){
+void Visualizer::setLightDirection(const helios::vec3 &direction ){
 
-    direction.normalize();
-    light_direction = direction;
+    light_direction = direction/direction.magnitude();
     primaryShader.setLightDirection(direction);
 
 }
@@ -882,7 +846,7 @@ void Visualizer::getDomainBoundingBox( vec2& xbounds, vec2& ybounds, vec2& zboun
 
 }
 
-float Visualizer::getDomainBoundingRadius( void ) const{
+float Visualizer::getDomainBoundingRadius() const{
 
     vec2 xbounds, ybounds, zbounds;
     getDomainBoundingBox( xbounds, ybounds, zbounds );
@@ -896,17 +860,17 @@ float Visualizer::getDomainBoundingRadius( void ) const{
 
 }
 
-void Visualizer::setLightingModel( LightingModel lightingmodel ){
+void Visualizer::setLightingModel(LightingModel lightingmodel ){
     for( uint i=0; i<primaryLightingModel.size(); i++ ){
         primaryLightingModel.at(i) = lightingmodel;
     }
 }
 
-void Visualizer::setBackgroundColor( helios::RGBcolor color ){
+void Visualizer::setBackgroundColor(const helios::RGBcolor &color ){
     backgroundColor = color;
 }
 
-void Visualizer::printWindow( void ){
+void Visualizer::printWindow() {
 
     char outfile[100];
     if( context!=nullptr ){//context has been given to visualizer via buildContextGeometry()
@@ -933,7 +897,7 @@ void Visualizer::getWindowPixelsRGB( uint * buffer ){
     buff.resize( 3*Wframebuffer*Hframebuffer );
 
     glfwSwapBuffers((GLFWwindow*)window);
-    glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
+    glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
 
     //depending on the active frame buffer, we may get all zero data and need to swap it again.
     bool zeros = true;
@@ -946,13 +910,12 @@ void Visualizer::getWindowPixelsRGB( uint * buffer ){
 
         glfwSwapBuffers((GLFWwindow*)window);
 
-        glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
+        glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
 
     }
 
     //assert( checkerrors() );
 
-    //buffer.resize(3*Wframebuffer*Hframebuffer);
     for( int i=0; i<3*Wframebuffer*Hframebuffer; i++ ){
         buffer[i] = (unsigned int)buff[i];
     }
@@ -961,31 +924,30 @@ void Visualizer::getWindowPixelsRGB( uint * buffer ){
 
 void Visualizer::getDepthMap( float * buffer ){
 
-    if( depth_buffer_data.size()==0 ){
-        std::cerr << "ERROR (getDepthMap): No depth map data available. You must run 'plotDepthMap' before depth map can be retreived." << std::endl;
-        throw(1);
+    if( depth_buffer_data.empty() ){
+        helios_runtime_error("ERROR (Visualizer::getDepthMap): No depth map data available. You must run 'plotDepthMap' before depth map can be retrieved.");
     }
 
-    updatePerspectiveTransformation( center, eye );
+    updatePerspectiveTransformation( camera_lookat_center, camera_eye_location );
 
     for( int i=0; i<depth_buffer_data.size(); i++ ){
-        buffer[i] = -perspectiveTransformationMatrix[3].z/(depth_buffer_data.at(i) * -2.0 + 1.0 - perspectiveTransformationMatrix[2].z);
+        buffer[i] = -perspectiveTransformationMatrix[3].z/(depth_buffer_data.at(i) * -2.0f + 1.0f - perspectiveTransformationMatrix[2].z);
         //buffer[i] = -(depth_buffer_data.at(i) * 2.0 - 1.0 - perspectiveTransformationMatrix[3].z)/perspectiveTransformationMatrix[2].z;
     }
 
 }
 
-void Visualizer::getWindowSize( uint &width, uint &height ){
+void Visualizer::getWindowSize( uint &width, uint &height ) const{
     width = Wdisplay;
     height = Hdisplay;
 }
 
-void Visualizer::getFramebufferSize( uint &width, uint &height ){
+void Visualizer::getFramebufferSize( uint &width, uint &height ) const{
     width = Wframebuffer;
     height = Hframebuffer;
 }
 
-void Visualizer::clearGeometry( void ){
+void Visualizer::clearGeometry() {
     positionData.clear();
     colorData.clear();
     normalData.clear();
@@ -1001,20 +963,20 @@ void Visualizer::clearGeometry( void ){
     group_start.clear();
 }
 
-void Visualizer::closeWindow( void ){
+void Visualizer::closeWindow() {
     glfwHideWindow( (GLFWwindow*) window);
     glfwPollEvents();
 }
 
-void Visualizer::hideWatermark( void ){
+void Visualizer::hideWatermark() {
     isWatermarkVisible = false;
 }
 
-void Visualizer::showWatermark( void ){
+void Visualizer::showWatermark() {
     isWatermarkVisible = true;
 }
 
-void Visualizer::updatePerspectiveTransformation( const vec3 center, const vec3 eye ){
+void Visualizer::updatePerspectiveTransformation(const helios::vec3 &center, const helios::vec3 &eye ){
 
     float m = fmax( fabs(center.x-eye.x), fmax( fabs(center.y-eye.y), fabs(center.z-eye.z) ) );
     glm::mat4 Projection = glm::perspective( glm::radians(camera_FOV), float(Wdisplay)/float(Hdisplay), 0.01f*m, 100.f*m );
@@ -1023,7 +985,7 @@ void Visualizer::updatePerspectiveTransformation( const vec3 center, const vec3 
     perspectiveTransformationMatrix = Projection * View ;
 }
 
-void Visualizer::updateCustomTransformation( const glm::mat4 matrix ){
+void Visualizer::updateCustomTransformation(const glm::mat4 &matrix ){
     customTransformationMatrix = matrix;
 }
 
@@ -1158,18 +1120,18 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     if( coordFlag == COORDINATES_WINDOW_NORMALIZED ){ //No vertex transformation (i.e., identity matrix)
 
         //Check that coordinates are inside drawable area
-        for( uint i=0; i<vertices.size(); i++ ){
-            if( vertices.at(i).x<0.f || vertices.at(i).x>1.f ){
+        for(auto vertex : vertices){
+            if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( vertices.at(i).y<0.f || vertices.at(i).y>1.f ){
+            }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( vertices.at(i).z<-1.f || vertices.at(i).z>1.f ){
+            }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1237,7 +1199,8 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     normalData["triangle"].insert( normalData["triangle"].end(), normal_data.begin(), normal_data.end() );
     uvData["triangle"].insert( uvData["triangle"].end(), uv_data.begin(), uv_data.end() );
 
-    std::vector<int> texture_data, coord_data;;
+    std::vector<int> texture_data;
+    std::vector<int> coord_data;
     texture_data.resize(6,0);
     textureFlagData["triangle"].insert( textureFlagData["triangle"].end(), texture_data.begin(), texture_data.end() );
     textureIDData["triangle"].insert( textureIDData["triangle"].end(), texture_data.begin(), texture_data.end() );
@@ -1249,17 +1212,10 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
 void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const char* texture_file, CoordinateSystem coordFlag ){
     std::vector<vec2> uvs;
     uvs.resize(4);
-    if( coordFlag==COORDINATES_CARTESIAN ){
-        uvs.at(0) = make_vec2(0,0);
-        uvs.at(1) = make_vec2(1,0);
-        uvs.at(2) = make_vec2(1,1);
-        uvs.at(3) = make_vec2(0,1);
-    }else{
-        uvs.at(0) = make_vec2(0,0);
-        uvs.at(1) = make_vec2(1,0);
-        uvs.at(2) = make_vec2(1,1);
-        uvs.at(3) = make_vec2(0,1);
-    }
+    uvs.at(0) = make_vec2(0,0);
+    uvs.at(1) = make_vec2(1,0);
+    uvs.at(2) = make_vec2(1,1);
+    uvs.at(3) = make_vec2(0,1);
     addRectangleByVertices(vertices,texture_file,uvs,coordFlag);
 }
 
@@ -1270,18 +1226,18 @@ void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const
     if( coordFlag == COORDINATES_WINDOW_NORMALIZED ){ //No vertex transformation (i.e., identity matrix)
 
         //Check that coordinates are inside drawable area
-        for( uint i=0; i<vertices.size(); i++ ){
-            if( vertices.at(i).x<0.f || vertices.at(i).x>1.f ){
+        for(auto vertex : vertices){
+            if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( vertices.at(i).y<0.f || vertices.at(i).y>1.f ){
+            }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( vertices.at(i).z<-1.f || vertices.at(i).z>1.f ){
+            }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1317,49 +1273,43 @@ void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const
     position_data.at(0) = v.at(0).x;
     position_data.at(1) = v.at(0).y;
     position_data.at(2) = v.at(0).z;
-    uv_data.at(0) = uvs.at(0).x*(texture_size.x-1);
-//    uv_data.at(1) = uvs.at(0).y*(texture_size.y-1);
-    uv_data.at(1) = (1.f-uvs.at(0).y)*(texture_size.y-1);
+    uv_data.at(0) = uvs.at(0).x*float(texture_size.x-1);
+    uv_data.at(1) = (1.f-uvs.at(0).y)*float(texture_size.y-1);
 
     //Lower right vertex
     position_data.at(3) = v.at(1).x;
     position_data.at(4) = v.at(1).y;
     position_data.at(5) = v.at(1).z;
-    uv_data.at(2) = uvs.at(1).x*(texture_size.x-1);
-//    uv_data.at(3) = uvs.at(1).y*(texture_size.y-1);
-    uv_data.at(3) = (1.f-uvs.at(1).y)*(texture_size.y-1);
+    uv_data.at(2) = uvs.at(1).x*float(texture_size.x-1);
+    uv_data.at(3) = (1.f-uvs.at(1).y)*float(texture_size.y-1);
 
     //Upper right vertex
     position_data.at(6) = v.at(2).x;
     position_data.at(7) = v.at(2).y;
     position_data.at(8) = v.at(2).z;
-    uv_data.at(4) = uvs.at(2).x*(texture_size.x-1);
-//    uv_data.at(5) = uvs.at(2).y*(texture_size.y-1);
-    uv_data.at(5) = (1.f-uvs.at(2).y)*(texture_size.y-1);
+    uv_data.at(4) = uvs.at(2).x*float(texture_size.x-1);
+    uv_data.at(5) = (1.f-uvs.at(2).y)*float(texture_size.y-1);
 
     //Lower left vertex
     position_data.at(9) = v.at(0).x;
     position_data.at(10) = v.at(0).y;
     position_data.at(11) = v.at(0).z;
-    uv_data.at(6) = uvs.at(0).x*(texture_size.x-1);
-//    uv_data.at(7) = uvs.at(0).y*(texture_size.y-1);
-    uv_data.at(7) = (1.f-uvs.at(0).y)*(texture_size.y-1);
+    uv_data.at(6) = uvs.at(0).x*float(texture_size.x-1);
+    uv_data.at(7) = (1.f-uvs.at(0).y)*float(texture_size.y-1);
 
     //Upper right vertex
     position_data.at(12) = v.at(2).x;
     position_data.at(13) = v.at(2).y;
     position_data.at(14) = v.at(2).z;
-    uv_data.at(8) = uvs.at(2).x*(texture_size.x-1);
-//    uv_data.at(9) = uvs.at(2).y*(texture_size.y-1);
-    uv_data.at(9) = (1.f-uvs.at(2).y)*(texture_size.y-1);
+    uv_data.at(8) = uvs.at(2).x*float(texture_size.x-1);
+    uv_data.at(9) = (1.f-uvs.at(2).y)*float(texture_size.y-1);
 
     //Upper left vertex
     position_data.at(15) = v.at(3).x;
     position_data.at(16) = v.at(3).y;
     position_data.at(17) = v.at(3).z;
-    uv_data.at(10) = uvs.at(3).x*(texture_size.x-1);
-//    uv_data.at(11) = uvs.at(3).y*(texture_size.y-1);
-    uv_data.at(11) = (1.f-uvs.at(3).y)*(texture_size.y-1);
+    uv_data.at(10) = uvs.at(3).x*float(texture_size.x-1);
+    uv_data.at(11) = (1.f-uvs.at(3).y)*float(texture_size.y-1);
 
     positionData["triangle"].insert( positionData["triangle"].end(), position_data.begin(), position_data.end() );
     colorData["triangle"].insert( colorData["triangle"].end(), color_data.begin(), color_data.end() );
@@ -1369,8 +1319,7 @@ void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const
     std::vector<int> texture_data, coord_data;
     texture_data.resize(6,1);
     textureFlagData["triangle"].insert( textureFlagData["triangle"].end(), texture_data.begin(), texture_data.end() );
-    texture_data.resize(0);
-    texture_data.resize(6,textureID);
+    texture_data.assign(6, textureID);
     textureIDData["triangle"].insert( textureIDData["triangle"].end(), texture_data.begin(), texture_data.end() );
     coord_data.resize(6,coordFlag);
     coordinateFlagData["triangle"].insert( coordinateFlagData["triangle"].end(), coord_data.begin(), coord_data.end() );
@@ -1380,17 +1329,10 @@ void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const
 void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, const RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag ){
     std::vector<vec2> uvs;
     uvs.resize(4);
-    if( coordFlag==COORDINATES_CARTESIAN ){
-        uvs.at(0) = make_vec2(0,0);
-        uvs.at(1) = make_vec2(1,0);
-        uvs.at(2) = make_vec2(1,1);
-        uvs.at(3) = make_vec2(0,1);
-    }else{
-        uvs.at(0) = make_vec2(0,0);
-        uvs.at(1) = make_vec2(1,0);
-        uvs.at(2) = make_vec2(1,1);
-        uvs.at(3) = make_vec2(0,1);
-    }
+    uvs.at(0) = make_vec2(0,0);
+    uvs.at(1) = make_vec2(1,0);
+    uvs.at(2) = make_vec2(1,1);
+    uvs.at(3) = make_vec2(0,1);
     addRectangleByVertices( vertices, color, texture_file, uvs, coordFlag );
 
 }
@@ -1402,18 +1344,18 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     if( coordFlag == COORDINATES_WINDOW_NORMALIZED ){ //No vertex transformation (i.e., identity matrix)
 
         //Check that coordinates are inside drawable area
-        for( uint i=0; i<vertices.size(); i++ ){
-            if( vertices.at(i).x<0.f || vertices.at(i).x>1.f ){
+        for(auto vertex : vertices){
+            if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( vertices.at(i).y<0.f || vertices.at(i).y>1.f ){
+            }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( vertices.at(i).z<-1.f || vertices.at(i).z>1.f ){
+            }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1506,8 +1448,7 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     std::vector<int> texture_data, coord_data;
     texture_data.resize(6,2);
     textureFlagData["triangle"].insert( textureFlagData["triangle"].end(), texture_data.begin(), texture_data.end() );
-    texture_data.resize(0);
-    texture_data.resize(6,textureID);
+    texture_data.assign(6,textureID);
     textureIDData["triangle"].insert( textureIDData["triangle"].end(), texture_data.begin(), texture_data.end() );
     coord_data.resize(6,coordFlag);
     coordinateFlagData["triangle"].insert( coordinateFlagData["triangle"].end(), coord_data.begin(), coord_data.end() );
@@ -1525,18 +1466,18 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     if( coordFlag == COORDINATES_WINDOW_NORMALIZED ){ //No vertex transformation (i.e., identity matrix)
 
         //Check that coordinates are inside drawable area
-        for( uint i=0; i<vertices.size(); i++ ){
-            if( vertices.at(i).x<0.f || vertices.at(i).x>1.f ){
+        for(auto vertex : vertices){
+            if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `x' position ( " << vertices.at(i).x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( vertices.at(i).y<0.f || vertices.at(i).y>1.f ){
+            }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `y' position ( " << vertices.at(i).y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( vertices.at(i).z<-1.f || vertices.at(i).z>1.f ){
+            }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `z' position ( " << vertices.at(i).z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1623,8 +1564,7 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     std::vector<int> texture_data, coord_data;
     texture_data.resize(6,3);
     textureFlagData["triangle"].insert( textureFlagData["triangle"].end(), texture_data.begin(), texture_data.end() );
-    texture_data.resize(0);
-    texture_data.resize(6,textureID);
+    texture_data.assign(6,textureID);
     textureIDData["triangle"].insert( textureIDData["triangle"].end(), texture_data.begin(), texture_data.end() );
     coord_data.resize(6,coordFlag);
     coordinateFlagData["triangle"].insert( coordinateFlagData["triangle"].end(), coord_data.begin(), coord_data.end() );
@@ -1642,35 +1582,31 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
     if( coordFlag == 0 ){ //No vertex transformation (i.e., identity matrix)
 
         //Check that coordinates are inside drawable area
-        for( uint i=0; i<v.size(); i++ ){
-            if( v.at(i).x<0.f || v.at(i).x>1.f ){
+        for(auto & vertex : v){
+            if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Triangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( v.at(i).y<0.f || v.at(i).y>1.f ){
+            }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Triangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( v.at(i).z<-1.f || v.at(i).z>1.f ){
+            }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Triangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
 
         //NOTE for vertex positions: OpenGL window coordinates range from -1 to 1, but our rectangle coordinates are from 0 to 1 ---- need to convert
-        for( uint i=0; i<v.size(); i++ ){
-            v.at(i).x = 2.f*v.at(i).x - 1.f;
-            v.at(i).y = 2.f*v.at(i).y - 1.f;
+        for(auto & vertex : v){
+            vertex.x = 2.f * vertex.x - 1.f;
+            vertex.y = 2.f * vertex.y - 1.f;
         }
 
     }
 
     std::vector<GLfloat> position_data(9), color_data(12), normal_data(9), uv_data(6);
-//  position_data.resize(9);
-//  color_data.resize(12);
-//  normal_data.resize(9);
-//  uv_data.resize(6);
 
     vec3 normal = cross( vertex1-vertex0, vertex2-vertex0 );
     normal.normalize();
@@ -1733,26 +1669,26 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
     if( coordFlag == 0 ){ //No vertex transformation (i.e., identity matrix)
 
         //Check that coordinates are inside drawable area
-        for( uint i=0; i<v.size(); i++ ){
-            if( v.at(i).x<0.f || v.at(i).x>1.f ){
+        for(auto & vertex : v){
+            if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Triangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( v.at(i).y<0.f || v.at(i).y>1.f ){
+            }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Triangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( v.at(i).z<-1.f || v.at(i).z>1.f ){
+            }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING: Triangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
 
         //NOTE for vertex positions: OpenGL window coordinates range from -1 to 1, but our rectangle coordinates are from 0 to 1 ---- need to convert
-        for( uint i=0; i<v.size(); i++ ){
-            v.at(i).x = 2.f*v.at(i).x - 1.f;
-            v.at(i).y = 2.f*v.at(i).y - 1.f;
+        for(auto & vertex : v){
+            vertex.x = 2.f * vertex.x - 1.f;
+            vertex.y = 2.f * vertex.y - 1.f;
         }
 
     }
@@ -1770,8 +1706,6 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
     position_data[0] = v.at(0).x;
     position_data[1] = v.at(0).y;
     position_data[2] = v.at(0).z;
-//    uv_data[0] = (1.f-uv0.x)*texture_size.x;
-//    uv_data[1] = uv0.y*texture_size.y;
     uv_data[0] = uv0.x*texture_size.x;
     uv_data[1] = (1.f-uv0.y)*texture_size.y;
     normal_data[0] = normal.x;
@@ -1782,8 +1716,6 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
     position_data[3] = v.at(1).x;
     position_data[4] = v.at(1).y;
     position_data[5] = v.at(1).z;
-//    uv_data[2] = (1.f-uv1.x)*texture_size.x;
-//    uv_data[3] = uv1.y*texture_size.y;
     uv_data[2] = uv1.x*texture_size.x;
     uv_data[3] = (1.f-uv1.y)*texture_size.y;
     normal_data[3] = normal.x;
@@ -1794,8 +1726,6 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
     position_data[6] = v.at(2).x;
     position_data[7] = v.at(2).y;
     position_data[8] = v.at(2).z;
-//    uv_data[4] = (1.f-uv2.x)*texture_size.x;
-//    uv_data[5] = uv2.y*texture_size.y;
     uv_data[4] = uv2.x*texture_size.x;
     uv_data[5] = (1.f-uv2.y)*texture_size.y;
     normal_data[6] = normal.x;
@@ -1808,13 +1738,12 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
     uvData["triangle"].insert( uvData["triangle"].end(), uv_data.begin(), uv_data.end() );
 
     std::vector<int> texture_data, coord_data;
-    texture_data.resize(3,1);
+    texture_data.assign(3,1);
     textureFlagData["triangle"].insert( textureFlagData["triangle"].end(), texture_data.begin(), texture_data.end() );
-    texture_data.resize(0);
-    texture_data.resize(3,textureID);
+    texture_data.assign(3,textureID);
     textureIDData["triangle"].insert( textureIDData["triangle"].end(), texture_data.begin(), texture_data.end() );
 
-    coord_data.resize(3,coordFlag);
+    coord_data.assign(3,coordFlag);
     coordinateFlagData["triangle"].insert( coordinateFlagData["triangle"].end(), coord_data.begin(), coord_data.end() );
 
 }
@@ -2027,7 +1956,7 @@ void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const Sp
     textureFlagData["triangle"].insert( textureFlagData["triangle"].end(), texture_data.begin(), texture_data.end() );
     textureIDData["triangle"].insert( textureIDData["triangle"].end(), texture_data.begin(), texture_data.end() );
 
-    coord_data.resize(position_data.size()/3,coordFlag);
+    coord_data.assign(position_data.size()/3,coordFlag);
     coordinateFlagData["triangle"].insert( coordinateFlagData["triangle"].end(), coord_data.begin(), coord_data.end() );
 
 }
@@ -2102,13 +2031,12 @@ void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const Sp
     uvData["triangle"].insert( uvData["triangle"].end(), uv_data.begin(), uv_data.end() );
 
     std::vector<int> texture_data, coord_data;
-    texture_data.resize(position_data.size()/3,1);
+    texture_data.assign(position_data.size()/3,1);
     textureFlagData["triangle"].insert( textureFlagData["triangle"].end(), texture_data.begin(), texture_data.end() );
-    texture_data.resize(0);
-    texture_data.resize(position_data.size()/3,textureID);
+    texture_data.assign(position_data.size()/3,textureID);
     textureIDData["triangle"].insert( textureIDData["triangle"].end(), texture_data.begin(), texture_data.end() );
 
-    coord_data.resize(position_data.size()/3,coordFlag);
+    coord_data.assign(position_data.size()/3,coordFlag);
     coordinateFlagData["triangle"].insert( coordinateFlagData["triangle"].end(), coord_data.begin(), coord_data.end() );
 
 }
@@ -2134,10 +2062,10 @@ void Visualizer::addLine( const vec3 &start, const vec3 &end, const RGBAcolor &c
 
     std::vector<float> position_data, color_data, normal_data, uv_data;
 
-    position_data.resize( 6, 0 );
-    color_data.resize( 8, 0 );
-    normal_data.resize( 6, 0 );
-    uv_data.resize( 4, 0 );
+    position_data.assign( 6, 0 );
+    color_data.assign( 8, 0 );
+    normal_data.assign( 6, 0 );
+    uv_data.assign( 4, 0 );
 
     //start
     position_data.at(0) = s.x;
@@ -2163,11 +2091,11 @@ void Visualizer::addLine( const vec3 &start, const vec3 &end, const RGBAcolor &c
     uvData["line"].insert( uvData["line"].end(), uv_data.begin(), uv_data.end() );
 
     std::vector<int> texture_data, coord_data;
-    texture_data.resize(position_data.size()/3,0);
+    texture_data.assign(position_data.size()/3,0);
     textureFlagData["line"].insert( textureFlagData["line"].end(), texture_data.begin(), texture_data.end() );
     textureIDData["line"].insert( textureIDData["line"].end(), texture_data.begin(), texture_data.end() );
 
-    coord_data.resize(position_data.size()/3,coordFlag);
+    coord_data.assign(position_data.size()/3,coordFlag);
     coordinateFlagData["line"].insert( coordinateFlagData["line"].end(), coord_data.begin(), coord_data.end() );
 
 }
@@ -2191,10 +2119,10 @@ void Visualizer::addPoint( const vec3 &position, const RGBAcolor &color, uint po
 
     std::vector<float> position_data, color_data,normal_data, uv_data;
 
-    position_data.resize( 3, 0 );
-    color_data.resize( 4, 0 );
-    normal_data.resize( 3, 0 );
-    uv_data.resize( 2, 0 );
+    position_data.assign( 3, 0 );
+    color_data.assign( 4, 0 );
+    normal_data.assign( 3, 0 );
+    uv_data.assign( 2, 0 );
 
     position_data.at(0) = p.x;
     position_data.at(1) = p.y;
@@ -2210,11 +2138,11 @@ void Visualizer::addPoint( const vec3 &position, const RGBAcolor &color, uint po
     uvData["point"].insert( uvData["point"].end(), uv_data.begin(), uv_data.end() );
 
     std::vector<int> texture_data, coord_data;
-    texture_data.resize(position_data.size()/3,0);
+    texture_data.assign(position_data.size()/3,0);
     textureFlagData["point"].insert( textureFlagData["point"].end(), texture_data.begin(), texture_data.end() );
     textureIDData["point"].insert( textureIDData["point"].end(), texture_data.begin(), texture_data.end() );
 
-    coord_data.resize(position_data.size()/3,coordFlag);
+    coord_data.assign(position_data.size()/3,coordFlag);
     coordinateFlagData["point"].insert( coordinateFlagData["point"].end(), coord_data.begin(), coord_data.end() );
 
 }
@@ -2290,8 +2218,8 @@ void Visualizer::addSkyDomeByCenter( float radius, const vec3 &center, uint Ndiv
     std::vector<float> color_data, normal_data;
     std::vector<int> texture_data, coord_data;
 
-    color_data.resize(24,0);
-    normal_data.resize(18,0);
+    color_data.assign(24,0);
+    normal_data.assign(18,0);
 
     for( uint j=1; j<Nphi; j++ ){
         for( uint i=1; i<Ntheta; i++ ){
@@ -2343,14 +2271,12 @@ void Visualizer::addSkyDomeByCenter( float radius, const vec3 &center, uint Ndiv
             uvData["sky"].push_back(uv3.x);
             uvData["sky"].push_back(uv3.y);
 
-            texture_data.resize(0);
-            texture_data.resize(6,1);
+            texture_data.assign(6,1);
             textureFlagData["sky"].insert( textureFlagData["sky"].end(), texture_data.begin(), texture_data.end() );
-            texture_data.resize(0);
-            texture_data.resize(6,textureID);
+            texture_data.assign(6,textureID);
             textureIDData["sky"].insert( textureIDData["sky"].end(), texture_data.begin(), texture_data.end() );
 
-            coord_data.resize(6,COORDINATES_CARTESIAN);
+            coord_data.assign(6,COORDINATES_CARTESIAN);
             coordinateFlagData["sky"].insert( coordinateFlagData["sky"].end(), coord_data.begin(), coord_data.end() );
 
             colorData["sky"].insert( colorData["sky"].end(), color_data.begin(), color_data.end() );
@@ -2370,8 +2296,7 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
 
     //initialize the freetype library
     if(FT_Init_FreeType(&ft)!=0) {
-        fprintf(stderr, "Could not init freetype library\n");
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Could not init freetype library");
     }
 
     std::vector<std::vector<uint> > maskData; //This will hold the letter mask data
@@ -2380,8 +2305,7 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
     char font[100];
     std::snprintf(font,100,"plugins/visualizer/fonts/%s.ttf",fontname);
     if(FT_New_Face(ft, font, 0, &face)!=0) {
-        fprintf(stderr, "Could not open font `%s'\n",fontname);
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Could not open font '" + std::string(fontname) + "'");
     }
 
     //Load the font size
@@ -2403,11 +2327,11 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
             continue;
         float offset=0, scale=1;
         if(strncmp(p,"_",1)==0){ //subscript
-            offset=-0.3*sy;
+            offset=-0.3f*sy;
             scale=0.5;
             continue;
         }else if(strncmp(p,"^",1)==0){ //superscript
-            offset=0.3*sy;
+            offset=0.3f*sy;
             scale=0.5;
             continue;
         }
@@ -2490,7 +2414,7 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
 
 }
 
-void Visualizer::addColorbarByCenter( const char* title, const vec2 size, const vec3 center, const RGBcolor font_color, const Colormap colormap ){
+void Visualizer::addColorbarByCenter(const char* title, const helios::vec2 &size, const helios::vec3 &center, const helios::RGBcolor &font_color, const Colormap &colormap ){
 
     uint Ndivs = 50;
 
@@ -2502,8 +2426,8 @@ void Visualizer::addColorbarByCenter( const char* title, const vec2 size, const 
 
     float dx = size.x/float(Ndivs);
 
-    float cmin = clamp(colormap.getLowerLimit(),-1e7f,1e7f);
-    float cmax = clamp(colormap.getUpperLimit(),-1e7f,1e7f);
+    float cmin = clamp(colormap.getLowerLimit(), -1e7f, 1e7f);
+    float cmax = clamp(colormap.getUpperLimit(), -1e7f, 1e7f);
 
     for( uint i=0; i<Ndivs; i++ ){
 
@@ -2620,7 +2544,7 @@ void Visualizer::addCoordinateAxes(const helios::vec3 &origin, const helios::vec
 }
 
 
-void Visualizer::addGridWireFrame(const helios::vec3 center, const helios::vec3 size, const helios::int3 subdiv){
+void Visualizer::addGridWireFrame(const helios::vec3 &center, const helios::vec3 &size, const helios::int3 &subdiv){
     
     helios::vec3 boxmin, boxmax;
     boxmin = make_vec3(center.x - 0.5*size.x, center.y - 0.5*size.y, center.z - 0.5*size.z);
@@ -2656,52 +2580,48 @@ void Visualizer::addGridWireFrame(const helios::vec3 center, const helios::vec3 
     
 }
 
-void Visualizer::enableColorbar( void ){
+void Visualizer::enableColorbar() {
     colorbar_flag = 2;
 }
 
-void Visualizer::disableColorbar( void ){
+void Visualizer::disableColorbar() {
     colorbar_flag = 1;
 }
 
 void Visualizer::setColorbarPosition( vec3 position ){
     if( position.x < 0 || position.x>1 || position.y<0 || position.y>1 || position.z<-1 || position.z>1 ){
-        std::cerr << "ERROR (setColorbarPosition): position is out of range.  Coordinates must be: 0<x<1, 0<y<1, -1<z<1." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::setColorbarPosition): position is out of range.  Coordinates must be: 0<x<1, 0<y<1, -1<z<1.");
     }
     colorbar_position = position;
 }
 
 void Visualizer::setColorbarSize( vec2 size ){
     if( size.x < 0 || size.x>1 || size.y<0 || size.y>1 ){
-        std::cerr << "ERROR (setColorbarSize): Size must be greater than 0 and less than the window size (i.e., 1)." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::setColorbarSize): Size must be greater than 0 and less than the window size (i.e., 1).");
     }
     colorbar_size = size;
 }
 
 void Visualizer::setColorbarRange( float cmin, float cmax ){
     if( message_flag && cmin>cmax ){
-        std::cout << "WARNING (setColorbarRange): Maximum colorbar value must be greater than minimum value...Ignoring command." << std::endl;
+        std::cout << "WARNING (Visualizer::setColorbarRange): Maximum colorbar value must be greater than minimum value...Ignoring command." << std::endl;
         return;
     }
     colorbar_min = cmin;
     colorbar_max = cmax;
 }
 
-void Visualizer::setColorbarTicks( std::vector<float> ticks ){
+void Visualizer::setColorbarTicks(const std::vector<float> &ticks ){
 
     //check that vector is not empty
-    if( ticks.size()==0 ){
-        std::cerr << "ERROR (setColorbarTicks): Colorbar ticks vector is empty." << std::endl;
-        throw(1);
+    if( ticks.empty() ){
+        helios_runtime_error("ERROR (Visualizer::setColorbarTicks): Colorbar ticks vector is empty.");
     }
 
     //Check that ticks are monotonically increasing
     for( int i=1; i<ticks.size(); i++ ){
         if( ticks.at(i)<=ticks.at(i-1) ){
-            std::cerr << "ERROR (setColorbarTicks): Colorbar ticks must be monotonically increasing." << std::endl;
-            throw(1);
+            helios_runtime_error("ERROR (Visualizer::setColorbarTicks): Colorbar ticks must be monotonically increasing.");
         }
     }
 
@@ -2711,9 +2631,9 @@ void Visualizer::setColorbarTicks( std::vector<float> ticks ){
             colorbar_min = ticks.at(i);
         }
     }
-    for( uint i=0; i<ticks.size(); i++ ){
-        if( ticks.at(i)>colorbar_max ){
-            colorbar_max = ticks.at(i);
+    for( float tick : ticks){
+        if( tick>colorbar_max ){
+            colorbar_max = tick;
         }
     }
 
@@ -2726,8 +2646,7 @@ void Visualizer::setColorbarTitle( const char* title ){
 
 void Visualizer::setColorbarFontSize( uint font_size ){
     if( font_size<=0 ){
-        std::cerr << "ERROR (setColorbarFontSize): Font size must be greater than zero." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::setColorbarFontSize): Font size must be greater than zero.");
     }
     colorbar_fontsize = font_size;
 }
@@ -2750,66 +2669,63 @@ void Visualizer::setColormap( Ctable colormap_name ){
     }else if( colormap_name==COLORMAP_GRAY ){
         colormap_current = colormap_gray;
     }else if( colormap_name==COLORMAP_CUSTOM ){
-        std::cerr << "ERROR (setColormap): Setting a custom colormap requires calling setColormap with additional arguments defining the colormap." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::setColormap): Setting a custom colormap requires calling setColormap with additional arguments defining the colormap.");
     }else{
-        std::cerr << "ERROR (setColormap): " << colormap_name << " is not a valid colormap." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::setColormap): Invalid colormap.");
     }
 }
 
-void Visualizer::setColormap( Ctable colormap_name, std::vector<RGBcolor> colors, std::vector<float> divisions ){
+void Visualizer::setColormap(Ctable colormap_name, const std::vector<RGBcolor> &colors, const std::vector<float> &divisions ){
     if( colormap_name!=COLORMAP_CUSTOM ){
-        std::cerr << "ERROR (setColormap): Setting a custom colormap requires calling setColormap with additional arguments defining the colormap." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (Visualizer::setColormap): Setting a custom colormap requires calling setColormap with additional arguments defining the colormap.");
     }
 
-    Colormap colormap_custom( colors, divisions, 100, colorbar_min, colorbar_max );
+    Colormap colormap_custom( colors, divisions, 100, 0, 1 );
 
     colormap_current = colormap_custom;
 
 }
 
-Colormap Visualizer::getCurrentColormap( void )const{
+Colormap Visualizer::getCurrentColormap() const{
     return colormap_current;
 }
 
-void Visualizer::buildContextGeometry( helios::Context* __context ){
-    std::vector<uint> UUIDs = __context->getAllUUIDs();
-    buildContextGeometry(__context,UUIDs);
+void Visualizer::buildContextGeometry( helios::Context* context_ptr ){
+    std::vector<uint> UUIDs = context_ptr->getAllUUIDs();
+    buildContextGeometry(context_ptr, UUIDs);
 }
 
-void Visualizer::buildContextGeometry( helios::Context* __context, const std::vector<uint>& UUIDs ){
+void Visualizer::buildContextGeometry(helios::Context* context_ptr, const std::vector<uint>& UUIDs ){
 
-    if( UUIDs.size()==0 ){
+    if( UUIDs.empty() ){
         std::cerr << "WARNING (Visualizer::buildContextGeometry): There is no Context geometry to build...exiting." << std::endl;
         return;
     }
 
 
-    context = __context;
+    context = context_ptr;
     contextGeomNeedsUpdate = true;
 
     contextPrimitiveIDs.insert(contextPrimitiveIDs.begin(), UUIDs.begin(), UUIDs.end() );
 
     //Set the view to fit window
-    if( center.x==0 && center.y==0 && center.z==0 ){ //default center
-        if( eye.x<1e-4 && eye.y<1e-4 && eye.z==2.f ){ //default eye position
+    if( camera_lookat_center.x==0 && camera_lookat_center.y==0 && camera_lookat_center.z==0 ){ //default center
+        if( camera_eye_location.x<1e-4 && camera_eye_location.y<1e-4 && camera_eye_location.z==2.f ){ //default eye position
 
             vec3 center_sph;
             vec2 xbounds, ybounds, zbounds;
             float radius;
             context->getDomainBoundingSphere( UUIDs, center_sph, radius );
             context->getDomainBoundingBox( UUIDs, xbounds, ybounds, zbounds );
-            center = make_vec3( 0.5*(xbounds.x+xbounds.y), 0.5*(ybounds.x+ybounds.y), 0.5*(zbounds.x+zbounds.y) );
-            eye = center + sphere2cart( make_SphericalCoord(2.f*radius,20.f*M_PI/180.f,0) );
+            camera_lookat_center = make_vec3( 0.5*(xbounds.x+xbounds.y), 0.5*(ybounds.x+ybounds.y), 0.5*(zbounds.x+zbounds.y) );
+            camera_eye_location = camera_lookat_center + sphere2cart( make_SphericalCoord(2.f*radius,20.f*M_PI/180.f,0) );
 
         }
     }
 
 }
 
-void Visualizer::buildContextGeometry_private(){
+void Visualizer::buildContextGeometry_private() {
 
     contextGeomNeedsUpdate = false;
 
@@ -3285,7 +3201,7 @@ void Visualizer::colorContextPrimitivesByObjectData( const char* data_name, cons
 }
 
 void Visualizer::colorContextPrimitivesRandomly(const std::vector<uint>& UUIDs ){
-    
+
     disableColorbar();
     if( !colorPrimitives_UUIDs.empty() ){
         colorPrimitives_UUIDs.clear();
@@ -3306,7 +3222,7 @@ void Visualizer::colorContextPrimitivesRandomly(const std::vector<uint>& UUIDs )
 }
 
 void Visualizer::colorContextPrimitivesRandomly(){
-    
+
     disableColorbar();
     
     std::vector<uint> all_UUIDs = context->getAllUUIDs(); 
@@ -3328,7 +3244,7 @@ void Visualizer::colorContextPrimitivesRandomly(){
 
 
 void Visualizer::colorContextObjectsRandomly(const std::vector<uint>& ObjIDs ){
-    
+
     disableColorbar();
     if( !colorPrimitives_UUIDs.empty() ){
         colorPrimitives_UUIDs.clear();
@@ -3344,7 +3260,7 @@ void Visualizer::colorContextObjectsRandomly(const std::vector<uint>& ObjIDs ){
 }
 
 void Visualizer::colorContextObjectsRandomly(){
-    std::vector<uint> all_ObjIDs = context->getAllObjectIDs(); 
+    std::vector<uint> all_ObjIDs = context->getAllObjectIDs();
     disableColorbar();
     if( !colorPrimitives_UUIDs.empty() ){
         colorPrimitives_UUIDs.clear();
@@ -3366,7 +3282,7 @@ void Visualizer::colorContextObjectsRandomly(){
 
 
 
-std::vector<helios::vec3> Visualizer::plotInteractive(){
+std::vector<helios::vec3> Visualizer::plotInteractive() {
 
     if( message_flag ){
         std::cout << "Generating interactive plot..." << std::endl;
@@ -3450,7 +3366,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive(){
 
     }
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     std::vector<vec3> camera_output;
 
@@ -3469,7 +3385,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive(){
 
         primaryShader.useShader();
 
-        updatePerspectiveTransformation( center, eye );
+        updatePerspectiveTransformation( camera_lookat_center, camera_eye_location );
 
         glm::mat4 biasMatrix(
                 0.5, 0.0, 0.0, 0.0,
@@ -3495,7 +3411,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive(){
         render( 0 );
 
         glfwPollEvents();
-        getViewKeystrokes( eye, center );
+        getViewKeystrokes( camera_eye_location, camera_lookat_center );
 
         glfwSwapBuffers((GLFWwindow*)window);
 
@@ -3513,10 +3429,10 @@ std::vector<helios::vec3> Visualizer::plotInteractive(){
 
     glfwPollEvents();
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
-    camera_output.push_back(eye);
-    camera_output.push_back(center);
+    camera_output.push_back(camera_eye_location);
+    camera_output.push_back(camera_lookat_center);
 
     return camera_output;
 
@@ -3646,11 +3562,11 @@ void Visualizer::render( bool shadow ){
 
 }
 
-void Visualizer::plotUpdate( void ) {
+void Visualizer::plotUpdate() {
     plotUpdate( false );
 }
 
-void Visualizer::plotUpdate( const bool hide_window ){
+void Visualizer::plotUpdate( bool hide_window ){
 
     if( message_flag ){
         std::cout << "Updating the plot..." << std::flush;
@@ -3734,7 +3650,7 @@ void Visualizer::plotUpdate( const bool hide_window ){
 
     }
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     // Render to the screen
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -3747,7 +3663,7 @@ void Visualizer::plotUpdate( const bool hide_window ){
 
     primaryShader.useShader();
 
-    updatePerspectiveTransformation( center, eye );
+    updatePerspectiveTransformation( camera_lookat_center, camera_eye_location );
 
     glm::mat4 biasMatrix(
             0.5, 0.0, 0.0, 0.0,
@@ -3773,7 +3689,7 @@ void Visualizer::plotUpdate( const bool hide_window ){
     render( 0 );
 
     glfwPollEvents();
-    getViewKeystrokes( eye, center );
+    getViewKeystrokes( camera_eye_location, camera_lookat_center );
 
     int width, height;
     glfwGetFramebufferSize((GLFWwindow *) window, &width, &height);
@@ -3788,7 +3704,7 @@ void Visualizer::plotUpdate( const bool hide_window ){
 
 }
 
-void Visualizer::plotDepthMap( void ){
+void Visualizer::plotDepthMap() {
 
     if( message_flag ){
         std::cout << "Rendering depth map..." << std::flush;
@@ -3827,7 +3743,7 @@ void Visualizer::plotDepthMap( void ){
 
     depthShader.useShader();
 
-    updatePerspectiveTransformation( center, eye );
+    updatePerspectiveTransformation( camera_lookat_center, camera_eye_location );
     depthShader.setTransformationMatrix( perspectiveTransformationMatrix );
 
     depthShader.enableTextureMaps();
@@ -3835,7 +3751,7 @@ void Visualizer::plotDepthMap( void ){
 
     render( 1 );
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     depth_buffer_data.resize( Wframebuffer*Hframebuffer );
 
@@ -3857,7 +3773,7 @@ void Visualizer::plotDepthMap( void ){
 
     }
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     glEnableVertexAttribArray(0); //position
     glEnableVertexAttribArray(1); //color
@@ -3869,12 +3785,12 @@ void Visualizer::plotDepthMap( void ){
     std::vector<float> position_data, color_data, normal_data, uv_data;
     std::vector<int> coordinate_data, texture_data;
 
-    position_data.resize(12,0);
-    color_data.resize(16,0);
-    normal_data.resize(12,0);
-    uv_data.resize(8,0);
-    coordinate_data.resize(4,0);
-    texture_data.resize(4,0);
+    position_data.assign(12,0);
+    color_data.assign(16,0);
+    normal_data.assign(12,0);
+    uv_data.assign(8,0);
+    coordinate_data.assign(4,0);
+    texture_data.assign(4,0);
 
     position_data[0] = -1;
     position_data[1] = 1;
@@ -3990,7 +3906,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
 
     // ~~~~~~~~~~~~~~~ COMPILE SHADERS ~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     // Create the shaders
     unsigned int VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
@@ -3999,28 +3915,20 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     // Read the Vertex Shader code from the file
     std::string VertexShaderCode;
     std::ifstream VertexShaderStream(vertex_shader_file, std::ios::in);
-    if(VertexShaderStream.is_open()){
-        std::string Line = "";
-        while(getline(VertexShaderStream, Line))
-            VertexShaderCode += "\n" + Line;
-        VertexShaderStream.close();
-    }else{
-        std::cerr << "ERROR: Could not open vertex shader file `" << vertex_shader_file << "'." << std::endl;
-        throw(1);
-    }
+    assert(VertexShaderStream.is_open());
+    std::string Line = "";
+    while(getline(VertexShaderStream, Line))
+        VertexShaderCode += "\n" + Line;
+    VertexShaderStream.close();
 
     // Read the Fragment Shader code from the file
     std::string FragmentShaderCode;
     std::ifstream FragmentShaderStream(fragment_shader_file, std::ios::in);
-    if(FragmentShaderStream.is_open()){
-        std::string Line = "";
-        while(getline(FragmentShaderStream, Line))
-            FragmentShaderCode += "\n" + Line;
-        FragmentShaderStream.close();
-    }else{
-        std::cerr << "ERROR: Could not open vertex shader file `" << vertex_shader_file << "'." << std::endl;
-        throw(1);
-    }
+    assert(FragmentShaderStream.is_open());
+    Line = "";
+    while(getline(FragmentShaderStream, Line))
+        FragmentShaderCode += "\n" + Line;
+    FragmentShaderStream.close();
 
     int Result = GL_FALSE;
     int InfoLogLength;
@@ -4030,7 +3938,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     glShaderSource(VertexShaderID, 1, &VertexSourcePointer , NULL);
     glCompileShader(VertexShaderID);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     // Check Vertex Shader
     glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
@@ -4051,7 +3959,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , NULL);
     glCompileShader(FragmentShaderID);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     // Check Fragment Shader
     glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &Result);
@@ -4073,7 +3981,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     glAttachShader(shaderID, FragmentShaderID);
     glLinkProgram(shaderID);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     // Check the program
     glGetProgramiv(shaderID, GL_LINK_STATUS, &Result);
@@ -4085,22 +3993,22 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
         throw(1);
     }
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     glDeleteShader(VertexShaderID);
     glDeleteShader(FragmentShaderID);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     glUseProgram(shaderID);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     // ~~~~~~~~~~~ Create a Vertex Array Object (VAO) ~~~~~~~~~~//
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
     // ~~~~~~~~~~~ Primary Shader Uniforms ~~~~~~~~~~//
 
@@ -4133,7 +4041,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     RboundUniform = glGetUniformLocation(shaderID, "Rbound");
     glUniform1i(RboundUniform,0);
 
-    assert( checkerrors() );
+    assert(checkerrors());
 
 }
 
@@ -4142,7 +4050,7 @@ Shader::~Shader( void ){
     glDeleteProgram(shaderID);
 }
 
-void Shader::disableTextures( void ) const{
+void Shader::disableTextures() const{
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
@@ -4151,16 +4059,13 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
 
     //Check if the file exists
     std::ifstream f(texture_file);
-    if( !f.good() ){
-        std::cerr << "ERROR: texture file " << texture_file << " does not exist." << std::endl;
-        throw(1);
-    }
+    assert( f.good() );
     f.close();
 
     //Check if this texture has already been added to the shader
     //Note: if the texture_file is empy, it will automatically load a new texture
     for( uint i=0; i<textureMapFiles.size(); i++ ){
-        if( textureMapFiles.at(i).compare(texture_file)==0 && strlen(texture_file)>0 ){
+        if( textureMapFiles.at(i)==texture_file && strlen(texture_file)>0 ){
             textureID = textureMaps.at(i); //copy the handle
             texture_size = textureSizes.at(i); //copy the size
             return;
@@ -4173,13 +4078,12 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
     std::vector<unsigned char> texture;
     uint texture_height, texture_width;
     std::string file = texture_file;
-    if(file.substr(file.find_last_of(".") + 1) == "jpg" || file.substr(file.find_last_of(".") + 1) == "jpeg" ){
+    if(file.substr(file.find_last_of('.') + 1) == "jpg" || file.substr(file.find_last_of('.') + 1) == "jpeg" ){
         read_JPEG_file (texture_file,texture,texture_height,texture_width);
-    } else if(file.substr(file.find_last_of(".") + 1) == "png") {
+    } else if(file.substr(file.find_last_of('.') + 1) == "png") {
         read_png_file (texture_file,texture,texture_height,texture_width);
     }else {
-        std::cerr << "ERROR: texture file " << texture_file << " must be JPG, JPEG, or PNG." << std::endl;
-        throw(1);
+        assert(false);
     }
 
     texture_size = make_int2( texture_width, texture_height );
@@ -4230,7 +4134,7 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
 
 }
 
-void Shader::enableTextureMaps( void ) const{
+void Shader::enableTextureMaps() const{
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(textureUniform,0);
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -4325,7 +4229,7 @@ void Shader::setTextureMask( const char* texture_file, uint& textureID, int2& te
 
     //OpenGL is a pain, so we need to pad the first dimension of the texture so that it size is a power of two
     std::vector<unsigned char> texture_;
-    texture_.resize(texture_size_POT.y*texture_size_POT.x,0);
+    texture_.assign(texture_size_POT.y*texture_size_POT.x,0);
     for(int j=0;j<texture_size.y;j++){
         for(int i=0;i<texture_size.x;i++){
             texture_[j*texture_size_POT.x+i] = texture[ 3 + i*4 + j*texture_size.x*4 ];
@@ -4350,7 +4254,7 @@ void Shader::setTextureMask( const char* texture_file, uint& textureID, int2& te
 
 }
 
-void Shader::enableTextureMasks( void ) const{
+void Shader::enableTextureMasks() const{
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(textureUniform,0);
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -4365,23 +4269,23 @@ void Shader::enableTextureMasks( void ) const{
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void Shader::setTransformationMatrix( const glm::mat4 matrix ){
+void Shader::setTransformationMatrix(const glm::mat4 &matrix ){
     glUniformMatrix4fv(transformMatrixUniform, 1, GL_FALSE, &matrix[0][0]);
 }
 
-void Shader::setDepthBiasMatrix( const glm::mat4 matrix ){
+void Shader::setDepthBiasMatrix(const glm::mat4 &matrix ){
     glUniformMatrix4fv(depthBiasUniform, 1, GL_FALSE, &matrix[0][0]);
 }
 
-void Shader::setLightDirection( const vec3 direction ){
+void Shader::setLightDirection(const helios::vec3 &direction ){
     glUniform3f( lightDirectionUniform, direction.x, direction.y, direction.z );
 }
 
-void Shader::setLightingModel( const uint lightingmodel ){
+void Shader::setLightingModel( uint lightingmodel ){
     glUniform1i( lightingModelUniform, lightingmodel );
 }
 
-void Shader::useShader(void){
+void Shader::useShader() {
     glUseProgram(shaderID);
 }
 
@@ -4453,11 +4357,11 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
     }
 
     if (glfwGetKey( _window, GLFW_KEY_P  ) == GLFW_PRESS){
-        std::cout << "View is angle: (R,theta,phi)=(" << radius << "," << theta << "," << phi << ") at from position (" << eye.x << "," << eye.y << "," << eye.z << ") looking at (" << center.x << "," << center.y << "," << center.z << ")" << std::endl;
+        std::cout << "View is angle: (R,theta,phi)=(" << radius << "," << theta << "," << phi << ") at from position (" << camera_eye_location.x << "," << camera_eye_location.y << "," << camera_eye_location.z << ") looking at (" << center.x << "," << center.y << "," << center.z << ")" << std::endl;
     }
 
 
-    eye = sphere2cart( make_SphericalCoord(radius,theta,phi) ) + center;
+    camera_eye_location = sphere2cart( make_SphericalCoord(radius,theta,phi) ) + center;
 
 
 }
@@ -4487,7 +4391,7 @@ std::string errorString( GLenum err ){
 
 }
 
-int checkerrors( void ){
+int checkerrors() {
 
     GLenum err;
     int err_count=0;
