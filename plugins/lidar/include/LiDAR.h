@@ -1124,6 +1124,11 @@ d the last cell's index is Ncells-1.
    */
   void cropBeamsToGridAngleRange(const uint source);
   
+  //! find the indices of the peaks of a vector of floats
+  /**
+   * \param[in] "signal" the signal we want to detect peaks in
+   */
+  std::vector<uint> peakFinder(std::vector<float> signal);
   
 };
 
