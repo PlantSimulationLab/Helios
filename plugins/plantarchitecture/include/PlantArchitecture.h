@@ -1,5 +1,4 @@
 /** \file "PlantArchitecture.h" Primary header file for plant architecture plug-in.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 
@@ -351,19 +350,29 @@ public:
 
 struct ShootParameters{
 
+    //! Default constructor - does not set random number generator
     ShootParameters();
+
+    //! Constructor - sets random number generator
+    explicit ShootParameters( std::minstd_rand0 *generator );
 
     PhytomerParameters phytomer_parameters;
 
     uint max_nodes;
 
-    float shoot_internode_taper;
+    RandomParameter_float shoot_internode_taper;
 
-    float phyllochron; //phytomers/day
-    float growth_rate; //length/day
+    RandomParameter_float phyllochron; //phytomers/day
+    RandomParameter_float growth_rate; //length/day
 
-    float bud_probability;
-    float bud_time;  //days
+    // Probability that a given bud will become this type of shoot
+    float shoot_type_probability;
+    // Probability that bud with this shoot type will break and form a new shoot
+    float bud_break_probability;
+
+    RandomParameter_float bud_time;  //days
+
+    RandomParameter_float child_insertion_angle;
 
     std::vector<float> blind_nodes;
 
@@ -401,6 +410,7 @@ public:
 
     std::vector<helios::vec3> internode_vertices;
     std::vector<helios::vec3> petiole_vertices; //\todo this needs to be a multidimensional array for the case in which we have multiple buds per phytomer
+    std::vector<helios::vec3> leaf_bases;
     float internode_length;
 
     std::vector<float> internode_radii;
@@ -430,8 +440,8 @@ public:
 
 struct Shoot{
 
-    Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number,
-          ShootParameters shoot_params, std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr, helios::Context *context_ptr);
+    Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number, ShootParameters shoot_params, const std::string &shoot_type_label,
+          std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr, helios::Context *context_ptr);
 
     void initializePhytomer();
 
@@ -453,6 +463,8 @@ struct Shoot{
 
     ShootParameters shoot_parameters;
 
+    std::string shoot_type_label;
+
     std::vector<std::shared_ptr<Phytomer> > phytomers;
 
     std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr;
@@ -466,8 +478,6 @@ public:
 
     explicit PlantArchitecture( helios::Context* context_ptr );
 
-    void defineShootType( const std::string &plant_type_label, const std::string &shoot_type_label, const ShootParameters &shoot_params );
-
     uint addPlantInstance(const helios::vec3 &base_position, float current_age);
 
     uint duplicatePlantInstance(uint plantID, const helios::vec3 &base_position, float current_age );
@@ -478,11 +488,13 @@ public:
 
     // -- plant building methods -- //
 
-    uint addBaseShoot(uint plantID, uint current_node_number, const AxisRotation &base_rotation, const ShootParameters &shoot_params);
+    void defineShootType( const std::string &shoot_type_label, const ShootParameters &shoot_params );
 
-    uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, const ShootParameters &shoot_params);
+    uint addBaseShoot(uint plantID, uint current_node_number, const AxisRotation &base_rotation, const std::string &shoot_type_label);
 
-    uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, const ShootParameters &shoot_params);
+    uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, const std::string &shoot_type_label);
+
+    uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, const std::string &shoot_type_label);
 
     int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
@@ -526,6 +538,8 @@ private:
     std::map<uint,PlantInstance> plant_instances;
 
     std::string makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> & shoot_tree) const;
+
+    std::map<std::string,ShootParameters> shoot_types;
 
 };
 

@@ -1,5 +1,4 @@
 /** \file "selfTest.cpp" Context selfTest() function.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 

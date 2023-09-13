@@ -1,5 +1,4 @@
 /** \file "CanopyGenerator.h" Primary header file for canopy geometry generator plug-in.
-    \author Brian Bailey
     
     Copyright (C) 2016-2023 Brian Bailey
 

@@ -1,5 +1,4 @@
-/** \file "global.cpp" global declarations. 
-    \author Brian Bailey
+/** \file "global.cpp" global declarations.
 
     Copyright (C) 2016-2023 Brian Bailey
 

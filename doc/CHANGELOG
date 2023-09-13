@@ -1479,3 +1479,6 @@ The radiation model has been re-designed, with the following primary additions:
 
 * Radiation *
 - Calibration "calibrated_CREE6500K_NikonD700_spectral_response_*" in camera_spectral_library.xml edited to be consistent with normalized spectrum for CREE LED light source.
+
+* Canopy Generator *
+- Converted to using helios_runtime_error() for error handling.

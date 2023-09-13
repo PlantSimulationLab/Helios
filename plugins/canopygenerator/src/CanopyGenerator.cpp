@@ -767,7 +767,7 @@ void CanopyGenerator::loadXML( const char* filename ){
     std::ifstream f(filename);
     if( !f.good() ){
         std::cerr << "failed." << std::endl;
-        throw( std::runtime_error("XML file " + std::string(filename) + " does not exist.") );
+        helios_runtime_error("ERROR (CanopyGenerator::loadXML): XML file " + std::string(filename) + " does not exist.");
     }
 
     // Using "pugixml" parser.  See pugixml.org
@@ -779,14 +779,14 @@ void CanopyGenerator::loadXML( const char* filename ){
     //error checking
     if (!result){
         std::cout << "failed." << std::endl;
-        throw( std::runtime_error("XML  file " + std::string(filename) + " parsed with errors, attribute value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + result.description() + "\n"));
+        helios_runtime_error("ERROR (CanopyGenerator::loadXML): XML  file " + std::string(filename) + " parsed with errors, attribute value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + result.description() + "\n");
     }
 
     pugi::xml_node helios = xmldoc.child("helios");
 
     if( helios.empty() ){
         std::cout << "failed." << std::endl;
-        throw(std::runtime_error("ERROR (loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags."));
+        helios_runtime_error("ERROR (CanopyGenerator::loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags.");
     }
 
     //looping over any Canopy Generator blocks specified in XML file
@@ -2303,7 +2303,7 @@ void CanopyGenerator::buildCanopy(const VSPGrapevineParameters &params ){
 
     if( params.cordon_height<params.trunk_height ){
         std::cout << "failed." << std::endl;
-        throw(std::runtime_error("ERROR (CanopyGenerator::buildCanopy)): Cannot build VSP grapevine canopy. Cordon height cannot be less than the trunk height."));
+        helios_runtime_error("ERROR (CanopyGenerator::buildCanopy): Cannot build VSP grapevine canopy. Cordon height cannot be less than the trunk height.");
     }
 
     std::uniform_real_distribution<float> unif_distribution;
@@ -2723,7 +2723,7 @@ void CanopyGenerator::cleanDeletedUUIDs( std::vector<std::vector<std::vector<uin
 
 std::vector<uint> CanopyGenerator::getTrunkUUIDs(uint PlantID ){
     if( PlantID>=UUID_trunk.size() ){
-        throw( std::runtime_error("ERROR (CanopyGenerator::getTrunkUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_trunk.size()) + " plants have been built.") );
+        helios_runtime_error("ERROR (CanopyGenerator::getTrunkUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_trunk.size()) + " plants have been built.");
     }
 
     cleanDeletedUUIDs(UUID_trunk.at(PlantID));
@@ -2740,7 +2740,7 @@ std::vector<uint> CanopyGenerator::getTrunkUUIDs(){
 
 std::vector<uint> CanopyGenerator::getBranchUUIDs(uint PlantID ){
     if( PlantID>=UUID_branch.size() ){
-        throw(std::runtime_error("ERROR (CanopyGenerator::getBranchUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_branch.size()) + " plants have been built."));
+        helios_runtime_error("ERROR (CanopyGenerator::getBranchUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_branch.size()) + " plants have been built.");
     }
 
     cleanDeletedUUIDs(UUID_branch.at(PlantID));
@@ -2757,7 +2757,7 @@ std::vector<uint> CanopyGenerator::getBranchUUIDs(){
 
 std::vector<std::vector<uint> > CanopyGenerator::getLeafUUIDs(uint PlantID ){
     if( PlantID>=UUID_leaf.size() ){
-        throw(std::runtime_error("ERROR (CanopyGenerator::getLeafUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_leaf.size()) + " plants have been built."));
+        helios_runtime_error("ERROR (CanopyGenerator::getLeafUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_leaf.size()) + " plants have been built.");
     }
 
     cleanDeletedUUIDs(UUID_leaf.at(PlantID));
@@ -2773,7 +2773,7 @@ std::vector<uint> CanopyGenerator::getLeafUUIDs(){
 
 std::vector<std::vector<std::vector<uint> > > CanopyGenerator::getFruitUUIDs(uint PlantID ){
     if( PlantID>=UUID_fruit.size() ){
-        throw(std::runtime_error("ERROR (CanopyGenerator::getFruitUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_fruit.size()) + " plants have been built."));
+        helios_runtime_error("ERROR (CanopyGenerator::getFruitUUIDs): Cannot get UUIDs for plant " + std::to_string(PlantID) + " because only " + std::to_string(UUID_fruit.size()) + " plants have been built.");
     }
 
     cleanDeletedUUIDs(UUID_fruit.at(PlantID));
@@ -2966,7 +2966,7 @@ float CanopyGenerator::sampleLeafPDF( const char* distribution ){
         thetaL = fzero( evaluateCDFresid, args, distribution, 0.25f );
 
     }else{
-        throw(std::runtime_error("ERROR (sampleLeafPDF): Invalid leaf angle distribution of " + std::string(distribution) + " specified."));
+        helios_runtime_error("ERROR (CanopyGenerator::sampleLeafPDF): Invalid leaf angle distribution of " + std::string(distribution) + " specified.");
     }
 
     return thetaL;
