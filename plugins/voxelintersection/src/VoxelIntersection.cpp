@@ -1,5 +1,4 @@
 /** \file "VoxelIntersection.cpp" Primary source file for Primitive-Voxel Intersection plug-in.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey, Eric Kent
 

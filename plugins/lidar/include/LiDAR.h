@@ -1,5 +1,4 @@
 /** \file "LiDAR.h" Primary header file for LiDAR plug-in.
-    \author Brian Bailey, Eric Kent
 
     Copyright (C) 2016-2023 Brian Bailey
 
@@ -183,7 +182,8 @@ struct GridCell{
 };
 
 //! Structure containing metadata for a terrestrial scan
-/** A scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of azimuthal scan directions (see \ref Nphi), 5) the range of azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint() function. There are various functions to query the scan data.
+/** A scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of azimuthal scan directions (see \ref Nphi), 5) the range of
+azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint() function. There are various functions to query the scan data.
 */
 struct ScanMetadata{
 
@@ -201,24 +201,6 @@ struct ScanMetadata{
    * \param[in] "phimax" Maximum scan angle in the phi (azimuthal) direction in radians
   */
   ScanMetadata( const helios::vec3 &a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, const std::vector<std::string> &a_columnFormat);
-
-  //! Convert the (row,column) of hit point in a scan to a direction vector
-  /**
-   * \param[in] "row" Index of hit point in the theta (zenithal) direction.
-   * \param[in] "column" Index of hit point in the phi (azimuthal) direction.
-   * \return Spherical vector corresponding to the ray direction for the given hit point.
-  */
-  helios::SphericalCoord rc2direction(uint row, uint column ) const;
-  
-  //! Convert the scan ray direction into (row,column) table index
-  /**
-   * \param[in] "direction" Spherical vector corresponding to the ray direction for the given hit point.
-   * \return (row,column) table index for the given hit point
-  */
-  helios::int2 direction2rc(const helios::SphericalCoord &direction ) const;
-  
-  //! Total number of hits in the scan
-  uint Nhits;
 
   //! File containing hit point data
   std::string data_file;
@@ -266,6 +248,21 @@ struct ScanMetadata{
 
   //! Vector of strings specifying the columns of the scan ASCII file for input/output
   std::vector<std::string> columnFormat;
+
+    //! Convert the (row,column) of hit point in a scan to a direction vector
+    /**
+     * \param[in] "row" Index of hit point in the theta (zenithal) direction.
+     * \param[in] "column" Index of hit point in the phi (azimuthal) direction.
+     * \return Spherical vector corresponding to the ray direction for the given hit point.
+    */
+    helios::SphericalCoord rc2direction(uint row, uint column ) const;
+
+    //! Convert the scan ray direction into (row,column) table index
+    /**
+     * \param[in] "direction" Spherical vector corresponding to the ray direction for the given hit point.
+     * \return (row,column) table index for the given hit point
+    */
+    helios::int2 direction2rc(const helios::SphericalCoord &direction ) const;
   
 };
 
@@ -1122,9 +1119,14 @@ d the last cell's index is Ncells-1.
   /**
    * \param[in] "source" the scan index
    */
-  void cropBeamsToGridAngleRange(const uint source);
+  void cropBeamsToGridAngleRange(uint source);
   
-  
+  //! find the indices of the peaks of a vector of floats
+  /**
+   * \param[in] "signal" the signal we want to detect peaks in
+   */
+  std::vector<uint> peakFinder(std::vector<float> signal);
+
 };
 
 bool sortcol0( const std::vector<double>& v0, const std::vector<double>& v1 );

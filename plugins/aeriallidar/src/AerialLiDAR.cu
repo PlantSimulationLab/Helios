@@ -1,5 +1,4 @@
-/** \file "AerialLiDAR.cu" CUDA-related Aerial LiDAR plug-in functions 
-    \author Brian Bailey
+/** \file "AerialLiDAR.cu" CUDA-related Aerial LiDAR plug-in functions
 
     Copyright (C) 2016-2023 Brian Bailey
 

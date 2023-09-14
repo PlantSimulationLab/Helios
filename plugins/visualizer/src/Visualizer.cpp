@@ -1,5 +1,4 @@
-/** \file "Visualizer.cpp" Visualizer plugin declarations. 
-    \author Brian Bailey
+/** \file "Visualizer.cpp" Visualizer plugin declarations.
 
     Copyright (C) 2016-2023 Brian Bailey
 

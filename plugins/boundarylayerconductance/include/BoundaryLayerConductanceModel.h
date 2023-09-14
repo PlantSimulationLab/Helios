@@ -1,5 +1,4 @@
 /** \file "BoundaryLayerConductanceModel.h" Primary header file for boundary layer conductance model.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 

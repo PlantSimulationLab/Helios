@@ -1,5 +1,4 @@
 /** \file "WeberPennTree.h" Primary header file for Weber-Penn tree architecture model.
-    \author Brian Bailey
     
     Copyright (C) 2016-2023 Brian Bailey
 

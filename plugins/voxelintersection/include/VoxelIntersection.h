@@ -1,5 +1,4 @@
 /** \file "VoxelIntersection.h" Primary header file for Primitive-Voxel Intersection plug-in.
-    \author Brian Bailey, Eric Kent
 
     Copyright (C) 2016-2023 Brian Bailey
 

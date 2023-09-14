@@ -1,5 +1,4 @@
 /** \file "SolarPosition.cpp" Primary source file for solar position model plug-in.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 

@@ -40,7 +40,7 @@ var searchData=
   ['copyprimitivedata_37',['copyPrimitiveData',['../classhelios_1_1_context.html#a6cfa0bfd1005044e4a9c36934b57b753',1,'helios::Context']]],
   ['copyradiationband_38',['copyRadiationBand',['../class_radiation_model.html#a516dafe4d898ad38af6f5bc23bdfb4d8',1,'RadiationModel::copyRadiationBand(const std::string &amp;old_label, const std::string &amp;new_label)'],['../class_radiation_model.html#ab0e729819054765ad2c40d30fd56c7a6',1,'RadiationModel::copyRadiationBand(const std::string &amp;old_label, const std::string &amp;new_label, float wavelength_min, float wavelength_max)']]],
   ['createelementlabels_39',['createElementLabels',['../class_canopy_generator.html#ade5c366887c712553b134ef23509f255',1,'CanopyGenerator']]],
-  ['cropbeamstogridanglerange_40',['cropBeamsToGridAngleRange',['../class_li_d_a_rcloud.html#a2f1037d96d43b10de30338a820ce2a19',1,'LiDARcloud']]],
+  ['cropbeamstogridanglerange_40',['cropBeamsToGridAngleRange',['../class_li_d_a_rcloud.html#a85e1a7d8dc2df6eba9b798bb2a456473',1,'LiDARcloud']]],
   ['cropdomain_41',['cropDomain',['../classhelios_1_1_context.html#a73036d2c81202f14545393cc0403f46f',1,'helios::Context::cropDomain(const std::vector&lt; uint &gt; &amp;UUIDs, const vec2 &amp;xbounds, const vec2 &amp;ybounds, const vec2 &amp;zbounds)'],['../classhelios_1_1_context.html#a646610820710e8012084aeb0fe0ec0f1',1,'helios::Context::cropDomain(const vec2 &amp;xbounds, const vec2 &amp;ybounds, const vec2 &amp;zbounds)']]],
   ['cropdomainx_42',['cropDomainX',['../classhelios_1_1_context.html#a5a9ae91eb630bf727ce994e7d1c0fb40',1,'helios::Context']]],
   ['cropdomainy_43',['cropDomainY',['../classhelios_1_1_context.html#a743a39dcf2a6688cc8aeabf79f6bc0b6',1,'helios::Context']]],

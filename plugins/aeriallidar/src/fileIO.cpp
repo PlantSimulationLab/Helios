@@ -1,5 +1,4 @@
-/** \file "fileIO.cpp" Declarations for Aerial LiDAR plug-in related to file input/output. 
-    \author Brian Bailey
+/** \file "fileIO.cpp" Declarations for Aerial LiDAR plug-in related to file input/output.
 
     Copyright (C) 2016-2023 Brian Bailey
 

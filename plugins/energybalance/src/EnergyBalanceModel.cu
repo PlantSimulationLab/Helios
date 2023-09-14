@@ -1,5 +1,4 @@
-/** \file "EnergyBalanceModel.cu" Energy balance model plugin declarations (CUDA kernels). 
-    \author Brian Bailey
+/** \file "EnergyBalanceModel.cu" Energy balance model plugin declarations (CUDA kernels).
 
     Copyright (C) 2016-2023 Brian Bailey
 

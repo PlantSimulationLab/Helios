@@ -1,5 +1,4 @@
-/** \file "BoundaryLayerConductanceModel.cpp" Boundary-layer conductance  model plugin declarations. 
-    \author Brian Bailey
+/** \file "BoundaryLayerConductanceModel.cpp" Boundary-layer conductance  model plugin declarations.
 
     Copyright (C) 2016-2023 Brian Bailey
 

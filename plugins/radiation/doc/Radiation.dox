@@ -767,6 +767,10 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
     std::vector<uint> UUIDs_ground = context.addTile( nullorigin, make_vec2(3,3), nullrotation, make_int2(200,200) );
 
+    \c// Set labels that we'll use to label pixels
+    context.setPrimitiveData( UUIDs_bunny, "bunny", 1 );
+    context.setPrimitiveData( UUIDs_ground, "bunny", 0 );
+
     \c// Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil
     context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
     context.setPrimitiveData( UUIDs_bunny, "reflectivity_spectrum", "grape_leaf_reflectivity_0000" );
@@ -814,11 +818,16 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
     \c// writing output image
     radiationmodel.writeCameraImage("visible", {"red","green","blue"}, "myimage" );
 
+    \c// writing image labels based on primitive data 'bunny'
+    radiationmodel.writePrimitiveDataLabelMap( "visible", "labels.txt", "bunny" );
+
  }</code></pre></div>
 
- The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below.
+ The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.
 
  \image html camera_visible_myimage.jpeg
+
+ \image html Bunny_pixel_labels.png
 
 
 */

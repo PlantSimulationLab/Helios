@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.3.0</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.3.1</span>
    </div>
   </td>
  </tr>
@@ -611,6 +611,10 @@ Writing Camera Images to File</h3>
 
     std::vector&lt;uint&gt; UUIDs_ground = context.addTile( nullorigin, make_vec2(3,3), nullrotation, make_int2(200,200) );
 
+    <code></code>// Set labels that we'll use to label pixels
+    context.setPrimitiveData( UUIDs_bunny, "bunny", 1 );
+    context.setPrimitiveData( UUIDs_ground, "bunny", 0 );
+
     <code></code>// Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil
     context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
     context.setPrimitiveData( UUIDs_bunny, "reflectivity_spectrum", "grape_leaf_reflectivity_0000" );
@@ -658,9 +662,15 @@ Writing Camera Images to File</h3>
     <code></code>// writing output image
     radiationmodel.writeCameraImage("visible", {"red","green","blue"}, "myimage" );
 
- }</code></pre></div><p >The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below.</p>
+    <code></code>// writing image labels based on primitive data 'bunny'
+    radiationmodel.writePrimitiveDataLabelMap( "visible", "labels.txt", "bunny" );
+
+ }</code></pre></div><p >The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.</p>
 <div class="image">
 <img src="camera_visible_myimage.jpeg" alt=""/>
+</div>
+<div class="image">
+<img src="Bunny_pixel_labels.png" alt=""/>
 </div>
  </div></div><!-- contents -->
 </div><!-- PageDoc -->

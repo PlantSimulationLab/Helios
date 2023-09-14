@@ -1,5 +1,4 @@
 /** \file "grapevine.cpp" Definitions of functions for building grapevine plant geometries.
-    \author Brian Bailey
     
     Copyright (C) 2016-2023 Brian Bailey
 

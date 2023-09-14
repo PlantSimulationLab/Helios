@@ -1,5 +1,4 @@
 /** \file "SolarPosition.h" Primary header file for solar position model plug-in.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 
