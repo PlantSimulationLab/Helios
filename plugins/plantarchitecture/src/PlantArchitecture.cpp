@@ -91,15 +91,17 @@ PhytomerParameters::PhytomerParameters( std::minstd_rand0 *generator ) {
 
     //--- inflorescence ---//
     inflorescence.reproductive_state = 0;
-    inflorescence.length = 0.05;
-    inflorescence.fruit_per_inflorescence = 1;
-    inflorescence.fruit_offset = 0;
-    inflorescence.rachis_radius = 0.001;
-    inflorescence.curvature = 0;
+    inflorescence.length.initialize(0.05,generator);
+    inflorescence.fruit_per_inflorescence.initialize(1,generator);
+    inflorescence.fruit_offset.initialize(0,generator);
+    inflorescence.rachis_radius.initialize(0.001,generator);
+    inflorescence.curvature.initialize(0,generator);
     inflorescence.fruit_arrangement_pattern = "alternate";
     inflorescence.tube_subdivisions = 1;
-    inflorescence.fruit_rotation = make_AxisRotation(0,0,0);
+    inflorescence.fruit_pitch.initialize(0,generator);
+    inflorescence.fruit_roll.initialize(0,generator);
     inflorescence.fruit_prototype_scale = make_vec3(0.0075,0.0075,0.0075);
+    inflorescence.flower_prototype_scale = make_vec3(0.0075,0.0075,0.0075);
 
 }
 
@@ -119,12 +121,30 @@ ShootParameters::ShootParameters( std::minstd_rand0 *generator ) {
     phyllochron.initialize(0.0001,generator);
     growth_rate.initialize(0,generator);
 
-    shoot_type_probability = 1;
     bud_break_probability = 0;
+    flower_probability = 1;
+    fruit_probability = 1;
+
     bud_time.initialize(0,generator);
 
     child_insertion_angle.initialize(deg2rad(30),generator);
 }
+
+void ShootParameters::defineChildShootTypes( const std::vector<std::string> &a_child_shoot_type_labels, const std::vector<float> &a_child_shoot_type_probabilities ){
+
+    if( a_child_shoot_type_labels.size()!=a_child_shoot_type_probabilities.size() ){
+        helios_runtime_error("ERROR (ShootParameters::defineChildShootTypes): Child shoot type labels and probabilities must be the same size.");
+    }else if( a_child_shoot_type_labels.empty() ){
+        helios_runtime_error("ERROR (ShootParameters::defineChildShootTypes): Input argument vectors were empty.");
+    }else if( sum(a_child_shoot_type_probabilities)!=1.f ){
+        helios_runtime_error("ERROR (ShootParameters::defineChildShootTypes): Child shoot type probabilities must sum to 1.");
+    }
+
+    child_shoot_type_labels = a_child_shoot_type_labels;
+    child_shoot_type_probabilities = a_child_shoot_type_probabilities;
+
+}
+
 
 void PlantArchitecture::defineShootType( const std::string &shoot_type_label, const ShootParameters &shoot_params ) {
     shoot_types.emplace(shoot_type_label, shoot_params );
@@ -193,7 +213,7 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &sho
         parent_petiole_axis = phytomers.back()->getPetioleAxisVector(0.f);
     }
 
-    std::shared_ptr<Phytomer> phytomer = std::make_shared<Phytomer>(params, phytomers.size(), parent_internode_axis, parent_petiole_axis, shoot_base_rotation, internode_scale_factor_fraction, leaf_scale_factor_fraction, rank, context_ptr);
+    std::shared_ptr<Phytomer> phytomer = std::make_shared<Phytomer>(params, shoot_parameters, phytomers.size(), parent_internode_axis, parent_petiole_axis, shoot_base_rotation, internode_scale_factor_fraction, leaf_scale_factor_fraction, rank, context_ptr);
 
     shoot_tree_ptr->at(ID)->phytomers.push_back(phytomer);
 
@@ -201,8 +221,8 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &sho
 
 }
 
-Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction,
-                   float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr) : phytomer_parameters(params), context_ptr(context_ptr), rank(rank) {
+Phytomer::Phytomer(const PhytomerParameters &params, const ShootParameters &parent_shoot_parameters, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, const AxisRotation &shoot_base_rotation,
+                   float internode_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr) : phytomer_parameters(params), context_ptr(context_ptr), rank(rank) {
 
     //Number of longitudinal segments for internode and petiole
     //if Ndiv=0, use Ndiv=1 (but don't add any primitives to Context)
@@ -435,13 +455,17 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
         //--- create inflorescence ---//
 
         if( phytomer_parameters.inflorescence.reproductive_state!=0 ) {
-            vec3 inflorescence_bending_axis;
-            if( petiole_axis==make_vec3(0,0,1) ) {
-                inflorescence_bending_axis = make_vec3(1, 0, 0);
-            }else{
-                inflorescence_bending_axis = cross(make_vec3(0, 0, 1), petiole_axis);
+            float randf = context_ptr->randu();
+            if ( (phytomer_parameters.inflorescence.reproductive_state == 1 && randf < parent_shoot_parameters.flower_probability) || (phytomer_parameters.inflorescence.reproductive_state == 2 && randf < parent_shoot_parameters.fruit_probability) ) {
+                addInfluorescence(internode_vertices.back(), make_AxisRotation(0, 0, 0), shoot_bending_axis);
+                vec3 inflorescence_bending_axis;
+                if (petiole_axis == make_vec3(0, 0, 1)) {
+                    inflorescence_bending_axis = make_vec3(1, 0, 0);
+                } else {
+                    inflorescence_bending_axis = cross(make_vec3(0, 0, 1), petiole_axis);
+                }
+                addInfluorescence(internode_vertices.back(), make_AxisRotation(0, 0, 0), inflorescence_bending_axis);
             }
-            addInfluorescence(internode_vertices.back(), make_AxisRotation(0, 0, 0), inflorescence_bending_axis);
         }
 
     }
@@ -451,12 +475,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, uint phytomer_index, const 
 void Phytomer::addInfluorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation,
                                  const helios::vec3 &inflorescence_bending_axis) {
 
-    float dr_rachis = phytomer_parameters.inflorescence.length/float(phytomer_parameters.inflorescence.tube_subdivisions);
+    float dr_rachis = phytomer_parameters.inflorescence.length.val()/float(phytomer_parameters.inflorescence.tube_subdivisions);
 
     std::vector<vec3> rachis_vertices(phytomer_parameters.inflorescence.tube_subdivisions+1);
     rachis_vertices.at(0) = base_position;
     std::vector<float> rachis_radii(phytomer_parameters.inflorescence.tube_subdivisions+1);
-    rachis_radii.at(0) = phytomer_parameters.inflorescence.rachis_radius;
+    rachis_radii.at(0) = phytomer_parameters.inflorescence.rachis_radius.val();
     std::vector<RGBcolor> rachis_colors(phytomer_parameters.inflorescence.tube_subdivisions+1);
     rachis_colors.at(0) = phytomer_parameters.internode.color;
 
@@ -466,7 +490,7 @@ void Phytomer::addInfluorescence(const helios::vec3 &base_position, const AxisRo
 
     for( int i=1; i<=phytomer_parameters.inflorescence.tube_subdivisions; i++ ){
 
-        float theta_curvature = fabs(deg2rad(phytomer_parameters.inflorescence.curvature*dr_rachis));
+        float theta_curvature = fabs(deg2rad(phytomer_parameters.inflorescence.curvature.val()*dr_rachis));
          if( theta_curvature*float(i) < M_PI-theta_base ) {
             rachis_axis = rotatePointAboutLine(rachis_axis, nullorigin, inflorescence_bending_axis, theta_curvature);
         }else{
@@ -475,37 +499,39 @@ void Phytomer::addInfluorescence(const helios::vec3 &base_position, const AxisRo
 
         rachis_vertices.at(i) = rachis_vertices.at(i - 1) + dr_rachis * rachis_axis;
 
-        rachis_radii.at(i) = phytomer_parameters.inflorescence.rachis_radius;
+        rachis_radii.at(i) = phytomer_parameters.inflorescence.rachis_radius.val();
         rachis_colors.at(i) = phytomer_parameters.internode.color;
 
     }
 
     inflorescence_objIDs.push_back( context_ptr->addTubeObject(10, rachis_vertices, rachis_radii, rachis_colors ) );
 
-    for(int fruit=0; fruit < phytomer_parameters.inflorescence.fruit_per_inflorescence; fruit++ ){
+    for(int fruit=0; fruit < phytomer_parameters.inflorescence.fruit_per_inflorescence.val(); fruit++ ){
 
         uint objID_fruit;
+        vec3 fruit_scale;
+
         if( phytomer_parameters.inflorescence.reproductive_state==1 ){
             objID_fruit = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr,1,0);
+            fruit_scale = phytomer_parameters.inflorescence.flower_prototype_scale;
         }else{
             objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr,1,0);
+            fruit_scale = phytomer_parameters.inflorescence.fruit_prototype_scale;
         }
 
-        float ind_from_tip = fabs(fruit-float(phytomer_parameters.inflorescence.fruit_per_inflorescence-1)/2.f);
-
-        vec3 fruit_scale = phytomer_parameters.inflorescence.fruit_prototype_scale;
+        float ind_from_tip = fabs(fruit-float(phytomer_parameters.inflorescence.fruit_per_inflorescence.val()-1)/2.f);
 
         context_ptr->scaleObject( objID_fruit, fruit_scale );
 
         float compound_rotation = 0;
-        if( phytomer_parameters.inflorescence.fruit_per_inflorescence>1 ) {
-            if (phytomer_parameters.inflorescence.fruit_offset == 0) {
-                float dphi = M_PI / (floor(0.5 * float(phytomer_parameters.inflorescence.fruit_per_inflorescence - 1)) + 1);
+        if( phytomer_parameters.inflorescence.fruit_per_inflorescence.val()>1 ) {
+            if (phytomer_parameters.inflorescence.fruit_offset.val() == 0) {
+                float dphi = M_PI / (floor(0.5 * float(phytomer_parameters.inflorescence.fruit_per_inflorescence.val() - 1)) + 1);
                 compound_rotation = -float(M_PI) + dphi * (fruit + 0.5f);
             } else {
-                if( fruit == float(phytomer_parameters.inflorescence.fruit_per_inflorescence-1)/2.f ){ //tip leaf
+                if( fruit == float(phytomer_parameters.inflorescence.fruit_per_inflorescence.val()-1)/2.f ){ //tip leaf
                     compound_rotation = 0;
-                }else if( fruit < float(phytomer_parameters.inflorescence.fruit_per_inflorescence-1)/2.f ) {
+                }else if( fruit < float(phytomer_parameters.inflorescence.fruit_per_inflorescence.val()-1)/2.f ) {
                     compound_rotation = -0.5*M_PI;
                 }else{
                     compound_rotation = 0.5*M_PI;
@@ -514,26 +540,29 @@ void Phytomer::addInfluorescence(const helios::vec3 &base_position, const AxisRo
         }
 
         //\todo Once rachis curvature is added, rachis_axis needs to become rachis_tip_axis
+        //pitch rotation
+        context_ptr->rotateObject(objID_fruit, -asin_safe(rachis_axis.z) + phytomer_parameters.inflorescence.fruit_pitch.val(), "y" );
+        phytomer_parameters.inflorescence.fruit_pitch.resample();
+
+        //azimuth rotation
         context_ptr->rotateObject( objID_fruit, -std::atan2(rachis_axis.y, rachis_axis.x)+compound_rotation, "z" );
 
-        //pitch rotation
-//        context_ptr->rotateObject(objID_fruit, -asin_safe(rachis_axis.z) - phytomer_parameters.leaf_rotation.pitch, make_vec3(0,0,0), rachis_axis );
-
-//        //roll rotation
-        //context_ptr->rotateObject(objID_fruit, phytomer_parameters.inflorescence.fruit_rotation.roll, make_vec3(0,0,0), rachis_axis );
+        //roll rotation
+        context_ptr->rotateObject(objID_fruit, phytomer_parameters.inflorescence.fruit_roll.val(), make_vec3(0,0,0), rachis_axis );
+        phytomer_parameters.inflorescence.fruit_roll.resample();
 
         vec3 fruit_base = rachis_vertices.back();
-        if( phytomer_parameters.inflorescence.fruit_per_inflorescence>1 && phytomer_parameters.inflorescence.fruit_offset>0 ){
+        if( phytomer_parameters.inflorescence.fruit_per_inflorescence.val()>1 && phytomer_parameters.inflorescence.fruit_offset.val()>0 ){
             if( ind_from_tip != 0 ) {
                 float offset = 0;
                 if( phytomer_parameters.inflorescence.fruit_arrangement_pattern == "opposite" ){
-                    offset = (ind_from_tip - 0.5f) * phytomer_parameters.inflorescence.fruit_offset * phytomer_parameters.inflorescence.length;
+                    offset = (ind_from_tip - 0.5f) * phytomer_parameters.inflorescence.fruit_offset.val() * phytomer_parameters.inflorescence.length.val();
                 }else if( phytomer_parameters.inflorescence.fruit_arrangement_pattern == "alternate" ){
-                    offset = (ind_from_tip - 0.5f + 0.5f*float(fruit>float(phytomer_parameters.inflorescence.fruit_per_inflorescence-1)/2.f) ) * phytomer_parameters.inflorescence.fruit_offset * phytomer_parameters.inflorescence.length;
+                    offset = (ind_from_tip - 0.5f + 0.5f*float(fruit>float(phytomer_parameters.inflorescence.fruit_per_inflorescence.val()-1)/2.f) ) * phytomer_parameters.inflorescence.fruit_offset.val() * phytomer_parameters.inflorescence.length.val();
                 }else{
                     helios_runtime_error("ERROR (PlantArchitecture::addInfluorescence): Invalid fruit arrangement pattern.");
                 }
-                fruit_base = interpolateTube(rachis_vertices, 1.f - offset / phytomer_parameters.inflorescence.length);
+                fruit_base = interpolateTube(rachis_vertices, 1.f - offset / phytomer_parameters.inflorescence.length.val());
             }
         }
 
@@ -686,7 +715,6 @@ void Phytomer::setLeafScale( float leaf_scale_factor_fraction ){
     }
 
     //scale and translate leaves
-    assert( leaf_objIDs.size()==phytomer_parameters.petiole.leaves_per_petiole );
     assert( leaf_objIDs.size()==leaf_bases.size() );
     for(int leaf=0; leaf < leaf_objIDs.size(); leaf++ ) {
 
@@ -966,6 +994,8 @@ void PlantArchitecture::setPhytomerLeafScale(uint plantID, uint shootID, uint no
         helios_runtime_error("ERROR (PlantArchitecture::setPhytomerLeafScale): Shoot with ID of " + std::to_string(shootID) + " does not exist.");
     }else if( node_number>=parent_shoot->current_node_number ){
         helios_runtime_error("ERROR (PlantArchitecture::setPhytomerLeafScale): Cannot scale leaf " + std::to_string(node_number) + " because there are only " + std::to_string(parent_shoot->current_node_number) + " nodes in this shoot.");
+    }else if( parent_shoot->phytomers.at(node_number)->petiole_objIDs.empty() ){
+        return;
     }
     if(leaf_scale_factor_fraction < 0 || leaf_scale_factor_fraction > 1 ){
         std::cout << "WARNING (PlantArchitecture::setPhytomerLeafScale): Leaf scaling factor was outside the range of 0 to 1. No scaling was applied." << std::endl;
@@ -1087,6 +1117,7 @@ PhytomerParameters PlantArchitecture::getPhytomerParametersFromLibrary(const std
         phytomer_parameters_current.inflorescence.tube_subdivisions = 10;
         phytomer_parameters_current.inflorescence.fruit_prototype_function = BeanFruitPrototype;
         phytomer_parameters_current.inflorescence.fruit_prototype_scale = 0.05 * make_vec3(1, 1, 1);
+        phytomer_parameters_current.inflorescence.flower_prototype_scale = 0.05 * make_vec3(1, 1, 1);
         phytomer_parameters_current.inflorescence.fruit_arrangement_pattern = "opposite";
         phytomer_parameters_current.inflorescence.fruit_per_inflorescence = 4;
         phytomer_parameters_current.inflorescence.fruit_offset = 0.2;
@@ -1120,6 +1151,7 @@ PhytomerParameters PlantArchitecture::getPhytomerParametersFromLibrary(const std
         phytomer_parameters_current.inflorescence.tube_subdivisions = 10;
         phytomer_parameters_current.inflorescence.fruit_prototype_function = CowpeaFruitPrototype;
         phytomer_parameters_current.inflorescence.fruit_prototype_scale = 0.1 * make_vec3(1, 1, 1);
+        phytomer_parameters_current.inflorescence.flower_prototype_scale = 0.1 * make_vec3(1, 1, 1);
         phytomer_parameters_current.inflorescence.fruit_arrangement_pattern = "opposite";
         phytomer_parameters_current.inflorescence.fruit_per_inflorescence = 4;
         phytomer_parameters_current.inflorescence.fruit_offset = 0.;
@@ -1156,6 +1188,7 @@ PhytomerParameters PlantArchitecture::getPhytomerParametersFromLibrary(const std
         phytomer_parameters_current.inflorescence.fruit_prototype_function = TomatoFruitPrototype;
         phytomer_parameters_current.inflorescence.flower_prototype_function = TomatoFlowerPrototype;
         phytomer_parameters_current.inflorescence.fruit_prototype_scale = 0.01 * make_vec3(1, 1, 1);
+        phytomer_parameters_current.inflorescence.flower_prototype_scale = 0.01 * make_vec3(1, 1, 1);
         phytomer_parameters_current.inflorescence.fruit_arrangement_pattern = "alternate";
         phytomer_parameters_current.inflorescence.fruit_per_inflorescence = 9;
         phytomer_parameters_current.inflorescence.fruit_offset = 0.14;
@@ -1193,13 +1226,14 @@ PhytomerParameters PlantArchitecture::getPhytomerParametersFromLibrary(const std
         phytomer_parameters_current.inflorescence.fruit_prototype_function = AlmondFruitPrototype;
         phytomer_parameters_current.inflorescence.flower_prototype_function = AlmondFlowerPrototype;
         phytomer_parameters_current.inflorescence.fruit_prototype_scale = 0.01 * make_vec3(1, 1, 1);
+        phytomer_parameters_current.inflorescence.flower_prototype_scale = 0.0075 * make_vec3(1, 1, 1);
         phytomer_parameters_current.inflorescence.fruit_arrangement_pattern = "alternate";
         phytomer_parameters_current.inflorescence.fruit_per_inflorescence = 1;
         phytomer_parameters_current.inflorescence.fruit_offset = 0.14;
         phytomer_parameters_current.inflorescence.curvature = -300;
         phytomer_parameters_current.inflorescence.length = 0.0;
         phytomer_parameters_current.inflorescence.rachis_radius = 0.0005;
-        phytomer_parameters_current.inflorescence.fruit_rotation = make_AxisRotation(-0.5*M_PI,0,0);
+        phytomer_parameters_current.inflorescence.fruit_pitch = -0.5*M_PI;
         
     }else{
         helios_runtime_error("ERROR (PlantArchitecture::setCurrentPhytomerParameters): " + phytomer_label + " is not a valid phytomer in the library.");
@@ -1314,13 +1348,28 @@ void PlantArchitecture::advanceTime( float dt ) {
                 if (shoot->shoot_parameters.bud_break_probability > 0) {
 
                     if (phytomer->age < shoot->shoot_parameters.bud_time.val() && phytomer->age + dt >= shoot->shoot_parameters.bud_time.val() ) {
-                        auto it = shoot_types.begin();
-                        std::advance(it, context_ptr->randu(0,shoot_types.size()-1));
-                        std::string new_shoot_type_label = it->first;
-                        if (context_ptr->randu() < shoot_types.at(new_shoot_type_label).bud_break_probability) {
-                            uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle.val(), context_ptr->randu(0.f, 2.f*M_PI), -0. * M_PI), new_shoot_type_label);
-                            setPhytomerScale(plantID, childID, 0, 0.01, 0.01);
-                            std::cout << "Adding child shoot to phytomer " << node_number << " of type " << new_shoot_type_label << std::endl;
+
+                        if (!shoot->shoot_parameters.child_shoot_type_labels.empty()) {
+                            float randf = context_ptr->randu();
+                            int shoot_type_index = -1;
+                            for (int s = 0; s < shoot->shoot_parameters.child_shoot_type_labels.size(); s++) {
+                                if (randf < shoot->shoot_parameters.child_shoot_type_probabilities.at(s)) {
+                                    shoot_type_index = s;
+                                    break;
+                                }
+                            }
+                            if (shoot_type_index < 0) {
+                                shoot_type_index = shoot->shoot_parameters.child_shoot_type_labels.size() - 1;
+                            }
+                            std::string new_shoot_type_label = shoot->shoot_type_label;
+                            if (shoot_type_index >= 0) {
+                                new_shoot_type_label = shoot->shoot_parameters.child_shoot_type_labels.at(shoot_type_index);
+                            }
+                            if (context_ptr->randu() < shoot_types.at(new_shoot_type_label).bud_break_probability) {
+                                uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle.val(), context_ptr->randu(0.f, 2.f * M_PI), -0. * M_PI), new_shoot_type_label);
+                                setPhytomerScale(plantID, childID, 0, 0.01, 0.01);
+                                std::cout << "Adding child shoot to phytomer " << node_number << " of type " << new_shoot_type_label << std::endl;
+                            }
                         }
                     }
 

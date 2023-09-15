@@ -299,15 +299,17 @@ private:
 
     struct InflorescenceParameters{
         uint reproductive_state;
-        float length;
-        int fruit_per_inflorescence;
-        float fruit_offset;
-        float rachis_radius;
-        float curvature;
+        RandomParameter_float length;
+        RandomParameter_int fruit_per_inflorescence;
+        RandomParameter_float fruit_offset;
+        RandomParameter_float rachis_radius;
+        RandomParameter_float curvature;
         std::string fruit_arrangement_pattern;
         uint tube_subdivisions;
-        AxisRotation fruit_rotation;
+        RandomParameter_float fruit_pitch;
+        RandomParameter_float fruit_roll;
         helios::vec3 fruit_prototype_scale;
+        helios::vec3 flower_prototype_scale;
         uint(*fruit_prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
         uint(*flower_prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
         InflorescenceParameters& operator=(const InflorescenceParameters &a){
@@ -319,9 +321,11 @@ private:
             this->curvature = a.curvature;
             this->fruit_arrangement_pattern = a.fruit_arrangement_pattern;
             this->tube_subdivisions = a.tube_subdivisions;
-            this->fruit_rotation = a.fruit_rotation;
+            this->fruit_pitch = a.fruit_pitch;
+            this->fruit_roll = a.fruit_roll;
             this->fruit_prototype_scale = a.fruit_prototype_scale;
             this->fruit_prototype_function = a.fruit_prototype_function;
+            this->flower_prototype_scale = a.flower_prototype_scale;
             this->flower_prototype_function = a.flower_prototype_function;
             return *this;
         }
@@ -365,10 +369,14 @@ struct ShootParameters{
     RandomParameter_float phyllochron; //phytomers/day
     RandomParameter_float growth_rate; //length/day
 
-    // Probability that a given bud will become this type of shoot
-    float shoot_type_probability;
     // Probability that bud with this shoot type will break and form a new shoot
     float bud_break_probability;
+
+    // Probability that a phytomer will flower
+    float flower_probability;
+
+    // Probability that a phytomer will fruit
+    float fruit_probability;
 
     RandomParameter_float bud_time;  //days
 
@@ -376,13 +384,21 @@ struct ShootParameters{
 
     std::vector<float> blind_nodes;
 
+    void defineChildShootTypes( const std::vector<std::string> &child_shoot_type_labels, const std::vector<float> &child_shoot_type_probabilities );
+
+    std::vector<std::string> child_shoot_type_labels;
+    std::vector<float> child_shoot_type_probabilities;
+
+private:
+
+
 };
 
 struct Phytomer {
 public:
 
-    Phytomer(const PhytomerParameters &params, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction,
-             float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr);
+    Phytomer(const PhytomerParameters &params, const ShootParameters &parent_shoot_parameters, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, const AxisRotation &shoot_base_rotation,
+             float internode_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr);
 
     helios::vec3 getInternodeAxisVector( float stem_fraction ) const;
 

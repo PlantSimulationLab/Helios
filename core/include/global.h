@@ -279,6 +279,13 @@ std::vector<std::string> separate_string_by_delimiter( const std::string &inputs
 template <typename anytype>
 anytype clamp( anytype value, anytype min, anytype max );
 
+//! Sum of a vector of floats
+/**
+ * \param[in] "vect" C++ vector of floats
+ * \ingroup functions
+*/
+float sum( const std::vector<float>& vect );
+
 //! Mean value of a vector of floats
 /**
  * \param[in] "vect" C++ vector of floats
