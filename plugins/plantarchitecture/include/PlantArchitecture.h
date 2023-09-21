@@ -410,6 +410,10 @@ public:
 
     float getPetioleLength() const;
 
+    float getInternodeRadius( float stem_fraction ) const;
+
+    float getPetioleRadius( float stem_fraction ) const;
+
     void addInfluorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &inflorescence_bending_axis);
 
     void scaleInternode( float girth_scale_factor, float length_scale_factor );

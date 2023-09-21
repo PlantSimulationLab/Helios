@@ -20,6 +20,36 @@
 
 using namespace helios;
 
+float interpolateTube( const std::vector<float> &P, float frac ){
+
+    assert( frac>=0 && frac<=1 );
+    assert( !P.empty() );
+
+    float dl=1.f/float(P.size());
+
+    float f = 0;
+    for( int i=0; i<P.size()-1; i++ ){
+
+        float fplus = f+dl;
+
+        if( fplus>=1.f ){
+            fplus = 1.f+1e-3;
+        }
+
+        if( frac>=f && (frac<=fplus || fabs(frac-fplus)<0.0001 ) ){
+
+            float V = P.at(i) + (frac-f)/(fplus-f)*(P.at(i+1)-P.at(i));
+
+            return V;
+        }
+
+        f=fplus;
+    }
+
+    return P.front();
+
+}
+
 helios::vec3 interpolateTube( const std::vector<vec3> &P, float frac ){
 
     assert( frac>=0 && frac<=1 );
@@ -160,9 +190,7 @@ helios::vec3 Phytomer::getPetioleAxisVector(float stem_fraction) const{
 
 helios::vec3 Phytomer::getAxisVector( float stem_fraction, const std::vector<helios::vec3> &axis_vertices ) const{
 
-    if( stem_fraction<0 || stem_fraction>1 ){
-        std::cerr << "ERROR: Stem fraction must be between 0 and 1." << std::endl;
-    }
+    assert( stem_fraction>=0 && stem_fraction<=1 );
 
     float df = 0.1f;
     float frac_plus, frac_minus;
@@ -186,13 +214,26 @@ helios::vec3 Phytomer::getAxisVector( float stem_fraction, const std::vector<hel
 
 float Phytomer::getInternodeLength() const{
 
-
+    // \todo
     return 0;
 }
 
 float Phytomer::getPetioleLength() const{
 
+    // \todo
     return 0;
+}
+
+float Phytomer::getInternodeRadius( float stem_fraction ) const{
+
+    return interpolateTube( internode_radii, stem_fraction );
+
+}
+
+float Phytomer::getPetioleRadius( float stem_fraction ) const{
+
+    return interpolateTube( petiole_radii, stem_fraction );
+
 }
 
 int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction, float leaf_scale_factor_fraction) {
@@ -667,6 +708,7 @@ void Phytomer::setInternodeScale( float internode_scale_factor_fraction ){
     for( uint objID : internode_objIDs ) {
         context_ptr->getConeObjectPointer(objID)->scaleLength(delta_scale );
         context_ptr->getConeObjectPointer(objID)->scaleGirth( delta_scale );
+        internode_radii.at(node) *= delta_scale;
         if( node>0 ) {
             vec3 new_base = context_ptr->getConeObjectNode(objID, 0);
             context_ptr->translateObject(objID, last_base - new_base);
@@ -702,6 +744,7 @@ void Phytomer::setLeafScale( float leaf_scale_factor_fraction ){
         for (uint objID : petiole) {
             context_ptr->getConeObjectPointer(objID)->scaleLength(delta_scale);
             context_ptr->getConeObjectPointer(objID)->scaleGirth(delta_scale);
+            petiole_radii.at(node) *= delta_scale;
             if (node > 0) {
                 vec3 new_base = context_ptr->getConeObjectNode(objID, 0);
                 context_ptr->translateObject(objID, last_base - new_base);
@@ -760,8 +803,11 @@ void Shoot::initializePhytomer(){
             phytomer_parameters.petiole.roll = 0;
         }
 
-        //\todo This should probably be limited by the actual instantaneous radius of the parent
-        phytomer_parameters.internode.radius = shoot_parameters.phytomer_parameters.internode.radius*(1.f-shoot_parameters.shoot_internode_taper.val()*float(i)/float(shoot_parameters.max_nodes) );
+        float parent_radius = 1e6;
+        if( parentID>=0 ){
+            parent_radius = shoot_tree_ptr->at(parentID)->phytomers.at(parentNode)->phytomer_parameters.internode.radius;
+        }
+        phytomer_parameters.internode.radius = std::min(parent_radius,shoot_parameters.phytomer_parameters.internode.radius*(1.f-shoot_parameters.shoot_internode_taper.val()*float(i)/float(shoot_parameters.max_nodes) ));
 
         int pID = addPhytomer(phytomer_parameters, base_rotation, 1.f, 1.f);
 
@@ -1308,7 +1354,7 @@ void PlantArchitecture::advanceTime( float dt ) {
                 continue;
             }
 
-            // -- Add new phytomer based on the phyllochron -- //
+            // -- Add new phytomer at terminal bud based on the phyllochron -- //
             if (!shoot->phytomers.empty() && shoot->phytomers.back()->age < 1.f / shoot->shoot_parameters.phyllochron.val() && shoot->phytomers.back()->age + dt >= 1.f / shoot->shoot_parameters.phyllochron.val()) {
                  int pID = addPhytomerToShoot(plantID, shoot->ID, shoot->phytomers.back()->phytomer_parameters, 0.01, 0.01);
 //            context_ptr->setObjectColor( flatten({shoot->phytomers.at(pID).internode_objIDs,flatten(shoot->phytomers.at(pID).petiole_objIDs),shoot->phytomers.at(pID).leaf_objIDs}), RGB::red );
@@ -1344,7 +1390,7 @@ void PlantArchitecture::advanceTime( float dt ) {
 //            context_ptr->setObjectColor( flatten({phytomer.internode_objIDs,flatten(phytomer.petiole_objIDs),phytomer.leaf_objIDs}), RGB::blue );
 //            context_ptr->overrideObjectTextureColor( flatten({phytomer.internode_objIDs,flatten(phytomer.petiole_objIDs),phytomer.leaf_objIDs}) );
 
-                // -- Add buds based on bud probability -- //
+                // -- Add shoots at buds based on bud probability -- //
                 if (shoot->shoot_parameters.bud_break_probability > 0) {
 
                     if (phytomer->age < shoot->shoot_parameters.bud_time.val() && phytomer->age + dt >= shoot->shoot_parameters.bud_time.val() ) {
