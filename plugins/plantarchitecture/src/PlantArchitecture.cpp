@@ -1189,6 +1189,26 @@ void PlantArchitecture::setPhytomerScale(uint plantID, uint shootID, uint node_n
 
 }
 
+
+void PlantArchitecture::setShootState( uint plantID, uint shootID, GrowthState state ){
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::setShootState): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    auto shoot_tree_ptr = &plant_instances.at(plantID).shoot_tree;
+
+    if(shootID >= shoot_tree_ptr->size() ){
+        helios_runtime_error("ERROR (PlantArchitecture::setShootState): Shoot with ID of " + std::to_string(shootID) + " does not exist.");
+    }
+
+    auto phytomers = shoot_tree_ptr->at(shootID)->phytomers;
+    for( const auto & phytomer : phytomers ){
+        phytomer->state = state;
+    }
+
+}
+
 void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &base_position) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
@@ -1536,7 +1556,7 @@ void PlantArchitecture::advanceTime( float dt ) {
                 }
 
                 // -- Flowering -- //
-                if ( phytomer->state == VEGETATIVE && ( phytomer->inflorescence_age >= plant.second.dd_to_flowering || dormancy_broken_this_timestep ) ) {
+                if ( phytomer->state == VEGETATIVE && ( phytomer->inflorescence_age >= plant.second.dd_to_flowering )){//|| dormancy_broken_this_timestep ) ) {
                     phytomer->inflorescence_age = 0;
                     phytomer->changeReproductiveState(FLOWERING);
                 }

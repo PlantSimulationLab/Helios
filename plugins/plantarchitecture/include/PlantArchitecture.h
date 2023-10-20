@@ -568,6 +568,8 @@ public:
 
     void setPhytomerScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
+    void setShootState( uint plantID, uint shootID, GrowthState state );
+
     void setPlantBasePosition(uint plantID, const helios::vec3 &base_position);
 
     helios::vec3 getPlantBasePosition(uint plantID) const;
