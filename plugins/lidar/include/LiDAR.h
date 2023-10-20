@@ -630,6 +630,13 @@ class LiDARcloud{
   */
   void exportTriangleAreas( const char* filename, int gridcell );
 
+  //! Export to file discrete area-weighted inclination angle probability distribution based on the triangulation. Inclination angles are between 0 and 90 degrees. The probability distribution is normalized such that the sine-weighted integral over all angles is 1. The value of each bin is written as a column in the output file; lines correspond to each voxel grid cell.
+  /**
+    * \param[in] "filename" Name of file
+    * \param[in] "Nbins" Number of bins to use for the histogram
+  */
+  void exportTriangleInclinationDistribution( const char* filename, uint Nbins );
+
   //! Export to file the leaf area within each grid cell.  Lines of the file correspond to each grid cell
   /**
    * \param[in] "filename" Name of file
@@ -1024,6 +1031,12 @@ d the last cell's index is Ncells-1.
    * \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
    */
   float getCellGtheta( uint index ) const;
+
+    //! For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points for all scans. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.
+    /**
+     * \return (x,y,z) of missing points added to the scan from gapfilling
+     */
+    std::vector<helios::vec3> gapfillMisses();
 
   //! For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.
   /**

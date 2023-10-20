@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.3.1</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.3.2</span>
    </div>
   </td>
  </tr>
@@ -90,6 +90,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#a6aa59ee9ecf89c9c6a2ae3a734c5ccd4">ScanMetadata</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, const std::vector&lt; std::string &gt; &amp;a_columnFormat)</td></tr>
 <tr class="memdesc:a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a LiDAR scan data structure.  <a href="struct_scan_metadata.html#a6aa59ee9ecf89c9c6a2ae3a734c5ccd4">More...</a><br /></td></tr>
 <tr class="separator:a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae28f6042e5eae2adaaacbeaaa6109a8c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#ae28f6042e5eae2adaaacbeaaa6109a8c">rc2direction</a> (uint row, uint column) const</td></tr>
+<tr class="memdesc:ae28f6042e5eae2adaaacbeaaa6109a8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert the (row,column) of hit point in a scan to a direction vector.  <a href="struct_scan_metadata.html#ae28f6042e5eae2adaaacbeaaa6109a8c">More...</a><br /></td></tr>
+<tr class="separator:ae28f6042e5eae2adaaacbeaaa6109a8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aab2db5e4c22f1eb7979294a7f8993611"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int2.html">helios::int2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_scan_metadata.html#aab2db5e4c22f1eb7979294a7f8993611">direction2rc</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> &amp;direction) const</td></tr>
+<tr class="memdesc:aab2db5e4c22f1eb7979294a7f8993611"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert the scan ray direction into (row,column) table index.  <a href="struct_scan_metadata.html#aab2db5e4c22f1eb7979294a7f8993611">More...</a><br /></td></tr>
+<tr class="separator:aab2db5e4c22f1eb7979294a7f8993611"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -242,6 +248,76 @@ Data Fields</h2></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="aab2db5e4c22f1eb7979294a7f8993611" name="aab2db5e4c22f1eb7979294a7f8993611"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aab2db5e4c22f1eb7979294a7f8993611">&#9670;&#160;</a></span>direction2rc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1int2.html">helios::int2</a> ScanMetadata::direction2rc </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> &amp;&#160;</td>
+          <td class="paramname"><em>direction</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Convert the scan ray direction into (row,column) table index. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">direction</td><td>Spherical vector corresponding to the ray direction for the given hit point. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>(row,column) table index for the given hit point </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00066">66</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae28f6042e5eae2adaaacbeaaa6109a8c" name="ae28f6042e5eae2adaaacbeaaa6109a8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae28f6042e5eae2adaaacbeaaa6109a8c">&#9670;&#160;</a></span>rc2direction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> ScanMetadata::rc2direction </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>row</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>column</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Convert the (row,column) of hit point in a scan to a direction vector. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">row</td><td>Index of hit point in the theta (zenithal) direction. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">column</td><td>Index of hit point in the phi (azimuthal) direction. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Spherical vector corresponding to the ray direction for the given hit point. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00057">57</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
 </div>
 </div>

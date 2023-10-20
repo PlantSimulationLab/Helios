@@ -1,5 +1,4 @@
 /** \file "Context_fileIO.cpp" Filesystem input/output functions within the Context.
-\author Brian Bailey
 
 Copyright (C) 2016-2023 Brian Bailey
 
@@ -3781,6 +3780,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
       // ------- TEXTURE COORDINATES --------- //
     }else if( line=="vt" ){
       getline(inputOBJ, line);
+      line = trim_whitespace(line);
       //parse coordinates into uv
       vec2 uv(string2vec2(line.c_str()));
       texture_uv.emplace_back(uv);

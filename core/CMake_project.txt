@@ -51,3 +51,6 @@ foreach(PLUGIN ${PLUGINS})
     target_link_libraries( ${PLUGIN} helios )
 endforeach(PLUGIN)
 include_directories( "${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIRECTORY}" )
+
+enable_testing()
+add_test(Test0,"${EXECUTABLE_NAME}" "0")

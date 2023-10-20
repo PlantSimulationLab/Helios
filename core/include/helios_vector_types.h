@@ -1,5 +1,4 @@
 /** \file "helios_vector_types.h" Declarations for vector types
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 

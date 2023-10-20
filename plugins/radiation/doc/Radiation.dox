@@ -296,6 +296,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  There are six types of external sources of radiation that can be simulated: 1) a collimated radiation source (beams of radiation are approximately parallel), 2) a sphere with the same radius and distance as the sun, 3) a sphere with prescribed radius and position, 4) a disk with prescribed radius, position, and orientation, 5) a rectangle with prescribed size, position, and orientation, 6) ambient diffuse radiation with prescribed angular distribution.
 
+ <b>It is critical to note that radiative source fluxes are specified as the flux perpendicular to the direction of the source.</b> For a solar source, for example, this would be the flux on a plane perpendicular to the sun direction. This flux is of course different than what a sensor positioned horizontally would measure. One can convert between the two using the cosine of the solar zenith, but this becomes problematic when the sun is low in the sky. For this reason, it is recommended to use the SolarPosition plug-in to specify solar source fluxes, which can be matched to observations by tuning the atmospheric turbidity.
+
  \image html RadiationSources.png
 
  \subsubsection ColSource Adding Collimated Sources

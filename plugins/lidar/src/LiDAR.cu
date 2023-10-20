@@ -489,32 +489,36 @@ void LiDARcloud::sourcesInsideGridCellGPU() {
 
 }
 
-
-std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source){
-    std::vector<helios::vec3> xyz_filled =  gapfillMisses(source, false, false);
+std::vector<helios::vec3> LiDARcloud::gapfillMisses(){
+    std::vector<helios::vec3> xyz_filled;
+    for( uint scanID=0; scanID<getScanCount(); scanID++ ){
+        std::vector<helios::vec3> filled_this_scan = gapfillMisses(scanID,false,false);
+        xyz_filled.insert(xyz_filled.end(), filled_this_scan.begin(), filled_this_scan.end());
+    }
     return xyz_filled;
 }
 
-std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapfill_grid_only, const bool add_flags){
+std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID){
+    return gapfillMisses(scanID, false, false);
+}
 
-    std::cout << "gap filling complete misses in scan " << source << std::endl;
-    std::cout << "gapfill_grid_only = " << gapfill_grid_only << std::endl;
-    std::cout << "add_flags = " << add_flags << std::endl;
+std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapfill_grid_only, const bool add_flags){
+
+    if( printmessages ) {
+        std::cout << "Gap filling complete misses in scan " << scanID << "..." << std::flush;
+    }
 
     float gap_distance = 20000;
-    //float gap_distance = 1e5;
-    std::cout << "filled gaps set to distance of " << gap_distance << "m from scanner" << std::endl;
 
 
-
-    helios::vec3 origin = getScanOrigin(source);
+    helios::vec3 origin = getScanOrigin(scanID);
     std::vector<helios::vec3> xyz_filled;
 
     // Populating a hit table for each scan:
     // Column 0 - hit index; Column 1 - timestamp; Column 2 - ray zenith; Column 3 - ray azimuth
     std::vector<std::vector<double> > hit_table;
     for( size_t r=0; r< getHitCount(); r++ ){
-        if( getHitScanID(r)== source){
+        if( getHitScanID(r)== scanID){
 
             if(add_flags)
             {
@@ -541,8 +545,6 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
 
         }
     }
-
-    std::cout << "# of hits in the scan =  " << hit_table.size() << std::endl;
 
     // sorting, initial dt and dtheta calculations, and determining minimum target index in the scan
 
@@ -609,9 +611,6 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
         hit_table_clean.push_back(hit_table_semiclean.at(r));
     }
 
-    std::cout << "# of beams in the scan =  " << hit_table_clean.size() << std::endl;
-
-
     // recalculate dt and dtheta with only one hit per beam
     // and calculate the minimum dt value  
     std::vector<double> dt_clean;
@@ -652,8 +651,6 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
 
     }
 
-    std::cout << "# of sweeps in the scan =  " << hit_table2D.size() << std::endl;
-
     // calculate average dt and dtheta for subsequent points
 
     //calculate average dt
@@ -683,14 +680,13 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
     //Calculate the average dtheta to use for extrapolation
     dtheta_avg = dtheta_avg/float(dtheta_sum);
 
-    std::cout << "dt_avg = " << dt_avg << std::endl;
-    std::cout << "dtheta_avg = " << dtheta_avg << std::endl;
-    std::cout << "hit_table2D.size() = "<< hit_table2D.size() << std::endl;
+//    std::cout << "dt_avg = " << dt_avg << std::endl;
+//    std::cout << "dtheta_avg = " << dtheta_avg << std::endl;
+//    std::cout << "hit_table2D.size() = "<< hit_table2D.size() << std::endl;
 
     //identify gaps and fill
     for( int j=0; j<hit_table2D.size(); j++ ){
 
-        //std::cout << "hit_table2D.at(j = " << j << " ) = "<< hit_table2D.at(j).size() << std::endl;
         if(hit_table2D.at(j).size() > 0)
         {
             for( int i=0; i<hit_table2D.at(j).size()-1; i++ ){
@@ -730,7 +726,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
                             // gapfillMisses_code = 1: gapfilled points
                             data.insert(std::pair<std::string, double>("gapfillMisses_code", 1.0));
                         }
-                        addHitPoint(source, xyz, spherical, data);
+                        addHitPoint(scanID, xyz, spherical, data);
 
                     }
                 }
@@ -739,10 +735,9 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
 
     }
     uint npointsfilled = xyz_filled.size();
-    std::cout << "# of points filled =  " << npointsfilled << std::endl;
 
     helios::vec2 theta_range;
-    theta_range = getScanRangeTheta(source); // use ranges from xml file to start
+    theta_range = getScanRangeTheta(scanID); // use ranges from xml file to start
 
     if(gapfill_grid_only == true)
     {
@@ -766,7 +761,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
         float min_phi = 2*M_PI;
         for(uint gg=0;gg<grid_vertices.size();gg++)
         {
-            helios::vec3 direction_cart = grid_vertices.at(gg)-getScanOrigin(source);
+            helios::vec3 direction_cart = grid_vertices.at(gg)-getScanOrigin(scanID);
             helios::SphericalCoord sc = cart2sphere(direction_cart);
             if(sc.azimuth < min_phi)
             {
@@ -804,7 +799,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
         theta_range = helios::make_vec2(min_theta, max_theta);
     }
 
-    std::cout << "theta_range for extrapolation: " << theta_range.x*(180.0/M_PI) << ", " << theta_range.y*(180.0/M_PI) << std::endl;
+//    std::cout << "theta_range for extrapolation: " << theta_range.x*(180.0/M_PI) << ", " << theta_range.y*(180.0/M_PI) << std::endl;
 
     // extrapolate missing points
     for( int j=0; j<hit_table2D.size(); j++ ){
@@ -817,7 +812,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
 
                 float dtheta = dtheta_avg;
                 float theta = hit_table2D.at(j).at(0).at(2) - dtheta;
-                //just use the the last value of phi in the sweep
+                //just use the last value of phi in the sweep
                 float phi =  hit_table2D.at(j).at(0).at(3);
                 float timestep = hit_table2D.at(j).at(0).at(1) - dt_avg;
                 if( dtheta==0 ){
@@ -831,8 +826,6 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
 
                     xyz_filled.push_back(xyz);
 
-
-                    //ERK
                     std::map<std::string, double> data;
                     data.insert(std::pair<std::string, double>("timestamp", timestep));
                     data.insert(std::pair<std::string, double>("target_index", min_tindex));
@@ -844,7 +837,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
 
                     }
 
-                    addHitPoint(source, xyz, spherical, data);
+                    addHitPoint(scanID, xyz, spherical, data);
 
 
                     theta = theta - dtheta;
@@ -855,7 +848,6 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
             }
 
             //downward edge points
-            //ERK changed .x to .y here
             if( hit_table2D.at(j).back().at(2)<theta_range.y ){
 
                 int sz = hit_table2D.at(j).size();
@@ -871,7 +863,6 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
 
                     xyz_filled.push_back(xyz);
 
-                    //ERK
                     std::map<std::string, double> data;
                     data.insert(std::pair<std::string, double>("timestamp", timestep));
                     data.insert(std::pair<std::string, double>("target_index", min_tindex));
@@ -882,7 +873,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
                         data.insert(std::pair<std::string, double>("gapfillMisses_code", 2.0));
                     }
 
-                    addHitPoint(source, xyz, spherical, data);
+                    addHitPoint(scanID, xyz, spherical, data);
 
                     theta = theta + dtheta;
                     timestep = timestep + dt_avg;
@@ -894,10 +885,10 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint source, const bool gapf
     }
 
     uint npointsextrapolated = xyz_filled.size() - npointsfilled;
-    std::cout << "# of points extrapolated =  " << npointsextrapolated << std::endl;
 
-
-    std::cout << xyz_filled.size() << " points in the gap filled data" << std::endl;
+    if( printmessages ) {
+        std::cout << "filled " << xyz_filled.size() << " points." << std::endl;
+    }
     return xyz_filled;
 
 }
@@ -1090,7 +1081,7 @@ void LiDARcloud::calculateLeafAreaGPU( int min_voxel_hits){
                 this_scan_xyz.push_back( getHitXYZ(r) );
 
                 if( doesHitDataExist(r,"target_count") ){
-                    this_scan_weight.push_back( 1.f/getHitData(r,"target_count") );
+                    this_scan_weight.push_back( 1.f/float(getHitData(r,"target_count")) );
                 }else{
                     this_scan_weight.push_back(1.f);
                 }
@@ -1134,7 +1125,7 @@ void LiDARcloud::calculateLeafAreaGPU( int min_voxel_hits){
             CUDA_CHECK_ERROR( cudaMemset( d_hit_after, 0, sizeof(float)) );
 
             dimBlock = make_uint3( min(size_t(512),Nhits), 1, 1 );
-            dimGrid = make_uint3( ceil(float(Nhits)/dimBlock.x), 1, 1  );
+            dimGrid = make_uint3( ceil(float(Nhits)/float(dimBlock.x) ), 1, 1  );
 
             if( dimBlock.x==0 && dimGrid.x==0 ){
                 continue;

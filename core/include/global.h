@@ -1,5 +1,4 @@
-/** \file "global.h" Header file for all global function/object definitions. 
-    \author Brian Bailey
+/** \file "global.h" Header file for all global function/object definitions.
 
     Copyright (C) 2016-2023 Brian Bailey
 

@@ -500,6 +500,10 @@ void LiDARcloud::exportTriangleNormals( const char* filename ){
 
     file.open(filename);
 
+    if( !file.is_open() ) {
+        throw (std::runtime_error("ERROR (LiDARcloud::exportTriangleNormals): Could not open file '" + std::string(filename) + "' for writing."));
+    }
+
     for( std::size_t t=0; t<triangles.size(); t++ ){
 
         Triangulation tri = triangles.at(t);
@@ -524,6 +528,10 @@ void LiDARcloud::exportTriangleNormals( const char* filename, int gridcell ){
     ofstream file;
 
     file.open(filename);
+
+    if( !file.is_open() ) {
+        throw (std::runtime_error("ERROR (LiDARcloud::exportTriangleNormals): Could not open file '" + std::string(filename) + "' for writing."));
+    }
 
     for( std::size_t t=0; t<triangles.size(); t++ ){
 
@@ -555,6 +563,10 @@ void LiDARcloud::exportTriangleAreas( const char* filename ){
 
     file.open(filename);
 
+    if( !file.is_open() ) {
+        throw (std::runtime_error("ERROR (LiDARcloud::exportTriangleAreas): Could not open file '" + std::string(filename) + "' for writing."));
+    }
+
     for( std::size_t t=0; t<triangles.size(); t++ ){
 
         Triangulation tri = triangles.at(t);
@@ -573,6 +585,10 @@ void LiDARcloud::exportTriangleAreas( const char* filename, int gridcell ){
 
     file.open(filename);
 
+    if( !file.is_open() ) {
+        throw (std::runtime_error("ERROR (LiDARcloud::exportTriangleAreas): Could not open file '" + std::string(filename) + "' for writing."));
+    }
+
     for( std::size_t t=0; t<triangles.size(); t++ ){
 
         Triangulation tri = triangles.at(t);
@@ -589,11 +605,73 @@ void LiDARcloud::exportTriangleAreas( const char* filename, int gridcell ){
 
 }
 
+void LiDARcloud::exportTriangleInclinationDistribution( const char* filename, uint Nbins ){
+
+    std::vector<std::vector<float>> inclinations( getGridCellCount() );
+    for( int i=0; i<getGridCellCount(); i++ ){
+        inclinations.at(i).resize( Nbins );
+    }
+
+    float db = 0.5f*M_PI/float(Nbins); //bin width
+
+    for( std::size_t t=0; t<triangles.size(); t++ ){
+
+        Triangulation tri = triangles.at(t);
+
+        int cell = tri.gridcell;
+
+        if( cell<0 ){
+            continue;
+        }
+
+        vec3 v0 = tri.vertex0;
+        vec3 v1 = tri.vertex1;
+        vec3 v2 = tri.vertex2;
+
+        vec3 normal = cross( v1-v0, v2-v0 );
+        normal.normalize();
+
+        float angle = acos_safe(fabs(normal.z));
+
+        float area = tri.area;
+
+        uint bin = floor(angle/db);
+        if( bin>=Nbins ){
+            bin = Nbins-1;
+        }
+
+        inclinations.at(cell).at(bin) += area;
+
+    }
+
+    ofstream file;
+
+    file.open(filename);
+
+    if( !file.is_open() ){
+        throw( std::runtime_error("ERROR (LiDARcloud::exportTriangleInclinationDistribution): Could not open file '" + std::string(filename) + "' for writing.") );
+    }
+
+    for( int cell=0; cell<getGridCellCount(); cell++ ){
+        for( int bin=0; bin<Nbins; bin++ ) {
+            file << inclinations.at(cell).at(bin) << " ";
+        }
+        file << std::endl;
+    }
+
+    file.close();
+
+}
+
 void LiDARcloud::exportLeafAreas( const char* filename ){
 
     ofstream file;
 
     file.open(filename);
+
+    if( !file.is_open() ) {
+        throw (std::runtime_error("ERROR (LiDARcloud::exportLeafAreas): Could not open file '" + std::string(filename) + "' for writing."));
+    }
 
     for( uint i=0; i<getGridCellCount(); i++ ){
 
@@ -611,6 +689,10 @@ void LiDARcloud::exportLeafAreaDensities( const char* filename ){
 
     file.open(filename);
 
+    if( !file.is_open() ) {
+        throw (std::runtime_error("ERROR (LiDARcloud::exportLeafAreaDensities): Could not open file '" + std::string(filename) + "' for writing."));
+    }
+
     for( uint i=0; i<getGridCellCount(); i++ ){
 
         file << getCellLeafAreaDensity(i) << std::endl;
@@ -626,6 +708,10 @@ void LiDARcloud::exportGtheta( const char* filename ){
     ofstream file;
 
     file.open(filename);
+
+    if( !file.is_open() ) {
+        throw (std::runtime_error("ERROR (LiDARcloud::exportGtheta): Could not open file '" + std::string(filename) + "' for writing."));
+    }
 
     for( uint i=0; i<getGridCellCount(); i++ ){
 
@@ -675,6 +761,10 @@ void LiDARcloud::exportPointCloud( const char* filename, uint scanID ){
     ofstream file;
 
     file.open(filename);
+
+    if( !file.is_open() ) {
+        throw (std::runtime_error("ERROR (LiDARcloud::exportPointCloud): Could not open file '" + std::string(filename) + "' for writing."));
+    }
 
     std::vector<std::string> hit_data;
     for( int r=0; r< getHitCount(); r++ ){
@@ -758,6 +848,10 @@ void LiDARcloud::exportPointCloudPTX( const char* filename, uint scanID ){
     ofstream file;
 
     file.open(filename);
+
+    if( !file.is_open() ) {
+        throw (std::runtime_error("ERROR (LiDARcloud::exportPointCloudPTX): Could not open file '" + std::string(filename) + "' for writing."));
+    }
 
     std::vector<std::string> ASCII_format = getScanColumnFormat(scanID);
 

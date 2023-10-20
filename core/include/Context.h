@@ -1,5 +1,4 @@
-/** \file "Context.h" Context header file. 
- \author Brian Bailey
+/** \file "Context.h" Context header file.
  
  Copyright (C) 2016-2023 Brian Bailey
  
@@ -1886,7 +1885,7 @@ public:
     /**
      * \return 0 if test was successful, 1 if test failed.
      */
-    int selfTest();
+    static int selfTest();
 
     //! Set seed for random generator
     /**

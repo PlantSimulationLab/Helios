@@ -1,5 +1,4 @@
-/** \file "Context.cpp" Context declarations. 
-    \author Brian Bailey
+/** \file "Context.cpp" Context declarations.
 
     Copyright (C) 2016-2023 Brian Bailey
 

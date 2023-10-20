@@ -1,7 +1,7 @@
 var searchData=
 [
   ['g_0',['g',['../structhelios_1_1_r_g_bcolor.html#ae002d220d8695538760eee2a6c4e9023',1,'helios::RGBcolor::g()'],['../structhelios_1_1_r_g_b_acolor.html#ac018f8ed01b4d4128a68ebe42e1e6a00',1,'helios::RGBAcolor::g()']]],
-  ['gapfillmisses_1',['gapfillMisses',['../class_li_d_a_rcloud.html#a544384a19e7d060c85eb5a8daa1aeef4',1,'LiDARcloud::gapfillMisses(uint scanID)'],['../class_li_d_a_rcloud.html#aa70d9c9fb6ca8c20a818c2bc68d39077',1,'LiDARcloud::gapfillMisses(uint scanID, const bool gapfill_grid_only, const bool add_flags)']]],
+  ['gapfillmisses_1',['gapfillMisses',['../class_li_d_a_rcloud.html#a53b80def6bff07231b8d2b10eb3e0330',1,'LiDARcloud::gapfillMisses()'],['../class_li_d_a_rcloud.html#a544384a19e7d060c85eb5a8daa1aeef4',1,'LiDARcloud::gapfillMisses(uint scanID)'],['../class_li_d_a_rcloud.html#aa70d9c9fb6ca8c20a818c2bc68d39077',1,'LiDARcloud::gapfillMisses(uint scanID, const bool gapfill_grid_only, const bool add_flags)']]],
   ['generateheightmodel_2',['generateHeightModel',['../class_aerial_li_d_a_rcloud.html#afc44503e2a6eb986fa79b5af56069468',1,'AerialLiDARcloud']]],
   ['geometric_20primitives_3',['Geometric Primitives',['../group__primitives.html',1,'']]],
   ['germination_5fprobability_4',['germination_probability',['../struct_bean_parameters.html#a9bec1a611d5100e6e7417b70a47cbe06',1,'BeanParameters']]],
@@ -28,7 +28,7 @@ var searchData=
   ['getcellprimitives_25',['getCellPrimitives',['../class_voxel_intersection.html#a7d50123db71cf5cd7c7cc4582abd5cb2',1,'VoxelIntersection']]],
   ['getcellrbar_26',['getCellRbar',['../class_aerial_li_d_a_rcloud.html#ae35261c7fc1553cb15fb318a2b14a3b2',1,'AerialLiDARcloud']]],
   ['getcellrotation_27',['getCellRotation',['../class_li_d_a_rcloud.html#aa2cba1d0bcd9a2ae35d9a5be03832efc',1,'LiDARcloud']]],
-  ['getcellsize_28',['getCellSize',['../class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55',1,'LiDARcloud::getCellSize()'],['../class_aerial_li_d_a_rcloud.html#a37d5eec1dec60c9ddef91713344b635a',1,'AerialLiDARcloud::getCellSize(void) const']]],
+  ['getcellsize_28',['getCellSize',['../class_aerial_li_d_a_rcloud.html#a37d5eec1dec60c9ddef91713344b635a',1,'AerialLiDARcloud::getCellSize()'],['../class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55',1,'LiDARcloud::getCellSize()']]],
   ['getcelltransmissionprobability_29',['getCellTransmissionProbability',['../class_aerial_li_d_a_rcloud.html#a98770b70c510e7611fb171d3fe920554',1,'AerialLiDARcloud']]],
   ['getcellvegetationheight_30',['getCellVegetationHeight',['../class_aerial_li_d_a_rcloud.html#a12fe426a267cbef9982138537198558a',1,'AerialLiDARcloud']]],
   ['getcenter_31',['getCenter',['../classhelios_1_1_tile.html#a18178d0280f8ecc1149663558947ca06',1,'helios::Tile::getCenter()'],['../classhelios_1_1_sphere.html#a48eada17c3dab899a91158f1424518d6',1,'helios::Sphere::getCenter()'],['../classhelios_1_1_box.html#a96e72a40ff113d6a6b463fe8c60b672a',1,'helios::Box::getCenter()'],['../classhelios_1_1_disk.html#ae8ed884a95cbfa2440e3bd9f8e3e4057',1,'helios::Disk::getCenter()']]],

@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.3.1</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.3.2</span>
    </div>
   </td>
  </tr>
@@ -357,8 +357,9 @@ Hit point triangulation</h2>
 
   }</code></pre></div><h2><a class="anchor" id="LiDARleafarea"></a>
 Calculating leaf area for each grid cell</h2>
-<p >Using the triangulation and defined grid cells, the plug-in can calculate the leaf area (and leaf area density) for each grid cell. The algorithm for calculating leaf area is described in detail in <a href="dx.doi.org/doi:10.1088/1361-6501/aa5cfd">Bailey and Mahaffee (2017b)</a>.</p>
+<p >Using the triangulation and defined grid cells, the plug-in can calculate the leaf area (and leaf area density) for each grid cell. The algorithm for calculating leaf area is described in detail in <a href="dx.doi.org/doi:10.1088/1361-6501/aa5cfd">Bailey and Mahaffee (2017b)</a> (except that in the current implementation, weighting by the sine of the scan zenith direction has been removed).</p>
 <p >Performing the calculations is simple and requires no inputs, which is illustrated with the following code sample. Note that the leaf area calculation requires that the triangulation has been performed beforehand. If no triangulation is available, the plug-in will assume a uniformly distributed leaf angle orientation ( <img class="formulaInl" alt="$G=0.5$" src="form_90.png" width="51" height="12"/>). The leaf area calculation also requires that at least one grid cell was defined.</p>
+<p >When using real LiDAR data, it is recommended to gapfill sky/miss points using the <a class="el" href="class_li_d_a_rcloud.html#a53b80def6bff07231b8d2b10eb3e0330">LiDARcloud::gapfillMisses()</a> method if this has not already been done by the scanner or in pre-processing. When a laser pulse does not intersect any object and reaches the sky, many scanners do not record any hit points. These miss points are important for accurate determination of leaf area.</p>
 <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> #include "Context.h"
   #include "LiDAR.h"
 
@@ -369,6 +370,8 @@ Calculating leaf area for each grid cell</h2>
      LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
      pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
+
+     pointcloud.gapfillMisses(); //Gapfill sky/miss points if necessary
 
      pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5
 

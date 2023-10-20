@@ -1487,3 +1487,15 @@ The radiation model has been re-designed, with the following primary additions:
 * Radiation *
 - Calibration "calibrated_CREE6500K_NikonD700_spectral_response_*" in camera_spectral_library.xml edited to be consistent with normalized spectrum for CREE LED light source.
 - Added example to documentation of writing image pixel labels.
+
+[1.3.2] 2023-10-20
+
+*Context*
+- Try making Context::selfTest() static (again) so it can be run without declaring the Context class.
+- Fixed and issue in helios::parse_float() that could cause and out of bounds error if the parsed value requires more precision than can be stored in a float.
+
+*LiDAR*
+- Added error checking to LiDARcloud::export[*] methods to check whether the output file was successfully created.
+- Added method LiDARcloud::exportTriangleInclinationDistribution() to easily calculate and export triangulation angle distribution.
+- If users specify a scan thetaMax that is out of range and thetaMax is truncated to pi, the thetaMin value will also be set to 0.
+- ScanMetadata::direction2rc() function will truncate any points outside of the specified scan range (thetaMin - thetaMax; phiMin - phiMax).
