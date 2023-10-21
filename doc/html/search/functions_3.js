@@ -34,5 +34,6 @@ var searchData=
   ['doesobjectexist_31',['doesObjectExist',['../classhelios_1_1_context.html#a9b410e55075482b8cbc549f9bf571541',1,'helios::Context']]],
   ['doesprimitivedataexist_32',['doesPrimitiveDataExist',['../classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b',1,'helios::Context']]],
   ['doesprimitiveexist_33',['doesPrimitiveExist',['../classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66',1,'helios::Context']]],
-  ['dummymodel_34',['DummyModel',['../class_dummy_model.html#ae48cd297d1bf8b94c296218e767b9f70',1,'DummyModel']]]
+  ['doestimeseriesvariableexist_34',['doesTimeseriesVariableExist',['../group__timeseries.html#ga8beaa8454ad248064b74698f7f0534a2',1,'helios::Context']]],
+  ['dummymodel_35',['DummyModel',['../class_dummy_model.html#ae48cd297d1bf8b94c296218e767b9f70',1,'DummyModel']]]
 ];

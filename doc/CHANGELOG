@@ -1499,3 +1499,15 @@ The radiation model has been re-designed, with the following primary additions:
 - Added method LiDARcloud::exportTriangleInclinationDistribution() to easily calculate and export triangulation angle distribution.
 - If users specify a scan thetaMax that is out of range and thetaMax is truncated to pi, the thetaMin value will also be set to 0.
 - ScanMetadata::direction2rc() function will truncate any points outside of the specified scan range (thetaMin - thetaMax; phiMin - phiMax).
+
+[1.3.3] 2023-10-24
+
+*Context*
+- Simpler overloaded versions of Context::loadPLY() and Context::loadOBJ() added that only require a filename argument.
+
+*Stomatal Conductance*
+- Any steady-state stomatal conductance model can now be run in dynamic mode based on stomatal time constants for opening and closing.
+
+*Solar Position*
+- Added method calibrateTurbidityFromTimeseries() to calibrate turbidity based on a timeseries of measured solar irradiance. For now, this method only uses the maximum solar flux in the dataset to calibrate the turbidity.
+- Several methods were made const to have const-correctness.

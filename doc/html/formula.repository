@@ -215,14 +215,23 @@
 \_form#207=21x15:$E_m$
 \_form#208=12x14:$i_0$
 \_form#209=8x12:$k$
-\_form#210=44x15:$\theta_L=0$
-\_form#211=45x15:$\theta_L=\pi$
-\_form#212=17x11:$g_L$
-\_form#213=141x17:$\Delta \theta_L=\pi/18\approx 0.1795$
-\_form#214=105x36:$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1$
-\_form#215=54x15:$\theta_L=0.1$
-\_form#216=42x17:$1/\Delta \theta_L$
-\_form#217=60x17:$\theta_L<\pi/2$
-\_form#218=60x17:$\theta_L>\pi/2$
-\_form#219=15x15:$\theta_L$
-\_form#220=44x17:$g_L(\theta_L)$
+\_form#210=29x12:$g_{s,ss}$
+\_form#211=111x33:\[\dfrac{d g_s}{dt} = \dfrac{g_{s,ss} - g_s}{\tau},\]
+\_form#212=9x8:$\tau$
+\_form#213=62x12:$\tau = \tau_{open}$
+\_form#214=63x11:$\tau = \tau_{close}$
+\_form#215=18x12:$\Delta t$
+\_form#216=189x35:\[g_s^{new} = g_s^{old} + \dfrac{g_{s,ss} - g_s^{old}}{\tau}\Delta t.\]
+\_form#217=33x12:$\tau_{open}$
+\_form#218=35x11:$\tau_{close}$
+\_form#219=44x15:$\theta_L=0$
+\_form#220=45x15:$\theta_L=\pi$
+\_form#221=17x11:$g_L$
+\_form#222=141x17:$\Delta \theta_L=\pi/18\approx 0.1795$
+\_form#223=105x36:$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1$
+\_form#224=54x15:$\theta_L=0.1$
+\_form#225=42x17:$1/\Delta \theta_L$
+\_form#226=60x17:$\theta_L<\pi/2$
+\_form#227=60x17:$\theta_L>\pi/2$
+\_form#228=15x15:$\theta_L$
+\_form#229=44x17:$g_L(\theta_L)$

@@ -197,14 +197,37 @@ void StomatalConductanceModel::setModelCoefficients(const BBcoefficients &coeffs
     model = "BB";
 }
 
+void StomatalConductanceModel::setDynamicTimeConstants( float tau_open, float tau_close ){
+    dynamic_time_constants.clear();
+    dynamic_time_constants[0] = make_vec2(tau_open,tau_close);
+}
+
+void StomatalConductanceModel::setDynamicTimeConstants( float tau_open, float tau_close, const std::vector<uint> &UUIDs ){
+    for( uint UUID : UUIDs){
+        dynamic_time_constants[UUID] = make_vec2(tau_open,tau_close);
+    }
+}
+
 void StomatalConductanceModel::run(){
     run( context->getAllUUIDs() );
 }
 
 void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
+    run( UUIDs, 0.f );
+}
+
+void StomatalConductanceModel::run( float dt ){
+    run( context->getAllUUIDs(), dt );
+}
+
+void StomatalConductanceModel::run( const std::vector<uint>& UUIDs, float dt ){
 
     size_t assumed_default_An = 0;
     size_t assumed_default_Gamma = 0;
+
+    bool warn_dt_too_large = false;
+    bool warn_tau_unspecified = false;
+    bool warn_old_gs_unspecified = false;
 
     for( uint UUID : UUIDs){
 
@@ -435,10 +458,53 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
 
         }
 
+        if( dt>0 ){ //run dynamic stomatal conductance model
+
+            if( dynamic_time_constants.empty() ){
+                warn_tau_unspecified = true;
+            }
+
+            if( !dynamic_time_constants.empty() && (dynamic_time_constants.find(UUID)!=dynamic_time_constants.end() || dynamic_time_constants.find(0)!=dynamic_time_constants.end() ) ) {
+
+                if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType(UUID, "moisture_conductance") == HELIOS_TYPE_FLOAT) {
+
+                    float gs_old;
+                    context->getPrimitiveData(UUID, "moisture_conductance", gs_old);
+
+                    float gs_ss = gs;
+
+                    float tau_open;
+                    float tau_close;
+                    if (dynamic_time_constants.find(UUID) != dynamic_time_constants.end()) {
+                        tau_open = dynamic_time_constants.at(UUID).x;
+                        tau_close = dynamic_time_constants.at(UUID).y;
+                    } else {
+                        tau_open = dynamic_time_constants.at(0).x;
+                        tau_close = dynamic_time_constants.at(0).y;
+                    }
+
+                    float tau;
+                    if (gs_old > gs_ss) {
+                        tau = tau_close;
+                    } else {
+                        tau = tau_open;
+                    }
+
+                    if (dt > tau) {
+                        warn_dt_too_large = true;
+                    }
+
+                    gs = gs_old + (gs_ss - gs_old) * dt / tau;
+
+                } else {
+                    warn_old_gs_unspecified = true;
+                }
+
+            }
+
+        }
+
         context->setPrimitiveData( UUID, "moisture_conductance", gs);
-
-
-
 
     }
 
@@ -449,6 +515,16 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs ){
     }
     if( model == "BBL" && assumed_default_Gamma>0 ){
       std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires the CO2 compensation point ""Gamma"", but primitive data ""Gamma_CO2"" could not be found for " << assumed_default_An << " primitives. Did you forget to set optional output primitive data ""Gamma_CO2"" in the photosynthesis model?" << std::endl;
+    }
+
+    if( warn_dt_too_large ){
+        std::cout << "WARNING (StomatalConductanceModel::run): The specified time step is larger than the dynamic stomatal conductance time constant. This may result in inaccurate stomatal conductance values." << std::endl;
+    }
+    if( warn_old_gs_unspecified ){
+        std::cout << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the previous stomatal conductance value, but primitive data ""moisture_conductance"" could not be found for one or more primitives. Dynamic model was not run for these primitives this time step." << std::endl;
+    }
+    if( warn_tau_unspecified ){
+        std::cout << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the time constants to be specified using the StomatalConductance::setDynamicTimeConstants() method, but these were not specified for one or more primitives. Dynamic model was not run for these primitives." << std::endl;
     }
 
 }

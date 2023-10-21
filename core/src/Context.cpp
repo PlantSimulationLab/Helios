@@ -1861,7 +1861,7 @@ Time Context::queryTimeseriesTime( const char* label, const uint index ) const{
 Date Context::queryTimeseriesDate( const char* label, const uint index ) const{
 
     if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
-        helios_runtime_error("ERROR (queryTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
+        helios_runtime_error("ERROR (Context::queryTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
     }
 
     double dateval = timeseries_datevalue.at(label).at(index);
@@ -1881,10 +1881,19 @@ Date Context::queryTimeseriesDate( const char* label, const uint index ) const{
 uint Context::getTimeseriesLength( const char* label ) const{
 
     if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
-        helios_runtime_error("ERROR (getTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
-        return 0;
+        helios_runtime_error("ERROR (Context::getTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
     }else{
         return timeseries_data.at(label).size();
+    }
+
+}
+
+bool Context::doesTimeseriesVariableExist( const char* label ) const{
+
+    if( timeseries_data.find(label) == timeseries_data.end() ) { //does not exist
+        return false;
+    }else{
+        return true;
     }
 
 }

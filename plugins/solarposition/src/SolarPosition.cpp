@@ -219,7 +219,7 @@ Time SolarPosition::getSunsetTime() const{
 
 }
 
-float SolarPosition::getSunElevation(){
+float SolarPosition::getSunElevation() const{
     float elevation;
     if( issolarpositionoverridden ){
         elevation = sun_direction.elevation;
@@ -229,7 +229,7 @@ float SolarPosition::getSunElevation(){
     return elevation;
 }
 
-float SolarPosition::getSunZenith(){
+float SolarPosition::getSunZenith() const{
     float zenith;
     if( issolarpositionoverridden ){
         zenith = sun_direction.zenith;
@@ -239,7 +239,7 @@ float SolarPosition::getSunZenith(){
     return zenith;
 }
 
-float SolarPosition::getSunAzimuth(){
+float SolarPosition::getSunAzimuth() const{
     float azimuth;
     if( issolarpositionoverridden ){
         azimuth = sun_direction.azimuth;
@@ -249,7 +249,7 @@ float SolarPosition::getSunAzimuth(){
     return azimuth;
 }
 
-vec3 SolarPosition::getSunDirectionVector(){
+vec3 SolarPosition::getSunDirectionVector() const{
     SphericalCoord sundirection;
     if( issolarpositionoverridden ) {
         sundirection = sun_direction;
@@ -259,7 +259,7 @@ vec3 SolarPosition::getSunDirectionVector(){
     return sphere2cart(sundirection);
 }
 
-SphericalCoord SolarPosition::getSunDirectionSpherical(){
+SphericalCoord SolarPosition::getSunDirectionSpherical() const{
     SphericalCoord sundirection;
     if( issolarpositionoverridden ) {
         sundirection = sun_direction;
@@ -274,31 +274,31 @@ void SolarPosition::setSunDirection( const helios::SphericalCoord &sundirection 
     sun_direction = sundirection;
 }
 
-float SolarPosition::getSolarFlux( float pressure, float temperature, float humidity, float turbidity ){
+float SolarPosition::getSolarFlux( float pressure, float temperature, float humidity, float turbidity ) const{
   float Eb_PAR, Eb_NIR, fdiff;
   GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
   return Eb_PAR+Eb_NIR;
 }
 
-float SolarPosition::getSolarFluxPAR( float pressure, float temperature, float humidity, float turbidity ){
+float SolarPosition::getSolarFluxPAR( float pressure, float temperature, float humidity, float turbidity ) const{
   float Eb_PAR, Eb_NIR, fdiff;
   GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
   return Eb_PAR;
 }
 
-float SolarPosition::getSolarFluxNIR( float pressure, float temperature, float humidity, float turbidity ){
+float SolarPosition::getSolarFluxNIR( float pressure, float temperature, float humidity, float turbidity ) const{
   float Eb_PAR, Eb_NIR, fdiff;
   GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
   return Eb_NIR;
 }
 
-float SolarPosition::getDiffuseFraction( float pressure, float temperature, float humidity, float turbidity ){
+float SolarPosition::getDiffuseFraction( float pressure, float temperature, float humidity, float turbidity ) const{
   float Eb_PAR, Eb_NIR, fdiff;
   GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
   return fdiff;
 }
 
-void SolarPosition::GueymardSolarModel( float pressure, float temperature, float humidity, float turbidity, float& Eb_PAR, float& Eb_NIR, float &fdiff ){
+void SolarPosition::GueymardSolarModel( float pressure, float temperature, float humidity, float turbidity, float& Eb_PAR, float& Eb_NIR, float &fdiff ) const{
 
   float beta = turbidity;
 
@@ -440,7 +440,7 @@ void SolarPosition::GueymardSolarModel( float pressure, float temperature, float
     
 }
 
-float SolarPosition::getAmbientLongwaveFlux( float temperature, float humidity ){
+float SolarPosition::getAmbientLongwaveFlux( float temperature, float humidity ) const{
 
   //Model from Prata (1996) Q. J. R. Meteorol. Soc.
 
@@ -452,5 +452,60 @@ float SolarPosition::getAmbientLongwaveFlux( float temperature, float humidity )
   float eps = 1.f-(1.f+xi)*exp(-sqrt(1.2f+3.f*xi));
 
   return eps*5.67e-8*pow(temperature,4);
+
+}
+
+float turbidityResidualFunction(float turbidity, std::vector<float> &parameters, const void * a_solarpositionmodel) {
+
+    auto* solarpositionmodel = reinterpret_cast<const SolarPosition*>(a_solarpositionmodel);
+
+    float pressure = parameters.at(0);
+    float temperature = parameters.at(1);
+    float humidity = parameters.at(2);
+    float flux_target = parameters.at(3);
+
+    float flux_model = solarpositionmodel->getSolarFlux( pressure, temperature, humidity, turbidity )*cosf(solarpositionmodel->getSunZenith());
+    return flux_model-flux_target;
+}
+
+float SolarPosition::calibrateTurbidityFromTimeseries( const std::string &timeseries_variable_label ) const{
+
+    if( !context->doesTimeseriesVariableExist( timeseries_variable_label.c_str()) ){
+        helios_runtime_error("ERROR (SolarPosition::calibrateTurbidityFromTimeseries): Timeseries variable " + timeseries_variable_label + " does not exist.");
+    }
+
+    uint length = context->getTimeseriesLength( timeseries_variable_label.c_str() );
+
+    float min_flux = 1e6;
+    float max_flux = 0;
+    int max_flux_index = 0;
+    for( int t=0; t<length; t++ ){
+        float flux = context->queryTimeseriesData( timeseries_variable_label.c_str(), t );
+        if( flux<min_flux ){
+            min_flux = flux;
+        }
+        if( flux>max_flux ){
+            max_flux = flux;
+            max_flux_index = t;
+        }
+    }
+
+    if( max_flux<750 || max_flux>1200 ){
+        helios_runtime_error("ERROR (SolarPosition::calibrateTurbidityFromTimeseries): The maximum flux for the timeseries data is not within the expected range. Either it is not solar flux data, or there are no clear sky days in the dataset");
+    }else if( min_flux<0 ){
+        helios_runtime_error("ERROR (SolarPosition::calibrateTurbidityFromTimeseries): The minimum flux for the timeseries data is negative. Solar fluxes cannot be negative.");
+    }
+
+    std::vector<float> parameters{ 101325, 300, 0.5, max_flux };
+
+    SolarPosition solarposition_copy( UTC, latitude, longitude, context );
+    Date date_max = context->queryTimeseriesDate( timeseries_variable_label.c_str(), max_flux_index );
+    Time time_max = context->queryTimeseriesTime( timeseries_variable_label.c_str(), max_flux_index );
+
+    solarposition_copy.setSunDirection( solarposition_copy.calculateSunDirection( time_max, date_max) );
+
+    float turbidity = fzero( turbidityResidualFunction, parameters, &solarposition_copy, 0.01 );
+
+    return turbidity;
 
 }
