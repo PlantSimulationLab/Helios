@@ -220,6 +220,14 @@ enum GrowthState{
     DEAD = 5 //no leaves, no buds, no internode growth
 };
 
+enum BudState{
+    BUD_DORMANT = 0,
+    BUD_FLOWERING = 1,
+    BUD_FRUITING = 2,
+    BUD_VEGETATIVE = 3,
+    BUD_DEAD = 3
+};
+
 std::vector<uint> makeTubeFromCones(uint Ndivs, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
 
 struct PhytomerParameters{
@@ -316,7 +324,6 @@ private:
         uint tube_subdivisions;
         RandomParameter_float fruit_pitch;
         RandomParameter_float fruit_roll;
-        bool requires_dormancy;
         helios::vec3 fruit_prototype_scale;
         helios::vec3 flower_prototype_scale;
         uint(*fruit_prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
@@ -338,7 +345,6 @@ private:
             this->fruit_pitch.resample();
             this->fruit_roll = a.fruit_roll;
             this->fruit_roll.resample();
-            this->requires_dormancy = a.requires_dormancy;
             this->fruit_prototype_scale = a.fruit_prototype_scale;
             this->fruit_prototype_function = a.fruit_prototype_function;
             this->flower_prototype_scale = a.flower_prototype_scale;
@@ -398,13 +404,37 @@ struct ShootParameters{
 
     RandomParameter_float child_insertion_angle;
 
-    std::vector<float> blind_nodes;
+    bool flowers_require_dormancy;
+    bool growth_requires_dormancy;
 
     void defineChildShootTypes( const std::vector<std::string> &child_shoot_type_labels, const std::vector<float> &child_shoot_type_probabilities );
 
     //\todo These should be private
     std::vector<std::string> child_shoot_type_labels;
     std::vector<float> child_shoot_type_probabilities;
+
+    ShootParameters& operator=(const ShootParameters &a) {
+        this->phytomer_parameters = a.phytomer_parameters;
+        this->max_nodes = a.max_nodes;
+        this->shoot_internode_taper = a.shoot_internode_taper;
+        this->shoot_internode_taper.resample();
+        this->phyllochron = a.phyllochron;
+        this->phyllochron.resample();
+        this->growth_rate = a.growth_rate;
+        this->growth_rate.resample();
+        this->bud_break_probability = a.bud_break_probability;
+        this->flower_probability = a.flower_probability;
+        this->fruit_probability = a.fruit_probability;
+        this->bud_time = a.bud_time;
+        this->bud_time.resample();
+        this->child_insertion_angle = a.child_insertion_angle;
+        this->child_insertion_angle.resample();
+        this->flowers_require_dormancy = a.flowers_require_dormancy;
+        this->growth_requires_dormancy = a.growth_requires_dormancy;
+        this->child_shoot_type_labels = a.child_shoot_type_labels;
+        this->child_shoot_type_probabilities = a.child_shoot_type_probabilities;
+        return *this;
+    }
 
 private:
 
@@ -447,7 +477,7 @@ public:
 
     void setPhytomerBase( const helios::vec3 &base_position );
 
-    void changeReproductiveState( GrowthState state );
+    void changeReproductiveState( BudState state );
 
     void removeLeaf();
 
@@ -481,6 +511,8 @@ public:
     float current_inflorescence_scale_factor = 1;
 
     GrowthState state = DORMANT;
+    BudState flower_bud_state = BUD_DORMANT;
+    BudState vegetative_bud_state = BUD_DORMANT;
 
     helios::Context *context_ptr;
 
