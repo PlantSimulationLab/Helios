@@ -211,21 +211,12 @@ inline AxisRotation AxisRotation::operator-(const AxisRotation& a) const{
     return {a.pitch-pitch, a.yaw-yaw, a.roll-roll};
 }
 
-enum GrowthState{
-    DORMANT = 0,
-    VEGETATIVE = 1, //has active leaf, buds are viable
-    FLOWERING = 2, //has active leaf, flowers are open
-    FRUITING = 3, //has active leaf, fruit is growing
-    GROWING = 4, //no leaves, buds are gone, but internode can increase girth
-    DEAD = 5 //no leaves, no buds, no internode growth
-};
-
 enum BudState{
     BUD_DORMANT = 0,
-    BUD_FLOWERING = 1,
-    BUD_FRUITING = 2,
-    BUD_VEGETATIVE = 3,
-    BUD_DEAD = 3
+    BUD_ACTIVE = 1,
+    BUD_FLOWERING = 2,
+    BUD_FRUITING = 3,
+    BUD_DEAD = 4
 };
 
 std::vector<uint> makeTubeFromCones(uint Ndivs, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
@@ -397,8 +388,8 @@ struct ShootParameters{
     // Probability that a phytomer will flower
     float flower_probability;
 
-    // Probability that a phytomer will fruit
-    float fruit_probability;
+    // Probability that a flower will set fruit
+    float fruit_set_probability;
 
     RandomParameter_float bud_time;  //days
 
@@ -424,7 +415,7 @@ struct ShootParameters{
         this->growth_rate.resample();
         this->bud_break_probability = a.bud_break_probability;
         this->flower_probability = a.flower_probability;
-        this->fruit_probability = a.fruit_probability;
+        this->fruit_set_probability = a.fruit_set_probability;
         this->bud_time = a.bud_time;
         this->bud_time.resample();
         this->child_insertion_angle = a.child_insertion_angle;
@@ -510,9 +501,12 @@ public:
     float current_leaf_scale_factor = 1;
     float current_inflorescence_scale_factor = 1;
 
-    GrowthState state = DORMANT;
     BudState flower_bud_state = BUD_DORMANT;
     BudState vegetative_bud_state = BUD_DORMANT;
+
+private:
+
+    helios::vec3 inflorescence_bending_axis;
 
     helios::Context *context_ptr;
 
@@ -527,8 +521,6 @@ struct Shoot{
 
     int addPhytomer(const PhytomerParameters &params, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
-    void breakDormancy();
-
     uint current_node_number;
 
     helios::vec3 origin;
@@ -542,9 +534,15 @@ struct Shoot{
 
     float assimilate_pool;  // mg SC/g DW
 
-    float phyllochron_counter = 0;
+    void breakDormancy();
+    void makeDormant();
 
-    bool dormant = true;
+    bool dormant;
+    uint dormancy_cycles = 0;
+
+    bool meristem_is_alive = true;
+
+    float phyllochron_counter = 0;
 
     //map of node number to ID of shoot child
     std::map<int,int> childIDs;
@@ -558,6 +556,22 @@ struct Shoot{
     std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr;
 
     helios::Context *context_ptr;
+
+};
+
+struct PlantInstance{
+
+    PlantInstance(const helios::vec3 &a_base_position, float a_current_age) : base_position(a_base_position), current_age(a_current_age) {}
+    std::vector<std::shared_ptr<Shoot> > shoot_tree;
+    helios::vec3 base_position;
+    float current_age;
+
+    //Phenological thresholds
+    float assimilate_dormancy_threshold = 0;
+    float dd_to_flowering = 0;
+    float dd_to_fruit_set = 0;
+    float dd_to_fruit_maturity = 0;
+    float dd_to_senescence = 0;
 
 };
 
@@ -600,8 +614,6 @@ public:
 
     void setPhytomerScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
-    void setShootState( uint plantID, uint shootID, GrowthState state );
-
     void setPlantBasePosition(uint plantID, const helios::vec3 &base_position);
 
     helios::vec3 getPlantBasePosition(uint plantID) const;
@@ -629,20 +641,6 @@ private:
     std::minstd_rand0 *generator = nullptr;
 
     uint plant_count = 0;
-
-    struct PlantInstance{
-        PlantInstance(const helios::vec3 &a_base_position, float a_current_age) : base_position(a_base_position), current_age(a_current_age) {}
-        std::vector<std::shared_ptr<Shoot> > shoot_tree;
-        helios::vec3 base_position;
-        float current_age;
-
-        //Phenological thresholds
-        float assimilate_dormancy_threshold = 0;
-        float dd_to_flowering = 0;
-        float dd_to_fruit_set = 0;
-        float dd_to_fruit_maturity = 0;
-        float dd_to_senescence = 0;
-    };
 
     std::map<uint,PlantInstance> plant_instances;
 
