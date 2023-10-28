@@ -452,7 +452,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, const ShootParameters &pare
 
             float ind_from_tip = float(leaf)-float(phytomer_parameters.petiole.leaves_per_petiole-1)/2.f;
 
-            uint objID_leaf = phytomer_parameters.leaf.prototype_function(context_ptr,1,(int)ind_from_tip);
+            uint objID_leaf;
+            if( phytomer_parameters.internode.petioles_per_internode==1 ){
+                objID_leaf = phytomer_parameters.leaf.prototype_function(context_ptr,1,(int)ind_from_tip);
+            }else{
+                objID_leaf = phytomer_parameters.leaf.prototype_function(context_ptr,1,bud);
+            }
 
             // -- scaling -- //
 
