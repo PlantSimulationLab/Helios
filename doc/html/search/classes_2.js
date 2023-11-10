@@ -6,5 +6,6 @@ var searchData=
   ['colormap_3',['Colormap',['../struct_colormap.html',1,'']]],
   ['compoundobject_4',['CompoundObject',['../classhelios_1_1_compound_object.html',1,'helios']]],
   ['cone_5',['Cone',['../classhelios_1_1_cone.html',1,'helios']]],
-  ['context_6',['Context',['../classhelios_1_1_context.html',1,'helios']]]
+  ['conicalcrownscanopyparameters_6',['ConicalCrownsCanopyParameters',['../struct_conical_crowns_canopy_parameters.html',1,'']]],
+  ['context_7',['Context',['../classhelios_1_1_context.html',1,'helios']]]
 ];

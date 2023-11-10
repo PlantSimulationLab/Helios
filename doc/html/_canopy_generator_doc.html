@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.3.3</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.3.4</span>
    </div>
   </td>
  </tr>
@@ -82,6 +82,7 @@ $(function() {
 <li class="level1"><a href="#CGenConstructor">CanopyGenerator Class Constructor</a></li>
 <li class="level1"><a href="#CGenGeometries">Available Geometries and Parameters</a><ul><li class="level2"><a href="#CGenHomogeneous">Spatially Homogeneous Canopy</a></li>
 <li class="level2"><a href="#CGenSphere">Canopy of Spherical Crowns</a></li>
+<li class="level2"><a href="#CGenCone">Canopy of Conical Crowns</a></li>
 <li class="level2"><a href="#CGenVSP">Grapevine Canopy with VSP Trellis</a></li>
 <li class="level2"><a href="#CGenSplit">Grapevine Canopy with a Split Trellis</a></li>
 <li class="level2"><a href="#CGenUnilateral">Grapevine Canopy with a Unilateral VSP Trellis</a></li>
@@ -215,8 +216,56 @@ Canopy of Spherical Crowns</h2>
 <tr>
 <td>canopy_rotation</td><td> <font face="courier" color="green">float</font></td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0 </td></tr>
 </table>
-<p><br  />
-</p>
+<h2><a class="anchor" id="CGenCone"></a>
+Canopy of Conical Crowns</h2>
+<p>The conical crowns canopy consists of conical volumes of vegetation filled with homogeneous leaves.</p>
+<div class="image">
+<img src="ConicalCanopy.png" alt=""/>
+</div>
+<table class="doxtable">
+<tr>
+<th>Parameters Structure</th><td><a class="el" href="struct_conical_crowns_canopy_parameters.html">ConicalCrownsCanopyParameters</a> </td></tr>
+<tr>
+<th>Individual Plant Function</th><td>N/A </td></tr>
+<tr>
+<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( ConicalCrownsCanopyParameters parameters ) </td></tr>
+</table>
+<table class="doxtable">
+<tr>
+<th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value </th></tr>
+<tr>
+<td colspan="4"> <font face="times" color="blue">Properties of Plants</font> </td></tr>
+<tr>
+<td>leaf_size</td><td> <font face="courier" color="green">helios::vec2</font></td><td>Length and width of each leaf.</td><td>(0.025,0.025) </td></tr>
+<tr>
+<td>leaf_subdivisions</td><td> <font face="courier" color="green">helios::int2</font></td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1) </td></tr>
+<tr>
+<td>leaf_color</td><td> <font face="courier" color="green">helios::RGBcolor</font></td><td>Color of leaves if a texture map file is not provided (see 'leaf_texture_file' parameter).</td><td>RGB::green </td></tr>
+<tr>
+<td>leaf_texture_file</td><td> <font face="courier" color="green">std::string</font></td><td>Path to image for texture mapping/masking of leaves.</td><td>none </td></tr>
+<tr>
+<td>leaf_angle_distribution</td><td> <font face="courier" color="green">std::string</font></td><td>Leaf angle distribution - one of "spherical", "uniform", "erectophile", "planophile", "plagiophile", "extremophile"</td><td>"spherical" </td></tr>
+<tr>
+<td>leaf_area_density</td><td> <font face="courier" color="green">float</font></td><td>One-sided leaf area density in each crown (i.e., LAD is equal to the total leaf area in a crown divided by <img class="formulaInl" alt="$4/3\pi R^3$" src="form_59.png" width="51" height="18"/>).</td><td>1.0 </td></tr>
+<tr>
+<td>crown_radius</td><td> <font face="courier" color="green">float</font></td><td>Radius of cone base.</td><td>0.5 </td></tr>
+<tr>
+<td>crown_height</td><td> <font face="courier" color="green">float</font></td><td>Height of cone.</td><td><p class="starttd">1.0</p>
+<p class="endtd"></p>
+</td></tr>
+<tr>
+<td colspan="4"> <font face="times" color="blue">Properties of Canopy</font> </td></tr>
+<tr>
+<td>canopy_configuration</td><td> <font face="courier" color="green">std::string</font></td><td>Horizontal arrangement of crowns. Either "uniform", evenly spaced crowns in x- or y-direction, or "random", randomly arranged crowns such that crowns do not overlap.</td><td>"uniform" </td></tr>
+<tr>
+<td>plant_spacing</td><td> <font face="courier" color="green">helios::vec2</font></td><td>Spacing between adjacent crowns in x- and y-directions. If canopy_configuration="random", this is the average spacing between crowns.</td><td>(2,2) </td></tr>
+<tr>
+<td>plant_count</td><td> <font face="courier" color="green">helios::int2</font></td><td>Number of crowns in the x- and y-directions, such that plant_spacing*plant_count defines the extent of the canopy in the horizontal directions.</td><td>(5,5) </td></tr>
+<tr>
+<td>canopy_origin</td><td> <font face="courier" color="green">helios::vec3</font></td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0) </td></tr>
+<tr>
+<td>canopy_rotation</td><td> <font face="courier" color="green">float</font></td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0 </td></tr>
+</table>
 <h2><a class="anchor" id="CGenVSP"></a>
 Grapevine Canopy with VSP Trellis</h2>
 <p>A canopy of grapevine with a vertical shoot positioned (VSP) trellis.</p>

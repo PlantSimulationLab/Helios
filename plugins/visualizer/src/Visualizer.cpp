@@ -462,8 +462,10 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     glfwWindowHint(GLFW_SAMPLES, std::max(0,aliasing_samples) ); // antialiasing
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+#if __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //We don't want the old OpenGL
+#endif
     glfwWindowHint( GLFW_VISIBLE, 0 );
 
     if( !window_decorations ){

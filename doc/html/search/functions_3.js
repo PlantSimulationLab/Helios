@@ -28,12 +28,12 @@ var searchData=
   ['distortimage_25',['distortImage',['../struct_camera_calibration.html#a75a0688aa37a6d7706cef4ee4b92dd7f',1,'CameraCalibration']]],
   ['doesbandexist_26',['doesBandExist',['../class_radiation_model.html#a966780925811e3a710a6d91f4ac852fb',1,'RadiationModel']]],
   ['doesglobaldataexist_27',['doesGlobalDataExist',['../classhelios_1_1_context.html#a65ad9cb057b0cb2be3ef2734847608cc',1,'helios::Context']]],
-  ['doeshitdataexist_28',['doesHitDataExist',['../class_aerial_li_d_a_rcloud.html#a9b5aa652c94d4dee19a4f956a62f2ab1',1,'AerialLiDARcloud::doesHitDataExist()'],['../class_li_d_a_rcloud.html#aabb8d404b7f3fa00d8281cb6b74f90c0',1,'LiDARcloud::doesHitDataExist()']]],
+  ['doeshitdataexist_28',['doesHitDataExist',['../class_li_d_a_rcloud.html#aabb8d404b7f3fa00d8281cb6b74f90c0',1,'LiDARcloud::doesHitDataExist()'],['../class_aerial_li_d_a_rcloud.html#a9b5aa652c94d4dee19a4f956a62f2ab1',1,'AerialLiDARcloud::doesHitDataExist()']]],
   ['doesobjectcontainprimitive_29',['doesObjectContainPrimitive',['../classhelios_1_1_compound_object.html#ae06ed1275c9ba5ed5ed59b08bdfd1216',1,'helios::CompoundObject::doesObjectContainPrimitive()'],['../classhelios_1_1_context.html#a60b571dd1cfd525caedcfd725162721e',1,'helios::Context::doesObjectContainPrimitive()']]],
   ['doesobjectdataexist_30',['doesObjectDataExist',['../classhelios_1_1_compound_object.html#aac66c9dbdba0e7418051a9eb9c688618',1,'helios::CompoundObject::doesObjectDataExist()'],['../classhelios_1_1_context.html#a2834b9a6eee49d644f201f696ae5a4d5',1,'helios::Context::doesObjectDataExist(uint objID, const char *label) const']]],
   ['doesobjectexist_31',['doesObjectExist',['../classhelios_1_1_context.html#a9b410e55075482b8cbc549f9bf571541',1,'helios::Context']]],
   ['doesprimitivedataexist_32',['doesPrimitiveDataExist',['../classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b',1,'helios::Context']]],
-  ['doesprimitiveexist_33',['doesPrimitiveExist',['../classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66',1,'helios::Context']]],
+  ['doesprimitiveexist_33',['doesPrimitiveExist',['../classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66',1,'helios::Context::doesPrimitiveExist(uint UUID) const'],['../classhelios_1_1_context.html#a0c478e8ce47bfad4db16829f76305946',1,'helios::Context::doesPrimitiveExist(const std::vector&lt; uint &gt; &amp;UUIDs) const']]],
   ['doestimeseriesvariableexist_34',['doesTimeseriesVariableExist',['../group__timeseries.html#ga8beaa8454ad248064b74698f7f0534a2',1,'helios::Context']]],
   ['dummymodel_35',['DummyModel',['../class_dummy_model.html#ae48cd297d1bf8b94c296218e767b9f70',1,'DummyModel']]]
 ];

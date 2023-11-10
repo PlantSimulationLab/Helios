@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.3.3</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.3.4</span>
    </div>
   </td>
  </tr>
@@ -154,7 +154,7 @@ $(function() {
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    carry = lcg2(seed3);</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>  }</div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>  <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> <span class="keywordtype">long</span> sum = 2111111111ull * r[3] +</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>  <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> <span class="keywordtype">long</span> <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313">sum</a> = 2111111111ull * r[3] +</div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>                           1492ull       * r[2] +</div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>                           1776ull       * r[1] +</div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>                           5115ull       * r[0] +</div>
@@ -162,8 +162,8 @@ $(function() {
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>  r[3]   = r[2];</div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>  r[2]   = r[1];</div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>  r[1]   = r[0];</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>  r[0]   = <span class="keyword">static_cast&lt;</span><span class="keywordtype">unsigned</span> <span class="keywordtype">int</span><span class="keyword">&gt;</span>(sum);        <span class="comment">// lower half</span></div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>  carry  = <span class="keyword">static_cast&lt;</span><span class="keywordtype">unsigned</span> <span class="keywordtype">int</span><span class="keyword">&gt;</span>(sum &gt;&gt; 32);  <span class="comment">// upper half</span></div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>  r[0]   = <span class="keyword">static_cast&lt;</span><span class="keywordtype">unsigned</span> <span class="keywordtype">int</span><span class="keyword">&gt;</span>(<a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313">sum</a>);        <span class="comment">// lower half</span></div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>  carry  = <span class="keyword">static_cast&lt;</span><span class="keywordtype">unsigned</span> <span class="keywordtype">int</span><span class="keyword">&gt;</span>(<a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313">sum</a> &gt;&gt; 32);  <span class="comment">// upper half</span></div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>  <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><span class="keywordtype">unsigned</span> <span class="keywordtype">int</span><span class="keyword">&gt;</span>(r[0]);</div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>}</div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span> </div>
@@ -191,6 +191,7 @@ $(function() {
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>{</div>
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    <span class="keywordflow">return</span> seed ^ frame;</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>}</div>
+<div class="ttc" id="agroup__functions_html_gaa20cc657b6475964d10022adc9850313"><div class="ttname"><a href="group__functions.html#gaa20cc657b6475964d10022adc9850313">helios::sum</a></div><div class="ttdeci">float sum(const std::vector&lt; float &gt; &amp;vect)</div><div class="ttdoc">Sum of a vector of floats.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00889">global.cpp:889</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

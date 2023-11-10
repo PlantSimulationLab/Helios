@@ -886,6 +886,21 @@ template double helios::clamp<double>(double,double,double);
 template int helios::clamp<int>(int,int,int);
 template uint helios::clamp<uint>(uint,uint,uint);
 
+float helios::sum( const std::vector<float>& vect ){
+
+    if( vect.empty() ){
+        helios_runtime_error("ERROR (sum): Vector is empty.");
+    }
+
+    float m = 0;
+    for( float i : vect){
+        m += i;
+    }
+
+    return m;
+
+}
+
 float helios::mean( const std::vector<float>& vect ){
 
   if( vect.empty() ){

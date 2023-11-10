@@ -42,10 +42,10 @@ var searchData=
   ['doesobjectdataexist_39',['doesObjectDataExist',['../classhelios_1_1_compound_object.html#aac66c9dbdba0e7418051a9eb9c688618',1,'helios::CompoundObject::doesObjectDataExist()'],['../classhelios_1_1_context.html#a2834b9a6eee49d644f201f696ae5a4d5',1,'helios::Context::doesObjectDataExist(uint objID, const char *label) const']]],
   ['doesobjectexist_40',['doesObjectExist',['../classhelios_1_1_context.html#a9b410e55075482b8cbc549f9bf571541',1,'helios::Context']]],
   ['doesprimitivedataexist_41',['doesPrimitiveDataExist',['../classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b',1,'helios::Context']]],
-  ['doesprimitiveexist_42',['doesPrimitiveExist',['../classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66',1,'helios::Context']]],
+  ['doesprimitiveexist_42',['doesPrimitiveExist',['../classhelios_1_1_context.html#a0c478e8ce47bfad4db16829f76305946',1,'helios::Context::doesPrimitiveExist(const std::vector&lt; uint &gt; &amp;UUIDs) const'],['../classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66',1,'helios::Context::doesPrimitiveExist(uint UUID) const']]],
   ['doestimeseriesvariableexist_43',['doesTimeseriesVariableExist',['../group__timeseries.html#ga8beaa8454ad248064b74698f7f0534a2',1,'helios::Context']]],
   ['dummy_20model_20plugin_20documentation_44',['Dummy Model Plugin Documentation',['../_dummy.html',1,'']]],
-  ['dummymodel_45',['DummyModel',['../class_dummy_model.html',1,'DummyModel'],['../class_dummy_model.html#ae48cd297d1bf8b94c296218e767b9f70',1,'DummyModel::DummyModel()']]],
+  ['dummymodel_45',['DummyModel',['../class_dummy_model.html#ae48cd297d1bf8b94c296218e767b9f70',1,'DummyModel::DummyModel()'],['../class_dummy_model.html',1,'DummyModel']]],
   ['dummymodel_2ecpp_46',['DummyModel.cpp',['../_dummy_model_8cpp.html',1,'']]],
   ['dummymodel_2eh_47',['DummyModel.h',['../_dummy_model_8h.html',1,'']]],
   ['dupex_48',['Dupex',['../struct_dupex.html',1,'']]]

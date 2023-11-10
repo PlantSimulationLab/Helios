@@ -2215,6 +2215,13 @@ public:
      * \param[in] "UUID" Unique universal identifier of primitive element
      */
     bool doesPrimitiveExist( uint UUID ) const;
+
+    //! Check if ALL primitives exists for a vector UUIDs
+    /**
+     * \param[in] "UUIDs" Vector of unique universal identifiers of primitive elements
+     * \return true if all primitives exist, false if any do not exist
+     */
+    bool doesPrimitiveExist( const std::vector<uint> &UUIDs ) const;
     
     //! Get the size of a patch element
     /**

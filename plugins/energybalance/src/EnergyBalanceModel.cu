@@ -483,8 +483,10 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     free( gS );
     free( Nsides );
     free( Ntranspire );
-    free( T );
     free( heatcapacity );
+    free( surfacehumidity );
+    free( T );
+
 
     CUDA_CHECK_ERROR( cudaFree(d_To) );
     CUDA_CHECK_ERROR( cudaFree(d_R) );
@@ -497,8 +499,9 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     CUDA_CHECK_ERROR( cudaFree(d_gS) );
     CUDA_CHECK_ERROR( cudaFree(d_Nsides) );
     CUDA_CHECK_ERROR( cudaFree(d_Ntranspire) );
-    CUDA_CHECK_ERROR( cudaFree(d_T) );
     CUDA_CHECK_ERROR( cudaFree(d_heatcapacity) );
+    CUDA_CHECK_ERROR( cudaFree(d_surfacehumidity) );
+    CUDA_CHECK_ERROR( cudaFree(d_T) );
 
     if( message_flag ){
         std::cout << "done." << std::endl;
