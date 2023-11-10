@@ -182,7 +182,8 @@ struct GridCell{
 };
 
 //! Structure containing metadata for a terrestrial scan
-/** A scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of azimuthal scan directions (see \ref Nphi), 5) the range of azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint() function. There are various functions to query the scan data.
+/** A scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of azimuthal scan directions (see \ref Nphi), 5) the range of
+azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint() function. There are various functions to query the scan data.
 */
 struct ScanMetadata{
 
@@ -248,8 +249,6 @@ struct ScanMetadata{
   //! Vector of strings specifying the columns of the scan ASCII file for input/output
   std::vector<std::string> columnFormat;
 
-private:
-
     //! Convert the (row,column) of hit point in a scan to a direction vector
     /**
      * \param[in] "row" Index of hit point in the theta (zenithal) direction.
@@ -264,9 +263,6 @@ private:
      * \return (row,column) table index for the given hit point
     */
     helios::int2 direction2rc(const helios::SphericalCoord &direction ) const;
-
-    //! Total number of hits in the scan
-    uint Nhits;
   
 };
 
@@ -633,6 +629,13 @@ class LiDARcloud{
    * \param[in] "gridcell" Index of gridcell to get triangles from
   */
   void exportTriangleAreas( const char* filename, int gridcell );
+
+  //! Export to file discrete area-weighted inclination angle probability distribution based on the triangulation. Inclination angles are between 0 and 90 degrees. The probability distribution is normalized such that the sine-weighted integral over all angles is 1. The value of each bin is written as a column in the output file; lines correspond to each voxel grid cell.
+  /**
+    * \param[in] "filename" Name of file
+    * \param[in] "Nbins" Number of bins to use for the histogram
+  */
+  void exportTriangleInclinationDistribution( const char* filename, uint Nbins );
 
   //! Export to file the leaf area within each grid cell.  Lines of the file correspond to each grid cell
   /**
@@ -1029,6 +1032,12 @@ d the last cell's index is Ncells-1.
    */
   float getCellGtheta( uint index ) const;
 
+    //! For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points for all scans. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.
+    /**
+     * \return (x,y,z) of missing points added to the scan from gapfilling
+     */
+    std::vector<helios::vec3> gapfillMisses();
+
   //! For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.
   /**
    * \param[in] "scanID" ID of scan to gapfill
@@ -1125,7 +1134,12 @@ d the last cell's index is Ncells-1.
    */
   void cropBeamsToGridAngleRange(uint source);
   
-  
+  //! find the indices of the peaks of a vector of floats
+  /**
+   * \param[in] "signal" the signal we want to detect peaks in
+   */
+  std::vector<uint> peakFinder(std::vector<float> signal);
+
 };
 
 bool sortcol0( const std::vector<double>& v0, const std::vector<double>& v1 );

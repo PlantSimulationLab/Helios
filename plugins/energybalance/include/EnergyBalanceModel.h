@@ -1,5 +1,4 @@
 /** \file "EnergyBalanceModel.h" Primary header file for energy balance model.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 

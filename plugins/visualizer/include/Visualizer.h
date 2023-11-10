@@ -1,5 +1,4 @@
-/** \file "Visualizer.h" Visualizer header. 
-    \author Brian Bailey
+/** \file "Visualizer.h" Visualizer header.
 
     Copyright (C) 2016-2023 Brian Bailey
 
@@ -390,7 +389,7 @@ public:
    * \param[in] "size" Size in the x- and y-directions
    * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
    * \param[in] "color" R-G-B color of the rectangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
@@ -400,7 +399,7 @@ public:
    * \param[in] "size" Size in the x- and y-directions
    * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
    * \param[in] "color" R-G-B-A color of the rectangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
@@ -410,7 +409,7 @@ public:
    * \param[in] "size" Size in the x- and y-directions
    * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
    * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const char* texture_file, CoordinateSystem coordFlag );
 
@@ -421,7 +420,7 @@ public:
    * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
    * \param[in] "color" R-G-B color of the rectangle
    * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag );
 
@@ -432,7 +431,7 @@ public:
    * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
    * \param[in] "color" R-G-B color of the rectangle
    * \param[in] "glyph" Pixel map of true/false values for a transparency mask
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, const Glyph* glyph, CoordinateSystem coordFlag );
 
@@ -440,7 +439,7 @@ public:
   /**
    * \param[in] "vertices" (x,y,z) coordinates of four vertices
    * \param[in] "color" R-G-B color of the rectangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
@@ -448,7 +447,7 @@ public:
   /**
    * \param[in] "vertices" (x,y,z) coordinates of four vertices
    * \param[in] "color" R-G-B-A color of the rectangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
@@ -456,7 +455,7 @@ public:
   /**
    * \param[in] "vertices" (x,y,z) coordinates of four vertices
    * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const char* texture_file, CoordinateSystem coordFlag );
   
@@ -465,7 +464,7 @@ public:
    * \param[in] "vertices" (x,y,z) coordinates of four vertices
    * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
    * \param[in] "uvs" u-v coordinates for rectangle vertices
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices(const std::vector<helios::vec3>& vertices, const char* texture_file, const std::vector<helios::vec2> &uvs, CoordinateSystem coordFlag );
 
@@ -475,7 +474,7 @@ public:
    * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
    * \param[in] "uvs" u-v coordinates for rectangle vertices
    * \param[in] "color" R-G-B color of the rectangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, const std::vector<helios::vec2> &uvs, CoordinateSystem coordFlag );
 
@@ -484,7 +483,7 @@ public:
    * \param[in] "vertices" (x,y,z) coordinates of four vertices
    * \param[in] "color" R-G-B color of the rectangle
    * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag);
   
@@ -493,7 +492,7 @@ public:
    * \param[in] "vertices" (x,y,z) coordinates of four vertices
    * \param[in] "color" R-G-B color of the glyph
    * \param[in] "glyph" Glyph object used to render rectangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const Glyph* glyph, CoordinateSystem coordFlag );
 
@@ -502,7 +501,7 @@ public:
    * \param[in] "vertices" (x,y,z) coordinates of four vertices
    * \param[in] "color" R-G-B-A color of the glyph
    * \param[in] "glyph" Glyph object used to render rectangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `vertices' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBAcolor &color, const Glyph* glyph, CoordinateSystem coordFlag );
   
@@ -512,7 +511,7 @@ public:
    * \param[in] "vertex1" (x,y,z) location of first vertex
    * \param[in] "vertex2" (x,y,z) location of first vertex
    * \param[in] "color" R-G-B color of the triangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
@@ -522,7 +521,7 @@ public:
    * \param[in] "vertex1" (x,y,z) location of first vertex
    * \param[in] "vertex2" (x,y,z) location of first vertex
    * \param[in] "color" R-G-B-A color of the triangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
@@ -535,7 +534,7 @@ public:
    * \param[in] "uv0" u-v texture coordinates of vertex0
    * \param[in] "uv1" u-v texture coordinates of vertex1
    * \param[in] "uv2" u-v texture coordinates of vertex2
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, CoordinateSystem coordFlag );
 
@@ -549,7 +548,7 @@ public:
    * \param[in] "uv1" u-v texture coordinates of vertex1
    * \param[in] "uv2" u-v texture coordinates of vertex2
    * \param[in] "color" R-G-B-A color of the triangle
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the triangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
@@ -558,6 +557,7 @@ public:
    * \param[in] "size" Size in the x-, y- and z-directions
    * \param[in] "center" (x,y,z) location of the voxel center
    * \param[in] "color" R-G-B color of the voxel
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
@@ -566,7 +566,7 @@ public:
    * \param[in] "size" Size in the x-, y- and z-directions
    * \param[in] "center" (x,y,z) location of the voxel center
    * \param[in] "color" R-G-B-A color of the voxel
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the voxel.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the voxel, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
@@ -576,7 +576,7 @@ public:
    * \param[in] "size" length of disk semi-major and semi-minor axes
    * \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
    * \param[in] "color" R-G-B color of the disk
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the disk.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the disk, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
@@ -586,7 +586,7 @@ public:
    * \param[in] "size" length of disk semi-major and semi-minor axes
    * \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
    * \param[in] "color" R-G-B-A color of the disk
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the disk.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the disk, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
@@ -596,7 +596,7 @@ public:
    * \param[in] "size" length of disk semi-major and semi-minor axes
    * \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
    * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the disk.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the disk, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag );
 
@@ -606,7 +606,7 @@ public:
    * \param[in] "end" (x,y,z) coordinates of line ending position
    * \param[in] "color" R-G-B color of the line
    * \param[in] "linewidth" Width of the line in points
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, uint linewidth, CoordinateSystem coordFlag );
 
@@ -616,7 +616,7 @@ public:
    * \param[in] "end" (x,y,z) coordinates of line ending position
    * \param[in] "color" R-G-B-A color of the line
    * \param[in] "linewidth" Width of the line in points
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, uint linewidth, CoordinateSystem coordFlag );
 
@@ -625,7 +625,7 @@ public:
    * \param[in] "position" (x,y,z) coordinates of Point
    * \param[in] "color" R-G-B color of the Point
    * \param[in] "size" Size of the point in font points
-   * \param[in]  "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addPoint( const helios::vec3 &position, const helios::RGBcolor &color, uint pointsize,  CoordinateSystem coordFlag);
 
@@ -634,7 +634,7 @@ public:
    * \param[in] "position" (x,y,z) coordinates of Point
    * \param[in] "color" R-G-B-A color of the Point
    * \param[in] "size" Size of the point in font points
-   * \param[in]  "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the lines, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addPoint( const helios::vec3 &position, const helios::RGBAcolor &color, uint pointsize,  CoordinateSystem coordFlag );
   
@@ -644,7 +644,7 @@ public:
    * \param[in] "center" (x,y,z) location of sphere center
    * \param[in] "Ndivisions" Number of discrete divisions in making sphere
    * \param[in] "color" R-G-B color of the sphere
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the sphere, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addSphereByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
@@ -654,7 +654,7 @@ public:
    * \param[in] "center" (x,y,z) location of sphere center
    * \param[in] "Ndivisions" Number of discrete divisions in making sphere
    * \param[in] "color" R-G-B-A color of the sphere
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the sphere, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addSphereByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
@@ -678,7 +678,7 @@ public:
    * \param[in] "rotation" Spherical rotation angle in radians (elevation,azimuth)
    * \param[in] "fontcolor" Color of the font
    * \param[in] "fontsize" Size of the text font in points
-   * \param[in] "coordFlag" If flag value is false, no transform is applied to the rectangle.  In this case `size' and `center' values are normalized window coordinates, where the size of the window is 1x1 and (x=0,y=0) is the bottom left of the window. If flag value is true, a perspective transform is applied to the rectangle, and physical dimensions are used.
+   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTextboxByCenter( const char* textstring, const helios::vec3 &center, const helios::SphericalCoord &rotation, const helios::RGBcolor &fontcolor, uint fontsize, const char* fontname, CoordinateSystem coordFlag );
 

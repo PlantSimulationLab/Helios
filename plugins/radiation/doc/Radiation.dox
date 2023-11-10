@@ -296,6 +296,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  There are six types of external sources of radiation that can be simulated: 1) a collimated radiation source (beams of radiation are approximately parallel), 2) a sphere with the same radius and distance as the sun, 3) a sphere with prescribed radius and position, 4) a disk with prescribed radius, position, and orientation, 5) a rectangle with prescribed size, position, and orientation, 6) ambient diffuse radiation with prescribed angular distribution.
 
+ <b>It is critical to note that radiative source fluxes are specified as the flux perpendicular to the direction of the source.</b> For a solar source, for example, this would be the flux on a plane perpendicular to the sun direction. This flux is of course different than what a sensor positioned horizontally would measure. One can convert between the two using the cosine of the solar zenith, but this becomes problematic when the sun is low in the sky. For this reason, it is recommended to use the SolarPosition plug-in to specify solar source fluxes, which can be matched to observations by tuning the atmospheric turbidity.
+
  \image html RadiationSources.png
 
  \subsubsection ColSource Adding Collimated Sources
@@ -767,6 +769,10 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
     std::vector<uint> UUIDs_ground = context.addTile( nullorigin, make_vec2(3,3), nullrotation, make_int2(200,200) );
 
+    \c// Set labels that we'll use to label pixels
+    context.setPrimitiveData( UUIDs_bunny, "bunny", 1 );
+    context.setPrimitiveData( UUIDs_ground, "bunny", 0 );
+
     \c// Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil
     context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
     context.setPrimitiveData( UUIDs_bunny, "reflectivity_spectrum", "grape_leaf_reflectivity_0000" );
@@ -814,11 +820,16 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
     \c// writing output image
     radiationmodel.writeCameraImage("visible", {"red","green","blue"}, "myimage" );
 
+    \c// writing image labels based on primitive data 'bunny'
+    radiationmodel.writePrimitiveDataLabelMap( "visible", "labels.txt", "bunny" );
+
  }</code></pre></div>
 
- The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below.
+ The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.
 
  \image html camera_visible_myimage.jpeg
+
+ \image html Bunny_pixel_labels.png
 
 
 */

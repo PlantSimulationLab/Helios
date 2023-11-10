@@ -751,7 +751,8 @@ bool helios::parse_float( const std::string &input_string, float &converted_floa
   try {
     size_t read= 0;
     std::string str = trim_whitespace(input_string);
-    converted_float = std::stof(str, &read);
+    double converted_double = std::stod(str, &read);
+    converted_float = (float)converted_double;
     if (str.size() != read)
       return false;
   } catch ( std::invalid_argument& e ) {

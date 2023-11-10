@@ -1,5 +1,4 @@
 /** \file "CanopyGenerator.cpp" Primary source file for canopy geometry generator plug-in.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 
@@ -54,6 +53,34 @@ SphericalCrownsCanopyParameters::SphericalCrownsCanopyParameters(){
     leaf_area_density = 1.f;
 
     crown_radius = make_vec3(0.5f,0.5f,0.5f);
+
+    canopy_configuration = "uniform";
+
+    plant_spacing = make_vec2(2.f,2.f);
+
+    plant_count = make_int2(5,5);
+
+    canopy_origin = make_vec3(0,0,0);
+
+    canopy_rotation = 0.f;
+
+}
+
+ConicalCrownsCanopyParameters::ConicalCrownsCanopyParameters(){
+
+    leaf_size = make_vec2(0.025,0.025);
+
+    leaf_subdivisions = make_int2(1,1);
+
+    leaf_color = RGB::green;
+
+    leaf_angle_distribution = "spherical";
+
+    leaf_area_density = 1.f;
+
+    crown_radius = 0.5f;
+
+    crown_height = 1.f;
 
     canopy_configuration = "uniform";
 
@@ -2261,6 +2288,108 @@ void CanopyGenerator::buildCanopy(const SphericalCrownsCanopyParameters &params 
                     float w = unif_distribution(generator);
 
                     position = make_vec3( (-1+2.f*u)*r.x, (-1+2.f*v)*r.y, (-1+2.f*w)*r.z );
+
+                }
+
+                float theta = sampleLeafPDF(params.leaf_angle_distribution.c_str());
+                float phi = 2.f*float(M_PI)*unif_distribution(generator);
+
+                uint ID = context->copyObject(ID0);
+                context->getObjectPointer(ID)->rotate(-theta,"y");
+                context->getObjectPointer(ID)->rotate(phi,"z");
+                context->getObjectPointer(ID)->translate(center+position);
+
+                std::vector<uint> UUID = context->getObjectPointer(ID)->getPrimitiveUUIDs();
+
+                UUID_leaf.at(plant_ID).push_back(UUID);
+
+            }
+
+            std::vector<uint> UUIDs_all = getAllUUIDs(plant_ID);
+            prim_count += UUIDs_all.size();
+
+            plant_ID++;
+
+        }
+    }
+
+    context->deleteObject(ID0);
+
+    if( printmessages ){
+        std::cout << "done." << std::endl;
+        std::cout << "Canopy consists of " << UUID_leaf.size()*UUID_leaf.front().size() << " leaves and " << prim_count << " total primitives." << std::endl;
+    }
+
+}
+
+void CanopyGenerator::buildCanopy(const ConicalCrownsCanopyParameters &params ){
+
+    if( printmessages ){
+        std::cout << "Building canopy of conical crowns..." << std::flush;
+    }
+
+    std::uniform_real_distribution<float> unif_distribution;
+
+    float r = params.crown_radius;
+    float h = params.crown_height;
+
+    float solidFractionx;
+    if(params.leaf_texture_file.empty()){
+        solidFractionx = 1.0;
+    }else{
+        helios::Texture texture(params.leaf_texture_file.c_str());
+        solidFractionx = texture.getSolidFraction();
+    }
+
+    float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
+    int Nleaves = (int)lroundf(1.f/3.f*float(M_PI)*r*r*h*params.leaf_area_density/leafArea);
+
+    vec2 canopy_extent( params.plant_spacing.x*float(params.plant_count.x), params.plant_spacing.y*float(params.plant_count.y) );
+
+    std::string cconfig = params.canopy_configuration;
+    if( cconfig !="uniform" && cconfig !="random" ){
+        std::cout << "WARNING: Unknown canopy configuration parameter for conical crowns canopy: " << cconfig << ". Using uniformly spaced configuration." << std::endl;
+        cconfig = "uniform";
+    }
+
+    UUID_leaf.resize(params.plant_count.x*params.plant_count.y);
+
+    uint ID0;
+    if( params.leaf_texture_file.empty() ){
+        ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_color );
+    }else{
+        ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+    }
+
+    uint plant_ID = 0;
+    uint prim_count = 0;
+    for( int j=0; j<params.plant_count.y; j++ ){
+        for( int i=0; i<params.plant_count.x; i++ ){
+
+            vec3 center;
+            if( cconfig=="uniform" ){
+                center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing.x, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.plant_spacing.y, 0 );
+            }else if( cconfig=="random" ){
+                float rx = unif_distribution(generator);
+                float ry = unif_distribution(generator);
+                center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+float(i)*params.plant_spacing.x+r+(params.plant_spacing.x-2.f*r)*rx, -0.5f*canopy_extent.y+float(j)*params.plant_spacing.y+r+(params.plant_spacing.y-2.f*r)*ry, 0 );
+            }
+
+            if( params.canopy_rotation!=0 ){
+                center = rotatePointAboutLine( center, params.canopy_origin, make_vec3(0,0,1), params.canopy_rotation );
+            }
+
+            for (int l=0; l<Nleaves; l++ ){
+
+                vec3 position(-9999,-9999,-9999);
+
+                while( (powf(position.x,2) + powf(position.y,2) )/powf(r/h,2) > powf(h-position.z,2) ){
+
+                    float u = unif_distribution(generator);
+                    float v = unif_distribution(generator);
+                    float w = unif_distribution(generator);
+
+                    position = make_vec3( (-1+2.f*u)*r, (-1+2.f*v)*r, w*h );
 
                 }
 

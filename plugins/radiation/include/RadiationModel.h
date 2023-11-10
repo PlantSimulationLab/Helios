@@ -599,6 +599,7 @@ public:
     //! Use a periodic boundary condition in one or more lateral directions
     /**
      * \param[in] "boundary" Lateral direction to enforce periodic boundary - choices are "x" (periodic only in x-direction), "y" (periodic only in y-direction), or "xy" (periodic in both x- and y-directions).
+     * \note This method should be called prior to calling RadiationModel::updateGeometry(), otherwise the boundary condition will not be enforced.
     */
     void enforcePeriodicBoundary(const std::string &boundary );
 

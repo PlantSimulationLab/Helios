@@ -1,5 +1,4 @@
 /** \file "AerialLiDAR.cpp" Source file for LiDAR plug-in dealing with aerial scans.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 

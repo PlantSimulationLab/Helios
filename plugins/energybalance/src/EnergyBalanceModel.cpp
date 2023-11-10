@@ -1,5 +1,4 @@
-/** \file "EnergyBalanceModel.cpp" Energy balance model plugin declarations. 
-    \author Brian Bailey
+/** \file "EnergyBalanceModel.cpp" Energy balance model plugin declarations.
 
     Copyright (C) 2016-2023 Brian Bailey
 

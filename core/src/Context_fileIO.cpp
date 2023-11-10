@@ -3327,12 +3327,16 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
   }
 }
 
+std::vector<uint> Context::loadPLY(const char* filename, bool silent ){
+    return loadPLY( filename, nullorigin, 0, nullrotation, RGB::blue, "YUP", silent );
+}
+
 std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const std::string &upaxis, bool silent ){
-  return loadPLY( filename, origin, height, make_SphericalCoord(0,0), make_RGBcolor(0,0,1), upaxis, silent );
+  return loadPLY( filename, origin, height, make_SphericalCoord(0,0), RGB::blue, upaxis, silent );
 }
 
 std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const std::string &upaxis, bool silent ){
-  return loadPLY( filename, origin, height, rotation, make_RGBcolor(0,0,1), upaxis, silent );
+  return loadPLY( filename, origin, height, rotation, RGB::blue, upaxis, silent );
 }
 
 std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color, const std::string &upaxis, bool silent ){
@@ -3687,6 +3691,10 @@ void Context::writePLY( const char* filename ) const{
 
 }
 
+std::vector<uint> Context::loadOBJ(const char* filename, bool silent ){
+    return loadOBJ(filename,nullorigin,0,nullrotation,RGB::blue,"ZUP",silent);
+}
+
 std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, bool silent ){
   return loadOBJ(filename,origin,make_vec3(0,0,height),rotation,default_color,"ZUP",silent);
 }
@@ -3780,6 +3788,7 @@ std::vector<uint> Context::loadOBJ(const char* filename, const vec3 &origin, con
       // ------- TEXTURE COORDINATES --------- //
     }else if( line=="vt" ){
       getline(inputOBJ, line);
+      line = trim_whitespace(line);
       //parse coordinates into uv
       vec2 uv(string2vec2(line.c_str()));
       texture_uv.emplace_back(uv);

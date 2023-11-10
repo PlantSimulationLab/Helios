@@ -330,9 +330,11 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   \subsection LiDARleafarea Calculating leaf area for each grid cell
 
-  Using the triangulation and defined grid cells, the plug-in can calculate the leaf area (and leaf area density) for each grid cell.  The algorithm for calculating leaf area is described in detail in <a href="dx.doi.org/doi:10.1088/1361-6501/aa5cfd">Bailey and Mahaffee (2017b)</a>.
+  Using the triangulation and defined grid cells, the plug-in can calculate the leaf area (and leaf area density) for each grid cell.  The algorithm for calculating leaf area is described in detail in <a href="dx.doi.org/doi:10.1088/1361-6501/aa5cfd">Bailey and Mahaffee (2017b)</a> (except that in the current implementation, weighting by the sine of the scan zenith direction has been removed).
 
   Performing the calculations is simple and requires no inputs, which is illustrated with the following code sample. Note that the leaf area calculation requires that the triangulation has been performed beforehand.  If no triangulation is available, the plug-in will assume a uniformly distributed leaf angle orientation (\f$G=0.5\f$).  The leaf area calculation also requires that at least one grid cell was defined.
+
+  When using real LiDAR data, it is recommended to gapfill sky/miss points using the \ref LiDARcloud::gapfillMisses() method if this has not already been done by the scanner or in pre-processing. When a laser pulse does not intersect any object and reaches the sky, many scanners do not record any hit points. These miss points are important for accurate determination of leaf area.
 
   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
   <pre><code> #include "Context.h"
@@ -345,6 +347,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
      %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
      pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
+
+     pointcloud.gapfillMisses(); //Gapfill sky/miss points if necessary
 
      pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5
 

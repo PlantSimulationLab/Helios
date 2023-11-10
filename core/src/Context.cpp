@@ -1575,6 +1575,15 @@ bool Context::doesPrimitiveExist(uint UUID ) const{
     return primitives.find(UUID) != primitives.end();
 }
 
+bool Context::doesPrimitiveExist( const std::vector<uint> &UUIDs ) const{
+    for( uint UUID : UUIDs ){
+        if( !doesPrimitiveExist(UUID) ){
+            return false;
+        }
+    }
+    return true;
+}
+
 Patch* Context::getPatchPointer(uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (getPatchPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
@@ -1861,7 +1870,7 @@ Time Context::queryTimeseriesTime( const char* label, const uint index ) const{
 Date Context::queryTimeseriesDate( const char* label, const uint index ) const{
 
     if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
-        helios_runtime_error("ERROR (queryTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
+        helios_runtime_error("ERROR (Context::queryTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
     }
 
     double dateval = timeseries_datevalue.at(label).at(index);
@@ -1881,10 +1890,20 @@ Date Context::queryTimeseriesDate( const char* label, const uint index ) const{
 uint Context::getTimeseriesLength( const char* label ) const{
 
     if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
-        helios_runtime_error("ERROR (getTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
+        helios_runtime_error("ERROR (Context::getTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
         return 0;
     }else{
         return timeseries_data.at(label).size();
+    }
+
+}
+
+bool Context::doesTimeseriesVariableExist( const char* label ) const{
+
+    if( timeseries_data.find(label) == timeseries_data.end() ) { //does not exist
+        return false;
+    }else{
+        return true;
     }
 
 }
@@ -4743,6 +4762,10 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
 }
 
 uint Context::addPolymeshObject(const std::vector<uint> &UUIDs ){
+
+    if( !doesPrimitiveExist(UUIDs) ){
+        helios_runtime_error("ERROR (Context::addPolymeshObject): One or more of the provided UUIDs does not exist. Cannot create polymesh object.");
+    }
 
     auto* polymesh_new = (new Polymesh(currentObjectID, UUIDs, "", this));
 

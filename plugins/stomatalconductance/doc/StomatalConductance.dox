@@ -536,17 +536,16 @@ In order to modify model coefficients from the default values, one should 1) dec
  modelcoeffs.k = 672;
  modelcoeffs.b = 6.7;</code></pre></div>
 
-\subsection StomatalRun Running the Model
+\subsection StomatalRun Running the Model (steady-state mode)
 
 There are two possible functions to run the model: one to run the model for all primitives in the Context (see \ref StomatalConductanceModel::run()), and another to run the model only for a subset of primitives given their UUIDs (see \ref StomatalConductanceModel::run( std::vector<uint> &UUIDs )).
 
   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>  #include "Context.h"
-  #include "StomatalConductanceModel.h"
+  <pre><code>  #include "StomatalConductanceModel.h"
 
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
      \c//Initialize the Context and add some geometry
      Context context;
@@ -569,6 +568,73 @@ There are two possible functions to run the model: one to run the model for all 
 
      \c//Run the stomatal conductance model (for all primitives)
      stomatalmodel.run();
+
+  }</code></pre></div>
+
+  \subsection StomatalRunDyn Running the Model in Dynamic Mode
+
+  Any of the above steady-state models can be run in dynamic mode by specifying a timestep and response time constants, which will delay stomatal response to environmental stimuli. When environmental conditions are changed, the stomatal conductance will exponentially relax toward the steady-state value, which is calculated according to any of the above models.
+
+  Let the steady-state stomatal conductance value calculated according to any of the above models be denoted by \f$g_{s,ss}\f$. Then the dynamic stomatal conductance is calculated according to the following equation
+
+  \f[\dfrac{d g_s}{dt} = \dfrac{g_{s,ss} - g_s}{\tau},\f]
+
+  where
+
+  \f$\tau\f$ is the time constant for stomatal response to a change in environmental conditions, and \f$\tau = \tau_{open}\f$ if stomata are opening, and \f$\tau = \tau_{close}\f$ if stomata are closing.
+
+  The above equation can be discretized using a forward Euler scheme to update the stomatal conductance after each timestep \f$\Delta t\f$ as
+
+  \f[g_s^{new} = g_s^{old} + \dfrac{g_{s,ss} - g_s^{old}}{\tau}\Delta t.\f]
+
+  The response time constants \f$\tau_{open}\f$ and \f$\tau_{close}\f$ are specified using the \ref StomatalConductanceModel::setDynamicTimeConstants() method. If time constants are not defined, a warning will be issued and the model will run in steady-state mode.
+
+  The model also requires an initial stomatal conductance value, which is specified by setting primitive data "moisture_conductance". If this primitive data is not defined, the model will run in steady-state mode for the first timestep, and this steady-state value will become the initial value for running in dynamic mode.
+
+  Below is and example of running the model in dynamic mode.
+
+  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
+  <pre><code>  #include "StomatalConductanceModel.h"
+
+  using namespace helios;
+
+  int main(){
+
+    \c//Initialize the Context and add some geometry
+    Context context;
+
+    uint UUID = context.addPatch();
+
+    \c//Initialize the stomatal conductance model
+    %StomatalConductanceModel stomatalmodel( &context );
+
+    \c//Initialize model coefficients with default values
+    %BMFcoefficients modelcoeffs;  //values are initialized with default values
+    stomatalmodel.setModelCoefficients( modelcoeffs );
+
+    \c//Set the response time constants (seconds)
+    float tau_open = 10;
+    float tau_close = 10;
+    stomatalmodel.setDynamicTimeConstants(tau_open, tau_close);
+
+    \c//Set the initial stomatal conductance value
+    float gs_initial = 0.2f;
+    context.setPrimitiveData( UUID, "moisture_conductance", gs_initial );
+
+    float dt = 1; //timestep (seconds)
+    int Nsteps = 50; //number of timesteps to run
+
+    for( int t=0; t<Nsteps; t++ ){
+
+        \c//Run the model for each timestep
+        stomatalmodel.run(dt);
+
+        \c//Get and print the stomatal conductance value
+        float gs_dyn;
+        context.getPrimitiveData( UUID, "moisture_conductance", gs_dyn );
+        std::cout << "Timestep " << t << ": " << gs_dyn << std::endl;
+
+    }
 
   }</code></pre></div>
     

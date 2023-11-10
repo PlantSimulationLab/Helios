@@ -1,5 +1,4 @@
 /** \file "Context_data.cpp" Context primitive data, object data, and global data declarations.
-\author Brian Bailey
 
 Copyright (C) 2016-2023 Brian Bailey
 

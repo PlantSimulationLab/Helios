@@ -1,5 +1,4 @@
 /** \file "AerialLiDAR.h" Header file for Aerial LiDAR plug-in dealing with aerial scans.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 

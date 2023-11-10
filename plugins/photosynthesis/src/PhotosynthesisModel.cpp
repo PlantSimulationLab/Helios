@@ -1,5 +1,4 @@
 /** \file "PhotosynthesisModel.cpp" Primary source file for photosynthesis plug-in.
-\author Brian Bailey
 
 Copyright (C) 2016-2023 Brian Bailey
 

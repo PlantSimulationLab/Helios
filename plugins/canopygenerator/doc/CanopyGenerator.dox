@@ -99,7 +99,39 @@
  <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of crowns in the x- and y-directions, such that plant\_spacing*plant\_count defines the extent of the canopy in the horizontal directions.</td><td>(5,5)</td></tr>
  <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
  <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
- </table>	
+ </table>
+
+ \subsection CGenCone Canopy of Conical Crowns
+
+ The conical crowns canopy consists of conical volumes of vegetation filled with homogeneous leaves.
+
+ \image html ConicalCanopy.png
+
+ <table>
+  <tr><th>Parameters Structure</th><td>\ref ConicalCrownsCanopyParameters</td></tr>
+  <tr><th>Individual Plant Function</th><td>N/A</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( ConicalCrownsCanopyParameters parameters )</td></tr>
+ </table>
+
+ <table>
+  <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr>
+  <tr><td>leaf\_size</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Length and width of each leaf.</td><td>(0.025,0.025)</td></tr>
+  <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
+  <tr><td>leaf\_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of leaves if a texture map file is not provided (see 'leaf_texture_file' parameter).</td><td>RGB::green</td></tr>
+  <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for texture mapping/masking of leaves.</td><td>none</td></tr>
+  <tr><td>leaf\_angle\_distribution</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Leaf angle distribution - one of "spherical", "uniform", "erectophile", "planophile", "plagiophile", "extremophile"</td><td>"spherical"</td></tr>
+  <tr><td>leaf\_area\_density</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>One-sided leaf area density in each crown (i.e., LAD is equal to the total leaf area in a crown divided by \f$4/3\pi R^3\f$).</td><td>1.0</td></tr>
+  <tr><td>crown\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of cone base.</td><td>0.5</td></tr>
+  <tr><td>crown\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Height of cone.</td><td>1.0</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+  <tr><td>canopy\_configuration</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Horizontal arrangement of crowns. Either "uniform", evenly spaced crowns in x- or y-direction, or "random", randomly arranged crowns such that crowns do not overlap.</td><td>"uniform"</td></tr>
+  <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">helios::vec2</font>\endhtmlonly</td><td>Spacing between adjacent crowns in x- and y-directions. If canopy\_configuration="random", this is the average spacing between crowns.</td><td>(2,2)</td></tr>
+  <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of crowns in the x- and y-directions, such that plant\_spacing*plant\_count defines the extent of the canopy in the horizontal directions.</td><td>(5,5)</td></tr>
+  <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+  <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
+ </table>
 
  \subsection CGenVSP Grapevine Canopy with VSP Trellis
 
@@ -114,32 +146,32 @@
  </table>
 
  <table>
- <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr> 
- <tr><td>leaf\_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum leaf width at the base of shoot.</td><td>0.18</td></tr>
- <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
- <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/GrapeLeaf.png"</td></tr>
- <tr><td>wood\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for trunk and shoot texture overlay.</td><td>"plugins/canopygenerator/textures/wood.jpg"</td></tr>
- <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for trunk and shoot tubes (e.g., if wood\_subdivisions=3 the trunk/shoot would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
- <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the top of the trunk (head height).</td><td>0.7</td></tr>
- <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.05</td></tr>
- <tr><td>cordon\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the cordons. NOTE: cordon\_height must be greater than or equal to the trunk\_height.</td><td>0.9</td></tr>
- <tr><td>cordon\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the cordon at the widest point.</td><td>0.02</td></tr>
- <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>0.9</td></tr>
- <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
- <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon (thus each plant has 2*shoots\_per\_cordon shoots).</td><td>10</td></tr>
- <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
- <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
- <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
-<tr><td>grape\_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of berry surface</td><td>(0.18, 0.2, 0.25) <div style="width:50px;height:30px;background-color:rgb(45.9,51,63.75);"></div></td></tr>
-<tr><td>grape\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal and zenithal directions (each berry will consist of roughly 2*(grape\_subdivisions)^2 triangles.</td><td>8</td></tr>
- 
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
- <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
- <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
- <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
- <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
- <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
+  <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr>
+  <tr><td>leaf\_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum leaf width at the base of shoot.</td><td>0.18</td></tr>
+  <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
+  <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/GrapeLeaf.png"</td></tr>
+  <tr><td>wood\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for trunk and shoot texture overlay.</td><td>"plugins/canopygenerator/textures/wood.jpg"</td></tr>
+  <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for trunk and shoot tubes (e.g., if wood\_subdivisions=3 the trunk/shoot would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
+  <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the top of the trunk (head height).</td><td>0.7</td></tr>
+  <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.05</td></tr>
+  <tr><td>cordon\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the cordons. NOTE: cordon\_height must be greater than or equal to the trunk\_height.</td><td>0.9</td></tr>
+  <tr><td>cordon\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the cordon at the widest point.</td><td>0.02</td></tr>
+  <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>0.9</td></tr>
+  <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
+  <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon (thus each plant has 2*shoots\_per\_cordon shoots).</td><td>10</td></tr>
+  <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
+  <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
+  <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
+  <tr><td>grape\_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of berry surface</td><td>(0.18, 0.2, 0.25) <div style="width:50px;height:30px;background-color:rgb(45.9,51,63.75);"></div></td></tr>
+  <tr><td>grape\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal and zenithal directions (each berry will consist of roughly 2*(grape\_subdivisions)^2 triangles.</td><td>8</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+  <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
+  <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
+  <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
+  <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+  <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>
 
  \subsection CGenSplit Grapevine Canopy with a Split Trellis
@@ -155,34 +187,34 @@
  </table>
 
  <table>
- <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr> 
- <tr><td>leaf\_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum leaf width at the base of shoot.</td><td>0.18</td></tr>
- <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
- <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/GrapeLeaf.png"</td></tr>
- <tr><td>wood\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for trunk and shoot texture overlay.</td><td>"plugins/canopygenerator/textures/wood.jpg"</td></tr>
- <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for trunk and shoot tubes (e.g., if wood\_subdivisions=3 the trunk/shoot would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
- <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the top of the trunk (head height).</td><td>1.3</td></tr>
- <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.05</td></tr>
- <tr><td>cordon\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the cordons. NOTE: cordon\_height must be greater than or equal to the trunk\_height.</td><td>1.5</td></tr>
- <tr><td>cordon\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the cordon at the widest point.</td><td>0.02</td></tr>
- <tr><td>cordon\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between cordons in the row-normal direction.</td><td>1.0</td></tr>
- <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>1.2</td></tr>
- <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
- <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon (thus each plant has 4*shoots\_per\_cordon shoots).</td><td>10</td></tr>
- <tr><td>shoot\_angle\_tip</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
- <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
- <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
- <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
-<tr><td>grape\_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of berry surface</td><td>(0.18, 0.2, 0.25) <div style="width:50px;height:30px;background-color:rgb(45.9,51,63.75);"></div></td></tr>
-<tr><td>grape\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal and zenithal directions (each berry will consist of roughly 2*(grape\_subdivisions)^2 triangles.</td><td>8</td></tr>
- 
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
- <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
- <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>4.0</td></tr>
- <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
- <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
- <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
+  <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr>
+  <tr><td>leaf\_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum leaf width at the base of shoot.</td><td>0.18</td></tr>
+  <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
+  <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/GrapeLeaf.png"</td></tr>
+  <tr><td>wood\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for trunk and shoot texture overlay.</td><td>"plugins/canopygenerator/textures/wood.jpg"</td></tr>
+  <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for trunk and shoot tubes (e.g., if wood\_subdivisions=3 the trunk/shoot would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
+  <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the top of the trunk (head height).</td><td>1.3</td></tr>
+  <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.05</td></tr>
+  <tr><td>cordon\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the cordons. NOTE: cordon\_height must be greater than or equal to the trunk\_height.</td><td>1.5</td></tr>
+  <tr><td>cordon\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the cordon at the widest point.</td><td>0.02</td></tr>
+  <tr><td>cordon\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between cordons in the row-normal direction.</td><td>1.0</td></tr>
+  <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>1.2</td></tr>
+  <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
+  <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon (thus each plant has 4*shoots\_per\_cordon shoots).</td><td>10</td></tr>
+  <tr><td>shoot\_angle\_tip</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
+  <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
+  <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
+  <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
+  <tr><td>grape\_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of berry surface</td><td>(0.18, 0.2, 0.25) <div style="width:50px;height:30px;background-color:rgb(45.9,51,63.75);"></div></td></tr>
+  <tr><td>grape\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal and zenithal directions (each berry will consist of roughly 2*(grape\_subdivisions)^2 triangles.</td><td>8</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+  <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
+  <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>4.0</td></tr>
+  <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
+  <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+  <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>
 
  \subsection CGenUnilateral Grapevine Canopy with a Unilateral VSP Trellis
@@ -192,39 +224,39 @@
  \image html UnilateralGrapevineCanopy.png
 
  <table>
- <tr><th>Parameters Structure</th><td>\ref UnilateralGrapevineParameters</td></tr>
- <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::grapevineUnilateral()</td></tr>
- <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( UnilateralGrapevineParameters parameters )</td></tr>
+  <tr><th>Parameters Structure</th><td>\ref UnilateralGrapevineParameters</td></tr>
+  <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::grapevineUnilateral()</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( UnilateralGrapevineParameters parameters )</td></tr>
  </table>
 
  <table>
- <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr> 
- <tr><td>leaf\_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum leaf width at the base of shoot.</td><td>0.18</td></tr>
- <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
- <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/GrapeLeaf.png"</td></tr>
- <tr><td>wood\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for trunk and shoot texture overlay.</td><td>"plugins/canopygenerator/textures/wood.jpg"</td></tr>
- <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for trunk and shoot tubes (e.g., if wood\_subdivisions=3 the trunk/shoot would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
- <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the top of the trunk (head height).</td><td>0.7</td></tr>
- <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.05</td></tr>
- <tr><td>cordon\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the cordons. NOTE: cordon\_height must be greater than or equal to the trunk\_height.</td><td>0.9</td></tr>
- <tr><td>cordon\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the cordon at the widest point.</td><td>0.02</td></tr>
- <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>0.9</td></tr>
- <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
- <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon.</td><td>20</td></tr>
- <tr><td>shoot\_angle\_tip</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
- <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
- <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
- <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
-<tr><td>grape\_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of berry surface</td><td>(0.18, 0.2, 0.25) <div style="width:50px;height:30px;background-color:rgb(45.9,51,63.75);"></div></td></tr>
-<tr><td>grape\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal and zenithal directions (each berry will consist of roughly 2*(grape\_subdivisions)^2 triangles.</td><td>8</td></tr>
- 
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
- <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
- <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
- <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
- <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
- <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
+  <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr>
+  <tr><td>leaf\_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum leaf width at the base of shoot.</td><td>0.18</td></tr>
+  <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
+  <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/GrapeLeaf.png"</td></tr>
+  <tr><td>wood\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for trunk and shoot texture overlay.</td><td>"plugins/canopygenerator/textures/wood.jpg"</td></tr>
+  <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for trunk and shoot tubes (e.g., if wood\_subdivisions=3 the trunk/shoot would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
+  <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the top of the trunk (head height).</td><td>0.7</td></tr>
+  <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.05</td></tr>
+  <tr><td>cordon\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the cordons. NOTE: cordon\_height must be greater than or equal to the trunk\_height.</td><td>0.9</td></tr>
+  <tr><td>cordon\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the cordon at the widest point.</td><td>0.02</td></tr>
+  <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>0.9</td></tr>
+  <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
+  <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon.</td><td>20</td></tr>
+  <tr><td>shoot\_angle\_tip</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
+  <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
+  <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
+  <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
+  <tr><td>grape\_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of berry surface</td><td>(0.18, 0.2, 0.25) <div style="width:50px;height:30px;background-color:rgb(45.9,51,63.75);"></div></td></tr>
+  <tr><td>grape\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal and zenithal directions (each berry will consist of roughly 2*(grape\_subdivisions)^2 triangles.</td><td>8</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+  <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
+  <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
+  <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
+  <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+  <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>
 
  \subsection CGenGoblet Grapevine Canopy with a Goblet Trellis
@@ -234,131 +266,131 @@
  \image html GobletGrapevineCanopy.png
 
  <table>
- <tr><th>Parameters Structure</th><td>\ref GobletGrapevineParameters</td></tr>
- <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::grapevineGoblet()</td></tr>
- <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( GobletGrapevineParameters parameters )</td></tr>
+  <tr><th>Parameters Structure</th><td>\ref GobletGrapevineParameters</td></tr>
+  <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::grapevineGoblet()</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( GobletGrapevineParameters parameters )</td></tr>
  </table>
 
  <table>
- <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr> 
- <tr><td>leaf\_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum leaf width at the base of shoot.</td><td>0.18</td></tr>
- <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
- <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/GrapeLeaf.png"</td></tr>
- <tr><td>wood\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for trunk and shoot texture overlay.</td><td>"plugins/canopygenerator/textures/wood.jpg"</td></tr>
- <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for trunk and shoot tubes (e.g., if wood\_subdivisions=3 the trunk/shoot would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
- <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the top of the trunk (head height).</td><td>0.7</td></tr>
- <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.05</td></tr>
- <tr><td>cordon\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the cordons. NOTE: cordon\_height must be greater than or equal to the trunk\_height.</td><td>0.9</td></tr>
- <tr><td>cordon\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the cordon at the widest point.</td><td>0.02</td></tr>
- <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>0.9</td></tr>
- <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
- <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon.</td><td>10</td></tr>
- <tr><td>shoot\_angle\_tip</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
- <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
- <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
- <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
-<tr><td>grape\_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of berry surface</td><td>(0.18, 0.2, 0.25) <div style="width:50px;height:30px;background-color:rgb(45.9,51,63.75);"></div></td></tr>
-<tr><td>grape\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal and zenithal directions (each berry will consist of roughly 2*(grape\_subdivisions)^2 triangles.</td><td>8</td></tr>
- 
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
- <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
- <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
- <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
- <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
- <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
+  <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr>
+  <tr><td>leaf\_width</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum leaf width at the base of shoot.</td><td>0.18</td></tr>
+  <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,1)</td></tr>
+  <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/GrapeLeaf.png"</td></tr>
+  <tr><td>wood\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for trunk and shoot texture overlay.</td><td>"plugins/canopygenerator/textures/wood.jpg"</td></tr>
+  <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for trunk and shoot tubes (e.g., if wood\_subdivisions=3 the trunk/shoot would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
+  <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the top of the trunk (head height).</td><td>0.7</td></tr>
+  <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.05</td></tr>
+  <tr><td>cordon\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Distance between the ground and the cordons. NOTE: cordon\_height must be greater than or equal to the trunk\_height.</td><td>0.9</td></tr>
+  <tr><td>cordon\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the cordon at the widest point.</td><td>0.02</td></tr>
+  <tr><td>shoot\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average length of shoots (distance from cordon to shoot tip).</td><td>0.9</td></tr>
+  <tr><td>shoot\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the shoot at the widest point.</td><td>0.005</td></tr>
+  <tr><td>shoots\_per\_cordon</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of shoots on each cordon.</td><td>10</td></tr>
+  <tr><td>shoot\_angle\_tip</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average angle of shoot tips relative to vertical (radians).</td><td>0.4\f$\pi\f$</td></tr>
+  <tr><td>leaf\_spacing\_fraction</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent leaves on a shoot as a fraction of the leaf dimension.</td><td>0.6</td></tr>
+  <tr><td>grape\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of individual grape berries. NOTE: Setting grape\_radius=0 will not create any grapes.</td><td>0.0075</td></tr>
+  <tr><td>cluster\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average radius of grape clusters at the widest point. NOTE: Setting cluster\_radius=0 will not create any grapes.</td><td>0.03</td></tr>
+  <tr><td>grape\_color</td><td>\htmlonly<font face="courier" color="green">helios::RGBcolor</font>\endhtmlonly</td><td>Color of berry surface</td><td>(0.18, 0.2, 0.25) <div style="width:50px;height:30px;background-color:rgb(45.9,51,63.75);"></div></td></tr>
+  <tr><td>grape\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal and zenithal directions (each berry will consist of roughly 2*(grape\_subdivisions)^2 triangles.</td><td>8</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+  <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
+  <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>2.0</td></tr>
+  <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(3,3)</td></tr>
+  <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+  <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>	
 
-  \subsection CGenStrawberry Strawberry Canopy
+ \subsection CGenStrawberry Strawberry Canopy
 
  A canopy of strawberry plants.
 
  \image html StrawberryCanopy.png
 
  <table>
- <tr><th>Parameters Structure</th><td>\ref StrawberryParameters</td></tr>
- <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::strawberry()</td></tr>
- <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( StrawberryParameters parameters )</td></tr>
+  <tr><th>Parameters Structure</th><td>\ref StrawberryParameters</td></tr>
+  <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::strawberry()</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( StrawberryParameters parameters )</td></tr>
  </table>
 
  <table>
- <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr> 
- <tr><td>leaf\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum length of a leaf.</td><td>0.1</td></tr>
- <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(4,4)</td></tr>
- <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/StrawberryLeaf.png"</td></tr>
- <tr><td>stem\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for stem tubes (e.g., if stem\_subdivisions=3 the stem would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
- <tr><td>stem\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the stem at the widest point.</td><td>0.005</td></tr>
- <tr><td>plant\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average effective height of the plant.</td><td>0.4</td></tr>
- <tr><td>stems\_per\_plant</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of stems on each plant.</td><td>50</td></tr>
- <tr><td>fruit\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum horizontal radius of individual berries. NOTE: Setting fruit\_radius=0 will not create any berries.</td><td>0.025</td></tr>
- <tr><td>clusters\_per\_stem</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average number of berry clusters per stem (usually <1). NOTE: Setting clusters\_per\_stem=0 will not create any berries.</td><td>0.6</td></tr>
-<tr><td>fruit\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal direction.</td><td>12</td></tr>
-<tr><td>fruit\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for berry texture overlay.</td><td>"plugins/canopygenerator/textures/StrawberryTexture.jpg"</td></tr>
- 
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
- <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>0.5</td></tr>
- <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>1.5</td></tr>
- <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(4,2)</td></tr>
- <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
- <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
+  <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr>
+  <tr><td>leaf\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum length of a leaf.</td><td>0.1</td></tr>
+  <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(4,4)</td></tr>
+  <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/StrawberryLeaf.png"</td></tr>
+  <tr><td>stem\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for stem tubes (e.g., if stem\_subdivisions=3 the stem would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
+  <tr><td>stem\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the stem at the widest point.</td><td>0.005</td></tr>
+  <tr><td>plant\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average effective height of the plant.</td><td>0.4</td></tr>
+  <tr><td>stems\_per\_plant</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of stems on each plant.</td><td>50</td></tr>
+  <tr><td>fruit\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum horizontal radius of individual berries. NOTE: Setting fruit\_radius=0 will not create any berries.</td><td>0.025</td></tr>
+  <tr><td>clusters\_per\_stem</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average number of berry clusters per stem (usually <1). NOTE: Setting clusters\_per\_stem=0 will not create any berries.</td><td>0.6</td></tr>
+  <tr><td>fruit\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of berry triangular subdivisions in the azimuthal direction.</td><td>12</td></tr>
+  <tr><td>fruit\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for berry texture overlay.</td><td>"plugins/canopygenerator/textures/StrawberryTexture.jpg"</td></tr>
+
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+  <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>0.5</td></tr>
+  <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>1.5</td></tr>
+  <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(4,2)</td></tr>
+  <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+  <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>	
 
-  \subsection CGenWalnut Walnut Canopy
+ \subsection CGenWalnut Walnut Canopy
 
  A canopy of walnut trees.
 
  \image html WalnutCanopy.png
 
  <table>
- <tr><th>Parameters Structure</th><td>\ref WalnutCanopyParameters</td></tr>
- <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::walnut()</td></tr>
- <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( WalnutCanopyParameters parameters )</td></tr>
+  <tr><th>Parameters Structure</th><td>\ref WalnutCanopyParameters</td></tr>
+  <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::walnut()</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( WalnutCanopyParameters parameters )</td></tr>
  </table>
 
  <table>
- <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr> 
- <tr><td>leaf\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum length of a leaf along midrib.</td><td>0.15</td></tr>
- <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,2)</td></tr>
- <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/WalnutLeaf.png"</td></tr>
- <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for woody element tubes (e.g., if wood\_subdivisions=3 the stem would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
- <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.15</td></tr>
- <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average height of the trunk.</td><td>4.0</td></tr>
- <tr><td>branch\_length</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Average length of branches in each recursive branch level. For example, the first (.x) value is the length of branches emanating from the trunk, the second (.y) is the the length of branches emanating from the first branching level.</td><td>(4.0,0.75,0.75)</td></tr>
- <tr><td>fruit\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum horizontal radius of individual walnuts. NOTE: Setting fruit\_radius=0 will not create any nuts.</td><td>0.04</td></tr>
- <tr><td>fruit\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for nut texture overlay.</td><td>"plugins/canopygenerator/textures/WalnutTexture.jpg"</td></tr>
- <tr><td>fruit\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of nut triangular subdivisions in the azimuthal direction.</td><td>16</td></tr>
- <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
- <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>6.0</td></tr>
- <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>8.0</td></tr>
- <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(4,2)</td></tr>
- <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
- <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
+  <tr><th>Parameter Name</th><th>Data Type</th><th>Description</th><th>Default Value</th></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Plants</font>\endhtmlonly</td></tr>
+  <tr><td>leaf\_length</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum length of a leaf along midrib.</td><td>0.15</td></tr>
+  <tr><td>leaf\_subdivisions</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of sub-patch divisions for each leaf along the length and width of the leaf (subdivivisions of 1x1 means leaf is not sub-divided).</td><td>(1,2)</td></tr>
+  <tr><td>leaf\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for leaf texture overlay.</td><td>"plugins/canopygenerator/textures/WalnutLeaf.png"</td></tr>
+  <tr><td>wood\_subdivisions</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Number of radial subdivisions for woody element tubes (e.g., if wood\_subdivisions=3 the stem would be a triangle, =4 would be a square, etc.).</td><td>10</td></tr>
+  <tr><td>trunk\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radius of the trunk at the widest point.</td><td>0.15</td></tr>
+  <tr><td>trunk\_height</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Average height of the trunk.</td><td>4.0</td></tr>
+  <tr><td>branch\_length</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Average length of branches in each recursive branch level. For example, the first (.x) value is the length of branches emanating from the trunk, the second (.y) is the the length of branches emanating from the first branching level.</td><td>(4.0,0.75,0.75)</td></tr>
+  <tr><td>fruit\_radius</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Maximum horizontal radius of individual walnuts. NOTE: Setting fruit\_radius=0 will not create any nuts.</td><td>0.04</td></tr>
+  <tr><td>fruit\_texture\_file</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Path to image for nut texture overlay.</td><td>"plugins/canopygenerator/textures/WalnutTexture.jpg"</td></tr>
+  <tr><td>fruit\_subdivisions</td><td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td><td>Number of nut triangular subdivisions in the azimuthal direction.</td><td>16</td></tr>
+  <tr><td colspan="4">\htmlonly<font face="times" color="blue">Properties of Canopy</font>\endhtmlonly</td></tr>
+  <tr><td>plant\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-parallel direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>6.0</td></tr>
+  <tr><td>row\_spacing</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Spacing between adjacent plants in the row-normal direction. NOTE: default is to have rows oriented in the x-direction (row-parallel).</td><td>8.0</td></tr>
+  <tr><td>plant\_count</td><td>\htmlonly<font face="courier" color="green">helios::int2</font>\endhtmlonly</td><td>Number of plants in the row-parallel (x-direction) and row-normal (y-direction).</td><td>(4,2)</td></tr>
+  <tr><td>canopy\_origin</td><td>\htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly</td><td>Cartesian x,y (horizontal) point about which the canopy is centered. z-coordinate is at the bottom surface of the canopy.</td><td>(0,0,0)</td></tr>
+  <tr><td>canopy\_rotation</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Azimuthal rotation of the entire canopy (in radians) about the origin/center point.</td><td>0</td></tr>
  </table>
 
-  \subsection CGenSorghum sorghum Canopy
+ \subsection CGenSorghum sorghum Canopy
 
-  A canopy of sorghum plants.
+ A canopy of sorghum plants.
 
-  \image html SorghumCanopy.png
+ \image html SorghumCanopy.png
 
-   <table>
- <caption>Sorghum Stages</caption>
-   <tr>	
-      <td>\image html s1SorghumCanopy.png
-      <td>\image html s2SorghumCanopy.png
-      <td>\image html s3SorghumCanopy.png
-      <td>\image html s4SorghumCanopy.png
-      <td>\image html s5SorghumCanopy.png
-   </tr>
-   <tr>	
-      <td>Stage 1</td>
-      <td>Stage 2</td>
-      <td>Stage 3</td>
-      <td>Stage 4</td>
-      <td>Stage 5</td>
-   </tr>
+ <table>
+  <caption>Sorghum Stages</caption>
+  <tr>
+   <td>\image html s1SorghumCanopy.png
+   <td>\image html s2SorghumCanopy.png
+   <td>\image html s3SorghumCanopy.png
+   <td>\image html s4SorghumCanopy.png
+   <td>\image html s5SorghumCanopy.png
+  </tr>
+  <tr>
+   <td>Stage 1</td>
+   <td>Stage 2</td>
+   <td>Stage 3</td>
+   <td>Stage 4</td>
+   <td>Stage 5</td>
+  </tr>
  </table>
 
 

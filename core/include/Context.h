@@ -1,5 +1,4 @@
-/** \file "Context.h" Context header file. 
- \author Brian Bailey
+/** \file "Context.h" Context header file.
  
  Copyright (C) 2016-2023 Brian Bailey
  
@@ -1886,7 +1885,7 @@ public:
     /**
      * \return 0 if test was successful, 1 if test failed.
      */
-    int selfTest();
+    static int selfTest();
 
     //! Set seed for random generator
     /**
@@ -2216,6 +2215,13 @@ public:
      * \param[in] "UUID" Unique universal identifier of primitive element
      */
     bool doesPrimitiveExist( uint UUID ) const;
+
+    //! Check if ALL primitives exists for a vector UUIDs
+    /**
+     * \param[in] "UUIDs" Vector of unique universal identifiers of primitive elements
+     * \return true if all primitives exist, false if any do not exist
+     */
+    bool doesPrimitiveExist( const std::vector<uint> &UUIDs ) const;
     
     //! Get the size of a patch element
     /**
@@ -5132,6 +5138,13 @@ public:
      */
     uint getTimeseriesLength( const char* label ) const;
 
+    //! Query whether a timeseries variable exists
+    /**
+     * \param[in] "label" Name of timeseries variable (e.g., temperature)
+     * \ingroup timeseries
+     */
+    bool doesTimeseriesVariableExist( const char* label ) const;
+
     //! Load tabular weather data from text file into timeseries
     void loadTabularTimeseriesData( const std::string &data_file, const std::vector<std::string> &column_labels, const std::string &delimiter, const std::string &date_string_format="YYYYMMDD", uint headerlines=0 );
     
@@ -5275,14 +5288,22 @@ public:
      * \param[in] "print_header" Flag specifying whether to print the name of the primitive data in the column header.
      */
     void writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header = false ) const;
-    
+
+    //! Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no scaling or rotation applied.
+    /**
+     * \param[in] "filename" name of ply file.
+     * \param[in] "silent" (optional) If set to true, output messaged will be disabled.
+     * \note Assumes default color of blue if no colors are specified in the .ply file
+     */
+    std::vector<uint> loadPLY(const char* filename, bool silent=false );
+
     //! Load geometry contained in a Stanford polygon file (.ply)
     /**
      * \param[in] "filename" name of ply file.
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
-     * \param[in] "silent" If set to true, output messaged will be disabled.
+     * \param[in] "silent" (optional) If set to true, output messaged will be disabled.
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const std::string &upaxis="YUP", bool silent=false );
@@ -5294,7 +5315,7 @@ public:
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
-     * \param[in] "silent" If set to true, output messaged will be disabled
+     * \param[in] "silent" (optional) If set to true, output messaged will be disabled
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const std::string &upaxis="YUP", bool silent=false );
@@ -5306,7 +5327,7 @@ public:
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
      * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
-     * \param[in] "silent" If set to true, output messaged will be disabled
+     * \param[in] "silent" (optional) If set to true, output messaged will be disabled
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
     
@@ -5318,7 +5339,7 @@ public:
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
      * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
-     * \param[in] "silent" If set to true, output messaged will be disabled
+     * \param[in] "silent" (optional) If set to true, output messaged will be disabled
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
     
@@ -5327,6 +5348,13 @@ public:
      * \param[in] "filename" name of ply file
     */
     void writePLY( const char* filename ) const;
+
+    //! Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without any scaling or rotation applied.
+    /**
+     * \param[in] "filename" name of OBJ file
+     * \param[in] "silent" (optional) If set to true, output messaged will be disabled
+     */
+    std::vector<uint> loadOBJ(const char* filename, bool silent=false );
     
     //! Load geometry contained in a Wavefront OBJ file (.obj)
     /**
@@ -5335,7 +5363,7 @@ public:
      * \param[in] "height" A z-scaling factor is applied to make the model 'height' tall. If height=0, no scaling is applied
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] "silent" If set to true, output messaged will be disabled
+     * \param[in] "silent" (optional) If set to true, output messaged will be disabled
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, bool silent=false );
     
@@ -5347,7 +5375,7 @@ public:
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
      * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file (one of "XUP", "YUP", or "ZUP" - "ZUP" is default).
-     * \param[in] "silent" If set to true, output messaged will be disabled
+     * \param[in] "silent" (optional) If set to true, output messaged will be disabled
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );
 
@@ -5360,7 +5388,7 @@ public:
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
      * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file (one of "XUP", "YUP", or "ZUP" - "ZUP" is default).
-     * \param[in] "silent" If set to true, output messaged will be disabled
+     * \param[in] "silent" (optional) If set to true, output messaged will be disabled
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, const helios::vec3 &scale, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );
 

@@ -1,5 +1,4 @@
 /** \file "WeberPennTree.cpp" Primary source file for Weber-Penn tree architecture model.
-    \author Brian Bailey
 
     Copyright (C) 2016-2023 Brian Bailey
 

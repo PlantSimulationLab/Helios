@@ -31,7 +31,6 @@ ScanMetadata::ScanMetadata(){
     beamDivergence = 0;
     columnFormat = {"x","y","z"};
 
-    Nhits = 0;
     data_file = "";
 
 }
@@ -51,7 +50,6 @@ ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin
     beamDivergence = a_beamDivergence;
     columnFormat = a_columnFormat;
 
-    Nhits = 0;
     data_file = "";
 
 }
@@ -73,19 +71,16 @@ helios::int2 ScanMetadata::direction2rc(const SphericalCoord &direction ) const{
     int row = std::round((theta-thetaMin)/(thetaMax-thetaMin)*float(Ntheta));
     int column = std::round(fabs(phi-phiMin)/(phiMax-phiMin)*float(Nphi));
 
-    if( row==-1 ){
+    if( row<=-1 ){
         row = 0;
-    }else if( row==Ntheta ){
+    }else if( row>=Ntheta ){
         row = Ntheta-1;
     }
-    if( column==-1 ){
+    if( column<=-1 ){
         column = 0;
-    }else if( column==Nphi ){
+    }else if( column>=Nphi ){
         column = Nphi-1;
     }
-
-    assert( row>=0 && row<Ntheta );
-    assert( column>=0 && column<Nphi );
 
     return helios::make_int2(row,column);
 
@@ -154,8 +149,9 @@ uint LiDARcloud::addScan(ScanMetadata &newscan ){
         newscan.phiMin = 0;
     }
     if( newscan.thetaMax>M_PI+epsilon ){
-        std::cerr << "WARNING (LiDARcloud::addScan): Specified scan maximum zenith angle of " << newscan.thetaMax << " is greater than pi. Truncating to pi. Did you mistakenly use degrees instead of radians?" << std::endl;
+        std::cerr << "WARNING (LiDARcloud::addScan): Specified scan maximum zenith angle of " << newscan.thetaMax << " is greater than pi. Setting thetaMin to 0 and truncating thetaMax to pi. Did you mistakenly use degrees instead of radians?" << std::endl;
         newscan.thetaMax = M_PI;
+        newscan.thetaMin = 0;
     }
     if( newscan.phiMax>4.f*M_PI+epsilon ){
         std::cerr << "WARNING (LiDARcloud::addScan): Specified scan maximum azimuth angle of " << newscan.phiMax << " is greater than 2pi. Did you mistakenly use degrees instead of radians?" << std::endl;
@@ -310,7 +306,7 @@ float LiDARcloud::getScanBeamDivergence(uint scanID ) const{
 
 std::vector<std::string> LiDARcloud::getScanColumnFormat(uint scanID ) const{
     if( scanID>=scans.size() ){
-        helios_runtime_error("ERROR (LiDARcloud::getScanColumnFormat): Cannot get column format for scan #" std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+        helios_runtime_error("ERROR (LiDARcloud::getScanColumnFormat): Cannot get column format for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
     }
     return scans.at(scanID).columnFormat;
 }
@@ -354,7 +350,7 @@ double LiDARcloud::getHitData(uint index, const char* label ) const{
 
     std::map<std::string, double> hit_data = hits.at(index).data;
     if( hit_data.find(label) == hit_data.end() ){
-        helios_runtime_error("ERROR (LiDARcloud::getHitData): Data value ``" + std::to_string(label) + "'' does not exist.");
+        helios_runtime_error("ERROR (LiDARcloud::getHitData): Data value ``" + std::string(label) + "'' does not exist.");
     }
 
     return hit_data.at(label);
@@ -1855,8 +1851,6 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( helios::Context* contex
 
     std::vector<float> area_sum;
     area_sum.resize(Ncells,0.f);
-    std::vector<float> sin_sum;
-    sin_sum.resize(Ncells,0.f);
     std::vector<uint> cell_tri_count;
     cell_tri_count.resize(Ncells,0);
 
@@ -1878,14 +1872,12 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( helios::Context* contex
                 vec3 origin = getScanOrigin(s);
                 vec3 raydir = vertices.front()-origin;
                 raydir.normalize();
-                float theta = fabs(acos_safe(raydir.z));
 
                 if( area==area ){ //in rare cases you can get area=NaN
 
-                    Gtheta.at(gridCell) += fabs(normal*raydir)*area*fabs(sin(theta));
+                    Gtheta.at(gridCell) += fabs(normal*raydir)*area;
 
                     area_sum.at(gridCell) += area;
-                    sin_sum.at(gridCell) += fabs(sin(theta));
                     cell_tri_count.at(gridCell) += 1;
 
                 }
@@ -1896,7 +1888,7 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta( helios::Context* contex
 
     for( uint v=0; v<Ncells; v++ ){
         if( cell_tri_count[v]>0 ){
-            Gtheta[v] *= float(cell_tri_count[v])/(area_sum[v]*sin_sum[v]);
+            Gtheta[v] *= float(cell_tri_count[v])/(area_sum[v]);
         }
     }
 
@@ -2356,7 +2348,7 @@ void LiDARcloud::backfillLeavesAlphaMask(
                 if( group_index>=reconstructed_alphamasks_center.size() ){
                     helios_runtime_error("FAILED: " + std::to_string(group_index) + " " + std::to_string(reconstructed_alphamasks_center.size()) + " " + std::to_string(randi));
                 }else if( reconstructed_alphamasks_gridcell.at(group_index)!=v ){
-                    shelios_runtime_error("FAILED: selected leaf group is not from this grid cell");
+                    helios_runtime_error("FAILED: selected leaf group is not from this grid cell");
                 }
 
                 reconstructed_alphamasks_center.push_back( shift );
