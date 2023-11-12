@@ -1070,11 +1070,15 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
         helios_runtime_error("ERROR (PlantArchitecture::addChildShoot): Parent with ID of " + std::to_string(parent_shoot_ID) + " does not exist.");
     }
 
-    int parent_rank;
-    if(parent_shoot_ID == -1 ){
-        parent_rank = -1;
-    }else{
+    int parent_rank = -1;
+    uint parent_node_count = 0;
+    if(parent_shoot_ID != -1 ){
         parent_rank = (int)shoot_tree_ptr->at(parent_shoot_ID)->rank;
+        parent_node_count = shoot_tree_ptr->at(parent_shoot_ID)->current_node_number;
+    }
+
+    if( shoot_parameters.growth_requires_dormancy ){ //scale the shoot based on proximity from the tip
+        shoot_parameters.phytomer_parameters.internode.length = shoot_parameters.phytomer_parameters.internode.length.val()*(0.05f + (1.f - float(parent_node)/float(parent_node_count)) * 0.95f);
     }
 
     vec3 node_position;
