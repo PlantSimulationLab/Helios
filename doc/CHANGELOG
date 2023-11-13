@@ -1528,3 +1528,18 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Energy Balance*
 - There was a memory leak on the host and GPU associated with the variables 'surfacehumidity' and 'd_surfacehumidity' that has now been fixed. It appears this issue was introduced in v1.2.63.
+
+[1.3.5] 2023-12-13
+
+- Some updates to documentation and README
+
+*Context*
+- There was an error in the documentation for reading .obj files. When object groups are specified in the .obj file, the object label/name is assigned to primitive data called 'object_label'. Previously, the documentation said 'object_group'.
+
+*Radiation*
+- Images written by RadiationModel::writeCameraImage() were upside-down.
+- Added direct writing of label bounding boxes (see RadiationModel::writeImageBoundingBoxes).
+- Method RadiationModel::writeNormCameraImage() was not working correctly. It did not actually normalize by the maximum image value.
+
+*Visualizer*
+- There was an error that could cause the Helios watermark to get cut off if the window width is too narrow.

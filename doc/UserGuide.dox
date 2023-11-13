@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.4
+/*! \mainpage Helios Documentation v1.3.5
 
   <p> <br> </p>
 
@@ -24,20 +24,23 @@
 
   To do so, first install git, then using your command-line interface (e.g. terminal) change into the directory where you want to download the code, then type:
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> $ git clone %https://www.github.com/PlantSimulationLab/Helios </code></pre></div>
+  ~~~~~~
+  $ git clone %https://www.github.com/PlantSimulationLab/Helios
+  ~~~~~~
 
   As updates are released, update your version of the code by typing:
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> $ git pull </code></pre></div>
+  ~~~~~~
+$ git pull
+  ~~~~~~
 
   You can always check which version you are on by typing:
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> $ git log </code></pre></div>
+  ~~~~~~
+  $ git log
+  ~~~~~~
 
-  <p> <br><br><br><br> </p>
+<p> <br><br><br><br> </p>
 
   \image html doc/images/PSL_logo_compact.png
 
@@ -155,17 +158,21 @@
 
   
 
-/*! \page DependentSoftware Dependent Software
+/*! \page DependentSoftware Install and Set-up
 
   \tableofcontents
 
+  \htmlonly
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/rg21UHxR16s?si=lJ7qJDKMF-Mg_WOX" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/pPoAfE69VcI?si=13mwnedvYq_ekuk-" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+  \endhtmlonly
+
   This page will guide you through installation and set-up of dependent software needed to build and run Helios-based programs.
 
-  \section IDE Using an Interactive Development Environment (IDE)
+  \section WhichPlatform Which platform to use for Helios programming?
 
-  Using an IDE for Helios programming can make development easier, particularly if you have minimal command-line experience. If using an IDE, we recommend <a href="https://www.jetbrains.com/clion/">CLion</a> by JetBrains. CLion is a rich-featured C++ IDE that integrates with the Helios documentation, GitHub, and allows you to do pretty much everything you need based on the graphical interface. CLion is also free to use for educational purposes. We especially recommend CLion if working on a PC, as it makes setup very easy. There is a separate documentation page showing how to set up Helios in CLion once you have it installed: \ref CLionIDE.
-
-  Other IDEs can also be used, such as Microsoft Visual Studio, but setup with Helios is not well documented or tested. On Linux and Mac, you can also use any text editor and the command line to run Helios, which is covered in the documentation.
+  As Helios is simply C++ code, it can be used on any platform that supports C++ programming. If you prefer to use an interactive development environment (IDE), two great options are <a href="https://www.jetbrains.com/clion/">CLion</a> by JetBrains (recommended) and <a href="https://code.visualstudio.com">VS Code</a>. These IDEs are available on Windows, Linux, and Mac, and make setting up Helios projects relatively easy. CLion is free for educational purposes, and is loaded with very nice features for C++ development such as direct display of Helios documentation. VS Code also works, but is a little more clunky. Building and compiling from the command-line and using any text editor such as Vim or Emacs also works just fine.
 
   \section SetupPC Set-up on Windows PC
 
@@ -264,8 +271,9 @@
 
   If you are not using CLion, you can install and run everything you need from the command-line. Simple command-line tools are available to easily install dependent software libraries.  The appropriate commands will be given in the documentation to install any required libraries. For Mac OSX, <a href="https://brew.sh">homebrew</a> is a great package installer.  Homebrew itself can be installed via a single command:
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" </code></pre></div>
+  ~~~~~~
+  $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  ~~~~~~
 
   Git: It is recommended to install Git in order to facilitate easy download and updating of the Helios source software. This can be accomplished via the command line "brew install git".
 
@@ -317,8 +325,7 @@
   
   Projects that use the Helios API are typically built using a CMakeLists.txt file.  A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-    <pre><code> # Helios standard CMakeLists.txt file version 1.8
+  ~~~~~~
   # Helios standard CMakeLists.txt file version 1.8
   if ( WIN32 )
       cmake_minimum_required(VERSION 3.15)
@@ -343,15 +350,21 @@
 
   #-------- DO NOT MODIFY ---------#
   include( "${BASE_DIRECTORY}/core/CMake_project.txt" )
-  </code></pre></div>
+  ~~~~~~
 
   The easiest way to compile the code is by using an IDE such as CLion, which is described in detail on the page \ref CLionIDE "Using the CLion IDE with Helios".
 
   To build the code from the command line based on the CMakeLists.txt file, which creates a makefile, simply run the command 'cmake', followed by the path to the CMakeLists.txt file.  If, as in the examples above, you are currently in the build directory and your CMakeLists.txt file is located one directory up, the CMake build is accomplished through:
 
-  <div style="padding:12px;background-color:#D0D0D0 ;line-height:1.4;">
-    <code> $ cmake .. </code>
-  </div>
+  ~~~~~~
+  $ cmake ..
+  ~~~~~~
+
+  By default, this will build Helios in "debug" mode. This is useful for debugging and testing because it will generate debug symbols and output more detailed error messages to the command line. However, this will make the code run much slower because it disables compiler optimizations (usually 3x slower on Linux and 4-5x slower on PC). For 'production' runs, it is recommended to build in 'release' mode in order to enable compiler optimizations. This is accomplished by passing an additional command-line argument to CMake:
+
+  ~~~~~~
+  $ cmake -DCMAKE_BUILD_TYPE='Release' ..
+  ~~~~~~
 
   The code can then be compiled by issuing the 'make' command from the build directory, which will produce an executable in the build directory.
 
@@ -359,20 +372,23 @@
 
   There is a script in the main Helios directory that can quickly set up a new project called "create\_project.sh". First, create a new directory where the project will exist, for example:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>$ mkdir projects/myProject</code></pre></div>
+ ~~~~~~
+ $ mkdir projects/myProject
+ ~~~~~~
 
  To set up the new project, run the create\_project.sh script, with the input argument of the project directory:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>$ utilities/create_project.sh projects/myProjects</code></pre></div>
+ ~~~~~~
+ $ utilities/create_project.sh projects/myProjects
+ ~~~~~~
 
  This will create the CMakeLists.txt file, a main.cpp file template, and an empty build directory.
 
  You can also specify plug-ins as command-line arguments to the create\_project.sh script, in which case the script will create a CMakeLists.txt and main.cpp file that are set up to load those plug-ins:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>$ utilities/create_project.sh projects/myProjects radiation visualizer</code></pre></div>
+ ~~~~~~
+ $ utilities/create_project.sh projects/myProjects radiation visualizer
+ ~~~~~~
 
  \subsection GlobalInclude C++ Standard Library Include Files
 
@@ -407,6 +423,10 @@
  <!-- **************** CONTEXT ***************** -->
  \section ContextSect Context
 
+ \htmlonly
+ <iframe width="560" height="315" src="https://www.youtube.com/embed/qYespfkNMNI?si=iqPILUcMZjuMvGpF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+ \endhtmlonly
+
  The Context is a C++ class that manages data and functions associated with the Helios framework.  The functions of the Context are:
 
  <ol>
@@ -419,19 +439,18 @@
 
  In order to use the Context, the following header must be included:
 
- <div style="padding:2px;background-color:#D0D0D0; line-height: 1.2">
- <pre><code> #include "Context.h" </code></pre>
- </div>
+ ~~~~~~{.cpp}
+ #include "Context.h"
+ ~~~~~~
 
  The context is typically created within the main function:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height: 1.2;">
- <pre><code> #include "Context.h"
-  void main(){
-     Context context;
-  }
- </code></pre>	     
- </div>
+ ~~~~~~{.cpp}
+ #include "Context.h"
+ void main(){
+    Context context;
+ }
+ ~~~~~~
 
  The Context is usually passed to plugins (see \ref Plugins), which gives them access to geometry and data.
 
@@ -440,8 +459,9 @@
  
  There are several vector types commonly used by the Context and other plugins (see \ref Plugins).  These are C++ structures with at least two member variables.  Helios vector types are defined by including the header file:
 
- <div style="padding:2px;background-color:#D0D0D0 ;line-height:1.0;">
- <pre><code> #include "helios_vector_types.h" </code></pre></div>
+ ~~~~~~{.cpp}
+ #include "helios_vector_types.h"
+ ~~~~~~
 
  Note that this header is included within the 'Context.h' header, so it is not necessary to include both. 
 
@@ -494,9 +514,9 @@
  
  Note that the above colors can be directly passed to \ref helios::make_RGBAcolor() "make_RGBAcolor" to specify an alpha (transparency) value:
  
- <div style="padding:2px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> RGBAcolor red_trans = make_RGBAcolor( RGB::red, 0.5 );</code></pre>     
- </div>
+ ~~~~~~{.cpp}
+  RGBAcolor red_trans = make_RGBAcolor( RGB::red, 0.5 );
+  ~~~~~~
 
  <!-- **************** COORDINATE SYSTEM ***************** -->
   \section Coord Coordinate System
@@ -521,9 +541,9 @@
  
  <table>
  <tr><th>Primitive</th><th>Description</th><th>Enumeration</th></tr>
- <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>PRIMITIVE\_TYPE\_PATCH</td></tr>
- <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE\_TYPE\_TRIANGLE"</td></tr>
-  <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lenghts of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_VOXEL "PRIMITIVE\_TYPE\_VOXEL"</td></tr>
+ <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_PATCH "PRIMITIVE_TYPE_PATCH"</td></tr>
+ <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE_TYPE_TRIANGLE"</td></tr>
+  <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_VOXEL "PRIMITIVE_TYPE_VOXEL"</td></tr>
  </table>	
  
  \subsection AddingPrims Adding Primitives
@@ -562,8 +582,8 @@
  
  Patches are added by specifying the (x,y,z) coordinate of its center, the lengths of its sides in the x- and y-directions, and optionally its spherical rotation (see \ref Coord) and r-g-b color.  The following is an example of using the 'addPatch' function to add a simple patch:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
        
   int main(){
@@ -576,8 +596,8 @@
      uint UUID; //universal unique identifier
      UUID = context.addPatch( center, size );
      
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  This will add the Patch shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the '\ref Visualizer' plugin is needed to replicate this image, which is not shown in the example code.)
 
@@ -585,12 +605,12 @@
  
  The patch can also be rotated by adding the optional SphericalCoord argument:
  
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> vec3 center = make_vec3(0,0,1);
+ ~~~~~~{.cpp}
+  vec3 center = make_vec3(0,0,1);
   vec2 size = make_vec2(1,1);
   SphericalCoord rotation = make_SphericalCoord(0.25*M_PI,0.5*M_PI);
-  context.addPatch( center, size, rotation );</code></pre>
- </div>
+  context.addPatch( center, size, rotation );
+ ~~~~~~
 
  This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5\f$\pi\f$ rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the \ref Primitive::rotate() function (see "Primitive Transformations" section below).
 
@@ -598,8 +618,8 @@
 
  Triangles are added by specifying the (x,y,z) coordinates of the triangle's three vertices, and optionally its r-g-b color.  The following is an example of using the 'addTriangle()' function to add a simple triangle:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
        
   int main(){
@@ -613,8 +633,8 @@
      uint UUID; //universal unique identifier
      UUID = context.addTriangle( v0, v1, v2, RGB::red );
 
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  This will add the Triangle shown below. (Note that the addition of the checkerboard ground and the '\ref Visualizer' plugin is needed to replicate this image, which is not shown in the example code.)
 
@@ -628,8 +648,8 @@
 
  Voxels are added by specifying the (x,y,z) coordinate of its center, the lengths of its sides in the x-, y-, and z-directions, and optionally its spherical rotation (see \ref Coord) and r-g-b color.  The following is an example of using the 'addVoxel()' function to add a simple voxel:
  
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
 
   int main(){
@@ -642,8 +662,8 @@
      uint UUID; //universal unique identifier
      UUID = context.addVoxel( center, size, 0, RGB::red );
 
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  This will add the Voxel shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the 'visualizer' plugin is needed to replicate this image, which is not shown in the example code.)
 
@@ -651,12 +671,12 @@
 
  The voxel can also be rotated by adding the optional SphericalCoord argument:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  vec3 center = make_vec3(0,0,1);
+ ~~~~~~{.cpp}
+  vec3 center = make_vec3(0,0,1);
   vec3 size = make_vec3(1,1,1);
   rotation = 0.25*M_PI;
-  context.addVoxel( center, size, rotation, RGB::red );</code></pre>
- </div>
+  context.addVoxel( center, size, rotation, RGB::red );
+ ~~~~~~
 
  \subsection PrimTransform Primitive Transformations
 
@@ -695,26 +715,26 @@
 
   Below is a code example of applying a transformation using a pointer to the primitive:
 
-   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code>   #include "Context.h"
+   ~~~~~~{.cpp}
+    #include "Context.h"
     using namespace helios;
 
     int main(){
 
-       \c// Initialize the Context
+       // Initialize the Context
        Context context;
 
-       \c// Add 'Patch' primitive
+       // Add 'Patch' primitive
        vec3 center(0,0,1);
        vec2 size = make_vec2(1,1);
        uint UUID = context.addPatch( center, size );
 
-       \c// Apply translation
+       // Apply translation
        vec3 translation(1,0,0);
        context.translatePrimitive( UUID, translation );
 
-    }</code></pre>
-   </div>
+    }
+  ~~~~~~
 
  \subsection PrimProps Primitive Properties
 
@@ -747,25 +767,25 @@
  
  <p><br></p>
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
      
   int main(){
 
-     \c// Initialize the Context
+     // Initialize the Context
      Context context;
      
-     \c// Add 'Patch' primitive 
+     // Add 'Patch' primitive
      vec3 center = make_vec3(0,0,1);
      vec2 size = make_vec2(1,1);
      uint UUID = context.addPatch( center, size, nullrotation, RGB::red );
 
-     \c// Get Patch size
+     // Get Patch size
      vec2 SIZE = getPatchSize( UUID );
 
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  \subsection Texture Texture Mapping
 
@@ -775,12 +795,12 @@
 
  Patches: To color a Patch  based on an image, simply pass the path to a PNG or JPEG image to the appropriate argument of the addPatch() command. Note that the path should either be absolute, or relative to the directory where the executable will be run (typically the `build' directory).
  
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  vec3 center = make_vec3(0,0,1);
+ ~~~~~~{.cpp}
+  vec3 center = make_vec3(0,0,1);
   vec2 size = make_vec2(2.5,1);
   SphericalCoord rotation = make_SphericalCoord(0,0);
-  context.addPatch( center, size, rotation, "PSL_logo_white.png");</code></pre>
- </div>
+  context.addPatch( center, size, rotation, "PSL_logo_white.png");
+ ~~~~~~
 
  <p> <br> </p>
 
@@ -802,23 +822,23 @@
  If the image provided for texture mapping has a transparency channel, the portion of the primitive that is transparent will automatically be removed, and the rest of the non-transparent portion of the primitive will be colored according to the image. Note that only PNG images are supported, since JPEG images do not have transparency. An example is given below.
 
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
      
   int main(){
 
-     \c// Initialize the Context
+     // Initialize the Context
      Context context;
      
-     \c// Add 'Patch' primitive with transparency mask
+     // Add 'Patch' primitive with transparency mask
      vec3 center = make_vec3(0,0,1);
      vec2 size = make_vec2(1,1);
      
      uint UUID = context.addPatch( center, size, make_SphericalCoord(0,0), "GrapeLeaf.png" );
 
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  \image html images/AlphaMask_leaf.png "Rectangular patch masked by an image with a transparency channel."
 
@@ -828,17 +848,17 @@
   If you are adding many identical primitives/objects with transparency, it is better to add it to the Context one time, then copy and translate it as many times as you need. An example of this is given in the code below.
   </div>
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
      
   int main(){
 
-     \c// Initialize the Context
+     // Initialize the Context
      Context context;
      
-     \c// Add 'Patch' primitive with transparency mask
-     \c// We will add a patch at the origin and with unit size, and copy it multiple times
+     // Add 'Patch' primitive with transparency mask
+     // We will add a patch at the origin and with unit size, and copy it multiple times
      vec3 center = make_vec3(0,0,0);
      vec2 size = make_vec2(1,1);
 
@@ -854,11 +874,11 @@
 
      }
 
-     \c// Let's delete the original "template"
+     // Let's delete the original "template"
      context.deletePrimitive(UUID);
 
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  <table>
   <tr><th>Property</th><th>Getter Function</th></tr>
@@ -888,9 +908,9 @@
      <td>Tile</td>
      <td>Patch subdivided into uniform grid of sub-patches.</td>
      <td> <ul>
-	 <li> \ref helios::Context::addTile( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv ) "addTile( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv )" </li>
-	 <li> \ref helios::Context::addTile( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color ) "addTile( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color )" </li>
-	 <li> \ref helios::Context::addTile( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ) "addTile( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* &texturefile )" </li>
+	 <li> \ref helios::Context::addTile( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::int2 &subdiv ) "addTile( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv )" </li>
+	 <li> \ref helios::Context::addTile( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::int2 &subdiv, const helios::RGBcolor &color ) "addTile( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color )" </li>
+	 <li> \ref helios::Context::addTile( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::int2 &subdiv, const char* texturefile ) "addTile( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* &texturefile )" </li>
        </ul>
      </td>
      <td>\image html images/Tile.png </td>
@@ -899,9 +919,9 @@
      <td>Sphere</td>
      <td>Spherical object tessellated with Triangle primitives.</td>
      <td> <ul>
-	 <li> \ref helios::Context::addSphere( uint Ndivs, const vec3 &center, float radius ) "addSphere( uint Ndivs, const vec3 &center, float radius )" </li>
-	 <li> \ref helios::Context::addSphere( uint Ndivs, const vec3 &center, float radius, const RGBcolor &color ) "addSphere( uint Ndivs, const vec3 &center, float radius, const RGBcolor &color )" </li>
-	 <li> \ref helios::Context::addSphere( uint Ndivs, const vec3 &center, float radius, const char* texturefile ) "addSphere( uint Ndivs, const vec3 &center, float radius, const char* texturefille )" </li>
+	 <li> \ref helios::Context::addSphere( uint Ndivs, const helios::vec3 &center, float radius ) "addSphere( uint Ndivs, const vec3 &center, float radius )" </li>
+	 <li> \ref helios::Context::addSphere( uint Ndivs, const helios::vec3 &center, float radius, const helios::RGBcolor &color ) "addSphere( uint Ndivs, const vec3 &center, float radius, const RGBcolor &color )" </li>
+	 <li> \ref helios::Context::addSphere( uint Ndivs, const helios::vec3 &center, float radius, const char* texturefile ) "addSphere( uint Ndivs, const vec3 &center, float radius, const char* texturefille )" </li>
        </ul>
      </td>
      <td>\image html images/Sphere.png </td>
@@ -910,8 +930,8 @@
      <td>Tube</td>
      <td>Cylindrical tube object tessellated with Triangle primitives. Follows a specified path and can change radius along its length.</td>
      <td><ul>
-	 <li>\ref helios::Context::addTube( uint Ndivs, const std::vector< vec3 > &nodes, const std::vector< float > &radius ) "addTube( uint Ndivs, const vector<vec3> &nodes, const vector<float> &radius )"</li>
-	 <li>\ref helios::Context::addTube( uint Ndivs, const std::vector< vec3 > &nodes, const std::vector< float > &radius, const std::vector<RGBcolor> &color ) "addTube( uint Ndivs, const vector<vec3> &nodes, const vector<float> &radius, const RGBcolor &color )"</li>
+	 <li>\ref helios::Context::addTube( uint Ndivs, const std::vector< helios::vec3 > &nodes, const std::vector< float > &radius ) "addTube( uint Ndivs, const vector<vec3> &nodes, const vector<float> &radius )"</li>
+	 <li>\ref helios::Context::addTube( uint Ndivs, const std::vector< helios::vec3 > &nodes, const std::vector< float > &radius, const std::vector<helios::RGBcolor> &color ) "addTube( uint Ndivs, const vector<vec3> &nodes, const vector<float> &radius, const RGBcolor &color )"</li>
        </ul>
      </td>
      <td>\image html images/Tube.png</td>
@@ -920,9 +940,9 @@
      <td>Box</td>
      <td>Rectangular prism object tessellated with Patch primitives.</td>
      <td><ul>
-	 <li> \ref helios::Context::addBox(const vec3 &center,const vec3 &size, const int3 &subdiv) "addBox( const vec3 &center, const vec3 &size, const int3 &subdiv )" </li>
-	 <li> \ref helios::Context::addBox(const vec3 &center,const vec3 &size, const int3 &subdiv, const RGBcolor &color ) "addBox( const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color )" </li>
-	 <li> \ref helios::Context::addBox(const vec3 &center,const vec3 &size, const int3 &subdiv, const helios::RGBcolor &color, const bool revers_normals ) "addBox( const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals  )" </li>
+	 <li> \ref helios::Context::addBox(const helios::vec3 &center,const helios::vec3 &size, const helios::int3 &subdiv) "addBox( const vec3 &center, const vec3 &size, const int3 &subdiv )" </li>
+	 <li> \ref helios::Context::addBox(const helios::vec3 &center,const helios::vec3 &size, const helios::int3 &subdiv, const helios::RGBcolor &color ) "addBox( const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color )" </li>
+	 <li> \ref helios::Context::addBox(const helios::vec3 &center,const helios::vec3 &size, const helios::int3 &subdiv, const helios::RGBcolor &color, const bool revers_normals ) "addBox( const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals  )" </li>
        </ul>
      </td>
      <td>\image html images/Box.png </td>
@@ -931,11 +951,11 @@
      <td>Disk</td>
      <td>Ellipsoidal disk object tessellated with Triangle primitives.</td>
      <td><ul>
-	 <li> \ref helios::Context::addDisk( const uint Ndiv, const helios::vec3 & center, const helios::vec2 & size ) "addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size )" </li>
-	 <li> \ref helios::Context::addDisk( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation ) "addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation )" </li>
-	 <li> \ref helios::Context::addDisk( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color ) "addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBcolor color )" </li>
-	 <li> \ref helios::Context::addDisk( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color ) "addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBAcolor color )" </li>
-	 <li> \ref helios::Context::addDisk( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file ) "addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, const char* texture_file )" </li>
+	 <li> \ref helios::Context::addDisk( uint Ndiv, const helios::vec3 & center, const helios::vec2 & size ) "addDisk( uint Ndiv, const vec3 &center, const vec2 &size )" </li>
+	 <li> \ref helios::Context::addDisk( uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation ) "addDisk( uint Ndiv, const vec3 &center, const vec2 &size, const SphericalCoord &rotation )" </li>
+	 <li> \ref helios::Context::addDisk( uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color ) "addDisk( uint Ndiv, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color )" </li>
+	 <li> \ref helios::Context::addDisk( uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color ) "addDisk( uint Ndiv, helios::vec3 center, helios::vec2 size, const SphericalCoord &rotation, const RGBAcolor &color )" </li>
+	 <li> \ref helios::Context::addDisk( uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file ) "addDisk( uint Ndiv, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file )" </li>
        </ul>
      </td>
      <td>\image html images/Disk.png </td>
@@ -959,9 +979,9 @@
      <td>Tile</td>
      <td>Patch subdivided into uniform grid of sub-patches.</td>
      <td> <ul>
-	 <li> \ref helios::Context::addTileObject( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv ) "addTileObject( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv )" </li>
-	 <li> \ref helios::Context::addTileObject( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color ) "addTileObject( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color )" </li>
-	 <li> \ref helios::Context::addTileObject( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ) "addTileObject( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile )" </li>
+	 <li> \ref helios::Context::addTileObject( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::int2 &subdiv ) "addTileObject( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv )" </li>
+	 <li> \ref helios::Context::addTileObject( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::int2 &subdiv, const helios::RGBcolor &color ) "addTileObject( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color )" </li>
+	 <li> \ref helios::Context::addTileObject( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::int2 &subdiv, const char* texturefile ) "addTileObject( const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile )" </li>
        </ul>
      </td>
      <td>\image html images/Tile.png</td>
@@ -970,9 +990,9 @@
      <td>Sphere</td>
      <td>Spherical object tessellated with Triangle primitives.</td>
      <td> <ul>
-	 <li> \ref helios::Context::addSphereObject( uint Ndivs, const vec3 &center, float radius ) "addSphereObject( uint Ndivs, vec3 &center, float radius )" </li>
-	 <li> \ref helios::Context::addSphereObject( uint Ndivs, const vec3 &center, float radius, const RGBcolor &color ) "addSphereObject ( uint Ndivs, const vec3 &center, float radius, const RGBcolor &color )" </li>
-	 <li> \ref helios::Context::addSphereObject( uint Ndivs, const vec3 &center, float radius, const char* texturefile ) "addSphereObject ( uint Ndivs, const vec3 &center, float radius, const char* texturefile )" </li>
+	 <li> \ref helios::Context::addSphereObject( uint Ndivs, const helios::vec3 &center, float radius ) "addSphereObject( uint Ndivs, vec3 &center, float radius )" </li>
+	 <li> \ref helios::Context::addSphereObject( uint Ndivs, const helios::vec3 &center, float radius, const helios::RGBcolor &color ) "addSphereObject ( uint Ndivs, const vec3 &center, float radius, const RGBcolor &color )" </li>
+	 <li> \ref helios::Context::addSphereObject( uint Ndivs, const helios::vec3 &center, float radius, const char* texturefile ) "addSphereObject ( uint Ndivs, const vec3 &center, float radius, const char* texturefile )" </li>
        </ul>
      </td>
      <td>\image html images/Sphere.png </td>
@@ -981,8 +1001,8 @@
      <td>Tube</td>
      <td>Cylindrical tube object tessellated with Triangle primitives. Follows a specified path and can change radius along its length.</td>
      <td><ul>
-	 <li>\ref helios::Context::addTubeObject( uint Ndivs, const std::vector<vec3> &nodes, const std::vector< float > &radius ) "addTubeObject( uint Ndivs, const vector<vec3> &nodes, const vector<float> &radius )"</li>
-	 <li>\ref helios::Context::addTubeObject( uint Ndivs, const std::vector<vec3> &nodes, const std::vector< float > &radius, const std::vector<RGBcolor> &color ) "addTubeObject( uint Ndivs, const vector<vec3> &nodes, const vector<float> &radius, const RGBcolor &color )"</li>
+	 <li>\ref helios::Context::addTubeObject( uint Ndivs, const std::vector<helios::vec3> &nodes, const std::vector< float > &radius ) "addTubeObject( uint Ndivs, const vector<vec3> &nodes, const vector<float> &radius )"</li>
+	 <li>\ref helios::Context::addTubeObject( uint Ndivs, const std::vector<helios::vec3> &nodes, const std::vector< float > &radius, const std::vector<helios::RGBcolor> &color ) "addTubeObject( uint Ndivs, const vector<vec3> &nodes, const vector<float> &radius, const RGBcolor &color )"</li>
        </ul>
      </td>
      <td>\image html images/Tube.png</td>
@@ -991,9 +1011,9 @@
      <td>Box</td>
      <td>Rectangular prism object tessellated with Patch primitives.</td>
      <td><ul>
-	 <li> \ref helios::Context::addBoxObject(const vec3 &center,const vec3 &size, const int3 &subdiv) "addBoxObject( const vec3 &center, const vec3 &size, const int3 &subdiv )" </li>
-	 <li> \ref helios::Context::addBoxObject(const vec3 &center,const vec3 &size, const int3 &subdiv, const RGBcolor &color ) "addBoxObject( const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color )" </li>
-	 <li> \ref helios::Context::addBoxObject(const vec3 &center,const vec3 &size, const int3 &subdiv, const helios::RGBcolor &color, const bool revers_normals ) "addBoxObject( const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals  )" </li>
+	 <li> \ref helios::Context::addBoxObject(const helios::vec3 &center,const helios::vec3 &size, const helios::int3 &subdiv) "addBoxObject( const vec3 &center, const vec3 &size, const int3 &subdiv )" </li>
+	 <li> \ref helios::Context::addBoxObject(const helios::vec3 &center,const helios::vec3 &size, const helios::int3 &subdiv, const helios::RGBcolor &color ) "addBoxObject( const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color )" </li>
+	 <li> \ref helios::Context::addBoxObject(const helios::vec3 &center,const helios::vec3 &size, const helios::int3 &subdiv, const helios::RGBcolor &color, bool revers_normals ) "addBoxObject( const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals  )" </li>
        </ul>
      </td>
      <td>\image html images/Box.png </td>
@@ -1003,10 +1023,10 @@
      <td>Ellipsoidal disk object tessellated with Triangle primitives.</td>
      <td><ul>
 	 <li> \ref helios::Context::addDiskObject( const uint Ndiv, const helios::vec3 & center, const helios::vec2 & size ) "addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size )" </li>
-	 <li> \ref helios::Context::addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation ) "addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation )" </li>
-	 <li> \ref helios::Context::addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color ) "addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBcolor color )" </li>
-	 <li> \ref helios::Context::addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color ) "addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, helios::RGBAcolor color )" </li>
-	 <li> \ref helios::Context::addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file ) "addDiskObject( uint Ndiv, helios::vec3 center, helios::vec2 size, helios::SphericalCoord rotation, const char* texture_file )" </li>
+	 <li> \ref helios::Context::addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation ) "addDiskObject( uint Ndiv, const vec3 &center, const vec2 &size, const SphericalCoord &rotation )" </li>
+	 <li> \ref helios::Context::addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color ) "addDiskObject( uint Ndiv, const vec3 &center, vec2 size, const SphericalCoord &rotation, const RGBcolor color )" </li>
+	 <li> \ref helios::Context::addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color ) "addDiskObject( uint Ndiv, const vec3 &center, vec2 size, const SphericalCoord &rotation, const RGBAcolor &color )" </li>
+	 <li> \ref helios::Context::addDiskObject( const uint Ndiv, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file ) "addDiskObject( uint Ndiv, vec3 center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file )" </li>
        </ul>
      </td>
      <td>\image html images/Disk.png </td>
@@ -1015,9 +1035,9 @@
      <td>Cone</td>
      <td>Tapered cylinder/cone object tessellated with triangles.</td>
      <td><ul>
-	 <li>\ref helios::Context::addConeObject( uint Ndivs, const helios::vec3 &node0, const helios::vec3 &node1, float radius0, float radius1 ) "addConeObject( uint Ndivs, const helios::vec3 &node0, const helios::vec3 &node1, float radius0, float radius1 )"</li>
-	 <li>\ref helios::Context::addConeObject( uint Ndivs, const helios::vec3 &node0, const helios::vec3 &node1, float radius0, float radius1, const helios::RGBcolor &color ) "addConeObject( uint Ndivs, const helios::vec3 &node0, const helios::vec3 &node1, float radius0, float radius1, const RGBcolor &color )"</li>
-	 <li>\ref helios::Context::addConeObject( uint Ndivs, const helios::vec3 &node0, const helios::vec3 &node1, float radius0, float radius1, const char* texturefile ) "addConeObject( uint Ndivs, const helios::vec3 &node0, const helios::vec3 &node1, float radius0, float radius1, const char* texturefile )"</li>
+	 <li>\ref helios::Context::addConeObject( uint Ndivs, const helios::vec3 &node0, const helios::vec3 &node1, float radius0, float radius1 ) "addConeObject( uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1 )"</li>
+	 <li>\ref helios::Context::addConeObject( uint Ndivs, const helios::vec3 &node0, const helios::vec3 &node1, float radius0, float radius1, const helios::RGBcolor &color ) "addConeObject( uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const RGBcolor &color )"</li>
+	 <li>\ref helios::Context::addConeObject( uint Ndivs, const helios::vec3 &node0, const helios::vec3 &node1, float radius0, float radius1, const char* texturefile ) "addConeObject( uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const char* texturefile )"</li>
        </ul>
      </td>
      <td>\image html images/Cone.png </td>
@@ -1026,21 +1046,21 @@
 
  Similar to individual primitives, objects have functions to perform transformations on the entire object in unison. These functions are member functions of the \ref helios::CompoundObject class. As with primitives, you can use the identifier to an object to get its pointer, from which you can access member functions.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  uint objID; //unique identifier to object
+ ~~~~~~{.cpp}
+  uint objID; //unique identifier to object
   objID = context.addTileObject( center, size, rotation, make_int2(2,2) );
 
   CompoundObject* object = context.getObjectPointer(objID);
 
-  float area = object->getArea();</code></pre>
- </div>
+  float area = object->getArea();
+ ~~~~~~
 
  or a shorthand would be
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  uint objID; //object identifier
-  float area = context.getObjectPointer(objID)->getArea();</code></pre>
- </div>
+ ~~~~~~{.cpp}
+  uint objID; //object identifier
+  float area = context.getObjectPointer(objID)->getArea();
+ ~~~~~~
 
  The table below gives a list of available Object functions.
 
@@ -1053,9 +1073,6 @@
  <tr><td>Member Primitive Check</td><td>\ref helios::CompoundObject::doesObjectContainPrimitive() "doesObjectContainPrimitive()"</td></tr>
  <tr><td>Object Center</td><td>\ref helios::CompoundObject::getObjectCenter() "getObjectCenter()"</td></tr>
  <tr><td>Surface Area</td><td>\ref helios::CompoundObject::getArea() "getArea()"</td></tr>
- <tr><td>Diffuse R-G-B color code</td><td>\ref helios::CompoundObject::getColor() "getColor()"</td></tr>
- <tr><td>Diffuse R-G-B color code</td><td>\ref helios::CompoundObject::getRGBColor() "getColorRGB()"</td></tr>
- <tr><td>Diffuse R-G-B-A color code</td><td>\ref helios::CompoundObject::getRGBAColor() "getColorRGBA()"</td></tr>
  <tr><td>Override Texture</td><td>\ref helios::CompoundObject::overrideTextureColor() "overrideTextureColor()"</td></tr>
  <tr><td>Use Texture</td><td>\ref helios::CompoundObject::useTextureColor() "useTextureColor()"</td></tr>
  </table>
@@ -1064,9 +1081,10 @@
 
  <table>
  <tr><th>Transformation</th><th>Function</th></tr>
- <tr><td>Translate in x, y, or z direction</td><td>\ref helios::CompoundObject::translate( const helios::vec3 shift ) "translate( vec3 shift )"</td></tr>
- <tr><td>Rotate about x, y, or z axis</td><td>\ref helios::CompoundObject::rotate( const float rot, const char* axis ) "rotate( float rot, const char* axis )"</td></tr>
- <tr><td>Rotate about arbitrary axis</td><td>\ref helios::CompoundObject::rotate( const float rot, const helios::vec3 axis ) "rotate( float rot, vec3 axis )"</td></tr>
+ <tr><td>Translate in x, y, or z direction</td><td>\ref helios::CompoundObject::translate( const helios::vec3 &shift ) "translate( vec3 shift )"</td></tr>
+ <tr><td>Rotate about x, y, or z axis</td><td>\ref helios::CompoundObject::rotate( float rot, const char* axis ) "rotate( float rot, const char* axis )"</td></tr>
+ <tr><td>Rotate about arbitrary axis</td><td>\ref helios::CompoundObject::rotate( float rot, const helios::vec3 &axis ) "rotate( float rot, vec3 axis )"</td></tr>
+ <tr><td>Apply scaling factor in x, y, or z</td><td>\ref helios::CompoundObject::scale( const helios::vec3 &scale ) "scale( vec3 scaling_factor )"</td></tr>
  </table>
  
  Some objects have special functions specific to that type of object, which are listed below. In order to access these functions, you need to get a pointer to that type of object using the appropriate get[*]ObjectPointer() function.
@@ -1168,18 +1186,18 @@
 
  Variables are created from the Context via the \ref helios::Context::addVariable "addVariable" command.  The user specifies the name of the variable upon creation, which will be used to reference the data later.
  
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
 
-  int main(int argc, char* argv[]){
+  int main(){
 
      Context context;
 
      context.addVariable("temperature");
 
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  Variables can be added before or after primitives are added to the Context.  If variables are added before a primitive, newly added primitive variable values will be initialized to zero as they are added.  If variables are added after some primitives have been added, any previously added primitive variable values will be set to zero, and newly added primitive variable values will be initialized to zero as they are added.  
 
@@ -1189,11 +1207,11 @@
 
  The values of variables can be set through the Context via the \ref helios::Context::setVariableValue "setVariableValue" function:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
      
-  int main(int argc, char* argv[]){
+  int main(){
 
      Context context;
 
@@ -1203,18 +1221,18 @@
 
      context.setVariableValue(UUID,"temperature",300); 
 
-  }</code></pre>
- </div>	
+  }
+ ~~~~~~
 
  \subsubsection GetVariables Getting Variable Values
  
  Getting the values of variables is done via the \ref helios::Context::getVariableValue "getVariableValue" function:
  
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
 
-  int main(int argc, char* argv[]){
+  int main(){
 
      Context context;
 
@@ -1226,8 +1244,8 @@
 
      float T = context.getVariableValue(UUID,"temperature");
 
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  In the above example, the value of 'T' in equal to 300.f.
 
@@ -1241,8 +1259,8 @@
 
  Primitive data is set for a given primitive via the Context using the \ref helios::Context::setPrimitiveData() "setPrimitiveData()" function. Example use of this function for scalar data is given below.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
 
   int main( void ){
@@ -1253,13 +1271,13 @@
 
      float eps = 0.9;
      context.setPrimitiveData(UUID,"emissivity",eps);
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  There are multiple ways of setting vector primitive data. One method uses STL vectors to pass the data to the \ref helios::Context::setPrimitiveData() "setPrimitiveData()", and another is accomplished using a pointer to a standard C vector.  Both of these equivalent methods are illustrated below.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
 
   int main(){
@@ -1281,15 +1299,16 @@
      B[1] = 9.2;
      context.setPrimitiveData(UUID,"somedataB",HELIOS_TYPE_FLOAT,2,\&B[0]);
        
-  }</code></pre>
- </div>
+  }
+
+ ~~~~~~
 
  \subsubsection GetPrimData Getting Primitive Data Values
 
  If primitive data is a scalar value, it can be retrieved for a given primitive via the Context using the \ref helios::Context::getPrimitiveData() "getPrimitiveData" function:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
      
   int main(){
@@ -1307,8 +1326,9 @@
      float emissivity;
      context.getPrimitiveData(UUID,"emissivity",emissivity);
 
-  }</code></pre>
- </div>
+  }
+
+ ~~~~~~
 
  In the above example, the value of 'emissivity' is 0.9.
 
@@ -1327,8 +1347,8 @@
  
  <p> <br> </p>  
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
 
   int main(){
@@ -1348,8 +1368,8 @@
         uint L = context.getPrimitiveDataSize(UUID, "emissivity");
      }
 
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  \subsection GlobalData Global Data
 
@@ -1361,38 +1381,38 @@
 	
  Data in the timeseries can be accessed either via the queryTimeseriesData() function by giving the index of the data point, or by giving a date and time.  To loop through all data in the timeseries, we can query the length of the timeseries and make a for-loop.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
+  #include "Context.h"
   using namespace helios;
 
   int main(){
 
-        \c// Initialize the Context
+        // Initialize the Context
         Context context;
      
-        \c// Add data to timeseries
+        // Add data to timeseries
         Date date;
         Time time;
 
-        date = make_Date( 2, 1, 2000 ); \c// 2 Jan. 2000
+        date = make_Date( 2, 1, 2000 ); // 2 Jan. 2000
 
-        time = make_Time( 13, 00, 00 ); \c// 13:00:00
-        context.addTimeseriesData( "temperature", 301.23, date, time ); \c// index #0
+        time = make_Time( 13, 00, 00 ); // 13:00:00
+        context.addTimeseriesData( "temperature", 301.23, date, time ); // index #0
 	    
-        time = make_Time( 13, 15, 00 ); \c// 13:15:00
-        context.addTimeseriesData( "temperature", 301.92, date, time ); \c// index #1
+        time = make_Time( 13, 15, 00 ); // 13:15:00
+        context.addTimeseriesData( "temperature", 301.92, date, time ); // index #1
 	    
-        time = make_Time( 13, 30, 00 ); \c// 13:30:00
-        context.addTimeseriesData( "temperature", 302.56, date, time ); \c// index #2
+        time = make_Time( 13, 30, 00 ); // 13:30:00
+        context.addTimeseriesData( "temperature", 302.56, date, time ); // index #2
 	    
-        time = make_Time( 13, 45, 00 ); \c// 13:45:00
-        context.addTimeseriesData( "temperature", 303.05, date, time ); \c// index #3
+        time = make_Time( 13, 45, 00 ); // 13:45:00
+        context.addTimeseriesData( "temperature", 303.05, date, time ); // index #3
 
         float T;
-        T = context.queryTimeseriesData( "temperature", 1 ); \c// Here, T = 301.92
+        T = context.queryTimeseriesData( "temperature", 1 ); // Here, T = 301.92
 	    
         time = make_Time( 13, 15, 00 );
-        T = context.queryTimeseriesData( "temperature", date, time ); \c// Also here, T = 301.92
+        T = context.queryTimeseriesData( "temperature", date, time ); // Also here, T = 301.92
 
         for( uint i=0; i<context.getTimeseriesLength("temperature"); i++ ){
 	     T = context.queryTimeseriesData( "temperature", i );
@@ -1400,16 +1420,16 @@
 	     printf("Temperature at time %02d:%02d:%02d is %f\n", time.hour, time.minute, time.second );							 
 	 }
 
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
 
  Typically, data is not entered manually, but rather through an XML or text file (see \ref TimeXML "Reading XML Files" for information).
 
  It is often necessary to get the number of data points in a given timeseries, which can be accomplished with the command:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> uint N = context.getTimeseriesLength( "temperature" );</code></pre>
- </div>
+ ~~~~~~{.cpp}
+  uint N = context.getTimeseriesLength( "temperature" );
+ ~~~~~~
 	
 
 */
@@ -1429,17 +1449,17 @@
 
   All xml files start with a header indicating the version to be used, and the tag "<helios>...</helios>" should encapsulate the whole file:
 
-  <div style="padding:1px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code> <?xml version="1.0"?>
+  ~~~~~~{.xml}
+   <?xml version="1.0"?>
    <helios>
 	 
-   </helios></code></pre>
-  </div>
-  
+   </helios>
+  ~~~~~~
+
   Comments are given in xml files by:
-  <div style="padding:1px;background-color:#D0D0D0 ;line-height:1.2;">
-    <pre><code> \<!-- this is a comment --></code></pre>
-  </div>
+  ~~~~~~{.xml}
+    <!-- this is a comment -->
+  ~~~~~~
 
   \subsection PrimXML Adding Primitives
 
@@ -1494,39 +1514,39 @@
 
   Data timeseries are specified by the tag 'timeseries' with the attribute giving the label for the timeseries (e.g., temperature).  The 'datapoint' tag is used to specify data points, with elements specifying the time, date, and value.  The sample below gives an example of creating a timeseries in an xml file.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> \<?xml version="1.0"?\>
-   \<helios>	
-   \<timeseries label="temperature" \>
-	\<datapoint\>
-	  \<date\>2 1 2000\</date\> \<!-- 2 Jan. 2000 -->
-	  \<time\>0 0 13\</time\> \<!-- 13:00:00 -->
-	  \<value\>301.23\</value\>
-	\</datapoint\>
-	\<datapoint\>
-	  \<date\>2 1 2000\</date\> \<!-- 2 Jan. 2000 -->
-	  \<time\>13 15 00\</time\> \<!-- 13:15:00 -->
-	  \<value\>301.92\</value\>
-	\</datapoint\>
-	\<datapoint\>
-	  \<date\>2 1 2000\</date\> \<!-- 2 Jan. 2000 -->
-	  \<time\>13 30 00\</time\> \<!-- 13:30:00 -->
-	  \<value\>302.56\</value\>
-	\</datapoint\>
-	\<datapoint\>
-	  \<date\>2 1 2000\</date\> \<!-- 2 Jan. 2000 -->
-	  \<time\>13 45 00\</time\> \<!-- 13:45:00 -->
-	  \<value\>303.05\</value\>
-	\</datapoint\>
-  \</timeseries\>
-  \</helios></code></pre>
-  </div>
+  ~~~~~~{.xml}
+  <?xml version="1.0"?>
+  <helios>
+   <timeseries label="temperature" >
+	<datapoint>
+	  <date>2 1 2000</date> <!-- 2 Jan. 2000 -->
+	  <time>0 0 13</time> <!-- 13:00:00 -->
+	  <value>301.23</value>
+	</datapoint>
+	<datapoint>
+	  <date>2 1 2000</date> <!-- 2 Jan. 2000 -->
+	  <time>13 15 00</time> <!-- 13:15:00 -->
+	  <value>301.92</value>
+	</datapoint>
+	<datapoint>
+	  <date>2 1 2000</date> <!-- 2 Jan. 2000 -->
+	  <time>13 30 00</time> <!-- 13:30:00 -->
+	  <value>302.56</value>
+	</datapoint>
+	<datapoint>
+	  <date>2 1 2000</date> <!-- 2 Jan. 2000 -->
+	  <time>13 45 00</time> <!-- 13:45:00 -->
+	  <value>303.05</value>
+	</datapoint>
+  </timeseries>
+  </helios>
+  ~~~~~~
 
   Note that the date can alternatively be specified as a Julian day of year (1-366) using the <dateJulian> tag:
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> \<dateJulian\>2 2000\</dateJulian\> \<!-- 2 Jan. 2000, Julian Day = 2 --></code></pre>
-  </div>
+  ~~~~~~{.xml}
+    <dateJulian>2 2000</dateJulian> <!-- 2 Jan. 2000, Julian Day = 2 -->
+  ~~~~~~
 
   \section ASCIItimeseries Adding Timeseries (Weather) Data from Tabular Text Files
 
@@ -1561,8 +1581,8 @@
 
   A code example is given below.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
+   #include "Context.h"
    using namespace helios;
 
    int main(){
@@ -1575,17 +1595,16 @@
       Time time = make_Time( 13, 00, 00 );
       float T = context.queryTimeseriesData( "temperature", date, time );
 
-   }</code></pre>
-  </div>
+   }
+  ~~~~~~
 
   The above example would read the comma-delimited file "../input/weatherfile.csv". Timeseries data would be added to the Context for values of "temperature", which could be queried based on this label.
 
   \section XMLread Reading XML Files
 
   XML files can be read by the Context via the function \ref loadXML().  This function parses the XML file and adds all specified structures (see above) to the Context. Below is an example of how to load an XML file into the Context.
-  
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
+   #include "Context.h"
    using namespace helios;
 
    int main(){
@@ -1594,8 +1613,8 @@
 
       context.loadXML( "file.xml" );
 
-   }</code></pre>
-  </div>
+   }
+  ~~~~~~
 
   \section Poly Reading Standard Polygon File Formats
 	
@@ -1603,30 +1622,30 @@
 
   The Context can automatically import Stanford .ply files <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">en.wikipedia.org/wiki/PLY_(file_format)</a>.  This is accomplished via the \ref loadPLY() command, as illustrated below. There are several overloaded versions of this function, which allow for various modifications to the PLY model.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
+   #include "Context.h"
    using namespace helios;
 
    int main(){
 
        Context context;
 
-       \c// location where PLY model will be centered
+       // location where PLY model will be centered
        vec3 origin(0,0,0);
 
-       \c// scaling factor to apply to model
+       // scaling factor to apply to model
        float scale = 1.0;
 
-       \c// rotation to apply to model (optional argument to loadPLY)
+       // rotation to apply to model (optional argument to loadPLY)
        SphericalCoord rotation( 0., M_PI );
 
-       \c// default color for model (optional argument to loadPLY)
+       // default color for model (optional argument to loadPLY)
        RGBcolor color = RGB::red;
 
        context.loadPLY( "file.ply", origin, scale, rotation, color );
 
-   }</code></pre>
-  </div>
+   }
+  ~~~~~~
 
   There are other forms of the loadPLY function that allow for translation, rotation, and scaling of the entire PLY model.
 
@@ -1641,7 +1660,7 @@
   - Geometric vertex coordinates (x,y,z)
   - Vertex texture coordinates (u,v)
   - Texture map image files (.jpg, .png) associated with materials
-  - Object groups. When the 'o groupname' is added before a set of vertices, primitive data called 'object_group' is written for the resulting set of primitives.
+  - Object groups. When the 'o groupname' is added before a set of vertices, primitive data called 'object_label' is written for the resulting set of primitives.
 
   Wavefront files are loaded via the \ref helios::Context::loadOBJ() function, which takes the name of an .obj file.  If the file defines materials and lists an associated material (.mtl) file, the code looks in one of two places for the file.  First, if an absolute or relative path is given for the .mtl file name, the file is simply loaded from that location.  If only a file name is given for the .mtl file, the directory where the original .obj file was found is searched for the .mtl file.
 
@@ -1660,8 +1679,8 @@
 
   Example code is given below to load an OBJ model at the origin with no scaling (height=0) or rotation (rotation='nullrotation') applied and default up axis of "z".
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
+   #include "Context.h"
    using namespace helios;
 
    int main(){
@@ -1670,15 +1689,15 @@
 
       context.loadOBJ("relative/path/to/someobjfile.obj", make_vec3(0,0,0), 0, nullrotation, RGB::red );
 
-   }</code></pre>
-  </div>
+   }
+  ~~~~~~
 
   \subsection PLYwrite Writing PLY (Stanford Polygon) Files
 
   The Context has analogous files for writing PLY files based on the geometry currently loaded in the Context. This is accomplished via the \ref writePLY() command, as illustrated below.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
+   #include "Context.h"
    using namespace helios;
 
    int main(){
@@ -1689,15 +1708,15 @@
 
        context.writePLY( "file.ply" );
 
-   }</code></pre>
-  </div>
+   }
+  ~~~~~~
 
   \subsection OBJwrite Writing OBJ (Wavefront) Files
 
   Writing Wavefront OBJ files is similar to writing a PLY file, except that it will produce both a .obj file containing the geometry, and a .mtl file defining materials (colors, texture masks). For this reason, only the base file name with no extension is provided to the function.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
+   #include "Context.h"
    using namespace helios;
 
    int main(){
@@ -1706,11 +1725,11 @@
 
        context.addPatch();
 
-       \c// This will produce two files: "file.obj" and "file.mtl"
+       // This will produce two files: "file.obj" and "file.mtl"
        context.writeOBJ( "file" );
 
-   }</code></pre>
-  </div> 
+   }
+  ~~~~~~
 
   \section Export Exporting Project to XML File Format
 
@@ -1718,8 +1737,8 @@
 
   An XML file can be written as follows:
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
+   #include "Context.h"
    using namespace helios;
 
    int main(){
@@ -1732,31 +1751,31 @@
 
        context.writeXML( "file.xml" );
 
-   }</code></pre>
-  </div> 
+   }
+  ~~~~~~
 
   and later read back into a new simulation:
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
+   #include "Context.h"
    using namespace helios;
 
    int main(){
 
        Context context;
 
-       \c // The context will now contain a default patch, with primitive data "somedata" equal to 10.2
+       // The context will now contain a default patch, with primitive data "somedata" equal to 10.2
        context.loadXML( "file.xml" );
 
-   }</code></pre>
-  </div>
+   }
+   ~~~~~~
 
   \section ExportASCII Exporting Primitive Data to Text File
 
     It is often useful to be able to write primitive data to an ASCII text file for analysis in 3rd party software. This can be accomplished using the \ref helios::Context::writePrimitiveData() function. Each row of the resulting file will correspond to each primitive, and each column corresponds to different primitive data values. The user must specify which primitive data fields to write to each column in the file. If requested primitive data does not exist for one or more primitives, a default value of 0 will be written and a warning will be issued.
 
-    <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-    <pre><code> #include "Context.h"
+    ~~~~~~{.cpp}
+     #include "Context.h"
      using namespace helios;
 
      int main(){
@@ -1772,8 +1791,8 @@
 
          context.writePrimitiveData( "file.txt", columns );
 
-     }</code></pre>
-    </div>
+     }
+    ~~~~~~
 
     By default, column header labels will not be written, but if the optional third argument is set as "true" the label of the primitive data for each column will be written to the first line of the file.
 
