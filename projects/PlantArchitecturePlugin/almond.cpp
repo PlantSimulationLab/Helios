@@ -49,7 +49,7 @@ void PlantArchitecture::addAlmondShoot() {
     shoot_parameters_spur.bud_time = 100000;
     shoot_parameters_spur.shoot_internode_taper = 0;
     shoot_parameters_spur.phytomer_parameters = phytomer_parameters_spur;
-    shoot_parameters_spur.child_insertion_angle.uniformDistribution(deg2rad(35),deg2rad(45));
+    shoot_parameters_spur.child_insertion_angle_tip.uniformDistribution(deg2rad(35), deg2rad(45));
     shoot_parameters_spur.fruit_set_probability = 0.75;
     shoot_parameters_spur.flower_probability = 1;
     shoot_parameters_spur.flowers_require_dormancy = true;
@@ -64,7 +64,9 @@ void PlantArchitecture::addAlmondShoot() {
     shoot_parameters_proleptic.bud_time = 0;
     shoot_parameters_proleptic.shoot_internode_taper = 0.5;
     shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_proleptic;
-    shoot_parameters_proleptic.child_insertion_angle.uniformDistribution(deg2rad(35),deg2rad(45));
+    shoot_parameters_proleptic.child_insertion_angle_tip = 0;
+    shoot_parameters_proleptic.child_internode_length_max = 0.06;
+    shoot_parameters_proleptic.child_internode_length_decay_rate = 0.01;
     shoot_parameters_proleptic.fruit_set_probability = 0.5;
     shoot_parameters_proleptic.flower_probability = 0.5;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
@@ -81,7 +83,7 @@ void PlantArchitecture::addAlmondShoot() {
 
 
     defineShootType("trunk", shoot_parameters_trunk);
-    defineShootType("spur", shoot_parameters_spur);
+//    defineShootType("spur", shoot_parameters_spur);
     defineShootType("proleptic", shoot_parameters_proleptic);
     defineShootType("sylleptic", shoot_parameters_sylleptic);
 
@@ -113,7 +115,7 @@ void PlantArchitecture::addAlmondShoot() {
             }else{
                 current_node_number = 4;
             }
-            uint childID = addChildShoot(plant0, uID_trunk, node, 4, make_AxisRotation(shoot_parameters_trunk.child_insertion_angle.val(), context_ptr->randu(0.f, 2.f * M_PI), -0. * M_PI), new_shoot_type_label);
+            uint childID = addChildShoot(plant0, uID_trunk, node, 4, make_AxisRotation(shoot_parameters_trunk.child_insertion_angle_tip.val(), context_ptr->randu(0.f, 2.f * M_PI), -0. * M_PI), new_shoot_type_label);
             auto phytomers = plant_instances.at(plant0).shoot_tree.at(childID)->phytomers;
             for( uint p=0; p<phytomers.size(); p++ ){
                 phytomers.at(p)->removeLeaf();

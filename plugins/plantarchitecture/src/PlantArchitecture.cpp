@@ -156,7 +156,12 @@ ShootParameters::ShootParameters( std::minstd_rand0 *generator ) {
 
     bud_time.initialize(0,generator);
 
-    child_insertion_angle.initialize(deg2rad(30),generator);
+    child_insertion_angle_tip.initialize(deg2rad(20), generator);
+    child_insertion_angle_decay_rate.initialize(deg2rad(10), generator);
+
+    child_internode_length_max.initialize(0.02, generator);
+    child_internode_length_min.initialize(0.002, generator);
+    child_internode_length_decay_rate.initialize(0.005, generator);
 }
 
 void ShootParameters::defineChildShootTypes( const std::vector<std::string> &a_child_shoot_type_labels, const std::vector<float> &a_child_shoot_type_probabilities ){
@@ -997,6 +1002,8 @@ uint PlantArchitecture::addBaseShoot(uint plantID, uint current_node_number, con
 
     auto shoot_parameters = shoot_types.at(shoot_type_label);
 
+    validateShootTypes(shoot_parameters);
+
     if(current_node_number > shoot_parameters.max_nodes ){
         helios_runtime_error("ERROR (PlantArchitecture::addShoot): Cannot add shoot with " + std::to_string(current_node_number) + " nodes since the specified max node number is " + std::to_string(shoot_parameters.max_nodes) + ".");
     }else if( plant_instances.find(plantID) == plant_instances.end() ){
@@ -1020,6 +1027,8 @@ uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint curr
     auto shoot_tree_ptr = &plant_instances.at(plantID).shoot_tree;
 
     auto shoot_parameters = shoot_types.at(shoot_type_label);
+
+    validateShootTypes(shoot_parameters);
 
     if( shoot_tree_ptr->empty() ){
         helios_runtime_error("ERROR (PlantArchitecture::appendShoot): Cannot append shoot to empty shoot. You must call addBaseShoot() first for each plant.");
@@ -1066,6 +1075,8 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
 
     auto shoot_parameters = shoot_types.at(shoot_type_label);
 
+    validateShootTypes(shoot_parameters);
+
     if(parent_shoot_ID < -1 || parent_shoot_ID >= shoot_tree_ptr->size() ){
         helios_runtime_error("ERROR (PlantArchitecture::addChildShoot): Parent with ID of " + std::to_string(parent_shoot_ID) + " does not exist.");
     }
@@ -1077,9 +1088,13 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
         parent_node_count = shoot_tree_ptr->at(parent_shoot_ID)->current_node_number;
     }
 
-    if( shoot_parameters.growth_requires_dormancy ){ //scale the shoot based on proximity from the tip
-        shoot_parameters.phytomer_parameters.internode.length = shoot_parameters.phytomer_parameters.internode.length.val()*(0.05f + (1.f - float(parent_node)/float(parent_node_count)) * 0.95f);
+    //scale the shoot internode based on proximity from the tip
+    if( shoot_parameters.growth_requires_dormancy ){
+        shoot_parameters.phytomer_parameters.internode.length = fmax(shoot_parameters.child_internode_length_max.val() - shoot_parameters.child_internode_length_decay_rate.val() * float(parent_node_count-parent_node-1), shoot_parameters.child_internode_length_min.val());
     }
+
+    //set the insertion angle based on proximity from the tip
+    float insertion_angle_adjustment = fmin(shoot_parameters.child_insertion_angle_decay_rate.val() * float(parent_node_count-parent_node-1), M_PI/2.f-base_rotation.pitch );
 
     vec3 node_position;
 
@@ -1096,13 +1111,26 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
 
     int childID = shoot_tree_ptr->size();
 
-    auto* shoot_new = (new Shoot(childID, parent_shoot_ID, parent_node, parent_rank + 1, node_position, base_rotation, current_node_number, shoot_parameters, shoot_type_label, shoot_tree_ptr, context_ptr));
+    auto* shoot_new = (new Shoot(childID, parent_shoot_ID, parent_node, parent_rank + 1, node_position, base_rotation+ make_AxisRotation(insertion_angle_adjustment,0,0), current_node_number, shoot_parameters, shoot_type_label, shoot_tree_ptr, context_ptr));
     shoot_tree_ptr->emplace_back(shoot_new);
     shoot_new->initializePhytomer();
 
     shoot_tree_ptr->at(parent_shoot_ID)->childIDs[(int)parent_node] = childID;
 
     return childID;
+
+}
+
+void PlantArchitecture::validateShootTypes( ShootParameters &shoot_parameters ) const{
+
+    assert( shoot_parameters.child_shoot_type_probabilities.size() == shoot_parameters.child_shoot_type_labels.size() );
+
+    for( int ind = shoot_parameters.child_shoot_type_labels.size()-1; ind>=0; ind-- ){
+        if( shoot_types.find(shoot_parameters.child_shoot_type_labels.at(ind)) == shoot_types.end() ){
+            shoot_parameters.child_shoot_type_labels.erase(shoot_parameters.child_shoot_type_labels.begin()+ind);
+            shoot_parameters.child_shoot_type_probabilities.erase(shoot_parameters.child_shoot_type_probabilities.begin()+ind);
+        }
+    }
 
 }
 
@@ -1628,7 +1656,7 @@ void PlantArchitecture::advanceTime( float dt ) {
 
                        std::string new_shoot_type_label;
                         if(sampleChildShootType(plantID,shoot->ID, new_shoot_type_label) ){
-                            uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle.val(), context_ptr->randu(0.f, 2.f * M_PI), -0. * M_PI), new_shoot_type_label);
+                            uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle_tip.val(), context_ptr->randu(0.f, 2.f * M_PI), -0. * M_PI), new_shoot_type_label);
                             setPhytomerScale(plantID, childID, 0, 0.01, 0.01);
                             phytomer->vegetative_bud_state = BUD_DEAD;
                             std::cout << "Adding child shoot to phytomer " << node_number << " of type " << new_shoot_type_label << " on shoot " << shoot->ID << std::endl;

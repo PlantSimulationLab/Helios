@@ -393,7 +393,12 @@ struct ShootParameters{
 
     RandomParameter_float bud_time;  //days
 
-    RandomParameter_float child_insertion_angle;
+    RandomParameter_float child_insertion_angle_tip;
+    RandomParameter_float child_insertion_angle_decay_rate;
+
+    RandomParameter_float child_internode_length_max;
+    RandomParameter_float child_internode_length_min;
+    RandomParameter_float child_internode_length_decay_rate;
 
     bool flowers_require_dormancy;
     bool growth_requires_dormancy;
@@ -418,8 +423,16 @@ struct ShootParameters{
         this->fruit_set_probability = a.fruit_set_probability;
         this->bud_time = a.bud_time;
         this->bud_time.resample();
-        this->child_insertion_angle = a.child_insertion_angle;
-        this->child_insertion_angle.resample();
+        this->child_insertion_angle_tip = a.child_insertion_angle_tip;
+        this->child_insertion_angle_tip.resample();
+        this->child_insertion_angle_decay_rate = a.child_insertion_angle_decay_rate;
+        this->child_insertion_angle_decay_rate.resample();
+        this->child_internode_length_max = a.child_internode_length_max;
+        this->child_internode_length_max.resample();
+        this->child_internode_length_min = a.child_internode_length_min;
+        this->child_internode_length_min.resample();
+        this->child_internode_length_decay_rate = a.child_internode_length_decay_rate;
+        this->child_internode_length_decay_rate.resample();
         this->flowers_require_dormancy = a.flowers_require_dormancy;
         this->growth_requires_dormancy = a.growth_requires_dormancy;
         this->child_shoot_type_labels = a.child_shoot_type_labels;
@@ -647,6 +660,8 @@ private:
     std::string makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> & shoot_tree) const;
 
     std::map<std::string,ShootParameters> shoot_types;
+
+    void validateShootTypes( ShootParameters &shoot_parameters ) const;
 
     void accumulateShootPhotosynthesis( float dt );
 
