@@ -263,6 +263,12 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &sho
     phytomer->flower_bud_state = BUD_DORMANT;
     phytomer->vegetative_bud_state = BUD_DORMANT;
 
+    // if the internode is too short, it should not produce buds
+    if( phytomer->phytomer_parameters.internode.length.val()<0.001 ){
+        phytomer->flower_bud_state = BUD_DEAD;
+        phytomer->vegetative_bud_state = BUD_DEAD;
+    }
+
     shoot_tree_ptr->at(ID)->phytomers.push_back(phytomer);
 
     return (int)phytomers.size()-1;
@@ -291,12 +297,13 @@ void Shoot::makeDormant(){
     dormancy_cycles++;
 
     for( auto &phytomer : phytomers ){
-        if (phytomer->flower_bud_state != BUD_DEAD) {
-            phytomer->flower_bud_state = BUD_DORMANT;
+        if (phytomer->flower_bud_state != BUD_DORMANT) {
+            phytomer->flower_bud_state = BUD_DEAD;
         }
-        if( phytomer->vegetative_bud_state!=BUD_DEAD) {
-            phytomer->vegetative_bud_state = BUD_DORMANT;
+        if( phytomer->vegetative_bud_state!=BUD_DORMANT) {
+            phytomer->vegetative_bud_state = BUD_DEAD;
         }
+        phytomer->removeLeaf();
     }
 
 }
@@ -913,6 +920,21 @@ void Phytomer::removeLeaf(){
 
 }
 
+void Phytomer::removeInflorescence(){
+
+    context_ptr->deleteObject(inflorescence_objIDs);
+    inflorescence_objIDs.resize(0);
+
+}
+
+bool Phytomer::hasLeaf(){
+    return !leaf_objIDs.empty();
+}
+
+bool Phytomer::hasInflorescence(){
+    return !inflorescence_objIDs.empty();
+}
+
 Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number, ShootParameters shoot_params, const std::string &shoot_type_label,
              std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr, helios::Context *context_ptr) :
         ID(ID), parentID(parentID), parentNode(parent_node), rank(rank), origin(origin), base_rotation(shoot_base_rotation), current_node_number(current_node_number), shoot_parameters(std::move(shoot_params)), shoot_type_label(shoot_type_label), shoot_tree_ptr(shoot_tree_ptr), context_ptr(context_ptr) {
@@ -1024,6 +1046,12 @@ uint PlantArchitecture::addBaseShoot(uint plantID, uint current_node_number, con
 
 uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, const std::string &shoot_type_label) {
 
+    if( plant_instances.find(plantID) == plant_instances.end() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::appendShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }else if( shoot_types.find(shoot_type_label) == shoot_types.end() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::appendShoot): Shoot type with label of " + shoot_type_label + " does not exist.");
+    }
+
     auto shoot_tree_ptr = &plant_instances.at(plantID).shoot_tree;
 
     auto shoot_parameters = shoot_types.at(shoot_type_label);
@@ -1036,12 +1064,8 @@ uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint curr
         helios_runtime_error("ERROR (PlantArchitecture::appendShoot): Parent with ID of " + std::to_string(parent_shoot_ID) + " does not exist.");
     }else if(current_node_number > shoot_parameters.max_nodes ){
         helios_runtime_error("ERROR (PlantArchitecture::appendShoot): Cannot add shoot with " + std::to_string(current_node_number) + " nodes since the specified max node number is " + std::to_string(shoot_parameters.max_nodes) + ".");
-    }else if( plant_instances.find(plantID) == plant_instances.end() ){
-        helios_runtime_error("ERROR (PlantArchitecture::appendShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }else if( shoot_tree_ptr->at(parent_shoot_ID)->phytomers.empty() ){
         std::cout << "WARNING (PlantArchitecture::appendShoot): Shoot does not have any phytomers to append." << std::endl;
-    }else if( shoot_types.find(shoot_type_label) == shoot_types.end() ) {
-        helios_runtime_error("ERROR (PlantArchitecture::addShoot): Shoot type with label of " + shoot_type_label + " does not exist.");
     }
 
     //stop parent shoot from producing new phytomers at the apex
@@ -1091,6 +1115,7 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
     //scale the shoot internode based on proximity from the tip
     if( shoot_parameters.growth_requires_dormancy ){
         shoot_parameters.phytomer_parameters.internode.length = fmax(shoot_parameters.child_internode_length_max.val() - shoot_parameters.child_internode_length_decay_rate.val() * float(parent_node_count-parent_node-1), shoot_parameters.child_internode_length_min.val());
+        std::cout << "child shoot at node " << parent_node << " has internode length of " << shoot_parameters.phytomer_parameters.internode.length.val() << std::endl;
     }
 
     //set the insertion angle based on proximity from the tip
@@ -1149,6 +1174,8 @@ int PlantArchitecture::addPhytomerToShoot(uint plantID, uint shootID, const Phyt
     auto parent_shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
 
     PhytomerParameters phytomer_parameters(phytomer_params);
+
+    std::cout << "Adding phytomer to shoot with length: " << phytomer_parameters.internode.length.val() << ", parent length is " << std::endl;
 
     phytomer_parameters.internode.origin = parent_shoot->phytomers.back()->internode_vertices.back();
 
@@ -1294,6 +1321,20 @@ float PlantArchitecture::getPlantAge(uint plantID) const{
         helios_runtime_error("ERROR (PlantArchitecture::setPlantAge): Plant with ID of " + std::to_string(plantID) + " has no shoots, so could not get a base position.");
     }
     return plant_instances.at(plantID).current_age;
+}
+
+void PlantArchitecture::harvestPlant(uint plantID){
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::harvestPlant): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    for( auto& shoot: plant_instances.at(plantID).shoot_tree ){
+        for( auto& phytomer: shoot->phytomers ){
+            phytomer->removeInflorescence();
+        }
+    }
+
 }
 
 
@@ -1564,6 +1605,18 @@ void PlantArchitecture::advanceTime( float dt ) {
 
         //\todo placeholder
         incrementAssimilatePool(plantID, -10);
+        plant.second.current_age += dt;
+
+        if( plant.second.current_age > plant.second.dd_to_senescence ){
+            for (const auto& shoot : *shoot_tree) {
+                shoot->makeDormant();
+                shoot->assimilate_pool = 100;
+                plant.second.current_age = 0;
+            }
+            harvestPlant(plantID);
+            std::cout << "Going dormant" << std::endl;
+            continue;
+        }
 
         size_t shoot_count = shoot_tree->size();
         for ( int i=0; i<shoot_count; i++ ){
@@ -1638,7 +1691,7 @@ void PlantArchitecture::advanceTime( float dt ) {
                 }
 
                 //petiole/leaves
-                if (phytomer->current_leaf_scale_factor < 1) {
+                if ( phytomer->hasLeaf() && phytomer->current_leaf_scale_factor < 1) {
                     float scale = fmin(1.f, (phytomer->petiole_length + dL) / phytomer->phytomer_parameters.petiole.length.val());
                     phytomer->setLeafScale(scale);
                 }

@@ -6,23 +6,19 @@ void PlantArchitecture::addAlmondShoot() {
 
     PhytomerParameters phytomer_parameters_almond = getPhytomerParametersFromLibrary("almond");
 
-    PhytomerParameters phytomer_parameters_spur = phytomer_parameters_almond;
-    phytomer_parameters_spur.internode.length = 0.002;
-    phytomer_parameters_spur.internode.radius = 0.001;
-    phytomer_parameters_spur.internode.curvature = 0;
-    phytomer_parameters_spur.internode.pitch = 0;
-    phytomer_parameters_spur.leaf.prototype_scale = 0.05*make_vec3(1, 1,1);
-    phytomer_parameters_spur.petiole.yaw.uniformDistribution( 0.4*M_PI, 0.6*M_PI );
-    phytomer_parameters_spur.inflorescence.fruit_prototype_scale = 0.015*make_vec3(1, 1,1);
-    phytomer_parameters_spur.inflorescence.fruit_pitch.uniformDistribution(-0.2*M_PI,0.*M_PI);
-    phytomer_parameters_spur.inflorescence.fruit_roll = 0;
-    phytomer_parameters_spur.inflorescence.fruit_per_inflorescence.uniformDistribution(1,2);
-
-    PhytomerParameters phytomer_parameters_proleptic = phytomer_parameters_spur;
+    PhytomerParameters phytomer_parameters_proleptic = phytomer_parameters_almond;
     phytomer_parameters_proleptic.internode.length = 0.02;
     phytomer_parameters_proleptic.internode.radius = 0.003;
     phytomer_parameters_proleptic.internode.curvature = 100;
     phytomer_parameters_proleptic.inflorescence.fruit_prototype_scale = 0.015*make_vec3(1, 1,1);
+    phytomer_parameters_proleptic.internode.pitch = 0;
+    phytomer_parameters_proleptic.leaf.prototype_scale = 0.05*make_vec3(1, 1,1);
+    phytomer_parameters_proleptic.petiole.yaw.uniformDistribution( 0.4*M_PI, 0.6*M_PI );
+    phytomer_parameters_proleptic.inflorescence.fruit_prototype_scale = 0.015*make_vec3(1, 1,1);
+    phytomer_parameters_proleptic.inflorescence.fruit_pitch.uniformDistribution(-0.2*M_PI,0.*M_PI);
+    phytomer_parameters_proleptic.inflorescence.fruit_roll = 0;
+    phytomer_parameters_proleptic.inflorescence.fruit_per_inflorescence.uniformDistribution(1,2);
+
 
     PhytomerParameters phytomer_parameters_sylleptic = phytomer_parameters_proleptic;
     phytomer_parameters_sylleptic.internode.length = 0.04;
@@ -37,26 +33,11 @@ void PlantArchitecture::addAlmondShoot() {
     shoot_parameters_trunk.max_nodes = 20;
     shoot_parameters_trunk.shoot_internode_taper = 0.3;
     shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_trunk;
-    shoot_parameters_trunk.defineChildShootTypes({"spur","sylleptic","proleptic"},{0.5,0.2,0.3});
-//    shoot_parameters_trunk.defineChildShootTypes({"sylleptic"},{1});
-
-
-    ShootParameters shoot_parameters_spur(context_ptr->getRandomGenerator());
-    shoot_parameters_spur.max_nodes = 15;
-    shoot_parameters_spur.phyllochron = 1;
-    shoot_parameters_spur.growth_rate = 0.004;
-    shoot_parameters_spur.bud_break_probability = 1;
-    shoot_parameters_spur.bud_time = 100000;
-    shoot_parameters_spur.shoot_internode_taper = 0;
-    shoot_parameters_spur.phytomer_parameters = phytomer_parameters_spur;
-    shoot_parameters_spur.child_insertion_angle_tip.uniformDistribution(deg2rad(35), deg2rad(45));
-    shoot_parameters_spur.fruit_set_probability = 0.75;
-    shoot_parameters_spur.flower_probability = 1;
-    shoot_parameters_spur.flowers_require_dormancy = true;
-    shoot_parameters_spur.growth_requires_dormancy = true;
+    shoot_parameters_trunk.bud_break_probability = 1;
+    shoot_parameters_trunk.bud_time = 0;
+    shoot_parameters_trunk.defineChildShootTypes({"sylleptic","proleptic"},{0.,1});
 
     ShootParameters shoot_parameters_proleptic(context_ptr->getRandomGenerator());
-    shoot_parameters_proleptic = shoot_parameters_spur;
     shoot_parameters_proleptic.max_nodes = 10;
     shoot_parameters_proleptic.phyllochron = 1;
     shoot_parameters_proleptic.growth_rate = 0.004;
@@ -66,12 +47,13 @@ void PlantArchitecture::addAlmondShoot() {
     shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_proleptic;
     shoot_parameters_proleptic.child_insertion_angle_tip = 0;
     shoot_parameters_proleptic.child_internode_length_max = 0.06;
-    shoot_parameters_proleptic.child_internode_length_decay_rate = 0.01;
+    shoot_parameters_proleptic.child_internode_length_min = 0.001;
+    shoot_parameters_proleptic.child_internode_length_decay_rate = 0.02;
     shoot_parameters_proleptic.fruit_set_probability = 0.5;
     shoot_parameters_proleptic.flower_probability = 0.5;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
     shoot_parameters_proleptic.growth_requires_dormancy = true;
-    shoot_parameters_proleptic.defineChildShootTypes({"spur","sylleptic","proleptic"},{0.5,0.2,0.3});
+//    shoot_parameters_proleptic.defineChildShootTypes({"sylleptic","proleptic"},{0.,1});
 
     ShootParameters shoot_parameters_sylleptic(context_ptr->getRandomGenerator());
     shoot_parameters_sylleptic = shoot_parameters_proleptic;
@@ -83,7 +65,6 @@ void PlantArchitecture::addAlmondShoot() {
 
 
     defineShootType("trunk", shoot_parameters_trunk);
-//    defineShootType("spur", shoot_parameters_spur);
     defineShootType("proleptic", shoot_parameters_proleptic);
     defineShootType("sylleptic", shoot_parameters_sylleptic);
 
@@ -142,7 +123,127 @@ void PlantArchitecture::addAlmondShoot() {
         }
     }
 
-    setPlantPhenologicalThresholds(plant0, assimilate_flowering_threshold, 20, 3, 5, 0);
+    setPlantPhenologicalThresholds(plant0, assimilate_flowering_threshold, 20, 3, 5, 10);
+
+
+}
+
+void PlantArchitecture::addAlmondTree() {
+
+    Context context;
+
+    PhytomerParameters phytomer_parameters_almond = getPhytomerParametersFromLibrary("almond");
+
+    PhytomerParameters phytomer_parameters_proleptic = phytomer_parameters_almond;
+    phytomer_parameters_proleptic.internode.length = 0.02;
+    phytomer_parameters_proleptic.internode.radius = 0.003;
+    phytomer_parameters_proleptic.internode.curvature = 100;
+    phytomer_parameters_proleptic.inflorescence.fruit_prototype_scale = 0.015*make_vec3(1, 1,1);
+
+    PhytomerParameters phytomer_parameters_sylleptic = phytomer_parameters_proleptic;
+    phytomer_parameters_sylleptic.internode.length = 0.04;
+
+    PhytomerParameters phytomer_parameters_trunk = phytomer_parameters_almond;
+    phytomer_parameters_trunk.internode.length = 0.03;
+    phytomer_parameters_trunk.internode.radius = 0.02;
+    phytomer_parameters_trunk.internode.petioles_per_internode = 0;
+
+    PhytomerParameters phytomer_parameters_scaffold = getPhytomerParametersFromLibrary("almond");
+    phytomer_parameters_scaffold.internode.length.uniformDistribution(0.05,0.07);
+    phytomer_parameters_scaffold.internode.radius = 0.01;
+    phytomer_parameters_scaffold.petiole.leaves_per_petiole = 0;
+    phytomer_parameters_scaffold.internode.curvature.uniformDistribution(5, 50);
+    phytomer_parameters_scaffold.inflorescence.fruit_per_inflorescence = 0;
+
+    ShootParameters shoot_parameters_trunk(context_ptr->getRandomGenerator());
+    shoot_parameters_trunk.max_nodes = 20;
+    shoot_parameters_trunk.shoot_internode_taper = 0.4;
+    shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_trunk;
+
+    ShootParameters shoot_parameters_scaffold(context_ptr->getRandomGenerator());
+    shoot_parameters_scaffold.max_nodes = 25;
+    shoot_parameters_scaffold.shoot_internode_taper = 0.75;
+    shoot_parameters_scaffold.phytomer_parameters = phytomer_parameters_scaffold;
+    shoot_parameters_scaffold.defineChildShootTypes({"sylleptic","proleptic"},{0.2,0.8});
+    shoot_parameters_scaffold.bud_break_probability = 0.6;
+    shoot_parameters_scaffold.phyllochron = 1;
+    shoot_parameters_scaffold.growth_rate = 0.008;
+    shoot_parameters_scaffold.bud_time = 0;
+    shoot_parameters_scaffold.child_internode_length_max = 0.06;
+    shoot_parameters_scaffold.child_internode_length_min = 0.005;
+    shoot_parameters_scaffold.child_internode_length_decay_rate = 0.01;
+    shoot_parameters_scaffold.growth_requires_dormancy = true;
+
+    ShootParameters shoot_parameters_proleptic(context_ptr->getRandomGenerator());
+    shoot_parameters_proleptic.max_nodes = 20;
+    shoot_parameters_proleptic.phyllochron = 2;
+    shoot_parameters_proleptic.growth_rate = 0.004;
+    shoot_parameters_proleptic.bud_break_probability = 1;
+    shoot_parameters_proleptic.bud_time = 0;
+    shoot_parameters_proleptic.shoot_internode_taper = 0.5;
+    shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_proleptic;
+    shoot_parameters_proleptic.child_insertion_angle_tip = 0;
+    shoot_parameters_proleptic.child_internode_length_max = 0.06;
+    shoot_parameters_proleptic.child_internode_length_decay_rate = 0.01;
+    shoot_parameters_proleptic.fruit_set_probability = 0.5;
+    shoot_parameters_proleptic.flower_probability = 0.5;
+    shoot_parameters_proleptic.flowers_require_dormancy = true;
+    shoot_parameters_proleptic.growth_requires_dormancy = true;
+    shoot_parameters_proleptic.defineChildShootTypes({"sylleptic","proleptic"},{0.2,0.8});
+
+    ShootParameters shoot_parameters_sylleptic(context_ptr->getRandomGenerator());
+    shoot_parameters_sylleptic = shoot_parameters_proleptic;
+    shoot_parameters_proleptic.max_nodes = 30;
+    shoot_parameters_sylleptic.phytomer_parameters = phytomer_parameters_sylleptic;
+    shoot_parameters_sylleptic.bud_break_probability = 1;
+    shoot_parameters_sylleptic.shoot_internode_taper = 0.5;
+    shoot_parameters_sylleptic.flowers_require_dormancy = true;
+    shoot_parameters_sylleptic.growth_requires_dormancy = false;
+
+
+    defineShootType("trunk", shoot_parameters_trunk);
+    defineShootType("scaffold", shoot_parameters_scaffold);
+    defineShootType("proleptic", shoot_parameters_proleptic);
+    defineShootType("sylleptic", shoot_parameters_sylleptic);
+
+    //---- Make Initial Woody Structure ---- //
+
+    int Nplants = 1;
+
+    uint plant0 = addPlantInstance(nullorigin, 0);
+
+    uint uID_trunk = addBaseShoot( plant0, 12, make_AxisRotation(context.randu(0,0.2*M_PI),context.randu(0,2*M_PI), 0.*M_PI), "trunk" );
+
+    uint Nscaffolds = context.randu(3,4);
+
+    for( int i=0; i<Nscaffolds; i++ ) {
+        uint uID_shoot = appendShoot(plant0, uID_trunk, context.randu(10, 15), make_AxisRotation(context.randu(deg2rad(20), deg2rad(60)), (float(i) + context.randu(-0.1f, 0.1f)) / float(Nscaffolds) * 2 * M_PI, 0), "scaffold");
+
+        plant_instances.at(plant0).shoot_tree.at(uID_shoot)->makeDormant();
+
+        uint blind_nodes = context.randu(3,5);
+        for( int b=0; b<blind_nodes; b++){
+            if( b<plant_instances.at(plant0).shoot_tree.at(uID_shoot)->phytomers.size() ) {
+                plant_instances.at(plant0).shoot_tree.at(uID_shoot)->phytomers.at(b)->removeLeaf();
+                plant_instances.at(plant0).shoot_tree.at(uID_shoot)->phytomers.at(b)->flower_bud_state = BUD_DEAD;
+                plant_instances.at(plant0).shoot_tree.at(uID_shoot)->phytomers.at(b)->vegetative_bud_state = BUD_DEAD;
+            }
+        }
+
+    }
+
+    //----- Initialize Shoot Carbon Pool ----- //
+
+    float initial_assimilate_pool = 100; // mg SC/g DW
+    float assimilate_flowering_threshold = 85; // mg SC/g DW
+
+    for( auto &plant: plant_instances ){
+        for( auto &shoot: plant.second.shoot_tree ){
+            shoot->assimilate_pool = initial_assimilate_pool;
+        }
+    }
+
+    setPlantPhenologicalThresholds(plant0, assimilate_flowering_threshold, 100, 3, 5, 20);
 
 
 }

@@ -485,6 +485,12 @@ public:
 
     void removeLeaf();
 
+    void removeInflorescence();
+
+    bool hasLeaf();
+
+    bool hasInflorescence();
+
     std::vector<helios::vec3> internode_vertices;
     std::vector<helios::vec3> petiole_vertices; //\todo this needs to be a multidimensional array for the case in which we have multiple buds per phytomer
     std::vector<helios::vec3> leaf_bases;
@@ -635,6 +641,8 @@ public:
 
     float getPlantAge(uint plantID) const;
 
+    void harvestPlant(uint plantID);
+
     uint getShootNodeCount( uint plantID, uint shootID ) const;
 
     std::vector<uint> getAllPlantObjectIDs(uint plantID) const;
@@ -646,6 +654,10 @@ public:
     bool sampleChildShootType( uint plantID, uint shootID, std::string &child_shoot_type_label ) const;
 
     void addAlmondShoot();
+
+    void addAlmondTree();
+
+    void addWalnutShoot();
 
 private:
 
