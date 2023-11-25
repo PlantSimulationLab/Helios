@@ -487,9 +487,9 @@ public:
 
     void removeInflorescence();
 
-    bool hasLeaf();
+    bool hasLeaf() const;
 
-    bool hasInflorescence();
+    bool hasInflorescence() const;
 
     std::vector<helios::vec3> internode_vertices;
     std::vector<helios::vec3> petiole_vertices; //\todo this needs to be a multidimensional array for the case in which we have multiple buds per phytomer

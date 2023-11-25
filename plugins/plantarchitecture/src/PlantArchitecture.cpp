@@ -927,11 +927,11 @@ void Phytomer::removeInflorescence(){
 
 }
 
-bool Phytomer::hasLeaf(){
+bool Phytomer::hasLeaf() const{
     return !leaf_objIDs.empty();
 }
 
-bool Phytomer::hasInflorescence(){
+bool Phytomer::hasInflorescence() const {
     return !inflorescence_objIDs.empty();
 }
 
@@ -940,6 +940,7 @@ Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::ve
         ID(ID), parentID(parentID), parentNode(parent_node), rank(rank), origin(origin), base_rotation(shoot_base_rotation), current_node_number(current_node_number), shoot_parameters(std::move(shoot_params)), shoot_type_label(shoot_type_label), shoot_tree_ptr(shoot_tree_ptr), context_ptr(context_ptr) {
     assimilate_pool = 0;
     phyllochron_counter = 0;
+    dormant = true;
 }
 
 void Shoot::initializePhytomer(){
@@ -1174,8 +1175,6 @@ int PlantArchitecture::addPhytomerToShoot(uint plantID, uint shootID, const Phyt
     auto parent_shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
 
     PhytomerParameters phytomer_parameters(phytomer_params);
-
-    std::cout << "Adding phytomer to shoot with length: " << phytomer_parameters.internode.length.val() << ", parent length is " << std::endl;
 
     phytomer_parameters.internode.origin = parent_shoot->phytomers.back()->internode_vertices.back();
 
@@ -1625,7 +1624,7 @@ void PlantArchitecture::advanceTime( float dt ) {
 
             // breaking dormancy
             bool dormancy_broken_this_timestep = false;
-            if( shoot->dormancy_cycles==1 && shoot->dormant && shoot->assimilate_pool < plant.second.assimilate_dormancy_threshold ){
+            if( shoot->dormancy_cycles>=1 && shoot->dormant && shoot->assimilate_pool < plant.second.assimilate_dormancy_threshold ){
                 shoot->breakDormancy();
                 dormancy_broken_this_timestep = true;
                 shoot->assimilate_pool = 1e6;
@@ -1731,7 +1730,7 @@ void PlantArchitecture::advanceTime( float dt ) {
             // -- Add new phytomer at terminal bud based on the phyllochron -- //
             shoot->phyllochron_counter += dt;
             if ( shoot->phyllochron_counter >= 1.f / shoot->shoot_parameters.phyllochron.val()) {
-                 int pID = addPhytomerToShoot(plantID, shoot->ID, shoot->phytomers.back()->phytomer_parameters, 0.01, 0.01);
+                 int pID = addPhytomerToShoot(plantID, shoot->ID, shoot->phytomers.back()->phytomer_parameters, 0.25, 0.25); //\todo These factors should be set to be consistent with the shoot
                 shoot->phyllochron_counter = 0;
             }
 

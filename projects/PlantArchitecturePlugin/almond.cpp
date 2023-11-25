@@ -13,10 +13,10 @@ void PlantArchitecture::addAlmondShoot() {
     phytomer_parameters_proleptic.inflorescence.fruit_prototype_scale = 0.015*make_vec3(1, 1,1);
     phytomer_parameters_proleptic.internode.pitch = 0;
     phytomer_parameters_proleptic.leaf.prototype_scale = 0.05*make_vec3(1, 1,1);
-    phytomer_parameters_proleptic.petiole.yaw.uniformDistribution( 0.4*M_PI, 0.6*M_PI );
+    phytomer_parameters_proleptic.petiole.yaw.uniformDistribution( deg2rad(130), deg2rad(145) );
     phytomer_parameters_proleptic.inflorescence.fruit_prototype_scale = 0.015*make_vec3(1, 1,1);
     phytomer_parameters_proleptic.inflorescence.fruit_pitch.uniformDistribution(-0.2*M_PI,0.*M_PI);
-    phytomer_parameters_proleptic.inflorescence.fruit_roll = 0;
+    phytomer_parameters_proleptic.inflorescence.fruit_roll = 0.5*M_PI;
     phytomer_parameters_proleptic.inflorescence.fruit_per_inflorescence.uniformDistribution(1,2);
 
 
@@ -48,7 +48,7 @@ void PlantArchitecture::addAlmondShoot() {
     shoot_parameters_proleptic.child_insertion_angle_tip = 0;
     shoot_parameters_proleptic.child_internode_length_max = 0.06;
     shoot_parameters_proleptic.child_internode_length_min = 0.001;
-    shoot_parameters_proleptic.child_internode_length_decay_rate = 0.02;
+    shoot_parameters_proleptic.child_internode_length_decay_rate = 0.01;
     shoot_parameters_proleptic.fruit_set_probability = 0.5;
     shoot_parameters_proleptic.flower_probability = 0.5;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
@@ -100,13 +100,10 @@ void PlantArchitecture::addAlmondShoot() {
             auto phytomers = plant_instances.at(plant0).shoot_tree.at(childID)->phytomers;
             for( uint p=0; p<phytomers.size(); p++ ){
                 phytomers.at(p)->removeLeaf();
-                if( p==phytomers.size()-1 || new_shoot_type_label=="sylleptic" ){
-                    phytomers.at(p)->flower_bud_state = BUD_DORMANT;
-                    phytomers.at(p)->vegetative_bud_state = BUD_DORMANT;
-                }else{
+                if( p!=phytomers.size()-1 ) {
                     phytomers.at(p)->flower_bud_state = BUD_DEAD;
-                    phytomers.at(p)->vegetative_bud_state = BUD_DEAD;
                 }
+                phytomers.at(p)->vegetative_bud_state = BUD_DEAD;
             }
             plant_instances.at(plant0).shoot_tree.at(childID)->makeDormant();
         }
@@ -139,6 +136,13 @@ void PlantArchitecture::addAlmondTree() {
     phytomer_parameters_proleptic.internode.radius = 0.003;
     phytomer_parameters_proleptic.internode.curvature = 100;
     phytomer_parameters_proleptic.inflorescence.fruit_prototype_scale = 0.015*make_vec3(1, 1,1);
+    phytomer_parameters_proleptic.internode.pitch = 0;
+    phytomer_parameters_proleptic.leaf.prototype_scale = 0.05*make_vec3(1, 1,1);
+    phytomer_parameters_proleptic.petiole.yaw.uniformDistribution( deg2rad(130), deg2rad(145) );
+    phytomer_parameters_proleptic.inflorescence.fruit_prototype_scale = 0.015*make_vec3(1, 1,1);
+    phytomer_parameters_proleptic.inflorescence.fruit_pitch.uniformDistribution(-0.2*M_PI,0.*M_PI);
+    phytomer_parameters_proleptic.inflorescence.fruit_roll = 0.5*M_PI;
+    phytomer_parameters_proleptic.inflorescence.fruit_per_inflorescence.uniformDistribution(1,2);
 
     PhytomerParameters phytomer_parameters_sylleptic = phytomer_parameters_proleptic;
     phytomer_parameters_sylleptic.internode.length = 0.04;
