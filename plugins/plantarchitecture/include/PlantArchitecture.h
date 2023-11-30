@@ -563,6 +563,8 @@ struct Shoot{
 
     float phyllochron_counter = 0;
 
+    RandomParameter_float phyllotactic_angle;
+
     //map of node number to ID of shoot child
     std::map<int,int> childIDs;
 

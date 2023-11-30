@@ -264,7 +264,7 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &sho
     phytomer->vegetative_bud_state = BUD_DORMANT;
 
     // if the internode is too short, it should not produce buds
-    if( phytomer->phytomer_parameters.internode.length.val()<0.001 ){
+    if( phytomer->phytomer_parameters.internode.length.val()<0.005 ){
         phytomer->flower_bud_state = BUD_DEAD;
         phytomer->vegetative_bud_state = BUD_DEAD;
     }
@@ -279,6 +279,7 @@ void Shoot::breakDormancy(){
 
     dormant = false;
 
+    int phytomer_ind = 0;
     for( auto &phytomer : phytomers ) {
         phytomer->inflorescence_age = 0;
         if (phytomer->flower_bud_state != BUD_DEAD) {
@@ -287,6 +288,13 @@ void Shoot::breakDormancy(){
         if( phytomer->vegetative_bud_state!=BUD_DEAD) {
             phytomer->vegetative_bud_state = BUD_ACTIVE;
         }
+
+        bool is_terminal_phytomer = (phytomer_ind == current_node_number - 1);
+        if( meristem_is_alive && is_terminal_phytomer ){
+            phytomer->flower_bud_state = BUD_ACTIVE;
+            //phytomer->vegetative_bud_state = BUD_ACTIVE;
+        }
+        phytomer_ind++;
     }
 
 }
@@ -940,6 +948,7 @@ Shoot::Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::ve
         ID(ID), parentID(parentID), parentNode(parent_node), rank(rank), origin(origin), base_rotation(shoot_base_rotation), current_node_number(current_node_number), shoot_parameters(std::move(shoot_params)), shoot_type_label(shoot_type_label), shoot_tree_ptr(shoot_tree_ptr), context_ptr(context_ptr) {
     assimilate_pool = 0;
     phyllochron_counter = 0;
+    phyllotactic_angle.initialize(deg2rad(137.5), context_ptr->getRandomGenerator() );
     dormant = true;
 }
 
@@ -1622,12 +1631,15 @@ void PlantArchitecture::advanceTime( float dt ) {
 
             auto shoot = shoot_tree->at(i);
 
+            // ****** PHENOLOGICAL TRANSITIONS ****** //
+
             // breaking dormancy
             bool dormancy_broken_this_timestep = false;
             if( shoot->dormancy_cycles>=1 && shoot->dormant && shoot->assimilate_pool < plant.second.assimilate_dormancy_threshold ){
                 shoot->breakDormancy();
                 dormancy_broken_this_timestep = true;
                 shoot->assimilate_pool = 1e6;
+                std::cout << "Shoot " << shoot->ID << " breaking dormancy" << std::endl;
             }
 
             if( shoot->dormant ){ //dormant, don't do anything
@@ -1670,47 +1682,47 @@ void PlantArchitecture::advanceTime( float dt ) {
 
             }
 
-            // if shoot has reached max_nodes, don't do anything more with the shoot
-            if (shoot->current_node_number >= shoot->shoot_parameters.max_nodes) {
-                continue;
-            }
-
             int node_number = 0;
             for (auto &phytomer: shoot->phytomers) {
 
-                // Scale phytomers based on the growth rate
+                // ****** GROWTH/SCALING OF CURRENT PHYTOMERS ****** //
 
                 float dL = dt * shoot->shoot_parameters.growth_rate.val();
 
-                 //internode
+                 //scale internode
                 if (phytomer->current_internode_scale_factor < 1) {
                     float scale = fmin(1.f, (phytomer->internode_length + dL) / phytomer->phytomer_parameters.internode.length.val());
                     //std::cout << "dL: " << dL << ", " << phytomer.current_internode_scale_factor << " " << scale << " " << phytomer.internode_length << " " << phytomer.internode_length + dL << " " << phytomer.phytomer_parameters.internode.length.val() << " " << dL / phytomer.internode_length << std::endl;
-                    phytomer->setInternodeScale(scale);
+
+                    if( scale!=1.f ) {
+                        phytomer->setInternodeScale(scale);
+
+                        //shift all downstream phytomers
+                        for (int node = node_number + 1; node < shoot->phytomers.size(); node++) {
+                            vec3 upstream_base = shoot->phytomers.at(node - 1)->internode_vertices.back();
+                            shoot->phytomers.at(node)->setPhytomerBase(upstream_base);
+                        }
+                    }
+
                 }
 
-                //petiole/leaves
+                //scale petiole/leaves
                 if ( phytomer->hasLeaf() && phytomer->current_leaf_scale_factor < 1) {
                     float scale = fmin(1.f, (phytomer->petiole_length + dL) / phytomer->phytomer_parameters.petiole.length.val());
                     phytomer->setLeafScale(scale);
                 }
 
-                //shift all downstream phytomers
-                for (int node = node_number + 1; node < shoot->phytomers.size(); node++) {
-                    vec3 upstream_base = shoot->phytomers.at(node - 1)->internode_vertices.back();
-                    shoot->phytomers.at(node)->setPhytomerBase(upstream_base);
-                }
-
-                // -- Add shoots at buds based on bud probability -- //
+                // ****** NEW CHILD SHOOTS FROM VEGETATIVE BUDS ****** //
                 if (shoot->shoot_parameters.bud_break_probability > 0 && phytomer->vegetative_bud_state == BUD_ACTIVE ) {
 
-                    if (phytomer->age <= shoot->shoot_parameters.bud_time.val() && phytomer->age + dt > shoot->shoot_parameters.bud_time.val() ) {
+                    if ( phytomer->vegetative_bud_state != BUD_DEAD && phytomer->age + dt > shoot->shoot_parameters.bud_time.val() ) {
 
                        std::string new_shoot_type_label;
                         if(sampleChildShootType(plantID,shoot->ID, new_shoot_type_label) ){
-                            uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle_tip.val(), context_ptr->randu(0.f, 2.f * M_PI), -0. * M_PI), new_shoot_type_label);
-                            setPhytomerScale(plantID, childID, 0, 0.01, 0.01);
+                            uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle_tip.val(), shoot->phyllotactic_angle.val()*float(node_number) + context_ptr->randu(-0.1f, 0.1f), -0. * M_PI), new_shoot_type_label);
+                            setPhytomerScale(plantID, childID, 0, 0.1, 0.1);
                             phytomer->vegetative_bud_state = BUD_DEAD;
+                            shoot_tree->at(childID)->dormant = false;
                             std::cout << "Adding child shoot to phytomer " << node_number << " of type " << new_shoot_type_label << " on shoot " << shoot->ID << std::endl;
                         }
                     }
@@ -1722,12 +1734,20 @@ void PlantArchitecture::advanceTime( float dt ) {
                 node_number++;
             }
 
+            // if shoot has reached max_nodes, don't do anything more with the shoot
+            if (shoot->current_node_number >= shoot->shoot_parameters.max_nodes) {
+                shoot->meristem_is_alive = false;
+            }
+
             // If the apical bud is dead, don't do anything more with the shoot
             if( !shoot->meristem_is_alive ){
                 continue;
+                for (auto &phytomer: shoot->phytomers) {
+                    context_ptr->setObjectColor( phytomer->internode_objIDs, RGB::red );
+                }
             }
 
-            // -- Add new phytomer at terminal bud based on the phyllochron -- //
+            // ****** PHYLLOCHRON - NEW PHYTOMERS ****** //
             shoot->phyllochron_counter += dt;
             if ( shoot->phyllochron_counter >= 1.f / shoot->shoot_parameters.phyllochron.val()) {
                  int pID = addPhytomerToShoot(plantID, shoot->ID, shoot->phytomers.back()->phytomer_parameters, 0.25, 0.25); //\todo These factors should be set to be consistent with the shoot
