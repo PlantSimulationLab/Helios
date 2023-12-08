@@ -645,6 +645,10 @@ public:
 
     void harvestPlant(uint plantID);
 
+    void makePlantDormant( uint plantID );
+
+    void breakPlantDormancy( uint plantID );
+
     uint getShootNodeCount( uint plantID, uint shootID ) const;
 
     std::vector<uint> getAllPlantObjectIDs(uint plantID) const;

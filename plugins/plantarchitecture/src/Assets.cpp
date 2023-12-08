@@ -32,11 +32,11 @@ uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, int f
 uint CowpeaLeafPrototype( helios::Context* context_ptr, uint subdivisions, int flag ){
     std::vector<uint> UUIDs;
     if( flag<0 ){
-        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_tip.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_left_lowres.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     }else if( flag==0 ){
         UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_tip.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     }else{
-        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_tip.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_right.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     }
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
