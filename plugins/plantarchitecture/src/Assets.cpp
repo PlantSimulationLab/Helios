@@ -49,7 +49,7 @@ uint CowpeaFruitPrototype( helios::Context* context_ptr, uint subdivisions, int 
 }
 
 uint CowpeaFlowerPrototype( helios::Context* context_ptr, uint subdivisions, int flag ){
-    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaFlower.obj", make_vec3(0.0,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaFlower_open_yellow.obj", make_vec3(0.0,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
 }

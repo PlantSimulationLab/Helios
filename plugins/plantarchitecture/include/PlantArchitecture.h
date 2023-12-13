@@ -508,13 +508,15 @@ public:
     std::vector<std::vector<uint> > petiole_objIDs;
     std::vector<uint> leaf_objIDs;
     std::vector<uint> inflorescence_objIDs;
+    std::vector<uint> rachis_objIDs;
 
     PhytomerParameters phytomer_parameters;
 
     uint rank;
 
     float age = 0;
-    float inflorescence_age = 0;
+    float time_since_dormancy = 0;
+    float time_since_flowering = 0;
 
     float current_internode_scale_factor = 1;
     float current_leaf_scale_factor = 1;
@@ -634,6 +636,10 @@ public:
     void setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction);
 
     void setPhytomerScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
+
+    void setPhytomerVegetativeBudState(uint plantID, uint shootID, uint node_number, BudState state );
+
+    void setPhytomerFlowerBudState(uint plantID, uint shootID, uint node_number, BudState state );
 
     void setPlantBasePosition(uint plantID, const helios::vec3 &base_position);
 

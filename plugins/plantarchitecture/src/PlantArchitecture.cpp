@@ -269,6 +269,13 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const AxisRotation &sho
         phytomer->vegetative_bud_state = BUD_DEAD;
     }
 
+    if( !shoot_parameters.growth_requires_dormancy ){
+        phytomer->vegetative_bud_state = BUD_ACTIVE;
+    }
+    if( !shoot_parameters.flowers_require_dormancy ){
+        phytomer->flower_bud_state = BUD_ACTIVE;
+    }
+
     shoot_tree_ptr->at(ID)->phytomers.push_back(phytomer);
 
     return (int)phytomers.size()-1;
@@ -281,7 +288,7 @@ void Shoot::breakDormancy(){
 
     int phytomer_ind = 0;
     for( auto &phytomer : phytomers ) {
-        phytomer->inflorescence_age = 0;
+        phytomer->time_since_flowering = 0;
         if (phytomer->flower_bud_state != BUD_DEAD) {
             phytomer->flower_bud_state = BUD_ACTIVE;
         }
@@ -292,7 +299,6 @@ void Shoot::breakDormancy(){
         bool is_terminal_phytomer = (phytomer_ind == current_node_number - 1);
         if( meristem_is_alive && is_terminal_phytomer ){
             phytomer->flower_bud_state = BUD_ACTIVE;
-            //phytomer->vegetative_bud_state = BUD_ACTIVE;
         }
         phytomer_ind++;
     }
@@ -312,6 +318,7 @@ void Shoot::makeDormant(){
             phytomer->vegetative_bud_state = BUD_DEAD;
         }
         phytomer->removeLeaf();
+        phytomer->time_since_dormancy = 0;
     }
 
 }
@@ -594,8 +601,9 @@ void Phytomer::addInfluorescence(const helios::vec3 &base_position, const AxisRo
 
     }
 
-    //\todo This should be in separate vector from flowers/fruit
-    //inflorescence_objIDs.push_back( context_ptr->addTubeObject(10, rachis_vertices, rachis_radii, rachis_colors ) );
+    rachis_objIDs.push_back( context_ptr->addTubeObject(phytomer_parameters.inflorescence.tube_subdivisions, rachis_vertices, rachis_radii, rachis_colors ) );
+
+    context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs( rachis_objIDs ), "rank", rank );
 
     for(int fruit=0; fruit < phytomer_parameters.inflorescence.fruit_per_inflorescence.val(); fruit++ ){
 
@@ -609,7 +617,7 @@ void Phytomer::addInfluorescence(const helios::vec3 &base_position, const AxisRo
             objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr,1,0);
             fruit_scale = phytomer_parameters.inflorescence.fruit_prototype_scale;
         }
-        inflorescence_age = 0;
+        time_since_flowering = 0;
 
         float ind_from_tip = fabs(fruit-float(phytomer_parameters.inflorescence.fruit_per_inflorescence.val()-1)/2.f);
 
@@ -726,6 +734,7 @@ void Phytomer::setPetioleBase( const helios::vec3 &base_position ){
     for(auto & inflorescence_base : inflorescence_bases){
         inflorescence_base += shift;
     }
+    context_ptr->translateObject( rachis_objIDs, shift );
 
 }
 
@@ -752,6 +761,7 @@ void Phytomer::setPhytomerBase( const helios::vec3 &base_position ){
     for(auto & inflorescence_base : inflorescence_bases){
         inflorescence_base += shift;
     }
+    context_ptr->translateObject( rachis_objIDs, shift );
 
 }
 
@@ -924,6 +934,8 @@ void Phytomer::changeReproductiveState( BudState a_state ){
         context_ptr->deleteObject(inflorescence_objIDs);
         inflorescence_objIDs.resize(0);
         inflorescence_bases.resize(0);
+        context_ptr->deleteObject(rachis_objIDs);
+        rachis_objIDs.resize(0);
     }
 
     this->flower_bud_state = a_state;
@@ -952,6 +964,8 @@ void Phytomer::removeInflorescence(){
 
     context_ptr->deleteObject(inflorescence_objIDs);
     inflorescence_objIDs.resize(0);
+    context_ptr->deleteObject(rachis_objIDs);
+    rachis_objIDs.resize(0);
 
 }
 
@@ -999,6 +1013,7 @@ void Shoot::initializePhytomer(){
         context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs( flatten(phytomer->petiole_objIDs)), "rank", rank );
         context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(phytomer->leaf_objIDs), "rank", rank );
         context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(phytomer->inflorescence_objIDs), "rank", rank );
+        context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(phytomer->rachis_objIDs), "rank", rank );
 
     }
 
@@ -1050,6 +1065,12 @@ bool PlantArchitecture::sampleChildShootType( uint plantID, uint shootID, std::s
 
 uint PlantArchitecture::addBaseShoot(uint plantID, uint current_node_number, const AxisRotation &base_rotation, const std::string &shoot_type_label) {
 
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::addShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }else if( shoot_types.find(shoot_type_label) == shoot_types.end() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::addShoot): Shoot type with label of " + shoot_type_label + " does not exist.");
+    }
+
     auto shoot_tree_ptr = &plant_instances.at(plantID).shoot_tree;
 
     auto shoot_parameters = shoot_types.at(shoot_type_label);
@@ -1058,10 +1079,6 @@ uint PlantArchitecture::addBaseShoot(uint plantID, uint current_node_number, con
 
     if(current_node_number > shoot_parameters.max_nodes ){
         helios_runtime_error("ERROR (PlantArchitecture::addShoot): Cannot add shoot with " + std::to_string(current_node_number) + " nodes since the specified max node number is " + std::to_string(shoot_parameters.max_nodes) + ".");
-    }else if( plant_instances.find(plantID) == plant_instances.end() ){
-        helios_runtime_error("ERROR (PlantArchitecture::addShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }else if( shoot_types.find(shoot_type_label) == shoot_types.end() ) {
-        helios_runtime_error("ERROR (PlantArchitecture::addShoot): Shoot type with label of " + shoot_type_label + " does not exist.");
     }
 
     uint shootID = shoot_tree_ptr->size();
@@ -1313,6 +1330,34 @@ void PlantArchitecture::setPhytomerScale(uint plantID, uint shootID, uint node_n
 
 }
 
+void PlantArchitecture::setPhytomerVegetativeBudState(uint plantID, uint shootID, uint node_number, BudState state ){
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::setPhytomerVegetativeBudState): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }else if( shootID>=plant_instances.at(plantID).shoot_tree.size() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPhytomerVegetativeBudState): Shoot with ID of " + std::to_string(shootID) + " does not exist.");
+    }else if( node_number>=plant_instances.at(plantID).shoot_tree.at(shootID)->current_node_number ){
+        helios_runtime_error("ERROR (PlantArchitecture::setPhytomerVegetativeBudState): Cannot set bud state of node " + std::to_string(node_number) + " because there are only " + std::to_string(plant_instances.at(plantID).shoot_tree.at(shootID)->current_node_number) + " nodes in this shoot.");
+    }
+
+    plant_instances.at(plantID).shoot_tree.at(shootID)->phytomers.at(node_number)->vegetative_bud_state = state;
+
+}
+
+void PlantArchitecture::setPhytomerFlowerBudState(uint plantID, uint shootID, uint node_number, BudState state ){
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::setPhytomerFlowerBudState): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }else if( shootID>=plant_instances.at(plantID).shoot_tree.size() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPhytomerFlowerBudState): Shoot with ID of " + std::to_string(shootID) + " does not exist.");
+    }else if( node_number>=plant_instances.at(plantID).shoot_tree.at(shootID)->current_node_number ){
+        helios_runtime_error("ERROR (PlantArchitecture::setPhytomerFlowerBudState): Cannot set bud state of node " + std::to_string(node_number) + " because there are only " + std::to_string(plant_instances.at(plantID).shoot_tree.at(shootID)->current_node_number) + " nodes in this shoot.");
+    }
+
+    plant_instances.at(plantID).shoot_tree.at(shootID)->phytomers.at(node_number)->flower_bud_state = state;
+
+}
+
 void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &base_position) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
@@ -1410,6 +1455,7 @@ std::vector<uint> PlantArchitecture::getAllPlantObjectIDs(uint plantID) const{
             objIDs.insert(objIDs.end(), petiole_objIDs_flat.begin(), petiole_objIDs_flat.end() );
             objIDs.insert(objIDs.end(), phytomer->leaf_objIDs.begin(), phytomer->leaf_objIDs.end() );
             objIDs.insert(objIDs.end(), phytomer->inflorescence_objIDs.begin(), phytomer->inflorescence_objIDs.end() );
+            objIDs.insert(objIDs.end(), phytomer->rachis_objIDs.begin(), phytomer->rachis_objIDs.end() );
         }
     }
 
@@ -1494,7 +1540,7 @@ PhytomerParameters PlantArchitecture::getPhytomerParametersFromLibrary(const std
         phytomer_parameters_current.inflorescence.fruit_per_inflorescence = 4;
         phytomer_parameters_current.inflorescence.fruit_offset = 0.;
         phytomer_parameters_current.inflorescence.curvature = -200;
-        phytomer_parameters_current.inflorescence.length = 0.075;
+        phytomer_parameters_current.inflorescence.length = 0.07;
         phytomer_parameters_current.inflorescence.rachis_radius = 0.001;
         
     }else if( phytomer_label=="tomato" ){
@@ -1688,13 +1734,16 @@ void PlantArchitecture::advanceTime( float dt ) {
 
             for( auto &phytomer : shoot->phytomers ) {
 
+                if( phytomer->flower_bud_state != BUD_DEAD && phytomer->flower_bud_state != BUD_DORMANT ){
+                    phytomer->time_since_dormancy += dt;
+                }
                 if (phytomer->flower_bud_state == BUD_FLOWERING || phytomer->flower_bud_state == BUD_FRUITING) {
-                    phytomer->inflorescence_age += dt;
+                    phytomer->time_since_flowering += dt;
                 }
 
                 // -- Flowering -- //
-                if ( phytomer->flower_bud_state == BUD_ACTIVE && ( (!shoot->shoot_parameters.flowers_require_dormancy && phytomer->inflorescence_age >= plant.second.dd_to_flowering) || dormancy_broken_this_timestep ) ) {
-                    phytomer->inflorescence_age = 0;
+                if ( phytomer->flower_bud_state == BUD_ACTIVE && ((!shoot->shoot_parameters.flowers_require_dormancy && phytomer->time_since_dormancy >= plant.second.dd_to_flowering)  ) ) {
+                    phytomer->time_since_flowering = 0;
                     if( context_ptr->randu() < shoot->shoot_parameters.flower_probability ) {
                         phytomer->changeReproductiveState(BUD_FLOWERING);
                     } else {
@@ -1704,8 +1753,8 @@ void PlantArchitecture::advanceTime( float dt ) {
 
                 // -- Fruit Set -- //
                 // If the flower bud is in a 'flowering' state, the fruit set occurs after a certain amount of time
-                else if ( phytomer->flower_bud_state == BUD_FLOWERING && phytomer->inflorescence_age >= plant.second.dd_to_fruit_set ) {
-                    phytomer->inflorescence_age = 0;
+                else if ( phytomer->flower_bud_state == BUD_FLOWERING && phytomer->time_since_flowering >= plant.second.dd_to_fruit_set ) {
+                    phytomer->time_since_flowering = 0;
                     if( context_ptr->randu() < shoot->shoot_parameters.fruit_set_probability ) {
                         phytomer->changeReproductiveState(BUD_FRUITING);
                     }else{
@@ -1716,7 +1765,7 @@ void PlantArchitecture::advanceTime( float dt ) {
                 // -- Fruit Growth -- //
                 // If the flower bud it in a 'fruiting' state, the fruit grows with time
                 else if ( phytomer->flower_bud_state == BUD_FRUITING ){
-                    float scale = fmin(1,phytomer->inflorescence_age / plant.second.dd_to_fruit_maturity );
+                    float scale = fmin(1, phytomer->time_since_flowering / plant.second.dd_to_fruit_maturity );
                     phytomer->setInflorescenceScale(scale);
                 }
 
@@ -1757,11 +1806,13 @@ void PlantArchitecture::advanceTime( float dt ) {
 
                        std::string new_shoot_type_label;
                         if(sampleChildShootType(plantID,shoot->ID, new_shoot_type_label) ){
-                            uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle_tip.val(), shoot->phyllotactic_angle.val()*float(node_number) + context_ptr->randu(-0.1f, 0.1f), -0. * M_PI), new_shoot_type_label);
+                            uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle_tip.val(), shoot->phyllotactic_angle.val()*float(node_number) + context_ptr->randu(-0.1f, 0.1f), 0.5 * M_PI), new_shoot_type_label);
                             setPhytomerScale(plantID, childID, 0, 0.1, 0.1); //\todo These factors should be set to be consistent with the parent shoot
                             phytomer->vegetative_bud_state = BUD_DEAD;
                             shoot_tree->at(childID)->dormant = false;
                             std::cout << "Adding child shoot to phytomer " << node_number << " of type " << new_shoot_type_label << " on shoot " << shoot->ID << std::endl;
+                        }else{
+                            phytomer->vegetative_bud_state = BUD_DEAD;
                         }
                     }
 
