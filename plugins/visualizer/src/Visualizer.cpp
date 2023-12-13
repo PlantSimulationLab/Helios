@@ -3308,7 +3308,8 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     //Watermark
     if( isWatermarkVisible ){
         float hratio = float(Wdisplay)/float(Hdisplay);
-        addRectangleByCenter( make_vec3(0.15,0.95f,0), make_vec2(0.2389/0.8f/hratio,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
+        float width = 0.2389f/0.8f/hratio;
+        addRectangleByCenter( make_vec3(0.75f*width,0.95f,0), make_vec2(width,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
     }
 
     setupPlot();
@@ -3591,8 +3592,9 @@ void Visualizer::plotUpdate( bool hide_window ){
 
     //Watermark
     if( isWatermarkVisible ){
-        float hratio = float(Wdisplay)/(Hdisplay);
-        addRectangleByCenter( make_vec3(0.15,0.95f,0), make_vec2(0.2389/0.8/hratio,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
+        float hratio = float(Wdisplay)/float(Hdisplay);
+        float width = 0.2389f/0.8f/hratio;
+        addRectangleByCenter( make_vec3(0.75f*width,0.95f,0), make_vec2(width,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
     }
 
     setupPlot();

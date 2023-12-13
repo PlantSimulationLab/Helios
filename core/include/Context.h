@@ -4443,6 +4443,7 @@ public:
     //! get the length of a Cone object from the context
     /**
      * \param[in] "ObjectID" object ID of the Cone object
+     * \return Dimension of cone object in the axial direction
      */
     float getConeObjectLength(uint &ObjectID) const;
     
@@ -4452,7 +4453,7 @@ public:
      * \param[in] "size" Size of the box in the x- and y-directions
      * \param[in] "rotation" Spherical rotation of tiled surface
      * \param[in] "subdiv" Number of subdivisions in x- and y-directions
-     * \return Vector of UUIDs for each sub-patch
+     * \return Object ID of new tile object.
      * \note Assumes default color of green
      * \ingroup compoundobjects
      */
@@ -4465,7 +4466,7 @@ public:
      * \param[in] "rotation" Spherical rotation of tiled surface
      * \param[in] "subdiv" Number of subdivisions in x- and y-directions
      * \param[in] "color" r-g-b color of tiled surface
-     * \return Vector of UUIDs for each sub-patch
+     * \return Object ID of new tile object.
      * \ingroup compoundobjects
      */
     uint addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color );
@@ -4477,7 +4478,7 @@ public:
      * \param[in] "rotation" Spherical rotation of tiled surface
      * \param[in] "subdiv" Number of subdivisions in x- and y-directions
      * \param[in] "texturefile" Name of image file for texture map
-     * \return Vector of UUIDs for each sub-patch
+     * \return Object ID of new tile object.
      * \ingroup compoundobjects
      */
     uint addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile );
@@ -4487,6 +4488,7 @@ public:
      * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere
+     * \return Object ID of new sphere object.
      * \note Assumes a default color of green
      * \ingroup compoundobjects
      */
@@ -4498,6 +4500,7 @@ public:
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere
      * \param[in] "color" r-g-b color of sphere
+     * \return Object ID of new sphere object.
      * \ingroup compoundobjects
      */
     uint addSphereObject(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color );
@@ -4508,6 +4511,7 @@ public:
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere
      * \param[in] "texturefile" Name of image file for texture map
+     * \return Object ID of new sphere object.
      * \ingroup compoundobjects
      */
     uint addSphereObject(uint Ndivs, const vec3 &center, float radius, const char* texturefile );
@@ -4517,6 +4521,7 @@ public:
      * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere in x-, y-, and z-directions
+     * \return Object ID of new sphere object.
      * \note Assumes a default color of green
      * \ingroup compoundobjects
      */
@@ -4528,6 +4533,7 @@ public:
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere in x-, y-, and z-directions
      * \param[in] "color" r-g-b color of sphere
+     * \return Object ID of new sphere object.
      * \ingroup compoundobjects
      */
     uint addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const RGBcolor &color );
@@ -4538,6 +4544,7 @@ public:
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere in x-, y-, and z-directions
      * \param[in] "texturefile" Name of image file for texture map
+     * \return Object ID of new sphere object.
      * \ingroup compoundobjects
      */
     uint addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const char* texturefile );
@@ -4548,6 +4555,7 @@ public:
      * \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
      * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
      * \param[in] "radius" Radius of the tube at each node position.
+     * \return Object ID of new tube object.
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
@@ -4559,6 +4567,7 @@ public:
      * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
      * \param[in] "radius" Radius of the tube at each node position.
      * \param[in] "color" Diffuse color of each tube segment.
+     * \return Object ID of new tube object.
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
@@ -4570,6 +4579,7 @@ public:
      * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
      * \param[in] "radius" Radius of the tube at each node position.
      * \param[in] "texturefile" Name of image file for texture map
+     * \return Object ID of new tube object.
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
@@ -4580,7 +4590,7 @@ public:
      * \param[in] "center" 3D coordinates of box center
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
      * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
-     * \return Vector of UUIDs for each sub-patch
+     * \return Object ID of new box object
      * \note Assumes default color of green
      * \note This version of addBox assumes that all surface normal vectors point away from the box
      * \ingroup compoundobjects
@@ -4593,7 +4603,7 @@ public:
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
      * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
      * \param[in] "color" r-g-b color of box
-     * \return Vector of UUIDs for each sub-patch
+     * \return Object ID of new box object
      * \note This version of addBox assumes that all surface normal vectors point away from the box
      * \ingroup compoundobjects
      */
@@ -4605,7 +4615,7 @@ public:
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
      * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
      * \param[in] "texturefile" Name of image file for texture map
-     * \return Vector of UUIDs for each sub-patch
+     * \return Object ID of new box object
      * \note This version of addBox assumes that all surface normal vectors point away from the box
      * \ingroup compoundobjects
      */
@@ -4618,7 +4628,7 @@ public:
      * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
      * \param[in] "color" r-g-b color of box
      * \param[in] "reverse_normals" Flip all surface normals so that patch normals point inside the box
-     * \return Vector of UUIDs for each sub-patch
+     * \return Object ID of new box object
      * \note This version of addBox assumes that all surface normal vectors point away from the box
      * \ingroup compoundobjects
      */
@@ -4630,7 +4640,7 @@ public:
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
      * \param[in] "subdiv" Number of subdivisions in x-, y-, and z-directions
      * \param[in] "texturefile" Name of image file for texture map
-     * \return Vector of UUIDs for each sub-patch
+     * \return Object ID of new box object
      * \note This version of addBox assumes that all surface normal vectors point away from the box
      * \ingroup compoundobjects
      */
@@ -4641,7 +4651,7 @@ public:
      * \param[in] "Ndiv" Number to triangles used to form disk
      * \param[in] "center" 3D coordinates of Disk center
      * \param[in] "size" length of Disk semi-major and semi-minor radii
-     * \return Vector of UUIDs for each sub-triangle
+     * \return Object ID of new disk object
      * \note Assumes that disk is horizontal.
      * \note Assumes a default color of black.
      * \ingroup compoundobjects
@@ -4654,7 +4664,7 @@ public:
      * \param[in] "center" 3D coordinates of Disk center
      * \param[in] "size" length of Disk semi-major and semi-minor radii
      * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
-     * \return Vector of UUIDs for each sub-triangle
+     * \return Object ID of new disk object
      * \note Assumes a default color of black.
      * \ingroup compoundobjects
      */
@@ -4667,7 +4677,7 @@ public:
      * \param[in] "size" length of Disk semi-major and semi-minor radii
      * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
      * \param[in] "color" diffuse R-G-B color of Disk
-     * \return Vector of UUIDs for each sub-triangle
+     * \return Object ID of new disk object
      * \ingroup compoundobjects
      */
     uint addDiskObject(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color );
@@ -4679,7 +4689,7 @@ public:
      * \param[in] "size" length of Disk semi-major and semi-minor radii
      * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
      * \param[in] "color" diffuse R-G-B-A color of Disk
-     * \return Vector of UUIDs for each sub-triangle
+     * \return Object ID of new disk object
      * \ingroup compoundobjects
      */
     uint addDiskObject(uint Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color );
@@ -4691,7 +4701,7 @@ public:
      * \param[in] "size" length of Disk semi-major and semi-minor radii
      * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
      * \param[in] "texture_file" path to JPEG file to be used as texture
-     * \return Vector of UUIDs for each sub-triangle
+     * \return Object ID of new disk object
      * \note Assumes a default color of black.
      * \ingroup compoundobjects
      */
@@ -4704,7 +4714,7 @@ public:
      * \param[in] "size" length of Disk semi-major and semi-minor radii
      * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
      * \param[in] "color" diffuse R-G-B color of Disk
-     * \return Vector of UUIDs for each sub-triangle
+     * \return Object ID of new disk object
      * \ingroup compoundobjects
      */
     uint addDiskObject(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBcolor& color );
@@ -4716,7 +4726,7 @@ public:
      * \param[in] "size" length of Disk semi-major and semi-minor radii
      * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
      * \param[in] "color" diffuse R-G-B-A color of Disk
-     * \return Vector of UUIDs for each sub-triangle
+     * \return Object ID of new disk object
      * \ingroup compoundobjects
      */
     uint addDiskObject(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const helios::RGBAcolor& color );
@@ -4728,7 +4738,7 @@ public:
      * \param[in] "size" length of Disk semi-major and semi-minor radii
      * \param[in] "rotation" spherical rotation angle (elevation,azimuth) in radians of Disk
      * \param[in] "texture_file" path to JPEG file to be used as texture
-     * \return Vector of UUIDs for each sub-triangle
+     * \return Object ID of new disk object
      * \note Assumes a default color of black.
      * \ingroup compoundobjects
      */
@@ -4737,6 +4747,7 @@ public:
     //! Add new Polymesh Compound Object
     /** Method to add a new Polymesh to the Context given a vector of UUIDs
      * \param[in] "UUIDs" Unique universal identifiers of primitives to be added to polymesh object
+     * \return Object ID of new Polymesh
      * \ingroup compoundobjects
      */
     uint addPolymeshObject(const std::vector<uint> &UUIDs );
@@ -4749,6 +4760,7 @@ public:
      * \param[in] "node1" (x,y,z) position defining the end of the cone
      * \param[in] "radius0" Radius of the cone at the base node.
      * \param[in] "radius1" Radius of the cone at the base node.
+     * \return Vector of UUIDs for each sub-triangle
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
@@ -4762,6 +4774,7 @@ public:
      * \param[in] "radius0" Radius of the cone at the base node.
      * \param[in] "radius1" Radius of the cone at the base node.
      * \param[in] "color" Diffuse color of each tube segment.
+     * \return Vector of UUIDs for each sub-triangle
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
@@ -4775,6 +4788,7 @@ public:
      * \param[in] "radius0" Radius of the cone at the base node.
      * \param[in] "radius1" Radius of the cone at the base node.
      * \param[in] "texturefile" Name of image file for texture map
+     * \return Vector of UUIDs for each sub-triangle
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
@@ -4785,6 +4799,7 @@ public:
      * \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere
+     * \return Vector of UUIDs for each sub-triangle
      * \note Assumes a default color of green
      * \ingroup compoundobjects
      */
@@ -4796,6 +4811,7 @@ public:
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere
      * \param[in] "color" r-g-b color of sphere
+     * \return Vector of UUIDs for each sub-triangle
      * \ingroup compoundobjects
      */
     std::vector<uint> addSphere(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color );
@@ -4806,6 +4822,7 @@ public:
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere
      * \param[in] "texturefile" Name of image file for texture map
+     * \return Vector of UUIDs for each sub-triangle
      * \ingroup compoundobjects
      */
     std::vector<uint> addSphere(uint Ndivs, const vec3 &center, float radius, const char* texturefile );
@@ -4852,6 +4869,7 @@ public:
      * \param[in] "Ndivs" Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
      * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
      * \param[in] "radius" Radius of the tube at each node position.
+     * \return Vector of UUIDs for each sub-triangle
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
@@ -4863,6 +4881,7 @@ public:
      * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
      * \param[in] "radius" Radius of the tube at each node position.
      * \param[in] "color" Diffuse color of each tube segment.
+     * \return Vector of UUIDs for each sub-triangle
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
@@ -4874,6 +4893,7 @@ public:
      * \param[in] "nodes" Vector of (x,y,z) positions defining Tube segments.
      * \param[in] "radius" Radius of the tube at each node position.
      * \param[in] "texturefile" Name of image file for texture map
+     * \return Vector of UUIDs for each sub-triangle
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
@@ -5239,6 +5259,7 @@ public:
     /**
      * \param[in] "filename" name of XML file.
      * \param[in] "quiet" If set to true, command line output will be disabled. Optional argument - default value is false.
+     * \return Vector of UUIDs for each primitive loaded from the XML file
      * \note This method is based on the pugi xml parser.  See <a href="www.pugixml.org">pugixml.org</a>
      */
     std::vector<uint> loadXML( const char* filename, bool quiet = false );
@@ -5293,6 +5314,7 @@ public:
     /**
      * \param[in] "filename" name of ply file.
      * \param[in] "silent" (optional) If set to true, output messaged will be disabled.
+     * \return Vector of UUIDs for each primitive generated from the PLY model
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
     std::vector<uint> loadPLY(const char* filename, bool silent=false );
@@ -5302,8 +5324,9 @@ public:
      * \param[in] "filename" name of ply file.
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
-     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
+     * \param[in] "upaxis" (optional) Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
      * \param[in] "silent" (optional) If set to true, output messaged will be disabled.
+     * \return Vector of UUIDs for each primitive generated from the PLY model
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const std::string &upaxis="YUP", bool silent=false );
@@ -5314,8 +5337,9 @@ public:
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift).
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "rotation" Spherical rotation of PLY object about origin
-     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
+     * \param[in] "upaxis" (optional) Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
      * \param[in] "silent" (optional) If set to true, output messaged will be disabled
+     * \return Vector of UUIDs for each primitive generated from the PLY model
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const std::string &upaxis="YUP", bool silent=false );
@@ -5326,8 +5350,9 @@ public:
      * \param[in] "origin" (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
+     * \param[in] "upaxis" (optional) Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
      * \param[in] "silent" (optional) If set to true, output messaged will be disabled
+     * \return Vector of UUIDs for each primitive generated from the PLY model
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
     
@@ -5338,8 +5363,9 @@ public:
      * \param[in] "height" Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] "upaxis" Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP").
+     * \param[in] "upaxis" (optional) Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
      * \param[in] "silent" (optional) If set to true, output messaged will be disabled
+     * \return Vector of UUIDs for each primitive generated from the PLY model
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
     
@@ -5364,6 +5390,7 @@ public:
      * \param[in] "rotation" Spherical rotation of PLY object about origin
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
      * \param[in] "silent" (optional) If set to true, output messaged will be disabled
+     * \return Vector of UUIDs for each primitive generated from the OBJ model
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, bool silent=false );
     
@@ -5376,6 +5403,7 @@ public:
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
      * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file (one of "XUP", "YUP", or "ZUP" - "ZUP" is default).
      * \param[in] "silent" (optional) If set to true, output messaged will be disabled
+     * \return Vector of UUIDs for each primitive generated from the PLY model
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );
 
@@ -5389,6 +5417,7 @@ public:
      * \param[in] "default_color" Color to be used if no r-g-b color values are given for PLY nodes
      * \param[in] "upaxis" Direction of "up" vector used when creating OBJ file (one of "XUP", "YUP", or "ZUP" - "ZUP" is default).
      * \param[in] "silent" (optional) If set to true, output messaged will be disabled
+     * \return Vector of UUIDs for each primitive generated from the PLY model
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, const helios::vec3 &scale, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );
 
@@ -5439,22 +5468,22 @@ public:
     
     //! Get simulation date
     /**
-     * \return \ref Date vector
-     * \sa \ref setDate(), \ref getJulianDate()
+     * \return Date vector
+     * \sa setDate(), getJulianDate()
      */
     helios::Date getDate() const;
     
     //! Get a string corresponding to the month of the simulation date
     /**
-     * \return \ref Month string (e.g., Jan, Feb, Mar, etc)
-     * \sa \ref setDate(), \ref getJulianDate()
+     * \return Month string (e.g., Jan, Feb, Mar, etc)
+     * \sa setDate(), \ref getJulianDate()
      */
     const char* getMonthString() const;
     
     //! Get simulation date by Julian day
     /**
      * \return Julian day of year (1-366)
-     * \sa \ref setDate(), \ref getDate()
+     * \sa setDate(), getDate()
      */
     int getJulianDate() const;
     
@@ -5462,7 +5491,7 @@ public:
     /**
      * \param[in] "minute" Minute of hour (0-59)
      * \param[in] "hour" Hour of day (0-23)
-     * \sa \ref getTime(), \ref setSunDirection()
+     * \sa getTime(), setSunDirection()
      */
     void setTime( int minute, int hour );
     
@@ -5471,7 +5500,7 @@ public:
      * \param[in] "second" Second of minute (0-59)
      * \param[in] "minute" Minute of hour (0-59)
      * \param[in] "hour" Hour of day (0-23)
-     * \sa \ref getTime(), \ref setSunDirection()
+     * \sa getTime(), setSunDirection()
      */
     void setTime( int second, int minute, int hour );
     
@@ -5484,18 +5513,22 @@ public:
     
     //! Get the simulation time
     /**
-     * \return \ref \ref Time vector
-     * \sa \ref setTime()
+     * \return Time vector
+     * \sa setTime()
      */
     helios::Time getTime() const;
     
     //! Draw a random number from a uniform distribution between 0 and 1
+    /**
+     * \return Random float between 0 and 1
+     */
     float randu();
     
     //! Draw a random number from a uniform distribution with specified range
     /**
      * \param[in] "min" Minimum value of random uniform distribution (float)
      * \param[in] "max" Maximum value of random uniform distribution (float)
+     * \return Random float between 'min' and 'max'
      */
     float randu( float min, float max );
     
@@ -5503,6 +5536,7 @@ public:
     /**
      * \param[in] "min" Minimum value of random uniform distribution (integer)
      * \param[in] "max" Maximum value of random uniform distribution (integer)
+     * \return Random integer between 'min' and 'max'
      */
     int randu( int min, int max );
     

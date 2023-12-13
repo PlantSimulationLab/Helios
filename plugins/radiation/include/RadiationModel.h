@@ -811,12 +811,10 @@ public:
     /**
      * \param[in] "cameralabel" Label of target camera
      * \param[in] "filename" Filename of the output file
-     * \param[in] "labelname" Name of the label
-     * \param[in] "datatype" Data type of the label
+     * \param[in] "primitive_data_label" Name of the primitive data label
      * \param[in] "padvalue" Pad value for the empty pixels
     */
-    void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue = NAN);
-
+    void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &filename, const std::string &primitive_data_label, float padvalue = NAN);
 
     //! Write depth image to file
     /**
@@ -824,6 +822,14 @@ public:
      * \param[in] "filename" Filename of the output file
     */
     void writeDepthImage(const std::string &cameralabel, const std::string &filename);
+
+    //! Write bounding boxes based on primitive data labels (Ultralytic's YOLO format)
+    /**
+     * \param[in] "cameralabel" Label of target camera
+     * \param[in] "filename" Filename of the output label file
+     * \param[in] "primitive_data_label" Name of the primitive data label
+    */
+    void writeImageBoundingBoxes(const std::string &cameralabel, const std::string &filename, const std::string &primitive_data_label);
 
     //! Set padding value for pixels do not have valid values
     /**
