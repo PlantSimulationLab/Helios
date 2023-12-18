@@ -21,4 +21,9 @@ uint AlmondLeafPrototype( helios::Context* context_ptr, uint subdivisions=1, int
 uint AlmondFruitPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 uint AlmondFlowerPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 
+uint CheeseweedLeafPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+
+uint BindweedLeafPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+
 #endif //HELIOS_ASSETS_H

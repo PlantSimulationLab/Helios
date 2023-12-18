@@ -181,6 +181,9 @@ void ShootParameters::defineChildShootTypes( const std::vector<std::string> &a_c
 
 
 void PlantArchitecture::defineShootType( const std::string &shoot_type_label, const ShootParameters &shoot_params ) {
+    if( shoot_types.find(shoot_type_label)!=shoot_types.end() ){
+        std::cerr <<"WARNING (PlantArchitecture::defineShootType): Shoot type label of " << shoot_type_label << " already exists." << std::endl;
+    }
     shoot_types.emplace(shoot_type_label, shoot_params );
 }
 
@@ -1054,7 +1057,8 @@ bool PlantArchitecture::sampleChildShootType( uint plantID, uint shootID, std::s
     }
 
     bool bud_break = true;
-    if (context_ptr->randu() > shoot_types.at(child_shoot_type_label).bud_break_probability) {
+//    if (context_ptr->randu() > shoot_types.at(child_shoot_type_label).bud_break_probability) {
+    if (context_ptr->randu() > shoot_types.at(shoot_ptr->shoot_type_label).bud_break_probability) {
         bud_break = false;
         child_shoot_type_label = "";
     }
