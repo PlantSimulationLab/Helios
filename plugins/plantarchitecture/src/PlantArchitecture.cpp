@@ -382,9 +382,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, const ShootParameters &pare
         }
 
         //roll rotation for shoot base rotation
-        if( shoot_base_rotation.roll!=0 ) {
-            petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, nullorigin, internode_axis,-shoot_base_rotation.roll);
-         }
+//        if( shoot_base_rotation.roll!=0 ) {
+//            petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, nullorigin, internode_axis,-shoot_base_rotation.roll);
+//        }
 
         //yaw rotation for shoot base rotation
         if( shoot_base_rotation.yaw!=0 ) {
@@ -442,7 +442,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, const ShootParameters &pare
     }
 
     //petiole yaw rotation
-    if( phytomer_parameters.petiole.yaw.val()!=0 ) {
+    if( shoot_base_rotation.roll!=0 && phytomer_index==0 ) {
+        petiole_axis = rotatePointAboutLine(petiole_axis, nullorigin, internode_axis, shoot_base_rotation.roll );
+    }else if( phytomer_parameters.petiole.yaw.val()!=0 ){
         petiole_axis = rotatePointAboutLine(petiole_axis, nullorigin, internode_axis, phytomer_parameters.petiole.yaw.val() );
         petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, nullorigin, internode_axis, phytomer_parameters.petiole.yaw.val() );
     }
@@ -1810,7 +1812,7 @@ void PlantArchitecture::advanceTime( float dt ) {
 
                        std::string new_shoot_type_label;
                         if(sampleChildShootType(plantID,shoot->ID, new_shoot_type_label) ){
-                            uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle_tip.val(), shoot->phyllotactic_angle.val()*float(node_number) + context_ptr->randu(-0.1f, 0.1f), 0.5 * M_PI), new_shoot_type_label);
+                            uint childID = addChildShoot(plantID, shoot->ID, node_number, 1, make_AxisRotation(shoot->shoot_parameters.child_insertion_angle_tip.val(), shoot->phyllotactic_angle.val()*float(node_number) + context_ptr->randu(-0.1f, 0.1f), 0.75 * M_PI), new_shoot_type_label);
                             setPhytomerScale(plantID, childID, 0, 0.1, 0.1); //\todo These factors should be set to be consistent with the parent shoot
                             phytomer->vegetative_bud_state = BUD_DEAD;
                             shoot_tree->at(childID)->dormant = false;
