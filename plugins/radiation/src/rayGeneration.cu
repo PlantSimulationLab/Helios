@@ -221,7 +221,11 @@ RT_PROGRAM void direct_raygen()
 
                         uint3 ind = make_uint3( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)), ID );
 
-                        solid = maskdata[ind];
+                        if( uv.x<0 || uv.x>1.f || uv.y<0 || uv.y>1.f ) {
+                            solid = true;
+                        }else {
+                            solid = maskdata[ind];
+                        }
                         if( !solid ){
                             if( count>10 ){
                                 break;
@@ -528,7 +532,11 @@ RT_PROGRAM void diffuse_raygen(){
 
                         uint3 ind = make_uint3( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)), ID );
 
-                        solid = maskdata[ind];
+                        if( uv.x<0 || uv.x>1.f || uv.y<0 || uv.y>1.f ) {
+                            solid = true;
+                        }else {
+                            solid = maskdata[ind];
+                        }
                         if( !solid ){
                             if( count>10 ){
                                 break;

@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.3.5</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.3.6</span>
    </div>
   </td>
  </tr>
@@ -671,11 +671,11 @@ $(function() {
 <div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>                    <span class="keywordtype">float</span> t_tau_cam = tau_cam[ indc ];</div>
 <div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>                    <span class="keywordflow">if</span> ( (t_rho_cam &gt; 0 || t_tau_cam &gt; 0) &amp;&amp; prd.strength&gt;0 ) {</div>
 <div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>                        <span class="keywordflow">if</span> (prd.face) {<span class="comment">//reflection from top, transmission from bottom</span></div>
-<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>                            atomicFloatAdd(&amp;scatter_buff_top_cam[ind_origin], prd.strength * t_rho_cam); <span class="comment">//reflection</span></div>
-<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>                            atomicFloatAdd(&amp;scatter_buff_bottom_cam[ind_origin], prd.strength * t_tau_cam); <span class="comment">//transmission</span></div>
+<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>                            atomicFloatAdd(&amp;scatter_buff_top_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_rho_cam); <span class="comment">//reflection</span></div>
+<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>                            atomicFloatAdd(&amp;scatter_buff_bottom_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_tau_cam); <span class="comment">//transmission</span></div>
 <div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>                        } <span class="keywordflow">else</span> {<span class="comment">//reflection from bottom, transmission from top</span></div>
-<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>                            atomicFloatAdd(&amp;scatter_buff_bottom_cam[ind_origin], prd.strength * t_rho_cam); <span class="comment">//reflection</span></div>
-<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>                            atomicFloatAdd(&amp;scatter_buff_top_cam[ind_origin], prd.strength * t_tau_cam); <span class="comment">//transmission</span></div>
+<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>                            atomicFloatAdd(&amp;scatter_buff_bottom_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_rho_cam); <span class="comment">//reflection</span></div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>                            atomicFloatAdd(&amp;scatter_buff_top_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_tau_cam); <span class="comment">//transmission</span></div>
 <div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>                        }</div>
 <div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>                    }</div>
 <div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>                }</div>

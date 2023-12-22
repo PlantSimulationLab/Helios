@@ -684,27 +684,6 @@ public:
      */
     std::vector<std::string> getAllCameraLabels();
 
-    //! Write camera data for one or more bands to a JPEG image
-    /**
-     * \param[in] camera Label for camera to be queried
-     * \param[in] bands Vector of labels for radiative bands to be written
-     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
-     * \param[in] flux_to_pixel_conversion OPTIONAL: A factor to convert radiative flux to 8-bit pixel values (0-255). By default, this value is 1.0, which means that the pixel values will be equal to the radiative flux. If the radiative flux is very large or very small, it may be necessary to scale the flux to a more appropriate range for the image.
-     */
-    void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float flux_to_pixel_conversion = 1.f);
-
-    //! Write normalized camera data (maximum value is 1) for one or more bands to a JPEG image
-    /**
-     * \param[in] camera Label for camera to be queried
-     * \param[in] bands Vector of labels for radiative bands to be written
-     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path Path to directory where images should be saved
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
-     */
-    void writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
-
     //! Adds all geometric primitives from the Context to OptiX
     /**
      * This function should be called anytime Context geometry is created or modified
@@ -807,29 +786,57 @@ public:
                              const std::vector<std::string>& cameraresponselabels, helios::vec2 wavelengthrange,
                              float fluxscale = 1, float diffusefactor = 0.0005, uint scatteringdepth = 4);
 
-    //! Write image labels to file
+    //! Write camera data for one or more bands to a JPEG image
+    /**
+     * \param[in] camera Label for camera to be queried
+     * \param[in] bands Vector of labels for radiative bands to be written
+     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] flux_to_pixel_conversion OPTIONAL: A factor to convert radiative flux to 8-bit pixel values (0-255). By default, this value is 1.0, which means that the pixel values will be equal to the radiative flux. If the radiative flux is very large or very small, it may be necessary to scale the flux to a more appropriate range for the image.
+     */
+    void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float flux_to_pixel_conversion = 1.f);
+
+    //! Write normalized camera data (maximum value is 1) for one or more bands to a JPEG image
+    /**
+     * \param[in] camera Label for camera to be queried
+     * \param[in] bands Vector of labels for radiative bands to be written
+     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path Path to directory where images should be saved
+     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     */
+    void writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
+
+    //! Write image pixel labels to text file based on primitive data. Primitive data must have type 'float', 'double', 'uint', or 'int'.
     /**
      * \param[in] "cameralabel" Label of target camera
-     * \param[in] "filename" Filename of the output file
      * \param[in] "primitive_data_label" Name of the primitive data label
+     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame OPTIONAL: A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      * \param[in] "padvalue" Pad value for the empty pixels
     */
-    void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &filename, const std::string &primitive_data_label, float padvalue = NAN);
+    void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &primitive_data_label, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float padvalue = NAN);
 
     //! Write depth image to file
     /**
      * \param[in] "cameralabel" Label of target camera
-     * \param[in] "filename" Filename of the output file
+     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
     */
-    void writeDepthImage(const std::string &cameralabel, const std::string &filename);
+    void writeDepthImage(const std::string &cameralabel, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
-    //! Write bounding boxes based on primitive data labels (Ultralytic's YOLO format)
+    //! Write bounding boxes based on primitive data labels (Ultralytic's YOLO format). Primitive data must have type of 'uint' or 'int'.
     /**
      * \param[in] "cameralabel" Label of target camera
-     * \param[in] "filename" Filename of the output label file
-     * \param[in] "primitive_data_label" Name of the primitive data label
+     * \param[in] "primitive_data_label" Name of the primitive data label. Primitive data must have type of 'uint' or 'int'.
+     * \param[in] "object_class_ID" Object class ID to write for the labels in this group.
+     * \param[in] imagefile_base Name for base of output files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame OPTIONAL: A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
     */
-    void writeImageBoundingBoxes(const std::string &cameralabel, const std::string &filename, const std::string &primitive_data_label);
+    void writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./", bool append_label_file = false, int frame = -1);
 
     //! Set padding value for pixels do not have valid values
     /**
