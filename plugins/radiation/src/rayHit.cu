@@ -608,11 +608,11 @@ RT_PROGRAM void miss_diffuse() {
                     float t_tau_cam = tau_cam[ indc ];
                     if ( (t_rho_cam > 0 || t_tau_cam > 0) && prd.strength>0 ) {
                         if (prd.face) {//reflection from top, transmission from bottom
-                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], prd.strength * t_rho_cam); //reflection
-                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], prd.strength * t_tau_cam); //transmission
+                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_rho_cam); //reflection
+                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_tau_cam); //transmission
                         } else {//reflection from bottom, transmission from top
-                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], prd.strength * t_rho_cam); //reflection
-                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], prd.strength * t_tau_cam); //transmission
+                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_rho_cam); //reflection
+                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_tau_cam); //transmission
                         }
                     }
                 }

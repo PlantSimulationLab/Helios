@@ -22,7 +22,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname">.<span id="projectnumber">&#160;v1.3.5</span>
+   <div id="projectname">.<span id="projectnumber">&#160;v1.3.6</span>
    </div>
   </td>
  </tr>
@@ -250,12 +250,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <tr class="memitem:a4719caf3bacb35b9d58dc853b56d6a0b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a4719caf3bacb35b9d58dc853b56d6a0b">getAllCameraLabels</a> ()</td></tr>
 <tr class="memdesc:a4719caf3bacb35b9d58dc853b56d6a0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the labels for all radiation cameras that have been added to the radiation model.  <a href="class_radiation_model.html#a4719caf3bacb35b9d58dc853b56d6a0b">More...</a><br /></td></tr>
 <tr class="separator:a4719caf3bacb35b9d58dc853b56d6a0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de">writeCameraImage</a> (const std::string &amp;camera, const std::vector&lt; std::string &gt; &amp;bands, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1, float flux_to_pixel_conversion=1.f)</td></tr>
-<tr class="memdesc:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write camera data for one or more bands to a JPEG image.  <a href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de">More...</a><br /></td></tr>
-<tr class="separator:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a61abdff90fd75f3ebebc6b8f189cdac9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a61abdff90fd75f3ebebc6b8f189cdac9">writeNormCameraImage</a> (const std::string &amp;camera, const std::vector&lt; std::string &gt; &amp;bands, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1)</td></tr>
-<tr class="memdesc:a61abdff90fd75f3ebebc6b8f189cdac9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write normalized camera data (maximum value is 1) for one or more bands to a JPEG image.  <a href="class_radiation_model.html#a61abdff90fd75f3ebebc6b8f189cdac9">More...</a><br /></td></tr>
-<tr class="separator:a61abdff90fd75f3ebebc6b8f189cdac9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acf5fe304146a9270bf0e841f59e51934"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry</a> ()</td></tr>
 <tr class="memdesc:acf5fe304146a9270bf0e841f59e51934"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds all geometric primitives from the Context to OptiX.  <a href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">More...</a><br /></td></tr>
 <tr class="separator:acf5fe304146a9270bf0e841f59e51934"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -291,15 +285,21 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <tr class="memitem:a63f23da646aac79163c8154ef3a6e93e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a63f23da646aac79163c8154ef3a6e93e">runRadiationImaging</a> (const std::vector&lt; std::string &gt; &amp;cameralabels, const std::vector&lt; std::string &gt; &amp;sourcelabels, const std::vector&lt; std::string &gt; &amp;bandlabels, const std::vector&lt; std::string &gt; &amp;cameraresponselabels, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> wavelengthrange, float fluxscale=1, float diffusefactor=0.0005, uint scatteringdepth=4)</td></tr>
 <tr class="memdesc:a63f23da646aac79163c8154ef3a6e93e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run radiation imaging simulation.  <a href="class_radiation_model.html#a63f23da646aac79163c8154ef3a6e93e">More...</a><br /></td></tr>
 <tr class="separator:a63f23da646aac79163c8154ef3a6e93e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab932bd6be643b10d6b80f3488f842f17"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#ab932bd6be643b10d6b80f3488f842f17">writePrimitiveDataLabelMap</a> (const std::string &amp;cameralabel, const std::string &amp;filename, const std::string &amp;primitive_data_label, float padvalue=NAN)</td></tr>
-<tr class="memdesc:ab932bd6be643b10d6b80f3488f842f17"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write image labels to file.  <a href="class_radiation_model.html#ab932bd6be643b10d6b80f3488f842f17">More...</a><br /></td></tr>
-<tr class="separator:ab932bd6be643b10d6b80f3488f842f17"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a609e588ac523d4ea37789a859ff54094"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a609e588ac523d4ea37789a859ff54094">writeDepthImage</a> (const std::string &amp;cameralabel, const std::string &amp;filename)</td></tr>
-<tr class="memdesc:a609e588ac523d4ea37789a859ff54094"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write depth image to file.  <a href="class_radiation_model.html#a609e588ac523d4ea37789a859ff54094">More...</a><br /></td></tr>
-<tr class="separator:a609e588ac523d4ea37789a859ff54094"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af6bbc35dead06b5aa85d2c5e23a97154"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#af6bbc35dead06b5aa85d2c5e23a97154">writeImageBoundingBoxes</a> (const std::string &amp;cameralabel, const std::string &amp;filename, const std::string &amp;primitive_data_label)</td></tr>
-<tr class="memdesc:af6bbc35dead06b5aa85d2c5e23a97154"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write bounding boxes based on primitive data labels (Ultralytic's YOLO format)  <a href="class_radiation_model.html#af6bbc35dead06b5aa85d2c5e23a97154">More...</a><br /></td></tr>
-<tr class="separator:af6bbc35dead06b5aa85d2c5e23a97154"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de">writeCameraImage</a> (const std::string &amp;camera, const std::vector&lt; std::string &gt; &amp;bands, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1, float flux_to_pixel_conversion=1.f)</td></tr>
+<tr class="memdesc:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write camera data for one or more bands to a JPEG image.  <a href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de">More...</a><br /></td></tr>
+<tr class="separator:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a61abdff90fd75f3ebebc6b8f189cdac9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a61abdff90fd75f3ebebc6b8f189cdac9">writeNormCameraImage</a> (const std::string &amp;camera, const std::vector&lt; std::string &gt; &amp;bands, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1)</td></tr>
+<tr class="memdesc:a61abdff90fd75f3ebebc6b8f189cdac9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write normalized camera data (maximum value is 1) for one or more bands to a JPEG image.  <a href="class_radiation_model.html#a61abdff90fd75f3ebebc6b8f189cdac9">More...</a><br /></td></tr>
+<tr class="separator:a61abdff90fd75f3ebebc6b8f189cdac9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a771c53fe19d75303c3f60017db8a2b50"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a771c53fe19d75303c3f60017db8a2b50">writePrimitiveDataLabelMap</a> (const std::string &amp;cameralabel, const std::string &amp;primitive_data_label, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1, float padvalue=NAN)</td></tr>
+<tr class="memdesc:a771c53fe19d75303c3f60017db8a2b50"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write image pixel labels to text file based on primitive data. Primitive data must have type 'float', 'double', 'uint', or 'int'.  <a href="class_radiation_model.html#a771c53fe19d75303c3f60017db8a2b50">More...</a><br /></td></tr>
+<tr class="separator:a771c53fe19d75303c3f60017db8a2b50"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aab6a7c658a20a8c7bffcef32796c5c98"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#aab6a7c658a20a8c7bffcef32796c5c98">writeDepthImage</a> (const std::string &amp;cameralabel, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1)</td></tr>
+<tr class="memdesc:aab6a7c658a20a8c7bffcef32796c5c98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write depth image to file.  <a href="class_radiation_model.html#aab6a7c658a20a8c7bffcef32796c5c98">More...</a><br /></td></tr>
+<tr class="separator:aab6a7c658a20a8c7bffcef32796c5c98"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a59db63fb5cf7d82ab641f636378923fd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a59db63fb5cf7d82ab641f636378923fd">writeImageBoundingBoxes</a> (const std::string &amp;cameralabel, const std::string &amp;primitive_data_label, uint object_class_ID, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, bool append_label_file=false, int frame=-1)</td></tr>
+<tr class="memdesc:a59db63fb5cf7d82ab641f636378923fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write bounding boxes based on primitive data labels (Ultralytic's YOLO format). Primitive data must have type of 'uint' or 'int'.  <a href="class_radiation_model.html#a59db63fb5cf7d82ab641f636378923fd">More...</a><br /></td></tr>
+<tr class="separator:a59db63fb5cf7d82ab641f636378923fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a73fac0b01c685471de95cd7bdfb5ef7b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a73fac0b01c685471de95cd7bdfb5ef7b">setPadValue</a> (const std::string &amp;cameralabel, const std::vector&lt; std::string &gt; &amp;bandlabels, const std::vector&lt; float &gt; &amp;padvalues)</td></tr>
 <tr class="memdesc:a73fac0b01c685471de95cd7bdfb5ef7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set padding value for pixels do not have valid values.  <a href="class_radiation_model.html#a73fac0b01c685471de95cd7bdfb5ef7b">More...</a><br /></td></tr>
 <tr class="separator:a73fac0b01c685471de95cd7bdfb5ef7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -943,7 +943,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Projected area fraction G(theta) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04235">4235</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04236">4236</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1018,7 +1018,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04701">4701</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04744">4744</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1072,7 +1072,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04740">4740</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04783">4783</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1445,7 +1445,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>scale factor </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04469">4469</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04470">4470</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1466,7 +1466,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 
 <p>Get the radiative energy lost to the sky (surroundings) </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03124">3124</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03125">3125</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1556,7 +1556,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 
 <p>Get the total absorbed radiation flux summed over all bands for each primitive. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03136">3136</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03137">3137</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1802,7 +1802,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02514">2514</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02515">2515</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1831,7 +1831,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02519">2519</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02520">2520</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1912,7 +1912,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04382">4382</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04383">4383</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1993,7 +1993,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04424">4424</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04425">4425</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2035,7 +2035,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04259">4259</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04260">4260</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2530,7 +2530,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04679">4679</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04722">4722</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3015,7 +3015,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04264">4264</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04265">4265</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3137,8 +3137,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 
 </div>
 </div>
-<a id="a609e588ac523d4ea37789a859ff54094" name="a609e588ac523d4ea37789a859ff54094"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a609e588ac523d4ea37789a859ff54094">&#9670;&#160;</a></span>writeDepthImage()</h2>
+<a id="aab6a7c658a20a8c7bffcef32796c5c98" name="aab6a7c658a20a8c7bffcef32796c5c98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aab6a7c658a20a8c7bffcef32796c5c98">&#9670;&#160;</a></span>writeDepthImage()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3153,7 +3153,19 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>filename</em>&#160;</td>
+          <td class="paramname"><em>imagefile_base</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>image_path</em> = <code>&quot;./&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>-1</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -3167,17 +3179,19 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">cameralabel</td><td>Label of target camera </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>Filename of the output file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">imagefile_base</td><td>Name for base of output image JPEG files (will also include the camera label and a frame number in the file name) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">image_path</td><td>OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">frame</td><td>OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04550">4550</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04570">4570</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
-<a id="af6bbc35dead06b5aa85d2c5e23a97154" name="af6bbc35dead06b5aa85d2c5e23a97154"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af6bbc35dead06b5aa85d2c5e23a97154">&#9670;&#160;</a></span>writeImageBoundingBoxes()</h2>
+<a id="a59db63fb5cf7d82ab641f636378923fd" name="a59db63fb5cf7d82ab641f636378923fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a59db63fb5cf7d82ab641f636378923fd">&#9670;&#160;</a></span>writeImageBoundingBoxes()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3192,13 +3206,37 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>filename</em>, </td>
+          <td class="paramname"><em>primitive_data_label</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>object_class_ID</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>primitive_data_label</em>&#160;</td>
+          <td class="paramname"><em>imagefile_base</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>image_path</em> = <code>&quot;./&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>append_label_file</em> = <code>false</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>-1</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -3208,17 +3246,20 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
       </table>
 </div><div class="memdoc">
 
-<p>Write bounding boxes based on primitive data labels (Ultralytic's YOLO format) </p>
+<p>Write bounding boxes based on primitive data labels (Ultralytic's YOLO format). Primitive data must have type of 'uint' or 'int'. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">cameralabel</td><td>Label of target camera </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>Filename of the output label file </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">primitive_data_label</td><td>Name of the primitive data label </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">primitive_data_label</td><td>Name of the primitive data label. Primitive data must have type of 'uint' or 'int'. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">object_class_ID</td><td>Object class ID to write for the labels in this group. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">imagefile_base</td><td>Name for base of output files (will also include the camera label and a frame number in the file name) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">image_path</td><td>OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">frame</td><td>OPTIONAL: A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04598">4598</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04618">4618</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3282,8 +3323,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 
 </div>
 </div>
-<a id="ab932bd6be643b10d6b80f3488f842f17" name="ab932bd6be643b10d6b80f3488f842f17"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab932bd6be643b10d6b80f3488f842f17">&#9670;&#160;</a></span>writePrimitiveDataLabelMap()</h2>
+<a id="a771c53fe19d75303c3f60017db8a2b50" name="a771c53fe19d75303c3f60017db8a2b50"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a771c53fe19d75303c3f60017db8a2b50">&#9670;&#160;</a></span>writePrimitiveDataLabelMap()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3298,13 +3339,25 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>filename</em>, </td>
+          <td class="paramname"><em>primitive_data_label</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>primitive_data_label</em>, </td>
+          <td class="paramname"><em>imagefile_base</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>image_path</em> = <code>&quot;./&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>-1</code>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -3320,18 +3373,20 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
       </table>
 </div><div class="memdoc">
 
-<p>Write image labels to file. </p>
+<p>Write image pixel labels to text file based on primitive data. Primitive data must have type 'float', 'double', 'uint', or 'int'. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">cameralabel</td><td>Label of target camera </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>Filename of the output file </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">primitive_data_label</td><td>Name of the primitive data label </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">imagefile_base</td><td>Name for base of output image JPEG files (will also include the camera label and a frame number in the file name) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">image_path</td><td>OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">frame</td><td>OPTIONAL: A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">padvalue</td><td>Pad value for the empty pixels </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04492">4492</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04493">4493</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>

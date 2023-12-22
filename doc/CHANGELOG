@@ -1543,3 +1543,17 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Visualizer*
 - There was an error that could cause the Helios watermark to get cut off if the window width is too narrow.
+
+[1.3.6] 2023-12-21
+
+*Radiation*
+- Fixed issue in RadiationModel::writePrimitiveDataLabelMap() that caused an error thinking that the file could not be opened.
+- In some rare edge cases, there was a segmentation fault in direct_raygen() and diffuse_raygen() for textured triangle ray generation.
+- There was an error in one version of RadiationModel::integrateSpectrum() causing an index out of bounds.
+- If primitives had area of NaN, this would cause an NaN warning from the radiation model. These primitives are now excluded in RadiationModel::updateGeometry().
+- There was an error in the camera model for diffuse radiation where the flux was always equal to 1.0.
+- Modified input arguments of RadiationModel::writePrimitiveDataLabelMap(), RadiationModel::writeDepthImage(), and RadiationModel::writeImageBoundingBoxes() to be consistent with the convention used by RadiationModel::writeCameraImage().
+- Modified RadiationModel::writeImageBoundingBoxes() to be able to specify the object class ID as an argument, and an option to append the label file so that multiple classes can be written.
+
+*LiDAR*
+- Triangulation could in rare cases produce triangles with a surface area of NaN, which would cause problems when calculating the area-weighted angle distribution. These triangles are now automatically removed.

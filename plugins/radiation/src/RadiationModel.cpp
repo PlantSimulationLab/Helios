@@ -665,7 +665,7 @@ float RadiationModel::integrateSpectrum( const std::vector<helios::vec2> &object
 
     float E = 0;
     float Etot = 0;
-    for( auto i=0; i<object_spectrum.size(); i++ ){
+    for( auto i=1; i<object_spectrum.size(); i++ ){
 
         if( object_spectrum.at(i).x <= camera_spectrum.front().x ){
             continue;
@@ -911,9 +911,9 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
     }
 
     if( frame>=0 ) {
-        outfile << "camera_" << camera << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame_str << ".jpeg";
+        outfile << camera << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame_str << ".jpeg";
     }else{
-        outfile << "camera_" << camera << "_" << imagefile_base << ".jpeg";
+        outfile << camera << "_" << imagefile_base << ".jpeg";
     }
     std::ofstream testfile(outfile.str());
 
@@ -1472,9 +1472,10 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     context_UUIDs = UUIDs;
 
     for( int u=context_UUIDs.size()-1; u>=0; u-- ){
+        float area = context->getPrimitiveArea(context_UUIDs.at(u));
         if( !context->doesPrimitiveExist( context_UUIDs.at(u) ) ){
             context_UUIDs.erase( context_UUIDs.begin()+u );
-        }else if( context->getPrimitiveArea(context_UUIDs.at(u))==0 ){
+        }else if( area==0 || area!=area ){
             context_UUIDs.erase( context_UUIDs.begin()+u );
         }
     }
@@ -4489,7 +4490,7 @@ float RadiationModel::getCameraResponseScale(const std::string &orginalcameralab
 }
 
 
-void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &filename, const std::string &labelname, float padvalue){
+void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &primitive_data_label, const std::string &imagefile_base, const std::string &image_path, int frame, float padvalue){
 
     if( cameras.find(cameralabel)==cameras.end() ){
         helios_runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabelMap): Camera '" + cameralabel + "' does not exist." );
@@ -4505,36 +4506,55 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
     std::vector<uint> pixel_UUIDs = camera_UUIDs;
     int2 camera_resolution = cameras.at(cameralabel).resolution;
 
-    //Output label image in ".txt" format
-    std::ofstream pixel_data(filename);
+    std::string frame_str;
+    if( frame>=0 ) {
+        frame_str = std::to_string(frame);
+    }
 
-    if( pixel_data.is_open() ){
-        helios_runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabelMap): Could not open file '" + filename + "' for writing." );
+    std::ostringstream outfile;
+
+    if( image_path.find_last_of('/')==image_path.length()-1 ) {
+        outfile << image_path;
+    }else {
+        outfile << image_path << "/";
+    }
+
+    if( frame>=0 ) {
+        outfile << cameralabel << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame_str << ".txt";
+    }else{
+        outfile << cameralabel << "_" << imagefile_base << ".txt";
+    }
+
+    //Output label image in ".txt" format
+    std::ofstream pixel_data(outfile.str());
+
+    if( !pixel_data.is_open() ){
+        helios_runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabelMap): Could not open file '" + outfile.str() + "' for writing." );
     }
 
     for (uint j = 0; j < camera_resolution.y; j++) {
         for (uint i = 0; i < camera_resolution.x; i++) {
             uint UUID =pixel_UUIDs.at(j * camera_resolution.x + i)-1;
-            if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID,labelname.c_str())){
-                HeliosDataType datatype = context->getPrimitiveDataType(UUID,labelname.c_str());
+            if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID,primitive_data_label.c_str())){
+                HeliosDataType datatype = context->getPrimitiveDataType(UUID,primitive_data_label.c_str());
                 if( datatype == HELIOS_TYPE_FLOAT ){
                     float labeldata;
-                    context->getPrimitiveData(UUID,labelname.c_str(),labeldata);
+                    context->getPrimitiveData(UUID,primitive_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
                 }
                 else if (datatype == HELIOS_TYPE_UINT){
                     uint labeldata;
-                    context->getPrimitiveData(UUID,labelname.c_str(),labeldata);
+                    context->getPrimitiveData(UUID,primitive_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
                 }
                 else if (datatype == HELIOS_TYPE_INT){
                     int labeldata;
-                    context->getPrimitiveData(UUID,labelname.c_str(),labeldata);
+                    context->getPrimitiveData(UUID,primitive_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
                 }
                 else if (datatype == HELIOS_TYPE_DOUBLE){
                     double labeldata;
-                    context->getPrimitiveData(UUID,labelname.c_str(),labeldata);
+                    context->getPrimitiveData(UUID,primitive_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
                 }
             }
@@ -4547,7 +4567,7 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
     pixel_data.close();
 }
 
-void RadiationModel::writeDepthImage(const std::string &cameralabel, const std::string &filename) {
+void RadiationModel::writeDepthImage(const std::string &cameralabel, const std::string &imagefile_base, const std::string &image_path, int frame) {
 
     //Get image UUID labels
     std::vector<uint> camera_UUIDs;
@@ -4592,10 +4612,10 @@ void RadiationModel::writeDepthImage(const std::string &cameralabel, const std::
     }
 
     // Output depth image in ".txt" format
-    RadiationModel::writePrimitiveDataLabelMap(cameralabel, filename, "depth_norm",1);
+    RadiationModel::writePrimitiveDataLabelMap(cameralabel, "depth_norm", imagefile_base, image_path, frame, 0);
 }
 
-void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::string &filename, const std::string &primitive_data_label){
+void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path, bool append_label_file, int frame){
 
     if( cameras.find(cameralabel)==cameras.end() ){
         helios_runtime_error( "ERROR (RadiationModel::writeImageBoundingBoxes): Camera '" + cameralabel + "' does not exist." );
@@ -4611,11 +4631,35 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
     std::vector<uint> pixel_UUIDs = camera_UUIDs;
     int2 camera_resolution = cameras.at(cameralabel).resolution;
 
+    std::string frame_str;
+    if( frame>=0 ) {
+        frame_str = std::to_string(frame);
+    }
+
+    std::ostringstream outfile;
+
+    if( image_path.find_last_of('/')==image_path.length()-1 ) {
+        outfile << image_path;
+    }else {
+        outfile << image_path << "/";
+    }
+
+    if( frame>=0 ) {
+        outfile << cameralabel << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame_str << ".txt";
+    }else{
+        outfile << cameralabel << "_" << imagefile_base << ".txt";
+    }
+
     //Output label image in ".txt" format
-    std::ofstream label_file(filename);
+    std::ofstream label_file;
+    if( append_label_file ){
+        label_file.open(outfile.str(), std::ios::out | std::ios::app);
+    }else{
+        label_file.open(outfile.str());
+    }
 
     if( !label_file.is_open() ){
-        helios_runtime_error( "ERROR (RadiationModel::writeImageBoundingBoxes): Could not open file '" + filename + "'." );
+        helios_runtime_error( "ERROR (RadiationModel::writeImageBoundingBoxes): Could not open file '" + outfile.str() + "'." );
     }
 
     std::map<int, vec4> pdata_bounds;
@@ -4663,9 +4707,8 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
     }
 
     for( auto box : pdata_bounds ){
-        uint labeldata = box.first;
         vec4 bbox = box.second;
-        label_file << labeldata << " " << (bbox.x + 0.5 * (bbox.y - bbox.x)) / float(camera_resolution.x) << " "
+        label_file << object_class_ID << " " << (bbox.x + 0.5 * (bbox.y - bbox.x)) / float(camera_resolution.x) << " "
                    << (bbox.z + 0.5 * (bbox.w - bbox.z)) / float(camera_resolution.y) << " " << std::setprecision(6)
                    << std::fixed << (bbox.y - bbox.x) / float(camera_resolution.x) << " "
                    << (bbox.w - bbox.z) / float(camera_resolution.y) << std::endl;

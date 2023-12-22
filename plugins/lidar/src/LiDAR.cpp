@@ -1539,6 +1539,10 @@ void LiDARcloud::triangulateHitPoints( float Lmax, float max_aspect_ratio ){
 
             Triangulation tri( s, vertex0, vertex1, vertex2, ID0, ID1, ID2, color, gridcell );
 
+            if( tri.area!=tri.area ){
+                continue;
+            }
+
             triangles.push_back(tri);
 
             Ntriangles++;
@@ -1742,6 +1746,10 @@ void LiDARcloud::triangulateHitPoints( float Lmax, float max_aspect_ratio, const
             color.b = (hits.at(ID0).color.b + hits.at(ID1).color.b + hits.at(ID2).color.b )/3.f;
 
             Triangulation tri( s, vertex0, vertex1, vertex2, ID0, ID1, ID2, color, gridcell );
+
+            if( tri.area!=tri.area ){
+                continue;
+            }
 
             triangles.push_back(tri);
 
