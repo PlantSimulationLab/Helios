@@ -230,13 +230,22 @@ enum BudState{
  */
 std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
 
+struct VegetativeBud{
+
+    helios::vec3 base_position;
+    std::string shoot_type_label;
+    BudState state;
+    uint shoot_ID = -1;
+
+};
+
 struct PhytomerParameters{
 private:
 
     struct InternodeParameters{
         RandomParameter_float pitch;
-        float radius;
         RandomParameter_float length;
+        float radius;
         uint petioles_per_internode;
         helios::RGBcolor color;
         uint length_segments;
@@ -244,9 +253,9 @@ private:
         InternodeParameters& operator=(const InternodeParameters &a){
             this->pitch = a.pitch;
             this->pitch.resample();
-            this->radius = a.radius;
             this->length = a.length;
             this->length.resample();
+            this->radius = a.radius;
             this->petioles_per_internode = a.petioles_per_internode;
             this->color = a.color;
             this->length_segments = a.length_segments;
@@ -356,7 +365,7 @@ protected:
 //    bool is_initialized = false;
 //    helios::vec3 internode_base_position;
 //    float internode_radius;
-//    float internode_length;
+    float internode_length_max;
 
 public:
 
@@ -378,6 +387,7 @@ public:
     PhytomerParameters( const PhytomerParameters& parameters_copy );
 
     friend class PlantArchitecture;
+    friend class Phytomer;
     friend class Shoot;
 
 };
@@ -422,14 +432,12 @@ struct ShootParameters{
     RandomParameter_float child_internode_length_min;
     RandomParameter_float child_internode_length_decay_rate;
 
+    RandomParameter_float base_roll;
+
     bool flowers_require_dormancy;
     bool growth_requires_dormancy;
 
     void defineChildShootTypes( const std::vector<std::string> &child_shoot_type_labels, const std::vector<float> &child_shoot_type_probabilities );
-
-    //\todo These should be private
-    std::vector<std::string> child_shoot_type_labels;
-    std::vector<float> child_shoot_type_probabilities;
 
     ShootParameters& operator=(const ShootParameters &a) {
         this->phytomer_parameters = a.phytomer_parameters;
@@ -461,6 +469,8 @@ struct ShootParameters{
         this->child_internode_length_min.resample();
         this->child_internode_length_decay_rate = a.child_internode_length_decay_rate;
         this->child_internode_length_decay_rate.resample();
+        this->base_roll = a.base_roll;
+        this->base_roll.resample();
         this->flowers_require_dormancy = a.flowers_require_dormancy;
         this->growth_requires_dormancy = a.growth_requires_dormancy;
         this->child_shoot_type_labels = a.child_shoot_type_labels;
@@ -468,8 +478,15 @@ struct ShootParameters{
         return *this;
     }
 
+    friend class PlantArchitecture;
+    friend class Shoot;
+
 private:
 
+protected:
+
+    std::vector<std::string> child_shoot_type_labels;
+    std::vector<float> child_shoot_type_probabilities;
 
 };
 
@@ -545,6 +562,8 @@ public:
     float current_internode_scale_factor = 1;
     float current_leaf_scale_factor = 1;
     float current_inflorescence_scale_factor = 1;
+
+    std::vector<VegetativeBud> vegetative_buds;
 
     BudState flower_bud_state = BUD_DORMANT;
     BudState vegetative_bud_state = BUD_DORMANT;
@@ -711,8 +730,6 @@ public:
      */
     uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node, uint current_node_number, const std::string &shoot_type_label);
 
-    bool sampleChildShootType( uint plantID, uint shootID, std::string &child_shoot_type_label ) const;
-
     //! Add a new phytomer at the terminal bud of a shoot.
     int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
@@ -782,6 +799,8 @@ private:
     void validateShootTypes( ShootParameters &shoot_parameters ) const;
 
     void accumulateShootPhotosynthesis( float dt );
+
+    bool sampleChildShootType( uint plantID, uint shootID, std::string &child_shoot_type_label ) const;
 
 };
 
