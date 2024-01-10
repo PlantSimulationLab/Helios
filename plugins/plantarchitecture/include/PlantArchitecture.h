@@ -773,6 +773,12 @@ public:
 
     std::vector<uint> getAllPlantUUIDs(uint PlantID) const;
 
+    std::vector<uint> getPlantInternodeObjectIDs(uint plantID) const;
+
+    std::vector<uint> getPlantPetioleObjectIDs(uint plantID) const;
+
+    std::vector<uint> getPlantLeafObjectIDs(uint plantID) const;
+
     std::string getLSystemsString(uint plantID) const;
 
 

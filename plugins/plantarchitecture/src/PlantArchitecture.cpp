@@ -291,6 +291,11 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const helios::vec3 inte
 
     shoot_tree_ptr->at(ID)->phytomers.push_back(phytomer);
 
+    phytomer->age = 0;
+    context_ptr->setObjectData(phytomer->internode_objIDs, "age", phytomer->age);
+    context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
+    context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
+
     return (int)phytomers.size()-1;
 
 }
@@ -1632,6 +1637,65 @@ std::vector<uint> PlantArchitecture::getAllPlantUUIDs(uint plantID) const{
     return context_ptr->getObjectPrimitiveUUIDs(getAllPlantObjectIDs(plantID));
 }
 
+std::vector<uint> PlantArchitecture::getPlantInternodeObjectIDs(uint plantID) const{
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantInternodeObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::vector<uint> objIDs;
+
+    auto &shoot_tree = plant_instances.at(plantID).shoot_tree;
+
+    for( auto &shoot : shoot_tree ){
+        for( auto &phytomer : shoot->phytomers ){
+            objIDs.insert(objIDs.end(), phytomer->internode_objIDs.begin(), phytomer->internode_objIDs.end() );
+        }
+    }
+
+    return objIDs;
+
+}
+
+std::vector<uint> PlantArchitecture::getPlantPetioleObjectIDs(uint plantID) const{
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantPetioleObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::vector<uint> objIDs;
+
+    auto &shoot_tree = plant_instances.at(plantID).shoot_tree;
+
+    for( auto &shoot : shoot_tree ){
+        for( auto &phytomer : shoot->phytomers ){
+            for( auto &petiole : phytomer->petiole_objIDs ){
+                objIDs.insert(objIDs.end(), petiole.begin(), petiole.end() );
+            }
+        }
+    }
+
+    return objIDs;
+
+}
+
+std::vector<uint> PlantArchitecture::getPlantLeafObjectIDs(uint plantID) const{
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantLeafObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::vector<uint> objIDs;
+
+    auto &shoot_tree = plant_instances.at(plantID).shoot_tree;
+
+    for( auto &shoot : shoot_tree ){
+        for( auto &phytomer : shoot->phytomers ){
+            objIDs.insert(objIDs.end(), phytomer->leaf_objIDs.begin(), phytomer->leaf_objIDs.end() );
+        }
+    }
+
+    return objIDs;
+
+}
+
 PhytomerParameters PlantArchitecture::getPhytomerParametersFromLibrary(const std::string &phytomer_label ){
 
     PhytomerParameters phytomer_parameters_current(generator);
@@ -1970,6 +2034,10 @@ void PlantArchitecture::advanceTime( float dt ) {
                 }
 
                 phytomer->age += dt;
+
+                context_ptr->setObjectData(phytomer->internode_objIDs, "age", phytomer->age);
+                context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
+                context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
 
                 node_number++;
             }
