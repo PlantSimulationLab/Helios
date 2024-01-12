@@ -421,13 +421,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, ShootParameters &parent_sho
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, petiole_rotation_axis, -0.5f*internode_pitch );
         }
 
-        //yaw rotation for shoot base rotation
-//        if( shoot_base_rotation.yaw!=0 ) {
-////            std::cout << "base yaw: " << rad2deg(shoot_base_rotation.yaw) << std::endl;
-////            internode_axis = rotatePointAboutLine(internode_axis, nullorigin, parent_internode_axis,shoot_base_rotation.yaw);
-////            shoot_bending_axis = rotatePointAboutLine(shoot_bending_axis, nullorigin, parent_internode_axis,shoot_base_rotation.yaw);
-            petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, nullorigin, internode_axis,0.5*M_PI+parent_shoot_parameters.base_roll.val());
-//        }
+        //roll rotation for shoot base rotation
+        petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, nullorigin, internode_axis,0.5f*M_PI+parent_shoot_parameters.base_roll.val()+shoot_base_rotation.roll);
 
     }else {
 
