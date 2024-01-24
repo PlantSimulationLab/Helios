@@ -1,6 +1,6 @@
 /** \file "VoxelIntersection.cpp" Primary source file for Primitive-Voxel Intersection plug-in.
 
-    Copyright (C) 2016-2023 Brian Bailey, Eric Kent
+    Copyright (C) 2016-2024 Brian Bailey, Eric Kent
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

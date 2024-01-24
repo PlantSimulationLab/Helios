@@ -1,6 +1,6 @@
 /** \file "global.h" Header file for all global function/object definitions.
 
-    Copyright (C) 2016-2023 Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -559,9 +559,9 @@ void wait( float seconds );
 //! Function to write a PNG image based on pixel data
 /**
  * \param[in] "filename" Name of the PNG image file
- * \param[out] "width" Image width in pixels
- * \param[out] "height" Image height in pixels
- * \param[out] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
+ * \param[in] "width" Image width in pixels
+ * \param[in] "height" Image height in pixels
+ * \param[in] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
 */
 void writePNG( const std::string &filename, uint width, uint height, const std::vector<helios::RGBAcolor> &pixel_data );
 
@@ -578,11 +578,11 @@ void writePNG( const std::string &filename, uint width, uint height, const std::
 //! Function to write a JPEG image based on pixel data
 /**
  * \param[in] "filename" Name of the JPEG image file
- * \param[out] "width" Image width in pixels
- * \param[out] "height" Image height in pixels
- * \param[out] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
+ * \param[in] "width" Image width in pixels
+ * \param[in] "height" Image height in pixels
+ * \param[in] "pixel_data" Colors at each pixel (index at pixel_data[row*width+column])
 */
-    void writeJPEG( const std::string &filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data );
+ void writeJPEG( const std::string &filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data );
 
     //! Function to flatten a 2D int vector into a 1D vector
     std::vector<int> flatten( const std::vector<std::vector<int> > &vec );

@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.6
+/*! \mainpage Helios Documentation v1.3.7
 
   <p> <br> </p>
 
@@ -1576,10 +1576,10 @@ $ git pull
   4. (optional) The format of the date string used to specify date values (e.g., 'YYYYMMDD', 'MMDDYYYY'; month and day should always be two values, and year should be four values). This is not used if dates are specified using the year and DOY. The default format is 'YYYYMMDD'.
   5. (optional) Number of header lines in the file. By default, headerlines=0.
 
-  There is a special shortcut for reading <a href="https://cimis.water.ca.gov">CIMIS weather station</a> files. To read these files, simply specify the second argument as a vector of length 1 containing the string 'CIMIS' (e.g., {'CIMIS'}), which will automatically set column labels as:
-  '{"", "", "", "date", "hour", "DOY", "ETo", "", "precipitation", "", "net_radiation", "", "vapor_pressure", "", "air_temperature", "", "air_humidity", "", "dew_point", "", "wind_speed", "", "wind_direction", "", "soil_temperature", ""}'
+  There is a special shortcut for reading <a href="https://cimis.water.ca.gov">CIMIS weather station</a> files. To read these files, simply specify the second argument as a vector of length 1 containing the string "CIMIS" (e.g., {"CIMIS"}), which will automatically set column labels as:
+  '{"", "", "", "date", "hour", "DOY", "ETo", "", "precipitation", "", "net_radiation", "", "vapor_pressure", "", "air_temperature", "", "air_humidity", "", "dew_point", "", "wind_speed", "", "wind_direction", "", "soil_temperature", ""}'. You can specify any delimiter in this case - it will be overridden to be comma delimited.
 
-  A code example is given below.
+  A code example for generic weather data is given below.
 
   ~~~~~~{.cpp}
    #include "Context.h"

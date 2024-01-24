@@ -35,5 +35,6 @@ var searchData=
   ['doesprimitivedataexist_32',['doesPrimitiveDataExist',['../classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b',1,'helios::Context']]],
   ['doesprimitiveexist_33',['doesPrimitiveExist',['../classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66',1,'helios::Context::doesPrimitiveExist(uint UUID) const'],['../classhelios_1_1_context.html#a0c478e8ce47bfad4db16829f76305946',1,'helios::Context::doesPrimitiveExist(const std::vector&lt; uint &gt; &amp;UUIDs) const']]],
   ['doestimeseriesvariableexist_34',['doesTimeseriesVariableExist',['../group__timeseries.html#ga8beaa8454ad248064b74698f7f0534a2',1,'helios::Context']]],
-  ['dummymodel_35',['DummyModel',['../class_dummy_model.html#ae48cd297d1bf8b94c296218e767b9f70',1,'DummyModel']]]
+  ['dummymodel_35',['DummyModel',['../class_dummy_model.html#ae48cd297d1bf8b94c296218e767b9f70',1,'DummyModel']]],
+  ['duplicateprimitivedata_36',['duplicatePrimitiveData',['../classhelios_1_1_context.html#a3796eae362aec38408e40a3a83b3d8a4',1,'helios::Context']]]
 ];

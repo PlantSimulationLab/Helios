@@ -1,6 +1,6 @@
 /** \file "RadiationModel.cpp" Primary source file for radiation transport model.
 
-    Copyright (C) 2016-2023  Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -692,18 +692,154 @@ float RadiationModel::integrateSpectrum( const std::vector<helios::vec2> &object
 
 }
 
+void RadiationModel::scaleSpectrum( const std::string &existing_global_data_label, const std::string &new_global_data_label, float scale_factor ) const{
+
+    if( !context->doesGlobalDataExist( existing_global_data_label.c_str() ) ){
+        helios_runtime_error("ERROR (RadiationModel::scaleSpectrum): global data for spectrum " + existing_global_data_label + " does not exist");
+    }else if( context->getGlobalDataType( existing_global_data_label.c_str() ) != HELIOS_TYPE_VEC2 ){
+        helios_runtime_error("ERROR (RadiationModel::scaleSpectrum): global data for spectrum " + existing_global_data_label + " must have type helios::vec2");
+    }
+
+    std::vector<vec2> spectrum;
+    context->getGlobalData( existing_global_data_label.c_str(), spectrum );
+
+    if( spectrum.empty() ){
+        return;
+    }
+
+    for( vec2 &s : spectrum ){
+        s.y *= scale_factor;
+    }
+
+    context->setGlobalData( new_global_data_label.c_str(), HELIOS_TYPE_VEC2, spectrum.size(), &spectrum.at(0) );
+
+}
+
+void RadiationModel::scaleSpectrumRandomly( const std::string &existing_global_data_label, const std::string &new_global_data_label, float minimum_scale_factor, float maximum_scale_factor ) const{
+
+    scaleSpectrum( existing_global_data_label, new_global_data_label, context->randu(minimum_scale_factor,maximum_scale_factor) );
+
+}
+
+
+void RadiationModel::blendSpectra( const std::string &new_spectrum_label, const std::vector<std::string> &spectrum_labels, const std::vector<float> &weights ) const{
+
+    if( spectrum_labels.size() != weights.size() ){
+        helios_runtime_error("ERROR (RadiationModel::blendSpectra): number of spectra and weights must be equal");
+    }else if( sum(weights)!=1.f ){
+        helios_runtime_error("ERROR (RadiationModel::blendSpectra): weights must sum to 1");
+    }
+
+    std::vector<vec2> new_spectrum;
+    uint spectrum_size = 0;
+
+    std::vector<std::vector<vec2> > spectrum(spectrum_labels.size());
+
+    uint lambda_start=0;
+    uint lambda_end=0;
+    for( uint i=0; i<spectrum_labels.size(); i++ ) {
+
+        if (!context->doesGlobalDataExist(spectrum_labels.at(i).c_str())) {
+            helios_runtime_error("ERROR (RadiationModel::blendSpectra): global data for spectrum " + spectrum_labels.at(i) + " does not exist");
+        } else if (context->getGlobalDataType(spectrum_labels.at(i).c_str()) != HELIOS_TYPE_VEC2) {
+            helios_runtime_error("ERROR (RadiationModel::blendSpectra): global data for spectrum " + spectrum_labels.at(i) + " must have type helios::vec2");
+        }
+
+
+        context->getGlobalData(spectrum_labels.at(i).c_str(), spectrum.at(i));
+
+        if( i==0 ) {
+            lambda_start = spectrum.at(i).front().x;
+            lambda_end = spectrum.at(i).back().x;
+        }else{
+            if( spectrum.at(i).front().x > lambda_start ){
+                lambda_start = spectrum.at(i).front().x;
+            }
+            if( spectrum.at(i).back().x < lambda_end ){
+                lambda_end = spectrum.at(i).back().x;
+            }
+        }
+
+    }
+
+    spectrum_size = lambda_end-lambda_start+1;
+    new_spectrum.resize(spectrum_size );
+    for( uint j=0; j<spectrum_size; j++ ){
+        new_spectrum.at(j) = make_vec2(lambda_start+j,0);
+    }
+
+    //trim front
+    for( uint i=0; i<spectrum_labels.size(); i++ ) {
+        for (uint j = 0; j < spectrum.at(i).size(); j++) {
+
+            if (spectrum.at(i).at(j).x >= lambda_start) {
+                if (j > 0) {
+                    spectrum.at(i).erase(spectrum.at(i).begin(), spectrum.at(i).begin() + j);
+                }
+                break;
+            }
+
+        }
+    }
+
+    //trim back
+    for( uint i=0; i<spectrum_labels.size(); i++ ) {
+        for (int j = spectrum.at(i).size()-1; j <= 0; j--) {
+
+            if (spectrum.at(i).at(j).x <= lambda_end) {
+                if (j < spectrum.at(i).size()-1) {
+                    spectrum.at(i).erase(spectrum.at(i).begin()+j+1, spectrum.at(i).end());
+                }
+                break;
+            }
+
+        }
+    }
+
+    for( uint i=0; i<spectrum_labels.size(); i++ ) {
+        for (uint j = 0; j < spectrum_size; j++) {
+            assert( new_spectrum.at(j).x == spectrum.at(i).at(j).x );
+            new_spectrum.at(j).y += weights.at(i)*spectrum.at(i).at(j).y;
+        }
+
+    }
+
+    context->setGlobalData( new_spectrum_label.c_str(), HELIOS_TYPE_VEC2, new_spectrum.size(), &new_spectrum.front() );
+
+}
+
+void RadiationModel::blendSpectraRandomly( const std::string &new_spectrum_label, const std::vector<std::string> &spectrum_labels ) const{
+
+    std::vector<float> weights;
+    weights.resize(spectrum_labels.size());
+    for( uint i=0; i<spectrum_labels.size(); i++ ){
+        weights.at(i) = context->randu();
+    }
+    float sum_weights = sum(weights);
+    for( uint i=0; i<spectrum_labels.size(); i++ ){
+        weights.at(i) /= sum_weights;
+    }
+
+    blendSpectra( new_spectrum_label, spectrum_labels, weights );
+
+}
+
 void RadiationModel::setSourcePosition( uint source_ID, const vec3 &position ){
 
     if( source_ID >= radiation_sources.size() ){
         helios_runtime_error("ERROR (RadiationModel::setSourcePosition): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources.");
     }
 
-    if( radiation_sources.at(source_ID).source_type == RADIATION_SOURCE_TYPE_SPHERE ) {
+    if( radiation_sources.at(source_ID).source_type == RADIATION_SOURCE_TYPE_COLLIMATED ) {
+        radiation_sources.at(source_ID).source_position = position / position.magnitude();
+    }else{
         radiation_sources.at(source_ID).source_position = position * radiation_sources.at(source_ID).source_position_scaling_factor;
-    }else {
-        radiation_sources.at(source_ID).source_position = position/position.magnitude();
     }
 
+}
+
+void RadiationModel::setSourcePosition( uint source_ID, const SphericalCoord &position ) {
+    setSourcePosition( source_ID, sphere2cart(position) );
 }
 
 helios::vec3 RadiationModel::getSourcePosition( uint source_ID )const {

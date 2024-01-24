@@ -1,6 +1,6 @@
 /** \file "LeafOptics.h" Primary header file for PROSPECT leaf optics model.
 
-    Copyright (C) 2016-2023  Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -45,17 +45,30 @@ struct LeafOpticsProperties{
 
 class LeafOptics{
 public:
-    LeafOptics( helios::Context* a_context );
+
     //! Constructor
+    LeafOptics( helios::Context* a_context );
 
-
-    //! Run the LeafOptics model for specified primitives.
+    //! Self-test
     /**
-      * \param[in] UUIDs: UUIDs for primitives that should be included in LeafOptics calculations.
+     * \return 0 if test was successful, 1 if test failed
+     */
+    static int selfTest();
+
+    //! Run the LeafOptics model to generate reflectivity and transmissivity spectra, create associated global data, and assign to specified primitives.
+    /**
+      * \param[in] UUIDs: UUIDs for primitives that will be assigned the generated reflectivity and transmissivity spectra.
       * \param[in] leafproperties: LeafOptics properties.
-      * \param[in] label: label of spectra (e.g., chl_20).
+      * \param[in] label: label of spectra that will be created. This label will be appended to "leaf_reflectivity_" and "leaf_transmissivity_" (e.g., "leaf_reflectivity_bean" if the label is "bean").
      */
     void run(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties, const std::string &label);
+
+    //! Run the LeafOptics model to generate reflectivity and transmissivity spectra and create associated global data
+    /**
+      * \param[in] leafproperties: LeafOptics properties.
+      * \param[in] label: label of spectra that will be created. This label will be appended to "leaf_reflectivity_" and "leaf_transmissivity_" (e.g., "leaf_reflectivity_bean" if the label is "bean").
+     */
+    void run(const LeafOpticsProperties &leafproperties, const std::string &label);
 
     //! LeafOptics model kernel
     /**

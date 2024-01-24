@@ -1,6 +1,6 @@
 /** \file "Context.cpp" Context declarations.
 
-    Copyright (C) 2016-2023 Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -54,6 +54,15 @@ void Context::addTexture( const char* texture_file ){
     if( textures.find(texture_file)==textures.end() ){//texture has not already been added
         Texture text( texture_file );
         textures[ texture_file ] = text;
+    }
+}
+
+bool Context::doesTextureFileExist(const char* texture_file ) const{
+    if (FILE *file = fopen(texture_file, "r")) {
+        fclose(file);
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -1180,12 +1189,14 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texture_file;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addPatch): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addPatch): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texture_file) ){
+        helios_runtime_error("ERROR (Context::addPatch): Texture file " + std::string(texture_file) + " does not exist.");
+    }
 
     addTexture( texture_file );
 
@@ -1215,12 +1226,14 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file, const helios::vec2& uv_center, const helios::vec2& uv_size ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texture_file;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addPatch): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addPatch): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texture_file) ){
+        helios_runtime_error("ERROR (Context::addPatch): Texture file " + std::string(texture_file) + " does not exist.");
+    }
 
     if( size.x==0 || size.y==0 ){
         helios_runtime_error("ERROR (addPatch): Size of patch must be greater than 0.");
@@ -1287,12 +1300,14 @@ uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3&
 
 uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texture_file, const helios::vec2& uv0, const helios::vec2& uv1, const helios::vec2& uv2 ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texture_file;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addTriangle): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addTriangle): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texture_file) ){
+        helios_runtime_error("ERROR (Context::addTriangle): Texture file " + std::string(texture_file) + " does not exist.");
+    }
 
     addTexture( texture_file );
 
@@ -1824,7 +1839,7 @@ float Context::queryTimeseriesData(const char* label, const Date &date, const Ti
 float Context::queryTimeseriesData( const char* label, const uint index ) const{
 
     if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
-        std::cout << "WARNING (getTimeseriesData): Timeseries variable " << label << " does not exist." << std::endl;
+        helios_runtime_error("ERROR( Context::getTimeseriesData): Timeseries variable " + std::string(label) + " does not exist.");
     }
 
     return timeseries_data.at(label).at(index);
@@ -1834,7 +1849,7 @@ float Context::queryTimeseriesData( const char* label, const uint index ) const{
 Time Context::queryTimeseriesTime( const char* label, const uint index ) const{
 
     if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
-        std::cout << "WARNING (getTimeseriesData): Timeseries variable " << label << " does not exist." << std::endl;
+        helios_runtime_error("ERROR( Context::getTimeseriesTime): Timeseries variable " + std::string(label) + " does not exist.");
     }
 
     double dateval = timeseries_datevalue.at(label).at(index);
@@ -1870,7 +1885,7 @@ Time Context::queryTimeseriesTime( const char* label, const uint index ) const{
 Date Context::queryTimeseriesDate( const char* label, const uint index ) const{
 
     if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
-        helios_runtime_error("ERROR (Context::queryTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
+        helios_runtime_error("ERROR( Context::getTimeseriesDate): Timeseries variable " + std::string(label) + " does not exist.");
     }
 
     double dateval = timeseries_datevalue.at(label).at(index);
@@ -1889,13 +1904,14 @@ Date Context::queryTimeseriesDate( const char* label, const uint index ) const{
 
 uint Context::getTimeseriesLength( const char* label ) const{
 
+    uint size = 0;
     if( timeseries_data.find(label) == timeseries_data.end() ){ //does not exist
         helios_runtime_error("ERROR (Context::getTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
-        return 0;
     }else{
-        return timeseries_data.at(label).size();
+        size = timeseries_data.at(label).size();
     }
 
+    return size;
 }
 
 bool Context::doesTimeseriesVariableExist( const char* label ) const{
@@ -3994,12 +4010,14 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 
 uint Context::addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texturefile;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addTileObject): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addTileObject): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texturefile) ){
+        helios_runtime_error("ERROR (Context::addTileObject): Texture file " + std::string(texturefile) + " does not exist.");
+    }
 
     if( size.x==0 || size.y==0 ){
         helios_runtime_error("ERROR (addTileObject): Size of tile must be greater than 0.");
@@ -4230,12 +4248,14 @@ uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const st
 
 uint Context::addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texturefile;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addTubeObject): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addTubeObject): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texturefile) ){
+        helios_runtime_error("ERROR (Context::addTubeObject): Texture file " + std::string(texturefile) + " does not exist.");
+    }
 
     const uint node_count = nodes.size();
 
@@ -4501,12 +4521,14 @@ uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &sub
 
 uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, const char* texturefile, bool reverse_normals ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texturefile;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addBoxObject): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addBoxObject): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texturefile) ){
+        helios_runtime_error("ERROR (Context::addBoxObject): Texture file " + std::string(texturefile) + " does not exist.");
+    }
 
     std::vector<uint> UUID;
 
@@ -4706,12 +4728,14 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
 
 uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texture_file;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addDiskObject): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addDiskObject): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texture_file) ){
+        helios_runtime_error("ERROR (Context::addDiskObject): Texture file " + std::string(texture_file) + " does not exist.");
+    }
 
     std::vector<uint> UUID;
 
@@ -4905,12 +4929,14 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
 
 uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const char* texturefile ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texturefile;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addConeObject): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addConeObject): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texturefile) ){
+        helios_runtime_error("ERROR (Context::addConeObject): Texture file " + std::string(texturefile) + " does not exist.");
+    }
 
     std::vector<helios::vec3> nodes{node0, node1};
     std::vector<float> radii{radius0, radius1};
@@ -5090,12 +5116,14 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
 
 std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radius, const char* texturefile ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texturefile;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addSphereObject): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addSphereObject): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texturefile) ){
+        helios_runtime_error("ERROR (Context::addSphere): Texture file " + std::string(texturefile) + " does not exist.");
+    }
 
     std::vector<uint> UUID;
 
@@ -5240,12 +5268,14 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
 std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texturefile;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addTile): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addTile): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texturefile) ){
+        helios_runtime_error("ERROR (Context::addTile): Texture file " + std::string(texturefile) + " does not exist.");
+    }
 
     std::vector<uint> UUID;
 
@@ -5432,12 +5462,14 @@ std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, c
 
 std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texturefile;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addTube): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addTube): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texturefile) ){
+        helios_runtime_error("ERROR (Context::addTube): Texture file " + std::string(texturefile) + " does not exist.");
+    }
 
     const uint node_count = nodes.size();
 
@@ -5661,12 +5693,14 @@ std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const in
 
 std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const char* texturefile, bool reverse_normals ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texturefile;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addBox): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addBox): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texturefile) ){
+        helios_runtime_error("ERROR (Context::addBox): Texture file " + std::string(texturefile) + " does not exist.");
+    }
 
     std::vector<uint> UUID;
 
@@ -5823,12 +5857,14 @@ std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const 
 
 std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char* texture_file ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texture_file;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addDisk): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texture_file;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addDisk): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texture_file) ){
+        helios_runtime_error("ERROR (Context::addDisk): Texture file " + std::string(texture_file) + " does not exist.");
+    }
 
     std::vector<uint> UUID;
     UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
@@ -5963,12 +5999,14 @@ std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &no
 
 std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const char* texturefile ){
 
-  //texture must have type PNG or JPEG
-  std::string fn = texturefile;
-  std::string ext = getFileExtension(fn);
-  if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-    helios_runtime_error("ERROR (Context::addCone): Texture file " + fn + " is not PNG or JPEG format.");
-  }
+    //texture must have type PNG or JPEG
+    std::string fn = texturefile;
+    std::string ext = getFileExtension(fn);
+    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+        helios_runtime_error("ERROR (Context::addCone): Texture file " + fn + " is not PNG or JPEG format.");
+    }else if( !doesTextureFileExist(texturefile) ){
+        helios_runtime_error("ERROR (Context::addCone): Texture file " + std::string(texturefile) + " does not exist.");
+    }
 
     std::vector<helios::vec3> nodes{node0, node1};
     std::vector<float> radii{radius0, radius1};
@@ -7612,6 +7650,58 @@ helios::vec3 Context::getConeObjectAxisUnitVector(uint &ObjID) const {
 
 float Context::getConeObjectLength(uint &ObjID) const {
     return getConeObjectPointer_private(ObjID)->getLength();
+}
+
+void Context::duplicatePrimitiveData( const char* existing_data_label, const char* copy_data_label ){
+
+    for( auto primitive : primitives){
+        if( primitive.second->doesPrimitiveDataExist(existing_data_label) ){
+            HeliosDataType type = primitive.second->getPrimitiveDataType(existing_data_label);
+            if( type==HELIOS_TYPE_FLOAT ){
+                std::vector<float> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }else if( type==HELIOS_TYPE_DOUBLE ) {
+                std::vector<double> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }else if( type==HELIOS_TYPE_INT ) {
+                std::vector<int> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }else if( type==HELIOS_TYPE_UINT ) {
+                std::vector<uint> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }else if( type==HELIOS_TYPE_VEC2 ) {
+                std::vector<vec2> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }else if( type==HELIOS_TYPE_VEC3 ) {
+                std::vector<vec3> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }else if( type==HELIOS_TYPE_VEC4 ) {
+                std::vector<vec4> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }else if( type==HELIOS_TYPE_INT2 ) {
+                std::vector<int2> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }else if( type==HELIOS_TYPE_INT3 ) {
+                std::vector<int3> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }else if( type==HELIOS_TYPE_STRING ){
+                std::vector<std::string> data;
+                primitive.second->getPrimitiveData(existing_data_label, data);
+                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+            }
+        }
+    }
+
+
 }
 
 void Context::calculatePrimitiveDataMean( const std::vector<uint> &UUIDs, const std::string &label, float &mean ) const{

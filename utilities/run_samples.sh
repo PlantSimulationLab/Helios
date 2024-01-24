@@ -1,10 +1,10 @@
 #!/bin/bash
 
-SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
-SAMPLES_NOGPU=("context_selftest" "visualizer_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
+SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
+SAMPLES_NOGPU=("context_selftest" "visualizer_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
 
-TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance"
-TEST_PLUGINS_NOGPU="photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance"
+TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance"
+TEST_PLUGINS_NOGPU="leafoptics photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance"
 
 cd ../samples || exit 1
 

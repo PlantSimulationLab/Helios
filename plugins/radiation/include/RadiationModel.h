@@ -1,6 +1,6 @@
 /** \file "RadiationModel.h" Primary header file for radiation transport model.
     
-    Copyright (C) 2016-2023  Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -497,12 +497,19 @@ public:
      */
     float getSourceFlux(uint source_ID, const std::string &band_label )const;
 
-    //! Set the position/direction of radiation source
+    //! Set the position/direction of radiation source based on a Cartesian vector
     /**
      * \param[in] "ID" Identifier of radiation source
      * \param[in] "position" If point source - (x,y,z) position of the radiation source. If collimated source - (nx,ny,nz) unit vector pointing toward the source.
      */
     void setSourcePosition(uint source_ID, const helios::vec3 &position );
+
+    //! Set the position/direction of radiation source based on a spherical vector
+    /**
+     * \param[in] "ID" Identifier of radiation source
+     * \param[in] "position" If point source - (radius,elevation,azimuth) position of the radiation source. If collimated source - (elevation,azimuth) vector pointing toward the source (radius is ignored).
+     */
+    void setSourcePosition(uint source_ID, const helios::SphericalCoord &position );
 
     //! Get the position/direction of radiation source
     /**
@@ -581,6 +588,40 @@ public:
      * \return Integral of product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths
      */
     float integrateSpectrum( const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum ) const;
+
+    //! Scale an entire spectrum by a constant factor.
+    /**
+     * \param[in] "existing_global_data_label" Label of global data containing spectral data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity/reflectivity/transmissivity (.y).
+     * \param[in] "new_global_data_label" Label of new global data to be created containing scaled spectral data (type of vec2).
+     * \param[in] "scale_factor" Scaling factor.
+    */
+    void scaleSpectrum( const std::string &existing_global_data_label, const std::string &new_global_data_label, float scale_factor ) const;
+
+    //! Scale an entire spectrum by a random factor following a uniform distribution.
+    /**
+     * \param[in] "existing_global_data_label" Label of global data containing spectral data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity/reflectivity/transmissivity (.y).
+     * \param[in] "new_global_data_label" Label of new global data to be created containing scaled spectral data (type of vec2).
+     * \param[in] "minimum_scale_factor" Scaling factor minimum value in uniform distribution.
+     * \param[in] "maximum_scale_factor" Scaling factor maximum value in uniform distribution.
+    */
+    void scaleSpectrumRandomly( const std::string &existing_global_data_label, const std::string &new_global_data_label, float minimum_scale_factor, float maximum_scale_factor ) const;
+
+    //! Blend one or more spectra together into a new spectrum
+    /**
+     * \param[in] "new_spectrum_label" Label for new spectrum global data, which is created by blending the input spectra.
+     * \param[in] "spectrum_labels" Vector of global data labels for spectra to be blended.
+     * \param[in] "weights" Vector of weights for each spectrum to be blended. The weights must sum to 1.0.
+     * \note The input spectra can have different sizes, but must have matching wavelength values across all spectra. The output spectra will be the size of the overlapping portion of wavelengths.
+    */
+    void blendSpectra( const std::string &new_spectrum_label, const std::vector<std::string> &spectrum_labels, const std::vector<float> &weights ) const;
+
+    //! Blend one or more spectra together into a new spectrum, with random weights assigned to each input spectrum
+    /**
+     * \param[in] "new_spectrum_label" Label for new spectrum global data, which is created by blending the input spectra.
+     * \param[in] "spectrum_labels" Vector of global data labels for spectra to be blended.
+     * \note The input spectra can have different sizes, but must have matching wavelength values across all spectra. The output spectra will be the size of the overlapping portion of wavelengths.
+    */
+    void blendSpectraRandomly( const std::string &new_spectrum_label, const std::vector<std::string> &spectrum_labels ) const;
 
     //! Set the number of scattering iterations for a certain band
     /**
