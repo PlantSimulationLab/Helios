@@ -1427,6 +1427,40 @@ void PlantArchitecture::setPhytomerInternodeScale(uint plantID, uint shootID, ui
     for( int node=node_number+1; node<parent_shoot->phytomers.size(); node++ ){
         vec3 upstream_base = parent_shoot->phytomers.at(node-1)->internode_vertices.back();
         parent_shoot->phytomers.at(node)->setPhytomerBase(upstream_base);
+
+        if( parent_shoot->childIDs.find(node) != parent_shoot->childIDs.end() ){
+            auto child_shoot = plant_instances.at(plantID).shoot_tree.at(parent_shoot->childIDs.at(node));
+            setShootOrigin(plantID, parent_shoot->childIDs.at(node), upstream_base);
+        }
+
+    }
+
+}
+
+void PlantArchitecture::setShootOrigin(uint plantID, uint shootID, const helios::vec3 &origin){
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::setShootOrigin): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }else if( shootID>=plant_instances.at(plantID).shoot_tree.size() ){
+        helios_runtime_error("ERROR (PlantArchitecture::setShootOrigin): Shoot with ID of " + std::to_string(shootID) + " does not exist.");
+    }
+
+    auto shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
+
+    if( shoot->phytomers.empty() ){
+        return;
+    }
+
+    uint node_count = shoot->phytomers.size();
+
+    vec3 upstream_base = shoot->phytomers.front()->internode_vertices.front();
+    for( int node=0; node<node_count; node++ ) {
+        shoot->phytomers.at(node)->setPhytomerBase(upstream_base);
+        if( shoot->childIDs.find(node) != shoot->childIDs.end() ){
+            auto child_shoot = plant_instances.at(plantID).shoot_tree.at(shoot->childIDs.at(node));
+            setShootOrigin(plantID, shoot->childIDs.at(node), upstream_base);
+        }
+        upstream_base = shoot->phytomers.at(node)->internode_vertices.back();
     }
 
 }
@@ -2134,6 +2168,74 @@ std::string PlantArchitecture::getLSystemsString(uint plantID) const{
     }
 
     return lsystems_string;
+
+}
+
+uint PlantArchitecture::generateFromLSystemsString(const std::string &lsystems_string){
+
+    //check that first characters are 'Internode'
+//    if( lsystems_string.substr(0,9)!="Internode(" ){
+//        helios_runtime_error("ERROR (PlantArchitecture::generateFromLSystemsString): First characters of string must be 'Internode('");
+//    }
+
+
+    PhytomerParameters phytomer_parameters = getPhytomerParametersFromLibrary("almond");
+//    phytomer_parameters.internode.length = 0.05;
+//    phytomer_parameters.internode.pitch = deg2rad(20);
+    phytomer_parameters.leaf.prototype_scale = 0.075;
+
+    ShootParameters shoot_parameters(context_ptr->getRandomGenerator());
+    shoot_parameters.max_nodes = 200;
+//    shoot_parameters.shoot_internode_taper = 0.3;
+    shoot_parameters.bud_break_probability = 0;
+    shoot_parameters.bud_time = 0;
+    shoot_parameters.phyllochron = 0;
+    shoot_parameters.phyllotactic_angle = deg2rad(130);
+
+    uint plantID;
+
+    std::string s = lsystems_string;
+
+    size_t pos = 0;
+    std::string delimiter = "Internode(";
+    bool base_shoot = true;
+    uint baseID;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+
+        size_t pos2 = s.find(")");
+
+        std::string argument = s.substr(pos + delimiter.length(), pos2 - pos - delimiter.length());
+
+        s.erase(0, pos2+1);
+
+        pos = argument.find(",");
+        float internode_length = std::stof(argument.substr(0, pos));
+        argument.erase(0, pos+1);
+        phytomer_parameters.internode.length = internode_length;
+        std::cout << "internode_length: " << internode_length << std::endl;
+
+        pos = argument.find(",");
+        float internode_pitch = std::stof(argument.substr(0, pos));
+        argument.erase(0, pos+1);
+        phytomer_parameters.internode.pitch = deg2rad(internode_pitch);
+        std::cout << "internode_pitch: " << internode_pitch << std::endl;
+
+
+        if( base_shoot ){
+            shoot_parameters.phytomer_parameters = phytomer_parameters;
+            defineShootType("shoot", shoot_parameters);
+
+            plantID = addPlantInstance(nullorigin, 0);
+
+            baseID = addBaseStemShoot(plantID, 1, make_AxisRotation(0,0,0), "shoot");
+            base_shoot = false;
+        }else{
+            addPhytomerToShoot( plantID, baseID, phytomer_parameters, 1, 1 );
+        }
+
+    }
+
+    return plantID;
 
 }
 

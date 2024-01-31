@@ -749,6 +749,8 @@ public:
 
     void setPhytomerFlowerBudState(uint plantID, uint shootID, uint node_number, BudState state );
 
+    void setShootOrigin(uint plantID, uint shootID, const helios::vec3 &origin);
+
     void setPlantBasePosition(uint plantID, const helios::vec3 &base_position);
 
     helios::vec3 getPlantBasePosition(uint plantID) const;
@@ -781,6 +783,7 @@ public:
 
     std::string getLSystemsString(uint plantID) const;
 
+    uint generateFromLSystemsString(const std::string &lsystems_string);
 
     void addAlmondShoot();
 

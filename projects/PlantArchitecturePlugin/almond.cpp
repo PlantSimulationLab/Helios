@@ -246,5 +246,6 @@ void PlantArchitecture::addAlmondTree() {
 
     setPlantPhenologicalThresholds(plant0, assimilate_flowering_threshold, 100, 3, 5, 10);
 
+    setShootOrigin(plant0, uID_trunk, make_vec3(0,0,0.5));
 
 }
