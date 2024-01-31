@@ -1,6 +1,6 @@
 /** \file "CameraCalibration.cpp" Routines for performing synthetic radiation camera calibration.
 
-    Copyright (C) 2016-2023  Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

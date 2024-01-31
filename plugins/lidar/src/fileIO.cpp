@@ -1,6 +1,6 @@
 /** \file "fileIO.cpp" Declarations for LiDAR plug-in related to file input/output.
 
-    Copyright (C) 2016-2023 Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

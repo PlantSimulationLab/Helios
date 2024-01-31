@@ -1,6 +1,6 @@
 /** \file "Context.h" Context header file.
  
- Copyright (C) 2016-2023 Brian Bailey
+ Copyright (C) 2016-2024 Brian Bailey
  
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -1790,6 +1790,8 @@ private:
     std::map<std::string,Texture> textures;
     
     void addTexture( const char* texture_file );
+
+    bool doesTextureFileExist(const char* texture_file ) const;
     
     //----------- GLOBAL DATA -------------//
     
@@ -5550,6 +5552,13 @@ public:
      * \note If standard deviation is specified as negative, the absolute value is used.
      */
     float randn( float mean, float stddev );
+
+    //! Duplicate primitive data to create a copy of the primitive data with a new name/label
+    /**
+     * \param[in] "existing_data_label" Name of existing primitive data to be duplicated
+     * \param[in] "copy_data_label" Name of new primitive data copy
+     */
+    void duplicatePrimitiveData( const char* existing_data_label, const char* copy_data_label );
 
     //! Calculate mean of primitive data values (float) for a subset of primitives
     /**

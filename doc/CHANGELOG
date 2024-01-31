@@ -1557,3 +1557,24 @@ The radiation model has been re-designed, with the following primary additions:
 
 *LiDAR*
 - Triangulation could in rare cases produce triangles with a surface area of NaN, which would cause problems when calculating the area-weighted angle distribution. These triangles are now automatically removed.
+
+[1.3.7] 2024-01-23
+
+* Updated copyrights to 2024 *
+
+*Context*
+- Changed methods Context::setCurrentTimeseriesPoint(), Context::queryTimeseriesData(), Context::queryTimeseriesDate(), and Context::queryTimeseriesTime() to error out if the timeseries data does not exist. Previously, only a warning was issued, which caused a segmentation fault.
+- Added explicit error message to geometry generation functions when the specified texture file dies not exist.
+
+*Radiation*
+- Error corrected in RadiationModel::setSourcePosition() causing source positions to be incorrect for rectangle and disk source types.
+- Added overloaded version of RadiationModel::setSourcePosition() to accept a spherical coordinate instead of Cartesian vec3.
+- Added method to scale a spectrum by a constant factor (see RadiationModel::scaleSpectrum() and RadiationModel::scaleSpectrumRandomly()).
+- Added method to blend multiple spectra together (see RadiationModel::blendSpectra() and RadiationModel::blendSpectraRandomly()).
+- Added additional cowpea spectra to the default spectral library.
+
+*Leaf Optics*
+- The global data labels for generated spectra now appends an underscore between the "leaf_reflectivity_" and "leaf_transmissivity_" and the label.
+- Added LeafOptics::selfTest().
+- Added overloaded version of LeafOptics::run() that generates the spectra, but does not assign to any UUIDs.
+- Fixed an issue where a file was reference from the RadiationModel plug-in, making it so that the LeafOptics plug-in could not be used without the RadiationModel plug-in.

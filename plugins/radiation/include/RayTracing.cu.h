@@ -1,6 +1,6 @@
 /** \file "RayTracing.cu.h" This file contains definitions and helper functions for CUDA/OptiX routines
 
-    Copyright (C) 2016-2023 Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

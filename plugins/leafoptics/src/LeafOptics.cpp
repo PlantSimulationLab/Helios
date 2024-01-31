@@ -1,6 +1,6 @@
-/** \file "LeafOptics.cpp" Routines for performing synthetic radiation camera calibration.
+/** \file "LeafOptics.cpp" Implementation of PROSPECT-PRO leaf optical model.
 
-    Copyright (C) 2016-2023  Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ LeafOptics::LeafOptics( helios::Context* a_context ){
     context = a_context; //just copying the pointer to the context
 
     // Load leaf refraction index and specific absorption coefficients  (400,401,...2500 nm)
-    context->loadXML("plugins/radiation/spectral_data/prospect_spectral_library.xml", true);
+    context->loadXML("plugins/leafoptics/spectral_data/prospect_spectral_library.xml", true);
 
     // Load leaf refraction index -  refractiveindex (n)
     std::vector<helios::vec2> data;
@@ -158,20 +158,46 @@ LeafOptics::LeafOptics( helios::Context* a_context ){
     }
 }
 
-// Loop prospect over a list of UUIDs
+int LeafOptics::selfTest(){
+
+    Context context_test;
+
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    LeafOpticsProperties leafproperties;
+
+    leafoptics.run(leafproperties, "test");
+
+    return 0;
+
+}
+
 void LeafOptics::run(const std::vector<uint> &UUIDs , const LeafOpticsProperties &leafproperties, const std::string &label) {
     std::vector<vec2> reflectivities_fit;
     std::vector<vec2> transmissivities_fit;
     getLeafSpectra(leafproperties, reflectivities_fit, transmissivities_fit);
 
-    std::string leaf_reflectivity_label = "leaf_reflectivity"+label;
-    std::string leaf_transmissivity_label = "leaf_transmissivity"+label;
-    context->setPrimitiveData( UUIDs, "reflectivity_spectrum", leaf_reflectivity_label);
-    context->setPrimitiveData( UUIDs, "transmissivity_spectrum", leaf_transmissivity_label);
+    std::string leaf_reflectivity_label = "leaf_reflectivity_"+label;
+    std::string leaf_transmissivity_label = "leaf_transmissivity_"+label;
     context->setGlobalData(leaf_reflectivity_label.c_str(),HELIOS_TYPE_VEC2,reflectivities_fit.size(),&reflectivities_fit[0]);
     context->setGlobalData(leaf_transmissivity_label.c_str(),HELIOS_TYPE_VEC2,transmissivities_fit.size(),&transmissivities_fit[0]);
 
+    context->setPrimitiveData( UUIDs, "reflectivity_spectrum", leaf_reflectivity_label);
+    context->setPrimitiveData( UUIDs, "transmissivity_spectrum", leaf_transmissivity_label);
     setProperties(UUIDs, leafproperties);
+}
+
+void LeafOptics::run(const LeafOpticsProperties &leafproperties, const std::string &label) {
+    std::vector<vec2> reflectivities_fit;
+    std::vector<vec2> transmissivities_fit;
+    getLeafSpectra(leafproperties, reflectivities_fit, transmissivities_fit);
+
+    std::string leaf_reflectivity_label = "leaf_reflectivity_"+label;
+    std::string leaf_transmissivity_label = "leaf_transmissivity_"+label;
+    context->setGlobalData(leaf_reflectivity_label.c_str(),HELIOS_TYPE_VEC2,reflectivities_fit.size(),&reflectivities_fit[0]);
+    context->setGlobalData(leaf_transmissivity_label.c_str(),HELIOS_TYPE_VEC2,transmissivities_fit.size(),&transmissivities_fit[0]);
+
 }
 
 
@@ -258,7 +284,7 @@ void LeafOptics::getLeafSpectra(const LeafOpticsProperties &leafproperties, std:
     float carbonconstituents = leafproperties.carbonconstituents;
 
     if (protein == 0 && carbonconstituents == 0) {
-        if (drymass == 0) {
+        if (drymass == 0 && message_flag ) {
             std::cerr << "Warning: No leaf mass given" << std::endl;
         }
     }
