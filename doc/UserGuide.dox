@@ -151,6 +151,7 @@ $ git pull
   - \subpage SolarPositionDoc "Solar Position Model: Model for the position of the sun in the sky, as well as models of solar radiation flux and longwave flux from the sky."
   - \subpage VoxelIntersectionDoc "Voxel Intersection: Determine planar primitive elements that lie within voxel primitives."
   - \subpage CanopyGeneratorDoc "Canopy Generator: Simple generation of different type of plant and canopy geometries."
+  - \subpage PlantArchitectureDoc "Plant Architecture: Flexible procedural plant generation with dynamic growth and phenology."
 
 */
 

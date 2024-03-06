@@ -25,10 +25,36 @@
 struct RandomParameter_float {
 public:
 
+    //! Constructor initializing to a constant default value of 0.
+    /**
+     * In order to make this a randomly varying parameter, the initialize() method must be called to set the random number generator.
+     */
     explicit RandomParameter_float(){
-        constval = 1.f;
+        constval = 0.f;
         distribution = "constant";
         generator = nullptr;
+        sampled = false;
+    }
+
+    //! Constructor initializing to a constant value.
+    /**
+     * In order to make this a randomly varying parameter, the initialize() method must be called to set the random number generator.
+     */
+    explicit RandomParameter_float( float val ){
+        constval = val;
+        distribution = "constant";
+        generator = nullptr;
+        sampled = false;
+    }
+
+    //! Constructor initializing the random number generator.
+    /**
+     * \param[in] rand_generator Pointer to a random number generator. Note: it is recommended to use the random number generator from the Context, which can be retrieved using the getContextRandomGenerator() method.
+     */
+    explicit RandomParameter_float( std::minstd_rand0 *rand_generator ){
+        constval = 0.f;
+        distribution = "constant";
+        generator = rand_generator;
         sampled = false;
     }
 
@@ -406,13 +432,15 @@ struct ShootParameters{
 
     RandomParameter_float phyllotactic_angle;
 
-    RandomParameter_float shoot_internode_taper;
+    RandomParameter_float internode_radius_initial;
 
     RandomParameter_float phyllochron; //phytomers/day
     RandomParameter_float elongation_rate; //length/day
     RandomParameter_float girth_growth_rate; //length/day
 
     RandomParameter_float gravitropic_curvature;  //degrees/length
+
+    RandomParameter_float tortuosity; //degrees/length (standard deviation of random curvature perturbation)
 
     // Probability that bud with this shoot type will break and form a new shoot
     float bud_break_probability;
@@ -444,8 +472,8 @@ struct ShootParameters{
         this->max_nodes = a.max_nodes;
         this->phyllotactic_angle = a.phyllotactic_angle;
         this->phyllotactic_angle.resample();
-        this->shoot_internode_taper = a.shoot_internode_taper;
-        this->shoot_internode_taper.resample();
+        this->internode_radius_initial = a.internode_radius_initial;
+        this->internode_radius_initial.resample();
         this->phyllochron = a.phyllochron;
         this->phyllochron.resample();
         this->elongation_rate = a.elongation_rate;
@@ -454,6 +482,8 @@ struct ShootParameters{
         this->girth_growth_rate.resample();
         this->gravitropic_curvature = a.gravitropic_curvature;
         this->gravitropic_curvature.resample();
+        this->tortuosity = a.tortuosity;
+        this->tortuosity.resample();
         this->bud_break_probability = a.bud_break_probability;
         this->flower_probability = a.flower_probability;
         this->fruit_set_probability = a.fruit_set_probability;
@@ -490,10 +520,12 @@ protected:
 
 };
 
+struct Shoot;
+
 struct Phytomer {
 public:
 
-    Phytomer(const PhytomerParameters &params, ShootParameters &parent_shoot_parameters, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
+    Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
              const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr);
 
     helios::vec3 getInternodeAxisVector( float stem_fraction ) const;
@@ -554,6 +586,7 @@ public:
     PhytomerParameters phytomer_parameters;
 
     uint rank;
+    helios::int2 shoot_index; // .x = index of phytomer along shoot, .y = maximum number of phytomers on parent shoot
 
     float age = 0;
     float time_since_dormancy = 0;
@@ -609,6 +642,8 @@ struct Shoot{
     bool meristem_is_alive = true;
 
     float phyllochron_counter = 0;
+
+    float curvature_perturbation = 0;
 
     //map of node number to ID of shoot child
     std::map<int,int> childIDs;
@@ -783,7 +818,7 @@ public:
 
     std::string getLSystemsString(uint plantID) const;
 
-    uint generateFromLSystemsString(const std::string &lsystems_string);
+    uint generateFromLSystemsString(const std::string &lsystems_string, const PhytomerParameters &phytomer_parameters);
 
     void addAlmondShoot();
 
@@ -810,6 +845,8 @@ private:
     void accumulateShootPhotosynthesis( float dt );
 
     bool sampleChildShootType( uint plantID, uint shootID, std::string &child_shoot_type_label ) const;
+
+    void parseLStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, PhytomerParameters &phytomer_parameters, ShootParameters &shoot_parameters);
 
 };
 

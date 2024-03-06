@@ -1,0 +1,129 @@
+/*! \page PlantArchitectureDoc Plant Architecture Model Plugin Documentation
+
+ \tableofcontents
+
+ <table>
+ <tr><th>Dependencies</th><td>None</td></tr>
+ <tr><th>CMakeLists.txt</th><td>set( PLUGINS "plantarchitecture" )</td></tr>
+ <tr><th>Header File</th><td>#include "PlantArchitecture.h"</td></tr>
+ <tr><th>Class</th><td>\ref PlantArchitecture</td></tr>
+ </table>
+ 
+ \section PlantArchConstructor Class Constructor
+ 
+ <table>
+ <tr><th>Constructors</th></tr>
+ <tr><td>\ref PlantArchitecture( helios::Context* )</td></tr>
+ </table>
+ 
+ \section PlantArchVarsAndProps Primitive Data
+ 
+ \subsection PlantArchInputData Input Primitive Data
+
+ <table>
+ <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value</th></tr>
+ </table>
+
+ \subsection PlantArchOutputData Default Output Primitive Data
+
+ <table>
+ <tr><th>Primitive Data Label</th><th>Data Type</th><th>Description</th></tr>
+ <tr><td>rank</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Rank of shoot primitive belongs to.</td></tr>
+ </table>
+
+ \section PlantArchDescription Introduction
+
+ \subsection PlantArchCoord Coordinate System
+
+ The coordinate system of plant organs is defined with respect to it's parent element (i.e., element it originated from), with it's default orientation being aligned with it's parent's axis. It can then be rotated based on angles (always in radians) of 'pitch', 'yaw', and 'roll' (in that order):
+
+ Pitch: rotation angle formed between the axis of the element and it's parent's axis.
+
+ Yaw: rotation angle about the parent's axis
+
+ Roll: rotation angle about the element's own axis
+
+ \image html pitchyawroll_schematic.jpeg
+
+ \subsection PlantArchRandParam Randomization of Parameters
+
+ Nearly all parameters in the architectural model can either be specified as a constant value, or as a random variable following several pre-defined distributions.
+
+ Parameters that can be randomized have type of \ref RandomParameter_float or \ref RandomParameter_int depending on the parameter value type. If the parameters are assigned a constant value, they are set the same as a regular float or int. The \ref val() method is used to get the value of the parameter.
+
+ ~~~~~~
+    // Assign a constant value
+    RandomParameter_float param;
+    param = 5;
+    // Alternative approach
+    RandomParameter_float other_param(5);
+ ~~~~~~
+
+~~~~~~
+    Context context;
+
+    RandomParameter_float param(context.getRandomGenerator());
+    param.uniformDistribution(0,7.5);
+    std::cout << "Random value: " << param.val() << std::endl;
+~~~~~~
+
+ In order to randomize the variable, member methods can be called to set the distribution type and specify the distribution parameters. It is also required to initialize the variable with a random number generator. It is recommended that this be based on the Context's generator to keep everything consistent. Below is an example.
+
+ \subsection PlantArchOrgans Creating Plant Organ Prototypes
+
+
+
+ \section PlantArchPhytomer Defining the Phytomer and its Parameters
+
+ The phytomer is the basic unit of the plant architecture model, and consists of an internode, one or more petioles, leaves, and inflorescence if present.
+
+
+| Parameter | Type | Units | Description |
+| ------| ------ | ------ | ------ |
+| ---- **Internode** ---- ||||
+| pitch | RandomParameter_float | radians | Angle of the phytomer internode with respect to the previous phytomer along the shoot. Setting this >0 creates a zig-zag shoot. |
+| petioles_per_internode | uint | - | Number of petioles emanating from a single internode (e.g., for an 'opposite' growth pattern, = 2) |
+| color | helios::RGBcolor | - | Diffuse color of the internode tube. |
+| length_segments | uint | - | Number of longitudinal segment subdivisions of the internode tube. |
+| radial_subdivisions | uint | - | Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
+| ---- **Petiole** ---- ||||
+| pitch | RandomParameter_float | radians | Angle of the petiole base axis with respect to its parent phytomer axis. |
+| radius | RandomParameter_float | meters | Radius of petiole cross-section. |
+| taper | RandomParameter_float | - | Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip). |
+| length | RandomParameter_float | meters | Length of the petiole tube |
+| curvature | RandomParameter_float | degrees/meter | Curvature angle of the petiole per unit length of petiole. If curvature is positive, petiole curves upward toward vertical. If negative, curvature is downward. |
+| length_segments | uint | - | Number of longitudinal segment subdivisions of the petiole tube. |
+| radial_subdivisions | uint | - | Number of radial subdivisions segments of the petiole tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
+| leaves_per_petiole | uint | - | Number of leaves on each petiole. >1 creates a compound leaf. |
+| ---- **Leaf** ---- ||||
+| pitch | RandomParameter_float | radians | Angle of the leaf axis with respect to its parent petiole axis. |
+| yaw | RandomParameter_float | radians | Rotation angle of the leaf about its base along the plane of its lamina. |
+| roll | RandomParameter_float | radians | Rotation angle of the leaf about it's own axis (midrib). |
+| leaflet_offset | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. |
+| leaflet_scale | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the scaling factor of the leaflet moving down the petiole with respect to the previous leaf (<1 scales down, >1 scales up). |
+| prototype_scale | RandomParameter_float | - | Scaling factor applied to the leaf prototype. Usually the prototype has unit length, so this sets the physical length of the leaf. |
+| prototype_function | function pointer | - | Pointer to a function that generates the leaf prototype model. Function takes arguments ( helios::Context*, uint subdivisions, int flag ) and returns an object ID (uint). |
+| ---- **Inflorescence** ---- ||||
+| length | RandomParameter_float | meters | Length of the inflorescence supporting structure (rachis, peduncle, etc.). |
+
+ \image html phytomer_schematic.jpeg
+
+ \section PlantArchShoot Defining Shoots and their Parameters
+
+ \section PlantArchBuild Building a Custom Plant
+
+ \subsection PlantArchBuild1 1. Defining the Phytomer
+
+
+ \subsection PlantArchBuild2 2. Defining Shoot Types
+
+ \subsection PlantArchBuild3 3. Adding a Plant Instance
+
+ \subsection PlantArchBuild4 4. Adding the Base Shoot
+
+
+ \subsection PlantArchBuild4 5. Manually Adding Child Shoots or Modifying
+
+
+    
+*/
