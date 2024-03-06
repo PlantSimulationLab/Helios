@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.7
+/*! \mainpage Helios Documentation v1.3.8
 
   <p> <br> </p>
 
@@ -410,7 +410,7 @@ $ git pull
    <tr><td>\<cassert\></td></tr>
    <tr><td>\<cmath\></td></tr>
    <tr><td>\<memory\></td></tr>
-   <tr><td>\<ctime\></td></tr>
+   <tr><td>\<cmath\></td></tr>
    <tr><td>\<map\></td></tr>
    <tr><td>\<algorithm\></td></tr>
    <tr><td>\<ctime\></td></tr>
@@ -447,7 +447,7 @@ $ git pull
 
  ~~~~~~{.cpp}
  #include "Context.h"
- void main(){
+ int main(){
     Context context;
  }
  ~~~~~~
@@ -1263,7 +1263,7 @@ $ git pull
   #include "Context.h"
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
      Context context;
 

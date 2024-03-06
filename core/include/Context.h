@@ -4063,6 +4063,38 @@ public:
      \return True/false
      */
     bool doesGlobalDataExist( const char* label ) const;
+
+    //! Increase value of global data (int) by some value
+    /**
+     \param[in] "label" Global data label string
+     \param[in] "increment" Value to increment global data by
+     \note If global data is a vector, each value in the vector will be incremented by the same amount
+    */
+    void incrementGlobalData( const char* label, int increment );
+
+    //! Increase value of global data (uint) by some value
+    /**
+     \param[in] "label" Global data label string
+     \param[in] "increment" Value to increment global data by
+     \note If global data is a vector, each value in the vector will be incremented by the same amount
+    */
+    void incrementGlobalData( const char* label, uint increment );
+
+    //! Increase value of global data (float) by some value
+    /**
+     \param[in] "label" Global data label string
+     \param[in] "increment" Value to increment global data by
+     \note If global data is a vector, each value in the vector will be incremented by the same amount
+    */
+    void incrementGlobalData( const char* label, float increment );
+
+    //! Increase value of global data (double) by some value
+    /**
+     \param[in] "label" Global data label string
+     \param[in] "increment" Value to increment global data by
+     \note If global data is a vector, each value in the vector will be incremented by the same amount
+    */
+    void incrementGlobalData( const char* label, double increment );
     
     //--------- Compound Objects Methods -------------//
     

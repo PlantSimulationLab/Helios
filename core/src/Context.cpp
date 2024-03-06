@@ -1646,56 +1646,56 @@ Triangle* Context::getTrianglePointer(uint UUID ) const{
 
 Triangle* Context::getTrianglePointer_private(uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getTrianglePointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getTrianglePointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_TRIANGLE ){
-        helios_runtime_error("ERROR (getTrianglePointer): UUID of " + std::to_string(UUID) + " is not a triangle.");
+        helios_runtime_error("ERROR (Context::getTrianglePointer): UUID of " + std::to_string(UUID) + " is not a triangle.");
     }
     return dynamic_cast<Triangle*>(primitives.at(UUID));
 }
 
 helios::vec3 Context::getTriangleVertex( uint UUID, uint number ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getTriangleVertex): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getTriangleVertex): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_TRIANGLE ){
-        helios_runtime_error("ERROR (getTriangleVertex): UUID of " + std::to_string(UUID) + " is not a triangle.");
+        helios_runtime_error("ERROR (Context::getTriangleVertex): UUID of " + std::to_string(UUID) + " is not a triangle.");
     }else if( number>2 ){
-        helios_runtime_error("ERROR (getTriangleVertex): Vertex index must be one of 0, 1, or 2.");
+        helios_runtime_error("ERROR (Context::getTriangleVertex): Vertex index must be one of 0, 1, or 2.");
     }
     return dynamic_cast<Triangle*>(primitives.at(UUID))->getVertex( number );
 }
 
 Voxel* Context::getVoxelPointer(uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getVoxelPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
-        helios_runtime_error("ERROR (getVoxelPointer): UUID of " + std::to_string(UUID) + " is not a voxel.");
+        helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " is not a voxel.");
     }
     return dynamic_cast<Voxel*>(primitives.at(UUID));
 }
 
 Voxel* Context::getVoxelPointer_private(uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getVoxelPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
-        helios_runtime_error("ERROR (getVoxelPointer): UUID of " + std::to_string(UUID) + " is not a voxel.");
+        helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " is not a voxel.");
     }
     return dynamic_cast<Voxel*>(primitives.at(UUID));
 }
 
 helios::vec3 Context::getVoxelSize( uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getVoxelSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getVoxelSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
-        helios_runtime_error("ERROR (getVoxelSize): UUID of " + std::to_string(UUID) + " is not a patch.");
+        helios_runtime_error("ERROR (Context::getVoxelSize): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
     return dynamic_cast<Voxel*>(primitives.at(UUID))->getSize();
 }
 
 helios::vec3 Context::getVoxelCenter( uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getVoxelCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getVoxelCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
-        helios_runtime_error("ERROR (getVoxelCenter): UUID of " + std::to_string(UUID) + " is not a patch.");
+        helios_runtime_error("ERROR (Context::getVoxelCenter): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
     return dynamic_cast<Voxel*>(primitives.at(UUID))->getCenter();
 }
@@ -2400,7 +2400,7 @@ bool Context::areObjectPrimitivesComplete( uint objID ) const{
 
 CompoundObject* Context::getObjectPointer( uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     return objects.at(ObjID);
 }
@@ -3102,7 +3102,7 @@ Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, c
 
 Tile* Context::getTileObjectPointer(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     return dynamic_cast<Tile*>(objects.at(ObjID));
 }
@@ -3202,7 +3202,7 @@ Sphere::Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, cons
 
 Sphere* Context::getSphereObjectPointer(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     return dynamic_cast<Sphere*>(objects.at(ObjID));
 }
@@ -3279,7 +3279,7 @@ Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3>
 
 Tube* Context::getTubeObjectPointer(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     return dynamic_cast<Tube*>(objects.at(ObjID));
 }
@@ -3344,7 +3344,7 @@ Box::Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, con
 
 Box* Context::getBoxObjectPointer(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     return dynamic_cast<Box*>(objects.at(ObjID));
 }
@@ -3408,7 +3408,7 @@ Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, int2 a_subdiv, const ch
 
 Disk* Context::getDiskObjectPointer(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     return dynamic_cast<Disk*>(objects.at(ObjID));
 }
@@ -3468,7 +3468,7 @@ Polymesh::Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_t
 
 Polymesh* Context::getPolymeshObjectPointer(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     return dynamic_cast<Polymesh*>(objects.at(ObjID));
 }
@@ -3491,7 +3491,7 @@ Cone::Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, co
 
 Cone* Context::getConeObjectPointer( const uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     return dynamic_cast<Cone*>(objects.at(ObjID));
 }
@@ -6642,7 +6642,7 @@ const std::vector<std::vector<bool>> * Context::getPrimitiveTextureTransparencyD
         const std::vector<std::vector<bool> > *data = textures.at(getPrimitivePointer_private(UUID)->getTextureFile()).getTransparencyData();
         return data;
     }else{
-        helios_runtime_error("ERROR (getPrimitiveTransparencyData): Texture transparency data does not exist for primitive " + std::to_string(UUID) + ".");
+        helios_runtime_error("ERROR (Context::getPrimitiveTransparencyData): Texture transparency data does not exist for primitive " + std::to_string(UUID) + ".");
         return 0;
     }
 }
@@ -7346,7 +7346,7 @@ void Context::printObjectInfo(uint ObjID) const{
 
 CompoundObject* Context::getObjectPointer_private( uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     return objects.at(ObjID);
 }
@@ -7441,7 +7441,7 @@ void Context::getObjectBoundingBox( const std::vector<uint> &ObjIDs, vec3 &min_c
     for( uint ObjID : ObjIDs ) {
 
         if ( objects.find(ObjID) == objects.end()){
-            helios_runtime_error("ERROR (getObjectBoundingBox): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+            helios_runtime_error("ERROR (Context::getObjectBoundingBox): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
         }
 
         const std::vector<uint> &UUIDs = objects.at(ObjID)->getPrimitiveUUIDs();
@@ -7487,63 +7487,63 @@ void Context::getObjectBoundingBox( const std::vector<uint> &ObjIDs, vec3 &min_c
 
 Tile* Context::getTileObjectPointer_private(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_TILE ){
-        helios_runtime_error("ERROR (getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Tile Object.");
+        helios_runtime_error("ERROR (Context::getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Tile Object.");
     }
     return dynamic_cast<Tile*>(objects.at(ObjID));
 }
 
 Sphere* Context::getSphereObjectPointer_private(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_SPHERE ){
-        helios_runtime_error("ERROR (getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Sphere Object.");
+        helios_runtime_error("ERROR (Context::getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Sphere Object.");
     }
     return dynamic_cast<Sphere*>(objects.at(ObjID));
 }
 
 Tube* Context::getTubeObjectPointer_private(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_TUBE ){
-        helios_runtime_error("ERROR (getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Tube Object.");
+        helios_runtime_error("ERROR (Context::getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Tube Object.");
     }
     return dynamic_cast<Tube*>(objects.at(ObjID));
 }
 
 Box* Context::getBoxObjectPointer_private(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_BOX ){
-        helios_runtime_error("ERROR (getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Box Object.");
+        helios_runtime_error("ERROR (Context::getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Box Object.");
     }
     return dynamic_cast<Box*>(objects.at(ObjID));
 }
 
 Disk* Context::getDiskObjectPointer_private(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_DISK ){
-        helios_runtime_error("ERROR (getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Disk Object.");
+        helios_runtime_error("ERROR (Context::getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Disk Object.");
     }
     return dynamic_cast<Disk*>(objects.at(ObjID));
 }
 
 Polymesh* Context::getPolymeshObjectPointer_private(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_POLYMESH ){
-        helios_runtime_error("ERROR (getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Polymesh Object.");
+        helios_runtime_error("ERROR (Context::getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Polymesh Object.");
     }
     return dynamic_cast<Polymesh*>(objects.at(ObjID));
 }
 
 Cone* Context::getConeObjectPointer_private(uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_CONE ){
-        helios_runtime_error("ERROR (getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Cone Object.");
+        helios_runtime_error("ERROR (Context::getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Cone Object.");
     }
     return dynamic_cast<Cone*>(objects.at(ObjID));
 }
