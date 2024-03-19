@@ -1,6 +1,6 @@
 /** \file "PlantArchitecture.h" Primary header file for plant architecture plug-in.
 
-    Copyright (C) 2016-2023 Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -270,19 +270,12 @@ private:
 
     struct InternodeParameters{
         RandomParameter_float pitch;
-        RandomParameter_float length;
-        float radius;
-        uint petioles_per_internode;
         helios::RGBcolor color;
         uint length_segments;
         uint radial_subdivisions;
         InternodeParameters& operator=(const InternodeParameters &a){
             this->pitch = a.pitch;
             this->pitch.resample();
-            this->length = a.length;
-            this->length.resample();
-            this->radius = a.radius;
-            this->petioles_per_internode = a.petioles_per_internode;
             this->color = a.color;
             this->length_segments = a.length_segments;
             this->radial_subdivisions = a.radial_subdivisions;
@@ -291,15 +284,17 @@ private:
     };
 
     struct PetioleParameters{
+        uint petioles_per_internode;
         RandomParameter_float pitch;
         RandomParameter_float radius;
         RandomParameter_float length;
         RandomParameter_float curvature;
         RandomParameter_float taper;
+        helios::RGBcolor color;
         uint length_segments;
         uint radial_subdivisions;
-        int leaves_per_petiole;
         PetioleParameters& operator=(const PetioleParameters &a){
+            this->petioles_per_internode = a.petioles_per_internode;
             this->pitch = a.pitch;
             this->pitch.resample();
             this->radius = a.radius;
@@ -310,14 +305,15 @@ private:
             this->curvature.resample();
             this->taper = a.taper;
             this->taper.resample();
+            this->color = a.color;
             this->length_segments = a.length_segments;
             this->radial_subdivisions = a.radial_subdivisions;
-            this->leaves_per_petiole = a.leaves_per_petiole;
             return *this;
         }
     };
 
     struct LeafParameters{
+        int leaves_per_petiole;
         RandomParameter_float pitch;
         RandomParameter_float yaw;
         RandomParameter_float roll;
@@ -326,6 +322,7 @@ private:
         RandomParameter_float prototype_scale;
         uint(*prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
         LeafParameters& operator=(const LeafParameters &a){
+            this->leaves_per_petiole = a.leaves_per_petiole;
             this->pitch = a.pitch;
             this->pitch.resample();
             this->yaw = a.yaw;
@@ -345,11 +342,11 @@ private:
 
     struct InflorescenceParameters{
         RandomParameter_float length;
-        RandomParameter_int fruit_per_inflorescence;
-        RandomParameter_float fruit_offset;
+        RandomParameter_int flowers_per_rachis;
+        RandomParameter_float flower_offset;
         RandomParameter_float rachis_radius;
         RandomParameter_float curvature;
-        std::string fruit_arrangement_pattern;
+        std::string flower_arrangement_pattern;
         uint length_segments;
         uint radial_subdivisions;
         RandomParameter_float fruit_pitch;
@@ -361,15 +358,15 @@ private:
         InflorescenceParameters& operator=(const InflorescenceParameters &a){
             this->length = a.length;
             this->length.resample();
-            this->fruit_per_inflorescence = a.fruit_per_inflorescence;
-            this->fruit_per_inflorescence.resample();
-            this->fruit_offset = a.fruit_offset;
-            this->fruit_offset.resample();
+            this->flowers_per_rachis = a.flowers_per_rachis;
+            this->flowers_per_rachis.resample();
+            this->flower_offset = a.flower_offset;
+            this->flower_offset.resample();
             this->rachis_radius = a.rachis_radius;
             this->rachis_radius.resample();
             this->curvature = a.curvature;
             this->curvature.resample();
-            this->fruit_arrangement_pattern = a.fruit_arrangement_pattern;
+            this->flower_arrangement_pattern = a.flower_arrangement_pattern;
             this->length_segments = a.length_segments;
             this->radial_subdivisions = a.radial_subdivisions;
             this->fruit_pitch = a.fruit_pitch;
@@ -388,9 +385,7 @@ private:
 
 protected:
 
-//    bool is_initialized = false;
-//    helios::vec3 internode_base_position;
-//    float internode_radius;
+    float internode_radius;
     float internode_length_max;
 
 public:
@@ -428,19 +423,32 @@ struct ShootParameters{
 
     PhytomerParameters phytomer_parameters;
 
-    uint max_nodes;
+    // ---- Geometric Parameters ---- //
+
+    RandomParameter_int max_nodes;
 
     RandomParameter_float phyllotactic_angle;
 
     RandomParameter_float internode_radius_initial;
 
-    RandomParameter_float phyllochron; //phytomers/day
-    RandomParameter_float elongation_rate; //length/day
-    RandomParameter_float girth_growth_rate; //length/day
+    RandomParameter_float child_insertion_angle_tip;
+    RandomParameter_float child_insertion_angle_decay_rate;
+
+    RandomParameter_float child_internode_length_max;
+    RandomParameter_float child_internode_length_min;
+    RandomParameter_float child_internode_length_decay_rate;
+
+    RandomParameter_float base_roll;
 
     RandomParameter_float gravitropic_curvature;  //degrees/length
 
     RandomParameter_float tortuosity; //degrees/length (standard deviation of random curvature perturbation)
+
+    // ---- Growth Parameters ---- //
+
+    RandomParameter_float phyllochron; //phytomers/day
+    RandomParameter_float elongation_rate; //length/day
+    RandomParameter_float girth_growth_rate; //1/day
 
     // Probability that bud with this shoot type will break and form a new shoot
     float bud_break_probability;
@@ -453,15 +461,6 @@ struct ShootParameters{
 
     RandomParameter_float bud_time;  //days
 
-    RandomParameter_float child_insertion_angle_tip;
-    RandomParameter_float child_insertion_angle_decay_rate;
-
-    RandomParameter_float child_internode_length_max;
-    RandomParameter_float child_internode_length_min;
-    RandomParameter_float child_internode_length_decay_rate;
-
-    RandomParameter_float base_roll;
-
     bool flowers_require_dormancy;
     bool growth_requires_dormancy;
 
@@ -470,6 +469,7 @@ struct ShootParameters{
     ShootParameters& operator=(const ShootParameters &a) {
         this->phytomer_parameters = a.phytomer_parameters;
         this->max_nodes = a.max_nodes;
+        max_nodes.resample();
         this->phyllotactic_angle = a.phyllotactic_angle;
         this->phyllotactic_angle.resample();
         this->internode_radius_initial = a.internode_radius_initial;
@@ -616,7 +616,7 @@ struct Shoot{
     Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number, ShootParameters shoot_params, const std::string &shoot_type_label,
           std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr, helios::Context *context_ptr);
 
-    void buildShootPhytomers();
+    void buildShootPhytomers(float internode_length);
 
     int addPhytomer(const PhytomerParameters &params, const helios::vec3 internode_base_position, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
@@ -685,6 +685,34 @@ public:
      */
     explicit PlantArchitecture( helios::Context* context_ptr );
 
+    // ********* Methods for Building Plants from Existing Library ********* //
+
+    void loadPlantModelFromLibrary( const std::string &plant_label );
+
+    uint buildPlantInstanceFromLibrary( const helios::vec3 &base_position, float age );
+
+    ShootParameters getCurrentShootParameters( const std::string &shoot_type_label );
+
+    std::map<std::string, ShootParameters> getCurrentShootParameters( );
+
+    //! Update the parameters of a single shoot type in the current plant model
+    /**
+     * \param[in] shoot_type_label User-defined label for the shoot type to be updated.
+     * \param[in] params Updated parameters structure for the shoot type.
+     * \note This will overwrite any existing shoot parameter definitions.
+     */
+    void updateCurrentShootParameters( const std::string &shoot_type_label, const ShootParameters &params );
+
+    //! Update the parameters of all shoot types in the current plant model
+    /**
+     * \param[in] shoot_type_label User-defined label for the shoot type to be updated.
+     * \param[in] params Updated parameters structure for the shoot type.
+     * \note This will overwrite any existing shoot parameter definitions.
+     */
+    void updateCurrentShootParameters( const std::map<std::string, ShootParameters> &params );
+
+    // ********* Methods for Building Custom Plant Geometry from Scratch ********* //
+
     //! Create an instance of a plant
     /** This is the first step of the plant building process. It creates an empty plant instance that can be built up manually, or using a pre-defined plant type in the library.
      * \param[in] base_position Cartesian coordinates of the base of the plant.
@@ -702,7 +730,7 @@ public:
      */
     uint duplicatePlantInstance(uint plantID, const helios::vec3 &base_position, float current_age );
 
-    PhytomerParameters getPhytomerParametersFromLibrary(const std::string &phytomer_label );
+    //PhytomerParameters getPhytomerParametersFromLibrary(const std::string &phytomer_label );
 
     //! Specify the threshold values for plant phenological stages
     /**
@@ -737,22 +765,25 @@ public:
     //! Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has already been created using the addPlantInstance() method.
     /**
      * \param[in] plantID ID of the plant instance.
+     * \param[in] current_node_number Number of nodes of the stem shoot.
+     * \param[in] internode_length Length of the internode of the stem shoot.
      * \param[in] base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot.
      * \param[in] shoot_type_label Label of the shoot type to be used for the base stem shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
-    uint addBaseStemShoot(uint plantID, uint current_node_number, const AxisRotation &base_rotation, const std::string &shoot_type_label);
+    uint addBaseStemShoot(uint plantID, uint current_node_number, float internode_length, const AxisRotation &base_rotation, const std::string &shoot_type_label);
 
     //! Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of a shoot change along its length (e.g., from a unifolitate to trifoliate leaf).
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] parent_shoot_ID ID of the shoot to which the new shoot will be appended.
      * \param[in] current_node_number Number of nodes of the newly appended shoot.
+     * \param[in] internode_length Length of the internode of the newly appended shoot.
      * \param[in] base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot relative to the parent shoot.
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
-    uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, const std::string &shoot_type_label);
+    uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, float internode_length, const AxisRotation &base_rotation, const std::string &shoot_type_label);
 
     //! Manually add a child shoot at the axillary bud of a phytomer.
     /**
@@ -818,13 +849,7 @@ public:
 
     std::string getLSystemsString(uint plantID) const;
 
-    uint generateFromLSystemsString(const std::string &lsystems_string, const PhytomerParameters &phytomer_parameters);
-
-    void addAlmondShoot();
-
-    void addAlmondTree();
-
-    void addWalnutShoot();
+    uint generatePlantFromString(const std::string &lsystems_string, const PhytomerParameters &phytomer_parameters);
 
 private:
 
@@ -833,6 +858,8 @@ private:
     std::minstd_rand0 *generator = nullptr;
 
     uint plant_count = 0;
+
+    std::string current_plant_model;
 
     std::map<uint,PlantInstance> plant_instances;
 
@@ -846,9 +873,33 @@ private:
 
     bool sampleChildShootType( uint plantID, uint shootID, std::string &child_shoot_type_label ) const;
 
-    void parseLStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, PhytomerParameters &phytomer_parameters, ShootParameters &shoot_parameters);
+    void parseStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, PhytomerParameters &phytomer_parameters, ShootParameters &shoot_parameters);
 
-};
+    void parseShootArgument(const std::string &shoot_argument, ShootParameters &shoot_parameters, ShootParameters &parent_shoot_parameters);
+
+    void parseInternodeArgument(const std::string &internode_argument, PhytomerParameters &phytomer_parameters, ShootParameters &shoot_parameters);
+
+    void parsePetioleArgument( const std::string& petiole_argument, PhytomerParameters &phytomer_parameters );
+
+    void parseLeafArgument( const std::string& leaf_argument, PhytomerParameters &phytomer_parameters );
+
+
+
+    void initializeDefaultShoots( const std::string &plant_label );
+
+    void initializeAlmondTreeShoots();
+
+    uint buildAlmondTree( const helios::vec3 &base_position, float age );
+
+    void initializeCowpeaShoots();
+
+    uint buildCowpeaPlant( const helios::vec3 &base_position, float age );
+
+    void initializeBeanShoots();
+
+    uint buildBeanPlant( const helios::vec3 &base_position, float age );
+
+    };
 
 
 #endif //PLANT_ARCHITECTURE
