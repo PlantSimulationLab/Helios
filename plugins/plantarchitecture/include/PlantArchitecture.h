@@ -530,7 +530,7 @@ public:
 
     helios::vec3 getInternodeAxisVector( float stem_fraction ) const;
 
-    helios::vec3 getPetioleAxisVector( float stem_fraction ) const;
+    helios::vec3 getPetioleAxisVector(float stem_fraction, uint petiole_index) const;
 
     helios::vec3 getAxisVector( float stem_fraction, const std::vector<helios::vec3> &axis_vertices ) const;
 
@@ -539,8 +539,6 @@ public:
     float getPetioleLength() const;
 
     float getInternodeRadius( float stem_fraction ) const;
-
-    float getPetioleRadius( float stem_fraction ) const;
 
     void addInflorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &a_inflorescence_bending_axis);
 
@@ -564,22 +562,22 @@ public:
 
     bool hasInflorescence() const;
 
-    std::vector<helios::vec3> internode_vertices;
-    std::vector<helios::vec3> petiole_vertices; //\todo this needs to be a multidimensional array for the case in which we have multiple buds per phytomer
-    std::vector<helios::vec3> leaf_bases;
-    std::vector<helios::vec3> inflorescence_bases;
+    std::vector<helios::vec3> internode_vertices; //index is tube segment within internode
+    std::vector<std::vector<helios::vec3>> petiole_vertices; //first index is petiole within internode, second index is tube segment within petiole
+    std::vector<std::vector<helios::vec3>> leaf_bases; //first index is petiole within internode, second index is leaf within petiole
+    std::vector<helios::vec3> inflorescence_bases; //index is tube segment within inflorescence
     float internode_length;
 
-    std::vector<float> internode_radii;
-    std::vector<float> petiole_radii;
-    float petiole_length;
+    std::vector<float> internode_radii; //index is segment within internode
+    std::vector<std::vector<float>> petiole_radii; //first index is petiole within internode, second index is segment within petiole
+    std::vector<float> petiole_length; //index is petiole within internode
 
     std::vector<helios::RGBcolor> internode_colors;
     std::vector<helios::RGBcolor> petiole_colors;
 
-    std::vector<uint> internode_objIDs;
-    std::vector<std::vector<uint> > petiole_objIDs;
-    std::vector<uint> leaf_objIDs;
+    std::vector<uint> internode_objIDs; //index is segment within internode
+    std::vector<std::vector<uint> > petiole_objIDs; //first index is petiole within internode, second index is segment within petiole
+    std::vector<std::vector<uint>> leaf_objIDs; //first index is petiole within internode, second index is leaf within petiole
     std::vector<uint> inflorescence_objIDs;
     std::vector<uint> rachis_objIDs;
 
@@ -791,10 +789,11 @@ public:
      * \param[in] parent_shoot_ID ID of the shoot to which the new shoot will be added.
      * \param[in] parent_node Number of the node of the parent shoot at which the new shoot will be added.
      * \param[in] current_node_number Number of nodes of the newly added shoot.
+     * \param[in] base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot.
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
-    uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node, uint current_node_number, const std::string &shoot_type_label);
+    uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, const std::string &shoot_type_label);
 
     //! Add a new phytomer at the terminal bud of a shoot.
     int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
@@ -849,7 +848,9 @@ public:
 
     std::string getLSystemsString(uint plantID) const;
 
-    uint generatePlantFromString(const std::string &lsystems_string, const PhytomerParameters &phytomer_parameters);
+    uint generatePlantFromString(const std::string &generation_string, const PhytomerParameters &phytomer_parameters);
+
+    uint generatePlantFromString(const std::string &generation_string, const std::map<std::string,PhytomerParameters> &phytomer_parameters);
 
 private:
 
@@ -873,15 +874,15 @@ private:
 
     bool sampleChildShootType( uint plantID, uint shootID, std::string &child_shoot_type_label ) const;
 
-    void parseStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, PhytomerParameters &phytomer_parameters, ShootParameters &shoot_parameters);
+    void parseStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters);
 
-    void parseShootArgument(const std::string &shoot_argument, ShootParameters &shoot_parameters, ShootParameters &parent_shoot_parameters);
+    void parseShootArgument(const std::string &shoot_argument, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters, ShootParameters &parent_shoot_parameters);
 
-    void parseInternodeArgument(const std::string &internode_argument, PhytomerParameters &phytomer_parameters, ShootParameters &shoot_parameters);
+    void parseInternodeArgument(const std::string &internode_argument, ShootParameters &shoot_parameters);
 
-    void parsePetioleArgument( const std::string& petiole_argument, PhytomerParameters &phytomer_parameters );
+    void parsePetioleArgument(const std::string& petiole_argument, ShootParameters &shoot_parameters );
 
-    void parseLeafArgument( const std::string& leaf_argument, PhytomerParameters &phytomer_parameters );
+    void parseLeafArgument(const std::string& leaf_argument, ShootParameters &shoot_parameters );
 
 
 
@@ -899,7 +900,12 @@ private:
 
     uint buildBeanPlant( const helios::vec3 &base_position, float age );
 
-    };
+    void initializeSorghumShoots();
+
+    uint buildSorghumPlant( const helios::vec3 &base_position, float age );
+
+
+};
 
 
 #endif //PLANT_ARCHITECTURE

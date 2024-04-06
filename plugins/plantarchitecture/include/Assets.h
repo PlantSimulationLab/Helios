@@ -5,7 +5,8 @@
 
 #include "Context.h"
 
-uint BeanLeafPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+uint BeanLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+uint BeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 uint BeanFruitPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 
@@ -25,5 +26,9 @@ uint CheeseweedLeafPrototype( helios::Context* context_ptr, uint subdivisions=1,
 
 uint BindweedLeafPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+
+uint SorghumLeafPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+
 
 #endif //HELIOS_ASSETS_H

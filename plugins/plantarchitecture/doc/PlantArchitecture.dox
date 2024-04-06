@@ -115,7 +115,7 @@ The size, position, and orientation of the prototype when it is created needs to
 An example prototype function for a leaf is given below, which creates each of the three leaflets on a bean trifoliate compound leaf based on OBJ models created in Blender. Note that the triangular mesh is added to a Polymesh compound object, as the prototype geometry must always be a single compound object with object ID returned from the prototype function.
 
 ~~~~~~
-uint BeanLeafPrototype( helios::Context* context_ptr, uint subdivisions, int flag ){
+uint BeanLeafPrototype_trifoliate( helios::Context* context_ptr, uint subdivisions, int flag ){
     std::vector<uint> UUIDs;
     if( flag==0 ){
         UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanLeaf_tip.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
