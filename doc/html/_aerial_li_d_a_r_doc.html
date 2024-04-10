@@ -179,7 +179,7 @@ Class Constructor</h1>
 Background information</h1>
 <h2><a class="anchor" id="AerialLiDARcoord"></a>
 Coordinates and scan pattern</h2>
-<p >The plug-in assumes that laser pulses are launched from some surface above the canopy downward. When processing LiDAR data, each laser pulse is defined by 1) the (x,y,z) coordinates of the laser-object intersection point, and 2) the angle of the laser traversal direction in spherical coordinates (e.g., for a laser pulse traveling directly downward, the zenith angle is <img class="formulaInl" alt="$\theta=\pi$" src="form_22.png"/> and azimuth <img class="formulaInl" alt="$\varphi$" src="form_20.png"/> is arbitrary).</p>
+<p >The plug-in assumes that laser pulses are launched from some surface above the canopy downward. When processing LiDAR data, each laser pulse is defined by 1) the (x,y,z) coordinates of the laser-object intersection point, and 2) the angle of the laser traversal direction in spherical coordinates (e.g., for a laser pulse traveling directly downward, the zenith angle is <img class="formulaInl" alt="$\theta=\pi$" src="form_22.png" width="36" height="12"/> and azimuth <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/> is arbitrary).</p>
 <div class="image">
 <img src="LaunchSchematic.jpeg" alt=""/>
 </div>
@@ -218,7 +218,7 @@ Loading scan data from file</h1>
 <tr>
 <td>target_index </td><td>Index of returns/hits along the hit's beam path (target_index=0 for first return, =1 for second return, =target_count-1 for last return). NOTE: target indices can start at 0 or 1 for the first return as long as it is consitent throughout. </td><td>REQUIRED for full-waveform; N/A for discrete-return  </td></tr>
 <tr>
-<td>zenith (or zenith_rad) </td><td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees. </td><td>180 (or <img class="formulaInl" alt="$\pi$" src="form_21.png"/>)  </td></tr>
+<td>zenith (or zenith_rad) </td><td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees. </td><td>180 (or <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/>)  </td></tr>
 <tr>
 <td>azimuth (or phi_rad) </td><td>Azithal angle (degrees) of scan ray direction corresponding to the hit point. If "phi_rad" is used, phi has units of radians rather than degrees. </td><td>0  </td></tr>
 <tr>

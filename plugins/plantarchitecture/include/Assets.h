@@ -10,7 +10,8 @@ uint BeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivision
 uint BeanFruitPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 
-uint CowpeaLeafPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+uint CowpeaLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
+uint CowpeaLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 uint CowpeaFruitPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 uint CowpeaFlowerPrototype( helios::Context* context_ptr, uint subdivisions=1, int flag=0 );
 

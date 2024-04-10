@@ -385,7 +385,7 @@ private:
 
 protected:
 
-    float internode_radius;
+    float internode_radius_initial;
     float internode_length_max;
 
 public:
@@ -439,6 +439,7 @@ struct ShootParameters{
     RandomParameter_float child_internode_length_decay_rate;
 
     RandomParameter_float base_roll;
+    RandomParameter_float base_yaw;
 
     RandomParameter_float gravitropic_curvature;  //degrees/length
 
@@ -501,6 +502,8 @@ struct ShootParameters{
         this->child_internode_length_decay_rate.resample();
         this->base_roll = a.base_roll;
         this->base_roll.resample();
+        this->base_yaw = a.base_yaw;
+        this->base_yaw.resample();
         this->flowers_require_dormancy = a.flowers_require_dormancy;
         this->growth_requires_dormancy = a.growth_requires_dormancy;
         this->child_shoot_type_labels = a.child_shoot_type_labels;
@@ -526,7 +529,7 @@ struct Phytomer {
 public:
 
     Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
-             const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr);
+             const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr);
 
     helios::vec3 getInternodeAxisVector( float stem_fraction ) const;
 
@@ -614,9 +617,10 @@ struct Shoot{
     Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number, ShootParameters shoot_params, const std::string &shoot_type_label,
           std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr, helios::Context *context_ptr);
 
-    void buildShootPhytomers(float internode_length);
+    void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
-    int addPhytomer(const PhytomerParameters &params, const helios::vec3 internode_base_position, const AxisRotation &shoot_base_rotation, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
+    int addPhytomer(const PhytomerParameters &params, const helios::vec3 internode_base_position, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
+                    float leaf_scale_factor_fraction);
 
     uint current_node_number;
 
@@ -764,39 +768,45 @@ public:
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] current_node_number Number of nodes of the stem shoot.
-     * \param[in] internode_length Length of the internode of the stem shoot.
      * \param[in] base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot.
+     * \param[in] internode_radius Radius of the internodes along the shoot.
+     * \param[in] internode_length_max Maximum length (i.e., fully elongated) of the internodes along the shoot.
+     * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual internode length (=1 applies no scaling).
+     * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual leaf size (=1 applies no scaling).
      * \param[in] shoot_type_label Label of the shoot type to be used for the base stem shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
-    uint addBaseStemShoot(uint plantID, uint current_node_number, float internode_length, const AxisRotation &base_rotation, const std::string &shoot_type_label);
+    uint addBaseStemShoot(uint plantID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction,
+                          const std::string &shoot_type_label);
 
     //! Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of a shoot change along its length (e.g., from a unifolitate to trifoliate leaf).
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] parent_shoot_ID ID of the shoot to which the new shoot will be appended.
      * \param[in] current_node_number Number of nodes of the newly appended shoot.
-     * \param[in] internode_length Length of the internode of the newly appended shoot.
+     * \param[in] internode_length_max Length of the internode of the newly appended shoot.
      * \param[in] base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot relative to the parent shoot.
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
-    uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, float internode_length, const AxisRotation &base_rotation, const std::string &shoot_type_label);
+    uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
+                     float leaf_scale_factor_fraction, const std::string &shoot_type_label);
 
     //! Manually add a child shoot at the axillary bud of a phytomer.
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] parent_shoot_ID ID of the shoot to which the new shoot will be added.
-     * \param[in] parent_node Number of the node of the parent shoot at which the new shoot will be added.
+     * \param[in] parent_node_index Number of the node of the parent shoot at which the new shoot will be added.
      * \param[in] current_node_number Number of nodes of the newly added shoot.
-     * \param[in] base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot.
+     * \param[in] shoot_base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot.
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
-    uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node, uint current_node_number, const AxisRotation &base_rotation, const std::string &shoot_type_label);
+    uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max,
+                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &shoot_type_label);
 
     //! Add a new phytomer at the terminal bud of a shoot.
-    int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
+    int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     // -- methods for modifying the current plant state -- //
 
@@ -876,17 +886,18 @@ private:
 
     void parseStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters);
 
-    void parseShootArgument(const std::string &shoot_argument, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters, ShootParameters &parent_shoot_parameters);
+    void parseShootArgument(const std::string &shoot_argument, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters, AxisRotation &base_rotation);
 
-    void parseInternodeArgument(const std::string &internode_argument, ShootParameters &shoot_parameters);
+    void parseInternodeArgument(const std::string &internode_argument, float &internode_radius, float &internode_length, PhytomerParameters &phytomer_parameters);
 
-    void parsePetioleArgument(const std::string& petiole_argument, ShootParameters &shoot_parameters );
+    void parsePetioleArgument(const std::string& petiole_argument, PhytomerParameters &phytomer_parameters );
 
-    void parseLeafArgument(const std::string& leaf_argument, ShootParameters &shoot_parameters );
+    void parseLeafArgument(const std::string& leaf_argument, PhytomerParameters &phytomer_parameters );
+
+    void shiftDownstreamShoots(uint plantID, std::vector<std::shared_ptr<Shoot>> &shoot_tree, std::shared_ptr<Shoot> parent_shoot_ptr, const helios::vec3 &base_position );
 
 
-
-    void initializeDefaultShoots( const std::string &plant_label );
+        void initializeDefaultShoots( const std::string &plant_label );
 
     void initializeAlmondTreeShoots();
 

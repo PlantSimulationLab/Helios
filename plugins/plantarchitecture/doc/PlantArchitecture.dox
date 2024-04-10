@@ -302,7 +302,7 @@ A shoot is the fundamental topological unit of organization in the plant archite
   d\theta = \frac{1}{2}\left(C_g-\theta\right)dL + T\xi(dL)
   \f]
 
-  where \f$\dtheta\f$ is the change in curvature angle of the current phytomer internode relative to the previous internode, \f$\theta\f$ is the integrated curvature angle relative to the base of the shoot, \f$dL\f$ is the internode length, \f$T\f$ is the tortuosity, and \f$\xi(dL)\f$ is a Gaussian process with variance of \f$dL\f$.
+  where \f$d\theta\f$ is the change in curvature angle of the current phytomer internode relative to the previous internode, \f$\theta\f$ is the integrated curvature angle relative to the base of the shoot, \f$dL\f$ is the internode length, \f$T\f$ is the tortuosity, and \f$\xi (dL)\f$ is a Gaussian process with variance of \f$dL\f$.
 
  \subsection ShootParametersGrowth Growth Parameters of the Shoot
 

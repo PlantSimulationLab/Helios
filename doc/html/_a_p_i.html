@@ -363,8 +363,8 @@ R-G-B(-A) color vectors</h2>
 Coordinate System</h1>
 <p >Helios uses a right-handed Cartesian coordinate system. (x,y,z) coordinates are typically specified using the 'vec3' data structure (see <a class="el" href="_a_p_i.html#VecTypes">Vector Types</a>). <br  />
 </p>
-<p >Rotations are typically specified using spherical angles (see <a class="el" href="_a_p_i.html#VecTypes">Vector Types</a>). A rotation of the elevation angle <img class="formulaInl" alt="$\theta$" src="form_19.png"/> rotates the object about its y-axis. A rotation of the azimuthal angle <img class="formulaInl" alt="$\varphi$" src="form_20.png"/> rotates the object clockwise about its z-axis.</p>
-<p >When compass directions are used, +y corresponds to North, and +x corresponds East. The azimuthal angle <img class="formulaInl" alt="$\varphi$" src="form_20.png"/> is measured clockwise from North.</p>
+<p >Rotations are typically specified using spherical angles (see <a class="el" href="_a_p_i.html#VecTypes">Vector Types</a>). A rotation of the elevation angle <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/> rotates the object about its y-axis. A rotation of the azimuthal angle <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/> rotates the object clockwise about its z-axis.</p>
+<p >When compass directions are used, +y corresponds to North, and +x corresponds East. The azimuthal angle <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/> is measured clockwise from North.</p>
 <div class="image">
 <img src="CoordinateSystem.jpg" alt=""/>
 </div>
@@ -463,7 +463,7 @@ Patch geometric primitive.</div></div>
 <div class="line"><a class="code hl_struct" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> rotation = make_SphericalCoord(0.25*M_PI,0.5*M_PI);</div>
 <div class="line">context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>( center, size, rotation );</div>
 <div class="ttc" id="astructhelios_1_1_spherical_coord_html"><div class="ttname"><a href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a></div><div class="ttdoc">Vector of spherical coordinates (elevation,azimuth)</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01268">helios_vector_types.h:1268</a></div></div>
-</div><!-- fragment --><p >This will first rotate the patch by 0.25 <img class="formulaInl" alt="$\pi$" src="form_21.png"/> rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 <img class="formulaInl" alt="$\pi$" src="form_21.png"/> rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
+</div><!-- fragment --><p >This will first rotate the patch by 0.25 <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/> rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/> rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
 <h3><a class="anchor" id="AddingTriangle"></a>
 Adding Triangles</h3>
 <p >Triangles are added by specifying the (x,y,z) coordinates of the triangle's three vertices, and optionally its r-g-b color. The following is an example of using the 'addTriangle()' function to add a simple triangle:</p>
