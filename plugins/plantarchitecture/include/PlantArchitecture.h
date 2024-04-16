@@ -21,6 +21,8 @@
 #include <utility>
 #include "Assets.h"
 
+//forward declaration of PlantArchitecture class
+class PlantArchitecture;
 
 struct RandomParameter_float {
 public:
@@ -258,10 +260,25 @@ std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<
 
 struct VegetativeBud{
 
+    //position of the bud, which can later become the base of a shoot
     helios::vec3 base_position;
+    //label of the shoot type that will be produced if the bud breaks into a shoot
     std::string shoot_type_label;
-    BudState state;
+    //state of the bud
+    BudState state = BUD_DORMANT;
+    //ID of the shoot that the bud will produce if it breaks into a shoot
     uint shoot_ID = -1;
+
+};
+
+struct FloralBud{
+
+    //position of the bud, which can later become the base of a flower or fruit
+    helios::vec3 base_position;
+    //state of the bud
+    BudState state = BUD_DORMANT;
+    //amount of time since the bud flowered (=0 if it has not yet flowered)
+    float time_since_flowering = 0;
 
 };
 
@@ -270,12 +287,21 @@ private:
 
     struct InternodeParameters{
         RandomParameter_float pitch;
+        RandomParameter_float phyllotactic_angle;
+        RandomParameter_int max_vegetative_buds_per_petiole;
+        RandomParameter_int max_floral_buds_per_petiole;
         helios::RGBcolor color;
         uint length_segments;
         uint radial_subdivisions;
         InternodeParameters& operator=(const InternodeParameters &a){
             this->pitch = a.pitch;
             this->pitch.resample();
+            this->phyllotactic_angle = a.phyllotactic_angle;
+            this->phyllotactic_angle.resample();
+            this->max_vegetative_buds_per_petiole = a.max_vegetative_buds_per_petiole;
+            this->max_vegetative_buds_per_petiole.resample();
+            this->max_floral_buds_per_petiole = a.max_floral_buds_per_petiole;
+            this->max_floral_buds_per_petiole.resample();
             this->color = a.color;
             this->length_segments = a.length_segments;
             this->radial_subdivisions = a.radial_subdivisions;
@@ -427,8 +453,6 @@ struct ShootParameters{
 
     RandomParameter_int max_nodes;
 
-    RandomParameter_float phyllotactic_angle;
-
     RandomParameter_float internode_radius_initial;
 
     RandomParameter_float child_insertion_angle_tip;
@@ -471,8 +495,6 @@ struct ShootParameters{
         this->phytomer_parameters = a.phytomer_parameters;
         this->max_nodes = a.max_nodes;
         max_nodes.resample();
-        this->phyllotactic_angle = a.phyllotactic_angle;
-        this->phyllotactic_angle.resample();
         this->internode_radius_initial = a.internode_radius_initial;
         this->internode_radius_initial.resample();
         this->phyllochron = a.phyllochron;
@@ -543,7 +565,7 @@ public:
 
     float getInternodeRadius( float stem_fraction ) const;
 
-    void addInflorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &a_inflorescence_bending_axis);
+    void addInflorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &a_inflorescence_bending_axis, BudState floral_bud_state);
 
     void setInternodeScale( float internode_scale_factor_fraction );
 
@@ -555,7 +577,11 @@ public:
 
     void setPhytomerBase( const helios::vec3 &base_position );
 
-    void changeReproductiveState( BudState state );
+    void changeReproductiveState(FloralBud &fbud, BudState state);
+
+    void setVegetativeBudState( BudState state );
+
+    void setVegetativeBudState( BudState state, uint bud_index );
 
     void removeLeaf();
 
@@ -568,7 +594,7 @@ public:
     std::vector<helios::vec3> internode_vertices; //index is tube segment within internode
     std::vector<std::vector<helios::vec3>> petiole_vertices; //first index is petiole within internode, second index is tube segment within petiole
     std::vector<std::vector<helios::vec3>> leaf_bases; //first index is petiole within internode, second index is leaf within petiole
-    std::vector<helios::vec3> inflorescence_bases; //index is tube segment within inflorescence
+    std::vector<std::vector<helios::vec3>> inflorescence_bases; //first index is the floral bud, second index is flower/fruit within rachis
     float internode_length;
 
     std::vector<float> internode_radii; //index is segment within internode
@@ -581,8 +607,8 @@ public:
     std::vector<uint> internode_objIDs; //index is segment within internode
     std::vector<std::vector<uint> > petiole_objIDs; //first index is petiole within internode, second index is segment within petiole
     std::vector<std::vector<uint>> leaf_objIDs; //first index is petiole within internode, second index is leaf within petiole
-    std::vector<uint> inflorescence_objIDs;
-    std::vector<uint> rachis_objIDs;
+    std::vector<std::vector<uint>> inflorescence_objIDs; //first index is the floral bud, second index is flower/fruit within rachis
+    std::vector<std::vector<uint>> rachis_objIDs; //first index is the floral bud, second index is segment within rachis
 
     PhytomerParameters phytomer_parameters;
 
@@ -591,18 +617,13 @@ public:
 
     float age = 0;
     float time_since_dormancy = 0;
-    float time_since_flowering = 0;
 
     float current_internode_scale_factor = 1;
     float current_leaf_scale_factor = 1;
     float current_inflorescence_scale_factor = 1;
 
     std::vector<VegetativeBud> vegetative_buds;
-
-    BudState flower_bud_state = BUD_DORMANT;
-    BudState vegetative_bud_state = BUD_DORMANT;
-
-    float petiole_yaw = 0;
+    std::vector<FloralBud> floral_buds;
 
 private:
 
@@ -614,13 +635,20 @@ private:
 
 struct Shoot{
 
-    Shoot(int ID, int parentID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number, ShootParameters shoot_params, const std::string &shoot_type_label,
-          std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr, helios::Context *context_ptr);
+    Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number, ShootParameters shoot_params, const std::string &shoot_type_label,
+          PlantArchitecture *plant_architecture_ptr);
 
     void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     int addPhytomer(const PhytomerParameters &params, const helios::vec3 internode_base_position, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
                     float leaf_scale_factor_fraction);
+
+    //! Randomly sample the type of a child shoot based on the probabilities defined in the shoot parameters
+    /**
+     * \param[out] child_shoot_type_label Label of the randomly selected child shoot type.
+     * \return false if the bud dies, true if the bud survives and will produce a new shoot.
+     */
+    bool sampleChildShootType(std::string &child_shoot_type_label) const;
 
     uint current_node_number;
 
@@ -630,6 +658,7 @@ struct Shoot{
 
     int ID;
     int parentID;
+    uint plantID;
     uint parentNode;
     uint rank;
 
@@ -656,7 +685,7 @@ struct Shoot{
 
     std::vector<std::shared_ptr<Phytomer> > phytomers;
 
-    std::vector<std::shared_ptr<Shoot> > *shoot_tree_ptr;
+    PlantArchitecture* plant_architecture_ptr;
 
     helios::Context *context_ptr;
 
@@ -730,7 +759,7 @@ public:
      * \param[in] current_age Age of the new plant copy in days.
      * \return ID of the new plant instance.
      */
-    uint duplicatePlantInstance(uint plantID, const helios::vec3 &base_position, float current_age );
+    uint duplicatePlantInstance(uint plantID, const helios::vec3 &base_position, const AxisRotation &base_rotation, float current_age);
 
     //PhytomerParameters getPhytomerParametersFromLibrary(const std::string &phytomer_label );
 
@@ -820,10 +849,6 @@ public:
 
     void setPhytomerScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
-    void setPhytomerVegetativeBudState(uint plantID, uint shootID, uint node_number, BudState state );
-
-    void setPhytomerFlowerBudState(uint plantID, uint shootID, uint node_number, BudState state );
-
     void setShootOrigin(uint plantID, uint shootID, const helios::vec3 &origin);
 
     void setPlantBasePosition(uint plantID, const helios::vec3 &base_position);
@@ -862,7 +887,9 @@ public:
 
     uint generatePlantFromString(const std::string &generation_string, const std::map<std::string,PhytomerParameters> &phytomer_parameters);
 
-private:
+    friend class Shoot;
+
+protected:
 
     helios::Context* context_ptr;
 
@@ -882,11 +909,9 @@ private:
 
     void accumulateShootPhotosynthesis( float dt );
 
-    bool sampleChildShootType( uint plantID, uint shootID, std::string &child_shoot_type_label ) const;
-
     void parseStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters);
 
-    void parseShootArgument(const std::string &shoot_argument, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters, AxisRotation &base_rotation);
+    void parseShootArgument(const std::string &shoot_argument, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters, AxisRotation &base_rotation, std::string &phytomer_label);
 
     void parseInternodeArgument(const std::string &internode_argument, float &internode_radius, float &internode_length, PhytomerParameters &phytomer_parameters);
 
@@ -896,8 +921,7 @@ private:
 
     void shiftDownstreamShoots(uint plantID, std::vector<std::shared_ptr<Shoot>> &shoot_tree, std::shared_ptr<Shoot> parent_shoot_ptr, const helios::vec3 &base_position );
 
-
-        void initializeDefaultShoots( const std::string &plant_label );
+    void initializeDefaultShoots( const std::string &plant_label );
 
     void initializeAlmondTreeShoots();
 
@@ -915,6 +939,9 @@ private:
 
     uint buildSorghumPlant( const helios::vec3 &base_position, float age );
 
+    void initializeTomatoShoots();
+
+    uint buildTomatoPlant( const helios::vec3 &base_position, float age );
 
 };
 
