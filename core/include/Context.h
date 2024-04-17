@@ -27,15 +27,13 @@ namespace helios {
 
 class Context; //forward declaration of Context class
 
-/// Type of primitive element
+//! Type of primitive element
 enum PrimitiveType{
-    /// < Rectangular primitive
+    //! < Rectangular primitive
     PRIMITIVE_TYPE_PATCH = 0,
-    /// < Triangular primitive
-    /** \ref Triangle */
+    //! < Triangular primitive
     PRIMITIVE_TYPE_TRIANGLE = 1,
     //! Rectangular prism primitive
-    /** \ref Voxel */
     PRIMITIVE_TYPE_VOXEL = 2
 };
 
@@ -45,7 +43,7 @@ enum HeliosDataType{
     HELIOS_TYPE_INT = 0,
     //! unsigned integer data type
     HELIOS_TYPE_UINT = 1,
-    //! floating point data taype
+    //! floating point data type
     HELIOS_TYPE_FLOAT = 2,
     //! double data type
     HELIOS_TYPE_DOUBLE = 3,
@@ -61,10 +59,11 @@ enum HeliosDataType{
     HELIOS_TYPE_INT3 = 8,
     //! helios::int4 data type
     HELIOS_TYPE_INT4 = 9,
-    //! string data type
+    //! std::string data type
     HELIOS_TYPE_STRING = 10,
 };
 
+//! Texture map data structure
 class Texture{
 public:
     
@@ -346,7 +345,7 @@ public:
      * \param[in] "type" Helios data type of object data (see \ref HeliosDataType)
      * \param[in] "size" Number of data elements
      * \param[in] "data" Pointer to object data
-     * \note While this method still works for scalar data, it is typically prefereable to use the scalar versions of this method.
+     * \note While this method still works for scalar data, it is typically preferable to use the scalar versions of this method.
      */
     void setObjectData( const char* label, HeliosDataType type, uint size, void* data );
     
@@ -560,6 +559,7 @@ protected:
     
 };
 
+//! Tile compound object class
 class Tile : public CompoundObject {
 public:
     
@@ -600,6 +600,7 @@ protected:
     
 };
 
+//! Sphere compound object class
 class Sphere : public CompoundObject {
 public:
     
@@ -630,6 +631,7 @@ protected:
     
 };
 
+//! Tube compound object class
 class Tube: public CompoundObject {
 public:
     
@@ -669,6 +671,7 @@ protected:
     
 };
 
+//! Box compound object class
 class Box : public CompoundObject {
 public:
     
@@ -699,6 +702,7 @@ protected:
     
 };
 
+//! Disk compound object class
 class Disk : public CompoundObject {
 public:
     
@@ -729,6 +733,7 @@ protected:
     
 };
 
+//! Polymesh compound object class
 class Polymesh : public CompoundObject {
 public:
     
@@ -743,6 +748,7 @@ protected:
     
 };
 
+//! Cone compound object class
 class Cone: public CompoundObject {
 public:
     
@@ -753,16 +759,30 @@ public:
     ~Cone() override = default;
     
     //! Get the Cartesian coordinates of each of the cone object nodes
-    std::vector<helios::vec3> getNodes() const;
+    /**
+     * \return Vector of Cartesian coordinates of cone object nodes (length = 2).
+     */
+    std::vector<helios::vec3> getNodeCoordinates() const;
     
     //! Get the Cartesian coordinates of a cone object node
-    helios::vec3 getNode(int number) const;
+    /**
+     * \param[in] node_index Index of the cone node. Either 0 for the cone base, or 1 for the cone apex.
+     * \return Cartesian coordinate of the cone node center.
+     */
+    helios::vec3 getNodeCoordinate(int node_index) const;
     
     //! Get the radius at each of the cone object nodes
+    /**
+     * \return Vector of radii at cone object nodes (length = 2).
+     */
     std::vector<float> getNodeRadii() const;
     
     //! Get the radius of a cone object node
-    float getNodeRadius(int number) const;
+    /**
+     * \param[in] node_index Index of the cone node. Either 0 for the cone base, or 1 for the cone apex.
+     * \return Radius of the cone node.
+     */
+    float getNodeRadius(int node_index) const;
     
     //! Get the number of sub-triangle divisions of the cone object
     uint getSubdivisionCount() const;
@@ -776,7 +796,7 @@ public:
     //! Get a unit vector pointing in the direction of the cone central axis
     helios::vec3 getAxisUnitVector() const;
     
-    //! Get the lenght of the cone along the axial direction
+    //! Get the length of the cone along the axial direction
     float getLength() const;
     
     //! Method to scale the length of the cone
@@ -1495,6 +1515,7 @@ public:
     
 };
 
+//! Class for parsing XML input files
 class XMLparser{
 public:
 
@@ -1586,93 +1607,93 @@ public:
    */
   static int parse_data_int4( const pugi::xml_node &node_data, std::vector<int4> &data );
 
-  //! Parse the value within an <objID> (object ID) tag
+  //! Parse the value within an \<objID> (object ID) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "objID" Object ID value parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
    */
-  static int parse_objID( const pugi::xml_node &node, uint &objID );
+  static int parse_objID( const pugi::xml_node &node_data, uint &objID );
 
-  //! Parse the value within a <transform> (transformation matrix) tag
+  //! Parse the value within a \<transform> (transformation matrix) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "transform" Transformation matrix data parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly, 3 if data was parsed successfully but tag did not contain 16 values.
    */
-  static int parse_transform( const pugi::xml_node &node, float (&transform)[16] );
+  static int parse_transform( const pugi::xml_node &node_data, float (&transform)[16] );
 
-  //! Parse the value within an <texture> (path to image texture) tag
+  //! Parse the value within an \<texture> (path to image texture) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "texture" Path to image texture file parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty.
    */
-  static int parse_texture( const pugi::xml_node &node, std::string &texture );
+  static int parse_texture( const pugi::xml_node &node_data, std::string &texture );
 
-  //! Parse the value within a <textureUV> (texture coordinates) tag
+  //! Parse the value within a \<textureUV> (texture coordinates) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
-   * \param[out] "textureUV" (u,v) texture coordinate data parsed from XML node
+   * \param[out] "uvs" (u,v) texture coordinate data parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
    */
-  static int parse_textureUV( const pugi::xml_node &node, std::vector<vec2> &uvs );
+  static int parse_textureUV( const pugi::xml_node &node_data, std::vector<vec2> &uvs );
 
-  //! Parse the value within a <solid_fraction> (primitive solid fraction) tag
+  //! Parse the value within a \<solid_fraction> (primitive solid fraction) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "solid_fraction" Primitive solid fraction value parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
    */
-  static int parse_solid_fraction( const pugi::xml_node &node, float &solid_fraction );
+  static int parse_solid_fraction( const pugi::xml_node &node_data, float &solid_fraction );
 
-  //! Parse the value within a <vertices> (primitive vertex coordinates) tag
+  //! Parse the value within a \<vertices> (primitive vertex coordinates) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "vertices" (x,y,z) primitive vertex data parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
    */
-  static int parse_vertices( const pugi::xml_node &node, std::vector<float> &vertices );
+  static int parse_vertices( const pugi::xml_node &node_data, std::vector<float> &vertices );
 
-  //! Parse the value within a <subdivisions> (object sub-primitive resolution) tag
+  //! Parse the value within a \<subdivisions> (object sub-primitive resolution) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "subdivisions" Scalar (uint) subdivisions value parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
    */
-  static int parse_subdivisions( const pugi::xml_node &node, uint &subdivisions );
+  static int parse_subdivisions( const pugi::xml_node &node_data, uint &subdivisions );
 
-  //! Parse the value within a <subdivisions> (object sub-primitive resolution) tag
+  //! Parse the value within a \<subdivisions> (object sub-primitive resolution) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "subdivisions" 2D (vec2) subdivisions parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
    */
-  static int parse_subdivisions( const pugi::xml_node &node, int2 &subdivisions );
+  static int parse_subdivisions( const pugi::xml_node &node_data, int2 &subdivisions );
 
-  //! Parse the value within a <subdivisions> (object sub-primitive resolution) tag
+  //! Parse the value within a \<subdivisions> (object sub-primitive resolution) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "subdivisions" 3D (vec3) subdivisions parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
    */
-  static int parse_subdivisions( const pugi::xml_node &node, int3 &subdivisions );
+  static int parse_subdivisions( const pugi::xml_node &node_data, int3 &subdivisions );
 
-  //! Parse the value within a <nodes> (coordinates defining nodes of a tube or cone) tag
+  //! Parse the value within a \<nodes> (coordinates defining nodes of a tube or cone) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "nodes" Vector of node coordinate data parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
    */
-  static int parse_nodes( const pugi::xml_node &node, std::vector<vec3> &nodes );
+  static int parse_nodes( const pugi::xml_node &node_data, std::vector<vec3> &nodes );
 
-  //! Parse the value within a <radius> (radius at nodes of a tube or cone) tag
+  //! Parse the value within a \<radius> (radius at nodes of a tube or cone) tag
   /**
    * \param[in] "node_data" PUGI XML node for tag containing vector data
    * \param[out] "radius" Vector of radii at nodes parsed from XML node
    * \return 0 if parsing was successful, 1 if tag/node did not exist or was empty, 2 if tag/node contained invalid data that could not be converted properly.
    */
-  static int parse_radius( const pugi::xml_node &node, std::vector<float> &radius );
+  static int parse_radius( const pugi::xml_node &node_data, std::vector<float> &radius );
 
 };
 
@@ -1781,7 +1802,7 @@ private:
     //! Map containing data values for timeseries
     std::map<std::string, std::vector<float> > timeseries_data;
     
-    //! Map containging floating point values corresponding to date/time in timeseries
+    //! Map containing floating point values corresponding to date/time in timeseries
     /** \note The date value is calculated as Julian_day + hour/24.f + minute/24.f/60.f */
     std::map<std::string, std::vector<double> > timeseries_datevalue;
     
@@ -1806,7 +1827,7 @@ private:
      */
     helios::Date sim_date;
     
-    //! Simutation time (Time vector)
+    //! Simulation time (Time vector)
     /**
      \sa setTime(), getTime()
      */
@@ -1912,36 +1933,6 @@ public:
     //! Query whether the Context geometry is ``dirty", meaning has the geometry been modified since last set as clean
     /** \sa \ref markGeometryClean(), \ref markGeometryDirty() */
     bool isGeometryDirty() const;
-    
-    //!Get a pointer to a Primitive element from the Context
-    /**
-     * \param[in] "UUID" Unique universal identifier (UUID) of primitive element
-     * @private
-     */
-    DEPRECATED( Primitive* getPrimitivePointer( uint UUID ) const );
-    
-    //!Get a pointer to a Patch from the Context
-    /**
-     * \param[in] "UUID" Unique universal identifier (UUID) of Patch
-     * @private
-     */
-    DEPRECATED( Patch* getPatchPointer( uint UUID ) const );
-    
-    
-    //!Get a pointer to a Triangle from the Context
-    /**
-     * \param[in] "UUID" Unique universal identifier (UUID) of Triangle
-     * @private
-     */
-    DEPRECATED( Triangle* getTrianglePointer( uint UUID ) const) ;
-    
-    
-    //!Get a pointer to a Voxel from the Context
-    /**
-     * \param[in] "UUID" Unique universal identifier (UUID) of Voxel
-     * @private
-     */
-    DEPRECATED( Voxel* getVoxelPointer( uint UUID ) const );
     
     //! Add new default Patch geometric primitive, which is centered at the origin (0,0,0), has unit length and width, horizontal orientation, and black color
     /** Method to add a new default Patch to the Context
@@ -3087,7 +3078,7 @@ public:
      */
     void setPrimitiveTransformationMatrix( const std::vector<uint> &UUIDs, float (&T)[16] );
     
-    //! Method to return the (x,y,z) coordinates of the vertices of a Primitve
+    //! Method to return the (x,y,z) coordinates of the vertices of a Primitive
     /**
      * \param[in] "UUID" Universal unique identifier of primitive.
      */
@@ -4238,17 +4229,23 @@ public:
      */
     void scaleObject( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact );
     
-    //! Get primitive UUIDs associated with compound objects
-    /**
-     * \param[in] "ObjIDs" vector of object IDs to retrieve primitive UUIDs for
-     */
-    std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<uint> &ObjIDs) const;
-    
-    //! Get primitive UUIDs associated with compound object
+    //! Get primitive UUIDs associated with compound object (single object ID input)
     /**
      * \param[in] "ObjID" object ID to retrieve primitive UUIDs for
      */
     std::vector<uint> getObjectPrimitiveUUIDs( uint ObjID ) const;
+
+    //! Get primitive UUIDs associated with compound objects (1D vector of object IDs input)
+    /**
+     * \param[in] "ObjIDs" vector of object IDs to retrieve primitive UUIDs for
+     */
+    std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<uint> &ObjIDs) const;
+
+    //! Get primitive UUIDs associated with compound objects (2D vector of object IDs input)
+    /**
+     * \param[in] "ObjIDs" vector of object IDs to retrieve primitive UUIDs for
+     */
+    std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<std::vector<uint> > &ObjIDs) const;
     
     //! Get an enumeration specifying the type of the object
     /**
@@ -4268,9 +4265,9 @@ public:
      */
     float getTileObjectAreaRatio(const uint &ObjectID) const;
     
-    //! Get the area ratio of a multiplle tile objects (total object area / sub-patch area)
+    //! Get the area ratio of a multiple tile objects (total object area / sub-patch area)
     /**
-     * \param[in] "ObjID" Vector of dentifiers for Tile Compound Object.
+     * \param[in] "ObjID" Vector of identifiers for Tile Compound Object.
      */
     std::vector<float> getTileObjectAreaRatio(const std::vector<uint> &ObjectID) const;
     
@@ -4563,7 +4560,7 @@ public:
 
     //! Add a spherical/ellipsoidal compound object to the Context
     /**
-     * \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+     * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere in x-, y-, and z-directions
      * \param[in] "color" r-g-b color of sphere
@@ -4619,7 +4616,7 @@ public:
      */
     uint addTubeObject( uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
      * \param[in] "center" 3D coordinates of box center
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
@@ -4631,7 +4628,7 @@ public:
      */
     uint addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
      * \param[in] "center" 3D coordinates of box center
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
@@ -4643,7 +4640,7 @@ public:
      */
     uint addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
      * \param[in] "center" 3D coordinates of box center
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
@@ -4655,7 +4652,7 @@ public:
      */
     uint addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const char* texturefile );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
      * \param[in] "center" 3D coordinates of box center
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
@@ -4668,7 +4665,7 @@ public:
      */
     uint addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
      * \param[in] "center" 3D coordinates of box center
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
@@ -4830,7 +4827,7 @@ public:
     
     //! Add a spherical compound object to the Context
     /**
-     * \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+     * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere
      * \return Vector of UUIDs for each sub-triangle
@@ -4841,7 +4838,7 @@ public:
     
     //! Add a spherical compound object to the Context
     /**
-     * \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+     * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere
      * \param[in] "color" r-g-b color of sphere
@@ -4852,7 +4849,7 @@ public:
     
     //! Add a spherical compound object to the Context colored by texture map
     /**
-     * \param[in] "Ndivs" Number of tesselations in zenithal and azimuthal directions
+     * \param[in] "Ndivs" Number of tessellations in zenithal and azimuthal directions
      * \param[in] "center" (x,y,z) coordinate of sphere center
      * \param[in] "radius" Radius of sphere
      * \param[in] "texturefile" Name of image file for texture map
@@ -4969,7 +4966,7 @@ public:
      */
     std::vector<uint> addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const char* texturefile );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
      * \param[in] "center" 3D coordinates of box center
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
@@ -4982,7 +4979,7 @@ public:
      */
     std::vector<uint> addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals );
     
-    //! Add a rectangular prism tesselated with Patch primitives
+    //! Add a rectangular prism tessellated with Patch primitives
     /**
      * \param[in] "center" 3D coordinates of box center
      * \param[in] "size" Size of the box in the x-, y-, and z-directions
@@ -5330,7 +5327,7 @@ public:
     //! Write primitive data to an ASCII text file for all primitives in the Context
     /**
      * \param[in] "filename" Path to file that will be written.
-     * \param[in] "column_format" Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data doesn not exist, an error will be thrown.
+     * \param[in] "column_format" Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data does not exist, an error will be thrown.
      * \param[in] "print_header" Flag specifying whether to print the name of the primitive data in the column header.
      */
     void writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, bool print_header = false ) const;
@@ -5338,7 +5335,7 @@ public:
     //! Write primitive data to an ASCII text file for selected primitives in the Context
     /**
      * \param[in] "filename" Path to file that will be written.
-     * \param[in] "column_format" Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data doesn not exist, an error will be thrown.
+     * \param[in] "column_format" Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data does not exist, an error will be thrown.
      * \param[in] "UUIDs" Unique universal identifiers for primitives to include when writing data to file.
      * \param[in] "print_header" Flag specifying whether to print the name of the primitive data in the column header.
      */

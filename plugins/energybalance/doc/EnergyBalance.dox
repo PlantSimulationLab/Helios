@@ -43,7 +43,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \section EBIntro Introduction
 
- This model plugin calculates a local energy balance for every primitive, and ultimately predics sensible, latent, and longwave fluxes as well as surface temperature. The energy balance equation is solved in parallel on the GPU to accelerate calculations.
+ This model plugin calculates a local energy balance for every primitive, and ultimately predicts sensible, latent, and longwave fluxes as well as surface temperature. The energy balance equation is solved in parallel on the GPU to accelerate calculations.
 
  The model is solving the steady-state budget between absorbed radiation, emitted radiation, sensible heat exchange, and latent heat exchange, which is written as
 
@@ -131,7 +131,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsection EBRad Input Radiative Bands
 
- In order for the model to calculate the absorbed all-wave radiation flux, it needs to know the names of all radiation bands that were added to the radiation model. This is done using the function \ref EnergyBalanceModel::addRadiationBand() "addRadiationBand()". In the following examplle, assume we have three radiative wavebands "PAR", "NIR", and "LW". 
+ In order for the model to calculate the absorbed all-wave radiation flux, it needs to know the names of all radiation bands that were added to the radiation model. This is done using the function \ref EnergyBalanceModel::addRadiationBand() "addRadiationBand()". In the following example, assume we have three radiative wavebands "PAR", "NIR", and "LW".
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code> \c // Initialize the Model

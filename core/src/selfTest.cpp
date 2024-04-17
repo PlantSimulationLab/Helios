@@ -166,7 +166,7 @@ int Context::selfTest(){
 
     center = make_vec3(1,2,3);
     size = make_vec2(1,2);
-    rotation.elevation = 0.15f*M_PI;
+    rotation = make_SphericalCoord(1.f, 0.15f*M_PI, 0.5f*M_PI);
     rotation.azimuth = 0.5f*M_PI;;
     UUID = context_test.addPatch(center,size,rotation);
     normal_r = context_test.getPrimitiveNormal(UUID);
@@ -667,7 +667,7 @@ int Context::selfTest(){
     context_test.getConeObjectPointer(cone_1)->translate(make_vec3(1, 1, 1));
 
     // get the updated node position
-    std::vector<helios::vec3> nodes_T = context_test.getConeObjectPointer(cone_1)->getNodes();
+    std::vector<helios::vec3> nodes_T = context_test.getConeObjectPointer(cone_1)->getNodeCoordinates();
 
     if(nodes_T.at(0).x - 1.0f > errtol || nodes_T.at(0).y - 1.0f > errtol || nodes_T.at(0).z - 1.0f > errtol ||
        nodes_T.at(1).x - 1.0f > errtol || nodes_T.at(1).y - 1.0f > errtol || nodes_T.at(1).z - 3.0f > errtol ){
@@ -693,7 +693,7 @@ int Context::selfTest(){
     // translate back
     context_test.getConeObjectPointer(cone_1)->translate(nodes_T.at(0));
     //get the updated node positions
-    nodes_T = context_test.getConeObjectPointer(cone_1)->getNodes();
+    nodes_T = context_test.getConeObjectPointer(cone_1)->getNodeCoordinates();
 
     if(nodes_T.at(0).x - 1.0f > errtol || nodes_T.at(0).y - 1.0f > errtol || nodes_T.at(0).z - 1.0f > errtol ||
        nodes_T.at(1).x - 3.0f > errtol || nodes_T.at(1).y - 1.0f > errtol || nodes_T.at(1).z - 1.0f > errtol ){
@@ -705,7 +705,7 @@ int Context::selfTest(){
     //scale the length of the cone to twice its original length
     context_test.getConeObjectPointer(cone_1)->scaleLength(2.0);
     //get the updated node positions
-    nodes_T = context_test.getConeObjectPointer(cone_1)->getNodes();
+    nodes_T = context_test.getConeObjectPointer(cone_1)->getNodeCoordinates();
 
     if(nodes_T.at(0).x - 1.0 > errtol || nodes_T.at(0).y - 1.0 > errtol || nodes_T.at(0).z - 1.0 > errtol ||
        nodes_T.at(1).x - 6.0 > errtol || nodes_T.at(1).y - 1.0 > errtol || nodes_T.at(1).z - 1.0 > errtol ){

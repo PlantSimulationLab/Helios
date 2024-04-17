@@ -827,7 +827,7 @@ Patch::Patch( const char* a_texturefile, float a_solid_fraction, uint a_parent_o
 
 }
 
-Patch::Patch( const char* a_texturefile, const std::vector<vec2>& a_uv, const std::map<std::string,Texture> &textures, uint a_parent_objID, uint a_UUID ){
+Patch::Patch( const char* a_texturefile, const std::vector<helios::vec2>& a_uv, const std::map<std::string,Texture> &textures, uint a_parent_objID, uint a_UUID ){
 
     makeIdentityMatrix( transform );
 
@@ -858,7 +858,7 @@ helios::vec3 Patch::getCenter() const{
     return make_vec3(transform[3],transform[7],transform[11]);
 }
 
-Triangle::Triangle(  const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const RGBAcolor& a_color, uint a_parent_objID, uint a_UUID ){
+Triangle::Triangle(  const helios::vec3& a_vertex0, const helios::vec3& a_vertex1, const helios::vec3& a_vertex2, const helios::RGBAcolor& a_color, uint a_parent_objID, uint a_UUID ){
 
     makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
     color = a_color;
@@ -871,7 +871,7 @@ Triangle::Triangle(  const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a
 
 }
 
-Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const char* a_texturefile, const std::vector<vec2>& a_uv, float solid_fraction, uint a_parent_objID, uint a_UUID ){
+Triangle::Triangle( const helios::vec3& a_vertex0, const helios::vec3& a_vertex1, const helios::vec3& a_vertex2, const char* a_texturefile, const std::vector<helios::vec2>& a_uv, float solid_fraction, uint a_parent_objID, uint a_UUID ){
 
   makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
   color = make_RGBAcolor(RGB::red,1);
@@ -886,7 +886,7 @@ Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_
 
 }
 
-Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_vertex2, const char* a_texturefile, const std::vector<vec2>& a_uv, const std::map<std::string,Texture> &textures, uint a_parent_objID, uint a_UUID ){
+Triangle::Triangle( const helios::vec3& a_vertex0, const helios::vec3& a_vertex1, const helios::vec3& a_vertex2, const char* a_texturefile, const std::vector<helios::vec2>& a_uv, const std::map<std::string,Texture> &textures, uint a_parent_objID, uint a_UUID ){
 
   makeTransformationMatrix(a_vertex0,a_vertex1,a_vertex2);
   color = make_RGBAcolor(RGB::red,1);
@@ -906,7 +906,7 @@ Triangle::Triangle( const vec3& a_vertex0, const vec3& a_vertex1, const vec3& a_
 vec3 Triangle::getVertex( int number ){
 
     if( number<0 || number>2 ){
-        helios_runtime_error("ERROR (getVertex): vertex index must be 1, 2, or 3.");
+        helios_runtime_error("ERROR (Context::getVertex): vertex index must be 1, 2, or 3.");
     }
 
     vec3 Y[3];
@@ -1000,11 +1000,11 @@ vec3 Voxel::getSize(){
 void Context::setDate( int day, int month, int year ){
 
     if( day<1 || day>31 ){
-        helios_runtime_error("ERROR (setDate): Day of month is out of range (day of " + std::to_string(day) + " was given).");
+        helios_runtime_error("ERROR (Context::setDate): Day of month is out of range (day of " + std::to_string(day) + " was given).");
     }else if( month<1 || month>12){
-        helios_runtime_error("ERROR (setDate): Month of year is out of range (month of " + std::to_string(month) + " was given).");
+        helios_runtime_error("ERROR (Context::setDate): Month of year is out of range (month of " + std::to_string(month) + " was given).");
     }else if( year<1000 ){
-        helios_runtime_error("ERROR (setDate): Year should be specified in YYYY format.");
+        helios_runtime_error("ERROR (Context::setDate): Year should be specified in YYYY format.");
     }
 
     sim_date = make_Date(day,month,year);
@@ -1014,11 +1014,11 @@ void Context::setDate( int day, int month, int year ){
 void Context::setDate( Date date ){
 
     if( date.day<1 || date.day>31 ){
-        helios_runtime_error("ERROR (setDate): Day of month is out of range (day of " + std::to_string(date.day) + " was given).");
+        helios_runtime_error("ERROR (Context::setDate): Day of month is out of range (day of " + std::to_string(date.day) + " was given).");
     }else if( date.month<1 || date.month>12){
-        helios_runtime_error("ERROR (setDate): Month of year is out of range (month of " + std::to_string(date.month) + " was given).");
+        helios_runtime_error("ERROR (Context::setDate): Month of year is out of range (month of " + std::to_string(date.month) + " was given).");
     }else if( date.year<1000 ){
-        helios_runtime_error("ERROR (setDate): Year should be specified in YYYY format.");
+        helios_runtime_error("ERROR (Context::setDate): Year should be specified in YYYY format.");
     }
 
     sim_date = date;
@@ -1028,9 +1028,9 @@ void Context::setDate( Date date ){
 void Context::setDate( int Julian_day, int year ){
 
     if( Julian_day<1 || Julian_day>366 ){
-        helios_runtime_error("ERROR (setDate): Julian day out of range.");
+        helios_runtime_error("ERROR (Context::setDate): Julian day out of range.");
     }else if( year<1000 ){
-        helios_runtime_error("ERROR (setDate): Year should be specified in YYYY format.");
+        helios_runtime_error("ERROR (Context::setDate): Year should be specified in YYYY format.");
     }
 
     sim_date = CalendarDay( Julian_day, year );
@@ -1081,11 +1081,11 @@ void Context::setTime( int minute, int hour ){
 void Context::setTime( int second, int minute, int hour ){
 
     if( second<0 || second>59 ){
-        helios_runtime_error("ERROR (setTime): Second out of range (0-59).");
+        helios_runtime_error("ERROR (Context::setTime): Second out of range (0-59).");
     }else if( minute<0 || minute>59 ){
-        helios_runtime_error("ERROR (setTime): Minute out of range (0-59).");
+        helios_runtime_error("ERROR (Context::setTime): Minute out of range (0-59).");
     }else if( hour<0 || hour>23 ){
-        helios_runtime_error("ERROR (setTime): Hour out of range (0-23).");
+        helios_runtime_error("ERROR (Context::setTime): Hour out of range (0-23).");
     }
 
     sim_time = make_Time(hour,minute,second);
@@ -1095,9 +1095,9 @@ void Context::setTime( int second, int minute, int hour ){
 void Context::setTime( Time time ){
 
     if( time.minute<0 || time.minute>59 ){
-        helios_runtime_error("ERROR (setTime): Minute out of range (0-59).");
+        helios_runtime_error("ERROR (Context::setTime): Minute out of range (0-59).");
     }else if( time.hour<0 || time.hour>23 ){
-        helios_runtime_error("ERROR (setTime): Hour out of range (0-23).");
+        helios_runtime_error("ERROR (Context::setTime): Hour out of range (0-23).");
     }
 
     sim_time = time;
@@ -1114,7 +1114,7 @@ float Context::randu(){
 
 float Context::randu( float minrange, float maxrange ){
     if( maxrange<minrange ){
-        helios_runtime_error("ERROR (randu): Maximum value of range must be greater than minimum value of range.");
+        helios_runtime_error("ERROR (Context::randu): Maximum value of range must be greater than minimum value of range.");
         return 0;
     }else if( maxrange==minrange ){
         return minrange;
@@ -1125,7 +1125,7 @@ float Context::randu( float minrange, float maxrange ){
 
 int Context::randu( int minrange, int maxrange ){
     if( maxrange<minrange ){
-        helios_runtime_error("ERROR (randu): Maximum value of range must be greater than minimum value of range.");
+        helios_runtime_error("ERROR (Context::randu): Maximum value of range must be greater than minimum value of range.");
         return 0;
     }else if( maxrange==minrange ){
         return minrange;
@@ -1161,7 +1161,7 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const RGBAcolor& color ){
 
     if( size.x==0 || size.y==0 ){
-        helios_runtime_error("ERROR (addPatch): Size of patch must be greater than 0.");
+        helios_runtime_error("ERROR (Context::addPatch): Size of patch must be greater than 0.");
     }
 
     auto* patch_new = (new Patch( color, 0, currentUUID ));
@@ -1236,11 +1236,11 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
     }
 
     if( size.x==0 || size.y==0 ){
-        helios_runtime_error("ERROR (addPatch): Size of patch must be greater than 0.");
+        helios_runtime_error("ERROR (Context::addPatch): Size of patch must be greater than 0.");
     }
 
     if( uv_center.x-0.5*uv_size.x<-1e-3 || uv_center.y-0.5*uv_size.y<-1e-3 || uv_center.x+0.5*uv_size.x-1.f>1e-3 || uv_center.y+0.5*uv_size.y-1.f>1e-3 ){
-        helios_runtime_error("ERROR (addPatch): Invalid texture coordinates. uv_center-0.5*uv_size should be >=0 and uv_center+0.5*uv_size should be <=1.");
+        helios_runtime_error("ERROR (Context::addPatch): Invalid texture coordinates. uv_center-0.5*uv_size should be >=0 and uv_center+0.5*uv_size should be <=1.");
     }
 
     addTexture( texture_file );
@@ -1459,7 +1459,7 @@ void Context::deletePrimitive( const std::vector<uint>& UUIDs ){
 void Context::deletePrimitive(uint UUID ){
     
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (deletePrimitive): UUID of " + std::to_string(UUID) + " not found in the context.");
+        helios_runtime_error("ERROR (Context::deletePrimitive): UUID of " + std::to_string(UUID) + " not found in the context.");
     }
     
     Primitive* prim = primitives.at(UUID);
@@ -1501,7 +1501,7 @@ std::vector<uint> Context::copyPrimitive(const std::vector<uint> &UUIDs ){
 uint Context::copyPrimitive( uint UUID ){
 
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (copyPrimitive): UUID of " + std::to_string(UUID) + " not found in the context.");
+        helios_runtime_error("ERROR (Context::copyPrimitive): UUID of " + std::to_string(UUID) + " not found in the context.");
     }
 
     PrimitiveType type = primitives.at(UUID)->getType();
@@ -1572,16 +1572,9 @@ uint Context::copyPrimitive( uint UUID ){
     return currentUUID-1;
 }
 
-Primitive* Context::getPrimitivePointer( uint UUID ) const{
-    if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getPrimitivePointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    }
-    return primitives.at(UUID);
-}
-
 Primitive* Context::getPrimitivePointer_private( uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getPrimitivePointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getPrimitivePointer_private): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }
     return primitives.at(UUID);
 }
@@ -1591,6 +1584,9 @@ bool Context::doesPrimitiveExist(uint UUID ) const{
 }
 
 bool Context::doesPrimitiveExist( const std::vector<uint> &UUIDs ) const{
+    if( UUIDs.empty() ){
+        return false;
+    }
     for( uint UUID : UUIDs ){
         if( !doesPrimitiveExist(UUID) ){
             return false;
@@ -1599,56 +1595,38 @@ bool Context::doesPrimitiveExist( const std::vector<uint> &UUIDs ) const{
     return true;
 }
 
-Patch* Context::getPatchPointer(uint UUID ) const{
-    if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getPatchPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
-        helios_runtime_error("ERROR (getPatchPointer): UUID of " + std::to_string(UUID) + " is not a patch.");
-    }
-    return dynamic_cast<Patch*>(primitives.at(UUID));
-}
-
 Patch* Context::getPatchPointer_private(uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getPatchPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getPatchPointer_private): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
-        helios_runtime_error("ERROR (getPatchPointer): UUID of " + std::to_string(UUID) + " is not a patch.");
+        helios_runtime_error("ERROR (Context::getPatchPointer_private): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
     return dynamic_cast<Patch*>(primitives.at(UUID));
 }
 
 helios::vec2 Context::getPatchSize( uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getPatchSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getPatchSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
-        helios_runtime_error("ERROR (getPatchSize): UUID of " + std::to_string(UUID) + " is not a patch.");
+        helios_runtime_error("ERROR (Context::getPatchSize): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
     return dynamic_cast<Patch*>(primitives.at(UUID))->getSize();
 }
 
 helios::vec3 Context::getPatchCenter( uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getPatchCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getPatchCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
-        helios_runtime_error("ERROR (getPatchCenter): UUID of " + std::to_string(UUID) + " is not a patch.");
+        helios_runtime_error("ERROR (Context::getPatchCenter): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
     return dynamic_cast<Patch*>(primitives.at(UUID))->getCenter();
 }
 
-Triangle* Context::getTrianglePointer(uint UUID ) const{
-    if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (getTrianglePointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_TRIANGLE ){
-        helios_runtime_error("ERROR (getTrianglePointer): UUID of " + std::to_string(UUID) + " is not a triangle.");
-    }
-    return dynamic_cast<Triangle*>(primitives.at(UUID));
-}
-
 Triangle* Context::getTrianglePointer_private(uint UUID ) const{
     if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (Context::getTrianglePointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        helios_runtime_error("ERROR (Context::getTrianglePointer_private): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_TRIANGLE ){
-        helios_runtime_error("ERROR (Context::getTrianglePointer): UUID of " + std::to_string(UUID) + " is not a triangle.");
+        helios_runtime_error("ERROR (Context::getTrianglePointer_private): UUID of " + std::to_string(UUID) + " is not a triangle.");
     }
     return dynamic_cast<Triangle*>(primitives.at(UUID));
 }
@@ -1662,15 +1640,6 @@ helios::vec3 Context::getTriangleVertex( uint UUID, uint number ) const{
         helios_runtime_error("ERROR (Context::getTriangleVertex): Vertex index must be one of 0, 1, or 2.");
     }
     return dynamic_cast<Triangle*>(primitives.at(UUID))->getVertex( number );
-}
-
-Voxel* Context::getVoxelPointer(uint UUID ) const{
-    if( primitives.find(UUID) == primitives.end() ){
-        helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
-        helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " is not a voxel.");
-    }
-    return dynamic_cast<Voxel*>(primitives.at(UUID));
 }
 
 Voxel* Context::getVoxelPointer_private(uint UUID ) const{
@@ -2547,7 +2516,7 @@ uint Context::copyObject(uint ObjID ){
 
         Cone* o = getConeObjectPointer( ObjID );
 
-        std::vector<vec3> nodes = o->getNodes();
+        std::vector<vec3> nodes = o->getNodeCoordinates();
         std::vector<float> radius = o->getNodeRadii();
         uint subdiv = o->getSubdivisionCount();
 
@@ -2708,6 +2677,13 @@ void Context::scaleObject( const std::vector<uint>& ObjIDs, const helios::vec3 &
     }
 }
 
+std::vector<uint> Context::getObjectPrimitiveUUIDs( uint ObjID ) const{
+
+    std::vector<uint> IDs{ObjID};
+    std::vector<uint> output_UUIDs = getObjectPrimitiveUUIDs(IDs);
+    return output_UUIDs;
+}
+
 std::vector<uint> Context::getObjectPrimitiveUUIDs( const std::vector<uint> &ObjIDs ) const{
 
     std::vector<uint> output_UUIDs;
@@ -2721,10 +2697,17 @@ std::vector<uint> Context::getObjectPrimitiveUUIDs( const std::vector<uint> &Obj
     return output_UUIDs;
 }
 
-std::vector<uint> Context::getObjectPrimitiveUUIDs( uint ObjID ) const{
+std::vector<uint> Context::getObjectPrimitiveUUIDs( const std::vector<std::vector<uint> > &ObjIDs ) const{
 
-    std::vector<uint> IDs{ObjID};
-    std::vector<uint> output_UUIDs = getObjectPrimitiveUUIDs(IDs);
+    std::vector<uint> output_UUIDs;
+
+    for( uint j=0; j<ObjIDs.size(); j++ ) {
+        for (uint i = 0; i < ObjIDs.at(j).size(); i++) {
+            CompoundObject *pointer = getObjectPointer(ObjIDs.at(j).at(i));
+            std::vector<uint> current_UUIDs = pointer->getPrimitiveUUIDs();
+            output_UUIDs.insert(output_UUIDs.end(), current_UUIDs.begin(), current_UUIDs.end());
+        }
+    }
     return output_UUIDs;
 }
 
@@ -3496,7 +3479,7 @@ Cone* Context::getConeObjectPointer( const uint ObjID ) const{
     return dynamic_cast<Cone*>(objects.at(ObjID));
 }
 
-std::vector<helios::vec3> Cone::getNodes() const{
+std::vector<helios::vec3> Cone::getNodeCoordinates() const{
 
     std::vector<vec3> nodes_T;
 
@@ -3511,17 +3494,17 @@ std::vector<helios::vec3> Cone::getNodes() const{
     return nodes_T;
 }
 
-helios::vec3 Cone::getNode( int number ) const{
+helios::vec3 Cone::getNodeCoordinate(int node_index ) const{
 
-    if( number<0 || number>1 ){
-        helios_runtime_error("ERROR (Cone::getNode): node number must be 0 or 1.");
+    if(node_index < 0 || node_index > 1 ){
+        helios_runtime_error("ERROR (Cone::getNodeCoordinate): node number must be 0 or 1.");
     }
 
     vec3 node_T;
 
-    node_T.x = transform[0] * nodes.at(number).x + transform[1] * nodes.at(number).y + transform[2] * nodes.at(number).z + transform[3];
-    node_T.y = transform[4] * nodes.at(number).x + transform[5] * nodes.at(number).y + transform[6] * nodes.at(number).z + transform[7];
-    node_T.z = transform[8] * nodes.at(number).x + transform[9] * nodes.at(number).y + transform[10] * nodes.at(number).z + transform[11];
+    node_T.x = transform[0] * nodes.at(node_index).x + transform[1] * nodes.at(node_index).y + transform[2] * nodes.at(node_index).z + transform[3];
+    node_T.y = transform[4] * nodes.at(node_index).x + transform[5] * nodes.at(node_index).y + transform[6] * nodes.at(node_index).z + transform[7];
+    node_T.z = transform[8] * nodes.at(node_index).x + transform[9] * nodes.at(node_index).y + transform[10] * nodes.at(node_index).z + transform[11];
 
     return node_T;
 }
@@ -3543,12 +3526,12 @@ std::vector<float> Cone::getNodeRadii() const{
     return radii_T;
 }
 
-float Cone::getNodeRadius( int number ) const{
-    if( number<0 || number>1 ){
+float Cone::getNodeRadius( int node_index ) const{
+    if(node_index < 0 || node_index > 1 ){
         helios_runtime_error("ERROR (Cone::getNodeRadius): node number must be 0 or 1.");
     }
 
-    vec3 n0(0,0,0), nx(radii.at(number),0,0);
+    vec3 n0(0,0,0), nx(radii.at(node_index), 0, 0);
     vec3 n0_T, nx_T;
 
     vecmult(transform,n0,n0_T);
@@ -3601,7 +3584,7 @@ float Cone::getLength() const{
 void Cone::scaleLength( float S ){
 
     //get the nodes and radii of the nodes with transformation matrix applied
-    std::vector<helios::vec3> nodes_T = context->getConeObjectPointer(OID)->getNodes();
+    std::vector<helios::vec3> nodes_T = context->getConeObjectPointer(OID)->getNodeCoordinates();
     std::vector<float> radii_T = context->getConeObjectPointer(OID)->getNodeRadii();
 
     // calculate the transformed axis unit vector of the cone
@@ -3650,7 +3633,7 @@ void Cone::scaleLength( float S ){
 void Cone::scaleGirth( float S ){
 
     //get the nodes and radii of the nodes with transformation matrix applied
-    std::vector<helios::vec3> nodes_T = context->getConeObjectPointer(OID)->getNodes();
+    std::vector<helios::vec3> nodes_T = context->getConeObjectPointer(OID)->getNodeCoordinates();
     std::vector<float> radii_T = context->getConeObjectPointer(OID)->getNodeRadii();
 
     // calculate the transformed axis unit vector of the cone
@@ -4793,7 +4776,9 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
 
 uint Context::addPolymeshObject(const std::vector<uint> &UUIDs ){
 
-    if( !doesPrimitiveExist(UUIDs) ){
+    if( UUIDs.empty() ){
+        helios_runtime_error("ERROR (Context::addPolymeshObject): UUIDs array is empty. Cannot create polymesh object.");
+    }else if( !doesPrimitiveExist(UUIDs) ){
         helios_runtime_error("ERROR (Context::addPolymeshObject): One or more of the provided UUIDs does not exist. Cannot create polymesh object.");
     }
 
@@ -7629,7 +7614,7 @@ uint Context::getConeObjectSubdivisionCount(uint &ObjID) const {
 }
 
 std::vector<helios::vec3> Context::getConeObjectNodes(uint &ObjID) const {
-    return getConeObjectPointer_private(ObjID)->getNodes();
+    return getConeObjectPointer_private(ObjID)->getNodeCoordinates();
 }
 
 std::vector<float> Context::getConeObjectNodeRadii(uint &ObjID) const {
@@ -7637,7 +7622,7 @@ std::vector<float> Context::getConeObjectNodeRadii(uint &ObjID) const {
 }
 
 helios::vec3 Context::getConeObjectNode(uint &ObjID, int number) const {
-    return getConeObjectPointer_private(ObjID)->getNode(number);
+    return getConeObjectPointer_private(ObjID)->getNodeCoordinate(number);
 }
 
 float Context::getConeObjectNodeRadius(uint &ObjID, int number) const {

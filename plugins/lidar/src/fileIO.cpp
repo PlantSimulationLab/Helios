@@ -399,7 +399,7 @@ size_t LiDARcloud::loadASCIIFile( uint scanID, ScanMetadata &scandata ){
     }
 
     vec3 temp_xyz;
-    SphericalCoord temp_direction;
+    float temp_zenith, temp_azimuth;
     RGBcolor temp_rgb;
     float temp_row, temp_column;
     double temp_data;
@@ -413,7 +413,8 @@ size_t LiDARcloud::loadASCIIFile( uint scanID, ScanMetadata &scandata ){
         temp_rgb = make_RGBcolor(1,0,0); //default color: red
         temp_row = -1;
         temp_column = -1;
-        temp_direction = make_SphericalCoord(-9999,-9999);
+        temp_zenith = -9999;
+        temp_azimuth = -9999;
 
         for( uint i=0; i<scandata.columnFormat.size(); i++ ){
             if( scandata.columnFormat.at(i) == "row" ){
@@ -421,15 +422,15 @@ size_t LiDARcloud::loadASCIIFile( uint scanID, ScanMetadata &scandata ){
             }else if( scandata.columnFormat.at(i) == "column" ){
                 datafile >> temp_column;
             }else if( scandata.columnFormat.at(i) == "zenith" ){
-                datafile >> temp_direction.zenith;
+                datafile >> temp_zenith;
+                temp_zenith = deg2rad(temp_zenith);
             }else if( scandata.columnFormat.at(i) == "azimuth" ){
-                datafile >> temp_direction.azimuth;
+                datafile >> temp_azimuth;
+                temp_azimuth = deg2rad(temp_azimuth);
             }else if( scandata.columnFormat.at(i) == "zenith_rad" ){
-                datafile >> temp_direction.zenith;
-                temp_direction.zenith = deg2rad(temp_direction.zenith);
+                datafile >> temp_zenith;
             }else if( scandata.columnFormat.at(i) == "azimuth_rad" ){
-                datafile >> temp_direction.azimuth;
-                temp_direction.azimuth = deg2rad(temp_direction.azimuth);
+                datafile >> temp_azimuth;
             }else if( scandata.columnFormat.at(i) == "x" ){
                 datafile >> temp_xyz.x;
             }else if( scandata.columnFormat.at(i) == "y" ){
@@ -476,6 +477,7 @@ size_t LiDARcloud::loadASCIIFile( uint scanID, ScanMetadata &scandata ){
         }
 
         //direction
+        SphericalCoord temp_direction(1.f, 0.5f*M_PI-temp_zenith, temp_azimuth);
         if( temp_direction.elevation==-9999 || temp_direction.azimuth==-9999 ){
             temp_direction = cart2sphere( temp_xyz - scandata.origin );
         }

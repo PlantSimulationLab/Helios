@@ -57,6 +57,7 @@ struct AerialScanMetadata{
   
 };
 
+//! Structure containing metadata for an aerial hit point
 struct AerialHitPoint{
   helios::vec3 position;
   helios::SphericalCoord direction;

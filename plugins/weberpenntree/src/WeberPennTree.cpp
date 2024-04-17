@@ -454,7 +454,7 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
       
       for( uint s=0; s<stems_per_segment; s++ ){
 
-	child_rotation.elevation += (parameters.nCurve.at(n)+getVariation(parameters.nCurveV.at(n)))/float(parameters.nCurveRes.at(n))/float(stems_per_segment)*M_PI/180.f;
+    child_rotation = make_SphericalCoord(child_rotation.radius, child_rotation.elevation + (parameters.nCurve.at(n)+getVariation(parameters.nCurveV.at(n)))/float(parameters.nCurveRes.at(n))/float(stems_per_segment)*M_PI/180.f, child_rotation.azimuth);
 
 	float theta_child = child_rotation.elevation;
 	  

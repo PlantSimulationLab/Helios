@@ -1,4 +1,4 @@
-/** \file "StomatalConductance.h" Primary header file for stomatalconductance plug-in.
+/** \file "StomatalConductanceModel.h" Primary header file for stomatalconductance plug-in.
 
     Copyright (C) 2016-2024 Brian Bailey
 

@@ -5,7 +5,7 @@ var searchData=
   ['bean_2',['bean',['../class_canopy_generator.html#ad23ee37e5873fe542f6fc799f541384f',1,'CanopyGenerator']]],
   ['beanparameters_3',['BeanParameters',['../struct_bean_parameters.html#a2fdf7cbadfebd5c8494ad9bbdb0e8bf5',1,'BeanParameters']]],
   ['blconductancemodel_4',['BLConductanceModel',['../class_b_l_conductance_model.html#af507e5b75f21372ec225d5e5c0c8c97a',1,'BLConductanceModel']]],
-  ['blend_5',['blend',['../global_8h.html#aabb6c7be314ffb639d0e7db4aa33398c',1,'helios::blend(RGBcolor color0, RGBcolor color1, float weight)'],['../global_8h.html#a06a8d8b0bee35e1fd8c564a7674bd07a',1,'helios::blend(const RGBAcolor &amp;color0, const RGBAcolor &amp;color1, float weight)']]],
+  ['blend_5',['blend',['../global_8h.html#a192c018f83c0598738e048212904202d',1,'helios::blend(const RGBcolor &amp;color0, const RGBcolor &amp;color1, float weight)'],['../global_8h.html#a06a8d8b0bee35e1fd8c564a7674bd07a',1,'helios::blend(const RGBAcolor &amp;color0, const RGBAcolor &amp;color1, float weight)']]],
   ['blendspectra_6',['blendSpectra',['../class_radiation_model.html#a43a328dde4dd5f1a431afe9dc5e8664e',1,'RadiationModel']]],
   ['blendspectrarandomly_7',['blendSpectraRandomly',['../class_radiation_model.html#a3f52651f2144aaca702824028964a076',1,'RadiationModel']]],
   ['box_8',['Box',['../classhelios_1_1_box.html#ab93cb2d8f6948617f67d236d85b3682a',1,'helios::Box']]],

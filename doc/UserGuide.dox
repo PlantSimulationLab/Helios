@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.8
+/*! \mainpage Helios Documentation v1.3.9
 
   <p> <br> </p>
 
@@ -6,7 +6,7 @@
 
   <h3> <br><br>
 
-  The Helios simulation system is a versatile modeling framework that handles tasks such as managing geometry and associated data structures through a C++ API.  Plug-ins build off of the Helios core engine, and access the geometry and data via the Helios context. The system comes with a visualization plug-in that can produce stunning renderings of model geometry and data with relatively little effort.
+  The Helios simulation system is a versatile modeling framework that handles tasks such as managing geometry and associated data structures through a C++ API.  Plug-ins build on the Helios core engine, and access the geometry and data via the Helios context. The system comes with a visualization plug-in that can produce stunning renderings of model geometry and data with relatively little effort.
 
   </h3>
 
@@ -180,7 +180,7 @@ $ git pull
 
   Download and install Microsoft Visual Studio Community 2022 if your GPU has compute capability of 5 or higher. You can look up your GPU's compute capability here. If your compute capability is less than 5, you'll need to download Visual Studio Community 2019 and CUDA 10.2 to ensure compatibility. The link to download older versions of Visual Studio is here: <a href="https://visualstudio.microsoft.com/vs/older-downloads/">https://visualstudio.microsoft.com/vs/older-downloads/</a>. It will require that you <a href="https://visualstudio.microsoft.com/dev-essentials/">join the free Dev Essentials program</a> in order to access the old downloads. Once you have reached the downloads page, Download Visual Studio Community 2019. For more information on choosing your compiler version, consult \ref chooseCUDA "this page".
 
-  Once you have successfully downloaded the EXE install file, you can run it to perform the install. The important step is to be sure to install the optional packages for C++ Desktop Development. The figure below shows the check box to enable. When the installer finishes, there is no need to actually open Visual Studio, and you can move on to the next step.
+  Once you have successfully downloaded the EXE install file, you can run it to perform the installation. The important step is to be sure to install the optional packages for C++ Desktop Development. The figure below shows the check box to enable. When the installer finishes, there is no need to actually open Visual Studio, and you can move on to the next step.
 
   \image html MSVC_cpp_options.png
 
@@ -221,6 +221,10 @@ $ git pull
   3. If the TdrDelay key does not exist, right-click the GraphicsDrivers key, select New, and then select DWORD (32-bit) Value. Name the new value TdrDelay.
   4. Double-click TdrDelay and add 600 for the Value data and make it a Decimal (instead of Hexadecimal). Click OK. If you encounter the same "Display driver stopped responding and has recovered" error in the future, increase the value.
   5. Close the registry editor and restart the computer for the changes to take effect.
+
+  \subsubsection OptiXWSL Manually installing OptiX if using Windows Subsystem for Linux (WSL)
+
+  OptiX is normally packaged with Helios, such that you do not have to worry about installing it. However, if you are using Windows Subsystem for Linux (WSL), you will need to manually install OptiX since the version included with Helios does not have the required drivers for WSL. You can follow the instructions on this site to perform the installation: <a href="https://forums.developer.nvidia.com/t/problem-running-optix-7-6-in-wsl/239355/7">https://forums.developer.nvidia.com/t/problem-running-optix-7-6-in-wsl/239355/7</a>.
 
   \section SetupLinux Set-up on Linux
 
@@ -293,7 +297,7 @@ $ git pull
 
   \subsection DirStruct Basic Directory Structure
 
-  Projects that use the Helios API can be located in any directory, and simply need to reference the location of the source code and plug-ins.  Typically the project directory contains the following files and directories (see 'samples' directory for examples):
+  Projects that use the Helios API can be located in any directory, and simply need to reference the location of the source code and plug-ins.  Typically, the project directory contains the following files and directories (see 'samples' directory for examples):
 
   <ul>
     <li>'build' directory.
@@ -468,18 +472,18 @@ $ git pull
  Available vector types are detailed below. Note that these vector types are all defined under the 'helios' namespace.
 
  <table>
- <tr><th>Type</th><th>Description</th><th>Data Fields</th><th>Member Functions</th><th>Creation Function</th></tr>
- <tr><td>\ref helios::vec2 "vec2"</td><td>2D vector of floats</td><td>\ref helios::vec2::x "x", \ref helios::vec2::y "y"</td><td>\ref helios::vec2::normalize() "normalize()", \ref helios::vec2::magnitude() "magnitude()"</td><td>\ref helios::make_vec2() "make_vec2()"</td></tr>
- <tr><td>\ref helios::vec3 "vec3"</td><td>3D vector of floats</td><td>\ref helios::vec3::x "x", \ref helios::vec3::y "y", \ref helios::vec3::z "z"</td><td>\ref helios::vec3::normalize() "normalize()", \ref helios::vec3::magnitude() "magnitude()"</td><td>\ref helios::make_vec3() "make_vec3()"</td></tr>
- <tr><td>\ref helios::vec4 "vec4"</td><td>4D vector of floats</td><td>\ref helios::vec4::x "x", \ref helios::vec4::y "y", \ref helios::vec4::z "z", \ref helios::vec4::w "w"</td><td>none</td><td>\ref helios::make_vec4() "make_vec4()"</td></tr>
- <tr><td>\ref helios::int2 "int2"</td><td>2D vector of integers</td><td>\ref helios::int2::x "x", \ref helios::int2::y "y"</td><td>none</td><td>\ref helios::make_int2() "make_int2()"</td></tr>
- <tr><td>\ref helios::int3 "int3"</td><td>3D vector of integers</td><td>\ref helios::int3::x "x", \ref helios::int3::y "y", \ref helios::int3::z "z"</td><td>none</td><td>\ref helios::make_int3() "make_int3()"</td></tr>
- <tr><td>\ref helios::int4 "int4"</td><td>4D vector of integers</td><td>\ref helios::int4::x "x", \ref helios::int4::y "y", \ref helios::int4::z "z", \ref helios::int4::w "w"</td><td>none</td><td>\ref helios::make_int4() "make_int4()"</td></tr>
- <tr><td>\ref helios::SphericalCoord "SphericalCoord"</td><td>Spherical coordinate</td><td>\ref helios::SphericalCoord::radius "radius", \ref helios::SphericalCoord::elevation "elevation", \ref helios::SphericalCoord::zenith "zenith", \ref helios::SphericalCoord::azimuth "azimuth"</td><td>none</td><td>\ref helios::make_SphericalCoord() "make_SphericalCoord()"</td></tr>
- <tr><td>\ref helios::RGBcolor "RGBcolor"</td><td>red-green-blue color code</td><td>\ref helios::RGBcolor::r "r", \ref helios::RGBcolor::g "g", \ref helios::RGBcolor::b "b"</td><td>\ref helios::RGBcolor::scale() "scale()"</td><td>\ref helios::make_RGBcolor() "make_RGBcolor()"</td></tr>
- <tr><td>\ref helios::RGBAcolor "RGBAcolor"</td><td>red-green-blue-alpha color code</td><td>\ref helios::RGBAcolor::r "r", \ref helios::RGBAcolor::g "g", \ref helios::RGBAcolor::b "b", \ref helios::RGBAcolor::a "a"</td><td>\ref helios::RGBAcolor::scale() "scale()"</td><td>\ref helios::make_RGBAcolor() "make_RGBAcolor()"</td></tr>
- <tr><td>\ref helios::Time "Time"</td><td>Time of day</td><td>\ref helios::Time::second "second", \ref helios::Time::minute "minute", \ref helios::Time::hour "hour"</td><td>none</td><td>\ref helios::make_Time() "make_Time()"</td></tr>
- <tr><td>\ref helios::Date "Date"</td><td>Calendar date (MM,DD,YYYY)</td><td>\ref helios::Date::day "day", \ref helios::Date::month "month", \ref helios::Date::year "year"</td><td>\ref helios::Date::JulianDay() "JulianDay()"</td><td>\ref helios::make_Date() "make_Date()"</td></tr>
+ <tr><th>Type</th><th>Description</th><th>Data Fields</th><th>Member Functions</th><th>Math Operators</th><th>Creation Function</th></tr>
+ <tr><td>\ref helios::vec2 "vec2"</td><td>2D vector of floats</td><td>\ref helios::vec2::x "x", \ref helios::vec2::y "y"</td><td>\ref helios::vec2::normalize() "normalize()", \ref helios::vec2::magnitude() "magnitude()"</td><td>* (dot product), * (mult. by scalar), /, +, -, +=, ==, !=, \<\< </td><td>\ref helios::make_vec2() "make_vec2()"</td></tr>
+ <tr><td>\ref helios::vec3 "vec3"</td><td>3D vector of floats</td><td>\ref helios::vec3::x "x", \ref helios::vec3::y "y", \ref helios::vec3::z "z"</td><td>\ref helios::vec3::normalize() "normalize()", \ref helios::vec3::magnitude() "magnitude()"</td><td>* (dot product), * (mult. by scalar), /, +, -, +=, ==, !=, \<\< </td><td>\ref helios::make_vec3() "make_vec3()"</td></tr>
+ <tr><td>\ref helios::vec4 "vec4"</td><td>4D vector of floats</td><td>\ref helios::vec4::x "x", \ref helios::vec4::y "y", \ref helios::vec4::z "z", \ref helios::vec4::w "w"</td><td>none</td><td>* (dot product), * (mult. by scalar), /, +, -, +=, ==, !=, \<\< </td><td>\ref helios::make_vec4() "make_vec4()"</td></tr>
+ <tr><td>\ref helios::int2 "int2"</td><td>2D vector of integers</td><td>\ref helios::int2::x "x", \ref helios::int2::y "y"</td><td>none</td><td>+, -, +=, ==, !=, \<\< </td><td>\ref helios::make_int2() "make_int2()"</td></tr>
+ <tr><td>\ref helios::int3 "int3"</td><td>3D vector of integers</td><td>\ref helios::int3::x "x", \ref helios::int3::y "y", \ref helios::int3::z "z"</td><td>none</td><td>+, -, +=, ==, !=, \<\< </td><td>\ref helios::make_int3() "make_int3()"</td></tr>
+ <tr><td>\ref helios::int4 "int4"</td><td>4D vector of integers</td><td>\ref helios::int4::x "x", \ref helios::int4::y "y", \ref helios::int4::z "z", \ref helios::int4::w "w"</td><td>none</td><td>+, -, +=, ==, !=, \<\< </td><td>\ref helios::make_int4() "make_int4()"</td></tr>
+ <tr><td>\ref helios::SphericalCoord "SphericalCoord"</td><td>Spherical coordinate</td><td>\ref helios::SphericalCoord::radius "radius", \ref helios::SphericalCoord::elevation "elevation", \ref helios::SphericalCoord::zenith "zenith", \ref helios::SphericalCoord::azimuth "azimuth"</td><td>none</td><td> ==, !=, \<\< </td><td>\ref helios::make_SphericalCoord() "make_SphericalCoord()"</td></tr>
+ <tr><td>\ref helios::RGBcolor "RGBcolor"</td><td>red-green-blue color code (values normalized to 1)</td><td>\ref helios::RGBAcolor::r "r", \ref helios::RGBAcolor::g "g", \ref helios::RGBAcolor::b "b"</td><td>\ref helios::RGBcolor::scale() "scale()"</td><td>==, !=, \<\< </td><td>\ref helios::make_RGBcolor() "make_RGBcolor()"</td></tr>
+ <tr><td>\ref helios::RGBAcolor "RGBAcolor"</td><td>red-green-blue-alpha color code (values normalized to 1)</td><td>\ref helios::RGBAcolor::r "r", \ref helios::RGBAcolor::g "g", \ref helios::RGBAcolor::b "b", \ref helios::RGBAcolor::a "a"</td><td>\ref helios::RGBAcolor::scale() "scale()"</td><td>==, !=, \<\< </td><td>\ref helios::make_RGBAcolor() "make_RGBAcolor()"</td></tr>
+ <tr><td>\ref helios::Time "Time"</td><td>Time of day</td><td>\ref helios::Time::second "second", \ref helios::Time::minute "minute", \ref helios::Time::hour "hour"</td><td>none</td><td> ==, !=, \<\< </td><td>\ref helios::make_Time() "make_Time()"</td></tr>
+ <tr><td>\ref helios::Date "Date"</td><td>Calendar date (MM,DD,YYYY)</td><td>\ref helios::Date::day "day", \ref helios::Date::month "month", \ref helios::Date::year "year"</td><td>\ref helios::Date::JulianDay() "JulianDay()", \ref helios::Date::incrementDay() "incrementDay()", \ref helios::Date::isLeapYear() "isLeapYear()"</td><td> ==, !=, \<\< </td><td>\ref helios::make_Date() "make_Date()"</td></tr>
  </table>
  
  Vector types can be initialized by using their 'make_*()' function. For example, 'i2=make_int2(1,2);' creates an int2 with members 'i2.x -> 1' and 'i2.y -> 2'.
@@ -1136,8 +1140,8 @@ $ git pull
  </td>
  <tr><td>Cone</td><td>\ref helios::Context::getConeObjectPointer() "getConeObjectPointer()"</td><td>
        <ul>
-	 <li>\ref helios::Cone::getNodes() "getNodes()"</li>
-	 <li>\ref helios::Cone::getNode() "getNode()"</li>
+	 <li>\ref helios::Cone::getNodes() "getNodeCoordinates()"</li>
+	 <li>\ref helios::Cone::getNode() "getNodeCoordinate()"</li>
 	 <li>\ref helios::Cone::getNodeRadii() "getNodeRadii()"</li>
 	 <li>\ref helios::Cone::getNodeRadius() "getNodeRadius()"</li>
 	 <li>\ref helios::Cone::getSubdivisionCount() "getSubdivisionCount()"</li>
@@ -1896,7 +1900,7 @@ $ git pull
 
 /*! \page "ChoosingCUDA" Choosing the right CUDA and OptiX version
 
-Picking the right version of the NVIDIA CUDA driver can be the most difficult part of the CUDA install. If you choose the wrong version, the resulting error messages may not always be clear. This guide will help you to chose the right CUDA version for your system. It may also be necessary to change your OptiX version if using an old GPU along with the radiation model. Fortunately, this is easy and will also be described below.
+Picking the right version of the NVIDIA CUDA driver can be the most difficult part of the CUDA install. If you choose the wrong version, the resulting error messages may not always be clear. This guide will help you to choose the right CUDA version for your system. It may also be necessary to change your OptiX version if using an old GPU along with the radiation model. Fortunately, this is easy and will also be described below.
 
 \section chooseCUDA CUDA Version
 
@@ -1946,7 +1950,7 @@ You can and should edit the registry to increase the timeout delay. The steps ar
 
     b. Name the key "TdrDelay"
 
-    c. Double-click on "TdrDelay" key, make it a Decimal, and set its value to some "large" value you feel comfortable with. A conservative value may be 60 (sec), but the higher the better for potentially long running GPU calculations.
+    c. Double-click on "TdrDelay" key, make it a Decimal, and set its value to some "large" value you feel comfortable with. A conservative value may be 60 (sec), but the higher the better for potentially long-running GPU calculations.
 
 4. Reboot your system for settings to take effect. In some cases, the TdrDelay value can be changed automatically in some cases if you update your OS.
 

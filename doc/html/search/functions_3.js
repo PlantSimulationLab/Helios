@@ -4,7 +4,7 @@ var searchData=
   ['d_5fmagnitude_1',['d_magnitude',['../_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138',1,'RayTracing.cu.h']]],
   ['d_5frotatepoint_2',['d_rotatePoint',['../_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01',1,'RayTracing.cu.h']]],
   ['d_5ftransformpoint_3',['d_transformPoint',['../_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500',1,'RayTracing.cu.h']]],
-  ['date_4',['Date',['../structhelios_1_1_date.html#a0cf0a25b63afde0c55203451e827b56a',1,'helios::Date::Date()'],['../structhelios_1_1_date.html#a2ee7a12d59bcc1e7c5e1ce497701ee58',1,'helios::Date::Date(int a_day, int a_month, int a_year)']]],
+  ['date_4',['Date',['../structhelios_1_1_date.html#a0cf0a25b63afde0c55203451e827b56a',1,'helios::Date::Date()'],['../structhelios_1_1_date.html#ab6a3fd0b6aa30e71a995f71c24c68d1b',1,'helios::Date::Date(int day, int month, int year)']]],
   ['deblank_5',['deblank',['../group__functions.html#gaaf03682753b330b32f6c5d117df90db7',1,'helios::deblank(const std::string &amp;input)'],['../group__functions.html#gad5aa3cd5124a2e1e526d6070e53c2bc8',1,'helios::deblank(const char *input)']]],
   ['deg2rad_6',['deg2rad',['../group__functions.html#ga60f429b247883516de80687774f4155c',1,'helios']]],
   ['deletechildprimitive_7',['deleteChildPrimitive',['../classhelios_1_1_compound_object.html#a4b8f242ec7d96ef82bd9d49658fb605f',1,'helios::CompoundObject::deleteChildPrimitive(const std::vector&lt; uint &gt; &amp;UUIDs)'],['../classhelios_1_1_compound_object.html#a5448b4bd356d7f772b8a0c7a848cfb89',1,'helios::CompoundObject::deleteChildPrimitive(uint UUID)']]],

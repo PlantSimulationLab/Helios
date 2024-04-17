@@ -1589,3 +1589,24 @@ The radiation model has been re-designed, with the following primary additions:
 *Radiation*
 - Added check to RadiationModel::writePrimitiveDataLabelMap() to print a warning if the primitive data was empty for all pixels.
 - There was an error with the radiation camera field of view in that the actual field of view in the image was half that of the specified HFOV value.
+
+[1.3.9] 2024-04-17
+
+* Many documentation updates
+* Leaf Optics plug-in was missing from utilities/create_project.sh script
+
+*Context*
+- Added check to Context::doesPrimitiveExist() for an empty UUID vector, which could cause undefined behavior.
+- Added check to Context::addPolymeshObject() for an empty UUID vector.
+- Added overloaded version of Context::getObjectPrimitiveUUIDs() that accepts a 2D vector of object IDs.
+- Added inequality operators for vec2, vec3, vec4, int2, int3, int4, Date, Time, and SphericalCoord.
+- Changed SphericalCoord to make elements read-only to make sure that elevation and zenith angles remain linked.
+
+*Radiation*
+- In selfTest() test #17, camera HFOV was increased (by factor of 2) to account for correction from version 1.3.8.
+
+*LiDAR*
+- Degrees vs. radians was not handled correctly if zenith/azimuth is specified from an input XML file.
+
+*AerialLiDAR*
+- Degrees vs. radians was not handled correctly if zenith/azimuth is specified from an input XML file.

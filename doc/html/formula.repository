@@ -102,7 +102,7 @@
 \_form#101=108x35:\[W_j=\dfrac{J C_i}{4C_i+8\Gamma^*}\]
 \_form#102=9x12:$J$
 \_form#103=110x36:\[J=\dfrac{\alpha J_{max} Q}{\alpha Q + J_{max}}.\]
-\_form#104=212x29:$A=0.75\left(\frac{1.08g_Hg_M}{1.08g_H+g_M}\right)\left(C_{a}-C_i\right)$
+\_form#104=207x29:$A=0.75\left(\frac{1.08g_Hg_S}{1.08g_H+g_S}\right)\left(C_{a}-C_i\right)$
 \_form#105=326x129:\begin{align*}
  \Gamma^* &= \mathrm{exp}\left(19.02-37.83/(RT_s)\right),\\
  K_{c} &= \mathrm{exp}\left(38.05-79.43/(RT_s)\right),\\

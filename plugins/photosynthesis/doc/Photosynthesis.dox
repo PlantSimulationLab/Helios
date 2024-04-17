@@ -18,7 +18,7 @@
  <tr><td>\ref PhotosynthesisModel( helios::Context* )</td></tr>
  </table>
  
- \section VarsAndProps Primitive Data	
+ \section PhotoVarsAndProps Primitive Data
  
  \subsection PhotoInputData Input Primitive Data
 
@@ -27,8 +27,8 @@
  <tr><td>radiation\_flux\_PAR</td><td>\f$Q\f$</td><td>W/m<sup>2</sup></td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radiative flux in PAR band. NOTE: this is automatically converted to units of photon flux density, which are the units used in the photosynthesis model.</td><td>Can be computed by \ref RadiationModel plug-in.</td><td>0</td></tr>
  <tr><td>temperature</td><td>\f$T_s\f$</td><td>Kelvin</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Primitive surface temperature.</td><td>Can be computed by \ref EnergyBalanceModel plug-in.</td><td>300 K</td></tr>
  <tr><td>air\_CO2</td><td>\f$C_a\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>CO<sub>2</sub> concentration of air outside of primitive boundary-layer.</td><td>N/A</td><td>390 \f$\mu\f$mol/mol</td></tr>
- <tr><td>moisture\_conductance</td><td>\f$g_M\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to moisture between sub-stomatal cells and leaf surface (i.e., stomatal conductance).</td><td>Can be computed by \ref StomatalConductanceModel plug-in.</td><td>0.25 mol/m<sup>2</sup>-s</td></tr>
- <tr><td>boundarylayer\_conductance**</td><td>\f$g_M\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to heat between leaf surface and outside of the boundary-layer (i.e., boundary-layer conductance).</td><td>Can be computed by \ref BLConductanceModel plug-in, or by \ref EnergyBalanceModel plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td><td>1.0 mol/m<sup>2</sup>-s</td></tr>
+ <tr><td>moisture\_conductance</td><td>\f$g_S\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to moisture between sub-stomatal cells and leaf surface (i.e., stomatal conductance).</td><td>Can be computed by \ref StomatalConductanceModel plug-in.</td><td>0.25 mol/m<sup>2</sup>-s</td></tr>
+ <tr><td>boundarylayer\_conductance**</td><td>\f$g_H\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to heat between leaf surface and outside of the boundary-layer (i.e., boundary-layer conductance).</td><td>Can be computed by \ref BLConductanceModel plug-in, or by \ref EnergyBalanceModel plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td><td>1.0 mol/m<sup>2</sup>-s</td></tr>
  </table>
 
  \*\*The photosynthesis model will also check for primitive data "boundarylayer_conductance_out" if "boundarylayer_conductance" does not exist. If you are using the energy balance model to calculate the boundary-layer conductance, you should enable optional output primitive data "boundarylayer_conductance_out" so that other plug-ins can use it.
@@ -100,7 +100,7 @@
 
  The intercellular CO<sub>2</sub> concentration \f$C_i\f$ is determined from the relation
 
- \f$A=0.75\left(\frac{1.08g_Hg_M}{1.08g_H+g_M}\right)\left(C_{a}-C_i\right)\f$
+ \f$A=0.75\left(\frac{1.08g_Hg_S}{1.08g_H+g_S}\right)\left(C_{a}-C_i\right)\f$
 
  which is solved numerically using the Secant method, since \f$A\f$ is a complex nonlinear function of \f$C_i\f$ which prevents an analytical solution for \f$C_i\f$. The 0.75 factor comes from the fact that diffusion of CO<sub>2</sub> in air is slower than that of water vapor (see Eq. 7.33 of <a href="http://www.springer.com/us/book/9780387949376#otherversion=9781461216261">Campbell and Norman</a>).
 
@@ -283,9 +283,9 @@
 
    \f$A = 0.75g_M\left(C_{amb}-C_i\right)\f$,
 
-   where \f$g_M\f$ is the conductance to moisture from the substomtal cells to outside of the boundary-layer. The 0.75 factor comes from the fact that diffusion of CO<sub>2</sub> in air is slower than that of water vapor (see Eq. 7.33 of <a href="http://www.springer.com/us/book/9780387949376#otherversion=9781461216261">Campbell and Norman</a>).
+   where \f$g_M\f$ is the conductance to moisture from the sub-stomatal cells to outside of the boundary-layer. The 0.75 factor comes from the fact that diffusion of CO<sub>2</sub> in air is slower than that of water vapor (see Eq. 7.33 of <a href="http://www.springer.com/us/book/9780387949376#otherversion=9781461216261">Campbell and Norman</a>).
 
-   Since \f$A\f$ is dependent on \f$C_i\f$ and vice-versa, an iterative solution is requred for \f$A\f$.
+   Since \f$A\f$ is dependent on \f$C_i\f$ and vice-versa, an iterative solution is required for \f$A\f$.
 
    \subsection PhotoCalib Empirical Model Calibration Procedure
 

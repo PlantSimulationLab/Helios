@@ -2444,17 +2444,9 @@ void LiDARcloud::calculateLeafAngleCDF(
             int gridcell = reconstructed_triangles.at(g).at(t).gridcell;
 
             helios::vec3 normal = cross( reconstructed_triangles.at(g).at(t).vertex1-reconstructed_triangles.at(g).at(t).vertex0, reconstructed_triangles.at(g).at(t).vertex2-reconstructed_triangles.at(g).at(t).vertex0 );
+            normal.z = fabs(normal.z); //keep in upper hemisphere
 
             helios::SphericalCoord normal_dir = cart2sphere(normal);
-
-            //flipping
-            if( normal.z<0 ){
-                normal_dir.azimuth += M_PI;
-                if( normal_dir.azimuth>2.f*M_PI ){
-                    normal_dir.azimuth -= 2.f*M_PI;
-                }
-                normal_dir.zenith = normal_dir.zenith - 0.5*M_PI;
-            }
 
             int bin_theta = floor(normal_dir.zenith/db_theta);
             if( bin_theta>=Nbins ){

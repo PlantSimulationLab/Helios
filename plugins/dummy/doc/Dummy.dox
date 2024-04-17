@@ -3,7 +3,7 @@
 
 	\tableofcontents
 
-	\section Introduction
+	\section DummyIntro Introduction
 
 	This is a dummy plugin intended to illustrate the concept of creating a model plugin.  All this plugin does is creates a variable called `dummy_variable' and sets its value to 5.0 for all primitive elements in the context.
 
