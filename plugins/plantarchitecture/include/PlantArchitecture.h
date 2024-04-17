@@ -583,6 +583,10 @@ public:
 
     void setVegetativeBudState( BudState state, uint bud_index );
 
+    void setFloralBudState( BudState state );
+
+    void setFloralBudState( BudState state, uint bud_index );
+
     void removeLeaf();
 
     void removeInflorescence();
@@ -808,7 +812,7 @@ public:
     uint addBaseStemShoot(uint plantID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction,
                           const std::string &shoot_type_label);
 
-    //! Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of a shoot change along its length (e.g., from a unifolitate to trifoliate leaf).
+    //! Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of a shoot change along its length (e.g., from a unifoliate to trifoliate leaf).
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] parent_shoot_ID ID of the shoot to which the new shoot will be appended.

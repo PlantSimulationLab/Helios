@@ -207,8 +207,8 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position, float
     auto phytomers = plant_instances.at(plantID).shoot_tree.at(uID_trunk)->phytomers;
     for( const auto & phytomer : phytomers ){
         phytomer->removeLeaf();
-        phytomer->flower_bud_state = BUD_DEAD;
         phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->setFloralBudState(BUD_DEAD);
     }
 
     uint Nscaffolds = context_ptr->randu(4,5);
@@ -223,7 +223,7 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position, float
         for( int b=0; b<blind_nodes; b++){
             if( b<plant_instances.at(plantID).shoot_tree.at(uID_shoot)->phytomers.size() ) {
                 plant_instances.at(plantID).shoot_tree.at(uID_shoot)->phytomers.at(b)->removeLeaf();
-                plant_instances.at(plantID).shoot_tree.at(uID_shoot)->phytomers.at(b)->flower_bud_state = BUD_DEAD;
+                plant_instances.at(plantID).shoot_tree.at(uID_shoot)->phytomers.at(b)->setFloralBudState(BUD_DEAD);
                 plant_instances.at(plantID).shoot_tree.at(uID_shoot)->phytomers.at(b)->setVegetativeBudState(BUD_DEAD);
             }
         }

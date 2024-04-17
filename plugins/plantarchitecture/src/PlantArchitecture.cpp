@@ -272,6 +272,19 @@ void Phytomer::setVegetativeBudState( BudState state, uint bud_index ){
     vegetative_buds.at(bud_index).state = state;
 }
 
+void Phytomer::setFloralBudState( BudState state ){
+    for( auto&bud : floral_buds ){
+        bud.state = state;
+    }
+}
+
+void Phytomer::setFloralBudState( BudState state, uint bud_index ){
+    if( bud_index>=floral_buds.size() ){
+        helios_runtime_error("ERROR (Phytomer::setFloralBudState): Bud index out of range.");
+    }
+    floral_buds.at(bud_index).state = state;
+}
+
 int Shoot::addPhytomer(const PhytomerParameters &params, const helios::vec3 internode_base_position, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
                        float leaf_scale_factor_fraction) {
 
@@ -843,7 +856,7 @@ void Phytomer::setPetioleBase( const helios::vec3 &base_position ){
         }
     }
 
-    for( int bud=0; bud<vegetative_buds.size(); bud++ ) {
+    for( int bud=0; bud<floral_buds.size(); bud++ ) {
         context_ptr->translateObject(inflorescence_objIDs.at(bud), shift);
         for (auto &inflorescence_base: inflorescence_bases.at(bud)) {
             inflorescence_base += shift;
@@ -876,7 +889,7 @@ void Phytomer::setPhytomerBase( const helios::vec3 &base_position ){
             leaf_base += shift;
         }
     }
-    for( int bud=0; bud<vegetative_buds.size(); bud++ ) {
+    for( int bud=0; bud<floral_buds.size(); bud++ ) {
         context_ptr->translateObject(inflorescence_objIDs.at(bud), shift);
         for (auto &inflorescence_base: inflorescence_bases.at(bud)) {
             inflorescence_base += shift;
