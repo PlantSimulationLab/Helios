@@ -26,15 +26,52 @@ uint BeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivision
 }
 
 uint BeanFruitPrototype( helios::Context* context_ptr, uint subdivisions, int flag ){
-    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanPod.obj", make_vec3(0.,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanPod.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
 }
 
-uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, int flag ){
-    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanFlower.obj", make_vec3(0.0,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
+uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
+    std::vector<uint> UUIDs;
+    if( flower_is_open ){
+        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanFlower_open_white.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    }else{
+        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanFlower_closed_white.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    }
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
+}
+
+void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+    if( shoot_node_index<=4 ) {
+
+        //set leaf and internode scale based on position along the shoot
+        float leaf_scale = fmin(1.f, 0.75 + 0.25 * float(shoot_node_index) / 4.f);
+        phytomer->scaleLeafPrototypeScale(leaf_scale);
+
+        //set internode length based on position along the shoot
+        float inode_scale = fmin(1.f, 0.1 + 0.9 * float(shoot_node_index) / 4.f);
+        phytomer->scaleInternodeMaxLength(inode_scale);
+
+    }
+
+}
+
+uint SoybeanLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int flag ){
+    std::vector<uint> UUIDs;
+    UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanLeaf_unifoliate.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+uint SoybeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions, int flag ){
+    std::vector<uint> UUIDs;
+    UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/SoybeanLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+
 }
 
 uint CowpeaLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int flag ){
@@ -64,7 +101,7 @@ uint CowpeaFruitPrototype( helios::Context* context_ptr, uint subdivisions, int 
     return objID;
 }
 
-uint CowpeaFlowerPrototype( helios::Context* context_ptr, uint subdivisions, int flag ){
+uint CowpeaFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaFlower_open_yellow.obj", make_vec3(0.0,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
@@ -82,7 +119,7 @@ uint TomatoFruitPrototype( helios::Context* context_ptr, uint subdivisions, int 
     return objID;
 }
 
-uint TomatoFlowerPrototype( helios::Context* context_ptr, uint subdivisions, int flag ){
+uint TomatoFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/TomatoFlower.obj", make_vec3(0.0,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
@@ -100,7 +137,7 @@ uint AlmondFruitPrototype( helios::Context* context_ptr, uint subdivisions, int 
     return objID;
 }
 
-uint AlmondFlowerPrototype( helios::Context* context_ptr, uint subdivisions, int flag ){
+uint AlmondFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondFlower.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
@@ -118,7 +155,7 @@ uint BindweedLeafPrototype( helios::Context* context_ptr, uint subdivisions, int
     return objID;
 }
 
-uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions, int flag ){
+uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BindweedFlower.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
@@ -214,4 +251,24 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, i
 
     uint objID;// = context_ptr->addPolymeshObject( UUIDs );
     return objID;
+}
+
+void SorghumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+    //set leaf scale based on position along the shoot
+    float scale = fmin(1.f, 0.5 + 0.5*float(shoot_node_index)/5.f);
+    phytomer->scaleLeafPrototypeScale(scale);
+
+    //set internode length based on position along the shoot
+    phytomer->scaleInternodeMaxLength(scale);
+
+    //remove all vegetative buds
+    phytomer->setVegetativeBudState( BUD_DEAD );
+
+    //remove all floral buds except for the terminal one
+    if( shoot_node_index < shoot_max_nodes-1 ){
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+
 }

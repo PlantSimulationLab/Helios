@@ -19,10 +19,11 @@
 #include "Context.h"
 #include <random>
 #include <utility>
-#include "Assets.h"
 
-//forward declaration of PlantArchitecture class
+//forward declarations of classes/structs
 class PlantArchitecture;
+struct Shoot;
+struct Phytomer;
 
 struct RandomParameter_float {
 public:
@@ -242,9 +243,10 @@ inline AxisRotation AxisRotation::operator-(const AxisRotation& a) const{
 enum BudState{
     BUD_DORMANT = 0,
     BUD_ACTIVE = 1,
-    BUD_FLOWERING = 2,
-    BUD_FRUITING = 3,
-    BUD_DEAD = 4
+    BUD_FLOWER_CLOSED = 2,
+    BUD_FLOWER_OPEN = 3,
+    BUD_FRUITING = 4,
+    BUD_DEAD = 5
 };
 
 //! Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape
@@ -260,8 +262,6 @@ std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<
 
 struct VegetativeBud{
 
-    //position of the bud, which can later become the base of a shoot
-    helios::vec3 base_position;
     //label of the shoot type that will be produced if the bud breaks into a shoot
     std::string shoot_type_label;
     //state of the bud
@@ -273,12 +273,16 @@ struct VegetativeBud{
 
 struct FloralBud{
 
-    //position of the bud, which can later become the base of a flower or fruit
-    helios::vec3 base_position;
     //state of the bud
     BudState state = BUD_DORMANT;
     //amount of time since the bud flowered (=0 if it has not yet flowered)
-    float time_since_flowering = 0;
+    float time_counter = 0;
+    //Index of the petiole within the internode that this floral bud originates from
+    uint parent_petiole_index = 0;
+    //Index of the bud within the petiole that this floral bud originates from
+    uint bud_index = 0;
+    //Scaling factor fraction of the fruit (if present), ranging from 0 to 1
+    float current_fruit_scale_factor = 1;
 
 };
 
@@ -367,10 +371,12 @@ private:
     };
 
     struct InflorescenceParameters{
-        RandomParameter_float length;
+        RandomParameter_float peduncle_length;
+        RandomParameter_float peduncle_pitch;
+        RandomParameter_float peduncle_roll;
         RandomParameter_int flowers_per_rachis;
         RandomParameter_float flower_offset;
-        RandomParameter_float rachis_radius;
+        RandomParameter_float peduncle_radius;
         RandomParameter_float curvature;
         std::string flower_arrangement_pattern;
         uint length_segments;
@@ -379,17 +385,22 @@ private:
         RandomParameter_float fruit_roll;
         RandomParameter_float fruit_prototype_scale;
         RandomParameter_float flower_prototype_scale;
+        bool fruit_gravity_on;
         uint(*fruit_prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
-        uint(*flower_prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
+        uint(*flower_prototype_function)(helios::Context*, uint subdivisions, bool flower_is_open ) = nullptr;
         InflorescenceParameters& operator=(const InflorescenceParameters &a){
-            this->length = a.length;
-            this->length.resample();
+            this->peduncle_length = a.peduncle_length;
+            this->peduncle_length.resample();
+            this->peduncle_pitch = a.peduncle_pitch;
+            this->peduncle_pitch.resample();
+            this->peduncle_roll = a.peduncle_roll;
+            this->peduncle_roll.resample();
             this->flowers_per_rachis = a.flowers_per_rachis;
             this->flowers_per_rachis.resample();
             this->flower_offset = a.flower_offset;
             this->flower_offset.resample();
-            this->rachis_radius = a.rachis_radius;
-            this->rachis_radius.resample();
+            this->peduncle_radius = a.peduncle_radius;
+            this->peduncle_radius.resample();
             this->curvature = a.curvature;
             this->curvature.resample();
             this->flower_arrangement_pattern = a.flower_arrangement_pattern;
@@ -403,16 +414,12 @@ private:
             this->fruit_prototype_scale.resample();
             this->fruit_prototype_function = a.fruit_prototype_function;
             this->flower_prototype_scale = a.flower_prototype_scale;
+            this->fruit_gravity_on = a.fruit_gravity_on;
             this->flower_prototype_scale.resample();
             this->flower_prototype_function = a.flower_prototype_function;
             return *this;
         }
     };
-
-protected:
-
-    float internode_radius_initial;
-    float internode_length_max;
 
 public:
 
@@ -424,14 +431,21 @@ public:
 
     InflorescenceParameters inflorescence;
 
+    //Custom user-defined function that is called when a phytomer is created
+    /**
+     * \param[in] phytomer_ptr Pointer to the phytomer to which the function will be applied
+     * \param[in] shoot_node_index Index of the phytomer within the shoot starting from 0 at the shoot base
+     * \param[in] parent_shoot_node_index Node index of the current shoot along it's parent shoot
+     * \param[in] shoot_max_nodes Maximum number of phytomers in the shoot
+     * \param[in] plant_age Age of the plant in days
+     */
+    void (*phytomer_creation_function)(std::shared_ptr<Phytomer> phytomer_ptr, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) = nullptr;
+
     //! Default constructor - does not set random number generator
     PhytomerParameters();
 
     //! Constructor - sets random number generator
     explicit PhytomerParameters( std::minstd_rand0 *generator );
-
-    //! Copy constructor
-    PhytomerParameters( const PhytomerParameters& parameters_copy );
 
     friend class PlantArchitecture;
     friend class Phytomer;
@@ -472,6 +486,8 @@ struct ShootParameters{
     // ---- Growth Parameters ---- //
 
     RandomParameter_float phyllochron; //phytomers/day
+    uint leaf_flush_count;  //number of leaves in a 'flush' (=1 gives continuous leaf production)
+
     RandomParameter_float elongation_rate; //length/day
     RandomParameter_float girth_growth_rate; //1/day
 
@@ -489,6 +505,10 @@ struct ShootParameters{
     bool flowers_require_dormancy;
     bool growth_requires_dormancy;
 
+    bool determinate_shoot_growth;  //true=determinate, false=indeterminate
+
+    // ---- Custom Functions ---- //
+
     void defineChildShootTypes( const std::vector<std::string> &child_shoot_type_labels, const std::vector<float> &child_shoot_type_probabilities );
 
     ShootParameters& operator=(const ShootParameters &a) {
@@ -499,6 +519,7 @@ struct ShootParameters{
         this->internode_radius_initial.resample();
         this->phyllochron = a.phyllochron;
         this->phyllochron.resample();
+        this->leaf_flush_count = a.leaf_flush_count;
         this->elongation_rate = a.elongation_rate;
         this->elongation_rate.resample();
         this->girth_growth_rate = a.girth_growth_rate;
@@ -530,13 +551,12 @@ struct ShootParameters{
         this->growth_requires_dormancy = a.growth_requires_dormancy;
         this->child_shoot_type_labels = a.child_shoot_type_labels;
         this->child_shoot_type_probabilities = a.child_shoot_type_probabilities;
+        this->determinate_shoot_growth = a.determinate_shoot_growth;
         return *this;
     }
 
     friend class PlantArchitecture;
     friend class Shoot;
-
-private:
 
 protected:
 
@@ -545,13 +565,14 @@ protected:
 
 };
 
-struct Shoot;
-
 struct Phytomer {
 public:
 
+    // Constructor
     Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
              const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr);
+
+    // ---- query info about the phytomer ---- //
 
     helios::vec3 getInternodeAxisVector( float stem_fraction ) const;
 
@@ -565,13 +586,27 @@ public:
 
     float getInternodeRadius( float stem_fraction ) const;
 
-    void addInflorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &a_inflorescence_bending_axis, BudState floral_bud_state);
+    bool hasLeaf() const;
 
-    void setInternodeScale( float internode_scale_factor_fraction );
+    bool hasInflorescence() const;
 
-    void setLeafScale( float leaf_scale_factor_fraction );
+    // ---- modify the phytomer ---- //
 
-    void setInflorescenceScale( float inflorescence_scale_factor_fraction );
+    void addInflorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &a_inflorescence_bending_axis, FloralBud &fbud);
+
+    void setInternodeScaleFraction(float internode_scale_factor_fraction );
+
+    void setInternodeMaxLength( float internode_length_max );
+
+    void scaleInternodeMaxLength( float scale_factor );
+
+    void setLeafScaleFraction(float leaf_scale_factor_fraction );
+
+    void setLeafPrototypeScale( float leaf_prototype_scale );
+
+    void scaleLeafPrototypeScale( float scale_factor );
+
+    void setInflorescenceScaleFraction(FloralBud &fbud, float inflorescence_scale_factor_fraction);
 
     void setPetioleBase( const helios::vec3 &base_position );
 
@@ -581,24 +616,22 @@ public:
 
     void setVegetativeBudState( BudState state );
 
-    void setVegetativeBudState( BudState state, uint bud_index );
+    void setVegetativeBudState(BudState state, uint petiole_index, uint bud_index);
 
     void setFloralBudState( BudState state );
 
-    void setFloralBudState( BudState state, uint bud_index );
+    void setFloralBudState(BudState state, uint petiole_index, uint bud_index);
 
     void removeLeaf();
 
     void removeInflorescence();
 
-    bool hasLeaf() const;
-
-    bool hasInflorescence() const;
+    // ---- phytomer data ---- //
 
     std::vector<helios::vec3> internode_vertices; //index is tube segment within internode
     std::vector<std::vector<helios::vec3>> petiole_vertices; //first index is petiole within internode, second index is tube segment within petiole
     std::vector<std::vector<helios::vec3>> leaf_bases; //first index is petiole within internode, second index is leaf within petiole
-    std::vector<std::vector<helios::vec3>> inflorescence_bases; //first index is the floral bud, second index is flower/fruit within rachis
+    std::vector<std::vector<std::vector<helios::vec3>>> inflorescence_bases; //first index is the petiole within internode, second index is the floral bud, third index is flower/fruit within peduncle/rachis
     float internode_length;
 
     std::vector<float> internode_radii; //index is segment within internode
@@ -611,8 +644,8 @@ public:
     std::vector<uint> internode_objIDs; //index is segment within internode
     std::vector<std::vector<uint> > petiole_objIDs; //first index is petiole within internode, second index is segment within petiole
     std::vector<std::vector<uint>> leaf_objIDs; //first index is petiole within internode, second index is leaf within petiole
-    std::vector<std::vector<uint>> inflorescence_objIDs; //first index is the floral bud, second index is flower/fruit within rachis
-    std::vector<std::vector<uint>> rachis_objIDs; //first index is the floral bud, second index is segment within rachis
+    std::vector<std::vector<std::vector<uint>>> inflorescence_objIDs; //first index is the petiole within internode, second index is the floral bud, third index is flower/fruit within peduncle/rachis
+    std::vector<std::vector<std::vector<uint>>> peduncle_objIDs; //first index is the petiole within internode, second index is the floral bud, third index is flower/fruit within peduncle/rachis
 
     PhytomerParameters phytomer_parameters;
 
@@ -624,10 +657,12 @@ public:
 
     float current_internode_scale_factor = 1;
     float current_leaf_scale_factor = 1;
-    float current_inflorescence_scale_factor = 1;
 
-    std::vector<VegetativeBud> vegetative_buds;
-    std::vector<FloralBud> floral_buds;
+    std::vector<std::vector<VegetativeBud>> vegetative_buds; //first index is petiole within internode, second index is bud within petiole
+    std::vector<std::vector<FloralBud>> floral_buds;
+
+    float internode_radius_initial;
+    float internode_length_max;
 
 private:
 
@@ -639,8 +674,8 @@ private:
 
 struct Shoot{
 
-    Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number, ShootParameters shoot_params, const std::string &shoot_type_label,
-          PlantArchitecture *plant_architecture_ptr);
+    Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node, uint parent_petiole_index, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number,
+          float internode_length_shoot_initial, ShootParameters shoot_params, const std::string &shoot_type_label, PlantArchitecture *plant_architecture_ptr);
 
     void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
@@ -654,17 +689,22 @@ struct Shoot{
      */
     bool sampleChildShootType(std::string &child_shoot_type_label) const;
 
+    void terminateApicalBud();
+
+    void terminateAxillaryVegetativeBuds();
+
     uint current_node_number;
 
     helios::vec3 origin;
 
     AxisRotation base_rotation;
 
-    int ID;
-    int parentID;
-    uint plantID;
-    uint parentNode;
-    uint rank;
+    const int ID;
+    const int parent_shoot_ID;
+    const uint plantID;
+    const uint parent_node_index;
+    const uint rank;
+    const uint parent_petiole_index;
 
     float assimilate_pool;  // mg SC/g DW
 
@@ -679,6 +719,8 @@ struct Shoot{
     float phyllochron_counter = 0;
 
     float curvature_perturbation = 0;
+
+    const float internode_length_max_shoot_initial;
 
     //map of node number to ID of shoot child
     std::map<int,int> childIDs;
@@ -704,7 +746,8 @@ struct PlantInstance{
 
     //Phenological thresholds
     float dd_to_dormancy_break = 0;
-    float dd_to_flowering = 0;
+    float dd_to_flower_initiation = 0;
+    float dd_to_flower_opening = 0;
     float dd_to_fruit_set = 0;
     float dd_to_fruit_maturity = 0;
     float dd_to_senescence = 0;
@@ -765,18 +808,18 @@ public:
      */
     uint duplicatePlantInstance(uint plantID, const helios::vec3 &base_position, const AxisRotation &base_rotation, float current_age);
 
-    //PhytomerParameters getPhytomerParametersFromLibrary(const std::string &phytomer_label );
-
     //! Specify the threshold values for plant phenological stages
     /**
      * \param[in] plantID ID of the plant.
      * \param[in] dd_to_dormancy_break Minimum assimilate pool (mg SC/g DW) required to break dormancy.
-     * \param[in] dd_to_flowering Degree-days from emergence/dormancy required to reach flowering.
-     * \param[in] dd_to_fruit_set Degree-days from flowering date required to reach fruit set (i.e., flower dies and fruit is created).
+     * \param[in] dd_to_flower_initiation Degree-days from emergence/dormancy required to reach flower creation (closed flower).
+     * \param[in] dd_to_flower_opening Degree-days from flower initiation to flower opening.
+     * \param[in] dd_to_fruit_set Degree-days from flower opening required to reach fruit set (i.e., flower dies and fruit is created).
      * \param[in] dd_to_fruit_maturity Degree-days from fruit set date required to reach fruit maturity.
      * \param[in] dd_to_senescence Degree-days from emergence/dormancy required to reach senescence.
+     * \note Any phenological stage can be skipped by specifying a negative threshold value. In this case, the stage will be skipped and the threshold for the next stage will be relative to the previous stage.
      */
-    void setPlantPhenologicalThresholds(uint plantID, float dd_to_dormancy_break, float dd_to_flowering, float dd_to_fruit_set, float dd_to_fruit_maturity, float dd_to_senescence);
+    void setPlantPhenologicalThresholds(uint plantID, float dd_to_dormancy_break, float dd_to_flower_initiation, float dd_to_flower_opening, float dd_to_fruit_set, float dd_to_fruit_maturity, float dd_to_senescence);
 
     //! Advance plant growth by a specified time interval
     /**
@@ -836,22 +879,18 @@ public:
      * \return ID of the new shoot to be used to reference it later.
      */
     uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max,
-                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &shoot_type_label);
+                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &shoot_type_label, uint petiole_index);
 
     //! Add a new phytomer at the terminal bud of a shoot.
     int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     // -- methods for modifying the current plant state -- //
 
-    void scalePhytomerInternodeLength(uint plantID, uint shootID, uint node_number, float length_scale_factor);
-
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float girth_change);
 
     void setPhytomerInternodeScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction);
 
     void setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction);
-
-    void setPhytomerScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     void setShootOrigin(uint plantID, uint shootID, const helios::vec3 &origin);
 
@@ -934,6 +973,10 @@ protected:
     void initializeCowpeaShoots();
 
     uint buildCowpeaPlant( const helios::vec3 &base_position, float age );
+
+    void initializeSoybeanShoots();
+
+    uint buildSoybeanPlant( const helios::vec3 &base_position, float age );
 
     void initializeBeanShoots();
 
