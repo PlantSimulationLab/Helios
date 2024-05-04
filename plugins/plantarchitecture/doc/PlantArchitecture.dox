@@ -4,10 +4,7 @@
 
  <b>Known Issues</b>
 
- - Growing the plant over time is pretty slow. Nothing has been done yet to optimize efficiency.
- - There can only be one petiole per phytomer, and one vegetative bud per petiole. This functionality is broken and will be fixed later.
- - Internode elongation when there are multiple branches is broken. It is recommended to set the shoot parameter "elongation_rate" to a large value, which avoids this issue because the internode will instantly elongate to its maximum length.
- - The growth timestep (i.e., argument to advanceTime() method) must be less than the phyllochron (i.e., the model cannot currently add more than one leaf in a timestep). This will be fixed in the future.
+ - Growing the plant over time is pretty slow. Nothing has been done yet to optimize efficiency. It may be helpful to lower the subdivision count on leaves and stems/branches.
 
  <table>
  <tr><th>Dependencies</th><td>None</td></tr>
@@ -46,11 +43,11 @@
 
  <b>Pitch:</b> rotation angle formed between the axis of the element and it's parent's axis.
 
- <b>Yaw:</b> rotation angle about the parent's axis
+ <b>Yaw:</b> rotation angle about the parent's axis (except in the case of a leaf, where it is about an axis perpendicular to the leaf midrib).
 
  <b>Roll:</b> rotation angle about the element's own axis
 
- \image html pitchyawroll_schematic.jpeg
+ \image html pitchyawroll_schematic_organs.jpeg
 
  \subsection PlantArchRandParam Randomization of Parameters
 
@@ -88,21 +85,24 @@ Available distributions are listed below
 
 The geometry of plant leaves, flowers, and fruit are defined based on `prototype' models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a \ref Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.
 
-The prototype functions must return an object ID (uint) corresponding to the compound object created in the function, and take arguments as listed below:
+The prototype functions must return an object ID (uint) corresponding to the compound object created in the function. Arguments to the prototype function vary based on organ type:
 
+Leaves
 ~~~~~~
-uint(*prototype_function)( helios::Context*, uint subdivisions, int flag )
+uint(*prototype_function)( helios::Context*, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes )
 ~~~~~~
 
-The first argument is a pointer to the Helios Context, which is used to add the geometry. The second argument corresponds to the subdivision resolution of the organ model, and the third argument is a flag that has different meaning based on the organ type as listed in the table below:
+Flowers
+~~~~~~
+uint(*prototype_function)( helios::Context*, uint subdivisions, bool flower_is_open )
+~~~~~~
 
-| Organ Type | "flag" argument meaning |
-| ------| ------ |
-| Leaf | Used for compound leaves only: index of the compound leaflet from the tip. =0 for the tip leaf, <0 running down one side of the petiole, >0 running down the other side of the petiole. |
-| Flower | = 0 for closed flowers, = 1 for open flowers |
-| Fruit | Currently unused |
+Fruit
+~~~~~~
+uint(*prototype_function)( helios::Context*, uint subdivisions, float time_since_fruit_set )
+~~~~~~
 
-The flag allows for specification of different geometric models for different states of the organ. For example, for a trifoliate compound leaf, the leaf geometry of the lateral leaves is generally different than the tip leaf. It is up to the user writing the prototype function whether they want to use the flag value argument or not.
+The arguments do not necessarily need to be used inside the prototype function, but are always passed to the function in case they are needed.
 
 The size, position, and orientation of the prototype when it is created needs to follow a specific convention.
 
@@ -112,22 +112,16 @@ The size, position, and orientation of the prototype when it is created needs to
 
 \image html prototype_coordinate_schematic.png
 
-An example prototype function for a leaf is given below, which creates each of the three leaflets on a bean trifoliate compound leaf based on OBJ models created in Blender. Note that the triangular mesh is added to a Polymesh compound object, as the prototype geometry must always be a single compound object with object ID returned from the prototype function.
+A generic leaf prototype function is given below, which simply loads a model from an OBJ file.
 
 ~~~~~~
-uint BeanLeafPrototype_trifoliate( helios::Context* context_ptr, uint subdivisions, int flag ){
-    std::vector<uint> UUIDs;
-    if( flag==0 ){
-        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanLeaf_tip.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
-    }else if( flag<0 ){
-        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanLeaf_left.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
-    }else{
-        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanLeaf_right.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+uint GenericLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+    return context_ptr->addPolymeshObject( UUIDs );
     }
-    uint objID = context_ptr->addPolymeshObject( UUIDs );
-    return objID;
-}
 ~~~~~~
+
+ A generic leaf prototype function is given in the file \ref Assets.cpp, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves.
 
  \section PlantArchPhytomer Defining the Phytomer and its Parameters
 
@@ -144,43 +138,52 @@ uint BeanLeafPrototype_trifoliate( helios::Context* context_ptr, uint subdivisio
 | Parameter | Type | Units | Description |
 | ------| ------ | ------ | ------ |
 | --- **internode** --- ||||
-| pitch | RandomParameter_float | radians | Angle of the phytomer internode with respect to the previous phytomer along the shoot. Setting this >0 creates a zig-zag shoot. |
+| pitch | RandomParameter_float | degrees | Angle of the phytomer internode with respect to the previous phytomer along the shoot. Setting this >0 creates a zig-zag shoot. |
+| phyllotactic_angle | RandomParameter_float | degrees | Angle between the petioles/buds of two successive phytomers along the shoot. |
+| max_vegetative_buds_per_petiole | RandomParameter_int | - | Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability. |
+| max_floral_buds_per_petiole | RandomParameter_int | - | Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability. |
 | color | helios::RGBcolor | - | Diffuse color of the internode tube. |
 | length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the internode tube. |
 | radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **petiole** --- ||||
 | petioles_per_internode | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of petioles emanating from a single internode (e.g., for an 'opposite' growth pattern, = 2) |
-| pitch | RandomParameter_float | radians | Angle of the petiole base axis with respect to its parent phytomer axis. |
+| pitch | RandomParameter_float | degrees | Angle of the petiole base axis with respect to its parent phytomer axis. |
 | radius | RandomParameter_float | meters | Radius of petiole cross-section. (radius = 0 does not create any petiole) |
-| taper | RandomParameter_float | - | Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip). |
 | length | RandomParameter_float | meters | Length of the petiole tube. (length = 0 does not create any petiole) |
 | curvature | RandomParameter_float | degrees/meter | Curvature angle of the petiole per unit length of petiole. If curvature is positive, petiole curves upward toward vertical. If negative, curvature is downward. |
+| taper | RandomParameter_float | - | Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip). |
 | color | helios::RGBcolor | - | Diffuse color of the petiole tube. |
 | length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the petiole tube. |
 | radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the petiole tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **leaf** --- ||||
 | leaves_per_petiole | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of leaves on each petiole. >1 creates a compound leaf. |
-| pitch | RandomParameter_float | radians | Angle of the leaf axis with respect to its parent petiole axis. |
-| yaw | RandomParameter_float | radians | Rotation angle of the leaf about its base along the plane of its lamina. |
-| roll | RandomParameter_float | radians | Rotation angle of the leaf about it's own axis (midrib). |
+| pitch | RandomParameter_float | degrees | Angle of the leaf axis with respect to its parent petiole axis. |
+| yaw | RandomParameter_float | degrees | Rotation angle of the leaf about its base along the plane of its lamina. |
+| roll | RandomParameter_float | degrees | Rotation angle of the leaf about it's own axis (midrib). |
 | leaflet_offset | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. |
 | leaflet_scale | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the scaling factor of the leaflet moving down the petiole with respect to the previous leaf (<1 scales down, >1 scales up). |
 | prototype_scale | RandomParameter_float | - | Scaling factor applied to the leaf prototype. Usually the prototype has unit length, so this sets the physical length of the leaf. |
 | prototype_function | function pointer | - | Pointer to a function that generates the leaf prototype model. Function takes arguments ( helios::Context*, uint subdivisions, int flag ) and returns an object ID (uint). |
-| --- **inflorescence** --- ||||
-| length | RandomParameter_float | meters | Length of the inflorescence supporting structure (rachis, peduncle, etc.). |
-| curvature | RandomParameter_float | degrees/meter | Curvature angle of the inflorescence per unit length of inflorescence. If curvature is positive, inflorescence curves upward toward vertical. If negative, curvature is downward. |
-| flowers_per_rachis | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of flowers on the inflorescence supporting structure. |
-| flower_arrangement_pattern | \htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly | - | Pattern of flower arrangement on the inflorescence supporting structure: one of "alternate" or "opposite". Only used if flowers_per_rachis > 1. |
+| --- **peduncle** --- ||||
+| length | RandomParameter_float | meters | Length of the peduncle (inflorescence supporting structure). |
+| radius | RandomParameter_float | meters | Radius of the peduncle. |
+| pitch | RandomParameter_float | degrees | Angle of the peduncle axis with respect to its parent internode axis. |
+| roll | RandomParameter_float | degrees | Rotation angle of the peduncle about it's own axis. |
+| curvature | RandomParameter_float | degrees/meter | Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward. |
 | length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the inflorescence supporting structure. |
 | radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the inflorescence supporting structure (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
+| --- **inflorescence** --- ||||
+| flowers_per_rachis | RandomParameter_int | - | Number of flowers per peduncle (rachis). |
+| flower_offset | RandomParameter_float | - | If peduncle has multiple flowers/fruit (flowers_per_rachis>1), this sets the spacing between adjacent flowers/fruit along the peduncle as a fraction of the peduncle length. |
+| flower_arrangement_pattern | \htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly | - | Pattern of flower arrangement on the peduncle (rachis): one of "alternate" or "opposite". Only used if flowers_per_rachis > 1. |
+| pitch | RandomParameter_float | degrees | Angle of the fruit axis with respect to its parent peduncle axis. |
+| roll | RandomParameter_float | degrees | Rotation angle of the fruit about it's own axis (x-axis of fruit prototype). |
 | flower_prototype_scale | RandomParameter_float | - | Scaling factor applied to the flower prototype. Usually the prototype has unit length, so this sets the physical length of the flower. |
-| flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, int flag ) and returns an object ID (uint). |
+| flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open ) and returns an object ID (uint). |
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
-| fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, int flag ) and returns an object ID (uint). |
+| fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint). |
 
-
-The rotation of each organ (internode, petiole, leaf, inflorescence) is defined relative to the axis of its parent following the pitch, yaw, roll convention described above.
+The rotation of each organ (internode, petiole, leaf, peduncle, inflorescence) is defined relative to the axis of its parent following the pitch, yaw, roll convention described above.
 
  \image html phytomer_angle_schematic.jpeg Schematic depiction of the angles defining the orientation of the phytomer internode, petiole, and leaf.
 
@@ -193,7 +196,7 @@ The rotation of each organ (internode, petiole, leaf, inflorescence) is defined 
     phytomer.petiole.length = 0.05;
     phytomer.leaf.pitch = 0.1;
     phytomer.leaf.prototype_scale = 0.1;
-    phytomer.inflorescence.length = 0.1;
+    phytomer.peduncle.length = 0.1;
 ~~~~~~
 
 The figure below provides some examples of how various shoot growth patterns (e.g., alternate, opposite) can be created by varying the model parameters.
@@ -224,7 +227,6 @@ A shoot is the fundamental topological unit of organization in the plant archite
  | phytomer_parameters | PhytomerParameters | - | Parameters defining the geometry of the phytomers comprising this shoot. |
  | --- **Geometric Parameters** --- ||||
  | max_nodes | RandomParameter_int | - | Maximum number of nodes/phytomers along a shoot. |
- | phyllotactic_angle | RandomParameter_float | degrees | Angle between the petioles/buds of two successive phytomers along the shoot. |
  | base_roll | RandomParameter_float | radians | Roll angle of the first phytomer of the shoot about the shoot axis relative to vertical. |
  | internode_radius_initial | RandomParameter_float | meters | Initial radius of the internode at the base of the shoot. |
  | child_insertion_angle_tip | RandomParameter_float | degrees | Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot. |
@@ -232,17 +234,22 @@ A shoot is the fundamental topological unit of organization in the plant archite
  | child_internode_length_max | RandomParameter_float | meters | Maximum length (with respect to position along the parent shoot) of the internode of a child shoot. |
  | child_internode_length_min | RandomParameter_float | meters | Minimum length (with respect to position along the parent shoot) of the internode of a child shoot. |
  | child_internode_length_decay_rate | RandomParameter_float | meters/node | Rate of decrease of the internode length moving down the parent shoot. |
+ | base_roll | RandomParameter_float | degrees | Roll angle of the shoot, which effectively specifies the angle of the first petiole relative to the parent shoot. |
+ | base_yaw | RandomParameter_float | degrees | Yaw angle of the shoot relative to the parent shoot. |
  | gravitropic_curvature | RandomParameter_float | degrees/meter | Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward. |
  | tortuosity | RandomParameter_float | - | Factor determining the amount of random "wiggle" in internode growth along the shoot. |
  | --- **Growth Parameters** --- ||||
  | phyllochron | RandomParameter_float | days/leaf | Time between the emergence of successive phytomers along the shoot. |
+ | leaf_flush_count | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of leaves/phytomers to flush at a time. Flushes will occur at an interval of phyllochron*leaf_flush_count. |
  | elongation_rate | RandomParameter_float | meters/day | Rate of elongation of the internode of the shoot. |
  | girth_growth_rate | RandomParameter_float | meters/day | Rate of increase of the internode radius of the shoot. |
- | bud_break_probability | RandomParameter_float | - | Probability of a bud breaking dormancy and emerging as a shoot. |
- | flower_probability | RandomParameter_float | - | Probability of a flower bud emerging as a flower. |
+ | vegetative_bud_break_probability | RandomParameter_float | - | Probability of a bud breaking dormancy and emerging as a shoot. |
+ | flower_bud_break_probability | RandomParameter_float | - | Probability of a flower bud emerging as a flower. |
  | fruit_set_probability | RandomParameter_float | - | Probability of a flower becoming a fruit. |
+ | vegetative_bud_break_time | RandomParameter_float | days | Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break. |
  | growth_requires_dormancy | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | - | Flag indicating whether or not the vegetative buds require a winter dormancy period to break into a shoot. If true, the shoot will emerge in the same growing season as the parent shoot. If false, the shoot will emerge from a bud that requires a winter dormancy period. |
  | flowers_require_dormancy | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | - | Flag indicating whether or not the flower buds require a winter dormancy period to emerge. If true, the flowers will emerge in the same growing season as the parent shoot. If false, the flowers will emerge from a bud that requires a winter dormancy period. |
+ | determinate_shoot_growth | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | - | Flag indicating whether or not shoot growth is determinate. If true, shoot growth will stop once flowering occurs, and the apical bud will become dormant. If false, the shoot will continue growing after flowering.  |
 
  \subsection ShootParametersGeom Geometric Parameters of the Shoot
 
@@ -329,10 +336,12 @@ Thresholds determining phenological transitions are set using the \ref PlantArch
  | Plant Type/Species | Variety/Variation | Plant type string argument | Shoot types | Image at time = 0 | Image at flowering | Image at (reproductive) maturity |
  | ------| ------ | ------ | ------ | ------ | ------ | ------ |
  | Almond Tree (*Prunus dulcis*) | Nonpareil | "almond" | trunk, scaffold, proleptic, sylleptic | | | |
- | Common Bean (*Phaseolus vulgaris*) | upright growth habit | "bean" | unifoliate, trifoliate | | | |
- | Cowpea (*Vigna unguiculata*) | upright growth habit | "cowpea" | unifoliate, trifoliate | | | |
- | Eastern Redbud (*Cercis canadensis*) | grown in full sun | "easternredbud_sun" | trunk, proleptic | | | |
- | Eastern Redbud (*Cercis canadensis*) | grown in shade | "easternredbud_shade" | trunk, proleptic | | | |
+ | Common Bean (*Phaseolus vulgaris*) | upright growth habit (determinate) | "bean" | unifoliate, trifoliate | | | |
+ | Cowpea (*Vigna unguiculata*) | upright growth habit (determinate) | "cowpea" | unifoliate, trifoliate | | | |
+ | Soybean (*Glycine max*) | upright growth habit (determinate) | "soybean" | unifoliate, trifoliate | | | |
+ | Sorghum (*Sorghum bicolor*) | grain sorghum | "sorghum" | mainstem | | | |
+ | Tomato (*Solanum lycopersicum*) | determinate growth | "tomato" | mainstem | | | |
+ | Sugar Beet (*Beta vulgaris*) | generic | "sugarbeet" | mainstem | | | |
 
 \subsubsection PlantArchBuild_default Loading a Plant with Default Parameters
 
@@ -349,7 +358,7 @@ int main(){
     PlantArchitecture plantarchitecture(&context);
 
     plantarchitecture.loadPlantModelFromLibrary( "bean" );
-    plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0), 0 );
+    plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 
     return 0;
 }
@@ -371,7 +380,7 @@ shoot_parameters.internode_radius_initial = 0.2;
 shoot_parameters.phytomer_parameters.internode.pitch = 10;
 
 plantarchitecture.updateCurrentShootParameters( "trunk", shoot_parameters );
-plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0), 0 );
+plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 ~~~~~~
 
 Below is an example of modifying the parameters for all shoot types:
@@ -387,7 +396,7 @@ for( auto params : shoot_parameters ){
     P.phytomer_parameters.internode.pitch = 10;
     plantarchitecture.updateCurrentShootParameters( shoot_type, P );
 }
-plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0), 0 );
+plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 ~~~~~~
 
  \section PlantArchCustom Building a Custom Plant

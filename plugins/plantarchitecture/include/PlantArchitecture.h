@@ -297,6 +297,7 @@ private:
         helios::RGBcolor color;
         uint length_segments;
         uint radial_subdivisions;
+
         InternodeParameters& operator=(const InternodeParameters &a){
             this->pitch = a.pitch;
             this->pitch.resample();
@@ -323,6 +324,7 @@ private:
         helios::RGBcolor color;
         uint length_segments;
         uint radial_subdivisions;
+
         PetioleParameters& operator=(const PetioleParameters &a){
             this->petioles_per_internode = a.petioles_per_internode;
             this->pitch = a.pitch;
@@ -343,14 +345,16 @@ private:
     };
 
     struct LeafParameters{
-        int leaves_per_petiole;
+        uint leaves_per_petiole;
         RandomParameter_float pitch;
         RandomParameter_float yaw;
         RandomParameter_float roll;
         RandomParameter_float leaflet_offset;
         RandomParameter_float leaflet_scale;
         RandomParameter_float prototype_scale;
-        uint(*prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
+        uint subdivisions;
+        uint(*prototype_function)( helios::Context*, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ) = nullptr;
+
         LeafParameters& operator=(const LeafParameters &a){
             this->leaves_per_petiole = a.leaves_per_petiole;
             this->pitch = a.pitch;
@@ -365,58 +369,68 @@ private:
             this->leaflet_scale.resample();
             this->prototype_scale = a.prototype_scale;
             this->prototype_scale.resample();
+            this->subdivisions = a.subdivisions;
             this->prototype_function = a.prototype_function;
             return *this;
         }
     };
 
-    struct InflorescenceParameters{
-        RandomParameter_float peduncle_length;
-        RandomParameter_float peduncle_pitch;
-        RandomParameter_float peduncle_roll;
-        RandomParameter_int flowers_per_rachis;
-        RandomParameter_float flower_offset;
-        RandomParameter_float peduncle_radius;
+    struct PeduncleParameters {
+        RandomParameter_float length;
+        RandomParameter_float radius;
+        RandomParameter_float pitch;
+        RandomParameter_float roll;
         RandomParameter_float curvature;
-        std::string flower_arrangement_pattern;
         uint length_segments;
         uint radial_subdivisions;
-        RandomParameter_float fruit_pitch;
-        RandomParameter_float fruit_roll;
-        RandomParameter_float fruit_prototype_scale;
+
+        PeduncleParameters &operator=(const PeduncleParameters &a) {
+            this->length = a.length;
+            this->length.resample();
+            this->radius = a.radius;
+            this->radius.resample();
+            this->pitch = a.pitch;
+            this->pitch.resample();
+            this->roll = a.roll;
+            this->roll.resample();
+            this->curvature = a.curvature;
+            this->curvature.resample();
+            this->length_segments = a.length_segments;
+            this->radial_subdivisions = a.radial_subdivisions;
+            return *this;
+        }
+    };
+
+    struct InflorescenceParameters {
+        RandomParameter_int flowers_per_rachis;
+        RandomParameter_float flower_offset;
+        std::string flower_arrangement_pattern;
+        RandomParameter_float pitch;
+        RandomParameter_float roll;
         RandomParameter_float flower_prototype_scale;
-        bool fruit_gravity_on;
-        uint(*fruit_prototype_function)( helios::Context*, uint subdivisions, int flag ) = nullptr;
-        uint(*flower_prototype_function)(helios::Context*, uint subdivisions, bool flower_is_open ) = nullptr;
-        InflorescenceParameters& operator=(const InflorescenceParameters &a){
-            this->peduncle_length = a.peduncle_length;
-            this->peduncle_length.resample();
-            this->peduncle_pitch = a.peduncle_pitch;
-            this->peduncle_pitch.resample();
-            this->peduncle_roll = a.peduncle_roll;
-            this->peduncle_roll.resample();
+        uint (*flower_prototype_function)(helios::Context *, uint subdivisions, bool flower_is_open) = nullptr;
+        RandomParameter_float fruit_prototype_scale;
+        uint (*fruit_prototype_function)(helios::Context *, uint subdivisions, float time_since_fruit_set) = nullptr;
+        RandomParameter_float fruit_gravity_factor_fraction;
+
+        InflorescenceParameters &operator=(const InflorescenceParameters &a) {
             this->flowers_per_rachis = a.flowers_per_rachis;
             this->flowers_per_rachis.resample();
             this->flower_offset = a.flower_offset;
             this->flower_offset.resample();
-            this->peduncle_radius = a.peduncle_radius;
-            this->peduncle_radius.resample();
-            this->curvature = a.curvature;
-            this->curvature.resample();
             this->flower_arrangement_pattern = a.flower_arrangement_pattern;
-            this->length_segments = a.length_segments;
-            this->radial_subdivisions = a.radial_subdivisions;
-            this->fruit_pitch = a.fruit_pitch;
-            this->fruit_pitch.resample();
-            this->fruit_roll = a.fruit_roll;
-            this->fruit_roll.resample();
+            this->pitch = a.pitch;
+            this->pitch.resample();
+            this->roll = a.roll;
+            this->roll.resample();
+            this->flower_prototype_scale = a.flower_prototype_scale;
+            this->flower_prototype_scale.resample();
+            this->flower_prototype_function = a.flower_prototype_function;
             this->fruit_prototype_scale = a.fruit_prototype_scale;
             this->fruit_prototype_scale.resample();
             this->fruit_prototype_function = a.fruit_prototype_function;
-            this->flower_prototype_scale = a.flower_prototype_scale;
-            this->fruit_gravity_on = a.fruit_gravity_on;
-            this->flower_prototype_scale.resample();
-            this->flower_prototype_function = a.flower_prototype_function;
+            this->fruit_gravity_factor_fraction = a.fruit_gravity_factor_fraction;
+            this->fruit_gravity_factor_fraction.resample();
             return *this;
         }
     };
@@ -428,6 +442,8 @@ public:
     PetioleParameters petiole;
 
     LeafParameters leaf;
+
+    PeduncleParameters peduncle;
 
     InflorescenceParameters inflorescence;
 
@@ -492,15 +508,15 @@ struct ShootParameters{
     RandomParameter_float girth_growth_rate; //1/day
 
     // Probability that bud with this shoot type will break and form a new shoot
-    float bud_break_probability;
+    float vegetative_bud_break_probability;
 
     // Probability that a phytomer will flower
-    float flower_probability;
+    float flower_bud_break_probability;
 
     // Probability that a flower will set fruit
     float fruit_set_probability;
 
-    RandomParameter_float bud_time;  //days
+    RandomParameter_float vegetative_bud_break_time;  //days
 
     bool flowers_require_dormancy;
     bool growth_requires_dormancy;
@@ -528,11 +544,11 @@ struct ShootParameters{
         this->gravitropic_curvature.resample();
         this->tortuosity = a.tortuosity;
         this->tortuosity.resample();
-        this->bud_break_probability = a.bud_break_probability;
-        this->flower_probability = a.flower_probability;
+        this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
+        this->flower_bud_break_probability = a.flower_bud_break_probability;
         this->fruit_set_probability = a.fruit_set_probability;
-        this->bud_time = a.bud_time;
-        this->bud_time.resample();
+        this->vegetative_bud_break_time = a.vegetative_bud_break_time;
+        this->vegetative_bud_break_time.resample();
         this->child_insertion_angle_tip = a.child_insertion_angle_tip;
         this->child_insertion_angle_tip.resample();
         this->child_insertion_angle_decay_rate = a.child_insertion_angle_decay_rate;
@@ -882,7 +898,7 @@ public:
                        float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &shoot_type_label, uint petiole_index);
 
     //! Add a new phytomer at the terminal bud of a shoot.
-    int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_params, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
+    int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     // -- methods for modifying the current plant state -- //
 
@@ -989,6 +1005,10 @@ protected:
     void initializeTomatoShoots();
 
     uint buildTomatoPlant( const helios::vec3 &base_position, float age );
+
+    void initializeSugarbeetShoots();
+
+    uint buildSugarbeetPlant( const helios::vec3 &base_position, float age );
 
 };
 
