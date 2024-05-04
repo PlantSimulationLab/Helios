@@ -655,14 +655,14 @@ class LiDARcloud{
   */
   void exportGtheta( const char* filename );
 
-  //! Export to file all points in the point cloud to an ASCII text file following the column format specified by the <ASCII_format></ASCII_format> tag in the scan XML file 
+  //! Export to file all points in the point cloud to an ASCII text file following the column format specified by the \<ASCII_format>\</ASCII_format> tag in the scan XML file
   /**
    * \param[in] "filename" Name of file
    * \note If there are multiple scans in the point cloud, each scan will be exported to a different file with the scan ID appended to the filename. This is because different scans may have a different column format.
   */
   void exportPointCloud( const char* filename );
 
-  //! Export to file all points from a given scan to an ASCII text file following the column format specified by the <ASCII_format></ASCII_format> tag in the scan XML file 
+  //! Export to file all points from a given scan to an ASCII text file following the column format specified by the \<ASCII_format>\</ASCII_format> tag in the scan XML file
   /**
    * \param[in] "filename" Name of file
    * \param[in] "scanID" Identifier of scan to be exported

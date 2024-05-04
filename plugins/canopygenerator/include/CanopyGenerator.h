@@ -1311,11 +1311,33 @@ uint grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec
 
 };
 
+//! Draw a random number from a uniform distribution between -V and V
+/**
+ * \param[in] "V" Maximum/minimum value of the distribution.
+ * \param[in] "generator" Random number generator.
+ */
 float getVariation( float V, std::minstd_rand0& generator );
 
+//! Interpolate the position of a point along a tube
+/**
+ * \param[in] "P" Vector of 3D points making up the tube.
+ * \param[in] "frac" Fractional position along the tube.
+ */
 helios::vec3 interpolateTube( const std::vector<helios::vec3> &P, float frac );
 
+//! Interpolate the radius of a point along a tube
+/**
+ * \param[in] "P" Vector of radii making up the tube.
+ * \param[in] "frac" Fractional position along the tube.
+ */
 float interpolateTube( const std::vector<float> &P, float frac );
 
+//! Evaluate the error between a predicted and actual leaf angle cumulative distribution at a given leaf angle
+/**
+ * \param[in] "thetaL" Leaf angle in radians.
+ * \param[in] "ru_v" Predicted CDF value (on the first value in this vector is used - it is a vector so it matches the arguments needed by the 'fzero' function).
+ * \param[in] "a_distribution" Label for a "classical" leaf angle distribution (spherical, uniform, planophile, erectophile, plagiophile, extremophile).
+ */
+float evaluateCDFresid(float thetaL, std::vector<float> &ru_v, const void *a_distribution);
 
-#endif
+#endif //CANOPY_GENERATOR

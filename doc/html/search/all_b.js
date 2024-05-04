@@ -28,7 +28,7 @@ var searchData=
   ['lighting_5fphong_25',['LIGHTING_PHONG',['../class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573adce805e52c5b47950ecc3cfdddd2160c',1,'Visualizer']]],
   ['lighting_5fphong_5fshadowed_26',['LIGHTING_PHONG_SHADOWED',['../class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573afe63a1dd4fcd9bbf57ad0dc2c168c864',1,'Visualizer']]],
   ['lightingmodel_27',['LightingModel',['../class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573',1,'Visualizer']]],
-  ['lineintersection_28',['lineIntersection',['../global_8h.html#a3fd112746616c33aae6ac56d9863c9a6',1,'helios']]],
+  ['lineintersection_28',['lineIntersection',['../group__functions.html#ga3fd112746616c33aae6ac56d9863c9a6',1,'helios']]],
   ['linesintersection_29',['linesIntersection',['../class_voxel_intersection.html#a69cda90cd28f478ae007a88615994df2',1,'VoxelIntersection']]],
   ['listobjectdata_30',['listObjectData',['../classhelios_1_1_compound_object.html#a4750278bd9c519d57c3f27891dcf666d',1,'helios::CompoundObject::listObjectData()'],['../classhelios_1_1_context.html#adc44dfce7e5dc7deaa42139795eee942',1,'helios::Context::listObjectData(uint ObjID) const']]],
   ['listprimitivedata_31',['listPrimitiveData',['../classhelios_1_1_context.html#a7cb64e054e6dacbab27f31cd73852cc3',1,'helios::Context']]],

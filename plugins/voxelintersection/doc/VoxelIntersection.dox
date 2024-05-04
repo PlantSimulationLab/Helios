@@ -45,7 +45,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <tr><td>\ref VoxelIntersection( helios::Context* )</td></tr>
  </table>
 
- \section VarsAndProps Variables and Primitive Data
+ \section VoxVarsAndProps Variables and Primitive Data
 
  \subsection VoxelIntersectionOutputData Output Primitive Data
 

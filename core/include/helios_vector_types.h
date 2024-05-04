@@ -77,6 +77,7 @@ public:
   //! Equality for all elements
   bool operator==( const int2& a ) const;
 
+  //! Write int2 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int2 &vec) {
     return os << "helios::int2<" << vec.x << ", " << vec.y << ">";
   }
@@ -160,6 +161,7 @@ public:
   //! Equality for all elements
   bool operator==( const int3& a ) const;
 
+  //! Write int3 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int3 &vec) {
     return os << "helios::int3<" << vec.x << ", " << vec.y << ", " << vec.z << ">";
   }
@@ -239,6 +241,7 @@ public:
   //! Equality for all elements
   bool operator==( const int4& a ) const;
 
+  //! Write int4 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int4 &vec) {
     return os << "helios::int4<" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ">";
   }
@@ -285,7 +288,7 @@ public:
   //! Second element in vector
   float y;
 
-  //! Normalize vector components such that the magnitue is unity.
+  //! Normalize vector components such that the magnitude is unity.
   void normalize(){
     float mag = sqrt( x*x + y*y );
     x/=mag;
@@ -336,7 +339,10 @@ public:
   vec2 operator-( float a) const;
   //! check for equality of two vec2 vectors
   bool operator==(const vec2& a) const;
+  //! check for inequality of two vec2 vectors
+  bool operator!=(const vec2& a) const;
 
+  //! Write vec2 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec2 &vec) {
     return os << "helios::vec2<" << vec.x << ", " << vec.y << ">";
   }
@@ -409,6 +415,10 @@ inline bool vec2::operator==(const vec2& a) const{
   return x == a.x && y == a.y;
 }
 
+inline bool vec2::operator!=(const vec2& a) const{
+    return x != a.x || y != a.y;
+}
+
 //! Vector of three elements of type 'float'. 
 /** \ingroup vectors */
 struct vec3{
@@ -421,7 +431,7 @@ public:
   //! Third element in vector
   float z;
 
-  //! Normalize vector components such that the magnitue is unity.
+  //! Normalize vector components such that the magnitude is unity.
   void normalize(){
     float mag = sqrt( x*x + y*y + z*z );
     x/=mag;
@@ -472,10 +482,12 @@ public:
   vec3 operator+( float a) const;
   //!Subtract a scalar from each element (scalar is subtracted on right: vec3-a)
   vec3 operator-( float a) const;
-
   //! check for equality of two vec3 vectors
   bool operator==(const vec3& a) const;
+  //! check for inequality of two vec3 vectors
+  bool operator!=(const vec3& a) const;
 
+  //! Write vec3 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec3 &vec) {
     return os << "helios::vec3<" << vec.x << ", " << vec.y << ", " << vec.z << ">";
   }
@@ -499,6 +511,7 @@ inline vec3 make_vec3( float X[3] ){
   return {X[0],X[1],X[2]};
 }
 
+//! Cross product of two vec3 vectors
 inline vec3 cross(const vec3 &a, const vec3 &b ){
   return {a.y*b.z - b.y*a.z,b.x*a.z - a.x*b.z,a.x*b.y - b.x*a.y };
 }
@@ -554,6 +567,10 @@ inline bool vec3::operator==(const vec3& a) const{
   return x == a.x && y == a.y && z == a.z;
 }
 
+inline bool vec3::operator!=(const vec3& a) const{
+    return x != a.x || y != a.y || z != a.z;
+}
+
 //! Vector of four elements of type 'float'. 
 /** \ingroup vectors */
 struct vec4{
@@ -568,7 +585,7 @@ public:
   //! Fourth element in vector
   float w;
 
-  //! Normalize vector components such that the magnitue is unity.
+  //! Normalize vector components such that the magnitude is unity.
   void normalize(){
     float mag = sqrt( x*x + y*y + z*z + w*w );
     x/=mag;
@@ -623,9 +640,12 @@ public:
   vec4 operator-( float a) const;
   //! check for equality of two vec4 vectors
   bool operator==(const vec4& a) const;
+  //! check for equality of two vec4 vectors
+  bool operator!=(const vec4& a) const;
 
+  //! Write vec4 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec4 &vec) {
-    return os << "helios::vec3<" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ">";
+    return os << "helios::vec4<" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ">";
   }
 
 };
@@ -699,6 +719,10 @@ inline bool vec4::operator==(const vec4& a) const{
   return x == a.x && y == a.y && z == a.z && w == a.w;
 }
 
+inline bool vec4::operator!=(const vec4& a) const{
+  return x != a.x || y != a.y || z != a.z || w != a.w;
+}
+
 //! R-G-B color vector
 /**  \ingroup vectors */
 struct RGBcolor{
@@ -714,7 +738,7 @@ public:
   /*! Takes a value between 0 and 1. */
   float b;
 
-  //! Defalut constructor - initializes color to black. 
+  //! Default constructor - initializes color to black.
   RGBcolor() : r(0), g(0), b(0) {}
 
   //! Constructor given three floats denoting R-G-B components.
@@ -776,12 +800,14 @@ public:
     b*=scl;
   }
 
+  //! write RGBcolor to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::RGBcolor &c) {
     return os << "helios::RGBcolor<" << c.r << ", " << c.g << ", " << c.b << ">";
   }
 
+  //! check for equality of two RGB colors
   bool operator==( const RGBcolor &c ) const;
-
+  //! check for inequality of two RGB colors
   bool operator!=( const RGBcolor &c ) const;
 
 private:
@@ -813,11 +839,11 @@ inline RGBcolor make_RGBcolor( float r, float g, float b ){
 }
 
 //! Blend two RGB colors together
-/** \param[in] "color0" First color to be blended.
-    \param[in] "color1" Second color to be bleded.
-    \param[out] "weight" Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
+/** \param[in] "color0_RGB" First color to be blended.
+    \param[in] "color1_RGB" Second color to be blended.
+    \param[out] "weight_RGB" Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
 */
-RGBcolor blend( RGBcolor color0, RGBcolor color1, float weight );
+RGBcolor blend(const RGBcolor &color0_RGB, const RGBcolor &color1_RGB, float weight_RGB );
 
 inline bool RGBcolor::operator==( const RGBcolor &c ) const{
   return c.r==r && c.g==g && c.b==b;
@@ -827,27 +853,48 @@ inline bool RGBcolor::operator!=( const RGBcolor &c ) const{
   return c.r!=r || c.g!=g || c.b!=b;
 }
 
+/// @private
 namespace RGB{
 
+  /// @private
   extern RGBcolor red;
+  /// @private
   extern RGBcolor blue;
+  /// @private
   extern RGBcolor green;
+  /// @private
   extern RGBcolor cyan;
+  /// @private
   extern RGBcolor magenta;
+  /// @private
   extern RGBcolor yellow;
+  /// @private
   extern RGBcolor orange;
+  /// @private
   extern RGBcolor violet;
+  /// @private
   extern RGBcolor black;
+  /// @private
   extern RGBcolor white;
+  /// @private
   extern RGBcolor lime;
+  /// @private
   extern RGBcolor silver;
+  /// @private
   extern RGBcolor gray;
+  /// @private
   extern RGBcolor navy;
+  /// @private
   extern RGBcolor brown;
+  /// @private
   extern RGBcolor khaki;
+  /// @private
   extern RGBcolor greenyellow;
+  /// @private
   extern RGBcolor forestgreen;
+  /// @private
   extern RGBcolor yellowgreen;
+  /// @private
   extern RGBcolor goldenrod;
 
 }
@@ -870,7 +917,7 @@ public:
   /*! Takes a value between 0 and 1. */
   float a;
 
-  //! Defalut constructor - initializes color to black. 
+  //! Default constructor - initializes color to black.
   RGBAcolor() : r(0), g(0), b(0), a(1) {}
 
   //! Constructor given three floats denoting R-G-B components.
@@ -927,13 +974,15 @@ public:
     a*=scl;
   }
 
+  //! write RGBAcolor to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::RGBAcolor &c) {
     return os << "helios::RGBAcolor<" << c.r << ", " << c.g << ", " << c.b << ", " << c.a << ">";
   }
 
-  bool operator==( const RGBAcolor &c ) const;
-
-  bool operator!=( const RGBAcolor &c ) const;
+  //! check for equality of two RGBA colors
+  bool operator==( const helios::RGBAcolor &c ) const;
+  //! check for inequality of two RGBA colors
+  bool operator!=( const helios::RGBAcolor &c ) const;
 
 private:
   //! Clamp float to range of 0 to 1.
@@ -966,20 +1015,22 @@ inline RGBAcolor make_RGBAcolor( float r, float g, float b, float a ){
 }
 
 //! Make an RGBAcolor vector (add alpha channel to RGBcolor)
-/** \param[in] "color" RGBcolor
-    \param[in] "a" Alpha (transparency) component
-    \ingroup vectors
+/**
+ * \param[in] "color" RGBcolor
+ * \param[in] "a" Alpha (transparency) component
+ * \ingroup vectors
 */
 inline RGBAcolor make_RGBAcolor( RGBcolor color, float a ){
   return {color.r,color.g,color.b,a};
 }
 
 //! Blend two RGBA colors together
-/** \param[in] "color0" First color to be blended.
-    \param[in] "color1" Second color to be bleded.
-    \param[out] "weight" Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
+/**
+ * \param[in] "color0_RGBA" First color to be blended.
+ * \param[in] "color1_RGBA" Second color to be blended.
+ * \param[out] "weight_RGBA" Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
 */
-RGBAcolor blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight );
+RGBAcolor blend(const helios::RGBAcolor &color0_RGBA, const helios::RGBAcolor &color1_RGBA, float weight_RGBA );
 
 inline bool RGBAcolor::operator==( const RGBAcolor &c ) const{
   return c.r==r && c.g==g && c.b==b && c.a==a;
@@ -990,8 +1041,9 @@ inline bool RGBAcolor::operator!=( const RGBAcolor &c ) const{
 }
 
 //! Date vector
-/** \sa \ref make_Date()
-    \ingroup vectors 
+/**
+ * \sa make_Date()
+ * \ingroup vectors
 */
 struct Date{
 public:
@@ -1015,19 +1067,19 @@ public:
       \param[in] "month" Day of year (1-12)
       \param[in] "year" Year in YYYY format
   */
-  Date( int a_day, int a_month, int a_year ){
+  Date(int day, int month, int year ){
     
-    if( a_day<1 || a_day>31 ){
-        throw(std::runtime_error("ERROR (Date constructor): Day of month is out of range (day of " + std::to_string(a_day) + " was given)."));
-    }else if( a_month<1 || a_month>12){
-        throw(std::runtime_error("ERROR (Date constructor): Month of year is out of range (month of " + std::to_string(a_month) + " was given)."));
-    }else if( a_year<1000 ){
+    if(day < 1 || day > 31 ){
+        throw(std::runtime_error("ERROR (Date constructor): Day of month is out of range (day of " + std::to_string(day) + " was given)."));
+    }else if(month < 1 || month > 12){
+        throw(std::runtime_error("ERROR (Date constructor): Month of year is out of range (month of " + std::to_string(month) + " was given)."));
+    }else if( year<1000 ){
         throw(std::runtime_error( "ERROR (Date constructor): Year should be specified in YYYY format."));
     }
     
-    day = a_day;
-    month = a_month;
-    year = a_year;
+    this->day = day;
+    this->month = month;
+    this->year = year;
     
   }
 
@@ -1046,6 +1098,12 @@ public:
    */
   bool isLeapYear() const;
 
+  //! check for equality of two dates
+  bool operator==( const helios::Date &c ) const;
+  //! check for inequality of two Dates
+  bool operator!=( const helios::Date &c ) const;
+
+  //! Write Date to output stream
   friend std::ostream &operator<<(std::ostream &os, helios::Date const &d) {
     return os << d.year << "-" << std::setfill('0') << std::setw(2) << d.month << "-" << std::setfill('0') << std::setw(2) << d.day;
   }
@@ -1068,12 +1126,16 @@ inline Date make_Date( int day, int month, int year ){
       throw(std::runtime_error("ERROR (make_Date): Year should be specified in YYYY format."));
   }
 
-  Date date;
-  date.day = day;
-  date.month = month;
-  date.year = year;
-  return date;
+  return {day,month,year};
   
+}
+
+inline bool Date::operator==( const Date &c ) const{
+  return c.day==day && c.month==month && c.year==year;
+}
+
+inline bool Date::operator!=( const Date &c ) const{
+  return c.day!=day || c.month!=month || c.year!=year;
 }
 
 //! Convert a Julian day to a calendar \ref Date vector.
@@ -1162,8 +1224,9 @@ inline Date make_Date( int JulianDay, int year ){
 
 
 //! Time vector
-/** \sa \ref make_Time()
-    \ingroup vectors 
+/**
+ * \sa make_Time()
+ * \ingroup vectors
 */
 struct Time{
 
@@ -1182,44 +1245,52 @@ struct Time{
   }
 
   //! second/minute/hour constructor
-  /** \param[in] "hour" Hour of day (0-23)
-      \param[in] "minute" Minute of hour (0-59)
+  /**
+   * \param[in] "hour" Hour of day (0-23)
+   * \param[in] "minute" Minute of hour (0-59)
   */
-  Time( int a_hour, int a_minute ){
+  Time( int hour, int minute ){
 
-    if( a_minute<0 || a_minute>59 ){
+    if( minute<0 || minute>59 ){
         throw(std::runtime_error("ERROR (Time constructor): Minute out of range (0-59)."));
-    }else if( a_hour<0 || a_hour>23 ){
+    }else if( hour<0 || hour>23 ){
         throw(std::runtime_error("ERROR (Time constructor): Hour out of range (0-23)."));
     }
 
-    second = 0;
-    minute = a_minute;
-    hour = a_hour;
+    this->second = 0;
+    this->minute = minute;
+    this->hour = hour;
     
   }
 
   //! minute/hour constructor
-  /** \param[in] "hour" Hour of day (0-23)
-      \param[in] "minute" Minute of hour (0-59)
-      \param[in] "second" Second of minute (0-59)
+  /**
+   * \param[in] "hour" Hour of day (0-23)
+   * \param[in] "minute" Minute of hour (0-59)
+   * \param[in] "second" Second of minute (0-59)
   */
-  Time( int a_hour, int a_minute, int a_second ){
+  Time( int hour, int minute, int second ){
 
-    if( a_second<0 || a_second>59 ){
+    if( second<0 || second>59 ){
         throw(std::runtime_error("ERROR (Time constructor): Second out of range (0-59)."));
-    }else if( a_minute<0 || a_minute>59 ){
+    }else if( minute<0 || minute>59 ){
         throw(std::runtime_error("ERROR (Time constructor): Minute out of range (0-59)."));
-    }else if( a_hour<0 || a_hour>23 ){
+    }else if( hour<0 || hour>23 ){
         throw(std::runtime_error("ERROR (Time constructor): Hour out of range (0-23)."));
     }
 
-    second = a_second;
-    minute = a_minute;
-    hour = a_hour;
+    this->second = second;
+    this->minute = minute;
+    this->hour = hour;
     
   }
 
+  //! check for equality of two times
+  bool operator==( const helios::Time &c ) const;
+  //! check for inequality of two times
+  bool operator!=( const helios::Time &c ) const;
+
+  //! Write Time to output stream
   friend std::ostream &operator<<(std::ostream &os, helios::Time const &t) {
     return os << t.hour << ":" << std::setfill('0') << std::setw(2) << t.minute << ":" << std::setfill('0') << std::setw(2) << t.second;
   }
@@ -1263,40 +1334,76 @@ inline Time make_Time( int hour, int minute, int second ){
   
 }
 
+inline bool Time::operator==( const Time &c ) const{
+   return c.hour==hour && c.minute==minute && c.second==second;
+}
+
+inline bool Time::operator!=( const Time &c ) const{
+   return c.hour!=hour || c.minute!=minute || c.second!=second;
+}
+
+
 //! Vector of spherical coordinates (elevation,azimuth)
-/** \ingroup vectors */
+/**
+ * \ingroup vectors
+ */
 struct SphericalCoord{
+private:
+
+    float elevation_private;
+    float zenith_private;
+
 public:
 
   //! Radius
   float radius;
   //! Elevation angle (radians)
-  float elevation;
-   //! Zenithal angle (radians)
-  float zenith;
+  /*
+   * \note Elevation angle is read-only, since it is linked to the zenith angle.
+   */
+  const float &elevation;
+  //! Zenithal angle (radians)
+  /*
+    * \note Zenith angle is read-only, since it is linked to the elevation angle.
+   */
+  const float &zenith;
   //! Azimuthal angle (radians)
   float azimuth;
 
   //! Default constructor 
   /** initializes to vertical unit vector */
-  SphericalCoord(){
+  SphericalCoord() : elevation_private(0.5*float(M_PI)), elevation(elevation_private), zenith_private(0.f), zenith(zenith_private)   {
     radius=1;
-    elevation=0.5*float(M_PI);
-    zenith=0.f;
     azimuth=0;
   }
   //! Initialize SphericalCoord by specifying radius, elevation, and azimuth
-  /** \param[in] "radius" Radius
-      \param[in] "elevation" Elevation angle (radians)
-      \param[in] "azimuth" Azimuthal angle (radians)
+  /**
+   * \param[in] "radius" Radius
+   * \param[in] "elevation" Elevation angle (radians)
+   * \param[in] "azimuth" Azimuthal angle (radians)
   */
-  SphericalCoord( float a_radius, float a_elevation, float a_azimuth ){
-    radius=a_radius;
-    elevation=a_elevation;
-    zenith=0.5f*float(M_PI)-elevation;
-    azimuth=a_azimuth;
+  SphericalCoord( float a_radius, float a_elevation, float a_azimuth ) : elevation_private(a_elevation), elevation(elevation_private), zenith_private(0.5f*float(M_PI)-a_elevation), zenith(zenith_private), radius(a_radius), azimuth(a_azimuth) {}
+
+  //! Copy constructor
+  SphericalCoord( const SphericalCoord &c ) : elevation_private(c.elevation_private), elevation(elevation_private), zenith_private(c.zenith_private), zenith(zenith_private), radius(c.radius), azimuth(c.azimuth) {}
+
+  //! Assignment operator
+  SphericalCoord& operator=( const SphericalCoord &c ){
+     if( this != &c ){
+        elevation_private = c.elevation_private;
+        zenith_private = c.zenith_private;
+        radius = c.radius;
+        azimuth = c.azimuth;
+     }
+     return *this;
   }
 
+  //! check for equality of two spherical coordinates
+  bool operator==( const helios::SphericalCoord &c ) const;
+  //! check for inequality of two spherical coordinates
+  bool operator!=( const helios::SphericalCoord &c ) const;
+
+  //! Write SphericalCoord to output stream
   friend std::ostream &operator<<(std::ostream &os, helios::SphericalCoord const &coord) {
     return os << "helios::SphericalCoord<" << coord.radius << ", " << coord.elevation << ", " << coord.azimuth << ">";
   }
@@ -1307,8 +1414,8 @@ public:
 /** \param[in] "elevation" Elevation angle (radians)
     \param[in] "azimuth" Azimuthal angle (radians)
   */
-inline SphericalCoord make_SphericalCoord( float a_elevation, float a_azimuth ){
-  return {1,a_elevation,a_azimuth};
+inline SphericalCoord make_SphericalCoord( float elevation, float azimuth ){
+  return {1,elevation,azimuth};
 }
 
 //! Make a SphericalCoord by specifying radius, elevation, and azimuth
@@ -1316,8 +1423,16 @@ inline SphericalCoord make_SphericalCoord( float a_elevation, float a_azimuth ){
     \param[in] "elevation" Elevation angle (radians)
     \param[in] "azimuth" Azimuthal angle (radians)
   */
- inline SphericalCoord make_SphericalCoord( float a_radius, float a_elevation, float a_azimuth ){
-  return {a_radius,a_elevation,a_azimuth};
+ inline SphericalCoord make_SphericalCoord( float radius, float elevation, float azimuth ){
+  return {radius,elevation,azimuth};
+}
+
+inline bool SphericalCoord::operator==( const SphericalCoord &c ) const{
+  return c.radius==radius && c.zenith==zenith && c.elevation==elevation && c.azimuth==azimuth;
+}
+
+inline bool SphericalCoord::operator!=( const SphericalCoord &c ) const {
+    return c.radius!=radius || c.zenith!=zenith || c.elevation!=elevation || c.azimuth!=azimuth;
 }
 
 

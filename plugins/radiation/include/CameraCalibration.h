@@ -17,6 +17,7 @@
 #define HELIOS_CAMERACALIBRATION_H
 #include "Context.h"
 
+//! Camera calibration structure used for camera calibration tasks
 struct CameraCalibration{
     explicit CameraCalibration(helios::Context *context);
 

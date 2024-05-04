@@ -51,7 +51,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
 
   if( helios.empty() ){
     std::cout << "failed." << std::endl;
-    std::cerr << "ERROR (loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags." << std::endl;
+    std::cerr << "ERROR (AerialLiDARcloud::loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags." << std::endl;
     exit(EXIT_FAILURE);
   }
 
@@ -83,7 +83,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
       extent = string2vec2( extent_str ); //note: pugi loads xml data as a character.  need to separate it into 2 floats
     }
     if( extent.x<0 || extent.y<0 ){
-      cerr << "failed.\nERROR (loadXML): The scan extent must be positive (check scan #" << scan_count << ")." << endl;
+      cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): The scan extent must be positive (check scan #" << scan_count << ")." << endl;
       exit(EXIT_FAILURE);
     }
 
@@ -98,10 +98,10 @@ void AerialLiDARcloud::loadXML( const char* filename ){
     }
 
     if( coneAngle<0 ){
-      cerr << "ERROR (loadXML): cone angle cannot be less than 0." << endl;
+      cerr << "ERROR (AerialLiDARcloud::loadXML): cone angle cannot be less than 0." << endl;
       exit(EXIT_FAILURE);
     }else if( coneAngle>90 ){
-      cerr << "ERROR (loadXML): cone angle cannot be greater than 90 degrees." << endl;
+      cerr << "ERROR (AerialLiDARcloud::loadXML): cone angle cannot be greater than 90 degrees." << endl;
       exit(EXIT_FAILURE);
     }
 
@@ -115,7 +115,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
       scanDensity = atof(density_str);
 
       if( scanDensity<=0 ){
-	cerr << "ERROR (loadXML): scan density should be greater than 0." << endl;
+	cerr << "ERROR (AerialLiDARcloud::loadXML): scan density should be greater than 0." << endl;
 	exit(EXIT_FAILURE);
       }
       
@@ -164,7 +164,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
 	f.open(str);
 
 	if( !f.good() ){
-	  cout << "failed.\n ERROR (loadXML): Data file `" << str << "' given for scan #" << scan_count << " does not exist." << endl;
+	  cout << "failed.\n ERROR (AerialLiDARcloud::loadXML): Data file `" << str << "' given for scan #" << scan_count << " does not exist." << endl;
 	  exit(EXIT_FAILURE);
 	}
 	f.close();
@@ -210,19 +210,21 @@ void AerialLiDARcloud::loadXML( const char* filename ){
 
 	temp_xyz = make_vec3(-9999,-9999,-9999);
 	temp_rgb = make_RGBcolor(1,0,0); //default color: red
-	temp_direction = make_SphericalCoord(-0.5*M_PI,0); //default direction: vertical (downward)
+//	temp_direction = make_SphericalCoord(-0.5*M_PI,0); //default direction: vertical (downward)
+    float temp_zenith = M_PI;
+    float temp_azimuth = 0;
 
 	for( uint i=0; i<column_format.size(); i++ ){
 	  if( column_format.at(i).compare("zenith")==0 ){
-	    datafile >> temp_direction.zenith;
+	    datafile >> temp_zenith;
+        temp_zenith = deg2rad(temp_zenith);
 	  }else if( column_format.at(i).compare("azimuth")==0 ){
-	    datafile >> temp_direction.azimuth;
+	    datafile >> temp_azimuth;
+        temp_azimuth = deg2rad(temp_azimuth);
 	  }else if( column_format.at(i).compare("zenith_rad")==0 ){
-	    datafile >> temp_direction.zenith;
-	    temp_direction.zenith *= 180.f/M_PI;
+	    datafile >> temp_zenith;
 	  }else if( column_format.at(i).compare("azimuth_rad")==0 ){
-	    datafile >> temp_direction.azimuth;
-	    temp_direction.azimuth *= 180.f/M_PI;
+	    datafile >> temp_azimuth;
 	  }else if( column_format.at(i).compare("x")==0 ){
 	    datafile >> temp_xyz.x;
 	  }else if( column_format.at(i).compare("y")==0 ){
@@ -252,7 +254,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
 	
 	if( !datafile.good() ){//if the whole line was not read successfully, stop
 	  if( hit_count==1 ){
-	    std::cerr << "WARNING: Something is likely wrong with the data file " << filename << ". Check that the format is consisten with that specified in the XML metadata file." << std::endl;
+	    std::cerr << "WARNING: Something is likely wrong with the data file " << filename << ". Check that the format is consistent with that specified in the XML metadata file." << std::endl;
 	  }
 	  break;
 	}
@@ -261,17 +263,19 @@ void AerialLiDARcloud::loadXML( const char* filename ){
 
 	//hit point
 	if( temp_xyz.x==-9999 ){
-	  std::cerr << "ERROR (loadXML): x-coordinate not specified for hit point #" << hit_count-1 << " of scan #" << scan_count << std::endl;
+	  std::cerr << "ERROR (AerialLiDARcloud::loadXML): x-coordinate not specified for hit point #" << hit_count-1 << " of scan #" << scan_count << std::endl;
 	  exit(EXIT_FAILURE);
 	}else if( temp_xyz.y==-9999 ){
-	  std::cerr << "ERROR (loadXML): t-coordinate not specified for hit point #" << hit_count-1 << " of scan #" << scan_count << std::endl;
+	  std::cerr << "ERROR (AerialLiDARcloud::loadXML): t-coordinate not specified for hit point #" << hit_count-1 << " of scan #" << scan_count << std::endl;
 	  exit(EXIT_FAILURE);
 	}else if( temp_xyz.z==-9999 ){
-	  std::cerr << "ERROR (loadXML): z-coordinate not specified for hit point #" << hit_count-1 << " of scan #" << scan_count << std::endl;
+	  std::cerr << "ERROR (AerialLiDARcloud::loadXML): z-coordinate not specified for hit point #" << hit_count-1 << " of scan #" << scan_count << std::endl;
 	  exit(EXIT_FAILURE);
 	}
-	
-       	//add hit point to the scan
+
+    SphericalCoord temp_direction(1.f, 0.5f*M_PI - temp_zenith, temp_azimuth);
+
+    //add hit point to the scan
 	addHitPoint( scanID, temp_xyz, temp_direction, temp_rgb, data );
 	
 	total_hits ++;
@@ -300,7 +304,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
     const char* center_str = s.child_value("center");
     
     if( strlen(center_str)==0 ){
-      cerr << "failed.\nERROR (loadXML): A center was not specified for grid #" << cell_count << endl;
+      cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): A center was not specified for grid #" << cell_count << endl;
       exit(EXIT_FAILURE);
     }
     
@@ -310,14 +314,14 @@ void AerialLiDARcloud::loadXML( const char* filename ){
     const char* gsize_str = s.child_value("size");
     
     if( strlen(gsize_str)==0 ){
-      cerr << "failed.\nERROR (loadXML): A size was not specified for grid cell #" << cell_count << endl;
+      cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): A size was not specified for grid cell #" << cell_count << endl;
       exit(EXIT_FAILURE);
     }
 
     gridextent = string2vec3( gsize_str ); //note: pugi loads xml data as a character.  need to separate it into 3 floats
 
     if( gridextent.x<=0 || gridextent.y<=0 || gridextent.z<=0 ){
-      cerr << "failed.\nERROR (loadXML): The grid size/extent must be positive." << endl;
+      cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): The grid size/extent must be positive." << endl;
       exit(EXIT_FAILURE);
     }
     
@@ -341,7 +345,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
       Nx = atof(Nx_str);
     }
     if( Nx<=0 ){
-      cerr << "failed.\nERROR (loadXML): The number of gridcells must be positive." << endl;
+      cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): The number of gridcells must be positive." << endl;
       exit(EXIT_FAILURE);
     }
     
@@ -365,7 +369,7 @@ void AerialLiDARcloud::loadXML( const char* filename ){
       Nz = atof(Nz_str);
     }
     if( Nz<=0 ){
-      cerr << "failed.\nERROR (loadXML): The number of gridcells must be positive." << endl;
+      cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): The number of gridcells must be positive." << endl;
       exit(EXIT_FAILURE);
     }
 

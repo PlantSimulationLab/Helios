@@ -33,7 +33,7 @@ var searchData=
   ['canopygenerator_30',['CanopyGenerator',['../class_canopy_generator.html#ac146e7630eb8d80fb91a3795d7b9f9f4',1,'CanopyGenerator::CanopyGenerator()'],['../class_canopy_generator.html',1,'CanopyGenerator']]],
   ['canopygenerator_2ecpp_31',['CanopyGenerator.cpp',['../_canopy_generator_8cpp.html',1,'']]],
   ['canopygenerator_2eh_32',['CanopyGenerator.h',['../_canopy_generator_8h.html',1,'']]],
-  ['cart2sphere_33',['cart2sphere',['../global_8h.html#a32a34b00e0a28f4b35e501b8b34cfccd',1,'helios']]],
+  ['cart2sphere_33',['cart2sphere',['../group__functions.html#ga32a34b00e0a28f4b35e501b8b34cfccd',1,'helios']]],
   ['center_34',['center',['../struct_aerial_scan_metadata.html#a8aaa9b231aca939a27d438bdf203699c',1,'AerialScanMetadata']]],
   ['choosing_20the_20right_20cuda_20and_20optix_20version_35',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
   ['clamp_36',['clamp',['../group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4',1,'helios']]],
@@ -69,7 +69,7 @@ var searchData=
   ['context_5fdata_2ecpp_66',['Context_data.cpp',['../_context__data_8cpp.html',1,'']]],
   ['context_5ffileio_2ecpp_67',['Context_fileIO.cpp',['../_context__file_i_o_8cpp.html',1,'']]],
   ['converting_20polygon_20file_20formats_20to_20_2eply_20using_20blender_68',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
-  ['coordinaterotation_69',['coordinateRotation',['../class_li_d_a_rcloud.html#aeae9aaa404a67082f849e1c8d56579e5',1,'LiDARcloud::coordinateRotation(uint scanID, const helios::SphericalCoord &amp;rotation)'],['../class_li_d_a_rcloud.html#a263717159dde05f5b98ae4133dec3d5e',1,'LiDARcloud::coordinateRotation(const helios::SphericalCoord &amp;rotation)'],['../class_li_d_a_rcloud.html#abf2f7677b1a92cba5b51ad0336e3743e',1,'LiDARcloud::coordinateRotation(float rotation, const helios::vec3 &amp;line_base, const helios::vec3 &amp;line_direction)']]],
+  ['coordinaterotation_69',['coordinateRotation',['../class_li_d_a_rcloud.html#abf2f7677b1a92cba5b51ad0336e3743e',1,'LiDARcloud::coordinateRotation(float rotation, const helios::vec3 &amp;line_base, const helios::vec3 &amp;line_direction)'],['../class_li_d_a_rcloud.html#a263717159dde05f5b98ae4133dec3d5e',1,'LiDARcloud::coordinateRotation(const helios::SphericalCoord &amp;rotation)'],['../class_li_d_a_rcloud.html#aeae9aaa404a67082f849e1c8d56579e5',1,'LiDARcloud::coordinateRotation(uint scanID, const helios::SphericalCoord &amp;rotation)']]],
   ['coordinates_5fcartesian_70',['COORDINATES_CARTESIAN',['../class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4',1,'Visualizer']]],
   ['coordinates_5fwindow_5fnormalized_71',['COORDINATES_WINDOW_NORMALIZED',['../class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5',1,'Visualizer']]],
   ['coordinateshift_72',['coordinateShift',['../class_li_d_a_rcloud.html#a72bc752975f8783ad8b1710cefa1d2a9',1,'LiDARcloud::coordinateShift(const helios::vec3 &amp;shift)'],['../class_li_d_a_rcloud.html#ab37566564d8e421a123c8b1b8cdb2347',1,'LiDARcloud::coordinateShift(uint scanID, const helios::vec3 &amp;shift)']]],
@@ -88,7 +88,8 @@ var searchData=
   ['cropdomainx_85',['cropDomainX',['../classhelios_1_1_context.html#a5a9ae91eb630bf727ce994e7d1c0fb40',1,'helios::Context']]],
   ['cropdomainy_86',['cropDomainY',['../classhelios_1_1_context.html#a743a39dcf2a6688cc8aeabf79f6bc0b6',1,'helios::Context']]],
   ['cropdomainz_87',['cropDomainZ',['../classhelios_1_1_context.html#a574cfb5f54a48a49d3a9f2b292f65786',1,'helios::Context']]],
-  ['crown_5fheight_88',['crown_height',['../struct_conical_crowns_canopy_parameters.html#a40b24b7e99ad96e967bc4d3d9af277e2',1,'ConicalCrownsCanopyParameters']]],
-  ['crown_5fradius_89',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius()'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius()'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius()']]],
-  ['ctable_90',['Ctable',['../class_visualizer.html#a0af839aae42fd7086643608a6cbd194b',1,'Visualizer']]]
+  ['cross_88',['cross',['../helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b',1,'helios']]],
+  ['crown_5fheight_89',['crown_height',['../struct_conical_crowns_canopy_parameters.html#a40b24b7e99ad96e967bc4d3d9af277e2',1,'ConicalCrownsCanopyParameters']]],
+  ['crown_5fradius_90',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius()'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius()'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius()']]],
+  ['ctable_91',['Ctable',['../class_visualizer.html#a0af839aae42fd7086643608a6cbd194b',1,'Visualizer']]]
 ];

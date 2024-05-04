@@ -138,7 +138,7 @@ void StomatalConductanceModel::setModelCoefficients(const BWBcoefficients &coeff
   model = "BWB";
 }
 
-void StomatalConductanceModel::setModelCoefficients(const BWBcoefficients &coeffs, const vector<uint> &UUIDs ){
+void StomatalConductanceModel::setModelCoefficients(const BWBcoefficients &coeffs, const std::vector<uint> &UUIDs ){
   for( uint UUID : UUIDs){
     BWBmodel_coefficients[UUID] = coeffs;
   }
@@ -151,7 +151,7 @@ void StomatalConductanceModel::setModelCoefficients(const BBLcoefficients &coeff
   model = "BBL";
 }
 
-void StomatalConductanceModel::setModelCoefficients(const BBLcoefficients &coeffs, const vector<uint> &UUIDs ){
+void StomatalConductanceModel::setModelCoefficients(const BBLcoefficients &coeffs, const std::vector<uint> &UUIDs ){
   for( uint UUID : UUIDs){
     BBLmodel_coefficients[UUID] = coeffs;
   }
@@ -164,7 +164,7 @@ void StomatalConductanceModel::setModelCoefficients(const MOPTcoefficients &coef
   model = "MOPT";
 }
 
-void StomatalConductanceModel::setModelCoefficients(const MOPTcoefficients &coeffs, const vector<uint> &UUIDs ){
+void StomatalConductanceModel::setModelCoefficients(const MOPTcoefficients &coeffs, const std::vector<uint> &UUIDs ){
   for( uint UUID : UUIDs){
     MOPTmodel_coefficients[UUID] = coeffs;
   }
@@ -177,7 +177,7 @@ void StomatalConductanceModel::setModelCoefficients(const BMFcoefficients &coeff
     model = "BMF";
 }
 
-void StomatalConductanceModel::setModelCoefficients(const BMFcoefficients &coeffs, const vector<uint> &UUIDs ){
+void StomatalConductanceModel::setModelCoefficients(const BMFcoefficients &coeffs, const std::vector<uint> &UUIDs ){
     for( uint UUID : UUIDs){
         BMFmodel_coefficients[UUID] = coeffs;
     }
@@ -190,7 +190,7 @@ void StomatalConductanceModel::setModelCoefficients(const BBcoefficients &coeffs
     model = "BB";
 }
 
-void StomatalConductanceModel::setModelCoefficients(const BBcoefficients &coeffs, const vector<uint> &UUIDs ){
+void StomatalConductanceModel::setModelCoefficients(const BBcoefficients &coeffs, const std::vector<uint> &UUIDs ){
     for( uint UUID : UUIDs){
         BBmodel_coefficients[UUID] = coeffs;
     }

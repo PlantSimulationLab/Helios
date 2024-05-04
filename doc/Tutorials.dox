@@ -456,7 +456,7 @@
 	 
  }</code></pre></div>
 
- \section context_primdata_scalar Creating Primitive Data (Arrays)
+ \section context_primdata_arrays Creating Primitive Data (Arrays)
 
  Adding primitive data that has length greater than one (array) requires a little extra information, namely the type of the data to be added and the length of the data array. The type is specified by one of the enumerations given in the table below;
 
@@ -532,7 +532,7 @@
 	 
  }</code></pre></div>
 
- \section context_globaldata_scalar Creating Global Data (Arrays)
+ \section context_globaldata_arrays Creating Global Data (Arrays)
  
  Adding global data that has length greater than one (array) requires a little extra information, namely the type of the data to be added and the length of the data array. The type is specified by one of the enumerations given in the table below.
 

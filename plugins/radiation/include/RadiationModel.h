@@ -27,6 +27,7 @@
 
 #include <utility>
 
+//! Properties defining a radiation camera
 struct CameraProperties{
 
     bool operator!=(const CameraProperties &rhs) const {
@@ -65,6 +66,7 @@ struct CameraProperties{
 
 };
 
+//! Data object for a radiation camera
 struct RadiationCamera{
 
     //Constructor
@@ -107,6 +109,7 @@ struct RadiationCamera{
 
 };
 
+//! Properties defining a radiation band
 struct RadiationBand{
 public:
 
@@ -201,6 +204,7 @@ enum RadiationSourceType{
     RADIATION_SOURCE_TYPE_DISK = 4
 };
 
+//! Radiation source data object
 struct RadiationSource{
 public:
 

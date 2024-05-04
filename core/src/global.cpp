@@ -57,22 +57,22 @@ RGBcolor RGB::goldenrod = make_RGBcolor( 0.855, 0.647, 0.126 );
 SphericalCoord helios::nullrotation = make_SphericalCoord(0,0);
 vec3 helios::nullorigin = make_vec3(0,0,0);
 
-RGBcolor helios::blend( RGBcolor color0, RGBcolor color1, float weight ){
+RGBcolor helios::blend(const RGBcolor &color0_RGB, const RGBcolor &color1_RGB, float weight_RGB ){
   RGBcolor color;
-  weight = clamp(weight,0.f,1.f);
-  color.r = weight*color1.r+(1.f-weight)*color0.r;
-  color.g = weight*color1.g+(1.f-weight)*color0.g;
-  color.b = weight*color1.b+(1.f-weight)*color0.b;
+  weight_RGB = clamp(weight_RGB,0.f,1.f);
+  color.r = weight_RGB*color1_RGB.r+(1.f-weight_RGB)*color0_RGB.r;
+  color.g = weight_RGB*color1_RGB.g+(1.f-weight_RGB)*color0_RGB.g;
+  color.b = weight_RGB*color1_RGB.b+(1.f-weight_RGB)*color0_RGB.b;
   return color;
 }
 
-RGBAcolor helios::blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight ){
+RGBAcolor helios::blend(const RGBAcolor &color0_RGBA, const RGBAcolor &color1_RGBA, float weight_RGBA ){
   RGBAcolor color;
-  weight = clamp(weight,0.f,1.f);
-  color.r = weight*color1.r+(1.f-weight)*color0.r;
-  color.g = weight*color1.g+(1.f-weight)*color0.g;
-  color.b = weight*color1.b+(1.f-weight)*color0.b;
-  color.a = weight*color1.a+(1.f-weight)*color0.a;
+  weight_RGBA = clamp(weight_RGBA,0.f,1.f);
+  color.r = weight_RGBA*color1_RGBA.r+(1.f-weight_RGBA)*color0_RGBA.r;
+  color.g = weight_RGBA*color1_RGBA.g+(1.f-weight_RGBA)*color0_RGBA.g;
+  color.b = weight_RGBA*color1_RGBA.b+(1.f-weight_RGBA)*color0_RGBA.b;
+  color.a = weight_RGBA*color1_RGBA.a+(1.f-weight_RGBA)*color0_RGBA.a;
   return color;
 }
 
@@ -580,29 +580,14 @@ float helios::atan2_2pi(float y, float x){
 
 SphericalCoord helios::cart2sphere( const vec3& Cartesian ){
 
-  SphericalCoord Spherical;
-
-  Spherical.radius = sqrt( Cartesian.x*Cartesian.x + Cartesian.y*Cartesian.y + Cartesian.z*Cartesian.z );
-
-  Spherical.elevation = asin( Cartesian.z/Spherical.radius );
-
-  Spherical.zenith = 0.5f*float(M_PI) - Spherical.elevation;
-
-  Spherical.azimuth = atan2_2pi( Cartesian.x, Cartesian.y );
-
-  return Spherical;
+  float radius = sqrtf( Cartesian.x*Cartesian.x + Cartesian.y*Cartesian.y + Cartesian.z*Cartesian.z );
+  return {radius, asin_safe( Cartesian.z/radius ), atan2_2pi( Cartesian.x, Cartesian.y )};
   
 }
 
 vec3 helios::sphere2cart( const SphericalCoord& Spherical ){
 
-  vec3 Cartesian;
-
-  Cartesian.x = Spherical.radius*cos(Spherical.elevation)*sin(Spherical.azimuth);
-  Cartesian.y = Spherical.radius*cos(Spherical.elevation)*cos(Spherical.azimuth);
-  Cartesian.z = Spherical.radius*sin(Spherical.elevation);
-
-  return Cartesian;
+  return {Spherical.radius*cosf(Spherical.elevation)*sinf(Spherical.azimuth), Spherical.radius*cosf(Spherical.elevation)*cosf(Spherical.azimuth), Spherical.radius*sinf(Spherical.elevation)};
 
 }
 

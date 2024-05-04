@@ -3161,7 +3161,7 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
             RT_CHECK_ERROR( rtVariableSet1f( camera_lens_diameter_RTvariable, camera.second.lens_diameter ) );
             RT_CHECK_ERROR( rtVariableSet2f( sensor_size_RTvariable, camera.second.sensor_size.x, camera.second.sensor_size.y ) );
             RT_CHECK_ERROR( rtVariableSet1f( camera_focal_length_RTvariable, camera.second.focal_length ) );
-            RT_CHECK_ERROR( rtVariableSet1f( camera_viewplane_length_RTvariable, 0.5f*camera.second.sensor_size.x/tanf(camera.second.HFOV_degrees*M_PI/180.f) ) );
+            RT_CHECK_ERROR( rtVariableSet1f( camera_viewplane_length_RTvariable, camera.second.sensor_size.x/tanf(camera.second.HFOV_degrees*M_PI/180.f) ) );
             RT_CHECK_ERROR( rtVariableSet1ui( camera_ID_RTvariable, cam ));
 
             zeroBuffer1D( radiation_in_camera_RTbuffer, camera.second.resolution.x*camera.second.resolution.y*Nbands );
@@ -4668,6 +4668,7 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
         helios_runtime_error( "ERROR (RadiationModel::writePrimitiveDataLabelMap): Could not open file '" + outfile.str() + "' for writing." );
     }
 
+    bool empty_flag = true;
     for (uint j = 0; j < camera_resolution.y; j++) {
         for (uint i = 0; i < camera_resolution.x; i++) {
             uint UUID =pixel_UUIDs.at(j * camera_resolution.x + i)-1;
@@ -4677,30 +4678,40 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
                     float labeldata;
                     context->getPrimitiveData(UUID,primitive_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
+                    empty_flag = false;
                 }
                 else if (datatype == HELIOS_TYPE_UINT){
                     uint labeldata;
                     context->getPrimitiveData(UUID,primitive_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
+                    empty_flag = false;
                 }
                 else if (datatype == HELIOS_TYPE_INT){
                     int labeldata;
                     context->getPrimitiveData(UUID,primitive_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
+                    empty_flag = false;
                 }
                 else if (datatype == HELIOS_TYPE_DOUBLE){
                     double labeldata;
                     context->getPrimitiveData(UUID,primitive_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
+                    empty_flag = false;
+                }else{
+                    pixel_data << padvalue << " ";
                 }
-            }
-            else{
+            }else{
                 pixel_data << padvalue << " ";
             }
         }
         pixel_data << "\n";
     }
     pixel_data.close();
+
+    if( empty_flag ){
+        std::cerr << "WARNING (RadiationModel::writePrimitiveDataLabelMap): No primitive data of " << primitive_data_label << " found in camera image. Primitive data map contains only padded values." << std::endl;
+    }
+
 }
 
 void RadiationModel::writeDepthImage(const std::string &cameralabel, const std::string &imagefile_base, const std::string &image_path, int frame) {

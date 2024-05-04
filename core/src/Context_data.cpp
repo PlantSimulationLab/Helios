@@ -3166,3 +3166,75 @@ bool Context::doesGlobalDataExist( const char* label ) const{
   }
 
 }
+
+void Context::incrementGlobalData( const char* label, int increment ){
+
+    if( !doesGlobalDataExist( label ) ){
+        helios_runtime_error("ERROR (Context::incrementGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    }
+
+    uint size = getGlobalDataSize(label);
+
+    if( globaldata.at(label).type==HELIOS_TYPE_INT ) {
+        for (uint i = 0; i < size; i++) {
+            globaldata.at(label).global_data_int.at(i) += increment;
+        }
+    }else{
+        std::cerr << "WARNING (Context::incrementGlobalData): Attempted to increment global data for type int, but data '" << label << "' does not have type int." << std::endl;
+    }
+
+}
+
+void Context::incrementGlobalData( const char* label, uint increment ){
+
+    if( !doesGlobalDataExist( label ) ){
+        helios_runtime_error("ERROR (Context::incrementGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    }
+
+    uint size = getGlobalDataSize(label);
+
+    if( globaldata.at(label).type==HELIOS_TYPE_UINT ) {
+        for (uint i = 0; i < size; i++) {
+            globaldata.at(label).global_data_uint.at(i) += increment;
+        }
+    }else{
+        std::cerr << "WARNING (Context::incrementGlobalData): Attempted to increment global data for type uint, but data '" << label << "' does not have type uint." << std::endl;
+    }
+
+}
+
+void Context::incrementGlobalData( const char* label, float increment ){
+
+    if( !doesGlobalDataExist( label ) ){
+        helios_runtime_error("ERROR (Context::incrementGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    }
+
+    uint size = getGlobalDataSize(label);
+
+    if( globaldata.at(label).type==HELIOS_TYPE_FLOAT ) {
+        for (uint i = 0; i < size; i++) {
+            globaldata.at(label).global_data_float.at(i) += increment;
+        }
+    }else{
+        std::cerr << "WARNING (Context::incrementGlobalData): Attempted to increment global data for type float, but data '" << label << "' does not have type float." << std::endl;
+    }
+
+}
+
+void Context::incrementGlobalData( const char* label, double increment ){
+
+    if( !doesGlobalDataExist( label ) ){
+        helios_runtime_error("ERROR (Context::incrementGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    }
+
+    uint size = getGlobalDataSize(label);
+
+    if( globaldata.at(label).type==HELIOS_TYPE_DOUBLE ) {
+        for (uint i = 0; i < size; i++) {
+            globaldata.at(label).global_data_double.at(i) += increment;
+        }
+    }else{
+        std::cerr << "WARNING (Context::incrementGlobalData): Attempted to increment global data for type double, but data '" << label << "' does not have type double." << std::endl;
+    }
+
+}

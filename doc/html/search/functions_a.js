@@ -4,7 +4,7 @@ var searchData=
   ['leafoptics_1',['LeafOptics',['../class_leaf_optics.html#a8f286671c723166c8aae098d0efd9b04',1,'LeafOptics']]],
   ['leafreconstructionalphamask_2',['leafReconstructionAlphaMask',['../class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935',1,'LiDARcloud::leafReconstructionAlphaMask(float minimum_leaf_group_area, float maximum_leaf_group_area, float leaf_aspect_ratio, const char *mask_file)'],['../class_li_d_a_rcloud.html#a0c80f96188fb83f444e7e08cbf888690',1,'LiDARcloud::leafReconstructionAlphaMask(float minimum_leaf_group_area, float maximum_leaf_group_area, float leaf_aspect_ratio, float leaf_length_constant, const char *mask_file)']]],
   ['lidarcloud_3',['LiDARcloud',['../class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c',1,'LiDARcloud']]],
-  ['lineintersection_4',['lineIntersection',['../global_8h.html#a3fd112746616c33aae6ac56d9863c9a6',1,'helios']]],
+  ['lineintersection_4',['lineIntersection',['../group__functions.html#ga3fd112746616c33aae6ac56d9863c9a6',1,'helios']]],
   ['linesintersection_5',['linesIntersection',['../class_voxel_intersection.html#a69cda90cd28f478ae007a88615994df2',1,'VoxelIntersection']]],
   ['listobjectdata_6',['listObjectData',['../classhelios_1_1_compound_object.html#a4750278bd9c519d57c3f27891dcf666d',1,'helios::CompoundObject::listObjectData()'],['../classhelios_1_1_context.html#adc44dfce7e5dc7deaa42139795eee942',1,'helios::Context::listObjectData(uint ObjID) const']]],
   ['listprimitivedata_7',['listPrimitiveData',['../classhelios_1_1_context.html#a7cb64e054e6dacbab27f31cd73852cc3',1,'helios::Context']]],

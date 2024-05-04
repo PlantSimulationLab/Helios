@@ -7,7 +7,7 @@ var searchData=
   ['tile_4',['Tile',['../classhelios_1_1_tile.html',1,'helios::Tile'],['../classhelios_1_1_tile.html#ae7a684eae38bd9f5b3397962cd1a2774',1,'helios::Tile::Tile()']]],
   ['tile_5fbounds_5',['tile_bounds',['../primitive_intersection_8cu.html#a4fd84a7124be9fea427690a9a2442b3b',1,'primitiveIntersection.cu']]],
   ['tile_5fintersect_6',['tile_intersect',['../primitive_intersection_8cu.html#ac645addc8bc3071933ca33a0f053af07',1,'primitiveIntersection.cu']]],
-  ['time_7',['Time',['../structhelios_1_1_time.html',1,'helios::Time'],['../structhelios_1_1_time.html#a6265f89a66bfff369fecf125bebfa3e2',1,'helios::Time::Time()'],['../structhelios_1_1_time.html#a6bde6a743bd59344f21f40416a389f32',1,'helios::Time::Time(int a_hour, int a_minute)'],['../structhelios_1_1_time.html#ae4a6f9f58cff6c8aaf25bb462b9cdd2c',1,'helios::Time::Time(int a_hour, int a_minute, int a_second)']]],
+  ['time_7',['Time',['../structhelios_1_1_time.html',1,'helios::Time'],['../structhelios_1_1_time.html#a6265f89a66bfff369fecf125bebfa3e2',1,'helios::Time::Time()'],['../structhelios_1_1_time.html#a2b47ac09cf37b9183c1236beebd2bd10',1,'helios::Time::Time(int hour, int minute)'],['../structhelios_1_1_time.html#a98d45a9c451c5ff2013b78f7d1ee7f57',1,'helios::Time::Time(int hour, int minute, int second)']]],
   ['timer_8',['Timer',['../structhelios_1_1_timer.html',1,'helios']]],
   ['timeseries_9',['Timeseries',['../group__timeseries.html',1,'']]],
   ['toc_10',['toc',['../structhelios_1_1_timer.html#a0449918d3129616aa908b5580069c7b6',1,'helios::Timer::toc(const char *message) const'],['../structhelios_1_1_timer.html#a9d3f79551cc1089cb6dd81d3bb68f537',1,'helios::Timer::toc() const']]],

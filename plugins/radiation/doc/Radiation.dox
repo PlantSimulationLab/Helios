@@ -48,7 +48,7 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 
 If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
 
- \section Introduction
+ \section RadIntro Introduction
 
  This model simulates the transport of radiative energy for arbitrary wavelength bands using a GPU-accelerated ray-tracing model. The model details are described in <a href="http://dx.doi.org/10.1016/j.ecolmodel.2017.11.022">Bailey (2018)</a>. Briefly, the model uses a reverse ray-tracing approach to simulate emission from primitive elements, collimated radiation sources, and point radiation sources.
 
@@ -296,7 +296,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  There are six types of external sources of radiation that can be simulated: 1) a collimated radiation source (beams of radiation are approximately parallel), 2) a sphere with the same radius and distance as the sun, 3) a sphere with prescribed radius and position, 4) a disk with prescribed radius, position, and orientation, 5) a rectangle with prescribed size, position, and orientation, 6) ambient diffuse radiation with prescribed angular distribution.
 
- <b>It is critical to note that radiative source fluxes are specified as the flux perpendicular to the direction of the source.</b> For a solar source, for example, this would be the flux on a plane perpendicular to the sun direction. This flux is of course different than what a sensor positioned horizontally would measure. One can convert between the two using the cosine of the solar zenith, but this becomes problematic when the sun is low in the sky. For this reason, it is recommended to use the SolarPosition plug-in to specify solar source fluxes, which can be matched to observations by tuning the atmospheric turbidity.
+ <b>It is critical to note that radiative source fluxes are specified as the flux perpendicular to the direction of the source.</b> For a solar source, for example, this would be the flux on a plane perpendicular to the sun direction. This flux is of course different from what a sensor positioned horizontally would measure. One can convert between the two using the cosine of the solar zenith, but this becomes problematic when the sun is low in the sky. For this reason, it is recommended to use the SolarPosition plug-in to specify solar source fluxes, which can be matched to observations by tuning the atmospheric turbidity.
 
  \image html RadiationSources.png
 
@@ -435,14 +435,14 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsection RadScatter Scattering Iterations
  
- If the reflectivity or tranmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively until there is no energy left to be scattered.  The number of scattering iterations is defined using:
+ If the reflectivity or transmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively until there is no energy left to be scattered.  The number of scattering iterations is defined using:
  
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>radiationmodel.setScatteringDepth( "PAR", 5); //set the number of scattering iterations</code></pre></div>	
 
  \subsection RadPeriodic Periodic Boundary Conditions
 
- By default, the radiation model does not enforce any boundary conditions on the edge of the domain (other than being a diffuse ambient radiation source if one has been added). Optionally, users can specify to enforce a periodic boundary in the horizontal in either the x- or y-direction or both. This effectively means that the domain repeats indefintely, and that any radiation leaving the domain on one boundary will re-enter the domain on the opposite boundary. This is useful for eliminating domain edge effects.
+ By default, the radiation model does not enforce any boundary conditions on the edge of the domain (other than being a diffuse ambient radiation source if one has been added). Optionally, users can specify to enforce a periodic boundary in the horizontal in either the x- or y-direction or both. This effectively means that the domain repeats indefinitely, and that any radiation leaving the domain on one boundary will re-enter the domain on the opposite boundary. This is useful for eliminating domain edge effects.
 
  \image html PeriodicBC.png
 
@@ -544,7 +544,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \image html CameraSpectralResponse.png
 
- Inputting raw measured surface spectra and camera spectral response specified by the manufacturer will typically result in simulated camera images that look quite different than those of the real camera due to errors in measurements, internal camera corrections, and lens effects. As such, a calibration is generally needed to achieve acceptable image results.
+ Inputting raw measured surface spectra and camera spectral response specified by the manufacturer will typically result in simulated camera images that look quite different from those of the real camera due to errors in measurements, internal camera corrections, and lens effects. As such, a calibration is generally needed to achieve acceptable image results.
 
  Pre-calibrated camera responses are available for a few cameras and light source combinations to use when direct calibration data is not available. These are for a Nikon B500 camera with the ASTMG173 solar spectrum or CREE 6500K LED. These calibrated camera spectra can be found in the included camera spectral library ("plugins/radiation/spectral_data/camera_spectral_library.xml") and has labels "calibrated_sun_NikonB500_spectral_response_[*]" or "calibrated_CREE6500K_NikonD700_spectral_response_[*]", where [*] is one of "red", "green", or "blue". These calibrated camera spectra can be used in place of the raw camera spectral response data, as illustrated below:
 

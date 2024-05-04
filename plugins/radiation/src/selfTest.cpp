@@ -1695,7 +1695,7 @@ int RadiationModel::selfTest(){
         cameraproperties.focal_plane_distance = 100000;
         cameraproperties.lens_diameter = 0;
         cameraproperties.sensor_size= make_vec2(0.5, float(std::abs(0.5*std::cos(deg2rad(viewangle)))));
-        cameraproperties.HFOV=0.02864786f;
+        cameraproperties.HFOV=0.02864786f*2.f;
 
         std::string cameralabel = "ROMC"+std::to_string(viewangle);
         radiation_17.addRadiationCamera(cameralabel, {bandname}, camera_position, camera_lookat, cameraproperties,60); //overlap warning multiple cameras

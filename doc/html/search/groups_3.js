@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['timeseries_0',['Timeseries',['../group__timeseries.html',1,'']]]
+  ['utility_20functions_0',['Utility functions',['../group__functions.html',1,'']]]
 ];

@@ -3147,7 +3147,7 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
       uint subdiv = cone->getSubdivisionCount();
       outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
 
-      std::vector<vec3> nodes = cone->getNodes();
+      std::vector<vec3> nodes = cone->getNodeCoordinates();
       std::vector<float> radius = cone->getNodeRadii();
 
       assert(nodes.size() == radius.size());

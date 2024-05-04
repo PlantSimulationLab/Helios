@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['geometric_20primitives_0',['Geometric Primitives',['../group__primitives.html',1,'']]]
+  ['timeseries_0',['Timeseries',['../group__timeseries.html',1,'']]]
 ];

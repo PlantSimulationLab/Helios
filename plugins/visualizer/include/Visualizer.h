@@ -766,13 +766,13 @@ public:
   //! Get the current colormap used in Colorbar/visualization
   Colormap getCurrentColormap() const;
   
-  //! Add all geometry from the \ref Context to the visualizer
+  //! Add all geometry from the Context to the visualizer
   /**
    * \param[in] "context" Pointer to the simulation context
    */
   void buildContextGeometry( helios::Context* context_ptr );
 
-  //! Add select geometry from the \ref Context to the visualizer by their UUIDs
+  //! Add select geometry from the Context to the visualizer by their UUIDs
   /**
    * \param[in] "context" Pointer to the simulation context
    * \param[in] "UUIDs" UUIDs of Context primitives to be added to the visualizer
