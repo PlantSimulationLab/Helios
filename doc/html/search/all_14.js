@@ -10,5 +10,6 @@ var searchData=
   ['useshader_7',['useShader',['../struct_shader.html#a6212f8a189b932362d1f6cffb31b6633',1,'Shader']]],
   ['usetexturecolor_8',['useTextureColor',['../classhelios_1_1_compound_object.html#ad40fa98ddefc9ba9d24cd45ca0df44d5',1,'helios::CompoundObject']]],
   ['using_20the_20clion_20ide_20with_20helios_9',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]],
-  ['using_20the_20helios_20api_10',['Using the Helios API',['../_a_p_i.html',1,'']]]
+  ['using_20the_20helios_20api_10',['Using the Helios API',['../_a_p_i.html',1,'']]],
+  ['utility_20functions_11',['Utility functions',['../group__functions.html',1,'']]]
 ];

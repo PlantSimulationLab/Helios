@@ -505,7 +505,9 @@ struct ShootParameters{
     uint leaf_flush_count;  //number of leaves in a 'flush' (=1 gives continuous leaf production)
 
     RandomParameter_float elongation_rate; //length/day
+
     RandomParameter_float girth_growth_rate; //1/day
+    RandomParameter_float internode_radius_max; //meters
 
     // Probability that bud with this shoot type will break and form a new shoot
     float vegetative_bud_break_probability;
@@ -540,6 +542,8 @@ struct ShootParameters{
         this->elongation_rate.resample();
         this->girth_growth_rate = a.girth_growth_rate;
         this->girth_growth_rate.resample();
+        this->internode_radius_max = a.internode_radius_max;
+        this->internode_radius_max.resample();
         this->gravitropic_curvature = a.gravitropic_curvature;
         this->gravitropic_curvature.resample();
         this->tortuosity = a.tortuosity;
@@ -585,8 +589,9 @@ struct Phytomer {
 public:
 
     // Constructor
-    Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
-             const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, helios::Context *context_ptr);
+    Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin, const AxisRotation &shoot_base_rotation,
+             float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, bool build_context_geometry_internode, bool build_context_geometry_petiole,
+             bool build_context_geometry_peduncle, helios::Context *context_ptr);
 
     // ---- query info about the phytomer ---- //
 
@@ -610,7 +615,7 @@ public:
 
     void addInflorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &a_inflorescence_bending_axis, FloralBud &fbud);
 
-    void setInternodeScaleFraction(float internode_scale_factor_fraction );
+    void setInternodeLengthScaleFraction(float internode_scale_factor_fraction );
 
     void setInternodeMaxLength( float internode_length_max );
 
@@ -680,7 +685,11 @@ public:
     float internode_radius_initial;
     float internode_length_max;
 
-private:
+    bool build_context_geometry_internode = true;
+    bool build_context_geometry_petiole = true;
+    bool build_context_geometry_peduncle = true;
+
+protected:
 
     helios::vec3 inflorescence_bending_axis;
 
@@ -900,11 +909,17 @@ public:
     //! Add a new phytomer at the terminal bud of a shoot.
     int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
+    void disableInternodeContextBuild();
+
+    void disablePetioleContextBuild();
+
+    void disablePeduncleContextBuild();
+
     // -- methods for modifying the current plant state -- //
 
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float girth_change);
 
-    void setPhytomerInternodeScale(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction);
+    void setPhytomerInternodeLengthScaleFraction(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction);
 
     void setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction);
 
@@ -912,11 +927,7 @@ public:
 
     void setPlantBasePosition(uint plantID, const helios::vec3 &base_position);
 
-    helios::vec3 getPlantBasePosition(uint plantID) const;
-
     void setPlantAge(uint plantID, float current_age);
-
-    float getPlantAge(uint plantID) const;
 
     void harvestPlant(uint plantID);
 
@@ -928,11 +939,17 @@ public:
 
     void breakPlantDormancy( uint plantID );
 
+    // -- methods for querying information about the plant -- //
+
+    float getPlantAge(uint plantID) const;
+
     uint getShootNodeCount( uint plantID, uint shootID ) const;
+
+    helios::vec3 getPlantBasePosition(uint plantID) const;
 
     std::vector<uint> getAllPlantObjectIDs(uint plantID) const;
 
-    std::vector<uint> getAllPlantUUIDs(uint PlantID) const;
+    std::vector<uint> getAllPlantUUIDs(uint plantID) const;
 
     std::vector<uint> getPlantInternodeObjectIDs(uint plantID) const;
 
@@ -940,7 +957,13 @@ public:
 
     std::vector<uint> getPlantLeafObjectIDs(uint plantID) const;
 
+    std::vector<uint> getPlantPeduncleObjectIDs(uint plantID) const;
+
+    std::vector<uint> getPlantInflorescenceObjectIDs(uint plantID) const;
+
     std::string getLSystemsString(uint plantID) const;
+
+    // -- manual plant generation from input string -- //
 
     uint generatePlantFromString(const std::string &generation_string, const PhytomerParameters &phytomer_parameters);
 
@@ -964,6 +987,10 @@ protected:
 
     std::map<std::string,ShootParameters> shoot_types;
 
+    bool build_context_geometry_internode = true;
+    bool build_context_geometry_petiole = true;
+    bool build_context_geometry_peduncle = true;
+
     void validateShootTypes( ShootParameters &shoot_parameters ) const;
 
     void accumulateShootPhotosynthesis( float dt );
@@ -982,33 +1009,47 @@ protected:
 
     void initializeDefaultShoots( const std::string &plant_label );
 
+    // --- Plant Libary --- //
+
     void initializeAlmondTreeShoots();
 
     uint buildAlmondTree( const helios::vec3 &base_position, float age );
 
-    void initializeCowpeaShoots();
+    void initializeBindweedShoots();
 
-    uint buildCowpeaPlant( const helios::vec3 &base_position, float age );
-
-    void initializeSoybeanShoots();
-
-    uint buildSoybeanPlant( const helios::vec3 &base_position, float age );
+    uint buildBindweedPlant( const helios::vec3 &base_position, float age );
 
     void initializeBeanShoots();
 
     uint buildBeanPlant( const helios::vec3 &base_position, float age );
 
+    void initializeCheeseweedShoots();
+
+    uint buildCheeseweedPlant( const helios::vec3 &base_position, float age );
+
+    void initializeCowpeaShoots();
+
+    uint buildCowpeaPlant( const helios::vec3 &base_position, float age );
+
+    void initializePuncturevineShoots();
+
+    uint buildPuncturevinePlant( const helios::vec3 &base_position, float age );
+
+    void initializeSoybeanShoots();
+
+    uint buildSoybeanPlant( const helios::vec3 &base_position, float age );
+
     void initializeSorghumShoots();
 
     uint buildSorghumPlant( const helios::vec3 &base_position, float age );
 
-    void initializeTomatoShoots();
-
-    uint buildTomatoPlant( const helios::vec3 &base_position, float age );
-
     void initializeSugarbeetShoots();
 
     uint buildSugarbeetPlant( const helios::vec3 &base_position, float age );
+
+    void initializeTomatoShoots();
+
+    uint buildTomatoPlant( const helios::vec3 &base_position, float age );
 
 };
 

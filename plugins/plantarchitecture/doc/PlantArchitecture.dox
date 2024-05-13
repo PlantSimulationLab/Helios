@@ -115,7 +115,7 @@ The size, position, and orientation of the prototype when it is created needs to
 A generic leaf prototype function is given below, which simply loads a model from an OBJ file.
 
 ~~~~~~
-uint GenericLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint buildGenericLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     return context_ptr->addPolymeshObject( UUIDs );
     }
@@ -243,6 +243,7 @@ A shoot is the fundamental topological unit of organization in the plant archite
  | leaf_flush_count | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of leaves/phytomers to flush at a time. Flushes will occur at an interval of phyllochron*leaf_flush_count. |
  | elongation_rate | RandomParameter_float | meters/day | Rate of elongation of the internode of the shoot. |
  | girth_growth_rate | RandomParameter_float | meters/day | Rate of increase of the internode radius of the shoot. |
+ | internode_radius_max | RandomParameter_float | meters | Maximum internode radius for girth growth. For some species like grasses, girth growth stops at some radius. By default, girth growth will continue indefinitely. |
  | vegetative_bud_break_probability | RandomParameter_float | - | Probability of a bud breaking dormancy and emerging as a shoot. |
  | flower_bud_break_probability | RandomParameter_float | - | Probability of a flower bud emerging as a flower. |
  | fruit_set_probability | RandomParameter_float | - | Probability of a flower becoming a fruit. |
@@ -336,12 +337,15 @@ Thresholds determining phenological transitions are set using the \ref PlantArch
  | Plant Type/Species | Variety/Variation | Plant type string argument | Shoot types | Image at time = 0 | Image at flowering | Image at (reproductive) maturity |
  | ------| ------ | ------ | ------ | ------ | ------ | ------ |
  | Almond Tree (*Prunus dulcis*) | Nonpareil | "almond" | trunk, scaffold, proleptic, sylleptic | | | |
+ | Bindweed (*Convolvulus arvensis*) | generic | "bindweed" | base, offshoots, children | | | |
+ | Cheeseweed (*Malva neglecta*) | generic | "cheeseweed" | mainstem | | | |
  | Common Bean (*Phaseolus vulgaris*) | upright growth habit (determinate) | "bean" | unifoliate, trifoliate | | | |
  | Cowpea (*Vigna unguiculata*) | upright growth habit (determinate) | "cowpea" | unifoliate, trifoliate | | | |
- | Soybean (*Glycine max*) | upright growth habit (determinate) | "soybean" | unifoliate, trifoliate | | | |
+ | Puncturevine (*Tribulus terrestris*) | generic | "puncturevine" | base, offshoots, children | | | |
  | Sorghum (*Sorghum bicolor*) | grain sorghum | "sorghum" | mainstem | | | |
- | Tomato (*Solanum lycopersicum*) | determinate growth | "tomato" | mainstem | | | |
+ | Soybean (*Glycine max*) | upright growth habit (determinate) | "soybean" | unifoliate, trifoliate | | | |
  | Sugar Beet (*Beta vulgaris*) | generic | "sugarbeet" | mainstem | | | |
+ | Tomato (*Solanum lycopersicum*) | determinate growth | "tomato" | mainstem | | | |
 
 \subsubsection PlantArchBuild_default Loading a Plant with Default Parameters
 
@@ -364,7 +368,7 @@ int main(){
 }
 ~~~~~~
 
-\subsubsection PlantArchBuild_custom Loading a Plant with Custom Parameters
+\subsubsection PlantArchBuild_custom Modifying Parameters of a Plant from the Library
 
 Building a plant from the library with modified parameters is similar to above, except that the parameters are modified before calling the \ref PlantArchitecture::buildPlantInstanceFromLibrary() method. After calling \ref PlantArchitecture::loadPlantModelFromLibrary(), the parameters can be queried (at the shoot level), modified, and then set.
 
@@ -399,26 +403,31 @@ for( auto params : shoot_parameters ){
 plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 ~~~~~~
 
- \section PlantArchCustom Building a Custom Plant
-
- \subsection PlantArchBuild1 1. Defining the Phytomer
-
- \subsection PlantArchBuild2 2. Defining Shoot Types
-
- \subsection PlantArchBuild3 3. Adding a Plant Instance
-
- \subsection PlantArchBuild4 4. Adding the Base Shoot
-
- \subsection PlantArchBuild4 5. Manually Adding Child Shoots or Modifying the Structure
-
  \section PlantArchGrowth Growing the Model over Time
 
- The model can be grown over time by calling the \ref PlantArchitecture::advanceTime() method, where the argument to this method is the timestep to advance in days.
+ The model can be grown over time by calling the \ref PlantArchitecture::advanceTime() method, where the argument to this method is the timestep to advance in days. The timestep value can be larger than the phyllochron, such that multiple phytomers and shoots can be produced in a single call to \ref PlantArchitecture::advanceTime().
 
  ~~~~~~
     plantarchitecture.advanceTime( 1 );
  ~~~~~~
 
+ \section PlantArchQuery Retrieving Information from the Model
 
-    
+ \subsection PlantArchQueryUUIDs Getting Object IDs and Primitive UUIDs of Model Geometry
+
+ The Object IDs and Primitive UUIDs of an entire plant, or organ groups in the plant, can be retrieved using several methods available in the PlantArchitecture class. These are listed in the table below.
+
+    | Method | Description |
+    | ------ | ------ |
+    | <td colspan=2> **Object IDs** </td> |
+    | \ref PlantArchitecture::getAllPlantObjectIDs() | Returns a vector of Object IDs for all objects the entire plant. |
+    | \ref PlantArchitecture::getPlantInternodeObjectIDs() | Returns a vector of Object IDs for all internode objects. |
+    | \ref PlantArchitecture::getPlantPetioleObjectIDs() | Returns a vector of Object IDs for all petiole objects (Tube objects). |
+    | \ref PlantArchitecture::getPlantLeafObjectIDs() | Returns a vector of Object IDs for all leaf objects. |
+    | \ref PlantArchitecture::getPlantPeduncleObjectIDs() | Returns a vector of Object IDs for all peduncle objects (Tube objects). |
+    | \ref PlantArchitecture::getPlantInflorescenceObjectIDs() | Returns a vector of Object IDs for all inflorescence objects (flowers or fruit depending on current state). |
+    | \ref PlantArchitecture::getAllPlantUUIDs() | Returns a vector of UUIDs for all primitives the entire plant. |
+
+    Note that individual methods to get UUIDs for all organ types are not provided. Instead, the user can query the Object IDs for each organ type and then get the corresponding UUIDs using the Context method \ref Context::getObjectPrimitiveUUIDs().
+
 */
