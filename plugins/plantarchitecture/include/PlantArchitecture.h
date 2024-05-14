@@ -680,7 +680,7 @@ public:
     float current_leaf_scale_factor = 1;
 
     std::vector<std::vector<VegetativeBud>> vegetative_buds; //first index is petiole within internode, second index is bud within petiole
-    std::vector<std::vector<FloralBud>> floral_buds;
+    std::vector<std::vector<FloralBud>> floral_buds; //first index is petiole within internode, second index is bud within petiole
 
     float internode_radius_initial;
     float internode_length_max;
@@ -959,7 +959,9 @@ public:
 
     std::vector<uint> getPlantPeduncleObjectIDs(uint plantID) const;
 
-    std::vector<uint> getPlantInflorescenceObjectIDs(uint plantID) const;
+    std::vector<uint> getPlantFlowerObjectIDs(uint plantID) const;
+
+    std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
 
     std::string getLSystemsString(uint plantID) const;
 

@@ -97,7 +97,7 @@ PhytomerParameters::PhytomerParameters( std::minstd_rand0 *generator ) {
     internode.phyllotactic_angle.initialize(137.5, generator );
     internode.color = RGB::forestgreen;
     internode.length_segments = 1;
-    internode.radial_subdivisions = 10;
+    internode.radial_subdivisions = 7;
 
     //--- petiole ---//
     petiole.petioles_per_internode = 1;
@@ -108,7 +108,7 @@ PhytomerParameters::PhytomerParameters( std::minstd_rand0 *generator ) {
     petiole.taper.initialize( 0, generator );
     petiole.color = RGB::forestgreen;
     petiole.length_segments = 1;
-    petiole.radial_subdivisions = 10;
+    petiole.radial_subdivisions = 7;
 
     //--- leaf ---//
     leaf.leaves_per_petiole = 1;
@@ -127,7 +127,7 @@ PhytomerParameters::PhytomerParameters( std::minstd_rand0 *generator ) {
     peduncle.roll.initialize(0,generator);
     peduncle.curvature.initialize(0,generator);
     peduncle.length_segments = 3;
-    peduncle.radial_subdivisions = 10;
+    peduncle.radial_subdivisions = 7;
 
     //--- inflorescence ---//
     inflorescence.flowers_per_rachis.initialize(1, generator);
@@ -375,13 +375,16 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const helios::vec3 inte
     if( phytomer->build_context_geometry_internode ) {
         context_ptr->setObjectData(phytomer->internode_objIDs, "age", phytomer->age);
         context_ptr->setObjectData(phytomer->internode_objIDs, "rank", rank);
+        context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(phytomer->internode_objIDs), "plantID", (int)plantID );
     }
     if( phytomer->build_context_geometry_petiole ) {
         context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
         context_ptr->setObjectData(phytomer->petiole_objIDs, "rank", phytomer->rank);
+        context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(phytomer->petiole_objIDs), "plantID", (int)plantID );
     }
     context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
     context_ptr->setObjectData(phytomer->leaf_objIDs, "rank", phytomer->rank);
+    context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(phytomer->leaf_objIDs), "plantID", (int)plantID );
 
     if( phytomer->phytomer_parameters.phytomer_creation_function != nullptr ) {
         phytomer->phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), plant_architecture_ptr->plant_instances.at(plantID).current_age);
@@ -950,7 +953,19 @@ void Phytomer::addInflorescence(const helios::vec3 &base_position, const AxisRot
     phytomer_parameters.peduncle.roll.resample();
 
     context_ptr->setObjectData( peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index), "rank", rank );
+
     context_ptr->setObjectData( inflorescence_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index), "rank", rank );
+
+    for( uint objID : peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index) ) {
+        context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(objID), "peduncleID", (int)objID );
+    }
+    for( uint objID : inflorescence_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index) ) {
+        if( fbud.state == BUD_FLOWER_CLOSED || fbud.state == BUD_FLOWER_OPEN ) {
+            context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID), "flowerID", (int) objID);
+        }else{
+            context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID), "fruitID", (int) objID);
+        }
+    }
 
 }
 
@@ -1902,7 +1917,7 @@ std::vector<uint> PlantArchitecture::getPlantPeduncleObjectIDs(uint plantID) con
 
 }
 
-std::vector<uint> PlantArchitecture::getPlantInflorescenceObjectIDs(uint plantID) const{
+std::vector<uint> PlantArchitecture::getPlantFlowerObjectIDs(uint plantID) const{
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::getPlantInflorescenceObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -1914,9 +1929,38 @@ std::vector<uint> PlantArchitecture::getPlantInflorescenceObjectIDs(uint plantID
 
     for( auto &shoot : shoot_tree ){
         for( auto &phytomer : shoot->phytomers ){
-            for( auto &fbud : phytomer->peduncle_objIDs ){
-                for( auto &inflorescence : fbud ) {
-                    objIDs.insert(objIDs.end(), inflorescence.begin(), inflorescence.end());
+            for( int petiole=0; petiole<phytomer->floral_buds.size(); petiole++ ){
+                for( int bud=0; bud<phytomer->floral_buds.at(petiole).size(); bud++ ){
+                    if( phytomer->floral_buds.at(petiole).at(bud).state == BUD_FLOWER_OPEN || phytomer->floral_buds.at(petiole).at(bud).state == BUD_FLOWER_CLOSED ) {
+                        objIDs.insert(objIDs.end(), phytomer->inflorescence_objIDs.at(petiole).at(bud).begin(), phytomer->inflorescence_objIDs.at(petiole).at(bud).end());
+                    }
+                }
+            }
+        }
+    }
+
+    return objIDs;
+
+
+}
+
+std::vector<uint> PlantArchitecture::getPlantFruitObjectIDs(uint plantID) const{
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantInflorescenceObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::vector<uint> objIDs;
+
+    auto &shoot_tree = plant_instances.at(plantID).shoot_tree;
+
+    for( auto &shoot : shoot_tree ){
+        for( auto &phytomer : shoot->phytomers ){
+            for( int petiole=0; petiole<phytomer->floral_buds.size(); petiole++ ){
+                for( int bud=0; bud<phytomer->floral_buds.at(petiole).size(); bud++ ){
+                    if( phytomer->floral_buds.at(petiole).at(bud).state == BUD_FRUITING ) {
+                        objIDs.insert(objIDs.end(), phytomer->inflorescence_objIDs.at(petiole).at(bud).begin(), phytomer->inflorescence_objIDs.at(petiole).at(bud).end());
+                    }
                 }
             }
         }
