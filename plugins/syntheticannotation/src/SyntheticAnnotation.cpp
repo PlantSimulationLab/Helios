@@ -172,8 +172,8 @@ void SyntheticAnnotation::setCameraPosition(const std::vector<helios::vec3> &a_c
     if( a_camera_position.size()!=a_camera_lookat.size() ){
         helios_runtime_error("ERROR (SyntheticAnnotation::setCameraPosition): the number of camera lookat coordinates specified is less than that of camera positions.");
     }
-    camera_position = __camera_position;
-    camera_lookat = __camera_lookat;
+    camera_position = a_camera_position;
+    camera_lookat = a_camera_lookat;
 
 }
 
@@ -273,7 +273,7 @@ void SyntheticAnnotation::render( const char* outputdir ) {
     createdir += odir;
     int dir = system(createdir.c_str());
     if (dir < 0) {
-        helios_runtime_error("ERROR (SyntheticAnnotation::render): output directory " + outputdir + " could not be created. Exiting...");
+        helios_runtime_error("ERROR (SyntheticAnnotation::render): output directory " + std::string(outputdir) + " could not be created. Exiting...");
     }
     //create sub-directory structure for each view
     //std::string viewdir;
