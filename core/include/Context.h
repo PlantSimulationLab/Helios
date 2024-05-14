@@ -2198,10 +2198,26 @@ public:
     
     //! copy all primitive data from one primitive to another
     /**
-     * \param[in] "UUID" uint unique universal identifier (UUID) of primitive that is the source of data for copying
-     * \param[in] "currentUUID" uint unique universal identifier (UUID) of primitive that is the destination for data copying
+     * \param[in] "UUID" unique universal identifier (UUID) of primitive that is the source of data for copying
+     * \param[in] "currentUUID" unique universal identifier (UUID) of primitive that is the destination for data copying
      */
     void copyPrimitiveData( uint UUID, uint currentUUID);
+
+    //! Rename primitive data for a primitive
+    /**
+     * \param[in] "UUID" unique universal identifier (UUID) of primitive that is the source of data for copying
+     * \param[in] "old_label" old label of data to be renamed
+     * \param[in] "new_label" new label of data to be renamed
+     */
+    void renamePrimitiveData( uint UUID, const char* old_label, const char* new_label );
+
+    //! Duplicate/copy primitive data
+    /**
+     * \param[in] "UUID" unique universal identifier (UUID) of primitive that is the source of data for copying
+     * \param[in] "old_label" old label of data to be copied
+     * \param[in] "new_label" new label of data to be copied
+     */
+    void duplicatePrimitiveData( uint UUID, const char* old_label, const char* new_label );
     
     //! Check if primitive exists for a given UUID
     /**
@@ -3878,6 +3894,26 @@ public:
      \param[in] "data" Global data value (scalar)
      */
     void setGlobalData( const char* label, HeliosDataType type, size_t size, void* data );
+
+    //! Rename global data
+    /**
+     * \param[in] "old_label" Old name/label associated with data
+     * \param[in] "new_label" New name/label associated with data
+     */
+    void renameGlobalData( const char* old_label, const char* new_label );
+
+    //! Make a copy of global data
+    /**
+     * \param[in] "old_label" Old name/label associated with data
+     * \param[in] "new_label" New name/label associated with data
+     */
+    void duplicateGlobalData(const char* old_label, const char* new_label );
+
+    //! Delete/clear global data
+    /**
+     * \param[in] "label" Name/label associated with data
+     */
+    void clearGlobalData( const char* label );
     
     //! Get global data value (scalar integer)
     /**
@@ -4141,6 +4177,20 @@ public:
      * \param[in] "currentObjID" uint Object identifier for compound object that is the destination for data copying
      */
     void copyObjectData( uint objID, uint currentObjID);
+
+    //! Duplicate/copy existing object data
+    /**
+     * \param[in] "old_label" Name/label associated with data
+     * \param[in] "new_label" Name/label associated with data
+     */
+    void duplicateObjectData( uint objID, const char* old_label, const char* new_label );
+
+    //! Rename existing object data
+    /**
+     * \param[in] "old_label" Name/label associated with data
+     * \param[in] "new_label" Name/label associated with data
+     */
+    void renameObjectData( uint objID, const char* old_label, const char* new_label );
     
     //! Get a vector of object IDs that meet filtering criteria based on object data
     /**

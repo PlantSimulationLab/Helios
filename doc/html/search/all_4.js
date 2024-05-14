@@ -37,8 +37,8 @@ var searchData=
   ['doesbandexist_34',['doesBandExist',['../class_radiation_model.html#a966780925811e3a710a6d91f4ac852fb',1,'RadiationModel']]],
   ['doesglobaldataexist_35',['doesGlobalDataExist',['../classhelios_1_1_context.html#a65ad9cb057b0cb2be3ef2734847608cc',1,'helios::Context']]],
   ['doeshitdataexist_36',['doesHitDataExist',['../class_aerial_li_d_a_rcloud.html#a9b5aa652c94d4dee19a4f956a62f2ab1',1,'AerialLiDARcloud::doesHitDataExist()'],['../class_li_d_a_rcloud.html#aabb8d404b7f3fa00d8281cb6b74f90c0',1,'LiDARcloud::doesHitDataExist()']]],
-  ['doesobjectcontainprimitive_37',['doesObjectContainPrimitive',['../classhelios_1_1_compound_object.html#ae06ed1275c9ba5ed5ed59b08bdfd1216',1,'helios::CompoundObject::doesObjectContainPrimitive()'],['../classhelios_1_1_context.html#a60b571dd1cfd525caedcfd725162721e',1,'helios::Context::doesObjectContainPrimitive()']]],
-  ['doesobjectdataexist_38',['doesObjectDataExist',['../classhelios_1_1_compound_object.html#aac66c9dbdba0e7418051a9eb9c688618',1,'helios::CompoundObject::doesObjectDataExist()'],['../classhelios_1_1_context.html#a2834b9a6eee49d644f201f696ae5a4d5',1,'helios::Context::doesObjectDataExist(uint objID, const char *label) const']]],
+  ['doesobjectcontainprimitive_37',['doesObjectContainPrimitive',['../classhelios_1_1_compound_object.html#ae06ed1275c9ba5ed5ed59b08bdfd1216',1,'helios::CompoundObject::doesObjectContainPrimitive()'],['../classhelios_1_1_context.html#a60b571dd1cfd525caedcfd725162721e',1,'helios::Context::doesObjectContainPrimitive(uint ObjID, uint UUID)']]],
+  ['doesobjectdataexist_38',['doesObjectDataExist',['../classhelios_1_1_context.html#a2834b9a6eee49d644f201f696ae5a4d5',1,'helios::Context::doesObjectDataExist()'],['../classhelios_1_1_compound_object.html#aac66c9dbdba0e7418051a9eb9c688618',1,'helios::CompoundObject::doesObjectDataExist()']]],
   ['doesobjectexist_39',['doesObjectExist',['../classhelios_1_1_context.html#a9b410e55075482b8cbc549f9bf571541',1,'helios::Context']]],
   ['doesprimitivedataexist_40',['doesPrimitiveDataExist',['../classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b',1,'helios::Context']]],
   ['doesprimitiveexist_41',['doesPrimitiveExist',['../classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66',1,'helios::Context::doesPrimitiveExist(uint UUID) const'],['../classhelios_1_1_context.html#a0c478e8ce47bfad4db16829f76305946',1,'helios::Context::doesPrimitiveExist(const std::vector&lt; uint &gt; &amp;UUIDs) const']]],
@@ -48,5 +48,7 @@ var searchData=
   ['dummymodel_2ecpp_45',['DummyModel.cpp',['../_dummy_model_8cpp.html',1,'']]],
   ['dummymodel_2eh_46',['DummyModel.h',['../_dummy_model_8h.html',1,'']]],
   ['dupex_47',['Dupex',['../struct_dupex.html',1,'']]],
-  ['duplicateprimitivedata_48',['duplicatePrimitiveData',['../classhelios_1_1_context.html#a3796eae362aec38408e40a3a83b3d8a4',1,'helios::Context']]]
+  ['duplicateglobaldata_48',['duplicateGlobalData',['../classhelios_1_1_context.html#ae89abaa03d7585e7f3abc6c5f16a0223',1,'helios::Context']]],
+  ['duplicateobjectdata_49',['duplicateObjectData',['../classhelios_1_1_context.html#a613366ab9fdbfd69428535d5c1867b73',1,'helios::Context']]],
+  ['duplicateprimitivedata_50',['duplicatePrimitiveData',['../classhelios_1_1_context.html#a86be37149a98b13141175da5793d053e',1,'helios::Context::duplicatePrimitiveData(uint UUID, const char *old_label, const char *new_label)'],['../classhelios_1_1_context.html#a3796eae362aec38408e40a3a83b3d8a4',1,'helios::Context::duplicatePrimitiveData(const char *existing_data_label, const char *copy_data_label)']]]
 ];
