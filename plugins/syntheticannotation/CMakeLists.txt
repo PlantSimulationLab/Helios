@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 2.0)
 
 project(helios)  
 
-include_directories( "include" )
-include_directories( "../../core/include" )
-include_directories( "../../plugins/visualizer/include" )
-include_directories( "../../plugins/visualizer/lib/glm" )
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../core/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/lib/glm")
 
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
      set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")

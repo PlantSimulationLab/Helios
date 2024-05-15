@@ -709,84 +709,84 @@ std::vector<std::string> Primitive::listPrimitiveData() const{
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const int& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const uint& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const float& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const double& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::vec2& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::vec3& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::vec4& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::int2& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::int3& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::int4& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, const std::string& data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
 void Context::setPrimitiveData( const uint& UUID, const char* label, HeliosDataType type, uint size, void* data ){
   if( primitives.find(UUID) == primitives.end() ){
-    helios_runtime_error( "ERROR (setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
   primitives.at(UUID)->setPrimitiveData(label,type,size,data);
 }
@@ -1302,6 +1302,79 @@ void Context::copyPrimitiveData( uint UUID, uint oldUUID){
   }
 }
 
+void Context::renamePrimitiveData( uint UUID, const char* old_label, const char* new_label ){
+
+    if( primitives.find(UUID) == primitives.end() ){
+        helios_runtime_error("ERROR (Context::renamePrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    }else if( !primitives.at(UUID)->doesPrimitiveDataExist(old_label) ){
+        helios_runtime_error("ERROR (Context::renamePrimitiveData): Primitive data of " + std::string(old_label) + " does not exist for primitive " + std::to_string(UUID) + ".");
+    }
+
+    duplicatePrimitiveData( UUID, old_label, new_label );
+    clearPrimitiveData( UUID, old_label );
+
+}
+
+void Context::duplicatePrimitiveData( uint UUID, const char* old_label, const char* new_label ){
+
+    if( primitives.find(UUID) == primitives.end() ){
+        helios_runtime_error("ERROR (Context::duplicatePrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+    }else if( !primitives.at(UUID)->doesPrimitiveDataExist(old_label) ){
+        helios_runtime_error("ERROR (Context::duplicatePrimitiveData): Primitive data of " + std::string(old_label) + " does not exist for primitive " + std::to_string(UUID) + ".");
+    }
+
+    HeliosDataType type = getPrimitiveDataType( UUID, old_label );
+
+    if( type==HELIOS_TYPE_INT ){
+        std::vector<int> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_INT, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_UINT ){
+        std::vector<uint> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_UINT, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_FLOAT ){
+        std::vector<float> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_FLOAT, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_DOUBLE ){
+        std::vector<double> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_DOUBLE, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC2 ){
+        std::vector<vec2> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_VEC2, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC3 ){
+        std::vector<vec3> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_VEC3, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC4 ){
+        std::vector<vec4> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_VEC4, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT2 ){
+        std::vector<int2> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_INT2, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT3 ){
+        std::vector<int3> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_INT3, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT4 ){
+        std::vector<int4> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_INT4, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_STRING ){
+        std::vector<std::string> pdata;
+        getPrimitiveData( UUID, old_label, pdata );
+        setPrimitiveData( UUID, new_label, HELIOS_TYPE_STRING, pdata.size(), &pdata.at(0) );
+    }else{
+        assert(false);
+    }
+
+}
+
 std::vector<std::string> Context::listPrimitiveData(uint UUID) const{
   return getPrimitivePointer_private(UUID)->listPrimitiveData();
 }
@@ -1310,84 +1383,84 @@ std::vector<std::string> Context::listPrimitiveData(uint UUID) const{
 
 void Context::setObjectData( const uint objID, const char* label, const int& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const uint& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const float& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const double& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const helios::vec2& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const helios::vec3& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const helios::vec4& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const helios::int2& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const helios::int3& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const helios::int4& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, const std::string& data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,data);
 }
 
 void Context::setObjectData( const uint objID, const char* label, HeliosDataType type, uint size, void* data ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->setObjectData(label,type,size,data);
 }
@@ -1658,154 +1731,154 @@ void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > >
 
 void Context::getObjectData( const uint objID, const char* label, int& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<int>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, uint& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<uint>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, float& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<float>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, double& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<double>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, vec2& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<vec2>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, vec3& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<vec3>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, vec4& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<vec4>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, int2& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<int2>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, int3& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<int3>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, int4& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<int4>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::string& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
 
 void Context::getObjectData( const uint objID, const char* label, std::vector<std::string>& data ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->getObjectData(label,data);
 }
@@ -1890,9 +1963,83 @@ void Context::copyObjectData( uint objID, uint oldObjID){
     }
 }
 
+void Context::duplicateObjectData( uint objID, const char* old_label, const char* new_label ){
+
+    if( objects.find(objID) == objects.end() ){
+        helios_runtime_error("ERROR (Context::duplicateObjectData): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
+    }else if( !doesObjectDataExist(objID, old_label) ){
+        helios_runtime_error("ERROR (Context::duplicateObjectData): Object ID of " + std::to_string(objID) + " does not have data with label " + std::string(old_label) + ".");
+    }
+
+    HeliosDataType type = getObjectDataType( objID, old_label );
+
+    if( type==HELIOS_TYPE_INT ){
+        std::vector<int> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_INT, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_UINT ){
+        std::vector<uint> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_UINT, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_FLOAT ){
+        std::vector<float> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_FLOAT, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_DOUBLE ){
+        std::vector<double> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_DOUBLE, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC2 ){
+        std::vector<vec2> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_VEC2, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC3 ){
+        std::vector<vec3> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_VEC3, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC4 ){
+        std::vector<vec4> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_VEC4, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT2 ){
+        std::vector<int2> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_INT2, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT3 ){
+        std::vector<int3> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_INT3, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT4 ){
+        std::vector<int4> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_INT4, pdata.size(), &pdata.at(0) );
+    }else if( type==HELIOS_TYPE_STRING ){
+        std::vector<std::string> pdata;
+        getObjectData( objID, old_label, pdata );
+        setObjectData( objID, new_label, HELIOS_TYPE_STRING, pdata.size(), &pdata.at(0) );
+    }else{
+        assert(false);
+    }
+
+}
+
+
+void Context::renameObjectData( uint objID, const char* old_label, const char* new_label ){
+
+    if( objects.find(objID) == objects.end() ){
+        helios_runtime_error("ERROR (Context::renameObjectData): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
+    }else if( !doesObjectDataExist(objID, old_label) ){
+        helios_runtime_error("ERROR (Context::renameObjectData): Object ID of " + std::to_string(objID) + " does not have data with label " + std::string(old_label) + ".");
+    }
+
+    duplicateObjectData( objID, old_label, new_label );
+    clearObjectData( objID, old_label );
+
+}
+
 void Context::clearObjectData( const uint objID, const char* label ){
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   objects.at(objID)->clearObjectData(label);
 }
@@ -1900,7 +2047,7 @@ void Context::clearObjectData( const uint objID, const char* label ){
 void Context::clearObjectData( const std::vector<uint>& objIDs, const char* label ){
   for( uint objID : objIDs ){
     if( objects.find(objID) == objects.end() ){
-      helios_runtime_error("ERROR (getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
+      helios_runtime_error("ERROR (Context::clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
     }
     objects.at(objID)->clearObjectData(label);
   }
@@ -2108,14 +2255,14 @@ void CompoundObject::setObjectData( const char* label, HeliosDataType a_type, ui
 void CompoundObject::getObjectData( const char* label, int& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT ){
     std::vector<int> d = object_data_int.at(label);
     data = d.at(0);
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type int, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int.");
   }
 
 }
@@ -2123,14 +2270,14 @@ void CompoundObject::getObjectData( const char* label, int& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<int>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT ){
     std::vector<int> d = object_data_int.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type int, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int.");
   }
 
 }
@@ -2138,14 +2285,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<int>& data ) 
 void CompoundObject::getObjectData( const char* label, uint& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_UINT ){
     std::vector<uint> d = object_data_uint.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type uint, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type uint.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type uint, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type uint.");
   }
 
 }
@@ -2153,14 +2300,14 @@ void CompoundObject::getObjectData( const char* label, uint& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<uint>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_UINT ){
     std::vector<uint> d = object_data_uint.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type uint, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type uint.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type uint, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type uint.");
   }
 
 }
@@ -2168,14 +2315,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<uint>& data )
 void CompoundObject::getObjectData( const char* label, float& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_FLOAT ){
     std::vector<float> d = object_data_float.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type float, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type float.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type float, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type float.");
   }
 
 }
@@ -2183,14 +2330,14 @@ void CompoundObject::getObjectData( const char* label, float& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<float>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_FLOAT ){
     std::vector<float> d = object_data_float.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type float, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type float.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type float, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type float.");
   }
 
 }
@@ -2198,14 +2345,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<float>& data 
 void CompoundObject::getObjectData( const char* label, double& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_DOUBLE ){
     std::vector<double> d = object_data_double.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type double, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type double.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type double, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type double.");
   }
 
 }
@@ -2213,14 +2360,14 @@ void CompoundObject::getObjectData( const char* label, double& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<double>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_DOUBLE ){
     std::vector<double> d = object_data_double.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type double, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type double.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type double, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type double.");
   }
 
 }
@@ -2228,14 +2375,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<double>& data
 void CompoundObject::getObjectData( const char* label, vec2& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC2 ){
     std::vector<vec2> d = object_data_vec2.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type vec2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec2.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec2.");
   }
 
 }
@@ -2243,14 +2390,14 @@ void CompoundObject::getObjectData( const char* label, vec2& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<vec2>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC2 ){
     std::vector<vec2> d = object_data_vec2.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type vec2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec2.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec2.");
   }
 
 }
@@ -2258,14 +2405,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<vec2>& data )
 void CompoundObject::getObjectData( const char* label, vec3& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC3 ){
     std::vector<vec3> d = object_data_vec3.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type vec3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec3.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec3.");
   }
 
 }
@@ -2273,14 +2420,14 @@ void CompoundObject::getObjectData( const char* label, vec3& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<vec3>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC3 ){
     std::vector<vec3> d = object_data_vec3.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type vec3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec3.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec3.");
   }
 
 }
@@ -2288,14 +2435,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<vec3>& data )
 void CompoundObject::getObjectData( const char* label, vec4& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC4 ){
     std::vector<vec4> d = object_data_vec4.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type vec4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec4.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec4.");
   }
 
 }
@@ -2303,14 +2450,14 @@ void CompoundObject::getObjectData( const char* label, vec4& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<vec4>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC4 ){
     std::vector<vec4> d = object_data_vec4.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type vec4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec4.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec4.");
   }
 
 }
@@ -2318,14 +2465,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<vec4>& data )
 void CompoundObject::getObjectData( const char* label, int2& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT2 ){
     std::vector<int2> d = object_data_int2.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type int2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int2.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int2.");
   }
 
 }
@@ -2333,14 +2480,14 @@ void CompoundObject::getObjectData( const char* label, int2& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<int2>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT2 ){
     std::vector<int2> d = object_data_int2.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type int2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int2.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int2.");
   }
 
 }
@@ -2348,14 +2495,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<int2>& data )
 void CompoundObject::getObjectData( const char* label, int3& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT3 ){
     std::vector<int3> d = object_data_int3.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type int3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int3.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int3.");
   }
 
 }
@@ -2363,14 +2510,14 @@ void CompoundObject::getObjectData( const char* label, int3& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<int3>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID) );
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID) );
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT3 ){
     std::vector<int3> d = object_data_int3.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type int3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int3.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int3.");
   }
 
 }
@@ -2378,14 +2525,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<int3>& data )
 void CompoundObject::getObjectData( const char* label, int4& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT4 ){
     std::vector<int4> d = object_data_int4.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type int4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int4.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int4.");
   }
 
 }
@@ -2393,14 +2540,14 @@ void CompoundObject::getObjectData( const char* label, int4& data ) const{
 void CompoundObject::getObjectData( const char* label, std::vector<int4>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT4 ){
     std::vector<int4> d = object_data_int4.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type int4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int4.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int4.");
   }
 
 }
@@ -2408,14 +2555,14 @@ void CompoundObject::getObjectData( const char* label, std::vector<int4>& data )
 void CompoundObject::getObjectData( const char* label, std::string& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_STRING ){
     std::vector<std::string> d = object_data_string.at(label);
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type string, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type string.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type string, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type string.");
   }
 
 }
@@ -2423,14 +2570,14 @@ void CompoundObject::getObjectData( const char* label, std::string& data ) const
 void CompoundObject::getObjectData( const char* label, std::vector<std::string>& data ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_STRING ){
     std::vector<std::string> d = object_data_string.at(label);
     data = d;
   }else{
-    helios_runtime_error("ERROR (getObjectData): Attempted to get data for type string, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type string.");
+    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type string, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type string.");
   }
 
 }
@@ -2438,7 +2585,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<std::string>&
 HeliosDataType CompoundObject::getObjectDataType( const char* label ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectDataType): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   return object_data_types.at(label);
@@ -2448,7 +2595,7 @@ HeliosDataType CompoundObject::getObjectDataType( const char* label ) const{
 uint CompoundObject::getObjectDataSize( const char* label ) const{
 
   if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+    helios_runtime_error("ERROR (CompoundObject::getObjectDataSize): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
 
   HeliosDataType qtype = object_data_types.at(label);
@@ -2763,10 +2910,87 @@ void Context::setGlobalData( const char* label, HeliosDataType type, size_t size
 
 }
 
+void Context::renameGlobalData( const char* old_label, const char* new_label ){
+
+    if( !doesGlobalDataExist( old_label ) ){
+        helios_runtime_error("ERROR (Context::duplicateGlobalData): Global data " + std::string(old_label) + " does not exist in the Context.");
+    }
+
+    duplicateGlobalData( old_label, new_label );
+    clearGlobalData( old_label );
+
+}
+
+void Context::duplicateGlobalData(const char* old_label, const char* new_label ){
+
+    if( !doesGlobalDataExist( old_label ) ){
+        helios_runtime_error("ERROR (Context::duplicateGlobalData): Global data " + std::string(old_label) + " does not exist in the Context.");
+    }
+
+    HeliosDataType type = getGlobalDataType( old_label );
+
+    if( type==HELIOS_TYPE_INT ){
+        std::vector<int> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_INT, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_UINT ){
+        std::vector<uint> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_UINT, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_FLOAT ){
+        std::vector<float> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_FLOAT, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_DOUBLE ){
+        std::vector<double> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_DOUBLE, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC2 ){
+        std::vector<vec2> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_VEC2, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC3 ){
+        std::vector<vec3> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_VEC3, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_VEC4 ){
+        std::vector<vec4> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_VEC4, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT2 ){
+        std::vector<int2> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_INT2, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT3 ){
+        std::vector<int3> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_INT3, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_INT4 ){
+        std::vector<int4> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_INT4, gdata.size(), &gdata.at(0) );
+    }else if( type==HELIOS_TYPE_STRING ){
+        std::vector<std::string> gdata;
+        getGlobalData( old_label, gdata );
+        setGlobalData( new_label, HELIOS_TYPE_STRING, gdata.size(), &gdata.at(0) );
+    }else{
+        assert(false);
+    }
+
+}
+
+void Context::clearGlobalData( const char* label ){
+
+    if(doesGlobalDataExist(label)){
+        globaldata.erase(label);
+    }
+
+}
+
 void Context::getGlobalData( const char* label, int& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2775,7 +2999,7 @@ void Context::getGlobalData( const char* label, int& data ) const{
     std::vector<int> d = gdata.global_data_int;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type int, but data '" + std::string(label) + "' does not have type int.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type int, but data '" + std::string(label) + "' does not have type int.");
   }
 
 }
@@ -2783,7 +3007,7 @@ void Context::getGlobalData( const char* label, int& data ) const{
 void Context::getGlobalData( const char* label, std::vector<int>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2792,7 +3016,7 @@ void Context::getGlobalData( const char* label, std::vector<int>& data ) const{
     std::vector<int> d = gdata.global_data_int;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type int, but data '" + std::string(label) + "' does not have type int.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type int, but data '" + std::string(label) + "' does not have type int.");
   }
 
 }
@@ -2800,7 +3024,7 @@ void Context::getGlobalData( const char* label, std::vector<int>& data ) const{
 void Context::getGlobalData( const char* label, uint& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2809,7 +3033,7 @@ void Context::getGlobalData( const char* label, uint& data ) const{
     std::vector<uint> d = gdata.global_data_uint;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type uint, but data '" + std::string(label) + "' does not have type uint.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type uint, but data '" + std::string(label) + "' does not have type uint.");
   }
 
 }
@@ -2817,7 +3041,7 @@ void Context::getGlobalData( const char* label, uint& data ) const{
 void Context::getGlobalData( const char* label, std::vector<uint>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2826,7 +3050,7 @@ void Context::getGlobalData( const char* label, std::vector<uint>& data ) const{
     std::vector<uint> d = gdata.global_data_uint;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type uint, but data '" + std::string(label) + "' does not have type uint.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type uint, but data '" + std::string(label) + "' does not have type uint.");
   }
 
 }
@@ -2834,7 +3058,7 @@ void Context::getGlobalData( const char* label, std::vector<uint>& data ) const{
 void Context::getGlobalData( const char* label, float& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2843,7 +3067,7 @@ void Context::getGlobalData( const char* label, float& data ) const{
     std::vector<float> d = gdata.global_data_float;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type float, but data '" + std::string(label) + "' does not have type float.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type float, but data '" + std::string(label) + "' does not have type float.");
   }
 
 }
@@ -2851,7 +3075,7 @@ void Context::getGlobalData( const char* label, float& data ) const{
 void Context::getGlobalData( const char* label, std::vector<float>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2860,7 +3084,7 @@ void Context::getGlobalData( const char* label, std::vector<float>& data ) const
     std::vector<float> d = gdata.global_data_float;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type float, but data '" + std::string(label) + "' does not have type float.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type float, but data '" + std::string(label) + "' does not have type float.");
   }
 
 }
@@ -2868,7 +3092,7 @@ void Context::getGlobalData( const char* label, std::vector<float>& data ) const
 void Context::getGlobalData( const char* label, double& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2877,7 +3101,7 @@ void Context::getGlobalData( const char* label, double& data ) const{
     std::vector<double> d = gdata.global_data_double;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type double, but data '" + std::string(label) + "' does not have type double.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type double, but data '" + std::string(label) + "' does not have type double.");
   }
 
 }
@@ -2885,7 +3109,7 @@ void Context::getGlobalData( const char* label, double& data ) const{
 void Context::getGlobalData( const char* label, std::vector<double>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2894,7 +3118,7 @@ void Context::getGlobalData( const char* label, std::vector<double>& data ) cons
     std::vector<double> d = gdata.global_data_double;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type double, but data '" + std::string(label) + "' does not have type double.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type double, but data '" + std::string(label) + "' does not have type double.");
   }
 
 }
@@ -2902,7 +3126,7 @@ void Context::getGlobalData( const char* label, std::vector<double>& data ) cons
 void Context::getGlobalData( const char* label, helios::vec2& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2911,7 +3135,7 @@ void Context::getGlobalData( const char* label, helios::vec2& data ) const{
     std::vector<vec2> d = gdata.global_data_vec2;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type vec2, but data '" + std::string(label) + "' does not have type vec2.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type vec2, but data '" + std::string(label) + "' does not have type vec2.");
   }
 
 }
@@ -2919,7 +3143,7 @@ void Context::getGlobalData( const char* label, helios::vec2& data ) const{
 void Context::getGlobalData( const char* label, std::vector<helios::vec2>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2928,7 +3152,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec2>& data 
     std::vector<vec2> d = gdata.global_data_vec2;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type vec2, but data '" + std::string(label) + "' does not have type vec2.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type vec2, but data '" + std::string(label) + "' does not have type vec2.");
   }
 
 }
@@ -2936,7 +3160,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec2>& data 
 void Context::getGlobalData( const char* label, helios::vec3& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2945,7 +3169,7 @@ void Context::getGlobalData( const char* label, helios::vec3& data ) const{
     std::vector<vec3> d = gdata.global_data_vec3;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type vec3, but data '" + std::string(label) + "' does not have type vec3.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type vec3, but data '" + std::string(label) + "' does not have type vec3.");
   }
 
 }
@@ -2953,7 +3177,7 @@ void Context::getGlobalData( const char* label, helios::vec3& data ) const{
 void Context::getGlobalData( const char* label, std::vector<helios::vec3>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2962,7 +3186,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec3>& data 
     std::vector<vec3> d = gdata.global_data_vec3;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type vec3, but data '" + std::string(label) + "' does not have type vec3.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type vec3, but data '" + std::string(label) + "' does not have type vec3.");
   }
 
 }
@@ -2970,7 +3194,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec3>& data 
 void Context::getGlobalData( const char* label, helios::vec4& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2979,7 +3203,7 @@ void Context::getGlobalData( const char* label, helios::vec4& data ) const{
     std::vector<vec4> d = gdata.global_data_vec4;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type vec4, but data '" + std::string(label) + "' does not have type vec4.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type vec4, but data '" + std::string(label) + "' does not have type vec4.");
   }
 
 }
@@ -2987,7 +3211,7 @@ void Context::getGlobalData( const char* label, helios::vec4& data ) const{
 void Context::getGlobalData( const char* label, std::vector<helios::vec4>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -2996,7 +3220,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec4>& data 
     std::vector<vec4> d = gdata.global_data_vec4;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type vec4, but data '" + std::string(label) + "' does not have type vec4.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type vec4, but data '" + std::string(label) + "' does not have type vec4.");
   }
 
 }
@@ -3004,7 +3228,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::vec4>& data 
 void Context::getGlobalData( const char* label, helios::int2& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3013,7 +3237,7 @@ void Context::getGlobalData( const char* label, helios::int2& data ) const{
     std::vector<int2> d = gdata.global_data_int2;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type int2, but data '" + std::string(label) + "' does not have type int2.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type int2, but data '" + std::string(label) + "' does not have type int2.");
   }
 
 }
@@ -3021,7 +3245,7 @@ void Context::getGlobalData( const char* label, helios::int2& data ) const{
 void Context::getGlobalData( const char* label, std::vector<helios::int2>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3030,7 +3254,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int2>& data 
     std::vector<int2> d = gdata.global_data_int2;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type int2, but data '" + std::string(label) + "' does not have type int2.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type int2, but data '" + std::string(label) + "' does not have type int2.");
   }
 
 }
@@ -3038,7 +3262,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int2>& data 
 void Context::getGlobalData( const char* label, helios::int3& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3047,7 +3271,7 @@ void Context::getGlobalData( const char* label, helios::int3& data ) const{
     std::vector<int3> d = gdata.global_data_int3;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type int3, but data '" + std::string(label) + "' does not have type int3.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type int3, but data '" + std::string(label) + "' does not have type int3.");
   }
 
 }
@@ -3055,7 +3279,7 @@ void Context::getGlobalData( const char* label, helios::int3& data ) const{
 void Context::getGlobalData( const char* label, std::vector<helios::int3>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3064,7 +3288,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int3>& data 
     std::vector<int3> d = gdata.global_data_int3;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type int3, but data '" + std::string(label) + "' does not have type int3.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type int3, but data '" + std::string(label) + "' does not have type int3.");
   }
 
 }
@@ -3072,7 +3296,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int3>& data 
 void Context::getGlobalData( const char* label, helios::int4& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3081,7 +3305,7 @@ void Context::getGlobalData( const char* label, helios::int4& data ) const{
     std::vector<int4> d = gdata.global_data_int4;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type int4, but data '" + std::string(label) + "' does not have type int4.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type int4, but data '" + std::string(label) + "' does not have type int4.");
   }
 
 }
@@ -3089,7 +3313,7 @@ void Context::getGlobalData( const char* label, helios::int4& data ) const{
 void Context::getGlobalData( const char* label, std::vector<helios::int4>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3098,7 +3322,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int4>& data 
     std::vector<int4> d = gdata.global_data_int4;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type int4, but data '" + std::string(label) + "' does not have type int4.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type int4, but data '" + std::string(label) + "' does not have type int4.");
   }
 
 }
@@ -3106,7 +3330,7 @@ void Context::getGlobalData( const char* label, std::vector<helios::int4>& data 
 void Context::getGlobalData( const char* label, std::string& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3115,7 +3339,7 @@ void Context::getGlobalData( const char* label, std::string& data ) const{
     std::vector<std::string> d = gdata.global_data_string;
     data = d.front();
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type string, but data '" + std::string(label) + "' does not have type string.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type string, but data '" + std::string(label) + "' does not have type string.");
   }
 
 }
@@ -3123,7 +3347,7 @@ void Context::getGlobalData( const char* label, std::string& data ) const{
 void Context::getGlobalData( const char* label, std::vector<std::string>& data ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   GlobalData gdata = globaldata.at(label);
@@ -3132,7 +3356,7 @@ void Context::getGlobalData( const char* label, std::vector<std::string>& data )
     std::vector<std::string> d = gdata.global_data_string;
     data = d;
   }else{
-    helios_runtime_error("ERROR (getGlobalData): Attempted to get global data for type string, but data '" + std::string(label) + "' does not have type string.");
+    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get global data for type string, but data '" + std::string(label) + "' does not have type string.");
   }
 
 }
@@ -3140,7 +3364,7 @@ void Context::getGlobalData( const char* label, std::vector<std::string>& data )
 HeliosDataType Context::getGlobalDataType( const char* label ) const{
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalDataType): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalDataType): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   return globaldata.at(label).type;
@@ -3150,7 +3374,7 @@ HeliosDataType Context::getGlobalDataType( const char* label ) const{
 size_t Context::getGlobalDataSize(const char *label) const {
 
   if( !doesGlobalDataExist( label ) ){
-    helios_runtime_error("ERROR (getGlobalDataSize): Global data " + std::string(label) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getGlobalDataSize): Global data " + std::string(label) + " does not exist in the Context.");
   }
 
   return globaldata.at(label).size;

@@ -1610,3 +1610,16 @@ The radiation model has been re-designed, with the following primary additions:
 
 *AerialLiDAR*
 - Degrees vs. radians was not handled correctly if zenith/azimuth is specified from an input XML file.
+
+[1.3.10] 2024-05-14
+
+*Context*
+- Added Context::duplicatePrimitiveData(), Context::duplicateObjectData(), and Context::duplicateGlobalData() methods to duplicate existing primitive, object, and global data.
+- Added Context::renamePrimitiveData(), Context::renameObjectData(), and Context::renameGlobalData() methods to rename existing primitive, object, and global data.
+- Added Context::clearGlobalData() method to delete global data.
+
+*Synthetic Annotation*
+- Added synthetic annotation self-test sample.
+- Added synthetic annotation to utilities/run_samples.sh automated testing script.
+- Error fixed in SyntheticAnnotation::setCameraPosition() where arguments were not being correctly assigned.
+- Error fixed in SyntheticAnnotation::render() where the 'outputdir' string needed to be converted to string in the error message.
