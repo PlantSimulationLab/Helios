@@ -54,7 +54,7 @@ std::string PlantArchitecture::makeShootString(const std::string &current_string
 
 }
 
-std::string PlantArchitecture::generatePlantString(uint plantID) const{
+std::string PlantArchitecture::getPlantString(uint plantID) const{
 
     auto plant_shoot_tree = &plant_instances.at(plantID).shoot_tree;
 

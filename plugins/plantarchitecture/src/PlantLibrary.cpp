@@ -301,11 +301,11 @@ void PlantArchitecture::initializeBindweedShoots() {
     shoot_parameters_primary.vegetative_bud_break_probability = 0.25;
     shoot_parameters_primary.vegetative_bud_break_time = 1;
     shoot_parameters_primary.base_roll = 90;
-    shoot_parameters_primary.internode_radius_initial = 0.0005;
+    shoot_parameters_primary.internode_radius_initial = 0.001;
     shoot_parameters_primary.phyllochron = 1;
-    shoot_parameters_primary.elongation_rate = 0.0025;
+    shoot_parameters_primary.elongation_rate = 0.005;
     shoot_parameters_primary.girth_growth_rate = 1.;
-    shoot_parameters_primary.child_internode_length_max = 0.02;
+    shoot_parameters_primary.child_internode_length_max = 0.04;
     shoot_parameters_primary.child_internode_length_decay_rate = 0;
     shoot_parameters_primary.child_insertion_angle_tip.uniformDistribution(50, 80);
     shoot_parameters_primary.flowers_require_dormancy = false;
@@ -739,7 +739,7 @@ void PlantArchitecture::initializePuncturevineShoots() {
     shoot_parameters_primary.phyllochron = 1;
     shoot_parameters_primary.elongation_rate = 0.005;
     shoot_parameters_primary.girth_growth_rate = 1.;
-    shoot_parameters_primary.child_internode_length_max = 0.01;
+    shoot_parameters_primary.child_internode_length_max = 0.02;
     shoot_parameters_primary.child_internode_length_decay_rate = 0;
     shoot_parameters_primary.child_insertion_angle_tip.uniformDistribution(50, 80);
     shoot_parameters_primary.flowers_require_dormancy = false;

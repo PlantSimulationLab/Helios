@@ -963,7 +963,7 @@ public:
 
     std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
 
-    std::string generatePlantString(uint plantID) const;
+    std::string getPlantString(uint plantID) const;
 
     // -- manual plant generation from input string -- //
 

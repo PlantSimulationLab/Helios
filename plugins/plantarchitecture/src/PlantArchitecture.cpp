@@ -386,6 +386,12 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const helios::vec3 inte
     context_ptr->setObjectData(phytomer->leaf_objIDs, "rank", phytomer->rank);
     context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(phytomer->leaf_objIDs), "plantID", (int)plantID );
 
+    for( auto &petiole : phytomer->leaf_objIDs ){
+        for( uint objID : petiole ){
+            context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(objID), "leafID", (int)objID );
+        }
+    }
+
     if( phytomer->phytomer_parameters.phytomer_creation_function != nullptr ) {
         phytomer->phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), plant_architecture_ptr->plant_instances.at(plantID).current_age);
     }
