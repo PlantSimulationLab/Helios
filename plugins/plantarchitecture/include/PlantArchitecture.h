@@ -963,7 +963,7 @@ public:
 
     std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
 
-    std::string getLSystemsString(uint plantID) const;
+    std::string generatePlantString(uint plantID) const;
 
     // -- manual plant generation from input string -- //
 
@@ -1036,6 +1036,10 @@ protected:
     void initializePuncturevineShoots();
 
     uint buildPuncturevinePlant( const helios::vec3 &base_position, float age );
+
+    void initializeRedbudShoots();
+
+    uint buildRedbudPlant( const helios::vec3 &base_position, float age );
 
     void initializeSoybeanShoots();
 

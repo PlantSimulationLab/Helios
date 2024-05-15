@@ -252,6 +252,36 @@ uint PuncturevineFlowerPrototype( helios::Context* context_ptr, uint subdivision
     return objID;
 }
 
+uint RedbudLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/RedbudLeaf.obj", make_vec3(0.,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+uint RedbudFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/RedbudFlower_open.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+uint RedbudFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/RedbudPod.obj", make_vec3(0.,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+void RedbudPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+//    //remove all vegetative buds
+//    phytomer->setVegetativeBudState( BUD_DEAD );
+//
+//    //remove all floral buds except for the terminal one
+//    if( shoot_node_index < shoot_max_nodes-1 ){
+//        phytomer->setFloralBudState( BUD_DEAD );
+//    }
+
+}
+
 uint SorghumLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
 
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
