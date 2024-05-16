@@ -393,7 +393,7 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const helios::vec3 inte
     }
 
     if( phytomer->phytomer_parameters.phytomer_creation_function != nullptr ) {
-        phytomer->phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), plant_architecture_ptr->plant_instances.at(plantID).current_age);
+        phytomer->phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), rank, plant_architecture_ptr->plant_instances.at(plantID).current_age);
     }
 
     return (int)phytomers.size()-1;

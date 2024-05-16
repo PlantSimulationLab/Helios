@@ -137,7 +137,7 @@ uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool 
     return objID;
 }
 
-void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
 
     if( shoot_node_index<=4 ) {
 
@@ -209,23 +209,21 @@ uint CowpeaFlowerPrototype( helios::Context* context_ptr, uint subdivisions, boo
     return objID;
 }
 
-void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
 
-    if( shoot_node_index<=5 ) {
-
-        //set leaf and internode scale based on position along the shoot
-        float leaf_scale = fmin(1.f, 0.4 + 0.6 * float(shoot_node_index) / 5.f);
-        phytomer->scaleLeafPrototypeScale(leaf_scale);
-
-        //set internode length based on position along the shoot
-        float inode_scale = fmin(1.f, 0.1 + 0.9 * float(shoot_node_index) / 5.f);
-        phytomer->scaleInternodeMaxLength(inode_scale);
-
-        phytomer->setFloralBudState( BUD_DEAD );
-
+    if( shoot_node_index>5 || rank>1 ) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
     }else{
-        phytomer->setVegetativeBudState( BUD_DEAD );
+        phytomer->setFloralBudState( BUD_DEAD );
     }
+
+    //set leaf and internode scale based on position along the shoot
+    float leaf_scale = fmin(1.f, 0.4 + 0.6 * plant_age / 15.f);
+    phytomer->scaleLeafPrototypeScale(leaf_scale);
+
+    //set internode length based on position along the shoot
+    float inode_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
+    phytomer->scaleInternodeMaxLength(inode_scale);
 
 }
 
@@ -270,7 +268,7 @@ uint RedbudFruitPrototype( helios::Context* context_ptr, uint subdivisions, floa
     return objID;
 }
 
-void RedbudPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+void RedbudPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
 
 //    //remove all vegetative buds
 //    phytomer->setVegetativeBudState( BUD_DEAD );
@@ -404,7 +402,7 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
     return objID;
 }
 
-void SorghumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+void SorghumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
 
     //set leaf scale based on position along the shoot
     float scale = fmin(1.f, 0.5 + 0.5*float(shoot_node_index)/5.f);

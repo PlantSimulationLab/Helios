@@ -455,7 +455,7 @@ public:
      * \param[in] shoot_max_nodes Maximum number of phytomers in the shoot
      * \param[in] plant_age Age of the plant in days
      */
-    void (*phytomer_creation_function)(std::shared_ptr<Phytomer> phytomer_ptr, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) = nullptr;
+    void (*phytomer_creation_function)(std::shared_ptr<Phytomer> phytomer_ptr, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age) = nullptr;
 
     //! Default constructor - does not set random number generator
     PhytomerParameters();

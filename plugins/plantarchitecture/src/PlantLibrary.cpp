@@ -581,7 +581,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;
     phytomer_parameters_trifoliate.petiole.pitch.uniformDistribution(45,60);
     phytomer_parameters_trifoliate.petiole.radius = 0.0025;
-    phytomer_parameters_trifoliate.petiole.length = 0.14;
+    phytomer_parameters_trifoliate.petiole.length = 0.1;
     phytomer_parameters_trifoliate.petiole.taper = 0.25;
     phytomer_parameters_trifoliate.petiole.curvature = -100;
     phytomer_parameters_trifoliate.petiole.color = phytomer_parameters_trifoliate.internode.color;
@@ -595,7 +595,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.leaf.leaflet_offset = 0.3;
     phytomer_parameters_trifoliate.leaf.leaflet_scale = 0.9;
     phytomer_parameters_trifoliate.leaf.prototype_function = CowpeaLeafPrototype_trifoliate;
-    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.06,0.1);
+    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.06,0.08);
 
     phytomer_parameters_trifoliate.peduncle.length = 0.2;
     phytomer_parameters_trifoliate.peduncle.radius = 0.002;
@@ -641,7 +641,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     shoot_parameters_trifoliate.elongation_rate = 0.02;
     shoot_parameters_trifoliate.girth_growth_rate = 1.5;
     shoot_parameters_trifoliate.gravitropic_curvature = 100;
-    shoot_parameters_trifoliate.vegetative_bud_break_time = 4;
+    shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
     shoot_parameters_trifoliate.child_internode_length_max = 0.03;
     shoot_parameters_trifoliate.child_internode_length_decay_rate = 0;
     shoot_parameters_trifoliate.child_internode_length_min = 0.0;
