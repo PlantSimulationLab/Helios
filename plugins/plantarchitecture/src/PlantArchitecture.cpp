@@ -715,7 +715,6 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             // -- scaling -- //
 
             vec3 leaf_scale = leaf_scale_factor_fraction * phytomer_parameters.leaf.prototype_scale.val() * make_vec3(1,1,1);
-            phytomer_parameters.leaf.prototype_scale.resample();
             if( phytomer_parameters.leaf.leaves_per_petiole>0 && phytomer_parameters.leaf.leaflet_scale.val()!=1.f && ind_from_tip!=0 ){
                 leaf_scale = powf(phytomer_parameters.leaf.leaflet_scale.val(),fabs(ind_from_tip))*leaf_scale;
             }
@@ -786,6 +785,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             leaf_bases.at(petiole).push_back(leaf_base );
 
         }
+        phytomer_parameters.leaf.prototype_scale.resample();
 
         if( petiole_axis==make_vec3(0,0,1) ) {
             inflorescence_bending_axis = make_vec3(1, 0, 0);
@@ -966,8 +966,11 @@ void Phytomer::addInflorescence(const helios::vec3 &base_position, const AxisRot
         context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(objID), "peduncleID", (int)objID );
     }
     for( uint objID : inflorescence_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index) ) {
-        if( fbud.state == BUD_FLOWER_CLOSED || fbud.state == BUD_FLOWER_OPEN ) {
-            context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID), "flowerID", (int) objID);
+        if( fbud.state == BUD_FLOWER_CLOSED ) {
+            context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID), "closedflowerID", (int) objID);
+        }else if( fbud.state == BUD_FLOWER_OPEN ) {
+            context_ptr->clearPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(objID), "closedflowerID" );
+            context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID), "openflowerID", (int) objID);
         }else{
             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID), "fruitID", (int) objID);
         }

@@ -292,7 +292,7 @@ void PlantArchitecture::initializeBindweedShoots() {
     phytomer_parameters_bindweed.inflorescence.flowers_per_rachis = 1;
     phytomer_parameters_bindweed.inflorescence.pitch = -90.f;
     phytomer_parameters_bindweed.inflorescence.flower_prototype_function = BindweedFlowerPrototype;
-    phytomer_parameters_bindweed.inflorescence.flower_prototype_scale = 0.04;
+    phytomer_parameters_bindweed.inflorescence.flower_prototype_scale = 0.03;
 
     // ---- Shoot Parameters ---- //
 
@@ -522,7 +522,7 @@ void PlantArchitecture::initializeCheeseweedShoots() {
     phytomer_parameters_cheeseweed.leaf.yaw = 0;
     phytomer_parameters_cheeseweed.leaf.roll = 0;
     phytomer_parameters_cheeseweed.leaf.prototype_function = CheeseweedLeafPrototype;
-    phytomer_parameters_cheeseweed.leaf.prototype_scale = 0.04;
+    phytomer_parameters_cheeseweed.leaf.prototype_scale = 0.035;
 
     // ---- Shoot Parameters ---- //
 
@@ -581,7 +581,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;
     phytomer_parameters_trifoliate.petiole.pitch.uniformDistribution(45,60);
     phytomer_parameters_trifoliate.petiole.radius = 0.0025;
-    phytomer_parameters_trifoliate.petiole.length = 0.1;
+    phytomer_parameters_trifoliate.petiole.length.uniformDistribution(0.1,0.12);
     phytomer_parameters_trifoliate.petiole.taper = 0.25;
     phytomer_parameters_trifoliate.petiole.curvature = -100;
     phytomer_parameters_trifoliate.petiole.color = phytomer_parameters_trifoliate.internode.color;
@@ -592,13 +592,14 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.leaf.pitch.normalDistribution(0, 10);
     phytomer_parameters_trifoliate.leaf.yaw = 0;
     phytomer_parameters_trifoliate.leaf.roll.normalDistribution(0, 10);
-    phytomer_parameters_trifoliate.leaf.leaflet_offset = 0.3;
+    phytomer_parameters_trifoliate.leaf.leaflet_offset = 0.25;
     phytomer_parameters_trifoliate.leaf.leaflet_scale = 0.9;
     phytomer_parameters_trifoliate.leaf.prototype_function = CowpeaLeafPrototype_trifoliate;
-    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.06,0.08);
+//    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.09,0.12);
+    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.04,0.05);
 
-    phytomer_parameters_trifoliate.peduncle.length = 0.2;
-    phytomer_parameters_trifoliate.peduncle.radius = 0.002;
+    phytomer_parameters_trifoliate.peduncle.length = 0.17;
+    phytomer_parameters_trifoliate.peduncle.radius = 0.0025;
     phytomer_parameters_trifoliate.peduncle.pitch = 0;
     phytomer_parameters_trifoliate.peduncle.roll = 90;
     phytomer_parameters_trifoliate.peduncle.curvature = 200;
@@ -608,11 +609,11 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.inflorescence.flowers_per_rachis.uniformDistribution(2, 3);
     phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.;
     phytomer_parameters_trifoliate.inflorescence.flower_arrangement_pattern = "opposite";
-    phytomer_parameters_trifoliate.inflorescence.pitch = 25;
-    phytomer_parameters_trifoliate.inflorescence.roll = 0;
+    phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50,70);
+    phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-90,90);
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.02;
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = CowpeaFlowerPrototype;
-    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale = 0.045;
+    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.02,0.025);
     phytomer_parameters_trifoliate.inflorescence.fruit_prototype_function = CowpeaFruitPrototype;
     phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.,0.5);
 
@@ -625,7 +626,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_unifoliate.petiole.radius = 0.001;
     phytomer_parameters_unifoliate.petiole.pitch.uniformDistribution(60,80);
     phytomer_parameters_unifoliate.leaf.leaves_per_petiole = 1;
-    phytomer_parameters_unifoliate.leaf.prototype_scale = 0.04;
+    phytomer_parameters_unifoliate.leaf.prototype_scale = 0.02;
     phytomer_parameters_unifoliate.leaf.pitch.uniformDistribution(-10, 10);
     phytomer_parameters_unifoliate.leaf.prototype_function = CowpeaLeafPrototype_unifoliate;
 
@@ -641,8 +642,8 @@ void PlantArchitecture::initializeCowpeaShoots() {
     shoot_parameters_trifoliate.elongation_rate = 0.02;
     shoot_parameters_trifoliate.girth_growth_rate = 1.5;
     shoot_parameters_trifoliate.gravitropic_curvature = 100;
-    shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
-    shoot_parameters_trifoliate.child_internode_length_max = 0.03;
+    shoot_parameters_trifoliate.vegetative_bud_break_time = 4;
+    shoot_parameters_trifoliate.child_internode_length_max = 0.04;
     shoot_parameters_trifoliate.child_internode_length_decay_rate = 0;
     shoot_parameters_trifoliate.child_internode_length_min = 0.0;
     shoot_parameters_trifoliate.internode_radius_max = 0.002;
@@ -651,8 +652,8 @@ void PlantArchitecture::initializeCowpeaShoots() {
     shoot_parameters_trifoliate.flowers_require_dormancy = false;
     shoot_parameters_trifoliate.growth_requires_dormancy = false;
     shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.5;
-    shoot_parameters_trifoliate.flower_bud_break_probability = 0.2;
-    shoot_parameters_trifoliate.fruit_set_probability = 0.4;
+    shoot_parameters_trifoliate.flower_bud_break_probability = 0.5;
+    shoot_parameters_trifoliate.fruit_set_probability = 0.3;
     shoot_parameters_trifoliate.defineChildShootTypes({"trifoliate"},{1.0});
     shoot_parameters_trifoliate.max_nodes = 20;
 
@@ -687,7 +688,7 @@ uint PlantArchitecture::buildCowpeaPlant(const helios::vec3 &base_position, floa
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 10, 1, 1, 2, 100);
+    setPlantPhenologicalThresholds(plantID, 0, 12, 1, 1, 1, 100);
 
     return plantID;
 
