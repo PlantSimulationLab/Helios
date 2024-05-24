@@ -83,82 +83,84 @@ std::vector<uint> CameraCalibration::addDefaultCheckerboard(const helios::vec3 &
 
 }
 
-std::vector<uint> CameraCalibration::addColorboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad,
-                                      const std::vector<std::vector<helios::RGBcolor>> &colorassignment, const float patchsize){
+std::vector<uint> CameraCalibration::addColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad, const std::vector<std::vector<helios::RGBcolor>> &colorassignment, const std::vector<std::vector<std::string>> &spectrumassignment) {
+
+    uint Nrow;
+    uint Ncol;
+    if( !colorassignment.empty() ){
+        Nrow=colorassignment.size();
+        Ncol=colorassignment.back().size();
+    }else if( !spectrumassignment.empty() ) {
+        Nrow = spectrumassignment.size();
+        Ncol = spectrumassignment.back().size();
+    }else{
+        helios_runtime_error("ERROR (CameraCalibration::addColorboard): No color or spectrum assignment provided.");
+    }
+
     std::vector<uint> UUIDs;
-    helios::vec2 boardfullsize;
-    boardfullsize.x=float(colorassignment.size());
-    boardfullsize.y=float(colorassignment.back().size());
     uint UUID;
-    for (int irow=0; float(irow) < boardfullsize.y; irow+=1){
-        for (int icolumn=0; float(icolumn) < boardfullsize.x; icolumn+=1){
+    for (int irow=0; irow < Nrow; irow++){
+        for (int icolumn=0; icolumn < Ncol; icolumn++){
 
-            float xp = centrelocation.x-patchsize*(float(boardfullsize.x)-1)/2+patchsize*float(icolumn);
-            float yp = centrelocation.y-patchsize*(float(boardfullsize.y)-1)/2+patchsize*float(irow);
+            float xp = centrelocation.x-patchsize*(float(Ncol)-1)/2.f+patchsize*float(icolumn);
+            float yp = centrelocation.y+patchsize*(float(Nrow)-1)/2.f-patchsize*float(irow);
 
-            UUID = context->addPatch(make_vec3(xp,yp,centrelocation.z),make_vec2(patchsize,patchsize),nullrotation,colorassignment.at(icolumn).at(irow));
-            UUIDs.push_back(UUID); //get UUIDs
+            if( !colorassignment.empty() ) {
+                if( irow>=colorassignment.size() || icolumn>=colorassignment.at(irow).size() ){
+                    helios_runtime_error("ERROR (CameraCalibration::addColorboard): Dimensions of color assignment array are not consistent. This should be a square matrix.");
+                }
+                UUID = context->addPatch(make_vec3(xp, yp, centrelocation.z), make_vec2(patchsize, patchsize), nullrotation, colorassignment.at(irow).at(icolumn));
+            }else{
+                UUID = context->addPatch(make_vec3(xp, yp, centrelocation.z), make_vec2(patchsize, patchsize), nullrotation);
+            }
+            context->setPrimitiveData(UUID, "twosided_flag", uint(0));
+            UUIDs.push_back(UUID);
+
+            if( !spectrumassignment.empty() ){
+                if( irow>=spectrumassignment.size() || icolumn>=spectrumassignment.at(irow).size() ){
+                    helios_runtime_error("ERROR (CameraCalibration::addColorboard): Dimensions of spectrum assignment array are not consistent. This should be a square matrix.");
+                }else if( !context->doesGlobalDataExist(spectrumassignment.at(irow).at(icolumn).c_str()) ){
+                    helios_runtime_error("ERROR (CameraCalibration::addColorboard): Spectrum assignment label of """ + spectrumassignment.at(irow).at(icolumn) + """ does not exist in global data.");
+                }
+                context->setPrimitiveData( UUID, "reflectivity_spectrum", spectrumassignment.at(irow).at(icolumn));
+            }
+
         }
     }
 
-    context->rotatePrimitive(UUIDs,rotationrad.x, make_vec3(1,0,0));  //rotate color board
-    context->rotatePrimitive(UUIDs,rotationrad.y, make_vec3(0,1,0));
-    context->rotatePrimitive(UUIDs,rotationrad.z, make_vec3(0,0,1));
+    context->rotatePrimitive(UUIDs,rotationrad.x, "x");  //rotate color board
+    context->rotatePrimitive(UUIDs,rotationrad.y, "y");
+    context->rotatePrimitive(UUIDs,rotationrad.z, "z");
     UUIDs_colorboard = UUIDs;
     return UUIDs;
 
 }
 
-// Set reflectivity for a specific UUID
-void CameraCalibration::setColorboardReflectivity(const uint &UUID, const std::string &filename, const std::string &labelname) {
-    std::vector<vec2> spectraldata;
-    CameraCalibration::loadXMLlabeldata(filename,labelname,spectraldata);
-    context->setPrimitiveData(UUID, "reflectivity_spectrum", labelname);
-    context->setPrimitiveData(UUID, "reflectivity_spectrum_raw", labelname+"_raw");
-    context->setPrimitiveData(UUID, "transmissivity_spectrum", "");
-    context->setPrimitiveData(UUID, "twosided_flag", uint(0) );
-    context->setGlobalData(labelname.c_str(),HELIOS_TYPE_VEC2,spectraldata.size(),&spectraldata[0]);
-    context->setGlobalData((labelname+"_raw").c_str(),HELIOS_TYPE_VEC2,spectraldata.size(),&spectraldata[0]);
-}
+//void CameraCalibration::setColorboardReflectivity(const uint &UUID, const std::string &filename, const std::string &labelname) {
+//    //\todo this needs to be updated
+//    std::vector<vec2> spectraldata;
+//    CameraCalibration::loadXMLlabeldata(filename,labelname,spectraldata);
+//    context->setPrimitiveData(UUID, "reflectivity_spectrum", labelname);
+//    context->setPrimitiveData(UUID, "reflectivity_spectrum_raw", labelname+"_raw");
+//    context->setPrimitiveData(UUID, "transmissivity_spectrum", "");
+//    context->setPrimitiveData(UUID, "twosided_flag", uint(0) );
+//    context->setGlobalData(labelname.c_str(),HELIOS_TYPE_VEC2,spectraldata.size(),&spectraldata[0]);
+//    context->setGlobalData((labelname+"_raw").c_str(),HELIOS_TYPE_VEC2,spectraldata.size(),&spectraldata[0]);
+//}
 
 // Add default color board (DKC-RPO) with spectral reflectivity values
-std::vector<uint> CameraCalibration::addDefaultColorboard(const helios::vec3 &centrelocation, const helios::vec3 &rotationrad, float patchsize){
+std::vector<uint> CameraCalibration::addDefaultColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad) {
 
     if (!UUIDs_colorboard.empty()){
         context->deletePrimitive(UUIDs_colorboard);
-        std::cout << "WARNING: Default color board has been reset"<< std::endl;
+        std::cout << "WARNING (CameraCalibration::addDefaultColorboard): Existing colorboard has been cleared in order to add default colorboard."<< std::endl;
     }
 
-    std::vector<uint> UUIDs = CameraCalibration::addColorboard(centrelocation, rotationrad ,colorassignment_default,patchsize);
+    context->loadXML( "plugins/radiation/spectral_data/color_board/DGK_DKK_colorboard.xml", true);
 
-    CameraCalibration::setDefaultColorBoardSpectra();
+    std::vector<uint> UUIDs = CameraCalibration::addColorboard(centrelocation, patchsize, rotationrad, colorassignment_default, spectrumassignment_default);
 
     return UUIDs;
-}
-
-void CameraCalibration::setDefaultColorBoardSpectra(){
-
-    uint colornumber=colorassignment_default.size()*colorassignment_default.at(0).size();
-    std::string numberstr;
-    std::vector<vec2> spectraldata;
-    std::string filename;
-    std::string labelname;
-
-    // Color board spectra XML file ID
-    // white to black:  1,  2,  3,  4,  5,  6
-    // basic colors:    7,  8,  9, 10, 11, 12
-    // bottom colors:   13, 14, 15, 16, 17, 18
-
-    for (uint UUID:UUIDs_colorboard){
-        numberstr = std::to_string(colornumber);
-        if (numberstr.size() < 2) {
-            numberstr = "0" + numberstr;
-        }
-        filename= "plugins/radiation/spectral_data/color_board/ColorReference_"+numberstr+".xml";
-        labelname= "ColorReference_"+numberstr;
-        CameraCalibration::setColorboardReflectivity(UUID, filename, labelname);
-        colornumber=colornumber-1;
-    }
 }
 
 std::vector<uint> CameraCalibration::getColorBoardUUIDs(){

@@ -8513,151 +8513,166 @@ float Context::sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const{
 
 std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, float filter_value, const std::string &comparator ){
 
-  if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
-    helios_runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
-  }
-
-  std::vector<uint> UUIDs_out = UUIDs;
-  for( int p=UUIDs.size()-1; p>=0; p-- ){
-    uint UUID = UUIDs_out.at(p);
-    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_FLOAT ){
-      float data;
-      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
-      if( comparator=="==" && data==filter_value ){
-        continue;
-      }else if ( comparator==">" && data>filter_value ) {
-        continue;
-      }else if ( comparator=="<" && data<filter_value ){
-        continue;
-      }else if ( comparator==">=" && data>=filter_value ){
-        continue;
-      }else if ( comparator=="<=" && data<=filter_value ){
-        continue;
-      }
-
-      std::swap( UUIDs_out.at(p),UUIDs_out.back() );
-      UUIDs_out.pop_back();
+    if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+        helios_runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
     }
-  }
 
-  return UUIDs_out;
+    std::vector<uint> UUIDs_out = UUIDs;
+    for( int p=UUIDs.size()-1; p>=0; p-- ){
+        uint UUID = UUIDs_out.at(p);
+        if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_FLOAT ){
+            float data;
+            getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+            if( comparator=="==" && data==filter_value ){
+                continue;
+            }else if ( comparator==">" && data>filter_value ) {
+                continue;
+            }else if ( comparator=="<" && data<filter_value ){
+                continue;
+            }else if ( comparator==">=" && data>=filter_value ){
+                continue;
+            }else if ( comparator=="<=" && data<=filter_value ){
+                continue;
+            }
+
+            std::swap( UUIDs_out.at(p),UUIDs_out.back() );
+            UUIDs_out.pop_back();
+        }else{
+            std::swap(UUIDs_out.at(p), UUIDs_out.back());
+            UUIDs_out.pop_back();
+        }
+    }
+
+    return UUIDs_out;
 
 }
 
 std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, double filter_value, const std::string &comparator ){
 
-  if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
-    helios_runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
-  }
-
-  std::vector<uint> UUIDs_out = UUIDs;
-  for( int p=UUIDs.size()-1; p>=0; p-- ){
-    uint UUID = UUIDs_out.at(p);
-    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_DOUBLE ){
-      double data;
-      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
-      if( comparator=="==" && data==filter_value ){
-        continue;
-      }else if ( comparator==">" && data>filter_value ) {
-        continue;
-      }else if ( comparator=="<" && data<filter_value ){
-        continue;
-      }else if ( comparator==">=" && data>=filter_value ){
-        continue;
-      }else if ( comparator=="<=" && data<=filter_value ){
-        continue;
-      }
-
-      std::swap( UUIDs_out.at(p),UUIDs_out.back() );
-      UUIDs_out.pop_back();
+    if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+        helios_runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
     }
-  }
 
-  return UUIDs_out;
+    std::vector<uint> UUIDs_out = UUIDs;
+    for( int p=UUIDs.size()-1; p>=0; p-- ){
+        uint UUID = UUIDs_out.at(p);
+        if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_DOUBLE ){
+            double data;
+            getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+            if( comparator=="==" && data==filter_value ){
+                continue;
+            }else if ( comparator==">" && data>filter_value ) {
+                continue;
+            }else if ( comparator=="<" && data<filter_value ){
+                continue;
+            }else if ( comparator==">=" && data>=filter_value ){
+                continue;
+            }else if ( comparator=="<=" && data<=filter_value ){
+                continue;
+            }
+
+            std::swap( UUIDs_out.at(p),UUIDs_out.back() );
+            UUIDs_out.pop_back();
+        }else{
+            std::swap(UUIDs_out.at(p), UUIDs_out.back());
+            UUIDs_out.pop_back();
+        }
+    }
+
+    return UUIDs_out;
 
 }
 
 std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, int filter_value, const std::string &comparator ){
 
-  if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
-    helios_runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
-  }
-
-  std::vector<uint> UUIDs_out = UUIDs;
-  for( int p=UUIDs.size()-1; p>=0; p-- ){
-    uint UUID = UUIDs_out.at(p);
-    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_INT ){
-      int data;
-      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
-      if( comparator=="==" && data==filter_value ){
-        continue;
-      }else if ( comparator==">" && data>filter_value ) {
-        continue;
-      }else if ( comparator=="<" && data<filter_value ){
-        continue;
-      }else if ( comparator==">=" && data>=filter_value ){
-        continue;
-      }else if ( comparator=="<=" && data<=filter_value ){
-        continue;
-      }
-
-      std::swap( UUIDs_out.at(p),UUIDs_out.back() );
-      UUIDs_out.pop_back();
+    if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+        helios_runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
     }
-  }
 
-  return UUIDs_out;
+    std::vector<uint> UUIDs_out = UUIDs;
+    for( int p=UUIDs.size()-1; p>=0; p-- ){
+        uint UUID = UUIDs_out.at(p);
+        if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_INT ){
+            int data;
+            getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+            if( comparator=="==" && data==filter_value ){
+                continue;
+            }else if ( comparator==">" && data>filter_value ) {
+                continue;
+            }else if ( comparator=="<" && data<filter_value ){
+                continue;
+            }else if ( comparator==">=" && data>=filter_value ){
+                continue;
+            }else if ( comparator=="<=" && data<=filter_value ){
+                continue;
+            }
+
+            std::swap( UUIDs_out.at(p),UUIDs_out.back() );
+            UUIDs_out.pop_back();
+        }else{
+            std::swap(UUIDs_out.at(p), UUIDs_out.back());
+            UUIDs_out.pop_back();
+        }
+    }
+
+    return UUIDs_out;
 
 }
 
 std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, uint filter_value, const std::string &comparator ){
 
-  if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
-    helios_runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
-  }
-
-  std::vector<uint> UUIDs_out = UUIDs;
-  for( int p=UUIDs.size()-1; p>=0; p-- ){
-    uint UUID = UUIDs_out.at(p);
-    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_UINT ){
-      uint data;
-      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
-      if( comparator=="==" && data==filter_value ){
-        continue;
-      }else if ( comparator==">" && data>filter_value ) {
-        continue;
-      }else if ( comparator=="<" && data<filter_value ){
-        continue;
-      }else if ( comparator==">=" && data>=filter_value ){
-        continue;
-      }else if ( comparator=="<=" && data<=filter_value ){
-        continue;
-      }
-
-      std::swap( UUIDs_out.at(p),UUIDs_out.back() );
-      UUIDs_out.pop_back();
+    if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+        helios_runtime_error("ERROR (Context::filterPrimitivesByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
     }
-  }
 
-  return UUIDs_out;
+    std::vector<uint> UUIDs_out = UUIDs;
+    for( int p=UUIDs.size()-1; p>=0; p-- ){
+        uint UUID = UUIDs_out.at(p);
+        if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_UINT ){
+            uint data;
+            getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+            if( comparator=="==" && data==filter_value ){
+                continue;
+            }else if ( comparator==">" && data>filter_value ) {
+                continue;
+            }else if ( comparator=="<" && data<filter_value ){
+                continue;
+            }else if ( comparator==">=" && data>=filter_value ){
+                continue;
+            }else if ( comparator=="<=" && data<=filter_value ){
+                continue;
+            }
+
+            std::swap( UUIDs_out.at(p),UUIDs_out.back() );
+            UUIDs_out.pop_back();
+        }else{
+            std::swap(UUIDs_out.at(p), UUIDs_out.back());
+            UUIDs_out.pop_back();
+        }
+    }
+
+    return UUIDs_out;
 
 }
 
 std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, const std::string &filter_value ){
 
-  std::vector<uint> UUIDs_out = UUIDs;
-  for( int p=UUIDs.size()-1; p>=0; p-- ){
-    uint UUID = UUIDs_out.at(p);
-    if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_STRING ){
-      std::string data;
-      getPrimitiveData(UUID,primitive_data_label.c_str(),data);
-      if( data!=filter_value ) {
-        std::swap(UUIDs_out.at(p), UUIDs_out.back());
-        UUIDs_out.pop_back();
-      }
+    std::vector<uint> UUIDs_out = UUIDs;
+    for( int p=UUIDs.size()-1; p>=0; p-- ){
+        uint UUID = UUIDs_out.at(p);
+        if( doesPrimitiveDataExist(UUID,primitive_data_label.c_str()) && getPrimitiveDataType(UUID,primitive_data_label.c_str())==HELIOS_TYPE_STRING ){
+            std::string data;
+            getPrimitiveData(UUID,primitive_data_label.c_str(),data);
+            if( data!=filter_value ) {
+                std::swap(UUIDs_out.at(p), UUIDs_out.back());
+                UUIDs_out.pop_back();
+            }
+        }else{
+            std::swap(UUIDs_out.at(p), UUIDs_out.back());
+            UUIDs_out.pop_back();
+        }
     }
-  }
 
-  return UUIDs_out;
+    return UUIDs_out;
 
 }

@@ -86,29 +86,23 @@ RT_PROGRAM void closest_hit_direct(){
 
         float3 ray_origin = ray.origin + t_hit*ray.direction;
 
-        float eps=0;
+        float eps=1e-5;
 
         if( prd.periodic_depth<9 ){
-            if( periodic_flag.x==1 ){
 
-                float2 xbounds = make_float2(bbox_vertices[make_uint2(0,0)].x,bbox_vertices[make_uint2(1,1)].x);
-                if(ray_origin.x==xbounds.x ){//-x facing boundary
-                    ray_origin.x = xbounds.y - eps;
-                }else if( ray_origin.x==xbounds.y ){//+x facing boundary
-                    ray_origin.x = xbounds.x + eps;
-                }
+            float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+            float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
 
+            if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps ) {//-x facing boundary
+                ray_origin.x = xbounds.y - eps;
+            } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
+                ray_origin.x = xbounds.x + eps;
+            }else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+                ray_origin.y = ybounds.y - eps;
+            } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
+                ray_origin.y = ybounds.x + eps;
             }
-            if( periodic_flag.y==1 ){
 
-                float2 ybounds = make_float2(bbox_vertices[make_uint2(0,0)].y,bbox_vertices[make_uint2(1,1)].y);
-                if( ray_origin.y==ybounds.x ){//-y facing boundary
-                    ray_origin.y = ybounds.y - eps;
-                }else if( ray_origin.y==ybounds.y ){//+y facing boundary
-                    ray_origin.y = ybounds.x + eps;
-                }
-
-            }
         }
 
         float3 ray_direction = ray.direction;
@@ -133,30 +127,23 @@ RT_PROGRAM void closest_hit_diffuse() {
 
         float3 ray_origin = ray.origin + t_hit * ray.direction;
 
-        float eps = 0;
+        float eps = 1e-5;
 
         if (prd.periodic_depth < 9) {
-            if (periodic_flag.x == 1) {
 
-                float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+            float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+            float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
 
-                if (ray_origin.x == xbounds.x) {//-x facing boundary
-                    ray_origin.x = xbounds.y - eps;
-                } else if (ray_origin.x == xbounds.y) {//+x facing boundary
-                    ray_origin.x = xbounds.x + eps;
-                }
-
+            if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps ) {//-x facing boundary
+                ray_origin.x = xbounds.y - eps;
+            } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
+                ray_origin.x = xbounds.x + eps;
+            }else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+                ray_origin.y = ybounds.y - eps;
+            } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
+                ray_origin.y = ybounds.x + eps;
             }
-            if (periodic_flag.y == 1) {
 
-                float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
-                if (ray_origin.y == ybounds.x) {//-y facing boundary
-                    ray_origin.y = ybounds.y - eps;
-                } else if (ray_origin.y == ybounds.y) {//+y facing boundary
-                    ray_origin.y = ybounds.x + eps;
-                }
-
-            }
         }
 
         float3 ray_direction = ray.direction;
@@ -301,30 +288,32 @@ RT_PROGRAM void closest_hit_camera() {
 
         float3 ray_origin = ray.origin + t_hit * ray.direction;
 
-        float eps = 0;
+        float eps = 1e-5;
 
         if (prd.periodic_depth < 9) {
-            if (periodic_flag.x == 1) {
 
-                float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+            float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+            float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
 
-                if (ray_origin.x == xbounds.x) {//-x facing boundary
-                    ray_origin.x = xbounds.y - eps;
-                } else if (ray_origin.x == xbounds.y) {//+x facing boundary
-                    ray_origin.x = xbounds.x + eps;
-                }
-
+            if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps ) {//-x facing boundary
+                ray_origin.x = xbounds.y - eps;
+            } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
+                ray_origin.x = xbounds.x + eps;
+            }else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+                ray_origin.y = ybounds.y - eps;
+            } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
+                ray_origin.y = ybounds.x + eps;
             }
-            if (periodic_flag.y == 1) {
+//            if ( periodic_flag.x == 1 && ray_origin.x==xbounds.x ) {//-x facing boundary
+//                ray_origin.x = xbounds.y - eps;
+//            } else if ( periodic_flag.x == 1 && ray_origin.x==xbounds.y ) {//+x facing boundary
+//                ray_origin.x = xbounds.x + eps;
+//            }else if ( periodic_flag.y == 1 && ray_origin.y==ybounds.x ) {//-y facing boundary
+//                ray_origin.y = ybounds.y - eps;
+//            } else if ( periodic_flag.y == 1 && ray_origin.y==ybounds.y ) {//+y facing boundary
+//                ray_origin.y = ybounds.x + eps;
+//            }
 
-                float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
-                if (ray_origin.y == ybounds.x) {//-y facing boundary
-                    ray_origin.y = ybounds.y - eps;
-                } else if (ray_origin.y == ybounds.y) {//+y facing boundary
-                    ray_origin.y = ybounds.x + eps;
-                }
-
-            }
         }
 
         float3 ray_direction = ray.direction;
@@ -451,30 +440,23 @@ RT_PROGRAM void closest_hit_pixel_label() {
 
         float3 ray_origin = ray.origin + t_hit * ray.direction;
 
-        float eps = 0;
+        float eps = 1e-5;
 
         if (prd.periodic_depth < 9) {
-            if (periodic_flag.x == 1) {
 
-                float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+            float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+            float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
 
-                if (ray_origin.x == xbounds.x) {//-x facing boundary
-                    ray_origin.x = xbounds.y - eps;
-                } else if (ray_origin.x == xbounds.y) {//+x facing boundary
-                    ray_origin.x = xbounds.x + eps;
-                }
-
+            if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps ) {//-x facing boundary
+                ray_origin.x = xbounds.y - eps;
+            } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
+                ray_origin.x = xbounds.x + eps;
+            }else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+                ray_origin.y = ybounds.y - eps;
+            } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
+                ray_origin.y = ybounds.x + eps;
             }
-            if (periodic_flag.y == 1) {
 
-                float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
-                if (ray_origin.y == ybounds.x) {//-y facing boundary
-                    ray_origin.y = ybounds.y - eps;
-                } else if (ray_origin.y == ybounds.y) {//+y facing boundary
-                    ray_origin.y = ybounds.x + eps;
-                }
-
-            }
         }
 
         float3 ray_direction = ray.direction;

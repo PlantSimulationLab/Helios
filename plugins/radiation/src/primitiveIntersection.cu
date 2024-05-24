@@ -118,7 +118,7 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 
 	  float amag = d_magnitude(a);
 	  float bmag = d_magnitude(b);
-	  float2 uv = make_float2( 1.f-ddota/amag/amag, ddotb/bmag/bmag );
+	  float2 uv = make_float2( ddota/amag/amag, 1.f-ddotb/bmag/bmag );
 	  int2 sz = masksize[ maskID[ID] ];
 	  uint3 ind;
 	  if( uvID[ID]==-1 ){ //does not have custom (u,v) coordinates
@@ -127,8 +127,6 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 	    
 	    float2 uvmin = uvdata[ make_uint2(1,uvID[ID]) ];
 	    float2 duv;
-	    //duv.x = uvdata[ make_uint2(1,uvID[ID]) ].x - uvdata[ make_uint2(0,uvID[ID]) ].x;
-	    //duv.y = uvdata[ make_uint2(1,uvID[ID]) ].y - uvdata[ make_uint2(2,uvID[ID]) ].y;
 	    duv.x = uvdata[ make_uint2(0,uvID[ID]) ].x - uvdata[ make_uint2(1,uvID[ID]) ].x;
 	    duv.y = uvdata[ make_uint2(2,uvID[ID]) ].y - uvdata[ make_uint2(1,uvID[ID]) ].y;
 	    
@@ -226,7 +224,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 	  float2 uv2 = uvdata[ make_uint2(2,uvID[ID]) ];
 
 	  float2 uv = uv0 + beta*(uv1-uv0) + gamma*(uv2-uv0);
-//	  uv.x = 1.f-uv.x;
+	  uv.y = 1.f-uv.y;
 
 	  uint3 ind = make_uint3( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)), maskID[ID] );
 	  if( ind.x>=sz.x || ind.y>=sz.y ){

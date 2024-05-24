@@ -1623,3 +1623,20 @@ The radiation model has been re-designed, with the following primary additions:
 - Added synthetic annotation to utilities/run_samples.sh automated testing script.
 - Error fixed in SyntheticAnnotation::setCameraPosition() where arguments were not being correctly assigned.
 - Error fixed in SyntheticAnnotation::render() where the 'outputdir' string needed to be converted to string in the error message.
+
+[1.3.11] 2024-05-24
+
+*Context*
+- Context::filterPrimitivesByData() was not properly filtering out primitives that did not have the specified primitive data field.
+
+*Radiation*
+- Added overloaded version of RadiationModel::scaleSpectrum() that performs scaling in-place without creating new global data.
+- Periodic boundary conditions were not working correctly with the radiation camera.
+- Output radiation images were incorrectly flipped about the vertical axis.
+- There was an error with texture coordinates. For Patches, textures were flipped about the x- and y-directions, and for Triangles, textures were flipped about the y-direction.
+- Combined DGK colorboard spectra in plugins/radiationmodel/spectral_data/color_board/ into a single file named DGK_DKK_colorboard.xml. Also added a JPEG image reference of the colorboard.
+- Added Calibrite ColorChecker colorboard in plugins/radiationmodel/spectral_data/color_board/.
+- ColorCalibration::addColorboard() was changed to accept everything that is needed to fully define the colorboard. Accordingly, ColorCalibration::setColorboardReflectivity() was removed.
+- Argument order of ColorCalibration::addDefaultColorboard() was changed to be consistent with ColorCalibration::addColorboard() and typical Helios convention.
+- Added method to output optional primitive data (reflectivity and transmissivity values).
+- Updated calibrated_CREE6500K_Basler-acA2500-20gc_spectral_response_[*] spectra in the camera library to be properly normalized.

@@ -52,23 +52,33 @@ void RadiationModel::enableMessages() {
     message_flag=true;
 }
 
+void RadiationModel::optionalOutputPrimitiveData( const char* label ){
+
+    if( strcmp(label,"reflectivity")==0 || strcmp(label,"transmissivity")==0 ){
+        output_prim_data.emplace_back(label );
+    }else{
+        std::cout << "WARNING (RadiationModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+    }
+
+}
+
 void RadiationModel::setDirectRayCount( const std::string &label, size_t N ){
     if( !doesBandExist(label) ){
-        helios_runtime_error("ERROR (RadiationModel::setDirectRayCount): Cannot set ray count for band " + label + " because it is not a valid band.");
+        helios_runtime_error("ERROR (RadiationModel::setDirectRayCount): Cannot set ray count for band """ + label + """ because it is not a valid band.");
     }
     radiation_bands.at(label).directRayCount = N;
 }
 
 void RadiationModel::setDiffuseRayCount( const std::string &label, size_t N ){
     if( !doesBandExist(label) ){
-        helios_runtime_error("ERROR (RadiationModel::setDiffuseRayCount): Cannot set ray count for band " + label + " because it is not a valid band." );
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseRayCount): Cannot set ray count for band """ + label + """ because it is not a valid band." );
     }
     radiation_bands.at(label).diffuseRayCount = N;
 }
 
 void RadiationModel::setDiffuseRadiationFlux( const std::string &label, float flux ){
     if( !doesBandExist(label) ){
-        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationFlux): Cannot set flux value for band " + label + " because it is not a valid band." );
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationFlux): Cannot set flux value for band """ + label + """ because it is not a valid band." );
     }
     radiation_bands.at(label).diffuseFlux = flux;
 }
@@ -79,7 +89,7 @@ void RadiationModel::setDiffuseRadiationExtinctionCoeff(const std::string &label
 
 void RadiationModel::setDiffuseRadiationExtinctionCoeff( const std::string &label, float K, const vec3 &peak_dir ){
     if( !doesBandExist(label) ){
-        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationExtinctionCoeff): Cannot set diffuse extinction value for band " + label + " because it is not a valid band.");
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationExtinctionCoeff): Cannot set diffuse extinction value for band """ + label + """ because it is not a valid band.");
     }
 
     vec3 dir = peak_dir;
@@ -200,7 +210,7 @@ bool RadiationModel::doesBandExist( const std::string &label ) const{
 void RadiationModel::disableEmission( const std::string &label ){
 
     if( !doesBandExist(label) ){
-        helios_runtime_error("ERROR (RadiationModel::disableEmission): Cannot disable emission for band " + label + " because it is not a valid band." );
+        helios_runtime_error("ERROR (RadiationModel::disableEmission): Cannot disable emission for band """ + label + """ because it is not a valid band." );
     }
 
     radiation_bands.at(label).emissionFlag = false;
@@ -210,7 +220,7 @@ void RadiationModel::disableEmission( const std::string &label ){
 void RadiationModel::enableEmission( const std::string &label ){
 
     if( !doesBandExist(label) ){
-        helios_runtime_error("ERROR (RadiationModel::enableEmission): Cannot disable emission for band " + label + " because it is not a valid band." );
+        helios_runtime_error("ERROR (RadiationModel::enableEmission): Cannot disable emission for band """ + label + """ because it is not a valid band." );
     }
 
     radiation_bands.at(label).emissionFlag = true;
@@ -410,7 +420,7 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
 void RadiationModel::setSourceFlux( uint source_ID, const std::string &label, float flux ){
 
     if( !doesBandExist(label) ){
-        helios_runtime_error( "ERROR (RadiationModel::setSourceFlux): Cannot add radiation source for band " + label + " because it is not a valid band.");
+        helios_runtime_error( "ERROR (RadiationModel::setSourceFlux): Cannot add radiation source for band """ + label + """ because it is not a valid band.");
     }else if( source_ID >= radiation_sources.size() ){
         helios_runtime_error("ERROR (RadiationModel::setSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
     }else if( flux<0 ){
@@ -429,16 +439,16 @@ void RadiationModel::setSourceFlux(const std::vector<uint> &source_ID, const std
 
 float RadiationModel::getSourceFlux( uint source_ID, const std::string &label )const{
     if( !doesBandExist(label) ){
-        helios_runtime_error( "ERROR (RadiationModel::getSourceFlux): Cannot add radiation source for band " + label + " because it is not a valid band.");
+        helios_runtime_error( "ERROR (RadiationModel::getSourceFlux): Cannot add radiation source for band """ + label + """ because it is not a valid band.");
     }else if( source_ID >= radiation_sources.size() ){
         helios_runtime_error("ERROR (RadiationModel::setSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
     }else if( radiation_sources.at(source_ID).source_fluxes.find(label) == radiation_sources.at(source_ID).source_fluxes.end() ) {
-        helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) + " because radiative band " + label + " does not exist.");
+        helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) + " because radiative band """ + label + """ does not exist.");
     }
 
     if( radiation_sources.at(source_ID).source_fluxes.find(label) == radiation_sources.at(source_ID).source_fluxes.end() ) {
         helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) +
-                " because radiative band " + label + " does not exist.");
+                " because radiative band """ + label + """ does not exist.");
     }else {
         return radiation_sources.at(source_ID).source_fluxes.at(label);
     }
@@ -740,9 +750,9 @@ void RadiationModel::blendSpectra( const std::string &new_spectrum_label, const 
     for( uint i=0; i<spectrum_labels.size(); i++ ) {
 
         if (!context->doesGlobalDataExist(spectrum_labels.at(i).c_str())) {
-            helios_runtime_error("ERROR (RadiationModel::blendSpectra): global data for spectrum " + spectrum_labels.at(i) + " does not exist");
+            helios_runtime_error("ERROR (RadiationModel::blendSpectra): global data for spectrum """ + spectrum_labels.at(i) + """ does not exist");
         } else if (context->getGlobalDataType(spectrum_labels.at(i).c_str()) != HELIOS_TYPE_VEC2) {
-            helios_runtime_error("ERROR (RadiationModel::blendSpectra): global data for spectrum " + spectrum_labels.at(i) + " must have type helios::vec2");
+            helios_runtime_error("ERROR (RadiationModel::blendSpectra): global data for spectrum """ + spectrum_labels.at(i) + """ must have type helios::vec2");
         }
 
 
@@ -852,7 +862,7 @@ helios::vec3 RadiationModel::getSourcePosition( uint source_ID )const {
 void RadiationModel::setScatteringDepth( const std::string &label, uint depth ){
 
     if( !doesBandExist(label) ){
-        helios_runtime_error( "ERROR (RadiationModel::setScatteringDepth): Cannot set scattering depth for band " + label + " because it is not a valid band.");
+        helios_runtime_error( "ERROR (RadiationModel::setScatteringDepth): Cannot set scattering depth for band """ + label + """ because it is not a valid band.");
     }
     radiation_bands.at(label).scatteringDepth = depth;
 
@@ -861,7 +871,7 @@ void RadiationModel::setScatteringDepth( const std::string &label, uint depth ){
 void RadiationModel::setMinScatterEnergy(const std::string &label, uint energy ){
 
     if( !doesBandExist(label) ){
-        helios_runtime_error( "ERROR (setMinScatterEnergy): Cannot set minimum scattering energy for band " + label + " because it is not a valid band.");
+        helios_runtime_error( "ERROR (setMinScatterEnergy): Cannot set minimum scattering energy for band """ + label + """ because it is not a valid band.");
     }
     radiation_bands.at(label).minScatterEnergy = energy;
 
@@ -899,7 +909,7 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
     }else if( resolution.x<=0 || resolution.y<=0 ){
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.");
     }else if( HFOV_degrees<0 || HFOV_degrees>180.f ){
-        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horzontal field of view must be between 0 and 180 degrees.");
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horizontal field of view must be between 0 and 180 degrees.");
     }
 
     RadiationCamera camera(camera_label, band_label, position, lookat, resolution, lens_diameter, sensor_size, focal_plane_distance, HFOV_degrees, antialiasing_samples );
@@ -1065,15 +1075,16 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
 
     RGBcolor pixel_color;
     for (uint j = 0; j < camera_resolution.y; j++) {
-        for (uint i = 0; i < camera_resolution.x; i++) {
+        for (uint i=0; i < camera_resolution.x; i++) {
             if( camera_data.size()==1 ){
                 float c = camera_data.front().at(j * camera_resolution.x + i);
                 pixel_color = make_RGBcolor(c,c,c);
             }else{
                 pixel_color = make_RGBcolor(camera_data.at(0).at(j * camera_resolution.x + i),camera_data.at(1).at(j * camera_resolution.x + i),camera_data.at(2).at(j * camera_resolution.x + i));
             }
+            uint ii = camera_resolution.x - i -1;
             uint jj = camera_resolution.y - j - 1;
-            pixel_data.at(jj * camera_resolution.x + i) = pixel_color;
+            pixel_data.at(jj * camera_resolution.x + ii) = pixel_color;
         }
     }
 
@@ -1921,10 +1932,32 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     helios::vec2 xbounds, ybounds, zbounds;
     context->getDomainBoundingBox( xbounds, ybounds, zbounds );
 
+    if( periodic_flag.x==1 || periodic_flag.y ==1 ) {
+        if (!cameras.empty()) {
+            for (auto &camera: cameras) {
+                vec3 camerapos = camera.second.position;
+                if (camerapos.x < xbounds.x || camerapos.x > xbounds.y || camerapos.y < ybounds.x || camerapos.y > ybounds.y) {
+                    std::cout << "WARNING (RadiationModel::updateGeometry): camera position is outside of the domain bounding box. Disabling periodic boundary conditions." << std::endl;
+                    periodic_flag.x = 0;
+                    periodic_flag.y = 0;
+                    break;
+                }
+                if (camerapos.z < zbounds.x) {
+                    zbounds.x = camerapos.z;
+                }
+                if (camerapos.z > zbounds.y) {
+                    zbounds.y = camerapos.z;
+                }
+            }
+        }
+    }
+
     xbounds.x -= 1e-5;
     xbounds.y += 1e-5;
     ybounds.x -= 1e-5;
     ybounds.y += 1e-5;
+    zbounds.x -= 1e-5;
+    zbounds.y += 1e-5;
 
     std::vector<uint> bbox_UUID;
     int bbox_face_count = 0;
@@ -2200,7 +2233,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                 //get the spectral reflectivity data and store it in surface_spectra to avoid having to load it again
                 if (surface_spectra_rho.find(spectrum_label) == surface_spectra_rho.end() ){
                     if( !context->doesGlobalDataExist(spectrum_label.c_str()) ){
-                        if (message_flag) {
+                        if (message_flag && !spectrum_label.empty() ) {
                             std::cerr << "WARNING (RadiationModel::runBand): Primitive spectral reflectivity \"" << spectrum_label << "\" does not exist. Using default reflectivity of 0..." << std::flush;
                         }
                         std::vector<helios::vec2> data;
@@ -2229,7 +2262,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                 //get the spectral transmissivity data and store it in surface_spectra to avoid having to load it again
                 if (surface_spectra_tau.find(spectrum_label) == surface_spectra_tau.end() ){
                     if( !context->doesGlobalDataExist(spectrum_label.c_str()) ) {
-                        if (message_flag){
+                        if (message_flag && !spectrum_label.empty() ){
                             std::cerr << "WARNING (RadiationModel::runBand): Primitive spectral transmissivity \"" << spectrum_label << "\" does not exist. Using default transmissivity of 0..." << std::flush;
                         }
                         std::vector<helios::vec2> data;
@@ -2512,6 +2545,11 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                     if( rho.at(s).at(u).at(b)!=0 ){
                         scattering_iterations_needed.at(b) = true;
                     }
+                    for( auto &odata : output_prim_data ) {
+                        if ( odata == "reflectivity" ){
+                            context->setPrimitiveData( UUID, ("reflectivity_" + std::to_string(s) + "_" + band).c_str(), rho.at(s).at(u).at(b) );
+                        }
+                    }
 
                 }
                 b++;
@@ -2571,6 +2609,11 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                     }
                     if( tau.at(s).at(u).at(b)!=0 ){
                         scattering_iterations_needed.at(b) = true;
+                    }
+                    for( auto &odata : output_prim_data ) {
+                        if (odata == "transmissivity" ){
+                            context->setPrimitiveData( UUID, ("transmissivity_" + std::to_string(s) + "_" + band).c_str(), tau.at(s).at(u).at(b) );
+                        }
                     }
                 }
                 b++;
@@ -4671,7 +4714,8 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
     bool empty_flag = true;
     for (uint j = 0; j < camera_resolution.y; j++) {
         for (uint i = 0; i < camera_resolution.x; i++) {
-            uint UUID =pixel_UUIDs.at(j * camera_resolution.x + i)-1;
+            uint ii = camera_resolution.x - i -1;
+            uint UUID =pixel_UUIDs.at(j * camera_resolution.x + ii)-1;
             if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID,primitive_data_label.c_str())){
                 HeliosDataType datatype = context->getPrimitiveDataType(UUID,primitive_data_label.c_str());
                 if( datatype == HELIOS_TYPE_FLOAT ){
@@ -4813,7 +4857,8 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
 
     for (int j = 0; j < camera_resolution.y; j++) {
         for (int i = 0; i < camera_resolution.x; i++) {
-            uint UUID =pixel_UUIDs.at(j * camera_resolution.x + i)-1;
+            uint ii = camera_resolution.x - i -1;
+            uint UUID =pixel_UUIDs.at(j * camera_resolution.x + ii)-1;
             if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID,primitive_data_label.c_str())){
 
                 uint labeldata;
@@ -4904,7 +4949,7 @@ void RadiationModel::calibrateCamera(const std::string &originalcameralabel, con
         cameracalibration = &cameracalibration_;
         vec3 centrelocation =make_vec3(0,0,0.2); // Location of color board
         vec3 rotationrad =make_vec3(0,0,1.5705); // Rotation angle of color board
-        cameracalibration->addDefaultColorboard(centrelocation, rotationrad,0.1);
+        cameracalibration->addDefaultColorboard(centrelocation, 0.1, rotationrad);
     }
     vec2 wavelengthrange = make_vec2(-10000,10000);
 
@@ -4941,7 +4986,7 @@ void RadiationModel::calibrateCamera(const std::string &originalcameralabel, con
         std::cout<< "No color board added, use default color calibration." <<std::endl;
         vec3 centrelocation =make_vec3(0,0,0.2); // Location of color board
         vec3 rotationrad =make_vec3(0,0,1.5705); // Rotation angle of color board
-        cameracalibration_.addDefaultColorboard(centrelocation, rotationrad,0.1);
+        cameracalibration_.addDefaultColorboard(centrelocation, 0.1, rotationrad);
         RadiationModel::setCameraCalibration(&cameracalibration_);
     }
 

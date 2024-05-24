@@ -306,6 +306,12 @@ public:
     //! Enable status messages
     void enableMessages();
 
+    //! Add optional output primitive data values to the Context
+    /**
+        * \param[in] "label" Name of primitive data (e.g., "reflectivity", "transmissivity")
+     */
+    void optionalOutputPrimitiveData( const char* label );
+
     //! Sets variable directRayCount, the number of rays to be used in direct radiation model.
     /**
         \param[in] "N" Number of rays
@@ -1488,7 +1494,6 @@ protected:
     RTvariable      top_object;
     RTacceleration  geometry_acceleration;
 
-    /* OptiX Functions */
 
     //! Flag indicating whether geometry has been built
     /**
@@ -1497,6 +1502,9 @@ protected:
     bool isgeometryinitialized;
 
     std::vector<bool> isbandpropertyinitialized;
+
+    //! Names of additional primitive data to add to the Context
+    std::vector<std::string> output_prim_data;
 
 };
 
