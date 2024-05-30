@@ -836,15 +836,15 @@ public:
     //! Specify the threshold values for plant phenological stages
     /**
      * \param[in] plantID ID of the plant.
-     * \param[in] dd_to_dormancy_break Minimum assimilate pool (mg SC/g DW) required to break dormancy.
-     * \param[in] dd_to_flower_initiation Degree-days from emergence/dormancy required to reach flower creation (closed flower).
-     * \param[in] dd_to_flower_opening Degree-days from flower initiation to flower opening.
-     * \param[in] dd_to_fruit_set Degree-days from flower opening required to reach fruit set (i.e., flower dies and fruit is created).
-     * \param[in] dd_to_fruit_maturity Degree-days from fruit set date required to reach fruit maturity.
-     * \param[in] dd_to_senescence Degree-days from emergence/dormancy required to reach senescence.
+     * \param[in] time_to_dormancy_break Time required to break dormancy.
+     * \param[in] time_to_flower_initiation Time from emergence/dormancy required to reach flower creation (closed flowers).
+     * \param[in] time_to_flower_opening Time from flower initiation to flower opening.
+     * \param[in] time_to_fruit_set Time from flower opening required to reach fruit set (i.e., flower dies and fruit is created).
+     * \param[in] time_to_fruit_maturity Time from fruit set date required to reach fruit maturity.
+     * \param[in] time_to_senescence Time from emergence/dormancy required to reach senescence.
      * \note Any phenological stage can be skipped by specifying a negative threshold value. In this case, the stage will be skipped and the threshold for the next stage will be relative to the previous stage.
      */
-    void setPlantPhenologicalThresholds(uint plantID, float dd_to_dormancy_break, float dd_to_flower_initiation, float dd_to_flower_opening, float dd_to_fruit_set, float dd_to_fruit_maturity, float dd_to_senescence);
+    void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence);
 
     //! Advance plant growth by a specified time interval
     /**

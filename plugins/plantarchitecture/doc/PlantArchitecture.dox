@@ -21,25 +21,54 @@
  </table>
  
  \section PlantArchVarsAndProps Primitive Data
- 
+
+ <!--
+
  \subsection PlantArchInputData Input Primitive Data
 
  <table>
  <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value</th></tr>
  </table>
 
+ -->
+
  \subsection PlantArchOutputData Default Output Primitive Data
 
  <table>
  <tr><th>Primitive Data Label</th><th>Data Type</th><th>Description</th></tr>
- <tr><td>rank</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Rank of shoot primitive belongs to.</td></tr>
+ <tr><td>plantID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Unique identifier of plant the primitive belongs to (used for image labeling).</td></tr>
+ <tr><td>leafID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Unique identifier of leaf the primitive belongs to (used for image labeling).</td></tr>
+ <tr><td>peduncleID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Unique identifier of peduncle the primitive belongs to (used for image labeling). Not defined if there are no peduncles.</td></tr>
+ <tr><td>closedflowerID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Unique identifier of flower (closed) the primitive belongs to (used for image labeling). Not defined if there are no closed flowers.</td></tr>
+ <tr><td>openflowerID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Unique identifier of flower (open) the primitive belongs to (used for image labeling). Not defined if there are no open flowers.</td></tr>
+ <tr><td>fruitID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Unique identifier of fruit the primitive belongs to (used for image labeling). Not defined if there are no fruits.</td></tr>
+ </table>
+
+ \subsection PlantArchOutputObjData Default Output Object Data
+
+ <table>
+    <tr><th>Object Data Label</th><th>Data Type</th><th>Description</th></tr>
+    <tr><td>rank</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Rank of shoot object belongs to.</td></tr>
+    <tr><td>age</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Age of the organ that the object belongs to (e.g., a leaf).</td></tr>
  </table>
 
  \section PlantArchDescription Introduction
 
+ \subsection PlantArchPhytomer The Phytomer: Basic Unit of a plant shoot
+
+ The phytomer is the basic unit of a shoot, and consists of an internode, one or more petioles, leaves, and inflorescence if present. The internode consists of a tube whose base is connected either to a parent shoot if it is the first phytomer along a shoot, or to the end of another phytomer along the same shoot.
+
+ A phytomer can have one or more petioles, which are connected at the end of the internode. Each petiole has one or more leaves.
+
+ At the tip of a growing shoot (i.e., end of the last phytomer on the shoot), there is an apical vegetative bud that can spawn a new phytomer along the same shoot. This is how shoot growth occurs. During a dormant period, one or more apical floral buds can also be created.
+
+ At the base of the petiole, there may be one or more vegetative buds that can develop into a new shoot, and one or more floral buds that can develop into a fruit. The vegetative and floral buds can break into a new shoot/flower in the same growing season, or may need a winter dormancy period before breaking. It is also possible that a bud never breaks and dies. Once a bud breaks it is considered dead.
+
+ \image html phytomer_schematic.jpeg Schematic depiction of a phytomer within a shoot.
+
  \subsection PlantArchCoord Coordinate System
 
- The coordinate system of plant organs is defined with respect to it's parent element (i.e., element it originated from), with it's default orientation being aligned with it's parent's axis. It can then be rotated based on angles (always in radians) of 'pitch', 'yaw', and 'roll' (in that order):
+ The coordinate system of plant organs is defined with respect to it's parent element (i.e., element it originated from), with it's default orientation being aligned with it's parent's axis. It can then be rotated based on angles of 'pitch', 'yaw', and 'roll' (in that order):
 
  <b>Pitch:</b> rotation angle formed between the axis of the element and it's parent's axis.
 
@@ -85,7 +114,7 @@ Available distributions are listed below
 
 The geometry of plant leaves, flowers, and fruit are defined based on `prototype' models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a \ref Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.
 
-The prototype functions must return an object ID (uint) corresponding to the compound object created in the function. Arguments to the prototype function vary based on organ type:
+The prototype functions must return an object ID (\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly) corresponding to the compound object created in the function. Arguments to the prototype function vary based on organ type:
 
 Leaves
 ~~~~~~
@@ -107,33 +136,51 @@ The arguments do not necessarily need to be used inside the prototype function, 
 The size, position, and orientation of the prototype when it is created needs to follow a specific convention.
 
 - Prototype size: The prototype should have a unit length, and the size of the organ is set by scaling the prototype in the prototype function. This is done to allow for consistent scaling of the organ based on the parameters of the phytomer and petiole.
-- Prototype origin: The base of the organ should be located at the origin (0,0,0). For a leaf, the base is the point at which the leaf meets the petiole. For a flow or fruit, this is the point at which the organ meets its supporting structure or rachis.
+- Prototype origin: The base of the organ should be located at the origin (0,0,0). For a leaf, the base is the point at which the leaf meets the petiole. For a flow or fruit, this is the point at which the organ meets its supporting structure (peduncle).
 - Prototype orientation: The organ should be oriented such that its centerline axis is along the positive x-axis, with the positive z-axis pointing upward from the base of the organ.
 
 \image html prototype_coordinate_schematic.png
 
-A generic leaf prototype function is given below, which simply loads a model from an OBJ file.
+A simple leaf prototype function is given below, which simply loads a model from an OBJ file.
 
 ~~~~~~
-uint buildGenericLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
-    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+uint someLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondLeaf.obj", make_vec3(0,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     return context_ptr->addPolymeshObject( UUIDs );
-    }
+}
 ~~~~~~
 
- A generic leaf prototype function is given in the file \ref Assets.cpp, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves.
+ A generic leaf prototype function is given in the file \ref Assets.cpp, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves. The advantage of this approach is that each leaf will have random variation, since the leaf is generated procedurally. The disadvantage is that it may not look as detailed as a leaf created outside Helios (e.g., in Blender) that has detailed sculpting of leaf texture, for example.
 
- \section PlantArchPhytomer Defining the Phytomer and its Parameters
+ ~~~~~~
+ uint someLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
 
- The phytomer is the basic unit of a shoot, and consists of an internode, one or more petioles, leaves, and inflorescence if present. The internode consists of a tube whose base is connected either to a parent shoot if it is the first phytomer along a shoot, or to the end of another phytomer along the same shoot.
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/AlmondLeaf.png";
 
- A phytomer can have one or more petioles, which are connected at the end of the internode. Each petiole has one or more leaves.
+    float leaf_aspect = 0.4; //ratio of leaf width to leaf length
 
- At the base of the petiole, there may be one or more vegetative buds that can develop into a new shoot, and one or more floral buds that can develop into a fruit. The vegetative and floral buds can break into a new shoot/flower in the same growing season, or may need a winter dormancy period before breaking, depending on the value of the parameters \htmlonly<font face="courier" color="blue">growth_requires_dormancy</font>\endhtmlonly and \htmlonly<font face="courier" color="blue">flowers_require_dormancy</font>\endhtmlonly in the \ref ShootParameters structure. It is also possible that a bud never breaks, and once a bud breaks it is considered dead.
+    float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
- At the tip of a growing shoot (i.e., end of the last phytomer on the shoot), there is an apical vegetative bud that can spawn a new phytomer along the same shoot. During a dormant period, one or more apical floral buds can also be created.
+    float x_curvature = -0.1; //curvature factor along x-direction. (+curves upward, -curved downward)
+    float y_curvature = 0.4; //curvature factor along y-direction. (+curves upward, -curved downward)
 
-\image html phytomer_schematic.jpeg Schematic depiction of a phytomer within a shoot.
+    float petiole_roll = 0.f; //creates a roll of the leaf near its base to more smoothly meet the petiole
+
+    //parameters for leaf wave/wrinkles
+    float wave_period = 0.1f; //period factor of leaf waves
+    float wave_amplitude = 0.03f; // amplitude of leaf waves
+
+    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, petiole_roll, wave_period, wave_amplitude);
+
+    return objID;
+ }
+ ~~~~~~
+
+ \section PlantArchPhytomerParams Defining the Phytomer and its Parameters
+
+ Phytomers are defined by a set of parameters that specify its geometry. These parameters are stored in a data structure called \ref PhytomerParameters. The phytomer parameters are parameters that are constant (aside from randomization), and are usually species-specific.
+
+ The table below lists the parameters that define the geometry of the phytomer, and their descriptions. There are some parameters that are notably absent, such as the internode length and radius. Since these parameters vary with age and position along the shoot, these are considered to be parameters of the shoot and not the phytomer. Shoot parameters are described below in \ref PlantArchShoot.
 
 | Parameter | Type | Units | Description |
 | ------| ------ | ------ | ------ |
@@ -183,9 +230,13 @@ uint buildGenericLeafPrototype( helios::Context* context_ptr, uint subdivisions,
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
 | fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint). |
 
-The rotation of each organ (internode, petiole, leaf, peduncle, inflorescence) is defined relative to the axis of its parent following the pitch, yaw, roll convention described above.
+    <!--
+
+ The rotation of each organ (internode, petiole, leaf, peduncle, inflorescence) is defined relative to the axis of its parent following the pitch, yaw, roll convention described above.
 
  \image html phytomer_angle_schematic.jpeg Schematic depiction of the angles defining the orientation of the phytomer internode, petiole, and leaf.
+
+  -->
 
  The phytomer parameters are stored in a data structure (struct) called \ref PhytomerParameters. This structure has sub-member structs for each of internode, leaf, petiole, and inflorescence, each containing the parameters for that element type as designated in the table above. Below is an example of how to set a few of the parameters:
 
@@ -212,6 +263,12 @@ Compound leaves consist of a single petiole with multiple leaves (leaflets) atta
 Alternatively, a compound leaf could be created by adding a single "leaf prototype" that contains all of the leaflets in a single model/mesh and specifying 1 leaf per petiole. However, the drawback of this is that it would not be possible to add random variation to the appearance of the compound leaf (e.g., leaf pitch angle, leaf yaw angle, etc.).
 
 \subsection PlantArch_flowers Inflorescence
+
+    The term 'inflorescence' used to denote the peduncle and flowers together. The peduncle is the supporting structure that connects the internode to the flowers. In this model, we do not distinguish between the peduncle (part between the internode and first flower) and the rachis (part that connects adjacent flowers when there are multiple flowers per inflorescence) - this is all considered the peduncle for simplicity.
+
+    If htmlonly<font face="courier" color="blue">flowers_per_rachis</font>\endhtmlonly is greater than 1, the flowers are arranged along the peduncle in a pattern specified by the parameter \htmlonly<font face="courier" color="blue">flower_arrangement_pattern</font>\endhtmlonly (the two options are "alternate" and "opposite"). The \htmlonly<font face="courier" color="blue">flower_offset</font>\endhtmlonly parameter specifies the spacing between adjacent flowers along the peduncle.
+
+    The sketch below shows an example of one parameter set for the infloresence.
 
 \image html flower_schematic.jpeg
 
@@ -241,8 +298,8 @@ A shoot is the fundamental topological unit of organization in the plant archite
  | --- **Growth Parameters** --- ||||
  | phyllochron | RandomParameter_float | days/leaf | Time between the emergence of successive phytomers along the shoot. |
  | leaf_flush_count | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of leaves/phytomers to flush at a time. Flushes will occur at an interval of phyllochron*leaf_flush_count. |
- | elongation_rate | RandomParameter_float | meters/day | Rate of elongation of the internode of the shoot. |
- | girth_growth_rate | RandomParameter_float | meters/day | Rate of increase of the internode radius of the shoot. |
+ | elongation_rate | RandomParameter_float | meter/meter/day | Rate of elongation of the internode of the shoot. |
+ | girth_growth_rate | RandomParameter_float | meter/meter/day | Rate of increase of the internode radius of the shoot. |
  | internode_radius_max | RandomParameter_float | meters | Maximum internode radius for girth growth. For some species like grasses, girth growth stops at some radius. By default, girth growth will continue indefinitely. |
  | vegetative_bud_break_probability | RandomParameter_float | - | Probability of a bud breaking dormancy and emerging as a shoot. |
  | flower_bud_break_probability | RandomParameter_float | - | Probability of a flower bud emerging as a flower. |
@@ -328,7 +385,16 @@ The \htmlonly<font face="courier" color="blue">girth_growth_rate</font>\endhtmlo
 
 \section PlantArchPheno Phenological Threshold Parameters
 
-Thresholds determining phenological transitions are set using the \ref PlantArchitecture::setPhenologicalThresholds() method.
+ Thresholds determining phenological transitions are set using the \ref PlantArchitecture::setPlantPhenologicalThresholds() method. The thresholds are in arbitrary time units, which should be consistent with the timestep units and units of other parameters. The table below describes each of the phenological parameters. Setting any parameter to a negative value will skip that phenological stage.
+
+    | Phenological Threshold | Description |
+    | ------| ------ |
+    | time_to_dormancy_break | Time required to break dormancy starting from the time of entering dormancy (or since the start of the simulation if starting dormant). |
+    | time_to_flower_initiation | Time from emergence/dormancy required to reach flower creation (closed flowers). |
+    | time_to_flower_opening | Time from flower initiation required to reach flower opening (open flowers). (If flower initiation was skipped, time is relative to emergence/dormancy). |
+    | time_to_fruit_set | Time from flower opening required to reach fruit set. (If flower opening or initiation was skipped, time is relative to previous phenological stage). |
+    | time_to_fruit_maturity | Time from fruit set required to reach maturity. (If fruit set was skipped, time is relative to previous phenological stage). |
+    | time_to_senescence | Time from emergence/dormancy required to reach senescence. At senescence, leaves and fruit will be removed, and the plant will become dormant. |
 
  \section PlantArchBuild Loading a Plant from the Existing Library
 

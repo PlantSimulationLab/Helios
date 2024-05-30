@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.9</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.10</span>
    </div>
   </td>
  </tr>
@@ -94,16 +94,17 @@ $(function() {
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
 <ul><li class="level1"><a href="#PlantArchConstructor">Class Constructor</a></li>
-<li class="level1"><a href="#PlantArchVarsAndProps">Primitive Data</a><ul><li class="level2"><a href="#PlantArchInputData">Input Primitive Data</a></li>
-<li class="level2"><a href="#PlantArchOutputData">Default Output Primitive Data</a></li>
+<li class="level1"><a href="#PlantArchVarsAndProps">Primitive Data</a><ul><li class="level2"><a href="#PlantArchOutputData">Default Output Primitive Data</a></li>
+<li class="level2"><a href="#PlantArchOutputObjData">Default Output Object Data</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#PlantArchDescription">Introduction</a><ul><li class="level2"><a href="#PlantArchCoord">Coordinate System</a></li>
+<li class="level1"><a href="#PlantArchDescription">Introduction</a><ul><li class="level2"><a href="#PlantArchPhytomer">The Phytomer: Basic Unit of a plant shoot</a></li>
+<li class="level2"><a href="#PlantArchCoord">Coordinate System</a></li>
 <li class="level2"><a href="#PlantArchRandParam">Randomization of Parameters</a></li>
 <li class="level2"><a href="#PlantArchOrgans">Creating Plant Organ Prototypes</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#PlantArchPhytomer">Defining the Phytomer and its Parameters</a><ul><li class="level2"><a href="#PlantArch_compound">Compound Leaves</a></li>
+<li class="level1"><a href="#PlantArchPhytomerParams">Defining the Phytomer and its Parameters</a><ul><li class="level2"><a href="#PlantArch_compound">Compound Leaves</a></li>
 <li class="level2"><a href="#PlantArch_flowers">Inflorescence</a></li>
 </ul>
 </li>
@@ -160,25 +161,49 @@ Class Constructor</h1>
 </table>
 <h1><a class="anchor" id="PlantArchVarsAndProps"></a>
 Primitive Data</h1>
-<h2><a class="anchor" id="PlantArchInputData"></a>
-Input Primitive Data</h2>
-<table class="doxtable">
-<tr>
-<th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value </th></tr>
-</table>
 <h2><a class="anchor" id="PlantArchOutputData"></a>
 Default Output Primitive Data</h2>
 <table class="doxtable">
 <tr>
 <th>Primitive Data Label</th><th>Data Type</th><th>Description </th></tr>
 <tr>
-<td>rank</td><td> <font face="courier" color="green">int</font></td><td>Rank of shoot primitive belongs to. </td></tr>
+<td>plantID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of plant the primitive belongs to (used for image labeling). </td></tr>
+<tr>
+<td>leafID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of leaf the primitive belongs to (used for image labeling). </td></tr>
+<tr>
+<td>peduncleID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of peduncle the primitive belongs to (used for image labeling). Not defined if there are no peduncles. </td></tr>
+<tr>
+<td>closedflowerID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of flower (closed) the primitive belongs to (used for image labeling). Not defined if there are no closed flowers. </td></tr>
+<tr>
+<td>openflowerID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of flower (open) the primitive belongs to (used for image labeling). Not defined if there are no open flowers. </td></tr>
+<tr>
+<td>fruitID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of fruit the primitive belongs to (used for image labeling). Not defined if there are no fruits. </td></tr>
+</table>
+<h2><a class="anchor" id="PlantArchOutputObjData"></a>
+Default Output Object Data</h2>
+<table class="doxtable">
+<tr>
+<th>Object Data Label</th><th>Data Type</th><th>Description </th></tr>
+<tr>
+<td>rank</td><td> <font face="courier" color="green">int</font></td><td>Rank of shoot object belongs to. </td></tr>
+<tr>
+<td>age</td><td> <font face="courier" color="green">float</font></td><td>Age of the organ that the object belongs to (e.g., a leaf). </td></tr>
 </table>
 <h1><a class="anchor" id="PlantArchDescription"></a>
 Introduction</h1>
+<h2><a class="anchor" id="PlantArchPhytomer"></a>
+The Phytomer: Basic Unit of a plant shoot</h2>
+<p >The phytomer is the basic unit of a shoot, and consists of an internode, one or more petioles, leaves, and inflorescence if present. The internode consists of a tube whose base is connected either to a parent shoot if it is the first phytomer along a shoot, or to the end of another phytomer along the same shoot.</p>
+<p >A phytomer can have one or more petioles, which are connected at the end of the internode. Each petiole has one or more leaves.</p>
+<p >At the tip of a growing shoot (i.e., end of the last phytomer on the shoot), there is an apical vegetative bud that can spawn a new phytomer along the same shoot. This is how shoot growth occurs. During a dormant period, one or more apical floral buds can also be created.</p>
+<p >At the base of the petiole, there may be one or more vegetative buds that can develop into a new shoot, and one or more floral buds that can develop into a fruit. The vegetative and floral buds can break into a new shoot/flower in the same growing season, or may need a winter dormancy period before breaking. It is also possible that a bud never breaks and dies. Once a bud breaks it is considered dead.</p>
+<div class="image">
+<img src="phytomer_schematic.jpeg" alt=""/>
+<div class="caption">
+Schematic depiction of a phytomer within a shoot.</div></div>
 <h2><a class="anchor" id="PlantArchCoord"></a>
 Coordinate System</h2>
-<p >The coordinate system of plant organs is defined with respect to it's parent element (i.e., element it originated from), with it's default orientation being aligned with it's parent's axis. It can then be rotated based on angles (always in radians) of 'pitch', 'yaw', and 'roll' (in that order):</p>
+<p >The coordinate system of plant organs is defined with respect to it's parent element (i.e., element it originated from), with it's default orientation being aligned with it's parent's axis. It can then be rotated based on angles of 'pitch', 'yaw', and 'roll' (in that order):</p>
 <p ><b>Pitch:</b> rotation angle formed between the axis of the element and it's parent's axis.</p>
 <p ><b>Yaw:</b> rotation angle about the parent's axis (except in the case of a leaf, where it is about an axis perpendicular to the leaf midrib).</p>
 <p ><b>Roll:</b> rotation angle about the element's own axis</p>
@@ -215,7 +240,7 @@ Randomization of Parameters</h2>
 <h2><a class="anchor" id="PlantArchOrgans"></a>
 Creating Plant Organ Prototypes</h2>
 <p >The geometry of plant leaves, flowers, and fruit are defined based on &lsquo;prototype&rsquo; models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.</p>
-<p >The prototype functions must return an object ID (uint) corresponding to the compound object created in the function. Arguments to the prototype function vary based on organ type:</p>
+<p >The prototype functions must return an object ID ( <font face="courier" color="green">uint</font>) corresponding to the compound object created in the function. Arguments to the prototype function vary based on organ type:</p>
 <p >Leaves </p><div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes )</div>
 <div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01703">Context.h:1703</a></div></div>
 </div><!-- fragment --><p >Flowers </p><div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">bool</span> flower_is_open )</div>
@@ -224,30 +249,45 @@ Creating Plant Organ Prototypes</h2>
 <p >The size, position, and orientation of the prototype when it is created needs to follow a specific convention.</p>
 <ul>
 <li>Prototype size: The prototype should have a unit length, and the size of the organ is set by scaling the prototype in the prototype function. This is done to allow for consistent scaling of the organ based on the parameters of the phytomer and petiole.</li>
-<li>Prototype origin: The base of the organ should be located at the origin (0,0,0). For a leaf, the base is the point at which the leaf meets the petiole. For a flow or fruit, this is the point at which the organ meets its supporting structure or rachis.</li>
+<li>Prototype origin: The base of the organ should be located at the origin (0,0,0). For a leaf, the base is the point at which the leaf meets the petiole. For a flow or fruit, this is the point at which the organ meets its supporting structure (peduncle).</li>
 <li>Prototype orientation: The organ should be oriented such that its centerline axis is along the positive x-axis, with the positive z-axis pointing upward from the base of the organ.</li>
 </ul>
 <div class="image">
 <img src="prototype_coordinate_schematic.png" alt=""/>
 </div>
-<p >A generic leaf prototype function is given below, which simply loads a model from an OBJ file.</p>
-<div class="fragment"><div class="line">uint buildGenericLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
-<div class="line">    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/AlmondLeaf.obj&quot;</span>, make_vec3(0.,0,0), 0, nullrotation, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
+<p >A simple leaf prototype function is given below, which simply loads a model from an OBJ file.</p>
+<div class="fragment"><div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
+<div class="line">    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/AlmondLeaf.obj&quot;</span>, make_vec3(0,0,0), 0, nullrotation, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
 <div class="line">    <span class="keywordflow">return</span> context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">addPolymeshObject</a>( UUIDs );</div>
-<div class="line">    }</div>
+<div class="line">}</div>
 <div class="ttc" id="aclasshelios_1_1_context_html_a8657240a0b2926e8c73b083f0fdc339d"><div class="ttname"><a href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">helios::Context::loadOBJ</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadOBJ(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...</div><div class="ttdef"><b>Definition:</b> <a href="_context__file_i_o_8cpp_source.html#l03694">Context_fileIO.cpp:3694</a></div></div>
 <div class="ttc" id="agroup__compoundobjects_html_gababf99153757527880fe3866cc23fd1b"><div class="ttname"><a href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">helios::Context::addPolymeshObject</a></div><div class="ttdeci">uint addPolymeshObject(const std::vector&lt; uint &gt; &amp;UUIDs)</div><div class="ttdoc">Add new Polymesh Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l04771">Context.cpp:4771</a></div></div>
-</div><!-- fragment --><p >A generic leaf prototype function is given in the file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves.</p>
-<h1><a class="anchor" id="PlantArchPhytomer"></a>
+</div><!-- fragment --><p >A generic leaf prototype function is given in the file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves. The advantage of this approach is that each leaf will have random variation, since the leaf is generated procedurally. The disadvantage is that it may not look as detailed as a leaf created outside Helios (e.g., in Blender) that has detailed sculpting of leaf texture, for example.</p>
+<div class="fragment"><div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
+<div class="line"> </div>
+<div class="line">   std::string leaf_texture = <span class="stringliteral">&quot;plugins/plantarchitecture/assets/textures/AlmondLeaf.png&quot;</span>;</div>
+<div class="line"> </div>
+<div class="line">   <span class="keywordtype">float</span> leaf_aspect = 0.4; <span class="comment">//ratio of leaf width to leaf length</span></div>
+<div class="line"> </div>
+<div class="line">   <span class="keywordtype">float</span> midrib_fold = 0.2; <span class="comment">//fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)</span></div>
+<div class="line"> </div>
+<div class="line">   <span class="keywordtype">float</span> x_curvature = -0.1; <span class="comment">//curvature factor along x-direction. (+curves upward, -curved downward)</span></div>
+<div class="line">   <span class="keywordtype">float</span> y_curvature = 0.4; <span class="comment">//curvature factor along y-direction. (+curves upward, -curved downward)</span></div>
+<div class="line"> </div>
+<div class="line">   <span class="keywordtype">float</span> petiole_roll = 0.f; <span class="comment">//creates a roll of the leaf near its base to more smoothly meet the petiole</span></div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//parameters for leaf wave/wrinkles</span></div>
+<div class="line">   <span class="keywordtype">float</span> wave_period = 0.1f; <span class="comment">//period factor of leaf waves</span></div>
+<div class="line">   <span class="keywordtype">float</span> wave_amplitude = 0.03f; <span class="comment">// amplitude of leaf waves</span></div>
+<div class="line"> </div>
+<div class="line">   uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, petiole_roll, wave_period, wave_amplitude);</div>
+<div class="line"> </div>
+<div class="line">   <span class="keywordflow">return</span> objID;</div>
+<div class="line">}</div>
+</div><!-- fragment --><h1><a class="anchor" id="PlantArchPhytomerParams"></a>
 Defining the Phytomer and its Parameters</h1>
-<p >The phytomer is the basic unit of a shoot, and consists of an internode, one or more petioles, leaves, and inflorescence if present. The internode consists of a tube whose base is connected either to a parent shoot if it is the first phytomer along a shoot, or to the end of another phytomer along the same shoot.</p>
-<p >A phytomer can have one or more petioles, which are connected at the end of the internode. Each petiole has one or more leaves.</p>
-<p >At the base of the petiole, there may be one or more vegetative buds that can develop into a new shoot, and one or more floral buds that can develop into a fruit. The vegetative and floral buds can break into a new shoot/flower in the same growing season, or may need a winter dormancy period before breaking, depending on the value of the parameters  <font face="courier" color="blue">growth_requires_dormancy</font> and  <font face="courier" color="blue">flowers_require_dormancy</font> in the <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structure. It is also possible that a bud never breaks, and once a bud breaks it is considered dead.</p>
-<p >At the tip of a growing shoot (i.e., end of the last phytomer on the shoot), there is an apical vegetative bud that can spawn a new phytomer along the same shoot. During a dormant period, one or more apical floral buds can also be created.</p>
-<div class="image">
-<img src="phytomer_schematic.jpeg" alt=""/>
-<div class="caption">
-Schematic depiction of a phytomer within a shoot.</div></div>
+<p >Phytomers are defined by a set of parameters that specify its geometry. These parameters are stored in a data structure called <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a>. The phytomer parameters are parameters that are constant (aside from randomization), and are usually species-specific.</p>
+<p >The table below lists the parameters that define the geometry of the phytomer, and their descriptions. There are some parameters that are notably absent, such as the internode length and radius. Since these parameters vary with age and position along the shoot, these are considered to be parameters of the shoot and not the phytomer. <a class="el" href="struct_shoot.html">Shoot</a> parameters are described below in <a class="el" href="_plant_architecture_doc.html#PlantArchShoot">Defining Shoots and their Parameters</a>.</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Type   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Description    </th></tr>
@@ -342,11 +382,13 @@ Schematic depiction of a phytomer within a shoot.</div></div>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">fruit_prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Pointer to a function that generates the fruit prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint).   </td></tr>
 </table>
-<p >The rotation of each organ (internode, petiole, leaf, peduncle, inflorescence) is defined relative to the axis of its parent following the pitch, yaw, roll convention described above.</p>
+<pre class="fragment">&lt;!--
+</pre><p> The rotation of each organ (internode, petiole, leaf, peduncle, inflorescence) is defined relative to the axis of its parent following the pitch, yaw, roll convention described above.</p>
 <div class="image">
 <img src="phytomer_angle_schematic.jpeg" alt=""/>
 <div class="caption">
 Schematic depiction of the angles defining the orientation of the phytomer internode, petiole, and leaf.</div></div>
+<p >--&gt;</p>
 <p >The phytomer parameters are stored in a data structure (struct) called <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a>. This structure has sub-member structs for each of internode, leaf, petiole, and inflorescence, each containing the parameters for that element type as designated in the table above. Below is an example of how to set a few of the parameters:</p>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="struct_phytomer_parameters.html">PhytomerParameters</a> phytomer;</div>
 <div class="line">phytomer.internode.pitch = 0.1;</div>

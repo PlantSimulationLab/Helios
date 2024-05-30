@@ -2050,18 +2050,18 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
 
 }
 
-void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float dd_to_dormancy_break, float dd_to_flower_initiation, float dd_to_flower_opening, float dd_to_fruit_set, float dd_to_fruit_maturity, float dd_to_senescence) {
+void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::setPlantPhenologicalThresholds): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
-    plant_instances.at(plantID).dd_to_dormancy_break = dd_to_dormancy_break;
-    plant_instances.at(plantID).dd_to_flower_initiation = dd_to_flower_initiation;
-    plant_instances.at(plantID).dd_to_flower_opening = dd_to_flower_opening;
-    plant_instances.at(plantID).dd_to_fruit_set = dd_to_fruit_set;
-    plant_instances.at(plantID).dd_to_fruit_maturity = dd_to_fruit_maturity;
-    plant_instances.at(plantID).dd_to_senescence = dd_to_senescence;
+    plant_instances.at(plantID).dd_to_dormancy_break = time_to_dormancy_break;
+    plant_instances.at(plantID).dd_to_flower_initiation = time_to_flower_initiation;
+    plant_instances.at(plantID).dd_to_flower_opening = time_to_flower_opening;
+    plant_instances.at(plantID).dd_to_fruit_set = time_to_fruit_set;
+    plant_instances.at(plantID).dd_to_fruit_maturity = time_to_fruit_maturity;
+    plant_instances.at(plantID).dd_to_senescence = time_to_senescence;
 
 }
 
@@ -2212,23 +2212,24 @@ void PlantArchitecture::advanceTime( float dt ) {
 
                     // ****** GROWTH/SCALING OF CURRENT PHYTOMERS/FRUIT ****** //
 
-                    float dL = dt_max * shoot->shoot_parameters.elongation_rate.val();
-
                     //scale internode length
                     if (phytomer->current_internode_scale_factor < 1) {
-                        float length_scale = fmin(1.f, (phytomer->internode_length + dL) / phytomer->internode_length_max);
+                        float dL_internode = dt_max * shoot->shoot_parameters.elongation_rate.val() * phytomer->internode_length;
+                        float length_scale = fmin(1.f, (phytomer->internode_length + dL_internode) / phytomer->internode_length_max);
                         setPhytomerInternodeLengthScaleFraction(plantID, shoot->ID, node_index, length_scale);
                     }
 
                     //scale internode girth
                     if( phytomer->internode_radii.front() < shoot->shoot_parameters.internode_radius_max.val() ) {
-                        float dR = dt_max * shoot->shoot_parameters.girth_growth_rate.val();
+                        float dR = dt_max * (1.f+shoot->shoot_parameters.girth_growth_rate.val());
                         incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dR);
                     }
 
                     //scale petiole/leaves
                     if (phytomer->hasLeaf() && phytomer->current_leaf_scale_factor <= 1) {
-                        float scale = fmin(1.f, (phytomer->petiole_length.front() + dL) / phytomer->phytomer_parameters.petiole.length.val());
+                        float leaf_length = phytomer->current_leaf_scale_factor * phytomer->phytomer_parameters.leaf.prototype_scale.val();
+                        float dL_leaf = dt_max * shoot->shoot_parameters.elongation_rate.val() * leaf_length;
+                        float scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val() );
                         phytomer->setLeafScaleFraction(scale);
                     }
 
