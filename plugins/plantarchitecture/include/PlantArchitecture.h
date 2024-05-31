@@ -790,8 +790,18 @@ public:
 
     // ********* Methods for Building Plants from Existing Library ********* //
 
+    //! Load an existing plant model from the library
+    /**
+     * \param[in] plant_label User-defined label for the plant model to be loaded.
+     */
     void loadPlantModelFromLibrary( const std::string &plant_label );
 
+    //! Build a plant instance based on the model currently loaded from the library
+    /**
+     * \param[in] base_position Cartesian coordinates of the base of the plant.
+     * \param[in] age Age of the plant.
+     * \return ID of the plant instance.
+     */
     uint buildPlantInstanceFromLibrary( const helios::vec3 &base_position, float age );
 
     ShootParameters getCurrentShootParameters( const std::string &shoot_type_label );
@@ -947,20 +957,60 @@ public:
 
     helios::vec3 getPlantBasePosition(uint plantID) const;
 
+    //! Get object IDs for all organs objects for a given plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of object IDs for all organs in the plant.
+     */
     std::vector<uint> getAllPlantObjectIDs(uint plantID) const;
 
+    //! Get primitive UUIDs for all primitives in a given plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of primitive UUIDs for all primitives in the plant.
+     */
     std::vector<uint> getAllPlantUUIDs(uint plantID) const;
 
+    //! Get object IDs for all internode (Tube) objects for a given plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of object IDs for all internodes in the plant.
+     */
     std::vector<uint> getPlantInternodeObjectIDs(uint plantID) const;
 
+    //! Get object IDs for all petiole (Tube) objects for a given plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of object IDs for all petioles in the plant.
+     */
     std::vector<uint> getPlantPetioleObjectIDs(uint plantID) const;
 
+    //! Get object IDs for all leaf objects for a given plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of object IDs for all leaves in the plant.
+     */
     std::vector<uint> getPlantLeafObjectIDs(uint plantID) const;
 
+    //! Get object IDs for all peduncle (Tube) objects for a given plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of object IDs for all peduncles in the plant.
+     */
     std::vector<uint> getPlantPeduncleObjectIDs(uint plantID) const;
 
+    //! Get object IDs for all inflorescence objects for a given plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of object IDs for all inflorescences in the plant.
+     */
     std::vector<uint> getPlantFlowerObjectIDs(uint plantID) const;
 
+    //! Get object IDs for all fruit objects for a given plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of object IDs for all fruits in the plant.
+     */
     std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
 
     std::string getPlantString(uint plantID) const;

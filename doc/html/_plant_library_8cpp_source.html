@@ -97,14 +97,14 @@ $(function() {
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="keyword">using namespace </span>helios;</div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keywordtype">void</span> PlantArchitecture::loadPlantModelFromLibrary( <span class="keyword">const</span> std::string &amp;plant_label ){</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno"><a class="line" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">   20</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary</a>( <span class="keyword">const</span> std::string &amp;plant_label ){</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    current_plant_model = plant_label;</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    initializeDefaultShoots(plant_label);</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>}</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>uint PlantArchitecture::buildPlantInstanceFromLibrary( <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;base_position, <span class="keywordtype">float</span> age ){</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">   27</a></span>uint <a class="code hl_function" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary</a>( <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;base_position, <span class="keywordtype">float</span> age ){</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keywordflow">if</span>( current_plant_model.empty() ){</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (PlantArchitecture::buildPlantInstanceFromLibrary): current plant model has not been initialized from library. You must call loadPlantModelFromLibrary() first.&quot;</span>);</div>
@@ -336,7 +336,7 @@ $(function() {
 <div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span> </div>
 <div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    }</div>
 <div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span> </div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 1, 1, 0, 3, 7, 12);</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 1, 1, 0, 3, 7, 12);</div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
 <div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span> </div>
@@ -443,7 +443,7 @@ $(function() {
 <div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span> </div>
 <div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span> </div>
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 3, 1000, 5, 100);</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 3, 1000, 5, 100);</div>
 <div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span> </div>
 <div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span> </div>
@@ -571,7 +571,7 @@ $(function() {
 <div class="line"><a id="l00491" name="l00491"></a><span class="lineno">  491</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l00492" name="l00492"></a><span class="lineno">  492</span> </div>
 <div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span><span class="comment">//    setPlantPhenologicalThresholds(plantID, 0, 30, 1, 2, 2, 100);</span></div>
-<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 2, 2, 100);</div>
+<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 2, 2, 100);</div>
 <div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span> </div>
 <div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span> </div>
 <div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span>    <span class="keywordflow">return</span> plantID;</div>
@@ -639,7 +639,7 @@ $(function() {
 <div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span> </div>
 <div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span> </div>
-<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, 1000, 3, 1000, 5, 100);</div>
+<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, 1000, 3, 1000, 5, 100);</div>
 <div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span> </div>
 <div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span> </div>
@@ -768,7 +768,7 @@ $(function() {
 <div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span> </div>
 <div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span> </div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, 12, 1, 1, 1, 100);</div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, 12, 1, 1, 1, 100);</div>
 <div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span> </div>
 <div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span> </div>
@@ -878,7 +878,7 @@ $(function() {
 <div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span> </div>
 <div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span> </div>
-<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 3, 1000, 5, 100);</div>
+<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 3, 1000, 5, 100);</div>
 <div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span> </div>
 <div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span> </div>
@@ -964,7 +964,7 @@ $(function() {
 <div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span> </div>
 <div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span> </div>
-<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 3, 1000, 5, 100);</div>
+<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 3, 1000, 5, 100);</div>
 <div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span> </div>
 <div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span> </div>
@@ -1043,7 +1043,7 @@ $(function() {
 <div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span> </div>
 <div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span> </div>
-<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 5, 5, 100);</div>
+<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 5, 5, 100);</div>
 <div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span> </div>
 <div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span> </div>
@@ -1162,7 +1162,7 @@ $(function() {
 <div class="line"><a id="l01082" name="l01082"></a><span class="lineno"> 1082</span> </div>
 <div class="line"><a id="l01083" name="l01083"></a><span class="lineno"> 1083</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l01084" name="l01084"></a><span class="lineno"> 1084</span> </div>
-<div class="line"><a id="l01085" name="l01085"></a><span class="lineno"> 1085</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, 15, 2, 2, 2, 100);</div>
+<div class="line"><a id="l01085" name="l01085"></a><span class="lineno"> 1085</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, 15, 2, 2, 2, 100);</div>
 <div class="line"><a id="l01086" name="l01086"></a><span class="lineno"> 1086</span> </div>
 <div class="line"><a id="l01087" name="l01087"></a><span class="lineno"> 1087</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l01088" name="l01088"></a><span class="lineno"> 1088</span> </div>
@@ -1230,7 +1230,7 @@ $(function() {
 <div class="line"><a id="l01150" name="l01150"></a><span class="lineno"> 1150</span> </div>
 <div class="line"><a id="l01151" name="l01151"></a><span class="lineno"> 1151</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l01152" name="l01152"></a><span class="lineno"> 1152</span> </div>
-<div class="line"><a id="l01153" name="l01153"></a><span class="lineno"> 1153</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, 1000, 10, 60, 5, 100);</div>
+<div class="line"><a id="l01153" name="l01153"></a><span class="lineno"> 1153</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, 1000, 10, 60, 5, 100);</div>
 <div class="line"><a id="l01154" name="l01154"></a><span class="lineno"> 1154</span> </div>
 <div class="line"><a id="l01155" name="l01155"></a><span class="lineno"> 1155</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l01156" name="l01156"></a><span class="lineno"> 1156</span> </div>
@@ -1326,17 +1326,19 @@ $(function() {
 <div class="line"><a id="l01246" name="l01246"></a><span class="lineno"> 1246</span> </div>
 <div class="line"><a id="l01247" name="l01247"></a><span class="lineno"> 1247</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l01248" name="l01248"></a><span class="lineno"> 1248</span> </div>
-<div class="line"><a id="l01249" name="l01249"></a><span class="lineno"> 1249</span>    <a class="code hl_function" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 5, 2, 2, 100);</div>
+<div class="line"><a id="l01249" name="l01249"></a><span class="lineno"> 1249</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 5, 2, 2, 100);</div>
 <div class="line"><a id="l01250" name="l01250"></a><span class="lineno"> 1250</span> </div>
 <div class="line"><a id="l01251" name="l01251"></a><span class="lineno"> 1251</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l01252" name="l01252"></a><span class="lineno"> 1252</span> </div>
 <div class="line"><a id="l01253" name="l01253"></a><span class="lineno"> 1253</span>}</div>
 <div class="ttc" id="aclass_plant_architecture_html_a046541b573d8e03845a2038370cd6665"><div class="ttname"><a href="class_plant_architecture.html#a046541b573d8e03845a2038370cd6665">PlantArchitecture::addPlantInstance</a></div><div class="ttdeci">uint addPlantInstance(const helios::vec3 &amp;base_position, float current_age)</div><div class="ttdoc">Create an instance of a plant.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l01983">PlantArchitecture.cpp:1983</a></div></div>
 <div class="ttc" id="aclass_plant_architecture_html_a2074dfe285a623833dd07b4aa0b93a7c"><div class="ttname"><a href="class_plant_architecture.html#a2074dfe285a623833dd07b4aa0b93a7c">PlantArchitecture::updateCurrentShootParameters</a></div><div class="ttdeci">void updateCurrentShootParameters(const std::string &amp;shoot_type_label, const ShootParameters &amp;params)</div><div class="ttdoc">Update the parameters of a single shoot type in the current plant model.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_library_8cpp_source.html#l00080">PlantLibrary.cpp:80</a></div></div>
-<div class="ttc" id="aclass_plant_architecture_html_a3cf82db8b3816e67fc4bbcd6074a69b4"><div class="ttname"><a href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">PlantArchitecture::setPlantPhenologicalThresholds</a></div><div class="ttdeci">void setPlantPhenologicalThresholds(uint plantID, float dd_to_dormancy_break, float dd_to_flower_initiation, float dd_to_flower_opening, float dd_to_fruit_set, float dd_to_fruit_maturity, float dd_to_senescence)</div><div class="ttdoc">Specify the threshold values for plant phenological stages.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l02053">PlantArchitecture.cpp:2053</a></div></div>
+<div class="ttc" id="aclass_plant_architecture_html_a4d0425099bc0ac47c3853f39e3e568aa"><div class="ttname"><a href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">PlantArchitecture::setPlantPhenologicalThresholds</a></div><div class="ttdeci">void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence)</div><div class="ttdoc">Specify the threshold values for plant phenological stages.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l02053">PlantArchitecture.cpp:2053</a></div></div>
 <div class="ttc" id="aclass_plant_architecture_html_a9700f223b8f60bf37852ad87d30e7fc0"><div class="ttname"><a href="class_plant_architecture.html#a9700f223b8f60bf37852ad87d30e7fc0">PlantArchitecture::defineShootType</a></div><div class="ttdeci">void defineShootType(const std::string &amp;shoot_type_label, const ShootParameters &amp;shoot_params)</div><div class="ttdoc">Define a new shoot type based on a set of ShootParameters.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l00205">PlantArchitecture.cpp:205</a></div></div>
 <div class="ttc" id="aclass_plant_architecture_html_aa035dac995a6ac7abeb18afce585775b"><div class="ttname"><a href="class_plant_architecture.html#aa035dac995a6ac7abeb18afce585775b">PlantArchitecture::addBaseStemShoot</a></div><div class="ttdeci">uint addBaseStemShoot(uint plantID, uint current_node_number, const AxisRotation &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &amp;shoot_type_label)</div><div class="ttdoc">Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has ...</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l01373">PlantArchitecture.cpp:1373</a></div></div>
+<div class="ttc" id="aclass_plant_architecture_html_ab98a62363a5e4553c5052a23e39711ba"><div class="ttname"><a href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary</a></div><div class="ttdeci">uint buildPlantInstanceFromLibrary(const helios::vec3 &amp;base_position, float age)</div><div class="ttdoc">Build a plant instance based on the model currently loaded from the library.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_library_8cpp_source.html#l00027">PlantLibrary.cpp:27</a></div></div>
 <div class="ttc" id="aclass_plant_architecture_html_aced9284293a890361b9cfe14a40963f2"><div class="ttname"><a href="class_plant_architecture.html#aced9284293a890361b9cfe14a40963f2">PlantArchitecture::appendShoot</a></div><div class="ttdeci">uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &amp;shoot_type_label)</div><div class="ttdoc">Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of...</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l01402">PlantArchitecture.cpp:1402</a></div></div>
+<div class="ttc" id="aclass_plant_architecture_html_adc41de628e65a52f560b4d0685c64c3a"><div class="ttname"><a href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary</a></div><div class="ttdeci">void loadPlantModelFromLibrary(const std::string &amp;plant_label)</div><div class="ttdoc">Load an existing plant model from the library.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_library_8cpp_source.html#l00020">PlantLibrary.cpp:20</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_context_html_a4caa001e21890bca8bb952e1206153dc"><div class="ttname"><a href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc">helios::Context::randu</a></div><div class="ttdeci">float randu()</div><div class="ttdoc">Draw a random number from a uniform distribution between 0 and 1.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01111">Context.cpp:1111</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_context_html_a96a928fa28d3d771ba310f798b56bd63"><div class="ttname"><a href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63">helios::Context::getRandomGenerator</a></div><div class="ttdeci">std::minstd_rand0 * getRandomGenerator()</div><div class="ttdoc">Get the random number generator engine.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l00049">Context.cpp:49</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a672182e7d8beb63c7cf256fa8294dc86"><div class="ttname"><a href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86">helios::helios_runtime_error</a></div><div class="ttdeci">void helios_runtime_error(const std::string &amp;error_message)</div><div class="ttdoc">Function to throw a runtime error.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00029">global.cpp:29</a></div></div>

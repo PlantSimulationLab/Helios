@@ -98,8 +98,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:ab55c86604c49abcedde90adb395074e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Main architectural model class constructor.  <a href="class_plant_architecture.html#ab55c86604c49abcedde90adb395074e9">More...</a><br /></td></tr>
 <tr class="separator:ab55c86604c49abcedde90adb395074e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adc41de628e65a52f560b4d0685c64c3a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">loadPlantModelFromLibrary</a> (const std::string &amp;plant_label)</td></tr>
+<tr class="memdesc:adc41de628e65a52f560b4d0685c64c3a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load an existing plant model from the library.  <a href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">More...</a><br /></td></tr>
 <tr class="separator:adc41de628e65a52f560b4d0685c64c3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab98a62363a5e4553c5052a23e39711ba"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">buildPlantInstanceFromLibrary</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;base_position, float age)</td></tr>
+<tr class="memdesc:ab98a62363a5e4553c5052a23e39711ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build a plant instance based on the model currently loaded from the library.  <a href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">More...</a><br /></td></tr>
 <tr class="separator:ab98a62363a5e4553c5052a23e39711ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa696281e805e8879a78dacdf4354ff38"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_shoot_parameters.html">ShootParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#aa696281e805e8879a78dacdf4354ff38">getCurrentShootParameters</a> (const std::string &amp;shoot_type_label)</td></tr>
 <tr class="separator:aa696281e805e8879a78dacdf4354ff38"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -117,9 +119,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:acd6de0d13dbc534992b94a203a16b76d"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#acd6de0d13dbc534992b94a203a16b76d">duplicatePlantInstance</a> (uint plantID, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;base_position, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;base_rotation, float current_age)</td></tr>
 <tr class="memdesc:acd6de0d13dbc534992b94a203a16b76d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Duplicate an existing plant instance and specify its base position and age.  <a href="class_plant_architecture.html#acd6de0d13dbc534992b94a203a16b76d">More...</a><br /></td></tr>
 <tr class="separator:acd6de0d13dbc534992b94a203a16b76d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3cf82db8b3816e67fc4bbcd6074a69b4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">setPlantPhenologicalThresholds</a> (uint plantID, float dd_to_dormancy_break, float dd_to_flower_initiation, float dd_to_flower_opening, float dd_to_fruit_set, float dd_to_fruit_maturity, float dd_to_senescence)</td></tr>
-<tr class="memdesc:a3cf82db8b3816e67fc4bbcd6074a69b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specify the threshold values for plant phenological stages.  <a href="class_plant_architecture.html#a3cf82db8b3816e67fc4bbcd6074a69b4">More...</a><br /></td></tr>
-<tr class="separator:a3cf82db8b3816e67fc4bbcd6074a69b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d0425099bc0ac47c3853f39e3e568aa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a> (uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence)</td></tr>
+<tr class="memdesc:a4d0425099bc0ac47c3853f39e3e568aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specify the threshold values for plant phenological stages.  <a href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">More...</a><br /></td></tr>
+<tr class="separator:a4d0425099bc0ac47c3853f39e3e568aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afac9e51e48de17afa485128dbea39019"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#afac9e51e48de17afa485128dbea39019">advanceTime</a> (float dt)</td></tr>
 <tr class="memdesc:afac9e51e48de17afa485128dbea39019"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance plant growth by a specified time interval.  <a href="class_plant_architecture.html#afac9e51e48de17afa485128dbea39019">More...</a><br /></td></tr>
 <tr class="separator:afac9e51e48de17afa485128dbea39019"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -177,20 +179,28 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a4e5ea512dbb0e612e5a9b946387e8056"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a4e5ea512dbb0e612e5a9b946387e8056">getPlantBasePosition</a> (uint plantID) const</td></tr>
 <tr class="separator:a4e5ea512dbb0e612e5a9b946387e8056"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acf9855048c790d30d8d4de7fa1dc3550"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#acf9855048c790d30d8d4de7fa1dc3550">getAllPlantObjectIDs</a> (uint plantID) const</td></tr>
+<tr class="memdesc:acf9855048c790d30d8d4de7fa1dc3550"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get object IDs for all organs objects for a given plant.  <a href="class_plant_architecture.html#acf9855048c790d30d8d4de7fa1dc3550">More...</a><br /></td></tr>
 <tr class="separator:acf9855048c790d30d8d4de7fa1dc3550"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3bdffb4e53fe0da836a40de80946d31f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a3bdffb4e53fe0da836a40de80946d31f">getAllPlantUUIDs</a> (uint plantID) const</td></tr>
+<tr class="memdesc:a3bdffb4e53fe0da836a40de80946d31f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get primitive UUIDs for all primitives in a given plant.  <a href="class_plant_architecture.html#a3bdffb4e53fe0da836a40de80946d31f">More...</a><br /></td></tr>
 <tr class="separator:a3bdffb4e53fe0da836a40de80946d31f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a53967340a1c9b88f4b804522f081ce62"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a53967340a1c9b88f4b804522f081ce62">getPlantInternodeObjectIDs</a> (uint plantID) const</td></tr>
+<tr class="memdesc:a53967340a1c9b88f4b804522f081ce62"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get object IDs for all internode (Tube) objects for a given plant.  <a href="class_plant_architecture.html#a53967340a1c9b88f4b804522f081ce62">More...</a><br /></td></tr>
 <tr class="separator:a53967340a1c9b88f4b804522f081ce62"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aee2486b87dca29982dd1b380aa3510fb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#aee2486b87dca29982dd1b380aa3510fb">getPlantPetioleObjectIDs</a> (uint plantID) const</td></tr>
+<tr class="memdesc:aee2486b87dca29982dd1b380aa3510fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get object IDs for all petiole (Tube) objects for a given plant.  <a href="class_plant_architecture.html#aee2486b87dca29982dd1b380aa3510fb">More...</a><br /></td></tr>
 <tr class="separator:aee2486b87dca29982dd1b380aa3510fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afcdea7f14c6ca722d39d94ff19ba87b4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#afcdea7f14c6ca722d39d94ff19ba87b4">getPlantLeafObjectIDs</a> (uint plantID) const</td></tr>
+<tr class="memdesc:afcdea7f14c6ca722d39d94ff19ba87b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get object IDs for all leaf objects for a given plant.  <a href="class_plant_architecture.html#afcdea7f14c6ca722d39d94ff19ba87b4">More...</a><br /></td></tr>
 <tr class="separator:afcdea7f14c6ca722d39d94ff19ba87b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af8a9f26212baf6695d71d44b982e6adf"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#af8a9f26212baf6695d71d44b982e6adf">getPlantPeduncleObjectIDs</a> (uint plantID) const</td></tr>
+<tr class="memdesc:af8a9f26212baf6695d71d44b982e6adf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get object IDs for all peduncle (Tube) objects for a given plant.  <a href="class_plant_architecture.html#af8a9f26212baf6695d71d44b982e6adf">More...</a><br /></td></tr>
 <tr class="separator:af8a9f26212baf6695d71d44b982e6adf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1cb3e4ba93c7a94558c3c07496e550c2"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a1cb3e4ba93c7a94558c3c07496e550c2">getPlantFlowerObjectIDs</a> (uint plantID) const</td></tr>
+<tr class="memdesc:a1cb3e4ba93c7a94558c3c07496e550c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get object IDs for all inflorescence objects for a given plant.  <a href="class_plant_architecture.html#a1cb3e4ba93c7a94558c3c07496e550c2">More...</a><br /></td></tr>
 <tr class="separator:a1cb3e4ba93c7a94558c3c07496e550c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aac602c603ac136c3aaffad052bd844d4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#aac602c603ac136c3aaffad052bd844d4">getPlantFruitObjectIDs</a> (uint plantID) const</td></tr>
+<tr class="memdesc:aac602c603ac136c3aaffad052bd844d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get object IDs for all fruit objects for a given plant.  <a href="class_plant_architecture.html#aac602c603ac136c3aaffad052bd844d4">More...</a><br /></td></tr>
 <tr class="separator:aac602c603ac136c3aaffad052bd844d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a627bb8f24d1742783e1f230f2c909ed8"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a627bb8f24d1742783e1f230f2c909ed8">getPlantString</a> (uint plantID) const</td></tr>
 <tr class="separator:a627bb8f24d1742783e1f230f2c909ed8"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -687,6 +697,16 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Build a plant instance based on the model currently loaded from the library. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">base_position</td><td>Cartesian coordinates of the base of the plant. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">age</td><td>Age of the plant. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>ID of the plant instance. </dd></dl>
+
 <p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00027">27</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
 
 </div>
@@ -916,6 +936,15 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Get object IDs for all organs objects for a given plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all organs in the plant. </dd></dl>
+
 <p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01813">1813</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
@@ -935,6 +964,15 @@ Friends</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Get primitive UUIDs for all primitives in a given plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of primitive UUIDs for all primitives in the plant. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01839">1839</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
@@ -1035,6 +1073,15 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Get object IDs for all inflorescence objects for a given plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all inflorescences in the plant. </dd></dl>
+
 <p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01929">1929</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
@@ -1054,6 +1101,15 @@ Friends</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Get object IDs for all fruit objects for a given plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all fruits in the plant. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01956">1956</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
@@ -1075,6 +1131,15 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Get object IDs for all internode (Tube) objects for a given plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all internodes in the plant. </dd></dl>
+
 <p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01843">1843</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
@@ -1094,6 +1159,15 @@ Friends</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Get object IDs for all leaf objects for a given plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all leaves in the plant. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01884">1884</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
@@ -1115,6 +1189,15 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Get object IDs for all peduncle (Tube) objects for a given plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all peduncles in the plant. </dd></dl>
+
 <p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01905">1905</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
@@ -1134,6 +1217,15 @@ Friends</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Get object IDs for all petiole (Tube) objects for a given plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all petioles in the plant. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01863">1863</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
@@ -1332,6 +1424,14 @@ Friends</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Load an existing plant model from the library. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plant_label</td><td>User-defined label for the plant model to be loaded. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 <p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00020">20</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
 
@@ -1551,8 +1651,8 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="a3cf82db8b3816e67fc4bbcd6074a69b4" name="a3cf82db8b3816e67fc4bbcd6074a69b4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3cf82db8b3816e67fc4bbcd6074a69b4">&#9670;&#160;</a></span>setPlantPhenologicalThresholds()</h2>
+<a id="a4d0425099bc0ac47c3853f39e3e568aa" name="a4d0425099bc0ac47c3853f39e3e568aa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4d0425099bc0ac47c3853f39e3e568aa">&#9670;&#160;</a></span>setPlantPhenologicalThresholds()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1567,37 +1667,37 @@ Friends</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>dd_to_dormancy_break</em>, </td>
+          <td class="paramname"><em>time_to_dormancy_break</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>dd_to_flower_initiation</em>, </td>
+          <td class="paramname"><em>time_to_flower_initiation</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>dd_to_flower_opening</em>, </td>
+          <td class="paramname"><em>time_to_flower_opening</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>dd_to_fruit_set</em>, </td>
+          <td class="paramname"><em>time_to_fruit_set</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>dd_to_fruit_maturity</em>, </td>
+          <td class="paramname"><em>time_to_fruit_maturity</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>dd_to_senescence</em>&#160;</td>
+          <td class="paramname"><em>time_to_senescence</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -1611,12 +1711,12 @@ Friends</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dd_to_dormancy_break</td><td>Minimum assimilate pool (mg SC/g DW) required to break dormancy. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dd_to_flower_initiation</td><td>Degree-days from emergence/dormancy required to reach flower creation (closed flower). </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dd_to_flower_opening</td><td>Degree-days from flower initiation to flower opening. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dd_to_fruit_set</td><td>Degree-days from flower opening required to reach fruit set (i.e., flower dies and fruit is created). </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dd_to_fruit_maturity</td><td>Degree-days from fruit set date required to reach fruit maturity. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dd_to_senescence</td><td>Degree-days from emergence/dormancy required to reach senescence. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">time_to_dormancy_break</td><td>Time required to break dormancy. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">time_to_flower_initiation</td><td>Time from emergence/dormancy required to reach flower creation (closed flowers). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">time_to_flower_opening</td><td>Time from flower initiation to flower opening. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">time_to_fruit_set</td><td>Time from flower opening required to reach fruit set (i.e., flower dies and fruit is created). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">time_to_fruit_maturity</td><td>Time from fruit set date required to reach fruit maturity. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">time_to_senescence</td><td>Time from emergence/dormancy required to reach senescence. </td></tr>
   </table>
   </dd>
 </dl>
@@ -1753,7 +1853,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00974">974</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01024">1024</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

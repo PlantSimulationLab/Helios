@@ -186,7 +186,7 @@ uint someLeafPrototype( helios::Context* context_ptr, uint subdivisions, int com
 | ------| ------ | ------ | ------ |
 | --- **internode** --- ||||
 | pitch | RandomParameter_float | degrees | Angle of the phytomer internode with respect to the previous phytomer along the shoot. Setting this >0 creates a zig-zag shoot. |
-| phyllotactic_angle | RandomParameter_float | degrees | Angle between the petioles/buds of two successive phytomers along the shoot. |
+| phyllotactic_angle | RandomParameter_float | degrees | Angle between the petioles/buds of two successive phytomers along the shoot. See <a href="https://en.wikipedia.org/wiki/Phyllotaxis">this page</a> for more information on phyllotaxis. |
 | max_vegetative_buds_per_petiole | RandomParameter_int | - | Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability. |
 | max_floral_buds_per_petiole | RandomParameter_int | - | Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability. |
 | color | helios::RGBcolor | - | Diffuse color of the internode tube. |
@@ -230,13 +230,13 @@ uint someLeafPrototype( helios::Context* context_ptr, uint subdivisions, int com
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
 | fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint). |
 
-    <!--
+<!--
 
  The rotation of each organ (internode, petiole, leaf, peduncle, inflorescence) is defined relative to the axis of its parent following the pitch, yaw, roll convention described above.
 
  \image html phytomer_angle_schematic.jpeg Schematic depiction of the angles defining the orientation of the phytomer internode, petiole, and leaf.
 
-  -->
+-->
 
  The phytomer parameters are stored in a data structure (struct) called \ref PhytomerParameters. This structure has sub-member structs for each of internode, leaf, petiole, and inflorescence, each containing the parameters for that element type as designated in the table above. Below is an example of how to set a few of the parameters:
 
@@ -264,11 +264,11 @@ Alternatively, a compound leaf could be created by adding a single "leaf prototy
 
 \subsection PlantArch_flowers Inflorescence
 
-    The term 'inflorescence' used to denote the peduncle and flowers together. The peduncle is the supporting structure that connects the internode to the flowers. In this model, we do not distinguish between the peduncle (part between the internode and first flower) and the rachis (part that connects adjacent flowers when there are multiple flowers per inflorescence) - this is all considered the peduncle for simplicity.
+The term 'inflorescence' used to denote the peduncle and flowers together. The peduncle is the supporting structure that connects the internode to the flowers. In this model, we do not distinguish between the peduncle (part between the internode and first flower) and the rachis (part that connects adjacent flowers when there are multiple flowers per inflorescence) - this is all considered the peduncle for simplicity.
 
-    If htmlonly<font face="courier" color="blue">flowers_per_rachis</font>\endhtmlonly is greater than 1, the flowers are arranged along the peduncle in a pattern specified by the parameter \htmlonly<font face="courier" color="blue">flower_arrangement_pattern</font>\endhtmlonly (the two options are "alternate" and "opposite"). The \htmlonly<font face="courier" color="blue">flower_offset</font>\endhtmlonly parameter specifies the spacing between adjacent flowers along the peduncle.
+If \htmlonly<font face="courier" color="blue">flowers_per_rachis</font>\endhtmlonly is greater than 1, the flowers are arranged along the peduncle in a pattern specified by the parameter \htmlonly<font face="courier" color="blue">flower_arrangement_pattern</font>\endhtmlonly (the two options are "alternate" and "opposite"). The \htmlonly<font face="courier" color="blue">flower_offset</font>\endhtmlonly parameter specifies the spacing between adjacent flowers along the peduncle.
 
-    The sketch below shows an example of one parameter set for the infloresence.
+The sketch below shows an example of one parameter set for the infloresence.
 
 \image html flower_schematic.jpeg
 
@@ -314,12 +314,6 @@ A shoot is the fundamental topological unit of organization in the plant archite
  \subsubsection ShootParam_max_nodes max_nodes
 
  \htmlonly<font face="courier" color="blue">max_nodes</font>\endhtmlonly is the maximum number of phytomers that a single shoot can grow to have. Leaves will continue to emerge from the terminal bud according to the phyllochron until \htmlonly<font face="courier" color="blue">max_nodes</font>\endhtmlonly is reached.
-
- \subsubsection ShootParam_phyllotaxis phyllotactic_angle
-
- \htmlonly<font face="courier" color="blue">phyllotactic_angle</font>\endhtmlonly is the angle that each phytomer is rotated about the internode axis relative to the previous phytomer along the shoot. For a shoot with an "opposite" leaf arrangement, the phyllotactic angle should be set to 0 and \ref PhytomerParameters::internode::petioles_per_internode should be set to 2. For an "opposite" leaf arrangement, the phyllotatic angle should be 180 degrees. The "golden angle" of phyllotaxis is 137.5 degrees.
-
- See <a href="https://en.wikipedia.org/wiki/Phyllotaxis">this page</a> for more information on phyllotaxis.
 
  \subsubsection ShootParam_base_roll base_roll
 
@@ -382,19 +376,6 @@ A shoot is the fundamental topological unit of organization in the plant archite
 \subsubsection ShootParam_girth_growth_rate girth_growth_rate
 
 The \htmlonly<font face="courier" color="blue">girth_growth_rate</font>\endhtmlonly parameter is the rate of increase of the internode radius, given as a scaling factor applied to the current radius. The girth growth rate value is the scale factor applied to the current radius per day. For example, if \htmlonly<font face="courier" color="blue">girth_growth_rate</font>\endhtmlonly = 1.01, the radius of the internode will increase by 1% per day.
-
-\section PlantArchPheno Phenological Threshold Parameters
-
- Thresholds determining phenological transitions are set using the \ref PlantArchitecture::setPlantPhenologicalThresholds() method. The thresholds are in arbitrary time units, which should be consistent with the timestep units and units of other parameters. The table below describes each of the phenological parameters. Setting any parameter to a negative value will skip that phenological stage.
-
-    | Phenological Threshold | Description |
-    | ------| ------ |
-    | time_to_dormancy_break | Time required to break dormancy starting from the time of entering dormancy (or since the start of the simulation if starting dormant). |
-    | time_to_flower_initiation | Time from emergence/dormancy required to reach flower creation (closed flowers). |
-    | time_to_flower_opening | Time from flower initiation required to reach flower opening (open flowers). (If flower initiation was skipped, time is relative to emergence/dormancy). |
-    | time_to_fruit_set | Time from flower opening required to reach fruit set. (If flower opening or initiation was skipped, time is relative to previous phenological stage). |
-    | time_to_fruit_maturity | Time from fruit set required to reach maturity. (If fruit set was skipped, time is relative to previous phenological stage). |
-    | time_to_senescence | Time from emergence/dormancy required to reach senescence. At senescence, leaves and fruit will be removed, and the plant will become dormant. |
 
  \section PlantArchBuild Loading a Plant from the Existing Library
 
@@ -469,6 +450,28 @@ for( auto params : shoot_parameters ){
 plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 ~~~~~~
 
+\subsection PlantArchPheno Modifying Phenological Threshold Parameters
+
+Thresholds determining phenological transitions are set using the \ref PlantArchitecture::setPlantPhenologicalThresholds() method. The thresholds are in arbitrary time units, which should be consistent with the timestep units and units of other parameters. The table below describes each of the phenological parameters. Setting any parameter to a negative value will skip that phenological stage.
+
+| Phenological Threshold | Description |
+| ------| ------ |
+| time_to_dormancy_break | Time required to break dormancy starting from the time of entering dormancy (or since the start of the simulation if starting dormant). |
+| time_to_flower_initiation | Time from emergence/dormancy required to reach flower creation (closed flowers). |
+| time_to_flower_opening | Time from flower initiation required to reach flower opening (open flowers). (If flower initiation was skipped, time is relative to emergence/dormancy). |
+| time_to_fruit_set | Time from flower opening required to reach fruit set. (If flower opening or initiation was skipped, time is relative to previous phenological stage). |
+| time_to_fruit_maturity | Time from fruit set required to reach maturity. (If fruit set was skipped, time is relative to previous phenological stage). |
+| time_to_senescence | Time from emergence/dormancy required to reach senescence. At senescence, leaves and fruit will be removed, and the plant will become dormant. |
+
+~~~~~~
+    PlantArchitecture plantarchitecture(&context);
+
+    plantarchitecture.loadPlantModelFromLibrary( "bean" );
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
+
+    plantarchitecture.setPlantPhenologicalThresholds( plantID, 0, 20, 10, 10, 5, 70 );
+~~~~~~
+
  \section PlantArchGrowth Growing the Model over Time
 
  The model can be grown over time by calling the \ref PlantArchitecture::advanceTime() method, where the argument to this method is the timestep to advance in days. The timestep value can be larger than the phyllochron, such that multiple phytomers and shoots can be produced in a single call to \ref PlantArchitecture::advanceTime().
@@ -479,21 +482,52 @@ plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 
  \section PlantArchQuery Retrieving Information from the Model
 
- \subsection PlantArchQueryUUIDs Getting Object IDs and Primitive UUIDs of Model Geometry
+ \subsection PlantArchQueryobjIDs Getting Object IDs and Primitive UUIDs of Model Geometry
 
  The Object IDs and Primitive UUIDs of an entire plant, or organ groups in the plant, can be retrieved using several methods available in the PlantArchitecture class. These are listed in the table below.
 
-    | Method | Description |
-    | ------ | ------ |
-    | <td colspan=2> **Object IDs** </td> |
-    | \ref PlantArchitecture::getAllPlantObjectIDs() | Returns a vector of Object IDs for all objects the entire plant. |
-    | \ref PlantArchitecture::getPlantInternodeObjectIDs() | Returns a vector of Object IDs for all internode objects. |
-    | \ref PlantArchitecture::getPlantPetioleObjectIDs() | Returns a vector of Object IDs for all petiole objects (Tube objects). |
-    | \ref PlantArchitecture::getPlantLeafObjectIDs() | Returns a vector of Object IDs for all leaf objects. |
-    | \ref PlantArchitecture::getPlantPeduncleObjectIDs() | Returns a vector of Object IDs for all peduncle objects (Tube objects). |
-    | \ref PlantArchitecture::getPlantInflorescenceObjectIDs() | Returns a vector of Object IDs for all inflorescence objects (flowers or fruit depending on current state). |
-    | \ref PlantArchitecture::getAllPlantUUIDs() | Returns a vector of UUIDs for all primitives the entire plant. |
+    <table>
+        <tr><th>Method</th><th>Description</th></tr>
+        <tr> <td colspan=2> **Object IDs** </td> </tr>
+        <tr> <td>\ref PlantArchitecture::getAllPlantObjectIDs()</td><td>Returns a vector of Object IDs for all objects the entire plant.</td> </tr>
+        <tr> <td>\ref PlantArchitecture::getPlantInternodeObjectIDs()</td><td>Returns a vector of Object IDs for all internode objects.</td> </tr>
+        <tr> <td>\ref PlantArchitecture::getPlantPetioleObjectIDs()</td><td>Returns a vector of Object IDs for all petiole objects (Tube objects).</td> </tr>
+        <tr> <td>\ref PlantArchitecture::getPlantLeafObjectIDs()</td><td>Returns a vector of Object IDs for all leaf objects.</td> </tr>
+        <tr> <td>\ref PlantArchitecture::getPlantPeduncleObjectIDs()</td><td>Returns a vector of Object IDs for all peduncle objects (Tube objects).</td> </tr>
+        <tr> <td>\ref PlantArchitecture::getPlantFlowerObjectIDs()</td><td>Returns a vector of Object IDs for all flower objects.</td> </tr>
+        <tr> <td>\ref PlantArchitecture::getPlantFruitObjectIDs()</td><td>Returns a vector of Object IDs for all fruit objects.</td> </tr>
+        <tr> <td colspan=2> **Primitive UUIDs** </td> </tr>
+        <tr> <td>\ref PlantArchitecture::getAllPlantUUIDs()</td><td>Returns a vector of UUIDs for all primitives the entire plant.</td> </tr>
+    </table>
 
-    Note that individual methods to get UUIDs for all organ types are not provided. Instead, the user can query the Object IDs for each organ type and then get the corresponding UUIDs using the Context method \ref Context::getObjectPrimitiveUUIDs().
+    Note that individual methods to get UUIDs for all organ types are not provided. Instead, the user can query the Object IDs for each organ type and then get the corresponding UUIDs using the Context method \ref helios::Context::getObjectPrimitiveUUIDs().
+
+  \subsection PlantArchQueryUUIDs Getting Primitive UUIDs for Organ Sub-Components
+
+    In some cases, it may be useful to get the UUIDs of sub-components that make up organ prototypes. For example, this is necessary in order to change the color or radiative properties of leaf veins or flower petals.
+
+    If such granularity is present in the organ prototype models, these sub-components are separated based on primitive data labels assigned to them.
+
+    | Organ | Primitive Data Label | Primitive Data Value String | Description |
+    | ------| ------ | ------ | ------ |
+    | **Leaves** ||||
+    | Leaf/lamina | "object_label" | "leaf" | The main lamina of the leaf. |
+    | veins | "object_label" | "veins" | The major veins of the leaf. |
+    | petiolule | "object_label" | "petiolule" | The petiolule (i.e., petiole-like structure connecting a leaflet to the petiole in a compound leaf). |
+    | **Flowers** ||||
+    | Petals | "object_label" | "petals" | The petals of the flower. |
+    | Sepals | "object_label" | "sepals" | The sepals (i.e., green part at base) of the flower. |
+    | **Fruit** ||||
+    | Fruit | "object_label" | "fruit" | The main body of the fruit. |
+    | Sepals | "object_label" | "sepals" | The sepals (i.e., green part at base) of the fruit. |
+
+    The UUIDs for a given sub-organ group can be retrieved by calling the Context method \ref helios::Context::filterPrimitivesByData(). Below is an example for getting the leaf vein UUIDs.
+
+    ~~~~~~
+     std::vector<uint> plant_UUIDs = plantarchitecture.getAllPlantUUIDs( plantID );
+     std::vector<uint> leaf_vein_UUIDs = context.filterPrimitivesByData( plant_UUIDs, "object_label", "veins" );
+    ~~~~~~
+
+    For custom user-defined organ prototypes, users should follow the convention of grouping the above sub-components into separate object groups with the labels given in the table above.
 
 */
