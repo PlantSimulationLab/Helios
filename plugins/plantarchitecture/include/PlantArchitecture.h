@@ -917,12 +917,25 @@ public:
                        float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &shoot_type_label, uint petiole_index);
 
     //! Add a new phytomer at the terminal bud of a shoot.
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot to which the phytomer will be added
+     * \param[in] phytomer_parameters Parameters of the phytomer to be added
+     * \param[in] internode_radius Radius of the phytomer internode at the time of creation
+     * \param[in] internode_length_max Maximum internode length at full elongation
+     * \param[in] internode_length_scale_factor_fraction Internode length fraction of fully elongated length
+     * \param[in] leaf_scale_factor_fraction Leaf scale as fraction of fully elongated leaf
+     * \return ID of phytomer
+     */
     int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
+    //! Do not build internode primitive geometry in the Context
     void disableInternodeContextBuild();
 
+    //! Do not build petiole primitive geometry in the Context
     void disablePetioleContextBuild();
 
+    //! Do not build peduncle primitive geometry in the Context
     void disablePeduncleContextBuild();
 
     // -- methods for modifying the current plant state -- //
