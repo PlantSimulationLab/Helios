@@ -1,6 +1,6 @@
 /** \file "EnergyBalanceModel.cu" Energy balance model plugin declarations (CUDA kernels).
 
-    Copyright (C) 2016-2023 Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -405,7 +405,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
 
     //if the length of a primitive that is not a member of an object was used, issue a warning
     if( message_flag && primitive_length_used ){
-        std::cout << "WARNING (EnergyBalanceModel::run): The length of a primitive that is not a member of a compound object was used to calculate the boundary-layer conductance. This often results in incorrect results because the length should be that of the object (e.g., leaf, stem) not the primitive. Make sure this is what you intended." << std::endl;
+        std::cout << "WARNING (EnergyBalanceModel::run): The length of a primitive that is not a member of a compound object was used to calculate the boundary-layer conductance. This often results in incorrect values because the length should be that of the object (e.g., leaf, stem) not the primitive. Make sure this is what you intended." << std::endl;
     }
 
     //To,R,Qother,eps,U,L,Ta,ea,pressure,gS,Nsides

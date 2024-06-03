@@ -1339,7 +1339,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     }
 
     // * Patch Solid Fraction * //
-    float solid_fraction = 1;
+    float solid_fraction = -1;
     if( XMLparser::parse_solid_fraction(p,solid_fraction)==2 ){
       helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'patch' block contains invalid data.");
     }
@@ -1356,20 +1356,20 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     }
 
     // * Add the Patch * //
-    if( strcmp(texture_file.c_str(),"none")==0 ){
+    if( strcmp(texture_file.c_str(),"none")==0 ){  //no texture file was given
       ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), color );
-    }else{
+    }else{ //has a texture file
       std::string texture_file_copy;
-      if( solid_fraction!=1.f ){
+      if( solid_fraction<1.f && solid_fraction>=0.f ){ //solid fraction was given in the XML, and is not equal to 1.0
         texture_file_copy = texture_file;
-        texture_file = "lib/images/solid.jpg"; //load dummy solid texture
+        texture_file = "lib/images/solid.jpg"; //load dummy solid texture to avoid re-calculating the solid fraction
       }
-      if( uv.empty() ){
+      if( uv.empty() ){ //custom (u,v) coordinates were not given
         ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), texture_file.c_str() );
       }else{
         ID=addPatch( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), texture_file.c_str(), 0.5*(uv.at(2)+uv.at(0)), uv.at(2)-uv.at(0) );
       }
-      if( solid_fraction!=1.f ) {
+      if( solid_fraction<1.f && solid_fraction>=0.f ) { //replace dummy texture and set the solid fraction
         getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
         addTexture(texture_file_copy.c_str());
         getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
@@ -1422,7 +1422,7 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
     }
 
     // * Triangle Solid Fraction * //
-    float solid_fraction = 1;
+    float solid_fraction = -1;
     if( XMLparser::parse_solid_fraction(tri,solid_fraction)==2 ){
       helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'triangle' block contains invalid data.");
     }
@@ -1449,12 +1449,12 @@ std::vector<uint> Context::loadXML( const char* filename, bool quiet ){
       ID = addTriangle( vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), color );
     }else{
       std::string texture_file_copy;
-      if( solid_fraction!=1.f ){
+      if( solid_fraction<1.f && solid_fraction>=0.f ){ //solid fraction was given in the XML, and is not equal to 1.0
         texture_file_copy = texture_file;
-        texture_file = "lib/images/solid.jpg"; //load dummy solid texture
+        texture_file = "lib/images/solid.jpg"; //load dummy solid texture to avoid re-calculating the solid fraction
       }
       ID = addTriangle( vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2) );
-      if( solid_fraction!=1.f ) {
+      if( solid_fraction<1.f && solid_fraction>=0.f ) {
         getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
         addTexture(texture_file_copy.c_str());
         getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);

@@ -1398,7 +1398,6 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     position_data.at(1) = v.at(0).y;
     position_data.at(2) = v.at(0).z;
     uv_data.at(0) = uvs.at(0).x*float(texture_size.x-1);
-//    uv_data.at(1) = uvs.at(0).y*(texture_size.y-1);
     uv_data.at(1) = (1.f-uvs.at(0).y)*float(texture_size.y-1);
 
     //Lower right vertex
@@ -1406,7 +1405,6 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     position_data.at(4) = v.at(1).y;
     position_data.at(5) = v.at(1).z;
     uv_data.at(2) = uvs.at(1).x*float(texture_size.x-1);
-//    uv_data.at(3) = uvs.at(1).y*(texture_size.y-1);
     uv_data.at(3) = (1.f-uvs.at(1).y)*float(texture_size.y-1);
 
     //Upper right vertex
@@ -1414,7 +1412,6 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     position_data.at(7) = v.at(2).y;
     position_data.at(8) = v.at(2).z;
     uv_data.at(4) = uvs.at(2).x*float(texture_size.x-1);
-//    uv_data.at(5) = uvs.at(2).y*(texture_size.y-1);
     uv_data.at(5) = (1.f-uvs.at(2).y)*float(texture_size.y-1);
 
     //Lower left vertex
@@ -1422,7 +1419,6 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     position_data.at(10) = v.at(0).y;
     position_data.at(11) = v.at(0).z;
     uv_data.at(6) = uvs.at(0).x*float(texture_size.x-1);
-//    uv_data.at(7) = uvs.at(0).y*(texture_size.y-1);
     uv_data.at(7) = (1.f-uvs.at(0).y)*float(texture_size.y-1);
 
     //Upper right vertex
@@ -1430,7 +1426,6 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     position_data.at(13) = v.at(2).y;
     position_data.at(14) = v.at(2).z;
     uv_data.at(8) = uvs.at(2).x*float(texture_size.x-1);
-//    uv_data.at(9) = uvs.at(2).y*(texture_size.y-1);
     uv_data.at(9) = (1.f-uvs.at(2).y)*float(texture_size.y-1);
 
     //Upper left vertex
@@ -1438,7 +1433,6 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
     position_data.at(16) = v.at(3).y;
     position_data.at(17) = v.at(3).z;
     uv_data.at(10) = uvs.at(3).x*float(texture_size.x-1);
-//    uv_data.at(11) = uvs.at(3).y*(texture_size.y-1);
     uv_data.at(11) = (1.f-uvs.at(3).y)*float(texture_size.y-1);
 
     positionData["triangle"].insert( positionData["triangle"].end(), position_data.begin(), position_data.end() );

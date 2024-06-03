@@ -1623,3 +1623,45 @@ The radiation model has been re-designed, with the following primary additions:
 - Added synthetic annotation to utilities/run_samples.sh automated testing script.
 - Error fixed in SyntheticAnnotation::setCameraPosition() where arguments were not being correctly assigned.
 - Error fixed in SyntheticAnnotation::render() where the 'outputdir' string needed to be converted to string in the error message.
+
+[1.3.11] 2024-05-24
+
+*Context*
+- Context::filterPrimitivesByData() was not properly filtering out primitives that did not have the specified primitive data field.
+
+*Radiation*
+- Added overloaded version of RadiationModel::scaleSpectrum() that performs scaling in-place without creating new global data.
+- Periodic boundary conditions were not working correctly with the radiation camera.
+- Output radiation images were incorrectly flipped about the vertical axis.
+- There was an error with texture coordinates. For Patches, textures were flipped about the x- and y-directions, and for Triangles, textures were flipped about the y-direction.
+- Combined DGK colorboard spectra in plugins/radiationmodel/spectral_data/color_board/ into a single file named DGK_DKK_colorboard.xml. Also added a JPEG image reference of the colorboard.
+- Added Calibrite ColorChecker colorboard in plugins/radiationmodel/spectral_data/color_board/.
+- ColorCalibration::addColorboard() was changed to accept everything that is needed to fully define the colorboard. Accordingly, ColorCalibration::setColorboardReflectivity() was removed.
+- Argument order of ColorCalibration::addDefaultColorboard() was changed to be consistent with ColorCalibration::addColorboard() and typical Helios convention.
+- Added method to output optional primitive data (reflectivity and transmissivity values).
+- Updated calibrated_CREE6500K_Basler-acA2500-20gc_spectral_response_[*] spectra in the camera library to be properly normalized.
+
+[1.3.12] 2024-06-03
+
+*utilities/create_project.sh script*
+- syntheticannotation plug-in was missing from this script, which also caused run_samples.sh to fail to run its self-test.
+
+*Context*
+- Added Context::cleanDeletedUUIDs() to delete UUIDs from a vector when the corresponding primitive does not exist. This is useful, for example, to update UUID vectors when deleting some primitives, such as after calling cropDomain().
+- Added fix for edge case in getFileExtension() to consider case where the filename starts with a '.' and had no extension.
+- Performance improvements when adding geometry with textures. Existence of the texture file is now only checked when a new texture is added.
+- Performance improvements when loading geometry with textures from XML file. The solid fraction is not re-calculated if it was previously written to the XML file being read.
+
+*Radiation*
+- In-place version of RadiationModel::scaleSpectrum() was not actually added in the last commit.
+- Added a check to make sure that the radiation camera position and 'lookat' coordinates are not the same.
+- Added a check in RadiationModel::writeNormCameraImage() to throw an error if the camera data does not exist. This check was there for RadiationModel::writeCameraImage(), but was missing in RadiationModel::writeNormCameraImage() which could cause an uncaught error.
+- Added support for periodic boundary conditions with depth images.
+- Changed previous version of RadiationModel::writeDepthImage() to RadiationModel::writeDepthImageData() (writes ASCII files with depth image data).
+- Added new RadiationModel::writeDepthImage(), which writes a JPEG version of (normalized) depth images.
+- Removed previously deprecated version of RadiationModel::addRadiationCamera(). Use versions that take a CameraProperties struct instead.
+- Behavior of twosided_flag = 0 was changed for direct sources. Previously, primitives could receive direct radiation from the back side when twosided_flag = 0, but now they cannot.
+- twosided_flag = 2 was not implemented correctly and was not working in most cases.
+- Added case for twosided_flag = 3 to make the primitive completely invisible to any radiation.
+- Added ability to visualize radiation sources by adding their geometry to the Context. See RadiationModel::enableLightModelVisualization().
+- Added ability to visualize radiation cameras by adding their geometry to the Context. See RadiationModel::enableCameraModelVisualization().
