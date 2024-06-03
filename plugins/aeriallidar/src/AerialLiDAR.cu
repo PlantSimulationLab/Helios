@@ -1,6 +1,6 @@
 /** \file "AerialLiDAR.cu" CUDA-related Aerial LiDAR plug-in functions
 
-    Copyright (C) 2016-2023 Brian Bailey
+    Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

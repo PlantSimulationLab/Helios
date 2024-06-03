@@ -55,9 +55,9 @@ rtBuffer<float, 1>   scatter_buff_top;
 rtBuffer<float, 1>   scatter_buff_bottom;
 rtBuffer<float, 1>   scatter_buff_top_cam;
 rtBuffer<float, 1>   scatter_buff_bottom_cam;
-rtBuffer<bool, 1> twosided_flag;
 
 rtBuffer<unsigned int, 1>   camera_pixel_label;
+rtBuffer<float, 1>   camera_pixel_depth;
 rtDeclareVariable( unsigned int, camera_ID,, );
 rtDeclareVariable( unsigned int, Ncameras,, );
 
@@ -82,13 +82,15 @@ RT_PROGRAM void closest_hit_direct(){
 
     uint objID = objectID[UUID];
 
+    float3 ray_origin = ray.origin;
+
     if( (periodic_flag.x==1 || periodic_flag.y==1) && primitive_type[objID] == 5 ){ //periodic boundary condition
 
-        float3 ray_origin = ray.origin + t_hit*ray.direction;
+        ray_origin = ray_origin + t_hit*ray.direction;
 
-        float eps=1e-5;
+        float eps=1e-4;
 
-        if( prd.periodic_depth<9 ){
+        if( prd.periodic_depth<9 ) {
 
             float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
             float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
@@ -97,7 +99,8 @@ RT_PROGRAM void closest_hit_direct(){
                 ray_origin.x = xbounds.y - eps;
             } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
                 ray_origin.x = xbounds.x + eps;
-            }else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+            }
+            if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
                 ray_origin.y = ybounds.y - eps;
             } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
                 ray_origin.y = ybounds.x + eps;
@@ -111,7 +114,7 @@ RT_PROGRAM void closest_hit_direct(){
         PerRayData prd_periodic = prd;
         prd_periodic.periodic_depth++;
 
-        rtTrace( top_object, ray_periodic, prd_periodic );
+        rtTrace(top_object, ray_periodic, prd_periodic);
 
     }
 
@@ -299,20 +302,12 @@ RT_PROGRAM void closest_hit_camera() {
                 ray_origin.x = xbounds.y - eps;
             } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
                 ray_origin.x = xbounds.x + eps;
-            }else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+            }
+            if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
                 ray_origin.y = ybounds.y - eps;
             } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
                 ray_origin.y = ybounds.x + eps;
             }
-//            if ( periodic_flag.x == 1 && ray_origin.x==xbounds.x ) {//-x facing boundary
-//                ray_origin.x = xbounds.y - eps;
-//            } else if ( periodic_flag.x == 1 && ray_origin.x==xbounds.y ) {//+x facing boundary
-//                ray_origin.x = xbounds.x + eps;
-//            }else if ( periodic_flag.y == 1 && ray_origin.y==ybounds.x ) {//-y facing boundary
-//                ray_origin.y = ybounds.y - eps;
-//            } else if ( periodic_flag.y == 1 && ray_origin.y==ybounds.y ) {//+y facing boundary
-//                ray_origin.y = ybounds.x + eps;
-//            }
 
         }
 
@@ -464,6 +459,7 @@ RT_PROGRAM void closest_hit_pixel_label() {
         optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
         PerRayData prd_periodic = prd;
         prd_periodic.periodic_depth++;
+        prd_periodic.strength += t_hit;
 
         rtTrace(top_object, ray_periodic, prd_periodic);
 
@@ -472,6 +468,10 @@ RT_PROGRAM void closest_hit_pixel_label() {
         //Note: UUID corresponds to the object that the ray hit (i.e., where energy is coming from), and UUID_origin is the object the ray originated from (i.e., where the energy is being received)
         //Note: We are reserving a value of 0 for the sky, so we will store UUID+1
         camera_pixel_label[origin_UUID] = UUID+1;
+
+        float depth = prd.strength + t_hit;
+        float3 camera_direction3 = d_rotatePoint( make_float3(1,0,0), -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y );
+        camera_pixel_depth[origin_UUID] = abs(dot(camera_direction3, ray.direction))*depth;
 
     }
 }
@@ -634,7 +634,6 @@ RT_PROGRAM void miss_camera() {
 
 RT_PROGRAM void miss_pixel_label() {
 
-    //Technically don't need this because the buffer is initialized to 0 anyway.
-//    camera_pixel_label[prd.origin_UUID] = 0;
+    camera_pixel_depth[prd.origin_UUID] = -1;
 
 }

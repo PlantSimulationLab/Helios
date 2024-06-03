@@ -1640,3 +1640,28 @@ The radiation model has been re-designed, with the following primary additions:
 - Argument order of ColorCalibration::addDefaultColorboard() was changed to be consistent with ColorCalibration::addColorboard() and typical Helios convention.
 - Added method to output optional primitive data (reflectivity and transmissivity values).
 - Updated calibrated_CREE6500K_Basler-acA2500-20gc_spectral_response_[*] spectra in the camera library to be properly normalized.
+
+[1.3.12] 2024-06-03
+
+*utilities/create_project.sh script*
+- syntheticannotation plug-in was missing from this script, which also caused run_samples.sh to fail to run its self-test.
+
+*Context*
+- Added Context::cleanDeletedUUIDs() to delete UUIDs from a vector when the corresponding primitive does not exist. This is useful, for example, to update UUID vectors when deleting some primitives, such as after calling cropDomain().
+- Added fix for edge case in getFileExtension() to consider case where the filename starts with a '.' and had no extension.
+- Performance improvements when adding geometry with textures. Existence of the texture file is now only checked when a new texture is added.
+- Performance improvements when loading geometry with textures from XML file. The solid fraction is not re-calculated if it was previously written to the XML file being read.
+
+*Radiation*
+- In-place version of RadiationModel::scaleSpectrum() was not actually added in the last commit.
+- Added a check to make sure that the radiation camera position and 'lookat' coordinates are not the same.
+- Added a check in RadiationModel::writeNormCameraImage() to throw an error if the camera data does not exist. This check was there for RadiationModel::writeCameraImage(), but was missing in RadiationModel::writeNormCameraImage() which could cause an uncaught error.
+- Added support for periodic boundary conditions with depth images.
+- Changed previous version of RadiationModel::writeDepthImage() to RadiationModel::writeDepthImageData() (writes ASCII files with depth image data).
+- Added new RadiationModel::writeDepthImage(), which writes a JPEG version of (normalized) depth images.
+- Removed previously deprecated version of RadiationModel::addRadiationCamera(). Use versions that take a CameraProperties struct instead.
+- Behavior of twosided_flag = 0 was changed for direct sources. Previously, primitives could receive direct radiation from the back side when twosided_flag = 0, but now they cannot.
+- twosided_flag = 2 was not implemented correctly and was not working in most cases.
+- Added case for twosided_flag = 3 to make the primitive completely invisible to any radiation.
+- Added ability to visualize radiation sources by adding their geometry to the Context. See RadiationModel::enableLightModelVisualization().
+- Added ability to visualize radiation cameras by adding their geometry to the Context. See RadiationModel::enableCameraModelVisualization().

@@ -75,7 +75,7 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 
   if( prd.origin_UUID == patch_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
     return;
-  }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+  }else if( twosided_flag[ patch_UUID[objID] ]>=2 ){ //if twosided_flag=2, ignore intersection (transparent)
       return;
   }
   
@@ -173,7 +173,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 
     if( prd.origin_UUID == triangle_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
         return;
-    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+    }else if( twosided_flag[ triangle_UUID[objID] ]>=2 ){ //if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -271,7 +271,7 @@ RT_PROGRAM void disk_intersect(int objID /**< [in] index of primitive in geometr
 
     if( prd.origin_UUID == disk_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
         return;
-    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+    }else if( twosided_flag[ disk_UUID[objID] ]>=2 ){ //if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -318,7 +318,7 @@ RT_PROGRAM void voxel_intersect(int objID /**< [in] index of primitive in geomet
 
     if( prd.origin_UUID == voxel_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
         return;
-    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+    }else if( twosided_flag[ voxel_UUID[objID] ]>=2 ){ //if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -417,7 +417,7 @@ RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometr
 
     if( prd.origin_UUID == bbox_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
         return;
-    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+    }else if( twosided_flag[ bbox_UUID[objID] ]>=2 ){ //if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -481,7 +481,7 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
 
     if( prd.origin_UUID == tile_UUID[objID] ){ //the ray should not intersect the primitive from which it was launched
         return;
-    }else if( twosided_flag[objID]==2 ){ //if twosided_flag=2, ignore intersection (transparent)
+    }else if( twosided_flag[ tile_UUID[objID] ]>=2 ){ //if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 

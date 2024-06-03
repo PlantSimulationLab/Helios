@@ -2282,6 +2282,24 @@ public:
     
     //!Get all primitive UUIDs currently in the Context
     std::vector<uint> getAllUUIDs() const;
+
+    //! Delete UUIDs from vector if primitives no longer exist (1D vector)
+    /**
+     * \param[inout] UUIDs Vector of primitive UUIDs. UUIDs for primitives that do not exist will be deleted from the vector.
+     */
+    void cleanDeletedUUIDs( std::vector<uint> &UUIDs ) const;
+
+    //! Delete UUIDs from vector if primitives no longer exist (2D vector)
+    /**
+     * \param[inout] UUIDs Vector of primitive UUIDs. UUIDs for primitives that do not exist will be deleted from the vector.
+     */
+    void cleanDeletedUUIDs( std::vector<std::vector<uint>> &UUIDs ) const;
+
+    //! Delete UUIDs from vector if primitives no longer exist (3D vector)
+    /**
+     * \param[inout] UUIDs Vector of primitive UUIDs. UUIDs for primitives that do not exist will be deleted from the vector.
+     */
+    void cleanDeletedUUIDs( std::vector<std::vector<std::vector<uint>>> &UUIDs ) const;
     
     //-------- Primitive Data Methods ---------- //
     

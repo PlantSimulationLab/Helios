@@ -40,7 +40,7 @@ rtBuffer<int, 1> uvID;
 rtBuffer<float, 2>  transform_matrix;
 rtBuffer<unsigned int, 1> primitive_type;
 rtBuffer<float, 1> primitive_area;
-rtBuffer<bool, 1> twosided_flag;
+rtBuffer<char, 1> twosided_flag;
 rtBuffer<float, 1>   radiation_out_top;
 rtBuffer<float, 1>   radiation_out_bottom;
 
@@ -368,7 +368,9 @@ RT_PROGRAM void direct_raygen()
                     prd.face = 0;
                 }
 
-                rtTrace( top_object, ray, prd);
+                if( (prd.face==1 || twosided_flag[objID]==1) && twosided_flag[objID]!=3 ){
+                    rtTrace( top_object, ray, prd);
+                }
 
             }
 
@@ -672,10 +674,12 @@ RT_PROGRAM void diffuse_raygen(){
 
                 prd.face = 1;
 
-                rtTrace( top_object, ray, prd);
+                if( twosided_flag[objID] != 3 ){
+                    rtTrace( top_object, ray, prd);
+                }
 
                 // ---- "bottom" surface launch -------
-                if( twosided_flag[objID] ){
+                if( twosided_flag[objID] == 1 ){
                     ray_direction = -ray_direction;
                     ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
 
@@ -822,7 +826,7 @@ RT_PROGRAM void pixel_label_raygen(){
 
     optix::Ray ray;
 
-    prd.strength = 1.f;
+    prd.strength = 0.f;
 
     prd.area = 1.f;
     prd.origin_UUID = origin_ID;

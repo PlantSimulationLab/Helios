@@ -106,6 +106,7 @@ struct RadiationCamera{
     std::map<std::string,std::vector<float>> pixel_data;
 
     std::vector<uint> pixel_label_UUID;
+    std::vector<float> pixel_depth;
 
 };
 
@@ -556,6 +557,18 @@ public:
     */
     void setSourceSpectrum(const std::vector<uint> &source_ID, const std::string &spectrum_label );
 
+    //! Add a 3D model of the light source (rectangular, disk, and sphere) to the Context for visualization purposes
+    void enableLightModelVisualization();
+
+    //! Remove the 3D model of the light source from the Context
+    void disableLightModelVisualization();
+
+    //! Add a 3D model of the camera to the Context for visualization purposes
+    void enableCameraModelVisualization();
+
+    //! Remove the 3D model of the camera from the Context
+    void disableCameraModelVisualization();
+
     //! Integrate a spectral distribution between two wavelength bounds
     /**
      * \param[in] "object_spectrum" Vector containing spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
@@ -599,13 +612,20 @@ public:
      */
     float integrateSpectrum( const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum ) const;
 
-    //! Scale an entire spectrum by a constant factor.
+    //! Scale an entire spectrum by a constant factor. Creates new global data for scaled spectrum.
     /**
      * \param[in] "existing_global_data_label" Label of global data containing spectral data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity/reflectivity/transmissivity (.y).
      * \param[in] "new_global_data_label" Label of new global data to be created containing scaled spectral data (type of vec2).
      * \param[in] "scale_factor" Scaling factor.
     */
     void scaleSpectrum( const std::string &existing_global_data_label, const std::string &new_global_data_label, float scale_factor ) const;
+
+    //! Scale an entire spectrum by a constant factor. Performs scaling in-place.
+    /**
+     * \param[in] "_global_data_label" Label of global data containing spectral data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity/reflectivity/transmissivity (.y).
+     * \param[in] "scale_factor" Scaling factor.
+    */
+    void scaleSpectrum( const std::string &global_data_label, float scale_factor ) const;
 
     //! Scale an entire spectrum by a random factor following a uniform distribution.
     /**
@@ -653,21 +673,6 @@ public:
      * \note This method should be called prior to calling RadiationModel::updateGeometry(), otherwise the boundary condition will not be enforced.
     */
     void enforcePeriodicBoundary(const std::string &boundary );
-
-    //! Add a radiation camera sensor
-    /**
-     * \param[in] "camera_label" A label that will be used to refer to the camera (e.g., "thermal", "multispectral", "NIR", etc.).
-     * \param[in] "band_label" Labels for radiation bands to include in camera.
-     * \param[in] "position" Cartesian (x,y,z) location of the camera sensor.
-     * \param[in] "lookat" Cartesian (x,y,z) position at which the camera is pointed. The vector (lookat-position) is perpendicular to the camera face.
-     * \param[in] "lens_diameter" Physical diameter of the camera lens.
-     * \param[in] "sensor_size" Physical dimensions of the camera pixel sensor.
-     * \param[in] "focal_length" Camera focal length.
-     * \param[in] "HFOV_degrees" Camera field of view (degrees).
-     * \param[in] "antialiasing_samples" Number of ray samples per pixel. More samples will decrease noise/aliasing in the image, but will take longer to run.
-     * \param[in] "resolution" Pixel resolution of the camera in the horizontal x vertical directions.
-     */
-    DEPRECATED( void addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::vec3 &lookat, float lens_diameter, const helios::vec2 &sensor_size, float focal_plane_distance, float HFOV_degrees, uint antialiasing_samples, const helios::int2 &resolution) );
 
     //! Add a radiation camera sensor
     /**
@@ -869,14 +874,24 @@ public:
     */
     void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &primitive_data_label, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float padvalue = NAN);
 
-    //! Write depth image to file
+    //! Write depth image data to text file
     /**
      * \param[in] "cameralabel" Label of target camera
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
      * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
      * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
     */
-    void writeDepthImage(const std::string &cameralabel, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
+    void writeDepthImageData(const std::string &cameralabel, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
+
+    //! Write depth image file, with grayscale normalized to the minimum and maximum depth values
+    /**
+     * \param[in] "cameralabel" Label of target camera
+     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
+     * \param[in] max_depth Maximum depth value for normalization (e.g., the depth of the sky)
+     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+    */
+    void writeNormDepthImage(const std::string &cameralabel, const std::string &imagefile_base, float max_depth, const std::string &image_path = "./", int frame = -1);
 
     //! Write bounding boxes based on primitive data labels (Ultralytic's YOLO format). Primitive data must have type of 'uint' or 'int'.
     /**
@@ -1145,12 +1160,18 @@ protected:
      * \param[in] "array" 1D array used to initialize buffer.
     */
     void initializeBuffer1Dint3(RTbuffer &buffer, const std::vector<optix::int3> &array );
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of type bool.
+//    //! Set size of 1D buffer and initialize all elements based on a 1D array of type bool.
+//    /**
+//     * \param[inout] "buffer" OptiX buffer to be initialized.
+//     * \param[in] "array" 1D array used to initialize buffer.
+//    */
+//    void initializeBuffer1Dbool(RTbuffer &buffer, const std::vector<bool> &array );
+    //! Set size of 1D buffer and initialize all elements based on a 1D array of type char.
     /**
      * \param[inout] "buffer" OptiX buffer to be initialized.
      * \param[in] "array" 1D array used to initialize buffer.
     */
-    void initializeBuffer1Dbool(RTbuffer &buffer, const std::vector<bool> &array );
+    void initializeBuffer1Dchar(RTbuffer &buffer, const std::vector<char> &array );
     //! Set size of 2D buffer and initialize all elements to zero.
     /**
      * \param[inout] "buffer" OptiX buffer to be initialized.
@@ -1225,6 +1246,17 @@ protected:
     */
     template <typename anytype>
     void initializeBuffer3D(RTbuffer &buffer, const std::vector<std::vector<std::vector<anytype>>> &array );
+
+    void buildLightModelGeometry( uint sourceID );
+
+    void buildCameraModelGeometry( const std::string &cameralabel );
+
+    void updateLightModelPosition( uint sourceID, const helios::vec3 &delta_position );
+
+    void updateCameraModelPosition(const std::string &cameralabel);
+
+    std::map<uint,std::vector<uint>> source_model_UUIDs;
+    std::map<std::string,std::vector<uint>> camera_model_UUIDs;
 
     /* Primary RT API objects */
 
@@ -1438,6 +1470,11 @@ protected:
     //! Pixel label primitive ID - RTvariable
     RTvariable camera_pixel_label_RTvariable;
 
+    //! Pixel depth - RTbuffer
+    RTbuffer camera_pixel_depth_RTbuffer;
+    //! Pixel depth - RTvariable
+    RTvariable camera_pixel_depth_RTvariable;
+
     //! Mask data for texture masked Patches - RTbuffer object
     RTbuffer maskdata_RTbuffer;
     //! Mask data for texture masked Patches - RTvariable
@@ -1502,6 +1539,9 @@ protected:
     bool isgeometryinitialized;
 
     std::vector<bool> isbandpropertyinitialized;
+
+    bool islightvisualizationenabled = false;
+    bool iscameravisualizationenabled = false;
 
     //! Names of additional primitive data to add to the Context
     std::vector<std::string> output_prim_data;

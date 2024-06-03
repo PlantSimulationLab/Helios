@@ -2820,8 +2820,12 @@ std::string helios::getFileExtension( const std::string &filepath ){
     return "";
   }
 
+  //edge case when filepath starts with '.' and there is no file extension (e.g., './myfile')
+  if( filepath.find_last_of('.')==0 ){
+    ext = "";
+
   //edge case when file is in a hidden directory AND there is no file extension (return empty string)
-  if( filepath.find_last_of('/')<filepath.size() && filepath.at(filepath.find_last_of('.')-1)=='/' ){
+  }else if( filepath.find_last_of('/')<filepath.size() && filepath.at(filepath.find_last_of('.')-1)=='/' ){
     ext = "";
   }
 

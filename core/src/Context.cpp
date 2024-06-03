@@ -52,6 +52,16 @@ std::minstd_rand0* Context::getRandomGenerator(){
 
 void Context::addTexture( const char* texture_file ){
     if( textures.find(texture_file)==textures.end() ){//texture has not already been added
+
+        //texture must have type PNG or JPEG
+        std::string fn = texture_file;
+        std::string ext = getFileExtension(fn);
+        if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
+            helios_runtime_error("ERROR (Context::addTexture): Texture file " + fn + " is not PNG or JPEG format.");
+        }else if( !doesTextureFileExist(texture_file) ){
+            helios_runtime_error("ERROR (Context::addTexture): Texture file " + std::string(texture_file) + " does not exist.");
+        }
+
         Texture text( texture_file );
         textures[ texture_file ] = text;
     }
@@ -1189,15 +1199,6 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texture_file;
-    std::string ext = getFileExtension(fn);
-    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-        helios_runtime_error("ERROR (Context::addPatch): Texture file " + fn + " is not PNG or JPEG format.");
-    }else if( !doesTextureFileExist(texture_file) ){
-        helios_runtime_error("ERROR (Context::addPatch): Texture file " + std::string(texture_file) + " does not exist.");
-    }
-
     addTexture( texture_file );
 
     auto* patch_new = (new Patch( texture_file, textures.at(texture_file).getSolidFraction(), 0, currentUUID ));
@@ -1225,15 +1226,6 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 }
 
 uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoord& rotation, const char* texture_file, const helios::vec2& uv_center, const helios::vec2& uv_size ){
-
-    //texture must have type PNG or JPEG
-    std::string fn = texture_file;
-    std::string ext = getFileExtension(fn);
-    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-        helios_runtime_error("ERROR (Context::addPatch): Texture file " + fn + " is not PNG or JPEG format.");
-    }else if( !doesTextureFileExist(texture_file) ){
-        helios_runtime_error("ERROR (Context::addPatch): Texture file " + std::string(texture_file) + " does not exist.");
-    }
 
     if( size.x==0 || size.y==0 ){
         helios_runtime_error("ERROR (Context::addPatch): Size of patch must be greater than 0.");
@@ -1299,15 +1291,6 @@ uint Context::addTriangle( const vec3& vertex0, const vec3& vertex1, const vec3&
 }
 
 uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texture_file, const helios::vec2& uv0, const helios::vec2& uv1, const helios::vec2& uv2 ){
-
-    //texture must have type PNG or JPEG
-    std::string fn = texture_file;
-    std::string ext = getFileExtension(fn);
-    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-        helios_runtime_error("ERROR (Context::addTriangle): Texture file " + fn + " is not PNG or JPEG format.");
-    }else if( !doesTextureFileExist(texture_file) ){
-        helios_runtime_error("ERROR (Context::addTriangle): Texture file " + std::string(texture_file) + " does not exist.");
-    }
 
     addTexture( texture_file );
 
@@ -1682,6 +1665,36 @@ std::vector<uint> Context::getAllUUIDs() const{
         i++;
     }
     return UUIDs;
+}
+
+void Context::cleanDeletedUUIDs( std::vector<uint> &UUIDs ) const {
+    for (int i = UUIDs.size() - 1; i >= 0; i--) {
+        if (!doesPrimitiveExist(UUIDs.at(i))) {
+            UUIDs.erase(UUIDs.begin() + i);
+        }
+    }
+}
+
+void Context::cleanDeletedUUIDs( std::vector<std::vector<uint>> &UUIDs ) const{
+    for( int j=UUIDs.size()-1; j>=0; j-- ){
+        for( int i=UUIDs.at(j).size()-1; i>=0; i-- ){
+            if( !doesPrimitiveExist(UUIDs.at(j).at(i)) ){
+                UUIDs.at(j).erase( UUIDs.at(j).begin()+i );
+            }
+        }
+    }
+}
+
+void Context::cleanDeletedUUIDs( std::vector<std::vector<std::vector<uint>>> &UUIDs ) const{
+    for( int k=UUIDs.size()-1; k>=0; k-- ) {
+        for (int j = UUIDs.at(k).size() - 1; j >= 0; j--) {
+            for (int i = UUIDs.at(k).at(j).size() - 1; i >= 0; i--) {
+                if (!doesPrimitiveExist(UUIDs.at(k).at(j).at(i))) {
+                    UUIDs.at(k).at(j).erase(UUIDs.at(k).at(j).begin() + i);
+                }
+            }
+        }
+    }
 }
 
 void Context::addTimeseriesData(const char* label, float value, const Date &date, const Time &time ){
@@ -3993,15 +4006,6 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 
 uint Context::addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    std::string ext = getFileExtension(fn);
-    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-        helios_runtime_error("ERROR (Context::addTileObject): Texture file " + fn + " is not PNG or JPEG format.");
-    }else if( !doesTextureFileExist(texturefile) ){
-        helios_runtime_error("ERROR (Context::addTileObject): Texture file " + std::string(texturefile) + " does not exist.");
-    }
-
     if( size.x==0 || size.y==0 ){
         helios_runtime_error("ERROR (addTileObject): Size of tile must be greater than 0.");
     }
@@ -5253,15 +5257,6 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
 std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile ){
 
-    //texture must have type PNG or JPEG
-    std::string fn = texturefile;
-    std::string ext = getFileExtension(fn);
-    if( ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG" ){
-        helios_runtime_error("ERROR (Context::addTile): Texture file " + fn + " is not PNG or JPEG format.");
-    }else if( !doesTextureFileExist(texturefile) ){
-        helios_runtime_error("ERROR (Context::addTile): Texture file " + std::string(texturefile) + " does not exist.");
-    }
-
     std::vector<uint> UUID;
 
     vec2 subsize;
@@ -5278,10 +5273,13 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
     addTexture( texturefile );
     std::vector<std::vector<bool> > alpha;
-    int2 sz;
+    int2 sz = textures.at(texturefile).getSize();
     if( textures.at(texturefile).hasTransparencyChannel() ){
         alpha = *textures.at(texturefile).getTransparencyData();
-        sz = textures.at(texturefile).getSize();
+    }
+
+    if( subdiv.x>=sz.x || subdiv.y>=sz.y ){
+        helios_runtime_error("ERROR (Context::addTile): The resolution of the texture image '" + std::string(texturefile) + "' is lower than the number of tile subdivisions. Increase resolution of the texture image.");
     }
 
     for( uint j=0; j<subdiv.y; j++ ){
