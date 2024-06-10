@@ -1236,6 +1236,8 @@ public:
     std::vector<std::string> listPrimitiveData() const;
 
     virtual void calculateSolidFraction( const std::map<std::string,Texture> &textures ) = 0;
+
+    friend class Context;
     
 protected:
     
@@ -3935,208 +3937,207 @@ public:
     
     //! Get global data value (scalar integer)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Global data value (scalar integer)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Global data value (scalar integer)
      */
     void getGlobalData( const char* label, int& data ) const;
     
     //! Get global data (array of integers)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of integers)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of integers)
      */
     void getGlobalData( const char* label, std::vector<int>& data ) const;
     
     //! Get global data value (scalar uint)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Global data value (scalar uint)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Global data value (scalar uint)
      */
     void getGlobalData( const char* label, uint& data ) const;
     
     //! Get global data (array of uint's)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of uint's)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of uint's)
      */
     void getGlobalData( const char* label, std::vector<uint>& data ) const;
     
     //! Get global data value (scalar float)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Global data value (scalar float)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Global data value (scalar float)
      */
     void getGlobalData( const char* label, float& data ) const;
     
     //! Get global data (array of floats)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of floats)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of floats)
      */
     void getGlobalData( const char* label, std::vector<float>& data ) const;
     
     //! Get global data value (scalar double)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Global data value (scalar double)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Global data value (scalar double)
      */
     void getGlobalData( const char* label, double& data ) const;
     
     //! Get global data (array of doubles)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of doubles)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of doubles)
      */
     void getGlobalData( const char* label, std::vector<double>& data ) const;
     
     //! Get global data value (scalar vec2)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Global data value (scalar vec2)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Global data value (scalar vec2)
      */
     void getGlobalData( const char* label, helios::vec2& data ) const;
     
     //! Get global data (array of vec2's)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of vec2's)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of vec2's)
      */
     void getGlobalData( const char* label, std::vector<helios::vec2>& data ) const;
     
     //! Get global data value (scalar vec3)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[in] "data" Global data value (scalar vec3)
+     * \param[in] "label" Name/label associated with data
+     * \param[in] "data" Global data value (scalar vec3)
      */
     void getGlobalData( const char* label, helios::vec3& data ) const;
     
     //! Get global data (array of vec3's)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of vec3's)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of vec3's)
      */
     void getGlobalData( const char* label, std::vector<helios::vec3>& data ) const;
     
     //! Get global data value (scalar vec4)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data' Global data value (scalar vec4)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data' Global data value (scalar vec4)
      */
     void getGlobalData( const char* label, helios::vec4& data ) const;
     
     //! Get global data (array of vec4's)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of vec4's)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of vec4's)
      */
     void getGlobalData( const char* label, std::vector<helios::vec4>& data ) const;
     
     //! Get global data value (scalar int2)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Global data value (scalar int2)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Global data value (scalar int2)
      */
     void getGlobalData( const char* label, helios::int2& data ) const;
     
     //! Get global data (array of int2's)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of int2's)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of int2's)
      */
     void getGlobalData( const char* label, std::vector<helios::int2>& data ) const;
     
     //! Get global data value (scalar int3)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Global data value (scalar int3)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Global data value (scalar int3)
      */
     void getGlobalData( const char* label, helios::int3& data ) const;
     
     //! Get global data (array of int3's)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of int3's)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of int3's)
      */
     void getGlobalData( const char* label, std::vector<helios::int3>& data ) const;
     
     //! Get global data value (scalar int4)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Global data value (scalar int4)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Global data value (scalar int4)
      */
     void getGlobalData( const char* label, helios::int4& data ) const;
     
     //! Get global data (array of int4's)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of int4's)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of int4's)
      */
     void getGlobalData( const char* label, std::vector<helios::int4>& data ) const;
     
     //! Get global data value (scalar string)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Global data value (scalar string)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Global data value (scalar string)
      */
     void getGlobalData( const char* label, std::string& data ) const;
     
     //! Get global data (array of strings)
     /**
-     \param[in] "label" Name/label associated with data
-     \param[out] "data" Pointer to global data (array of strings)
+     * \param[in] "label" Name/label associated with data
+     * \param[out] "data" Pointer to global data (array of strings)
      */
     void getGlobalData( const char* label, std::vector<std::string>& data ) const;
     
     //! Get the Helios data type of global data
     /**
-     \param[in] "label" Name/label associated with data
-     \return Helios data type of global data
-     \sa HeliosDataType
+     * \param[in] "label" Name/label associated with data
+     * \return Helios data type of global data
      */
     HeliosDataType getGlobalDataType( const char* label ) const;
     
     //! Get the size/length of global data
     /**
-     \param[in] "label" Name/label associated with data
-     \return Size/length of global data array
+     * \param[in] "label" Name/label associated with data
+     * \return Size/length of global data array
      */
     size_t getGlobalDataSize( const char* label ) const;
     
     //! Check if global data 'label' exists
     /**
-     \param[in] "label" Name/label associated with data
-     \return True/false
+     * \param[in] "label" Name/label associated with data
+     * \return True/false
      */
     bool doesGlobalDataExist( const char* label ) const;
 
     //! Increase value of global data (int) by some value
     /**
-     \param[in] "label" Global data label string
-     \param[in] "increment" Value to increment global data by
-     \note If global data is a vector, each value in the vector will be incremented by the same amount
+     * \param[in] "label" Global data label string
+     * \param[in] "increment" Value to increment global data by
+     * \note If global data is a vector, each value in the vector will be incremented by the same amount
     */
     void incrementGlobalData( const char* label, int increment );
 
     //! Increase value of global data (uint) by some value
     /**
-     \param[in] "label" Global data label string
-     \param[in] "increment" Value to increment global data by
-     \note If global data is a vector, each value in the vector will be incremented by the same amount
+     * \param[in] "label" Global data label string
+     * \param[in] "increment" Value to increment global data by
+     * \note If global data is a vector, each value in the vector will be incremented by the same amount
     */
     void incrementGlobalData( const char* label, uint increment );
 
     //! Increase value of global data (float) by some value
     /**
-     \param[in] "label" Global data label string
-     \param[in] "increment" Value to increment global data by
-     \note If global data is a vector, each value in the vector will be incremented by the same amount
+     * \param[in] "label" Global data label string
+     * \param[in] "increment" Value to increment global data by
+     * \note If global data is a vector, each value in the vector will be incremented by the same amount
     */
     void incrementGlobalData( const char* label, float increment );
 
     //! Increase value of global data (double) by some value
     /**
-     \param[in] "label" Global data label string
-     \param[in] "increment" Value to increment global data by
+     * \param[in] "label" Global data label string
+     * \param[in] "increment" Value to increment global data by
      \note If global data is a vector, each value in the vector will be incremented by the same amount
     */
     void incrementGlobalData( const char* label, double increment );
@@ -4168,24 +4169,28 @@ public:
     std::vector<uint> getAllObjectIDs() const;
     
     //! Delete a single Compound Object from the context
-    /**  \param[in] "ObjID" Identifier for Compound Object.
+    /**
+     * \param[in] "ObjID" Identifier for Compound Object.
      */
     void deleteObject(uint ObjID );
     
     //! Delete a group of Compound Objects from the context
-    /** \param[in] "ObjID" Identifier for Compound Object.
+    /**
+     * \param[in] "ObjID" Identifier for Compound Object.
      */
     void deleteObject(const std::vector<uint> &ObjIDs );
     
     //! Make a copy of a Compound Objects from the context
-    /** \param[in] "ObjID" Identifier for Compound Object.
-     \return ID for copied object.
+    /**
+     * \param[in] "ObjID" Identifier for Compound Object.
+     * \return ID for copied object.
      */
     uint copyObject(uint ObjID );
     
     //! Make a copy of a group of Compound Objects from the context
-    /** \param[in] "ObjID" Identifier for Compound Object.
-     \return ID for copied object.
+    /**
+     * \param[in] "ObjID" Identifier for Compound Object.
+     * \return ID for copied object.
      */
     std::vector<uint> copyObject(const std::vector<uint> &ObjIDs );
 
@@ -4448,7 +4453,8 @@ public:
     
     
     //! Get a pointer to a Box Compound Object
-    /** \param[in] "ObjID" Identifier for Box Compound Object.
+    /**
+     * \param[in] "ObjID" Identifier for Box Compound Object.
      */
     Box* getBoxObjectPointer(uint ObjID ) const;
     
@@ -4471,7 +4477,8 @@ public:
     helios::int3 getBoxObjectSubdivisionCount(uint &ObjectID) const;
     
     //! Get a pointer to a Disk Compound Object
-    /** \param[in] "ObjID" Identifier for Disk Compound Object.
+    /**
+     * \param[in] "ObjID" Identifier for Disk Compound Object.
      */
     Disk* getDiskObjectPointer(uint ObjID ) const;
     
@@ -4499,7 +4506,8 @@ public:
     Polymesh* getPolymeshObjectPointer(uint ObjID ) const;
     
     //! Get a pointer to a Cone Compound Object
-    /** \param[in] "ObjID" Identifier for Cone Compound Object.
+    /**
+     * \param[in] "ObjID" Identifier for Cone Compound Object.
      */
     Cone* getConeObjectPointer( uint ObjID ) const;
     
@@ -5222,6 +5230,14 @@ public:
      * \ingroup timeseries
      */
     float queryTimeseriesData(const char* label, const Date &date, const Time &time ) const;
+
+    //! Get a timeseries data point at the time currently set in the Context
+    /**
+     * \param "label" Name of timeseries variable (e.g., temperature)
+     * \return Value of timeseries data point
+     * \ingroup timeseries
+     */
+    float queryTimeseriesData( const char* label ) const;
     
     //! Get a timeseries data point by index in the timeseries
     /**This method returns timeseries data by index, and is typically used when looping over all data in the timeseries.  See \ref getTimeseriesLength() to get the total length of the timeseries data.
@@ -5825,6 +5841,50 @@ public:
    * \note An error will be thrown for primitive data types of uint, int, int2, int3, int4, and string.
    */
   void scalePrimitiveData( const std::vector<uint> &UUIDs, const std::string &label, float scaling_factor );
+
+    //! Multiply primitive data values by a constant scaling factor for all primitives.
+    /**
+     * \param[in] "label" Primitive data label
+     * \param[in] "scaling_factor" Factor to scale primitive data
+     * \note An error will be thrown for primitive data types of uint, int, int2, int3, int4, and string.
+     */
+    void scalePrimitiveData( const std::string &label, float scaling_factor );
+
+    //! Increase value of primitive data (int) by some value
+    /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" primitive data label string
+     * \param[in] "increment" Value to increment primitive data by
+     * \note If primitive data is a vector, each value in the vector will be incremented by the same amount
+    */
+    void incrementPrimitiveData( const std::vector<uint> &UUIDs, const char* label, int increment );
+
+    //! Increase value of primitive data (uint) by some value
+    /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" primitive data label string
+     * \param[in] "increment" Value to increment primitive data by
+     * \note If primitive data is a vector, each value in the vector will be incremented by the same amount
+    */
+    void incrementPrimitiveData( const std::vector<uint> &UUIDs, const char* label, uint increment );
+
+    //! Increase value of primitive data (float) by some value
+    /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" primitive data label string
+     * \param[in] "increment" Value to increment primitive data by
+     * \note If primitive data is a vector, each value in the vector will be incremented by the same amount
+    */
+    void incrementPrimitiveData( const std::vector<uint> &UUIDs, const char* label, float increment );
+
+    //! Increase value of primitive data (double) by some value
+    /**
+     * \param[in] "UUIDs" Universal unique identifiers of primitives
+     * \param[in] "label" primitive data label string
+     * \param[in] "increment" Value to increment primitive data by
+     * \note If primitive data is a vector, each value in the vector will be incremented by the same amount
+    */
+    void incrementPrimitiveData( const std::vector<uint> &UUIDs, const char* label, double increment );
 
   //! Sum multiple primitive data values for each primitive together and store result in new primitive data
   /**

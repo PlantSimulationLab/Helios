@@ -1,6 +1,6 @@
 /** \file "rayGeneration.cu" File containing OptiX ray generation programs
 
-    Copyright (C) 2016-2023  Brian Bailey
+    Copyright (C) 2016-2024  Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -64,7 +64,7 @@ rtBuffer<unsigned int, 1> source_types;
 rtDeclareVariable( float3, camera_position, , );
 rtDeclareVariable( float2, camera_direction, , );
 rtDeclareVariable( float, camera_lens_diameter, , );
-rtDeclareVariable( float2, sensor_size, , );
+rtDeclareVariable( float, FOV_aspect_ratio, , );
 rtDeclareVariable( float, camera_focal_length, , );
 rtDeclareVariable( float, camera_viewplane_length, , );
 
@@ -737,8 +737,8 @@ RT_PROGRAM void camera_raygen(){
     //    float Ry = 0.5;
 
     // Map sample to pixel
-    sp.y = (-0.5f * PPointsRatioy + (ii+Rx)/float(camera_resolution.x))*sensor_size.x;
-    sp.z = (0.5f * PPointsRatiox - (jj+Ry)/float(camera_resolution.y))*sensor_size.y;
+    sp.y = (-0.5f * PPointsRatioy + (ii+Rx)/float(camera_resolution.x));
+    sp.z = (0.5f * PPointsRatiox - (jj+Ry)/float(camera_resolution.y))/FOV_aspect_ratio;
     sp.x = camera_viewplane_length;
 
     // *** Determine point 'p' on focal plane that passes through the lens center (0,0) and pixel sample (view direction coordinate aligned) *** //
@@ -799,8 +799,8 @@ RT_PROGRAM void pixel_label_raygen(){
     size_t origin_ID = jj*launch_dim.y + ii; //global pixel index
 
     // Map sample to center of pixel
-    sp.y = (-0.5f + (ii+0.5f)/float(camera_resolution.x))*sensor_size.x;
-    sp.z = (0.5f - (jj+0.5f)/float(camera_resolution.y))*sensor_size.y;
+    sp.y = (-0.5f + (ii+0.5f)/float(camera_resolution.x));
+    sp.z = (0.5f - (jj+0.5f)/float(camera_resolution.y))/FOV_aspect_ratio;
     sp.x = camera_viewplane_length;
 
 

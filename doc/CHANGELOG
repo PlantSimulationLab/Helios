@@ -1665,3 +1665,31 @@ The radiation model has been re-designed, with the following primary additions:
 - Added case for twosided_flag = 3 to make the primitive completely invisible to any radiation.
 - Added ability to visualize radiation sources by adding their geometry to the Context. See RadiationModel::enableLightModelVisualization().
 - Added ability to visualize radiation cameras by adding their geometry to the Context. See RadiationModel::enableCameraModelVisualization().
+
+[1.3.13] 2024-06-10
+
+*Fixed compiler warning in pugixml (convert_number_to_mantissa_exponent).
+*Disabled CMake deprecation warnings.
+*Upgraded zlib to v1.3.1 to get rid of compiler warnings
+*Changed standard project CMakeList.txt to require cmake v3.15 on all systems.
+
+*Context*
+- Added Context::incrementPrimitiveData() methods.
+- Added overloaded version of Context::scalePrimitiveData() that does not take a UUID argument and scales data for all primitives.
+- Added overloaded version of Context::queryTimeseriesData() that queries at the time currently set in the Context.
+
+*Radiation*
+- **** significant change **** - 'sensor_size' was removed from the CameraProperties struct and replaced with FOV_aspect_ratio. The actual sensor_size values did not matter, and it was only the ratio of the size that determined the vertical field of view.
+- Added RadiationModel::getCameraPosition(), RadiationModel::getCameraLookat(), and RadiationModel::getCameraOrientation() methods.
+- Geometry for the light source model visualizations was not being correctly rotated.
+- Added check to RadiationModel::setCameraSpectralResponse() to make sure band actually exists.
+- Added Basler 730nm and 850nm filtered mono camera spectra to camera_spectral_library.xml.
+- Correction to fix camera calibration in CameraCalibration::updateCameraResponseSpectra().
+- Added RadiationModel::integrateSourceSpectrum() to easily integrate a source spectrum over a given wavelength range.
+- Added a filter to RadiationModel::writeImageBoundingBoxes() to not write bounding boxes with a width of 0 pixels.
+- Added RadiationModel::writeCameraImageData() to write out raw camera pixel flux data to ASCII text file.
+- 'flux_to_pixel_conversion' argument of RadiationModel::writeCameraImage() was not implemented.
+- File was not closed at the end of writing in RadiationModel::writeDepthImageData().
+- Added RadiationModel::deleteRadiationSource().
+- Deleted some overloaded versions of RadiationModel::addSunSphereSource() that take a sourceID as input to change the source ID. Instead we can use RadiationModel::deleteRadiationSource() and re-add a new source.
+- Fixed an error in RadiationModel::getSourceFlux() for sun sphere sources that caused the flux to be incorrect.

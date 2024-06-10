@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.12
+/*! \mainpage Helios Documentation v1.3.13
 
   <p> <br> </p>
 
@@ -330,12 +330,8 @@ $ git pull
   Projects that use the Helios API are typically built using a CMakeLists.txt file.  A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.
 
   ~~~~~~
-  # Helios standard CMakeLists.txt file version 1.8
-  if ( WIN32 )
-      cmake_minimum_required(VERSION 3.15)
-  else()
-      cmake_minimum_required(VERSION 2.5)
-  endif()
+  # Helios standard CMakeLists.txt file version 1.9
+  cmake_minimum_required(VERSION 3.15)
   project(helios)
 
   #-------- USER INPUTS ---------#

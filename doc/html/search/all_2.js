@@ -17,7 +17,7 @@ var searchData=
   ['boundary_2dlayer_20conductance_20model_20plugin_20documentation_14',['Boundary-Layer Conductance Model Plugin Documentation',['../_b_l_conductance_doc.html',1,'PlugIns']]],
   ['boundarylayerconductancemodel_2ecpp_15',['BoundaryLayerConductanceModel.cpp',['../_boundary_layer_conductance_model_8cpp.html',1,'']]],
   ['boundarylayerconductancemodel_2eh_16',['BoundaryLayerConductanceModel.h',['../_boundary_layer_conductance_model_8h.html',1,'']]],
-  ['box_17',['Box',['../classhelios_1_1_box.html#ab93cb2d8f6948617f67d236d85b3682a',1,'helios::Box::Box()'],['../classhelios_1_1_box.html',1,'helios::Box']]],
+  ['box_17',['Box',['../classhelios_1_1_box.html#a485bb895ea98e3b853f7f0e0fdfa0e1e',1,'helios::Box::Box(uint a_OID, const std::vector&lt; uint &gt; &amp;a_UUIDs, const int3 &amp;a_subdiv, const char *a_texturefile, helios::Context *a_context)'],['../classhelios_1_1_box.html#ab93cb2d8f6948617f67d236d85b3682a',1,'helios::Box::Box(uint a_OID, const std::vector&lt; uint &gt; &amp;a_UUIDs, const int3 &amp;a_subdiv, const char *a_texturefile, helios::Context *a_context)'],['../classhelios_1_1_box.html',1,'helios::Box']]],
   ['branch_5flength_18',['branch_length',['../struct_walnut_canopy_parameters.html#aabf3f873a3ed1d5850b7697b297ae295',1,'WalnutCanopyParameters']]],
   ['branches_5fper_5flevel_19',['branches_per_level',['../struct_white_spruce_canopy_parameters.html#afa54ff0b14e18e615a40ed80386491dc',1,'WhiteSpruceCanopyParameters']]],
   ['buffer_20',['buffer',['../struct_homogeneous_canopy_parameters.html#a1b6de173fb1f5e71f4d8e7ff9ae99881',1,'HomogeneousCanopyParameters']]],

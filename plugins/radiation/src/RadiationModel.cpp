@@ -291,26 +291,6 @@ uint RadiationModel::addSphereRadiationSource( const vec3 &position, float radiu
 
 }
 
-void RadiationModel::addSphereRadiationSource(const uint &sourceID, const helios::vec3 &position, float radius){
-    // Replace the existing radiation source with ID of "sourceID"
-    if( radius<=0 ){
-        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): Spherical radiation source radius must be positive.");
-    }
-
-    if( sourceID>256 ){
-        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): A maximum of 256 radiation sources are allowed.");
-    }
-
-    RadiationSource sphere_source( position, 2.f*fabsf(radius) );
-
-    //initialize fluxes to 0
-    for( const auto &band : radiation_bands ) {
-        sphere_source.source_fluxes[band.first] = 0.f;
-    }
-
-    radiation_sources.at(sourceID) = sphere_source;
-}
-
 uint RadiationModel::addSunSphereRadiationSource() {
     return addSunSphereRadiationSource( make_vec3(0,0,1) );
 }
@@ -400,6 +380,16 @@ uint RadiationModel::addDiskRadiationSource( const vec3 &position, float radius,
 
 }
 
+void RadiationModel::deleteRadiationSource(uint sourceID){
+
+    if( sourceID >= radiation_sources.size() ){
+        helios_runtime_error("ERROR (RadiationModel::deleteRadiationSource): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
+    }
+
+    radiation_sources.erase(radiation_sources.begin()+sourceID);
+
+}
+
 void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_integral){
 
     if( source_ID >= radiation_sources.size() ){
@@ -468,7 +458,7 @@ float RadiationModel::getSourceFlux( uint source_ID, const std::string &label )c
         helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) +
                 " because radiative band '" + label + "' does not exist.");
     }else {
-        return radiation_sources.at(source_ID).source_fluxes.at(label);
+        return radiation_sources.at(source_ID).source_fluxes.at(label)/radiation_sources.at(source_ID).source_flux_scaling_factor;
     }
     return 0;
 }
@@ -500,10 +490,6 @@ void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios
     RadiationSource &source = radiation_sources.at(source_ID);
 
     source.source_spectrum = spectrum;
-
-    //set the flux for all current bands based on the spectrum's integral
-
-
 
 }
 
@@ -597,7 +583,7 @@ void RadiationModel::buildLightModelGeometry( uint sourceID ){
         context->scalePrimitive( UUIDs_arrow, make_vec3(1,1,1)*0.25f*source.source_width.x );
     }else if( source.source_type == RADIATION_SOURCE_TYPE_RECTANGLE ) {
         source_model_UUIDs[sourceID] = context->loadOBJ( "plugins/radiation/camera_light_models/RectangularLightSource.obj", true);
-        context->scalePrimitive(source_model_UUIDs.at(sourceID), make_vec3(source.source_width.x, source.source_width.y, 0.05f*source.source_width.x));
+        context->scalePrimitive(source_model_UUIDs.at(sourceID), make_vec3(source.source_width.x, source.source_width.y, fmin(0.05f*(source.source_width.x+source.source_width.y),0.5f*fmin(source.source_width.x,source.source_width.y))));
         std::vector<uint> UUIDs_arrow = context->loadOBJ( "plugins/radiation/camera_light_models/Arrow.obj", true );
         source_model_UUIDs.at(sourceID).insert( source_model_UUIDs.at(sourceID).begin(), UUIDs_arrow.begin(), UUIDs_arrow.end() );
         context->scalePrimitive( UUIDs_arrow, make_vec3(1,1,1)*0.15f*(source.source_width.x+source.source_width.y) );
@@ -617,9 +603,9 @@ void RadiationModel::buildLightModelGeometry( uint sourceID ){
         sunvec.normalize();
         context->translatePrimitive( source_model_UUIDs.at(sourceID), center + sunvec*radius );
     }else {
-        context->rotatePrimitive( source_model_UUIDs.at(sourceID), -source.source_rotation.x, "x" );
-        context->rotatePrimitive( source_model_UUIDs.at(sourceID), -source.source_rotation.y, "y" );
-        context->rotatePrimitive( source_model_UUIDs.at(sourceID), -source.source_rotation.z, "z" );
+        context->rotatePrimitive( source_model_UUIDs.at(sourceID), source.source_rotation.x, "x" );
+        context->rotatePrimitive( source_model_UUIDs.at(sourceID), source.source_rotation.y, "y" );
+        context->rotatePrimitive( source_model_UUIDs.at(sourceID), source.source_rotation.z, "z" );
         context->translatePrimitive( source_model_UUIDs.at(sourceID), source.source_position );
     }
 
@@ -841,6 +827,18 @@ float RadiationModel::integrateSpectrum( const std::vector<helios::vec2> &object
     }
 
     return E/Etot;
+
+}
+
+float RadiationModel::integrateSourceSpectrum( uint source_ID, float wavelength1, float wavelength2 ) const{
+
+    if( source_ID >= radiation_sources.size() ){
+        helios_runtime_error( "ERROR (RadiationModel::integrateSourceSpectrum): Radiation spectrum was not set for source ID. Make sure to set its spectrum using setSourceSpectrum() function.");
+    }else if( wavelength1>wavelength2 || wavelength1==wavelength2 ){
+        helios_runtime_error( "ERROR (RadiationModel::integrateSourceSpectrum): Lower wavelength bound must be less than the upper wavelength bound." );
+    }
+
+    return integrateSpectrum( radiation_sources.at(source_ID).source_spectrum, wavelength1, wavelength2 );
 
 }
 
@@ -1073,8 +1071,8 @@ void RadiationModel::enforcePeriodicBoundary(const std::string &boundary ){
 
 void RadiationModel::addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::vec3 &lookat, const CameraProperties &camera_properties, uint antialiasing_samples) {
 
-    if( camera_properties.sensor_size.x<=0 || camera_properties.sensor_size.y<=0 ){
-        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Sensor size must be greater than 0.");
+    if( camera_properties.FOV_aspect_ratio<=0 ){
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Field of view aspect ratio must be greater than 0.");
     }else if( antialiasing_samples==0 ){
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): The model requires at least 1 antialiasing sample to run.");
     }else if( camera_properties.camera_resolution.x<=0 || camera_properties.camera_resolution.y<=0 ){
@@ -1083,7 +1081,7 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horizontal field of view must be between 0 and 180 degrees.");
     }
 
-    RadiationCamera camera(camera_label, band_label, position, lookat, camera_properties.camera_resolution, camera_properties.lens_diameter, camera_properties.sensor_size, camera_properties.focal_plane_distance, camera_properties.HFOV, antialiasing_samples );
+    RadiationCamera camera(camera_label, band_label, position, lookat, camera_properties.camera_resolution, camera_properties.lens_diameter, camera_properties.focal_plane_distance, camera_properties.HFOV, camera_properties.FOV_aspect_ratio, antialiasing_samples);
     if(cameras.find(camera_label)==cameras.end()){
         cameras.emplace(camera_label,camera);
     }
@@ -1111,6 +1109,8 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
 void RadiationModel::setCameraSpectralResponse( const std::string &camera_label, const std::string &band_label, const std::string &global_data ){
     if(cameras.find(camera_label) == cameras.end() ){
         helios_runtime_error("ERROR (setCameraSpectralResponse): Camera '" + camera_label + "' does not exist.");
+    }else if( !doesBandExist(band_label) ){
+        helios_runtime_error("ERROR (setCameraSpectralResponse): Band '" + band_label + "' does not exist.");
     }
 
     cameras.at(camera_label).band_spectral_response[band_label] = global_data;
@@ -1132,6 +1132,16 @@ void RadiationModel::setCameraPosition( const std::string &camera_label, const h
 
 }
 
+helios::vec3 RadiationModel::getCameraPosition(const std::string &camera_label) const{
+
+    if(cameras.find(camera_label) == cameras.end() ){
+        helios_runtime_error("ERROR (RadiationModel::getCameraPosition): Camera '" + camera_label + "' does not exist.");
+    }
+
+    return cameras.at(camera_label).position;
+
+}
+
 void RadiationModel::setCameraLookat( const std::string &camera_label, const helios::vec3& lookat ){
     if(cameras.find(camera_label) == cameras.end() ){
         helios_runtime_error("ERROR (RadiationModel::setCameraLookat): Camera '" + camera_label + "' does not exist.");
@@ -1145,6 +1155,16 @@ void RadiationModel::setCameraLookat( const std::string &camera_label, const hel
 
 }
 
+helios::vec3 RadiationModel::getCameraLookat(const std::string &camera_label) const{
+
+    if(cameras.find(camera_label) == cameras.end() ){
+        helios_runtime_error("ERROR (RadiationModel::getCameraLookat): Camera '" + camera_label + "' does not exist.");
+    }
+
+    return cameras.at(camera_label).lookat;
+
+}
+
 void RadiationModel::setCameraOrientation( const std::string &camera_label, const helios::vec3& direction ){
     if(cameras.find(camera_label) == cameras.end() ){
         helios_runtime_error("ERROR (RadiationModel::setCameraOrientation): Camera '" + camera_label + "' does not exist.");
@@ -1155,6 +1175,16 @@ void RadiationModel::setCameraOrientation( const std::string &camera_label, cons
     if( iscameravisualizationenabled ){
         updateCameraModelPosition(camera_label);
     }
+
+}
+
+helios::SphericalCoord RadiationModel::getCameraOrientation(const std::string &camera_label) const{
+
+    if(cameras.find(camera_label) == cameras.end() ){
+        helios_runtime_error("ERROR (RadiationModel::getCameraOrientation): Camera '" + camera_label + "' does not exist.");
+    }
+
+    return cart2sphere(cameras.at(camera_label).lookat - cameras.at(camera_label).position);
 
 }
 
@@ -1254,6 +1284,7 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
             }else{
                 pixel_color = make_RGBcolor(camera_data.at(0).at(j * camera_resolution.x + i),camera_data.at(1).at(j * camera_resolution.x + i),camera_data.at(2).at(j * camera_resolution.x + i));
             }
+            pixel_color.scale( flux_to_pixel_conversion );
             uint ii = camera_resolution.x - i -1;
             uint jj = camera_resolution.y - j - 1;
             pixel_data.at(jj * camera_resolution.x + ii) = pixel_color;
@@ -1296,6 +1327,70 @@ void RadiationModel::writeNormCameraImage(const std::string &camera, const std::
     }
 
     RadiationModel::writeCameraImage(camera, bands, imagefile_base, image_path, frame);
+}
+
+void RadiationModel::writeCameraImageData(const std::string &camera, const std::string &band, const std::string &imagefile_base, const std::string &image_path, int frame){
+
+    //check if camera exists
+    if( cameras.find(camera)==cameras.end() ){
+        std::cout << "ERROR (RadiationModel::writeCameraImageData): camera with label " << camera << " does not exist. Skipping image write for this camera." << std::endl;
+        return;
+    }
+
+    std::vector<float> camera_data;
+
+    //check if band exists
+    if (std::find(cameras.at(camera).band_labels.begin(), cameras.at(camera).band_labels.end(), band) == cameras.at(camera).band_labels.end()) {
+        std::cout << "ERROR (RadiationModel::writeCameraImageData): camera " << camera << " band with label " << band << " does not exist. Skipping image write for this camera." << std::endl;
+        return;
+    }
+
+    std::string global_data_label = "camera_" + camera + "_" + band;
+
+    if (!context->doesGlobalDataExist(global_data_label.c_str())) {
+        std::cout << "ERROR (RadiationModel::writeCameraImageData): image data for camera " << camera << ", band " << band << " has not been created. Did you run the radiation model? Skipping image write for this camera." << std::endl;
+        return;
+    }
+
+    context->getGlobalData(global_data_label.c_str(), camera_data );
+
+    std::string frame_str;
+    if( frame>=0 ) {
+        frame_str = std::to_string(frame);
+    }
+
+    std::ostringstream outfile;
+
+    if( image_path.find_last_of('/')==image_path.length()-1 ) {
+        outfile << image_path;
+    }else {
+        outfile << image_path << "/";
+    }
+
+    if( frame>=0 ) {
+        outfile << camera << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame_str << ".txt";
+    }else{
+        outfile << camera << "_" << imagefile_base << ".txt";
+    }
+
+    std::ofstream outfilestream(outfile.str());
+
+    if( !outfilestream.is_open() ){
+        std::cout << "ERROR (RadiationModel::writeCameraImageData): image file " << outfile.str() << " could not be opened. Check that the path exists and that you have write permission. Skipping image write for this camera." << std::endl;
+        return;
+    }
+
+    int2 camera_resolution = cameras.at(camera).resolution;
+
+    for ( int j = 0; j<camera_resolution.y; j++ ) {
+        for ( int i = camera_resolution.x-1; i >= 0; i-- ) {
+            outfilestream << camera_data.at(j*camera_resolution.x + i ) << " ";
+        }
+        outfilestream << "\n";
+    }
+
+    outfilestream.close();
+
 }
 
 void RadiationModel::initializeOptiX() {
@@ -1499,8 +1594,8 @@ void RadiationModel::initializeOptiX() {
     RT_CHECK_ERROR( rtVariableSet2f( camera_direction_RTvariable, 0.f, 0.f ));
     RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_lens_diameter", &camera_lens_diameter_RTvariable ) );
     RT_CHECK_ERROR( rtVariableSet1f( camera_lens_diameter_RTvariable, 0.f ));
-    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "sensor_size", &sensor_size_RTvariable ) );
-    RT_CHECK_ERROR( rtVariableSet2f( sensor_size_RTvariable, 0.f, 0.f ));
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "FOV_aspect_ratio", &FOV_aspect_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1f( FOV_aspect_RTvariable, 1.f ));
     RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_focal_length", &camera_focal_length_RTvariable ) );
     RT_CHECK_ERROR( rtVariableSet1f( camera_focal_length_RTvariable, 0.f ));
     RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "camera_viewplane_length", &camera_viewplane_length_RTvariable ) );
@@ -3378,9 +3473,9 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
             helios::SphericalCoord dir = cart2sphere( camera.second.lookat - camera.second.position );
             RT_CHECK_ERROR( rtVariableSet2f( camera_direction_RTvariable, dir.zenith, dir.azimuth ) );
             RT_CHECK_ERROR( rtVariableSet1f( camera_lens_diameter_RTvariable, camera.second.lens_diameter ) );
-            RT_CHECK_ERROR( rtVariableSet2f( sensor_size_RTvariable, camera.second.sensor_size.x, camera.second.sensor_size.y ) );
+            RT_CHECK_ERROR( rtVariableSet1f( FOV_aspect_RTvariable, camera.second.FOV_aspect_ratio ) );
             RT_CHECK_ERROR( rtVariableSet1f( camera_focal_length_RTvariable, camera.second.focal_length ) );
-            RT_CHECK_ERROR( rtVariableSet1f( camera_viewplane_length_RTvariable, camera.second.sensor_size.x/tanf(camera.second.HFOV_degrees*M_PI/180.f) ) );
+            RT_CHECK_ERROR( rtVariableSet1f( camera_viewplane_length_RTvariable, 1.f/tanf(camera.second.HFOV_degrees*M_PI/180.f) ) );
             RT_CHECK_ERROR( rtVariableSet1ui( camera_ID_RTvariable, cam ));
 
             zeroBuffer1D( radiation_in_camera_RTbuffer, camera.second.resolution.x*camera.second.resolution.y*Nbands );
@@ -4637,7 +4732,7 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
     cameraproperties.camera_resolution = calibratecamera.resolution;
     cameraproperties.focal_plane_distance = calibratecamera.focal_length;
     cameraproperties.lens_diameter = calibratecamera.lens_diameter;
-    cameraproperties.sensor_size = calibratecamera.sensor_size;
+    cameraproperties.FOV_aspect_ratio = calibratecamera.FOV_aspect_ratio;
 
     std::vector<uint> UUIDs_target = cameracalibration->getColorBoardUUIDs();
     std::string cameralabel = "calibration";
@@ -4839,7 +4934,7 @@ float RadiationModel::getCameraResponseScale(const std::string &orginalcameralab
     cameraproperties.camera_resolution = calibratecamera.resolution;
     cameraproperties.focal_plane_distance = calibratecamera.focal_length;
     cameraproperties.lens_diameter = calibratecamera.lens_diameter;
-    cameraproperties.sensor_size = calibratecamera.sensor_size;
+    cameraproperties.FOV_aspect_ratio = calibratecamera.FOV_aspect_ratio;
 
     std::string cameralabel = orginalcameralabel+"Scale";
     RadiationModel::addRadiationCamera(cameralabel, bandlabels, calibratecamera.position, calibratecamera.lookat, cameraproperties,20);
@@ -4983,14 +5078,14 @@ void RadiationModel::writeDepthImageData(const std::string &cameralabel, const s
         helios_runtime_error( "ERROR (RadiationModel::writeDepthImageData): Could not open file '" + outfile.str() + "' for writing." );
     }
 
-    int pixel = 0;
-    for ( int j = camera_resolution.y-1; j >= 0; j-- ) {
-        for ( int i = 0; i < camera_resolution.x; i++) {
-            pixel_data << camera_depth.at(pixel) << " ";
-            pixel++;
+    for ( int j = 0; j<camera_resolution.y; j++ ) {
+        for ( int i = camera_resolution.x-1; i >= 0; i--) {
+            pixel_data << camera_depth.at(j*camera_resolution.x + i) << " ";
         }
         pixel_data << "\n";
     }
+
+    pixel_data.close();
 
 }
 
@@ -5157,6 +5252,9 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
 
     for( auto box : pdata_bounds ){
         vec4 bbox = box.second;
+        if( bbox.x==bbox.y || bbox.z==bbox.w ){ //filter boxes of zeros size
+            continue;
+        }
         label_file << object_class_ID << " " << (bbox.x + 0.5 * (bbox.y - bbox.x)) / float(camera_resolution.x) << " "
                    << (bbox.z + 0.5 * (bbox.w - bbox.z)) / float(camera_resolution.y) << " " << std::setprecision(6)
                    << std::fixed << (bbox.y - bbox.x) / float(camera_resolution.x) << " "

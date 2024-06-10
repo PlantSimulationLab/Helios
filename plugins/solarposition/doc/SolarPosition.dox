@@ -26,7 +26,7 @@
  The \ref SolarPosition class can be initialized by simply passing a pointer to the Helios context as an argument to the constructor. This gives the class the model access to the time and date currently set in the Context. The model must also know certain parameters about the simulated location, in particular the offset from UTC time, latitude, and longitude. A description of these parameters are given in the table below. These can be supplied using the second constructor listed in the table above. If the Context is the only argument supplied to the constructor, default values are assumed for UTC, latitude, and longitude (see table below).
 
  <table>
- <caption>\SolarPosition constructor inputs</caption>
+ <caption>\ref SolarPosition constructor inputs</caption>
  <tr><th>Input Parameter</th><th>Description</th><th>Convention</th><th>Default Behavior</th></tr>
  <tr><td>UTC</td><td>Difference in hours between Coordinated Universal Time (UTC) for a particular location.  See the figure below to determine a particular UTC offset.</td><td>UTC offset value is positive moving West.</td><td>+8:00</td></tr>
  <tr><td>latitude</td><td>Geographic coordinate that specifies the north–south position of a point on the Earth's surface in degrees.</td><td>Latitude is positive in the northern hemisphere.</td><td>+38.55</td></tr>
@@ -121,7 +121,7 @@
 
  \subsection SolarPos Getting the Direction of the Sun
 
- The direction of the sun can be queried in one of several ways: a Cartesian unit vector pointing in the direction of the sun, a spherical coordinate describing the direction of the sun, the elevation angle of the sun, the zenithal angle of the sun, and the azimuthal angle of the sun.  The functions to query these quantities are given in the table below. Each of these functions calculates the solar direction based on the current time and date set in the Context (see \ref helios::Context::setTime() "setTime()" and \ref helios::Context::setDate() "setDate()"), and the UTC, latitude, and longitude specified in the \SolarPosition constructor.
+ The direction of the sun can be queried in one of several ways: a Cartesian unit vector pointing in the direction of the sun, a spherical coordinate describing the direction of the sun, the elevation angle of the sun, the zenithal angle of the sun, and the azimuthal angle of the sun.  The functions to query these quantities are given in the table below. Each of these functions calculates the solar direction based on the current time and date set in the Context (see \ref helios::Context::setTime() "setTime()" and \ref helios::Context::setDate() "setDate()"), and the UTC, latitude, and longitude specified in the \ref SolarPosition constructor.
 
  <table>
  <tr><th>Direction Quantity</th><th>Function</th></tr>
@@ -132,37 +132,37 @@
  <tr><td>Azimuthal angle of the sun (radians).</td><td>\ref SolarPosition::getSunAzimuth()</td></tr>
  </table>
 
- Below is an example of how to use the \SolarPosition mode to calculate the sun angle.
+ Below is an example of how to use the \ref SolarPosition mode to calculate the sun angle.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2">
-  <pre><code> #include "Context.h"
-  #include "SolarPosition"     
+ ~~~~~~
+  #include "SolarPosition"
 
-  int main( void ){
+  int main(){
       Context context; //declare the context
 
-      \c//Set the current time and date
+      //Set the current time and date
       context.setDate(1,5,2015); //May 1, 2015
       context.setTime(30,12); //12:30
 
-      \c//Initialize the %SolarPosition class
+      //Initialize the %SolarPosition class
       %SolarPosition sun( 7, 31.256, 119.947, &context );
 
-      \c//Get the sun position
+      //Get the sun position
       vec3 direction = sun.getSunDirectionVector(); //unit vector
 
       float elevation = sun.getSunElevation(); //elevation angle (radians)
       float azimuth = sun.getSunAzimuth(); //azimuthal angle (radians)
       
-  }</code></pre>
- </div>
-
+  }
+ ~~~~~~
 
  \subsection SolarFlux Getting the Solar Flux
 
- The solar flux can be calculated using the REST-2 model using the \ref SolarPosition::getSolarFlux() function. IT IS CRITICAL TO NOTE THAT THE CALCULATED FLUX IS FOR A SURFACE PERPENDICULAR TO THE SUN DIRECTION. To get the flux on a horizontal surface, multiply by the cosine of the solar zenith angle.
+ The solar flux can be calculated using the REST-2 model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990?casa_token=BAJYGez71awAAAAA:CfmA4oT9MLiHGvpD6oUkkDu4EJ1S9uRabZq4-wM07jtcmviZ12jvhD8VVcAkjLWoGNMtg8hDaqo">Gueymard (2008)</a> using the \ref SolarPosition::getSolarFlux() function. IT IS CRITICAL TO NOTE THAT THE CALCULATED FLUX IS FOR A SURFACE PERPENDICULAR TO THE SUN DIRECTION. To get the flux on a horizontal surface, multiply by the cosine of the solar zenith angle.
 
- The getSolarFlux() function takes several arguments needed for the model, which are listed in the table below.
+ Methods are available to get the incoming solar radiation flux perpendicular to the direction of the sun 1) for the entire solar spectrum (\ref SolarPosition::getSolarFlux()), 2) for the PAR band (\ref SolarPosition::getSolarFluxPAR()), and 3) (\ref SolarPosition::getSolarFluxNIR()).
+
+ These functions takes several arguments needed for the model, which are listed in the table below.
 
  <table>
  <tr><th>Argument</th><th>Description</th><th>Example Value</th></tr>
@@ -172,28 +172,27 @@
  <tr><td>turbidity</td><td>Angstrom's aerosol turbidity coefficient.</td><td>0.05</td></tr>
  </table>
 
- The very similar function \ref SolarPosition::getDiffuseFraction() calculates the fraciton of the total flux that is diffuse. The fraction that is direct is simply one minus the diffuse fraction. This function takes the same arguments as getSolarFlux().
+ The very similar function \ref SolarPosition::getDiffuseFraction() calculates the fraction of the total flux that is diffuse. The fraction that is direct is simply one minus the diffuse fraction. This function takes the same arguments as \ref SolarPosition::getSolarFlux().
 
  Example code for using these solar flux functions is given below.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2">
-  <pre><code> #include "Context.h"
-  #include "SolarPosition"     
+ ~~~~~~
+  #include "SolarPosition"
 
-  int main( void ){
+  int main(){
       Context context; //declare the context
 
-      \c//Set the current time and date
+      //Set the current time and date
       context.setDate(1,5,2015); //May 1, 2015
       context.setTime(30,12); //12:30
 
-      \c//Initialize the %SolarPosition class
-      %SolarPosition sun( 7, 31.256, 119.947, &context );
+      //Initialize the %SolarPosition class
+      SolarPosition sun( 7, 31.256, 119.947, &context );
 
-      \c//Get the sun position
+      //Get the sun position
       float zenith = sun.getSunZenith(); //zenithal angle (radians)
 
-      \c//Calculate solar flux
+      //Calculate solar flux
       float R = sun.getSolarFlux( 101000, 300, 0.6, 0.05 ); //flux perpendicular to sun
  (W/m^2)
       float R_horiz = R*cos(zenith);  //flux on horizontal surface
@@ -202,8 +201,14 @@
 
       float R_dir = R*(1.f-f_diff); //direct component of flux (W/m^2)
       
-  }</code></pre>
- </div>
+  }
+ ~~~~~~
+
+ \subsubsection SolarFluxTurb Calibrating the turbidity using weather station (radiometer) data
+
+ The predicted solar flux may not perfectly match local predicted solar fluxes due to uncertainty in the local turbidity value. There is a built-in routine to calibrate the turbidity based on measured radiative fluxes.
+
+ For the calibration, you must load radiation flux data into a timeseries within the Context. There must be at least one clear-sky day in the timeseries data, and the radiative fluxes must be for the entire solar spectrum in units of W/m<sup>2</sup>. You can then use the \ref SolarPosition::calibrateTurbidityFromTimeseries() method. This method takes one argument, which is a string corresponding to the timeseries variable name containing the radiation flux data.
 
  \subsection LWFlux Getting the Sky Longwave Flux
 

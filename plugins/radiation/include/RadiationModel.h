@@ -43,24 +43,24 @@ struct CameraProperties{
     //! Diameter of the camera lens (lens_diameter = 0 gives a 'pinhole' camera with everything in focus)
     float lens_diameter = 0.05;
 
-    //! Physical dimensions of the pixel array sensor in the horizontal (.x) and vertical (.y) directions
-    helios::vec2 sensor_size;
-
     //! Camera horizontal field of view in degrees
     float HFOV = 20.f;
+
+    //! Physical dimensions of the pixel array sensor in the horizontal (.x) and vertical (.y) directions
+    float FOV_aspect_ratio = 1.f;
 
     CameraProperties(){
         camera_resolution = helios::make_int2(512,512);
         focal_plane_distance = 1;
         lens_diameter = 0.05;
-        sensor_size = helios::make_vec2(0.05, 0.1);
+        FOV_aspect_ratio = 1.f;
     }
 
     bool operator==(const CameraProperties &rhs) const {
         return camera_resolution == rhs.camera_resolution &&
                focal_plane_distance == rhs.focal_plane_distance &&
                lens_diameter == rhs.lens_diameter &&
-               sensor_size == rhs.sensor_size &&
+               FOV_aspect_ratio == rhs.FOV_aspect_ratio &&
                HFOV == rhs.HFOV;
     }
 
@@ -70,10 +70,9 @@ struct CameraProperties{
 struct RadiationCamera{
 
     //Constructor
-    RadiationCamera(std::string initlabel, const std::vector<std::string> &band_label, const helios::vec3 &initposition,
-                    const helios::vec3 &initlookat, const helios::int2 &initresolution, float initlens_diameter, const helios::vec2 &initsensor_size,
-                    float initfocal_length, float intitHFOV_degrees, uint initantialiasing_samples)
-            : label(std::move(initlabel)), band_labels(band_label), position(initposition), lookat(initlookat), lens_diameter(initlens_diameter), sensor_size(initsensor_size), resolution(initresolution), focal_length(initfocal_length), HFOV_degrees(intitHFOV_degrees), antialiasing_samples(initantialiasing_samples)
+    RadiationCamera(std::string initlabel, const std::vector<std::string> &band_label, const helios::vec3 &initposition, const helios::vec3 &initlookat, const helios::int2 &initresolution, float initlens_diameter, float initfocal_length, float intitHFOV_degrees, float initFOV_aspect_ratio,
+                    uint initantialiasing_samples)
+            : label(std::move(initlabel)), band_labels(band_label), position(initposition), lookat(initlookat), lens_diameter(initlens_diameter), FOV_aspect_ratio(initFOV_aspect_ratio), resolution(initresolution), focal_length(initfocal_length), HFOV_degrees(intitHFOV_degrees), antialiasing_samples(initantialiasing_samples)
     {
         for( const auto &band : band_label ){
             band_spectral_response[band] = "uniform";
@@ -88,14 +87,14 @@ struct RadiationCamera{
     helios::vec3 lookat;
     //Physical dimensions of the camera lens
     float lens_diameter;
-    //Physical dimensions of the pixel array
-    helios::vec2 sensor_size;
     //Resolution of camera sub-divisions (i.e., pixels)
     helios::int2 resolution;
     //camera focal length.
     float focal_length;
     //camera horizontal field of view (degrees)
     float HFOV_degrees;
+    //Ratio of camera horizontal field of view to vertical field of view
+    float FOV_aspect_ratio;
     //Number of antialiasing samples per pixel
     uint antialiasing_samples;
 
@@ -426,8 +425,6 @@ public:
      */
     uint addSphereRadiationSource(const helios::vec3 &position, float radius );
 
-    void addSphereRadiationSource(const uint &sourceID, const helios::vec3 &position, float radius );
-
     //! Add a sphere radiation source that models the sun assuming the default direction of (0,0,1)
     /**
      * \return Source identifier
@@ -440,8 +437,6 @@ public:
      * \return Source identifier
     */
     uint addSunSphereRadiationSource(const helios::SphericalCoord &sun_direction );
-
-    void addSunSphereRadiationSource(uint sourceID, const helios::SphericalCoord &sun_direction );
 
     //! Add a sphere radiation source that models the sun
     /**
@@ -467,6 +462,12 @@ public:
       * \return Source identifier
     */
     uint addDiskRadiationSource( const helios::vec3 &position, float radius, const helios::vec3& rotation );
+
+    //! Delete an existing radiation source (any type)
+    /**
+     * \param[in] "sourceID" Identifier of radiation source
+    */
+    void deleteRadiationSource(uint sourceID);
 
     //! Set the integral of the source spectral flux distribution across all possible wavelengths (=∫Sdλ)
     /**
@@ -612,6 +613,15 @@ public:
      */
     float integrateSpectrum( const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum ) const;
 
+    //! Integrate a source spectral distribution between two wavelength bounds
+    /**
+     * \param[in] "source_ID" Identifier of a radiation source.
+     * \param[in] "wavelength1" Wavelength for lower bounds of integration
+     * \param[in] "wavelength2" Wavelength for upper bounds of integration
+     * \return Integral of spectral data from wavelength1 to wavelength2
+     */
+    float integrateSourceSpectrum( uint source_ID, float wavelength1, float wavelength2 ) const;
+
     //! Scale an entire spectrum by a constant factor. Creates new global data for scaled spectrum.
     /**
      * \param[in] "existing_global_data_label" Label of global data containing spectral data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity/reflectivity/transmissivity (.y).
@@ -713,12 +723,26 @@ public:
      */
      void setCameraPosition( const std::string &camera_label, const helios::vec3& position );
 
+     //! Get the position of the radiation camera.
+     /**
+     * \param[in] camera_label Label for the camera to be set.
+     * \return Cartesian coordinate of camera position.
+     */
+     helios::vec3 getCameraPosition(const std::string &camera_label) const;
+
     //! Set the position the radiation camera is pointed toward (used to calculate camera orientation)
     /**
      * \param[in] camera_label Label for the camera to be set.
      * \param[in] lookat Cartesian coordinate of location camera is pointed toward.
      */
     void setCameraLookat( const std::string &camera_label, const helios::vec3& lookat );
+
+    //! Get the position the radiation camera is pointed toward (used to calculate camera orientation)
+    /**
+     * \param[in] camera_label Label for the camera to be set.
+     * \return Cartesian coordinate of location camera is pointed toward.
+     */
+    helios::vec3 getCameraLookat(const std::string &camera_label) const;
 
     //! Set the orientation of the radiation camera based on a Cartesian vector
     /**
@@ -733,6 +757,13 @@ public:
      * \param[in] direction Spherical coordinate defining the orientation of the camera.
      */
     void setCameraOrientation( const std::string &camera_label, const helios::SphericalCoord& direction );
+
+    //! Get the orientation of the radiation camera based on a spherical coordinate
+    /**
+     * \param[in] camera_label Label for the camera to be set.
+     * \return Spherical coordinate defining the orientation of the camera.
+     */
+    helios::SphericalCoord getCameraOrientation(const std::string &camera_label) const;
 
     //! Get the labels for all radiation cameras that have been added to the radiation model
     /**
@@ -862,6 +893,16 @@ public:
      * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      */
     void writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
+
+    //! Write camera data for one band to an ASCII text file
+    /**
+     * \param[in] camera Label for camera to be queried
+     * \param[in] band Label for radiative band to be written
+     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     */
+    void writeCameraImageData(const std::string &camera, const std::string &band, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
     //! Write image pixel labels to text file based on primitive data. Primitive data must have type 'float', 'double', 'uint', or 'int'.
     /**
@@ -1010,8 +1051,8 @@ protected:
     //! Radiation camera lens size - RTvariable
     RTvariable camera_lens_diameter_RTvariable;
 
-    //! Radiation camera pixel array size - RTvariable
-    RTvariable sensor_size_RTvariable;
+    //! Radiation FOV aspect ratio - RTvariable
+    RTvariable FOV_aspect_RTvariable;
 
     //! Radiation camera focal length - RTvariable
     RTvariable camera_focal_length_RTvariable;
