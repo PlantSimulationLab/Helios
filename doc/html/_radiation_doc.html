@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.10</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.12</span>
    </div>
   </td>
  </tr>
@@ -475,7 +475,7 @@ green channel
 blue channel
  truevalues.at(2) = {1.0, 0.71, 0.60, 0.48, 0.36, 0.0, 0.20, 0.31, 0.35, 0.91, 0.31, 0.54, 0.24, 0.24, 0.63, 0.57, 0.56, 0.50};</code></pre></div><p >It is preferable to use more significant digits for the color values for increased precision. The above example used only two significant digits for simplicity.</p>
 <p >3. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using <a class="el" href="class_radiation_model.html#a790ce56ed07f2f40b80be9676fa02c05">RadiationModel::setSourceSpectrum()</a>, and specify an initial guess for the camera channel spectral distribution(s) using <a class="el" href="class_radiation_model.html#a1ea2acedb464217f1acc38f0e05d353f">RadiationModel::setCameraSpectralResponse()</a>.</p>
-<p >4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method <a class="el" href="struct_camera_calibration.html#ac24587a354b9faba7394ab169bf5db18">CameraCalibration::addDefaultColorboard()</a>, or a custom color board CameraCalibration::addCustomColorboard().</p>
+<p >4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method <a class="el" href="struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8">CameraCalibration::addDefaultColorboard()</a>, or a custom color board CameraCalibration::addCustomColorboard().</p>
 <h2><a class="anchor" id="RadRun"></a>
 Running Simulations</h2>
 <p >Before simulations are run, we must update the context geometry within the radiation model using the <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a> command. The geometry update can be somewhat costly, so it should only be done whenever geometry changes.</p>

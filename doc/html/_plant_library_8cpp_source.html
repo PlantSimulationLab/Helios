@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.10</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.12</span>
    </div>
   </td>
  </tr>
@@ -612,7 +612,7 @@ $(function() {
 <div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>    shoot_parameters_base.vegetative_bud_break_time = 3;</div>
 <div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>    shoot_parameters_base.internode_radius_initial = 0.001;</div>
 <div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>    shoot_parameters_base.phyllochron = 1;</div>
-<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>    shoot_parameters_base.elongation_rate = 1.0;</div>
+<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>    shoot_parameters_base.elongation_rate = 0.6;</div>
 <div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>    shoot_parameters_base.girth_growth_rate = 0.;</div>
 <div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>    shoot_parameters_base.gravitropic_curvature = 0;</div>
 <div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>    shoot_parameters_base.child_internode_length_max = 0.002;</div>
@@ -635,7 +635,7 @@ $(function() {
 <div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span> </div>
 <div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>    uint plantID = <a class="code hl_function" href="class_plant_architecture.html#a046541b573d8e03845a2038370cd6665">addPlantInstance</a>(base_position, age);</div>
 <div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span> </div>
-<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>    uint uID_stem = <a class="code hl_function" href="class_plant_architecture.html#aa035dac995a6ac7abeb18afce585775b">addBaseStemShoot</a>(plantID, 1, make_AxisRotation(0, 0.f, 0.f), 0.0001, 0.001, 0.1, 0.1, <span class="stringliteral">&quot;base&quot;</span>);</div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>    uint uID_stem = <a class="code hl_function" href="class_plant_architecture.html#aa035dac995a6ac7abeb18afce585775b">addBaseStemShoot</a>(plantID, 1, make_AxisRotation(0, 0.f, 0.f), 0.0001, 0.005, 0.1, 0.1, <span class="stringliteral">&quot;base&quot;</span>);</div>
 <div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span> </div>
 <div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span> </div>
@@ -660,10 +660,10 @@ $(function() {
 <div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span> </div>
 <div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>    phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;</div>
 <div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>    phytomer_parameters_trifoliate.petiole.pitch.uniformDistribution(45,60);</div>
-<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>    phytomer_parameters_trifoliate.petiole.radius = 0.0025;</div>
+<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>    phytomer_parameters_trifoliate.petiole.radius = 0.002;</div>
 <div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>    phytomer_parameters_trifoliate.petiole.length.uniformDistribution(0.1,0.12);</div>
 <div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>    phytomer_parameters_trifoliate.petiole.taper = 0.25;</div>
-<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>    phytomer_parameters_trifoliate.petiole.curvature = -100;</div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>    phytomer_parameters_trifoliate.petiole.curvature.uniformDistribution(-200,-50);</div>
 <div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>    phytomer_parameters_trifoliate.petiole.color = phytomer_parameters_trifoliate.internode.color;</div>
 <div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>    phytomer_parameters_trifoliate.petiole.length_segments = 5;</div>
 <div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>    phytomer_parameters_trifoliate.petiole.radial_subdivisions = 6;</div>
@@ -679,10 +679,10 @@ $(function() {
 <div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.04,0.05);</div>
 <div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span> </div>
 <div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>    phytomer_parameters_trifoliate.peduncle.length = 0.17;</div>
-<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>    phytomer_parameters_trifoliate.peduncle.radius = 0.0025;</div>
-<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>    phytomer_parameters_trifoliate.peduncle.pitch = 0;</div>
+<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>    phytomer_parameters_trifoliate.peduncle.radius = 0.0015;</div>
+<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>    phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 30);</div>
 <div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    phytomer_parameters_trifoliate.peduncle.roll = 90;</div>
-<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>    phytomer_parameters_trifoliate.peduncle.curvature = 200;</div>
+<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>    phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(50, 250);</div>
 <div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>    phytomer_parameters_trifoliate.peduncle.length_segments = 6;</div>
 <div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>    phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;</div>
 <div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span> </div>
@@ -690,7 +690,7 @@ $(function() {
 <div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>    phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.;</div>
 <div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>    phytomer_parameters_trifoliate.inflorescence.flower_arrangement_pattern = <span class="stringliteral">&quot;opposite&quot;</span>;</div>
 <div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>    phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50,70);</div>
-<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>    phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-90,90);</div>
+<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>    phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20,20);</div>
 <div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>    phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.02;</div>
 <div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = CowpeaFlowerPrototype;</div>
 <div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.02,0.025);</div>
@@ -720,9 +720,9 @@ $(function() {
 <div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>    shoot_parameters_trifoliate.base_roll = 90;</div>
 <div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>    shoot_parameters_trifoliate.base_yaw.uniformDistribution(-20,20);</div>
 <div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    shoot_parameters_trifoliate.elongation_rate = 1.0;</div>
-<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>    shoot_parameters_trifoliate.girth_growth_rate = 0.5;</div>
+<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>    shoot_parameters_trifoliate.girth_growth_rate = 0.1;</div>
 <div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>    shoot_parameters_trifoliate.gravitropic_curvature = 100;</div>
-<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>    shoot_parameters_trifoliate.vegetative_bud_break_time = 4;</div>
+<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>    shoot_parameters_trifoliate.vegetative_bud_break_time = 3;</div>
 <div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>    shoot_parameters_trifoliate.child_internode_length_max = 0.04;</div>
 <div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>    shoot_parameters_trifoliate.child_internode_length_decay_rate = 0;</div>
 <div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>    shoot_parameters_trifoliate.child_internode_length_min = 0.0;</div>
@@ -732,8 +732,8 @@ $(function() {
 <div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>    shoot_parameters_trifoliate.flowers_require_dormancy = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>    shoot_parameters_trifoliate.growth_requires_dormancy = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>    shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.5;</div>
-<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>    shoot_parameters_trifoliate.flower_bud_break_probability = 0.5;</div>
-<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>    shoot_parameters_trifoliate.fruit_set_probability = 0.3;</div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>    shoot_parameters_trifoliate.flower_bud_break_probability.uniformDistribution(0.05,0.15);</div>
+<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>    shoot_parameters_trifoliate.fruit_set_probability = 0.5;</div>
 <div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>    shoot_parameters_trifoliate.defineChildShootTypes({<span class="stringliteral">&quot;trifoliate&quot;</span>},{1.0});</div>
 <div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>    shoot_parameters_trifoliate.max_nodes = 20;</div>
 <div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span> </div>
@@ -768,7 +768,7 @@ $(function() {
 <div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span> </div>
 <div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>    breakPlantDormancy(plantID);</div>
 <div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span> </div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, 12, 1, 1, 1, 100);</div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>    <a class="code hl_function" href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">setPlantPhenologicalThresholds</a>(plantID, 0, 16, 1, 1, 1, 100);</div>
 <div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span> </div>
 <div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span> </div>
@@ -818,7 +818,7 @@ $(function() {
 <div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>    shoot_parameters_primary.base_roll = 90;</div>
 <div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>    shoot_parameters_primary.internode_radius_initial = 0.001;</div>
 <div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>    shoot_parameters_primary.phyllochron = 1;</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>    shoot_parameters_primary.elongation_rate = 1.5;</div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>    shoot_parameters_primary.elongation_rate = 1.;</div>
 <div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>    shoot_parameters_primary.girth_growth_rate = 0.;</div>
 <div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>    shoot_parameters_primary.child_internode_length_max = 0.02;</div>
 <div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>    shoot_parameters_primary.child_internode_length_decay_rate = 0;</div>
@@ -1331,15 +1331,15 @@ $(function() {
 <div class="line"><a id="l01251" name="l01251"></a><span class="lineno"> 1251</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l01252" name="l01252"></a><span class="lineno"> 1252</span> </div>
 <div class="line"><a id="l01253" name="l01253"></a><span class="lineno"> 1253</span>}</div>
-<div class="ttc" id="aclass_plant_architecture_html_a046541b573d8e03845a2038370cd6665"><div class="ttname"><a href="class_plant_architecture.html#a046541b573d8e03845a2038370cd6665">PlantArchitecture::addPlantInstance</a></div><div class="ttdeci">uint addPlantInstance(const helios::vec3 &amp;base_position, float current_age)</div><div class="ttdoc">Create an instance of a plant.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l01983">PlantArchitecture.cpp:1983</a></div></div>
+<div class="ttc" id="aclass_plant_architecture_html_a046541b573d8e03845a2038370cd6665"><div class="ttname"><a href="class_plant_architecture.html#a046541b573d8e03845a2038370cd6665">PlantArchitecture::addPlantInstance</a></div><div class="ttdeci">uint addPlantInstance(const helios::vec3 &amp;base_position, float current_age)</div><div class="ttdoc">Create an instance of a plant.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l01985">PlantArchitecture.cpp:1985</a></div></div>
 <div class="ttc" id="aclass_plant_architecture_html_a2074dfe285a623833dd07b4aa0b93a7c"><div class="ttname"><a href="class_plant_architecture.html#a2074dfe285a623833dd07b4aa0b93a7c">PlantArchitecture::updateCurrentShootParameters</a></div><div class="ttdeci">void updateCurrentShootParameters(const std::string &amp;shoot_type_label, const ShootParameters &amp;params)</div><div class="ttdoc">Update the parameters of a single shoot type in the current plant model.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_library_8cpp_source.html#l00080">PlantLibrary.cpp:80</a></div></div>
-<div class="ttc" id="aclass_plant_architecture_html_a4d0425099bc0ac47c3853f39e3e568aa"><div class="ttname"><a href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">PlantArchitecture::setPlantPhenologicalThresholds</a></div><div class="ttdeci">void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence)</div><div class="ttdoc">Specify the threshold values for plant phenological stages.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l02053">PlantArchitecture.cpp:2053</a></div></div>
+<div class="ttc" id="aclass_plant_architecture_html_a4d0425099bc0ac47c3853f39e3e568aa"><div class="ttname"><a href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">PlantArchitecture::setPlantPhenologicalThresholds</a></div><div class="ttdeci">void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence)</div><div class="ttdoc">Specify the threshold values for plant phenological stages.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l02055">PlantArchitecture.cpp:2055</a></div></div>
 <div class="ttc" id="aclass_plant_architecture_html_a9700f223b8f60bf37852ad87d30e7fc0"><div class="ttname"><a href="class_plant_architecture.html#a9700f223b8f60bf37852ad87d30e7fc0">PlantArchitecture::defineShootType</a></div><div class="ttdeci">void defineShootType(const std::string &amp;shoot_type_label, const ShootParameters &amp;shoot_params)</div><div class="ttdoc">Define a new shoot type based on a set of ShootParameters.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l00205">PlantArchitecture.cpp:205</a></div></div>
-<div class="ttc" id="aclass_plant_architecture_html_aa035dac995a6ac7abeb18afce585775b"><div class="ttname"><a href="class_plant_architecture.html#aa035dac995a6ac7abeb18afce585775b">PlantArchitecture::addBaseStemShoot</a></div><div class="ttdeci">uint addBaseStemShoot(uint plantID, uint current_node_number, const AxisRotation &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &amp;shoot_type_label)</div><div class="ttdoc">Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has ...</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l01373">PlantArchitecture.cpp:1373</a></div></div>
+<div class="ttc" id="aclass_plant_architecture_html_aa035dac995a6ac7abeb18afce585775b"><div class="ttname"><a href="class_plant_architecture.html#aa035dac995a6ac7abeb18afce585775b">PlantArchitecture::addBaseStemShoot</a></div><div class="ttdeci">uint addBaseStemShoot(uint plantID, uint current_node_number, const AxisRotation &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &amp;shoot_type_label)</div><div class="ttdoc">Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has ...</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l01375">PlantArchitecture.cpp:1375</a></div></div>
 <div class="ttc" id="aclass_plant_architecture_html_ab98a62363a5e4553c5052a23e39711ba"><div class="ttname"><a href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary</a></div><div class="ttdeci">uint buildPlantInstanceFromLibrary(const helios::vec3 &amp;base_position, float age)</div><div class="ttdoc">Build a plant instance based on the model currently loaded from the library.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_library_8cpp_source.html#l00027">PlantLibrary.cpp:27</a></div></div>
-<div class="ttc" id="aclass_plant_architecture_html_aced9284293a890361b9cfe14a40963f2"><div class="ttname"><a href="class_plant_architecture.html#aced9284293a890361b9cfe14a40963f2">PlantArchitecture::appendShoot</a></div><div class="ttdeci">uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &amp;shoot_type_label)</div><div class="ttdoc">Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of...</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l01402">PlantArchitecture.cpp:1402</a></div></div>
+<div class="ttc" id="aclass_plant_architecture_html_aced9284293a890361b9cfe14a40963f2"><div class="ttname"><a href="class_plant_architecture.html#aced9284293a890361b9cfe14a40963f2">PlantArchitecture::appendShoot</a></div><div class="ttdeci">uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &amp;shoot_type_label)</div><div class="ttdoc">Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of...</div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8cpp_source.html#l01404">PlantArchitecture.cpp:1404</a></div></div>
 <div class="ttc" id="aclass_plant_architecture_html_adc41de628e65a52f560b4d0685c64c3a"><div class="ttname"><a href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary</a></div><div class="ttdeci">void loadPlantModelFromLibrary(const std::string &amp;plant_label)</div><div class="ttdoc">Load an existing plant model from the library.</div><div class="ttdef"><b>Definition:</b> <a href="_plant_library_8cpp_source.html#l00020">PlantLibrary.cpp:20</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a4caa001e21890bca8bb952e1206153dc"><div class="ttname"><a href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc">helios::Context::randu</a></div><div class="ttdeci">float randu()</div><div class="ttdoc">Draw a random number from a uniform distribution between 0 and 1.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01111">Context.cpp:1111</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a4caa001e21890bca8bb952e1206153dc"><div class="ttname"><a href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc">helios::Context::randu</a></div><div class="ttdeci">float randu()</div><div class="ttdoc">Draw a random number from a uniform distribution between 0 and 1.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01121">Context.cpp:1121</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_context_html_a96a928fa28d3d771ba310f798b56bd63"><div class="ttname"><a href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63">helios::Context::getRandomGenerator</a></div><div class="ttdeci">std::minstd_rand0 * getRandomGenerator()</div><div class="ttdoc">Get the random number generator engine.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l00049">Context.cpp:49</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a672182e7d8beb63c7cf256fa8294dc86"><div class="ttname"><a href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86">helios::helios_runtime_error</a></div><div class="ttdeci">void helios_runtime_error(const std::string &amp;error_message)</div><div class="ttdoc">Function to throw a runtime error.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00029">global.cpp:29</a></div></div>
 <div class="ttc" id="agroup__functions_html_ga60f429b247883516de80687774f4155c"><div class="ttname"><a href="group__functions.html#ga60f429b247883516de80687774f4155c">helios::deg2rad</a></div><div class="ttdeci">float deg2rad(float deg)</div><div class="ttdoc">Convert degrees to radians.</div><div class="ttdef"><b>Definition:</b> <a href="global_8cpp_source.html#l00547">global.cpp:547</a></div></div>

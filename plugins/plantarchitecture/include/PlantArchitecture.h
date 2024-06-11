@@ -510,13 +510,13 @@ struct ShootParameters{
     RandomParameter_float internode_radius_max; //meters
 
     // Probability that bud with this shoot type will break and form a new shoot
-    float vegetative_bud_break_probability;
+    RandomParameter_float vegetative_bud_break_probability;
 
     // Probability that a phytomer will flower
-    float flower_bud_break_probability;
+    RandomParameter_float flower_bud_break_probability;
 
     // Probability that a flower will set fruit
-    float fruit_set_probability;
+    RandomParameter_float fruit_set_probability;
 
     RandomParameter_float vegetative_bud_break_time;  //days
 
@@ -544,6 +544,12 @@ struct ShootParameters{
         this->girth_growth_rate.resample();
         this->internode_radius_max = a.internode_radius_max;
         this->internode_radius_max.resample();
+        this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
+        this->vegetative_bud_break_probability.resample();
+        this->flower_bud_break_probability = a.flower_bud_break_probability;
+        this->flower_bud_break_probability.resample();
+        this->fruit_set_probability = a.fruit_set_probability;
+        this->fruit_set_probability.resample();
         this->gravitropic_curvature = a.gravitropic_curvature;
         this->gravitropic_curvature.resample();
         this->tortuosity = a.tortuosity;

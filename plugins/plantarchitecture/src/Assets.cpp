@@ -218,7 +218,7 @@ void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     }
 
     //set leaf and internode scale based on position along the shoot
-    float leaf_scale = fmin(1.f, 0.4 + 0.6 * plant_age / 15.f);
+    float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
     phytomer->scaleLeafPrototypeScale(leaf_scale);
 
     //set internode length based on position along the shoot

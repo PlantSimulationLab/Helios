@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.10</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.12</span>
    </div>
   </td>
  </tr>
@@ -261,7 +261,7 @@ Creating Plant Organ Prototypes</h2>
 <div class="line">    <span class="keywordflow">return</span> context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">addPolymeshObject</a>( UUIDs );</div>
 <div class="line">}</div>
 <div class="ttc" id="aclasshelios_1_1_context_html_a8657240a0b2926e8c73b083f0fdc339d"><div class="ttname"><a href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">helios::Context::loadOBJ</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadOBJ(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...</div><div class="ttdef"><b>Definition:</b> <a href="_context__file_i_o_8cpp_source.html#l03694">Context_fileIO.cpp:3694</a></div></div>
-<div class="ttc" id="agroup__compoundobjects_html_gababf99153757527880fe3866cc23fd1b"><div class="ttname"><a href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">helios::Context::addPolymeshObject</a></div><div class="ttdeci">uint addPolymeshObject(const std::vector&lt; uint &gt; &amp;UUIDs)</div><div class="ttdoc">Add new Polymesh Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l04771">Context.cpp:4771</a></div></div>
+<div class="ttc" id="agroup__compoundobjects_html_gababf99153757527880fe3866cc23fd1b"><div class="ttname"><a href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">helios::Context::addPolymeshObject</a></div><div class="ttdeci">uint addPolymeshObject(const std::vector&lt; uint &gt; &amp;UUIDs)</div><div class="ttdoc">Add new Polymesh Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l04775">Context.cpp:4775</a></div></div>
 </div><!-- fragment --><p >A generic leaf prototype function is given in the file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves. The advantage of this approach is that each leaf will have random variation, since the leaf is generated procedurally. The disadvantage is that it may not look as detailed as a leaf created outside Helios (e.g., in Blender) that has detailed sculpting of leaf texture, for example.</p>
 <div class="fragment"><div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
 <div class="line"> </div>
@@ -573,7 +573,7 @@ Loading a Plant with Default Parameters</h3>
 <div class="line">    <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
 <div class="ttc" id="a_plant_architecture_8h_html"><div class="ttname"><a href="_plant_architecture_8h.html">PlantArchitecture.h</a></div></div>
-<div class="ttc" id="aclass_plant_architecture_html"><div class="ttname"><a href="class_plant_architecture.html">PlantArchitecture</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00782">PlantArchitecture.h:782</a></div></div>
+<div class="ttc" id="aclass_plant_architecture_html"><div class="ttname"><a href="class_plant_architecture.html">PlantArchitecture</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00788">PlantArchitecture.h:788</a></div></div>
 </div><!-- fragment --><h3><a class="anchor" id="PlantArchBuild_custom"></a>
 Modifying Parameters of a Plant from the Library</h3>
 <p >Building a plant from the library with modified parameters is similar to above, except that the parameters are modified before calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method. After calling <a class="el" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary()</a>, the parameters can be queried (at the shoot level), modified, and then set.</p>

@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.10</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.12</span>
    </div>
   </td>
  </tr>
@@ -113,6 +113,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:abd5d02245b9dbd9401e2a7a65b37c95c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#abd5d02245b9dbd9401e2a7a65b37c95c">enableMessages</a> ()</td></tr>
 <tr class="memdesc:abd5d02245b9dbd9401e2a7a65b37c95c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable status messages.  <a href="class_radiation_model.html#abd5d02245b9dbd9401e2a7a65b37c95c">More...</a><br /></td></tr>
 <tr class="separator:abd5d02245b9dbd9401e2a7a65b37c95c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac42245154cfb4f125cfe1ef4671ca19f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#ac42245154cfb4f125cfe1ef4671ca19f">optionalOutputPrimitiveData</a> (const char *label)</td></tr>
+<tr class="memdesc:ac42245154cfb4f125cfe1ef4671ca19f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add optional output primitive data values to the Context.  <a href="class_radiation_model.html#ac42245154cfb4f125cfe1ef4671ca19f">More...</a><br /></td></tr>
+<tr class="separator:ac42245154cfb4f125cfe1ef4671ca19f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a48c6ea6e90806e3c4942348996c29391"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a48c6ea6e90806e3c4942348996c29391">setDirectRayCount</a> (const std::string &amp;label, size_t N)</td></tr>
 <tr class="memdesc:a48c6ea6e90806e3c4942348996c29391"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets variable directRayCount, the number of rays to be used in direct radiation model.  <a href="class_radiation_model.html#a48c6ea6e90806e3c4942348996c29391">More...</a><br /></td></tr>
 <tr class="separator:a48c6ea6e90806e3c4942348996c29391"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -217,6 +220,18 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <tr class="memitem:a04c39684e5ac12c403f6dc68cec06877"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a04c39684e5ac12c403f6dc68cec06877">setSourceSpectrum</a> (const std::vector&lt; uint &gt; &amp;source_ID, const std::string &amp;spectrum_label)</td></tr>
 <tr class="memdesc:a04c39684e5ac12c403f6dc68cec06877"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the spectral distribution of multiple radiation sources based on global data of wavelength-intensity pairs.  <a href="class_radiation_model.html#a04c39684e5ac12c403f6dc68cec06877">More...</a><br /></td></tr>
 <tr class="separator:a04c39684e5ac12c403f6dc68cec06877"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a4c7643cb05be9f7f893d65dee33dc2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a5a4c7643cb05be9f7f893d65dee33dc2">enableLightModelVisualization</a> ()</td></tr>
+<tr class="memdesc:a5a4c7643cb05be9f7f893d65dee33dc2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a 3D model of the light source (rectangular, disk, and sphere) to the Context for visualization purposes.  <a href="class_radiation_model.html#a5a4c7643cb05be9f7f893d65dee33dc2">More...</a><br /></td></tr>
+<tr class="separator:a5a4c7643cb05be9f7f893d65dee33dc2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abe728e1b9804571c0125ad92659d6a9e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#abe728e1b9804571c0125ad92659d6a9e">disableLightModelVisualization</a> ()</td></tr>
+<tr class="memdesc:abe728e1b9804571c0125ad92659d6a9e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove the 3D model of the light source from the Context.  <a href="class_radiation_model.html#abe728e1b9804571c0125ad92659d6a9e">More...</a><br /></td></tr>
+<tr class="separator:abe728e1b9804571c0125ad92659d6a9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad4236469b34bcb4b216a78c96872b760"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#ad4236469b34bcb4b216a78c96872b760">enableCameraModelVisualization</a> ()</td></tr>
+<tr class="memdesc:ad4236469b34bcb4b216a78c96872b760"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a 3D model of the camera to the Context for visualization purposes.  <a href="class_radiation_model.html#ad4236469b34bcb4b216a78c96872b760">More...</a><br /></td></tr>
+<tr class="separator:ad4236469b34bcb4b216a78c96872b760"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a697a43f3706fe60094dab0e525b370f8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a697a43f3706fe60094dab0e525b370f8">disableCameraModelVisualization</a> ()</td></tr>
+<tr class="memdesc:a697a43f3706fe60094dab0e525b370f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove the 3D model of the camera from the Context.  <a href="class_radiation_model.html#a697a43f3706fe60094dab0e525b370f8">More...</a><br /></td></tr>
+<tr class="separator:a697a43f3706fe60094dab0e525b370f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a47c0fce1e3ee937cd53f7380b6002c69"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a47c0fce1e3ee937cd53f7380b6002c69">integrateSpectrum</a> (const std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &amp;object_spectrum, float wavelength1, float wavelength2) const</td></tr>
 <tr class="memdesc:a47c0fce1e3ee937cd53f7380b6002c69"><td class="mdescLeft">&#160;</td><td class="mdescRight">Integrate a spectral distribution between two wavelength bounds.  <a href="class_radiation_model.html#a47c0fce1e3ee937cd53f7380b6002c69">More...</a><br /></td></tr>
 <tr class="separator:a47c0fce1e3ee937cd53f7380b6002c69"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -233,8 +248,11 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <tr class="memdesc:ab688ee5e6d5997711ca4ae24151148d7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Integrate the product of surface spectral data and camera spectral response across all wavelengths.  <a href="class_radiation_model.html#ab688ee5e6d5997711ca4ae24151148d7">More...</a><br /></td></tr>
 <tr class="separator:ab688ee5e6d5997711ca4ae24151148d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a32496f56edc4837c7cc2b28d154a108f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a32496f56edc4837c7cc2b28d154a108f">scaleSpectrum</a> (const std::string &amp;existing_global_data_label, const std::string &amp;new_global_data_label, float scale_factor) const</td></tr>
-<tr class="memdesc:a32496f56edc4837c7cc2b28d154a108f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scale an entire spectrum by a constant factor.  <a href="class_radiation_model.html#a32496f56edc4837c7cc2b28d154a108f">More...</a><br /></td></tr>
+<tr class="memdesc:a32496f56edc4837c7cc2b28d154a108f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scale an entire spectrum by a constant factor. Creates new global data for scaled spectrum.  <a href="class_radiation_model.html#a32496f56edc4837c7cc2b28d154a108f">More...</a><br /></td></tr>
 <tr class="separator:a32496f56edc4837c7cc2b28d154a108f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfd1f6bc9d59a09ff3baab866c0b124c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#abfd1f6bc9d59a09ff3baab866c0b124c">scaleSpectrum</a> (const std::string &amp;global_data_label, float scale_factor) const</td></tr>
+<tr class="memdesc:abfd1f6bc9d59a09ff3baab866c0b124c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scale an entire spectrum by a constant factor. Performs scaling in-place.  <a href="class_radiation_model.html#abfd1f6bc9d59a09ff3baab866c0b124c">More...</a><br /></td></tr>
+<tr class="separator:abfd1f6bc9d59a09ff3baab866c0b124c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac292f5d218647fc7cbb0a58bc3d284ae"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#ac292f5d218647fc7cbb0a58bc3d284ae">scaleSpectrumRandomly</a> (const std::string &amp;existing_global_data_label, const std::string &amp;new_global_data_label, float minimum_scale_factor, float maximum_scale_factor) const</td></tr>
 <tr class="memdesc:ac292f5d218647fc7cbb0a58bc3d284ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scale an entire spectrum by a random factor following a uniform distribution.  <a href="class_radiation_model.html#ac292f5d218647fc7cbb0a58bc3d284ae">More...</a><br /></td></tr>
 <tr class="separator:ac292f5d218647fc7cbb0a58bc3d284ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -253,9 +271,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <tr class="memitem:a46c60b11342d10feed8f3a431df415bd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a46c60b11342d10feed8f3a431df415bd">enforcePeriodicBoundary</a> (const std::string &amp;boundary)</td></tr>
 <tr class="memdesc:a46c60b11342d10feed8f3a431df415bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Use a periodic boundary condition in one or more lateral directions.  <a href="class_radiation_model.html#a46c60b11342d10feed8f3a431df415bd">More...</a><br /></td></tr>
 <tr class="separator:a46c60b11342d10feed8f3a431df415bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3aa9ffc4a1cfa479a311fded4ea9ca24"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a3aa9ffc4a1cfa479a311fded4ea9ca24">DEPRECATED</a> (void <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">addRadiationCamera</a>(const std::string &amp;camera_label, const std::vector&lt; std::string &gt; &amp;band_label, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;position, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;lookat, float lens_diameter, const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &amp;sensor_size, float focal_plane_distance, float HFOV_degrees, uint antialiasing_samples, const <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &amp;resolution))</td></tr>
-<tr class="memdesc:a3aa9ffc4a1cfa479a311fded4ea9ca24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a radiation camera sensor.  <a href="class_radiation_model.html#a3aa9ffc4a1cfa479a311fded4ea9ca24">More...</a><br /></td></tr>
-<tr class="separator:a3aa9ffc4a1cfa479a311fded4ea9ca24"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aedf80552eaf2bf6a8544dcb2c72cb331"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">addRadiationCamera</a> (const std::string &amp;camera_label, const std::vector&lt; std::string &gt; &amp;band_label, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;position, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;lookat, const <a class="el" href="struct_camera_properties.html">CameraProperties</a> &amp;camera_properties, uint antialiasing_samples)</td></tr>
 <tr class="memdesc:aedf80552eaf2bf6a8544dcb2c72cb331"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a radiation camera sensor.  <a href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">More...</a><br /></td></tr>
 <tr class="separator:aedf80552eaf2bf6a8544dcb2c72cb331"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -324,9 +339,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <tr class="memitem:a771c53fe19d75303c3f60017db8a2b50"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a771c53fe19d75303c3f60017db8a2b50">writePrimitiveDataLabelMap</a> (const std::string &amp;cameralabel, const std::string &amp;primitive_data_label, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1, float padvalue=NAN)</td></tr>
 <tr class="memdesc:a771c53fe19d75303c3f60017db8a2b50"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write image pixel labels to text file based on primitive data. Primitive data must have type 'float', 'double', 'uint', or 'int'.  <a href="class_radiation_model.html#a771c53fe19d75303c3f60017db8a2b50">More...</a><br /></td></tr>
 <tr class="separator:a771c53fe19d75303c3f60017db8a2b50"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aab6a7c658a20a8c7bffcef32796c5c98"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#aab6a7c658a20a8c7bffcef32796c5c98">writeDepthImage</a> (const std::string &amp;cameralabel, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1)</td></tr>
-<tr class="memdesc:aab6a7c658a20a8c7bffcef32796c5c98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write depth image to file.  <a href="class_radiation_model.html#aab6a7c658a20a8c7bffcef32796c5c98">More...</a><br /></td></tr>
-<tr class="separator:aab6a7c658a20a8c7bffcef32796c5c98"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad495efb7a88df316cc8117e1d181d104"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#ad495efb7a88df316cc8117e1d181d104">writeDepthImageData</a> (const std::string &amp;cameralabel, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1)</td></tr>
+<tr class="memdesc:ad495efb7a88df316cc8117e1d181d104"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write depth image data to text file.  <a href="class_radiation_model.html#ad495efb7a88df316cc8117e1d181d104">More...</a><br /></td></tr>
+<tr class="separator:ad495efb7a88df316cc8117e1d181d104"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a633d84a823ad4cd99495a06afc13d7a3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a633d84a823ad4cd99495a06afc13d7a3">writeNormDepthImage</a> (const std::string &amp;cameralabel, const std::string &amp;imagefile_base, float max_depth, const std::string &amp;image_path=&quot;./&quot;, int frame=-1)</td></tr>
+<tr class="memdesc:a633d84a823ad4cd99495a06afc13d7a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write depth image file, with grayscale normalized to the minimum and maximum depth values.  <a href="class_radiation_model.html#a633d84a823ad4cd99495a06afc13d7a3">More...</a><br /></td></tr>
+<tr class="separator:a633d84a823ad4cd99495a06afc13d7a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a59db63fb5cf7d82ab641f636378923fd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_radiation_model.html#a59db63fb5cf7d82ab641f636378923fd">writeImageBoundingBoxes</a> (const std::string &amp;cameralabel, const std::string &amp;primitive_data_label, uint object_class_ID, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, bool append_label_file=false, int frame=-1)</td></tr>
 <tr class="memdesc:a59db63fb5cf7d82ab641f636378923fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write bounding boxes based on primitive data labels (Ultralytic's YOLO format). Primitive data must have type of 'uint' or 'int'.  <a href="class_radiation_model.html#a59db63fb5cf7d82ab641f636378923fd">More...</a><br /></td></tr>
 <tr class="separator:a59db63fb5cf7d82ab641f636378923fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -343,7 +361,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p >Radiation transport model plugin. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00289">289</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00290">290</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="acfcbd32e59e2b2728dabde1c7fa74329" name="acfcbd32e59e2b2728dabde1c7fa74329"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acfcbd32e59e2b2728dabde1c7fa74329">&#9670;&#160;</a></span>RadiationModel()</h2>
@@ -415,7 +433,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <p>Add an external source of collimated radiation (i.e., source at infinite distance with parallel rays) assuming the default direction of (0,0,1) </p>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00220">220</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00230">230</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -444,7 +462,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00226">226</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00236">236</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -473,7 +491,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00230">230</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00240">240</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -520,7 +538,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00350">350</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00372">372</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -549,7 +567,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Unique integer identifier for the band </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00115">115</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00125">125</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -595,7 +613,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00133">133</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00143">143</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -662,7 +680,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00944">944</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01104">1104</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -729,7 +747,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00919">919</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01074">1074</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -776,7 +794,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00326">326</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00342">342</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -817,7 +835,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00254">254</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00264">264</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -853,7 +871,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00278">278</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00294">294</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -875,7 +893,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <p>Add a sphere radiation source that models the sun assuming the default direction of (0,0,1) </p>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00298">298</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00314">314</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -904,7 +922,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00302">302</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00318">318</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -933,7 +951,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00306">306</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00322">322</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -980,7 +998,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The input spectra can have different sizes, but must have matching wavelength values across all spectra. The output spectra will be the size of the overlapping portion of wavelengths. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00725">725</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00900">900</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1020,7 +1038,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The input spectra can have different sizes, but must have matching wavelength values across all spectra. The output spectra will be the size of the overlapping portion of wavelengths. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00811">811</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00986">986</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1060,7 +1078,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Projected area fraction G(theta) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04372">4372</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04597">4597</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1135,7 +1153,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04891">4891</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05193">5193</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1189,7 +1207,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04930">4930</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05232">5232</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1228,7 +1246,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00162">162</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00172">172</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1281,42 +1299,28 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00173">173</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00183">183</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a3aa9ffc4a1cfa479a311fded4ea9ca24" name="a3aa9ffc4a1cfa479a311fded4ea9ca24"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3aa9ffc4a1cfa479a311fded4ea9ca24">&#9670;&#160;</a></span>DEPRECATED()</h2>
+<a id="a697a43f3706fe60094dab0e525b370f8" name="a697a43f3706fe60094dab0e525b370f8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a697a43f3706fe60094dab0e525b370f8">&#9670;&#160;</a></span>disableCameraModelVisualization()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">RadiationModel::DEPRECATED </td>
+          <td class="memname">void RadiationModel::disableCameraModelVisualization </td>
           <td>(</td>
-          <td class="paramtype">void &#160;</td>
-          <td class="paramname"><em>addRadiationCamera</em>const std::string &amp;camera_label, const std::vector&lt; std::string &gt; &amp;band_label, const helios::vec3 &amp;position, const helios::vec3 &amp;lookat, float lens_diameter, const helios::vec2 &amp;sensor_size, float focal_plane_distance, float HFOV_degrees, uint antialiasing_samples, const helios::int2 &amp;resolution</td><td>)</td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Add a radiation camera sensor. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">camera_label</td><td>A label that will be used to refer to the camera (e.g., "thermal", "multispectral", "NIR", etc.). </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">band_label</td><td>Labels for radiation bands to include in camera. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">position</td><td>Cartesian (x,y,z) location of the camera sensor. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">lookat</td><td>Cartesian (x,y,z) position at which the camera is pointed. The vector (lookat-position) is perpendicular to the camera face. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">lens_diameter</td><td>Physical diameter of the camera lens. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">sensor_size</td><td>Physical dimensions of the camera pixel sensor. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">focal_length</td><td>Camera focal length. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">HFOV_degrees</td><td>Camera field of view (degrees). </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">antialiasing_samples</td><td>Number of ray samples per pixel. More samples will decrease noise/aliasing in the image, but will take longer to run. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">resolution</td><td>Pixel resolution of the camera in the horizontal x vertical directions. </td></tr>
-  </table>
-  </dd>
-</dl>
+<p>Remove the 3D model of the camera from the Context. </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00576">576</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1344,7 +1348,28 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00200">200</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00210">210</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abe728e1b9804571c0125ad92659d6a9e" name="abe728e1b9804571c0125ad92659d6a9e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abe728e1b9804571c0125ad92659d6a9e">&#9670;&#160;</a></span>disableLightModelVisualization()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationModel::disableLightModelVisualization </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Remove the 3D model of the light source from the Context. </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00559">559</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1394,7 +1419,28 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00192">192</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00202">202</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad4236469b34bcb4b216a78c96872b760" name="ad4236469b34bcb4b216a78c96872b760"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad4236469b34bcb4b216a78c96872b760">&#9670;&#160;</a></span>enableCameraModelVisualization()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationModel::enableCameraModelVisualization </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add a 3D model of the camera to the Context for visualization purposes. </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00566">566</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1422,7 +1468,28 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00210">210</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00220">220</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5a4c7643cb05be9f7f893d65dee33dc2" name="a5a4c7643cb05be9f7f893d65dee33dc2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a4c7643cb05be9f7f893d65dee33dc2">&#9670;&#160;</a></span>enableLightModelVisualization()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationModel::enableLightModelVisualization </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add a 3D model of the light source (rectangular, disk, and sphere) to the Context for visualization purposes. </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00549">549</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1472,7 +1539,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This method should be called prior to calling <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934" title="Adds all geometric primitives from the Context to OptiX.">RadiationModel::updateGeometry()</a>, otherwise the boundary condition will not be enforced. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00870">870</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01051">1051</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1494,7 +1561,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <p>Get the labels for all radiation cameras that have been added to the radiation model. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of strings corresponding to each camera label. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00992">992</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01174">1174</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1562,7 +1629,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>scale factor </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04606">4606</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04831">4831</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1583,7 +1650,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 
 <p>Get the radiative energy lost to the sky (surroundings) </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03261">3261</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03486">3486</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1623,7 +1690,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Radiative flux normal to the direction of radiation propagation </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00430">430</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00458">458</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1652,7 +1719,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>" If point source - (x,y,z) position of the radiation source. If collimated source - (nx,ny,nz) unit vector pointing toward the source. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00845">845</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01026">1026</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1673,7 +1740,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 
 <p>Get the total absorbed radiation flux summed over all bands for each primitive. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03273">3273</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03498">3498</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1702,7 +1769,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integral of spectral data from minimum to maximum wavelength </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00607">607</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00759">759</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1742,7 +1809,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integral of product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00660">660</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00812">812</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1789,7 +1856,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integral of spectral data from wavelength1 to wavelength2 </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00572">572</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00724">724</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1836,7 +1903,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integral of product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00614">614</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00766">766</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1890,7 +1957,35 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integral of product of source energy spectrum and spectral data from minimum to maximum wavelength </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00521">521</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00673">673</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac42245154cfb4f125cfe1ef4671ca19f" name="ac42245154cfb4f125cfe1ef4671ca19f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac42245154cfb4f125cfe1ef4671ca19f">&#9670;&#160;</a></span>optionalOutputPrimitiveData()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationModel::optionalOutputPrimitiveData </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>label</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add optional output primitive data values to the Context. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Name of primitive data (e.g., "reflectivity", "transmissivity") </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00055">55</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1919,7 +2014,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02651">2651</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02870">2870</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1948,7 +2043,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02656">2656</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02875">2875</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2029,7 +2124,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04519">4519</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04744">4744</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2110,12 +2205,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04561">4561</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04786">4786</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a32496f56edc4837c7cc2b28d154a108f" name="a32496f56edc4837c7cc2b28d154a108f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a32496f56edc4837c7cc2b28d154a108f">&#9670;&#160;</a></span>scaleSpectrum()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a32496f56edc4837c7cc2b28d154a108f">&#9670;&#160;</a></span>scaleSpectrum() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2146,7 +2241,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
       </table>
 </div><div class="memdoc">
 
-<p>Scale an entire spectrum by a constant factor. </p>
+<p>Scale an entire spectrum by a constant factor. Creates new global data for scaled spectrum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">existing_global_data_label</td><td>Label of global data containing spectral data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity/reflectivity/transmissivity (.y). </td></tr>
@@ -2156,7 +2251,46 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00695">695</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00847">847</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abfd1f6bc9d59a09ff3baab866c0b124c" name="abfd1f6bc9d59a09ff3baab866c0b124c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abfd1f6bc9d59a09ff3baab866c0b124c">&#9670;&#160;</a></span>scaleSpectrum() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationModel::scaleSpectrum </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>global_data_label</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>scale_factor</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Scale an entire spectrum by a constant factor. Performs scaling in-place. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">_global_data_label</td><td>Label of global data containing spectral data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity/reflectivity/transmissivity (.y). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scale_factor</td><td>Scaling factor. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00870">870</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2209,7 +2343,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00718">718</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00893">893</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2251,7 +2385,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04396">4396</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04621">4621</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2290,7 +2424,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00968">968</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01135">1135</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2329,7 +2463,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00984">984</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01161">1161</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2368,7 +2502,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00976">976</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01148">1148</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2407,7 +2541,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00960">960</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01120">1120</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2454,7 +2588,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If global data in the standard camera spectral library is referenced, the library will be automatically loaded. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00951">951</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01111">1111</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2500,7 +2634,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00076">76</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00086">86</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2546,7 +2680,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00080">80</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00090">90</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2585,7 +2719,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00069">69</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00079">79</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2623,7 +2757,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00062">62</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00072">72</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2661,7 +2795,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00055">55</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00065">65</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2700,7 +2834,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00861">861</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01042">1042</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2746,7 +2880,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04869">4869</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05171">5171</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2785,7 +2919,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00852">852</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01033">1033</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2831,7 +2965,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00424">424</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00452">452</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2877,7 +3011,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00410">410</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00438">438</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2916,7 +3050,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00841">841</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01022">1022</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2955,7 +3089,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00827">827</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01002">1002</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2994,7 +3128,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00515">515</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00543">543</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3033,7 +3167,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00482">482</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00510">510</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3072,7 +3206,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00488">488</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00516">516</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3111,7 +3245,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00448">448</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00476">476</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3151,7 +3285,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function will call <a class="el" href="class_radiation_model.html#a2fa24d994612857ddc889e705b0444b1" title="Set the flux of radiation source for this band.">setSourceFlux()</a> for all bands to update source fluxes based on the new spectrum integral </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00375">375</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00403">403</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3203,7 +3337,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function will call <a class="el" href="class_radiation_model.html#a2fa24d994612857ddc889e705b0444b1" title="Set the flux of radiation source for this band.">setSourceFlux()</a> for all bands to update source fluxes based on the new spectrum integral </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00387">387</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00415">415</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3270,7 +3404,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04401">4401</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04626">4626</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3292,7 +3426,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 <p>Adds all geometric primitives from the Context to OptiX. </p>
 <p >This function should be called anytime Context geometry is created or modified </p><dl class="section note"><dt>Note</dt><dd><a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a> must be called before simulation can be run </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01594">1594</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01785">1785</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3321,7 +3455,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
 </dl>
 <dl class="section note"><dt>Note</dt><dd><a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a> must be called before simulation can be run </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01598">1598</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01789">1789</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3388,18 +3522,18 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01002">1002</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01184">1184</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
-<a id="aab6a7c658a20a8c7bffcef32796c5c98" name="aab6a7c658a20a8c7bffcef32796c5c98"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aab6a7c658a20a8c7bffcef32796c5c98">&#9670;&#160;</a></span>writeDepthImage()</h2>
+<a id="ad495efb7a88df316cc8117e1d181d104" name="ad495efb7a88df316cc8117e1d181d104"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad495efb7a88df316cc8117e1d181d104">&#9670;&#160;</a></span>writeDepthImageData()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void RadiationModel::writeDepthImage </td>
+          <td class="memname">void RadiationModel::writeDepthImageData </td>
           <td>(</td>
           <td class="paramtype">const std::string &amp;&#160;</td>
           <td class="paramname"><em>cameralabel</em>, </td>
@@ -3430,7 +3564,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
       </table>
 </div><div class="memdoc">
 
-<p>Write depth image to file. </p>
+<p>Write depth image data to text file. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">cameralabel</td><td>Label of target camera </td></tr>
@@ -3441,7 +3575,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04717">4717</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04943">4943</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3514,7 +3648,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04765">4765</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05066">5066</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3574,7 +3708,67 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01084">1084</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01267">1267</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a633d84a823ad4cd99495a06afc13d7a3" name="a633d84a823ad4cd99495a06afc13d7a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a633d84a823ad4cd99495a06afc13d7a3">&#9670;&#160;</a></span>writeNormDepthImage()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationModel::writeNormDepthImage </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>cameralabel</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>imagefile_base</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>max_depth</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>image_path</em> = <code>&quot;./&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>-1</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Write depth image file, with grayscale normalized to the minimum and maximum depth values. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">cameralabel</td><td>Label of target camera </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">imagefile_base</td><td>Name for base of output image JPEG files (will also include the camera label and a frame number in the file name) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">max_depth</td><td>Maximum depth value for normalization (e.g., the depth of the sky) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">image_path</td><td>OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">frame</td><td>OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04997">4997</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3641,7 +3835,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>addSunSphereRadiation
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04629">4629</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04854">4854</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>

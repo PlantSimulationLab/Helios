@@ -111,7 +111,7 @@ Include Directories</h2>
  #include "somelibrary.h"
  class DummyModel{
     ...
- };</code></pre> </div><p >When <a class="el" href="_dummy_model_8h.html">DummyModel.h</a> is included in the project's main file (say main.cpp), the compiler will not be able to find 'somelibary.h'. <br  />
+ };</code></pre> </div><p >When <a class="el" href="_dummy_model_8h.html">DummyModel.h</a> is included in the project's main file (say <a class="el" href="main_8cpp_source.html">main.cpp</a>), the compiler will not be able to find 'somelibary.h'. <br  />
 </p>
 <p >To resolve this problem, add a command to the plugin's CMakeList.txt file that looks something like:</p>
 <p ><code> set( PLUGIN_INCLUDE_PATHS "/path/to/somelibrary/include;${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE ) </code> <br  />

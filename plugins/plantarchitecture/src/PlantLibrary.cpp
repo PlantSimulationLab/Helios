@@ -532,7 +532,7 @@ void PlantArchitecture::initializeCheeseweedShoots() {
     shoot_parameters_base.vegetative_bud_break_time = 3;
     shoot_parameters_base.internode_radius_initial = 0.001;
     shoot_parameters_base.phyllochron = 1;
-    shoot_parameters_base.elongation_rate = 1.0;
+    shoot_parameters_base.elongation_rate = 0.6;
     shoot_parameters_base.girth_growth_rate = 0.;
     shoot_parameters_base.gravitropic_curvature = 0;
     shoot_parameters_base.child_internode_length_max = 0.002;
@@ -555,7 +555,7 @@ uint PlantArchitecture::buildCheeseweedPlant(const helios::vec3 &base_position, 
 
     uint plantID = addPlantInstance(base_position, age);
 
-    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0.f, 0.f), 0.0001, 0.001, 0.1, 0.1, "base");
+    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0.f, 0.f), 0.0001, 0.005, 0.1, 0.1, "base");
 
     breakPlantDormancy(plantID);
 
@@ -580,10 +580,10 @@ void PlantArchitecture::initializeCowpeaShoots() {
 
     phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;
     phytomer_parameters_trifoliate.petiole.pitch.uniformDistribution(45,60);
-    phytomer_parameters_trifoliate.petiole.radius = 0.0025;
+    phytomer_parameters_trifoliate.petiole.radius = 0.002;
     phytomer_parameters_trifoliate.petiole.length.uniformDistribution(0.1,0.12);
     phytomer_parameters_trifoliate.petiole.taper = 0.25;
-    phytomer_parameters_trifoliate.petiole.curvature = -100;
+    phytomer_parameters_trifoliate.petiole.curvature.uniformDistribution(-200,-50);
     phytomer_parameters_trifoliate.petiole.color = phytomer_parameters_trifoliate.internode.color;
     phytomer_parameters_trifoliate.petiole.length_segments = 5;
     phytomer_parameters_trifoliate.petiole.radial_subdivisions = 6;
@@ -599,10 +599,10 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.04,0.05);
 
     phytomer_parameters_trifoliate.peduncle.length = 0.17;
-    phytomer_parameters_trifoliate.peduncle.radius = 0.0025;
-    phytomer_parameters_trifoliate.peduncle.pitch = 0;
+    phytomer_parameters_trifoliate.peduncle.radius = 0.0015;
+    phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 30);
     phytomer_parameters_trifoliate.peduncle.roll = 90;
-    phytomer_parameters_trifoliate.peduncle.curvature = 200;
+    phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(50, 250);
     phytomer_parameters_trifoliate.peduncle.length_segments = 6;
     phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;
 
@@ -610,7 +610,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.;
     phytomer_parameters_trifoliate.inflorescence.flower_arrangement_pattern = "opposite";
     phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50,70);
-    phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-90,90);
+    phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20,20);
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.02;
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = CowpeaFlowerPrototype;
     phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.02,0.025);
@@ -640,9 +640,9 @@ void PlantArchitecture::initializeCowpeaShoots() {
     shoot_parameters_trifoliate.base_roll = 90;
     shoot_parameters_trifoliate.base_yaw.uniformDistribution(-20,20);
     shoot_parameters_trifoliate.elongation_rate = 1.0;
-    shoot_parameters_trifoliate.girth_growth_rate = 0.5;
+    shoot_parameters_trifoliate.girth_growth_rate = 0.1;
     shoot_parameters_trifoliate.gravitropic_curvature = 100;
-    shoot_parameters_trifoliate.vegetative_bud_break_time = 4;
+    shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
     shoot_parameters_trifoliate.child_internode_length_max = 0.04;
     shoot_parameters_trifoliate.child_internode_length_decay_rate = 0;
     shoot_parameters_trifoliate.child_internode_length_min = 0.0;
@@ -652,8 +652,8 @@ void PlantArchitecture::initializeCowpeaShoots() {
     shoot_parameters_trifoliate.flowers_require_dormancy = false;
     shoot_parameters_trifoliate.growth_requires_dormancy = false;
     shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.5;
-    shoot_parameters_trifoliate.flower_bud_break_probability = 0.5;
-    shoot_parameters_trifoliate.fruit_set_probability = 0.3;
+    shoot_parameters_trifoliate.flower_bud_break_probability.uniformDistribution(0.05,0.15);
+    shoot_parameters_trifoliate.fruit_set_probability = 0.5;
     shoot_parameters_trifoliate.defineChildShootTypes({"trifoliate"},{1.0});
     shoot_parameters_trifoliate.max_nodes = 20;
 
@@ -688,7 +688,7 @@ uint PlantArchitecture::buildCowpeaPlant(const helios::vec3 &base_position, floa
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 12, 1, 1, 1, 100);
+    setPlantPhenologicalThresholds(plantID, 0, 16, 1, 1, 1, 100);
 
     return plantID;
 
@@ -738,7 +738,7 @@ void PlantArchitecture::initializePuncturevineShoots() {
     shoot_parameters_primary.base_roll = 90;
     shoot_parameters_primary.internode_radius_initial = 0.001;
     shoot_parameters_primary.phyllochron = 1;
-    shoot_parameters_primary.elongation_rate = 1.5;
+    shoot_parameters_primary.elongation_rate = 1.;
     shoot_parameters_primary.girth_growth_rate = 0.;
     shoot_parameters_primary.child_internode_length_max = 0.02;
     shoot_parameters_primary.child_internode_length_decay_rate = 0;

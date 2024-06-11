@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.10</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.12</span>
    </div>
   </td>
  </tr>
@@ -154,7 +154,7 @@ executable  </li>
 <li>
 CMakeLists.txt  </li>
 <li>
-main.cpp  </li>
+<a class="el" href="main_8cpp_source.html">main.cpp</a>  </li>
 </ul>
 <h2><a class="anchor" id="BuildDir"></a>
 Build Directory</h2>
@@ -201,8 +201,8 @@ New Project Script</h2>
 <div class="fragment"><div class="line">$ mkdir projects/myProject</div>
 </div><!-- fragment --><p >To set up the new project, run the create_project.sh script, with the input argument of the project directory:</p>
 <div class="fragment"><div class="line">$ utilities/create_project.sh projects/myProjects</div>
-</div><!-- fragment --><p >This will create the CMakeLists.txt file, a main.cpp file template, and an empty build directory.</p>
-<p >You can also specify plug-ins as command-line arguments to the create_project.sh script, in which case the script will create a CMakeLists.txt and main.cpp file that are set up to load those plug-ins:</p>
+</div><!-- fragment --><p >This will create the CMakeLists.txt file, a <a class="el" href="main_8cpp_source.html">main.cpp</a> file template, and an empty build directory.</p>
+<p >You can also specify plug-ins as command-line arguments to the create_project.sh script, in which case the script will create a CMakeLists.txt and <a class="el" href="main_8cpp_source.html">main.cpp</a> file that are set up to load those plug-ins:</p>
 <div class="fragment"><div class="line">$ utilities/create_project.sh projects/myProjects radiation visualizer</div>
 </div><!-- fragment --><h2><a class="anchor" id="GlobalInclude"></a>
 C++ Standard Library Include Files</h2>
@@ -449,7 +449,7 @@ Adding Patches</h3>
 <div class="line">   </div>
 <div class="line">}</div>
 <div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01703">Context.h:1703</a></div></div>
-<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01145">Context.cpp:1145</a></div></div>
+<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01155">Context.cpp:1155</a></div></div>
 <div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00283">helios_vector_types.h:283</a></div></div>
 <div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00424">helios_vector_types.h:424</a></div></div>
 </div><!-- fragment --><p >This will add the Patch shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the '<a class="el" href="class_visualizer.html">Visualizer</a>' plugin is needed to replicate this image, which is not shown in the example code.)</p>
@@ -482,7 +482,7 @@ Adding Triangles</h3>
 <div class="line">   UUID = context.<a class="code hl_function" href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77">addTriangle</a>( v0, v1, v2, RGB::red );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="agroup__primitives_html_ga2a78a464a4c7ef3375a0ced2f1005b77"><div class="ttname"><a href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77">helios::Context::addTriangle</a></div><div class="ttdeci">uint addTriangle(const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2)</div><div class="ttdoc">Add new Triangle geometric primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01279">Context.cpp:1279</a></div></div>
+<div class="ttc" id="agroup__primitives_html_ga2a78a464a4c7ef3375a0ced2f1005b77"><div class="ttname"><a href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77">helios::Context::addTriangle</a></div><div class="ttdeci">uint addTriangle(const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2)</div><div class="ttdoc">Add new Triangle geometric primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01271">Context.cpp:1271</a></div></div>
 </div><!-- fragment --><p >This will add the Triangle shown below. (Note that the addition of the checkerboard ground and the '<a class="el" href="class_visualizer.html">Visualizer</a>' plugin is needed to replicate this image, which is not shown in the example code.)</p>
 <div class="image">
 <img src="Triangle.png" alt=""/>
@@ -510,7 +510,7 @@ Adding Voxels</h3>
 <div class="line">   UUID = context.<a class="code hl_function" href="group__primitives.html#ga5c3476d33e4c6125276bcae114b49b10">addVoxel</a>( center, size, 0, RGB::red );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="agroup__primitives_html_ga5c3476d33e4c6125276bcae114b49b10"><div class="ttname"><a href="group__primitives.html#ga5c3476d33e4c6125276bcae114b49b10">helios::Context::addVoxel</a></div><div class="ttdeci">uint addVoxel(const helios::vec3 &amp;center, const helios::vec3 &amp;size)</div><div class="ttdoc">Add new Voxel geometric primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01332">Context.cpp:1332</a></div></div>
+<div class="ttc" id="agroup__primitives_html_ga5c3476d33e4c6125276bcae114b49b10"><div class="ttname"><a href="group__primitives.html#ga5c3476d33e4c6125276bcae114b49b10">helios::Context::addVoxel</a></div><div class="ttdeci">uint addVoxel(const helios::vec3 &amp;center, const helios::vec3 &amp;size)</div><div class="ttdoc">Add new Voxel geometric primitive.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01315">Context.cpp:1315</a></div></div>
 </div><!-- fragment --><p >This will add the Voxel shown below, with the default orientation of horizontal. (Note that the addition of the checkerboard ground and the 'visualizer' plugin is needed to replicate this image, which is not shown in the example code.)</p>
 <div class="image">
 <img src="Voxel.png" alt=""/>
@@ -583,7 +583,7 @@ Primitive Transformations</h2>
 <div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a1ae827c4e0c90a883430bd1db95993e1">translatePrimitive</a>( UUID, translation );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a1ae827c4e0c90a883430bd1db95993e1"><div class="ttname"><a href="classhelios_1_1_context.html#a1ae827c4e0c90a883430bd1db95993e1">helios::Context::translatePrimitive</a></div><div class="ttdeci">void translatePrimitive(uint UUID, const vec3 &amp;shift)</div><div class="ttdoc">Translate a primitive using its UUID.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01366">Context.cpp:1366</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a1ae827c4e0c90a883430bd1db95993e1"><div class="ttname"><a href="classhelios_1_1_context.html#a1ae827c4e0c90a883430bd1db95993e1">helios::Context::translatePrimitive</a></div><div class="ttdeci">void translatePrimitive(uint UUID, const vec3 &amp;shift)</div><div class="ttdoc">Translate a primitive using its UUID.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01349">Context.cpp:1349</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="PrimProps"></a>
 Primitive Properties</h2>
 <p >All primitives have a common set of data that can be accessed by the same set of functions, such as the primitive surface area, the primitive vertices, etc.</p>
@@ -738,8 +738,8 @@ Rectangular patch masked by an image with a transparency channel.</div></div>
 <div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e">deletePrimitive</a>(UUID);</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a24324ccb5318cb103846a71d44dda23e"><div class="ttname"><a href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e">helios::Context::deletePrimitive</a></div><div class="ttdeci">void deletePrimitive(uint UUID)</div><div class="ttdoc">Delete a single primitive from the context.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01459">Context.cpp:1459</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a7eb6409748de787c4a8f2cc10c290144"><div class="ttname"><a href="classhelios_1_1_context.html#a7eb6409748de787c4a8f2cc10c290144">helios::Context::copyPrimitive</a></div><div class="ttdeci">uint copyPrimitive(uint UUID)</div><div class="ttdoc">Make a copy of a primitive from the context.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01501">Context.cpp:1501</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a24324ccb5318cb103846a71d44dda23e"><div class="ttname"><a href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e">helios::Context::deletePrimitive</a></div><div class="ttdeci">void deletePrimitive(uint UUID)</div><div class="ttdoc">Delete a single primitive from the context.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01442">Context.cpp:1442</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a7eb6409748de787c4a8f2cc10c290144"><div class="ttname"><a href="classhelios_1_1_context.html#a7eb6409748de787c4a8f2cc10c290144">helios::Context::copyPrimitive</a></div><div class="ttdeci">uint copyPrimitive(uint UUID)</div><div class="ttdoc">Make a copy of a primitive from the context.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01484">Context.cpp:1484</a></div></div>
 </div><!-- fragment --><table class="doxtable">
 <tr>
 <th>Property</th><th>Getter Function </th></tr>
@@ -929,9 +929,9 @@ Objects</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">float</span> area = <span class="keywordtype">object</span>-&gt;<a class="code hl_function" href="classhelios_1_1_compound_object.html#a8bb518f6166e2a2831a68a7626787ac1">getArea</a>();</div>
 <div class="ttc" id="aclasshelios_1_1_compound_object_html"><div class="ttname"><a href="classhelios_1_1_compound_object.html">helios::CompoundObject</a></div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l00143">Context.h:143</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_compound_object_html_a8bb518f6166e2a2831a68a7626787ac1"><div class="ttname"><a href="classhelios_1_1_compound_object.html#a8bb518f6166e2a2831a68a7626787ac1">helios::CompoundObject::getArea</a></div><div class="ttdeci">float getArea() const</div><div class="ttdoc">Calculate the total one-sided surface area of the Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l02140">Context.cpp:2140</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a3d9493949db2c5d8ddeef30afd2a9a0a"><div class="ttname"><a href="classhelios_1_1_context.html#a3d9493949db2c5d8ddeef30afd2a9a0a">helios::Context::getObjectPointer</a></div><div class="ttdeci">CompoundObject * getObjectPointer(uint ObjID) const</div><div class="ttdoc">Get a pointer to a Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l02370">Context.cpp:2370</a></div></div>
-<div class="ttc" id="agroup__compoundobjects_html_gae5c1fa3bae1ff170c14a4378fb8abd95"><div class="ttname"><a href="group__compoundobjects.html#gae5c1fa3bae1ff170c14a4378fb8abd95">helios::Context::addTileObject</a></div><div class="ttdeci">uint addTileObject(const vec3 &amp;center, const vec2 &amp;size, const SphericalCoord &amp;rotation, const int2 &amp;subdiv)</div><div class="ttdoc">Add a patch that is subdivided into a regular grid of sub-patches (tiled)</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l03920">Context.cpp:3920</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_compound_object_html_a8bb518f6166e2a2831a68a7626787ac1"><div class="ttname"><a href="classhelios_1_1_compound_object.html#a8bb518f6166e2a2831a68a7626787ac1">helios::CompoundObject::getArea</a></div><div class="ttdeci">float getArea() const</div><div class="ttdoc">Calculate the total one-sided surface area of the Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l02153">Context.cpp:2153</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a3d9493949db2c5d8ddeef30afd2a9a0a"><div class="ttname"><a href="classhelios_1_1_context.html#a3d9493949db2c5d8ddeef30afd2a9a0a">helios::Context::getObjectPointer</a></div><div class="ttdeci">CompoundObject * getObjectPointer(uint ObjID) const</div><div class="ttdoc">Get a pointer to a Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l02383">Context.cpp:2383</a></div></div>
+<div class="ttc" id="agroup__compoundobjects_html_gae5c1fa3bae1ff170c14a4378fb8abd95"><div class="ttname"><a href="group__compoundobjects.html#gae5c1fa3bae1ff170c14a4378fb8abd95">helios::Context::addTileObject</a></div><div class="ttdeci">uint addTileObject(const vec3 &amp;center, const vec2 &amp;size, const SphericalCoord &amp;rotation, const int2 &amp;subdiv)</div><div class="ttdoc">Add a patch that is subdivided into a regular grid of sub-patches (tiled)</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l03933">Context.cpp:3933</a></div></div>
 </div><!-- fragment --><p >or a shorthand would be</p>
 <div class="fragment"><div class="line">uint objID; <span class="comment">//object identifier</span></div>
 <div class="line"><span class="keywordtype">float</span> area = context.<a class="code hl_function" href="classhelios_1_1_context.html#a3d9493949db2c5d8ddeef30afd2a9a0a">getObjectPointer</a>(objID)-&gt;<a class="code hl_function" href="classhelios_1_1_compound_object.html#a8bb518f6166e2a2831a68a7626787ac1">getArea</a>();</div>
@@ -1260,9 +1260,9 @@ Data Timeseries (Weather Inputs)</h2>
 <div class="line">   }</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_ab4e83017576a164eaa7c61cd0812d8a2"><div class="ttname"><a href="classhelios_1_1_context.html#ab4e83017576a164eaa7c61cd0812d8a2">helios::Context::addTimeseriesData</a></div><div class="ttdeci">void addTimeseriesData(const char *label, float value, const Date &amp;date, const Time &amp;time)</div><div class="ttdoc">Add a data point to timeseries of data.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01687">Context.cpp:1687</a></div></div>
-<div class="ttc" id="agroup__timeseries_html_ga56d13f8c949e68137581a3c974790892"><div class="ttname"><a href="group__timeseries.html#ga56d13f8c949e68137581a3c974790892">helios::Context::getTimeseriesLength</a></div><div class="ttdeci">uint getTimeseriesLength(const char *label) const</div><div class="ttdoc">Get the length of timeseries data.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01874">Context.cpp:1874</a></div></div>
-<div class="ttc" id="agroup__timeseries_html_ga8845155a8f5df1e6db968b78f5a5fb18"><div class="ttname"><a href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18">helios::Context::queryTimeseriesData</a></div><div class="ttdeci">float queryTimeseriesData(const char *label, const Date &amp;date, const Time &amp;time) const</div><div class="ttdoc">Get a timeseries data point by specifying a date and time vector.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01758">Context.cpp:1758</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_ab4e83017576a164eaa7c61cd0812d8a2"><div class="ttname"><a href="classhelios_1_1_context.html#ab4e83017576a164eaa7c61cd0812d8a2">helios::Context::addTimeseriesData</a></div><div class="ttdeci">void addTimeseriesData(const char *label, float value, const Date &amp;date, const Time &amp;time)</div><div class="ttdoc">Add a data point to timeseries of data.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01700">Context.cpp:1700</a></div></div>
+<div class="ttc" id="agroup__timeseries_html_ga56d13f8c949e68137581a3c974790892"><div class="ttname"><a href="group__timeseries.html#ga56d13f8c949e68137581a3c974790892">helios::Context::getTimeseriesLength</a></div><div class="ttdeci">uint getTimeseriesLength(const char *label) const</div><div class="ttdoc">Get the length of timeseries data.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01887">Context.cpp:1887</a></div></div>
+<div class="ttc" id="agroup__timeseries_html_ga8845155a8f5df1e6db968b78f5a5fb18"><div class="ttname"><a href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18">helios::Context::queryTimeseriesData</a></div><div class="ttdeci">float queryTimeseriesData(const char *label, const Date &amp;date, const Time &amp;time) const</div><div class="ttdoc">Get a timeseries data point by specifying a date and time vector.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01771">Context.cpp:1771</a></div></div>
 <div class="ttc" id="astructhelios_1_1_date_html"><div class="ttname"><a href="structhelios_1_1_date.html">helios::Date</a></div><div class="ttdoc">Date vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01048">helios_vector_types.h:1048</a></div></div>
 <div class="ttc" id="astructhelios_1_1_time_html"><div class="ttname"><a href="structhelios_1_1_time.html">helios::Time</a></div><div class="ttdoc">Time vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01231">helios_vector_types.h:1231</a></div></div>
 <div class="ttc" id="astructhelios_1_1_time_html_a627acedd68e0228600727b867db537dd"><div class="ttname"><a href="structhelios_1_1_time.html#a627acedd68e0228600727b867db537dd">helios::Time::second</a></div><div class="ttdeci">int second</div><div class="ttdoc">Second of minute.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01234">helios_vector_types.h:1234</a></div></div>

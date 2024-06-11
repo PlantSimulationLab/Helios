@@ -173,9 +173,9 @@ ShootParameters::ShootParameters( std::minstd_rand0 *generator ) {
     girth_growth_rate.initialize(0, generator);
     internode_radius_max.initialize(1e6, generator);
 
-    vegetative_bud_break_probability = 0;
-    flower_bud_break_probability = 1;
-    fruit_set_probability = 1;
+    vegetative_bud_break_probability.initialize(0,generator);
+    flower_bud_break_probability.initialize(1,generator);
+    fruit_set_probability.initialize(1,generator);
 
     vegetative_bud_break_time.initialize(0, generator);
 
@@ -647,6 +647,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     if( phytomer_index!=0 && phytomer_parameters.internode.phyllotactic_angle.val()!=0 ){ //not first phytomer along shoot
         petiole_axis = rotatePointAboutLine(petiole_axis, nullorigin, internode_axis, deg2rad(phytomer_parameters.internode.phyllotactic_angle.val()) );
         petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, nullorigin, internode_axis, deg2rad(phytomer_parameters.internode.phyllotactic_angle.val()) );
+        phytomer_parameters.internode.phyllotactic_angle.resample();
     }
 
     for(int petiole=0; petiole < phytomer_parameters.petiole.petioles_per_internode; petiole++ ) { //looping over petioles
@@ -1361,10 +1362,11 @@ bool Shoot::sampleChildShootType(std::string &child_shoot_type_label) const{
     }
 
     bool bud_break = true;
-    if (context_ptr->randu() > plant_architecture_ptr->shoot_types.at(shoot_ptr->shoot_type_label).vegetative_bud_break_probability) {
+    if (context_ptr->randu() > plant_architecture_ptr->shoot_types.at(shoot_ptr->shoot_type_label).vegetative_bud_break_probability.val() ) {
         bud_break = false;
         child_shoot_type_label = "";
     }
+
 
     return bud_break;
 
@@ -2148,7 +2150,7 @@ void PlantArchitecture::advanceTime( float dt ) {
                                     if ((!shoot->shoot_parameters.flowers_require_dormancy && plant_instance.current_age >= plant_instance.dd_to_flower_initiation) ||
                                         (shoot->shoot_parameters.flowers_require_dormancy && phytomer->time_since_dormancy >= plant_instance.dd_to_flower_initiation)) {
                                         fbud.time_counter = 0;
-                                        if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability ) {
+                                        if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val() ) {
                                             phytomer->changeReproductiveState(fbud, BUD_FLOWER_CLOSED);
                                         } else {
                                             phytomer->changeReproductiveState(fbud, BUD_DEAD);
@@ -2167,7 +2169,7 @@ void PlantArchitecture::advanceTime( float dt ) {
                                         if( fbud.state == BUD_FLOWER_CLOSED ) {
                                             phytomer->changeReproductiveState(fbud, BUD_FLOWER_OPEN);
                                         }else{
-                                            if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability ) {
+                                            if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val() ) {
                                                 phytomer->changeReproductiveState(fbud, BUD_FLOWER_OPEN);
                                             } else {
                                                 phytomer->changeReproductiveState(fbud, BUD_DEAD);
@@ -2189,7 +2191,7 @@ void PlantArchitecture::advanceTime( float dt ) {
                                     (fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f)) { //jumped from closed flower to fruit set with no flower opening
                                     if (fbud.time_counter >= plant_instance.dd_to_fruit_set) {
                                         fbud.time_counter = 0;
-                                        if (context_ptr->randu() < shoot->shoot_parameters.fruit_set_probability) {
+                                        if (context_ptr->randu() < shoot->shoot_parameters.fruit_set_probability.val() ) {
                                             phytomer->changeReproductiveState(fbud, BUD_FRUITING);
                                         } else {
                                             phytomer->changeReproductiveState(fbud, BUD_DEAD);
