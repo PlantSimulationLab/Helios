@@ -139,17 +139,20 @@ uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool 
 
 void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
 
-    if( shoot_node_index<=4 ) {
-
-        //set leaf and internode scale based on position along the shoot
-        float leaf_scale = fmin(1.f, 0.75 + 0.25 * float(shoot_node_index) / 4.f);
-        phytomer->scaleLeafPrototypeScale(leaf_scale);
-
-        //set internode length based on position along the shoot
-        float inode_scale = fmin(1.f, 0.1 + 0.9 * float(shoot_node_index) / 4.f);
-        phytomer->scaleInternodeMaxLength(inode_scale);
-
+    if( shoot_node_index>5 || rank>1 ) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
     }
+    if(shoot_node_index > 10){
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+    //set leaf and internode scale based on position along the shoot
+    float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
+    phytomer->scaleLeafPrototypeScale(leaf_scale);
+
+    //set internode length based on position along the shoot
+    float inode_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
+    phytomer->scaleInternodeMaxLength(inode_scale);
 
 }
 
@@ -182,11 +185,11 @@ uint CowpeaLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisi
 uint CowpeaLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
     std::vector<uint> UUIDs;
     if( compound_leaf_index<0 ){
-        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_left_lowres.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_left_highres.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     }else if( compound_leaf_index==0 ){
-        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_tip_lowres.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_tip_highres.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     }else{
-        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_right_lowres.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_right_highres.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     }
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;

@@ -101,10 +101,10 @@ $(function() {
 <li class="level1"><a href="#PlantArchDescription">Introduction</a><ul><li class="level2"><a href="#PlantArchPhytomer">The Phytomer: Basic Unit of a plant shoot</a></li>
 <li class="level2"><a href="#PlantArchCoord">Coordinate System</a></li>
 <li class="level2"><a href="#PlantArchRandParam">Randomization of Parameters</a></li>
-<li class="level2"><a href="#PlantArchOrgans">Creating Plant Organ Prototypes</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#PlantArchPhytomerParams">Defining the Phytomer and its Parameters</a><ul><li class="level2"><a href="#PlantArch_compound">Compound Leaves</a></li>
+<li class="level1"><a href="#PlantArchPhytomerParams">Defining the Phytomer and its Parameters</a><ul><li class="level2"><a href="#PlantArchOrgans">Creating Plant Organ Prototypes</a></li>
+<li class="level2"><a href="#PlantArch_compound">Compound Leaves</a></li>
 <li class="level2"><a href="#PlantArch_flowers">Inflorescence</a></li>
 </ul>
 </li>
@@ -237,54 +237,7 @@ Randomization of Parameters</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">Weibull   </td><td class="markdownTableBodyNone">weibullDistribution()   </td><td class="markdownTableBodyNone">shape parameter, scale parameter   </td></tr>
 </table>
-<h2><a class="anchor" id="PlantArchOrgans"></a>
-Creating Plant Organ Prototypes</h2>
-<p >The geometry of plant leaves, flowers, and fruit are defined based on &lsquo;prototype&rsquo; models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.</p>
-<p >The prototype functions must return an object ID ( <font face="courier" color="green">uint</font>) corresponding to the compound object created in the function. Arguments to the prototype function vary based on organ type:</p>
-<p >Leaves </p><div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes )</div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01703">Context.h:1703</a></div></div>
-</div><!-- fragment --><p >Flowers </p><div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">bool</span> flower_is_open )</div>
-</div><!-- fragment --><p >Fruit </p><div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">float</span> time_since_fruit_set )</div>
-</div><!-- fragment --><p >The arguments do not necessarily need to be used inside the prototype function, but are always passed to the function in case they are needed.</p>
-<p >The size, position, and orientation of the prototype when it is created needs to follow a specific convention.</p>
-<ul>
-<li>Prototype size: The prototype should have a unit length, and the size of the organ is set by scaling the prototype in the prototype function. This is done to allow for consistent scaling of the organ based on the parameters of the phytomer and petiole.</li>
-<li>Prototype origin: The base of the organ should be located at the origin (0,0,0). For a leaf, the base is the point at which the leaf meets the petiole. For a flow or fruit, this is the point at which the organ meets its supporting structure (peduncle).</li>
-<li>Prototype orientation: The organ should be oriented such that its centerline axis is along the positive x-axis, with the positive z-axis pointing upward from the base of the organ.</li>
-</ul>
-<div class="image">
-<img src="prototype_coordinate_schematic.png" alt=""/>
-</div>
-<p >A simple leaf prototype function is given below, which simply loads a model from an OBJ file.</p>
-<div class="fragment"><div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
-<div class="line">    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/AlmondLeaf.obj&quot;</span>, make_vec3(0,0,0), 0, nullrotation, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
-<div class="line">    <span class="keywordflow">return</span> context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">addPolymeshObject</a>( UUIDs );</div>
-<div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a8657240a0b2926e8c73b083f0fdc339d"><div class="ttname"><a href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">helios::Context::loadOBJ</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadOBJ(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...</div><div class="ttdef"><b>Definition:</b> <a href="_context__file_i_o_8cpp_source.html#l03694">Context_fileIO.cpp:3694</a></div></div>
-<div class="ttc" id="agroup__compoundobjects_html_gababf99153757527880fe3866cc23fd1b"><div class="ttname"><a href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">helios::Context::addPolymeshObject</a></div><div class="ttdeci">uint addPolymeshObject(const std::vector&lt; uint &gt; &amp;UUIDs)</div><div class="ttdoc">Add new Polymesh Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l04775">Context.cpp:4775</a></div></div>
-</div><!-- fragment --><p >A generic leaf prototype function is given in the file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves. The advantage of this approach is that each leaf will have random variation, since the leaf is generated procedurally. The disadvantage is that it may not look as detailed as a leaf created outside Helios (e.g., in Blender) that has detailed sculpting of leaf texture, for example.</p>
-<div class="fragment"><div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
-<div class="line"> </div>
-<div class="line">   std::string leaf_texture = <span class="stringliteral">&quot;plugins/plantarchitecture/assets/textures/AlmondLeaf.png&quot;</span>;</div>
-<div class="line"> </div>
-<div class="line">   <span class="keywordtype">float</span> leaf_aspect = 0.4; <span class="comment">//ratio of leaf width to leaf length</span></div>
-<div class="line"> </div>
-<div class="line">   <span class="keywordtype">float</span> midrib_fold = 0.2; <span class="comment">//fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)</span></div>
-<div class="line"> </div>
-<div class="line">   <span class="keywordtype">float</span> x_curvature = -0.1; <span class="comment">//curvature factor along x-direction. (+curves upward, -curved downward)</span></div>
-<div class="line">   <span class="keywordtype">float</span> y_curvature = 0.4; <span class="comment">//curvature factor along y-direction. (+curves upward, -curved downward)</span></div>
-<div class="line"> </div>
-<div class="line">   <span class="keywordtype">float</span> petiole_roll = 0.f; <span class="comment">//creates a roll of the leaf near its base to more smoothly meet the petiole</span></div>
-<div class="line"> </div>
-<div class="line">   <span class="comment">//parameters for leaf wave/wrinkles</span></div>
-<div class="line">   <span class="keywordtype">float</span> wave_period = 0.1f; <span class="comment">//period factor of leaf waves</span></div>
-<div class="line">   <span class="keywordtype">float</span> wave_amplitude = 0.03f; <span class="comment">// amplitude of leaf waves</span></div>
-<div class="line"> </div>
-<div class="line">   uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, petiole_roll, wave_period, wave_amplitude);</div>
-<div class="line"> </div>
-<div class="line">   <span class="keywordflow">return</span> objID;</div>
-<div class="line">}</div>
-</div><!-- fragment --><h1><a class="anchor" id="PlantArchPhytomerParams"></a>
+<h1><a class="anchor" id="PlantArchPhytomerParams"></a>
 Defining the Phytomer and its Parameters</h1>
 <p >Phytomers are defined by a set of parameters that specify its geometry. These parameters are stored in a data structure called <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a>. The phytomer parameters are parameters that are constant (aside from randomization), and are usually species-specific.</p>
 <p >The table below lists the parameters that define the geometry of the phytomer, and their descriptions. There are some parameters that are notably absent, such as the internode length and radius. Since these parameters vary with age and position along the shoot, these are considered to be parameters of the shoot and not the phytomer. <a class="el" href="struct_shoot.html">Shoot</a> parameters are described below in <a class="el" href="_plant_architecture_doc.html#PlantArchShoot">Defining Shoots and their Parameters</a>.</p>
@@ -395,7 +348,59 @@ Defining the Phytomer and its Parameters</h1>
 <div class="image">
 <img src="growth_pattern_schematic.jpeg" alt=""/>
 </div>
-<h2><a class="anchor" id="PlantArch_compound"></a>
+<h2><a class="anchor" id="PlantArchOrgans"></a>
+Creating Plant Organ Prototypes</h2>
+<p >The geometry of plant leaves, flowers, and fruit are defined based on &lsquo;prototype&rsquo; models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.</p>
+<p >The prototype functions must return an object ID ( <font face="courier" color="green">uint</font>) corresponding to the compound object created in the function. Arguments to the prototype function vary based on organ type:</p>
+<p >Leaves </p><div class="fragment"><div class="line"> {c++}</div>
+<div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes )</div>
+<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01703">Context.h:1703</a></div></div>
+</div><!-- fragment --><p >Flowers </p><div class="fragment"><div class="line"> {c++}</div>
+<div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">bool</span> flower_is_open )</div>
+</div><!-- fragment --><p >Fruit </p><div class="fragment"><div class="line"> {c++}</div>
+<div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">float</span> time_since_fruit_set )</div>
+</div><!-- fragment --><p >The arguments do not necessarily need to be used inside the prototype function, but are always passed to the function in case they are needed.</p>
+<p >The size, position, and orientation of the prototype when it is created needs to follow a specific convention.</p>
+<ul>
+<li>Prototype size: The prototype should have a unit length, and the size of the organ is set by scaling the prototype in the prototype function. This is done to allow for consistent scaling of the organ based on the parameters of the phytomer and petiole.</li>
+<li>Prototype origin: The base of the organ should be located at the origin (0,0,0). For a leaf, the base is the point at which the leaf meets the petiole. For a flow or fruit, this is the point at which the organ meets its supporting structure (peduncle).</li>
+<li>Prototype orientation: The organ should be oriented such that its centerline axis is along the positive x-axis, with the positive z-axis pointing upward from the base of the organ.</li>
+</ul>
+<div class="image">
+<img src="prototype_coordinate_schematic.png" alt=""/>
+</div>
+<p >A simple leaf prototype function is given below, which simply loads a model from an OBJ file.</p>
+<div class="fragment"><div class="line"> {c++}</div>
+<div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
+<div class="line">std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/AlmondLeaf.obj&quot;</span>, make_vec3(0,0,0), 0, nullrotation, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
+<div class="line"><span class="keywordflow">return</span> context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">addPolymeshObject</a>( UUIDs );</div>
+<div class="line">}</div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a8657240a0b2926e8c73b083f0fdc339d"><div class="ttname"><a href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">helios::Context::loadOBJ</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadOBJ(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...</div><div class="ttdef"><b>Definition:</b> <a href="_context__file_i_o_8cpp_source.html#l03694">Context_fileIO.cpp:3694</a></div></div>
+<div class="ttc" id="agroup__compoundobjects_html_gababf99153757527880fe3866cc23fd1b"><div class="ttname"><a href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">helios::Context::addPolymeshObject</a></div><div class="ttdeci">uint addPolymeshObject(const std::vector&lt; uint &gt; &amp;UUIDs)</div><div class="ttdoc">Add new Polymesh Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l04775">Context.cpp:4775</a></div></div>
+</div><!-- fragment --><p >A generic leaf prototype function is given in the file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves. The advantage of this approach is that each leaf will have random variation, since the leaf is generated procedurally. The disadvantage is that it may not look as detailed as a leaf created outside Helios (e.g., in Blender) that has detailed sculpting of leaf texture, for example.</p>
+<div class="fragment"><div class="line"> {c++}</div>
+<div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
+<div class="line"> </div>
+<div class="line">    std::string leaf_texture = <span class="stringliteral">&quot;plugins/plantarchitecture/assets/textures/AlmondLeaf.png&quot;</span>;</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> leaf_aspect = 0.4; <span class="comment">//ratio of leaf width to leaf length</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> midrib_fold = 0.2; <span class="comment">//fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> x_curvature = -0.1; <span class="comment">//curvature factor along x-direction. (+curves upward, -curved downward)</span></div>
+<div class="line">    <span class="keywordtype">float</span> y_curvature = 0.4; <span class="comment">//curvature factor along y-direction. (+curves upward, -curved downward)</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> petiole_roll = 0.f; <span class="comment">//creates a roll of the leaf near its base to more smoothly meet the petiole</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//parameters for leaf wave/wrinkles</span></div>
+<div class="line">    <span class="keywordtype">float</span> wave_period = 0.1f; <span class="comment">//period factor of leaf waves</span></div>
+<div class="line">    <span class="keywordtype">float</span> wave_amplitude = 0.03f; <span class="comment">// amplitude of leaf waves</span></div>
+<div class="line"> </div>
+<div class="line">    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, petiole_roll, wave_period, wave_amplitude);</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> objID;</div>
+<div class="line">}</div>
+</div><!-- fragment --><h2><a class="anchor" id="PlantArch_compound"></a>
 Compound Leaves</h2>
 <p >Compound leaves consist of a single petiole with multiple leaves (leaflets) attached. The number of leaflets is specified by the parameter  <font face="courier" color="blue">leaves_per_petiole</font> in the <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a> structure (if  <font face="courier" color="blue">leaves_per_petiole</font> = 1, it is not a compound leaf). The compound leaf is formed by making a copy of the leaf prototype, and scaling, rotating, and translating it based on the position along the petiole. If there is an even number of leaflets, there will be two leaves attached to the tip of the leaf at an angle of 60 degrees from each other, whereas if the number of leaflets is even there will be a single leaf attached to the tip. The size of these tip leaves is set by the parameter  <font face="courier" color="blue">leaf_prototype_scale</font>. If the number of leaflets is greater than 2, additional leaflets are added running down the petiole in an opposite pattern. The spacing between adjacent leaflets is specified as a fraction of the petiole length by the parameter  <font face="courier" color="blue">leaflet_offset</font>, and the scaling factor of the leaflet moving down the petiole with respect to the previous leaflet is specified by the parameter  <font face="courier" color="blue">leaflet_offset</font>. The leaflets along the petiole can either get bigger or smaller than the tip leaf/(leaves) according to the parameter  <font face="courier" color="blue">leaflet_scale</font> (&lt;1 gets smaller, &gt;1 gets bigger).</p>
 <div class="image">
@@ -507,14 +512,14 @@ child_internode_length_max, child_internode_length_min, and child_internode_leng
 </div>
 <h3><a class="anchor" id="ShootParam_gravitropic"></a>
 gravitropic_curvature</h3>
-<p >The tendency of shoots to grow toward vertical is given by the parameter  <font face="courier" color="blue">gravitropic_curvature</font>. This parameter is the curvature angle of the shoot per unit length of shoot. If curvature is positive, the shoot curves upward toward vertical. If negative, the shoot curves downward. Once the shoot has reached vertical, it will continue to grow vertically. For example, a shoot that emerges from the bud growing horizontally with  <font face="courier" color="blue">gravitropic_curvature</font> = 90 degrees/meter will curve upward such that it will be growing upward after the first meter of growth.</p>
+<p >The tendency of shoots to grow toward vertical is given by the parameter  <font face="courier" color="blue">gravitropic_curvature</font>. This parameter is the curvature angle of the shoot per unit length of shoot. If curvature is positive, the shoot curves upward toward vertical. If negative, the shoot curves downward. Once the shoot has reached vertical, it will continue to grow vertically. For example, a shoot that emerges from the bud growing horizontally with  <font face="courier" color="blue">gravitropic_curvature</font> = 90 degrees/meter will curve upward such that it will be growing upward after the first meter of growth. </p>
 <h3><a class="anchor" id="ShootParam_tortuosity"></a>
 tortuosity</h3>
 <p >Random "wiggle" can be added to shoot growth using the  <font face="courier" color="blue">tortuosity</font> parameter. Each time a phytomer is added to the shoot, some constant amount of differential curvature is added according to the parameter  <font face="courier" color="blue">gravitropic_curvature</font>. To introduce random variation, an additional amount of noise is added to the curvature based on a <a href="https://en.wikipedia.org/wiki/Langevin_equation">Langevin</a>-like equation (Brownian motion):</p>
 <p class="formulaDsp">
 <img class="formulaDsp" alt="\[
-  d\theta = \frac{1}{2}\left(C_g-\theta\right)dL + T\xi(dL)
-  \]" src="form_139.png" width="191" height="32"/>
+    d\theta = \frac{1}{2}\left(C_g-\theta\right)dL + T\xi(dL)
+\]" src="form_235.png" width="191" height="32"/>
 </p>
 <p >where <img class="formulaInl" alt="$d\theta$" src="form_140.png" width="15" height="12"/> is the change in curvature angle of the current phytomer internode relative to the previous internode, <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/> is the integrated curvature angle relative to the base of the shoot, <img class="formulaInl" alt="$dL$" src="form_141.png" width="18" height="12"/> is the internode length, <img class="formulaInl" alt="$T$" src="form_142.png" width="12" height="11"/> is the tortuosity, and <img class="formulaInl" alt="$\xi (dL)$" src="form_143.png" width="38" height="17"/> is a Gaussian process with variance of <img class="formulaInl" alt="$dL$" src="form_141.png" width="18" height="12"/>.</p>
 <h2><a class="anchor" id="ShootParametersGrowth"></a>
@@ -558,7 +563,8 @@ Loading a Plant from the Existing Library</h1>
 <h3><a class="anchor" id="PlantArchBuild_default"></a>
 Loading a Plant with Default Parameters</h3>
 <p >Loading a plant from the library with default parameters is relatively simple, and requires only declaring the <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> class, loading the model using the <a class="el" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary()</a> method (which takes a string argument for the plant model as listed in the table above), and calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method. The method takes two arguments: 1) the Cartesian (x,y,z) position of the plant base, and 2) the age of the plant in days. A code example is given below.</p>
-<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
+<div class="fragment"><div class="line"> {c++}</div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
@@ -579,7 +585,8 @@ Modifying Parameters of a Plant from the Library</h3>
 <p >Building a plant from the library with modified parameters is similar to above, except that the parameters are modified before calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method. After calling <a class="el" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary()</a>, the parameters can be queried (at the shoot level), modified, and then set.</p>
 <p >Parameters are queried based on shoot type (the names of which are given in the table above). The user can either query the <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structure for a single shoot type based on its label, or for all shoot types in the particular model.</p>
 <p >Below is an example of modifying the parameters of a single shoot type:</p>
-<div class="fragment"><div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;almond&quot;</span> );</div>
+<div class="fragment"><div class="line"> {c++}</div>
+<div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;almond&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line"><a class="code hl_struct" href="struct_shoot_parameters.html">ShootParameters</a> shoot_parameters = plantarchitecture.getCurrentShootParameters( <span class="stringliteral">&quot;trunk&quot;</span> );</div>
 <div class="line">shoot_parameters.internode_radius_initial = 0.2;</div>
@@ -589,7 +596,8 @@ Modifying Parameters of a Plant from the Library</h3>
 <div class="line">plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );</div>
 <div class="ttc" id="astruct_shoot_parameters_html"><div class="ttname"><a href="struct_shoot_parameters.html">ShootParameters</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00472">PlantArchitecture.h:472</a></div></div>
 </div><!-- fragment --><p >Below is an example of modifying the parameters for all shoot types:</p>
-<div class="fragment"><div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;almond&quot;</span> );</div>
+<div class="fragment"><div class="line"> {c++}</div>
+<div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;almond&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">std::map&lt;std::string,ShootParameters&gt; shoot_parameters = plantarchitecture.getCurrentShootParameters( <span class="stringliteral">&quot;trunk&quot;</span> );</div>
 <div class="line"><span class="keywordflow">for</span>( <span class="keyword">auto</span> params : shoot_parameters ){</div>
@@ -619,7 +627,8 @@ Modifying Phenological Threshold Parameters</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">time_to_senescence   </td><td class="markdownTableBodyNone">Time from emergence/dormancy required to reach senescence. At senescence, leaves and fruit will be removed, and the plant will become dormant.   </td></tr>
 </table>
-<div class="fragment"><div class="line"><a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
+<div class="fragment"><div class="line"> {c++}</div>
+<div class="line"><a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
 <div class="line"> </div>
 <div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
 <div class="line">uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );</div>
@@ -628,7 +637,8 @@ Modifying Phenological Threshold Parameters</h2>
 </div><!-- fragment --><h1><a class="anchor" id="PlantArchGrowth"></a>
 Growing the Model over Time</h1>
 <p >The model can be grown over time by calling the <a class="el" href="class_plant_architecture.html#afac9e51e48de17afa485128dbea39019">PlantArchitecture::advanceTime()</a> method, where the argument to this method is the timestep to advance in days. The timestep value can be larger than the phyllochron, such that multiple phytomers and shoots can be produced in a single call to <a class="el" href="class_plant_architecture.html#afac9e51e48de17afa485128dbea39019">PlantArchitecture::advanceTime()</a>.</p>
-<div class="fragment"><div class="line">plantarchitecture.advanceTime( 1 );</div>
+<div class="fragment"><div class="line"> {c++}</div>
+<div class="line">plantarchitecture.advanceTime( 1 );</div>
 </div><!-- fragment --><h1><a class="anchor" id="PlantArchQuery"></a>
 Retrieving Information from the Model</h1>
 <h2><a class="anchor" id="PlantArchQueryobjIDs"></a>
@@ -688,8 +698,11 @@ Getting Primitive UUIDs for Organ Sub-Components</h2>
 <td class="markdownTableBodyNone">Sepals   </td><td class="markdownTableBodyNone">"object_label"   </td><td class="markdownTableBodyNone">"sepals"   </td><td class="markdownTableBodyNone">The sepals (i.e., green part at base) of the fruit.   </td></tr>
 </table>
 <p >The UUIDs for a given sub-organ group can be retrieved by calling the Context method <a class="el" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7">helios::Context::filterPrimitivesByData()</a>. Below is an example for getting the leaf vein UUIDs.</p>
-<p >~~~~~~ std::vector&lt;uint&gt; plant_UUIDs = plantarchitecture.getAllPlantUUIDs( plantID ); std::vector&lt;uint&gt; leaf_vein_UUIDs = context.filterPrimitivesByData( plant_UUIDs, "object_label", "veins" ); ~~~~~~</p>
-<p >For custom user-defined organ prototypes, users should follow the convention of grouping the above sub-components into separate object groups with the labels given in the table above. </p>
+<div class="fragment"><div class="line"> {c++}</div>
+<div class="line">std::vector&lt;uint&gt; plant_UUIDs = plantarchitecture.getAllPlantUUIDs( plantID );</div>
+<div class="line">std::vector&lt;uint&gt; leaf_vein_UUIDs = context.<a class="code hl_function" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7">filterPrimitivesByData</a>( plant_UUIDs, <span class="stringliteral">&quot;object_label&quot;</span>, <span class="stringliteral">&quot;veins&quot;</span> );</div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a416b75bbf3ddf4ca0184df35651f41b7"><div class="ttname"><a href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7">helios::Context::filterPrimitivesByData</a></div><div class="ttdeci">std::vector&lt; uint &gt; filterPrimitivesByData(const std::vector&lt; uint &gt; &amp;UUIDs, const std::string &amp;primitive_data_label, float filter_value, const std::string &amp;comparator)</div><div class="ttdoc">Filter a set of primitives based on their primitive data and a condition and float value.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l08490">Context.cpp:8490</a></div></div>
+</div><!-- fragment --><p >For custom user-defined organ prototypes, users should follow the convention of grouping the above sub-components into separate object groups with the labels given in the table above. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->

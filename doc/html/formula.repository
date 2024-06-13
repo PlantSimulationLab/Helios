@@ -242,3 +242,6 @@
 \_form#232=15x15:$\theta_L$
 \_form#233=44x17:$g_L(\theta_L)$
 \_form#234=207x29:$A=0.75\left(\frac{1.08g_Hg_S}{1.08g_H+g_S}\right)\left(C_{a}-C_i\right)$
+\_form#235=191x32:\[
+    d\theta = \frac{1}{2}\left(C_g-\theta\right)dL + T\xi(dL)
+\]
