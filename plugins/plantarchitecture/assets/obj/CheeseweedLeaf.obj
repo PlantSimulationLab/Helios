@@ -1,7 +1,7 @@
-# Blender 3.4.1
+# Blender 3.3.0
 # www.blender.org
 mtllib CheeseweedLeaf.mtl
-o Circle
+o leaf
 v 0.005280 -0.000570 0.017536
 v 0.093261 0.489345 -0.019164
 v 0.003898 0.460512 0.017536

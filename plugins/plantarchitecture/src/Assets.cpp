@@ -147,7 +147,7 @@ void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoo
     }
 
     //set leaf and internode scale based on position along the shoot
-    float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
+    float leaf_scale = fmin(1.f, 0.3 + 0.7 * plant_age / 15.f);
     phytomer->scaleLeafPrototypeScale(leaf_scale);
 
     //set internode length based on position along the shoot
@@ -440,6 +440,42 @@ uint SoybeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivis
 
 }
 
+uint SoybeanFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/SoybeanPod.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+uint SoybeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
+    std::vector<uint> UUIDs;
+    if( flower_is_open ){
+        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/SoybeanFlower_open_white.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    }else{
+        UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanFlower_closed_white.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    }
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+void SoybeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
+
+    if( shoot_node_index>10 || rank>1 ) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
+    }
+    if( shoot_node_index<=0 || shoot_node_index > 15){
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+    //set leaf and internode scale based on position along the shoot
+    float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 5.f);
+    phytomer->scaleLeafPrototypeScale(leaf_scale);
+
+    //set internode length based on position along the shoot
+    float inode_scale = fmin(1.f, 0.75 + 0.25 * plant_age / 5.f);
+    phytomer->scaleInternodeMaxLength(inode_scale);
+
+}
+
 uint SugarbeetLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
 
     // -- Adjustable parameters -- //
@@ -549,4 +585,20 @@ uint TomatoFlowerPrototype( helios::Context* context_ptr, uint subdivisions, boo
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/TomatoFlower.obj", make_vec3(0.0,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
+}
+
+void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
+
+    if( shoot_node_index>5 || rank>1 ) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
+    }
+
+    //set leaf and internode scale based on position along the shoot
+    float leaf_scale = fmin(1.f, 0.5 + 0.5 * plant_age / 10.f);
+    phytomer->scaleLeafPrototypeScale(leaf_scale);
+
+    //set internode length based on position along the shoot
+    float inode_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 10.f);
+    phytomer->scaleInternodeMaxLength(inode_scale);
+
 }

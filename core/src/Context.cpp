@@ -3523,20 +3523,22 @@ helios::vec3 Cone::getNodeCoordinate(int node_index ) const{
 }
 
 std::vector<float> Cone::getNodeRadii() const{
-    std::vector<float> radii_T;
-    radii_T.resize(2);
-    for( int i=0; i<2; i++ ){
+//    std::vector<float> radii_T;
+//    radii_T.resize(2);
+//    for( int i=0; i<2; i++ ){
+//
+//        vec3 n0(0,0,0), nx(radii.at(i),0,0);
+//        vec3 n0_T, nx_T;
+//
+//        vecmult(transform,n0,n0_T);
+//        vecmult(transform,nx,nx_T);
+//
+//        radii_T.at(i) = (nx_T-n0_T).magnitude();
+//
+//    }
+//    return radii_T;
+    return radii;
 
-        vec3 n0(0,0,0), nx(radii.at(i),0,0);
-        vec3 n0_T, nx_T;
-
-        vecmult(transform,n0,n0_T);
-        vecmult(transform,nx,nx_T);
-
-        radii_T.at(i) = (nx_T-n0_T).magnitude();
-
-    }
-    return radii_T;
 }
 
 float Cone::getNodeRadius( int node_index ) const{
@@ -3544,13 +3546,16 @@ float Cone::getNodeRadius( int node_index ) const{
         helios_runtime_error("ERROR (Cone::getNodeRadius): node number must be 0 or 1.");
     }
 
-    vec3 n0(0,0,0), nx(radii.at(node_index), 0, 0);
-    vec3 n0_T, nx_T;
+//    vec3 n0(0,0,0), nx(radii.at(node_index), 0, 0);
+//    vec3 n0_T, nx_T;
+//
+//    vecmult(transform,n0,n0_T);
+//    vecmult(transform,nx,nx_T);
+//
+//    return (nx_T-n0_T).magnitude();
 
-    vecmult(transform,n0,n0_T);
-    vecmult(transform,nx,nx_T);
+    return radii.at(node_index);
 
-    return (nx_T-n0_T).magnitude();
 }
 
 uint Cone::getSubdivisionCount() const{
@@ -3651,35 +3656,35 @@ void Cone::scaleGirth( float S ){
 
     // calculate the transformed axis unit vector of the cone
     vec3 axis_unit_vector = helios::make_vec3(nodes_T.at(1).x - nodes_T.at(0).x, nodes_T.at(1).y - nodes_T.at(0).y, nodes_T.at(1).z - nodes_T.at(0).z );
-    float length = powf(powf(axis_unit_vector.x,2) + powf(axis_unit_vector.y,2) + powf(axis_unit_vector.z,2),0.5);
-    axis_unit_vector = axis_unit_vector / length;
+    axis_unit_vector.normalize();
 
     //translate node 0 back to origin
     context->getConeObjectPointer(OID)->translate(-1.0*nodes_T.at(0));
-
     //rotate the cone to align with z axis
     helios::vec3 z_axis = make_vec3(0,0,1);
     //get the axis about which to rotate
     vec3 ra = cross( z_axis, axis_unit_vector);
     //get the angle to rotate
-    float dot = axis_unit_vector.x*z_axis.x + axis_unit_vector.y*z_axis.y + axis_unit_vector.z*z_axis.z;
+    float dot = axis_unit_vector*z_axis;
     float angle = acos_safe(dot);
-    //only rotate if the cone is not alread aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
+    //only rotate if the cone is not already aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
     if(angle != float(0.0)){
         context->getConeObjectPointer(OID)->rotate( -1*angle, ra );
     }
 
-    // scale the cone in the z (length) dimension
-    float T[16], T_prim[16];
-    makeScaleMatrix( make_vec3(S,S,1), T);
-    matmult(T,transform,transform);
-    for( uint UUID : UUIDs){
-        if( context->doesPrimitiveExist( UUID ) ){
-            context->getPrimitiveTransformationMatrix( UUID,T_prim);
-            matmult(T,T_prim,T_prim);
-            context->setPrimitiveTransformationMatrix( UUID,T_prim);
-        }
-    }
+    // scale the cone in the x and y dimensions
+//    float T[16], T_prim[16];
+//    makeScaleMatrix( make_vec3(S,S,1), T);
+//    matmult(T,transform,transform);
+//    for( uint UUID : UUIDs){
+//        if( context->doesPrimitiveExist( UUID ) ){
+//            context->getPrimitiveTransformationMatrix( UUID,T_prim);
+//            matmult(T,T_prim,T_prim);
+//            context->setPrimitiveTransformationMatrix( UUID,T_prim);
+//        }
+//    }
+    context->scaleObject( OID, make_vec3(S,S,1)   );
+
 
     //rotate back
     if(angle != 0.0){
@@ -3688,6 +3693,10 @@ void Cone::scaleGirth( float S ){
 
     // translate back
     context->getConeObjectPointer(OID)->translate(nodes_T.at(0));
+
+    radii.at(0) *= S;
+    radii.at(1) *= S;
+
 
 }
 

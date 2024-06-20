@@ -944,6 +944,8 @@ public:
     //! Do not build peduncle primitive geometry in the Context
     void disablePeduncleContextBuild();
 
+    void enableGroundClipping( float ground_height = 0.f );
+
     // -- methods for modifying the current plant state -- //
 
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float girth_change);
@@ -1062,6 +1064,8 @@ protected:
     bool build_context_geometry_petiole = true;
     bool build_context_geometry_peduncle = true;
 
+    float ground_clipping_height = -99999;
+
     void validateShootTypes( ShootParameters &shoot_parameters ) const;
 
     void accumulateShootPhotosynthesis( float dt );
@@ -1079,6 +1083,10 @@ protected:
     void shiftDownstreamShoots(uint plantID, std::vector<std::shared_ptr<Shoot>> &shoot_tree, std::shared_ptr<Shoot> parent_shoot_ptr, const helios::vec3 &base_position );
 
     void initializeDefaultShoots( const std::string &plant_label );
+
+    bool detectGroundCollision(uint objID);
+
+    bool detectGroundCollision(const std::vector<uint> &objID);
 
     // --- Plant Libary --- //
 
