@@ -1693,3 +1693,18 @@ The radiation model has been re-designed, with the following primary additions:
 - Added RadiationModel::deleteRadiationSource().
 - Deleted some overloaded versions of RadiationModel::addSunSphereSource() that take a sourceID as input to change the source ID. Instead we can use RadiationModel::deleteRadiationSource() and re-add a new source.
 - Fixed an error in RadiationModel::getSourceFlux() for sun sphere sources that caused the flux to be incorrect.
+
+[1.3.14] 2024-06-22
+
+***NEW PLUG-IN***
+- Plant Architecture plug-in merged from development branch to master repo. This plug-in is still in beta testing and is not yet fully documented and is likely to still have a number of bugs. Please report bugs as you find them.
+
+*Context*
+- Cone object girth was not being properly scaled.
+
+*Solar Position*
+- Added sub-model to calculate solar fluxes and diffuse fraction for cloudy conditions based on radiometer measurements (see SolarPosition::enableCloudCalibration()).
+- Changed many variable names to make units more explicit.
+
+*Radiation*
+- Added "ActiveGrow_LED_RedBloom" light to light spectral library.

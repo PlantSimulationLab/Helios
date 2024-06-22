@@ -26,24 +26,24 @@ SolarPosition::SolarPosition( helios::Context* __context ){
 }
 
 
-SolarPosition::SolarPosition( int __UTC, float __latitude, float __longitude, helios::Context* __context ){
-  context = __context;
-  UTC = __UTC;
-  latitude = __latitude;
-  longitude = __longitude;
+SolarPosition::SolarPosition( int UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context_ptr ){
+  context = context_ptr;
+  UTC = UTC_hrs;
+  latitude = latitude_deg;
+  longitude = longitude_deg;
 
-  if( __latitude<-90 || __latitude>90 ){
+  if( latitude_deg<-90 || latitude_deg>90 ){
     std::cout << "WARNING (SolarPosition): Latitude must be between -90 and +90 deg (a latitude of " << latitude << " was given). Default latitude is being used." << std::endl;
     latitude = 38.55;
   }else{
-    latitude = __latitude;
+    latitude = latitude_deg;
   }
   
   if( longitude<-180 || longitude>180 ){
     std::cout << "WARNING (SolarPosition): Longitude must be between -180 and +180 deg (a longitude of " << longitude << " was given). Default longitude is being used." << std::endl;
     longitude = 121.76;
   }else{
-    longitude = __longitude;
+    longitude = longitude_deg;
   }
     
 }
@@ -274,28 +274,41 @@ void SolarPosition::setSunDirection( const helios::SphericalCoord &sundirection 
     sun_direction = sundirection;
 }
 
-float SolarPosition::getSolarFlux( float pressure, float temperature, float humidity, float turbidity ) const{
-  float Eb_PAR, Eb_NIR, fdiff;
-  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-  return Eb_PAR+Eb_NIR;
+float SolarPosition::getSolarFlux(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const{
+    float Eb_PAR, Eb_NIR, fdiff;
+    GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
+    float Eb = Eb_PAR+Eb_NIR;
+    if( !cloudcalibrationlabel.empty() ){
+        applyCloudCalibration( Eb, fdiff );
+    }
+    return Eb;
 }
 
-float SolarPosition::getSolarFluxPAR( float pressure, float temperature, float humidity, float turbidity ) const{
-  float Eb_PAR, Eb_NIR, fdiff;
-  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-  return Eb_PAR;
+float SolarPosition::getSolarFluxPAR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const{
+    float Eb_PAR, Eb_NIR, fdiff;
+    GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
+    if( !cloudcalibrationlabel.empty() ){
+        applyCloudCalibration( Eb_PAR, fdiff );
+    }
+    return Eb_PAR;
 }
 
-float SolarPosition::getSolarFluxNIR( float pressure, float temperature, float humidity, float turbidity ) const{
-  float Eb_PAR, Eb_NIR, fdiff;
-  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-  return Eb_NIR;
+float SolarPosition::getSolarFluxNIR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const{
+    float Eb_PAR, Eb_NIR, fdiff;
+    GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
+    if( !cloudcalibrationlabel.empty() ){
+        applyCloudCalibration( Eb_NIR, fdiff );
+    }
+    return Eb_NIR;
 }
 
-float SolarPosition::getDiffuseFraction( float pressure, float temperature, float humidity, float turbidity ) const{
-  float Eb_PAR, Eb_NIR, fdiff;
-  GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-  return fdiff;
+float SolarPosition::getDiffuseFraction(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const{
+    float Eb_PAR, Eb_NIR, fdiff;
+    GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
+    if( !cloudcalibrationlabel.empty() ){
+        applyCloudCalibration( Eb_PAR, fdiff );
+    }
+    return fdiff;
 }
 
 void SolarPosition::GueymardSolarModel( float pressure, float temperature, float humidity, float turbidity, float& Eb_PAR, float& Eb_NIR, float &fdiff ) const{
@@ -337,13 +350,13 @@ void SolarPosition::GueymardSolarModel( float pressure, float temperature, float
 
   float Tg_PAR=(1.f+0.95885*mR_p+0.012871*mR_p*mR_p)/(1.f+0.96321*mR_p+0.015455*mR_p*mR_p);
 
-  float Tg_NIR=(1+0.27284*mR_p-0.00063699*mR_p*mR_p)/(1.f+0.30306*mR_p);
+  float Tg_NIR=(1.f+0.27284*mR_p-0.00063699*mR_p*mR_p)/(1.f+0.30306*mR_p);
 
-  float BR_PAR=0.5*(0.89013-0.0049558*mR+0.000045721*mR*mR);
+  float BR_PAR=0.5f*(0.89013-0.0049558*mR+0.000045721*mR*mR);
 
   float BR_NIR=0.5;
 
-  float Ba=1-exp(-0.6931-1.8326*cos(theta));
+  float Ba=1.f-exp(-0.6931-1.8326*cos(theta));
 
   //---- Ozone -----//
   float uo=(235+(150+40*sin(0.9856*(DOY-30)*M_PI/180.f)+20*sin(3*(longitude*M_PI/180.f+20)))*pow(sin(1.28*latitude*M_PI/180.f),2))*0.001f; //O3 atm-cm
@@ -440,18 +453,18 @@ void SolarPosition::GueymardSolarModel( float pressure, float temperature, float
     
 }
 
-float SolarPosition::getAmbientLongwaveFlux( float temperature, float humidity ) const{
+float SolarPosition::getAmbientLongwaveFlux(float temperature_K, float humidity_rel ) const{
 
   //Model from Prata (1996) Q. J. R. Meteorol. Soc.
 
-  float e0 = 611.f*exp(17.502f*(temperature-273.f)/((temperature-273.f)+240.9f))*humidity; //Pascals
+  float e0 = 611.f * exp(17.502f * (temperature_K - 273.f) / ((temperature_K - 273.f) + 240.9f)) * humidity_rel; //Pascals
 
   float K = 0.465f; //cm-K/Pa
 
-  float xi = e0/temperature*K;
+  float xi = e0 / temperature_K * K;
   float eps = 1.f-(1.f+xi)*exp(-sqrt(1.2f+3.f*xi));
 
-  return eps*5.67e-8*pow(temperature,4);
+  return eps*5.67e-8*pow(temperature_K, 4);
 
 }
 
@@ -468,19 +481,19 @@ float turbidityResidualFunction(float turbidity, std::vector<float> &parameters,
     return flux_model-flux_target;
 }
 
-float SolarPosition::calibrateTurbidityFromTimeseries( const std::string &timeseries_variable_label ) const{
+float SolarPosition::calibrateTurbidityFromTimeseries( const std::string &timeseries_shortwave_flux_label_Wm2 ) const{
 
-    if( !context->doesTimeseriesVariableExist( timeseries_variable_label.c_str()) ){
-        helios_runtime_error("ERROR (SolarPosition::calibrateTurbidityFromTimeseries): Timeseries variable " + timeseries_variable_label + " does not exist.");
+    if( !context->doesTimeseriesVariableExist(timeseries_shortwave_flux_label_Wm2.c_str()) ){
+        helios_runtime_error("ERROR (SolarPosition::calibrateTurbidityFromTimeseries): Timeseries variable " + timeseries_shortwave_flux_label_Wm2 + " does not exist.");
     }
 
-    uint length = context->getTimeseriesLength( timeseries_variable_label.c_str() );
+    uint length = context->getTimeseriesLength(timeseries_shortwave_flux_label_Wm2.c_str() );
 
     float min_flux = 1e6;
     float max_flux = 0;
     int max_flux_index = 0;
     for( int t=0; t<length; t++ ){
-        float flux = context->queryTimeseriesData( timeseries_variable_label.c_str(), t );
+        float flux = context->queryTimeseriesData(timeseries_shortwave_flux_label_Wm2.c_str(), t );
         if( flux<min_flux ){
             min_flux = flux;
         }
@@ -499,8 +512,8 @@ float SolarPosition::calibrateTurbidityFromTimeseries( const std::string &timese
     std::vector<float> parameters{ 101325, 300, 0.5, max_flux };
 
     SolarPosition solarposition_copy( UTC, latitude, longitude, context );
-    Date date_max = context->queryTimeseriesDate( timeseries_variable_label.c_str(), max_flux_index );
-    Time time_max = context->queryTimeseriesTime( timeseries_variable_label.c_str(), max_flux_index );
+    Date date_max = context->queryTimeseriesDate(timeseries_shortwave_flux_label_Wm2.c_str(), max_flux_index );
+    Time time_max = context->queryTimeseriesTime(timeseries_shortwave_flux_label_Wm2.c_str(), max_flux_index );
 
     solarposition_copy.setSunDirection( solarposition_copy.calculateSunDirection( time_max, date_max) );
 
@@ -509,3 +522,35 @@ float SolarPosition::calibrateTurbidityFromTimeseries( const std::string &timese
     return turbidity;
 
 }
+
+void SolarPosition::enableCloudCalibration( const std::string &timeseries_shortwave_flux_label_Wm2 ){
+
+    if( !context->doesTimeseriesVariableExist( timeseries_shortwave_flux_label_Wm2.c_str()) ){
+        helios_runtime_error("ERROR (SolarPosition::enableCloudCalibration): Timeseries variable " + timeseries_shortwave_flux_label_Wm2 + " does not exist.");
+    }
+    
+    cloudcalibrationlabel = timeseries_shortwave_flux_label_Wm2;
+    
+}
+
+void SolarPosition::disableCloudCalibration(){
+    cloudcalibrationlabel = "";
+}
+
+void SolarPosition::applyCloudCalibration(float &R_calc_Wm2, float &fdiff_calc) const{
+
+    assert( context->doesTimeseriesVariableExist( cloudcalibrationlabel.c_str()) );
+
+    float R_meas = context->queryTimeseriesData( cloudcalibrationlabel.c_str() );
+    float R_calc_horiz = R_calc_Wm2*cosf(getSunZenith());
+
+    float fdiff = fmin(fmax(0, 1.f-(R_meas - R_calc_horiz) / (R_calc_horiz)), 1);
+    float R = R_calc_Wm2 * R_meas / R_calc_horiz;
+
+    if( fdiff>0.001 && R_calc_horiz>1.f ){
+        R_calc_Wm2 = R;
+        fdiff_calc = fdiff;
+    }
+
+}
+  

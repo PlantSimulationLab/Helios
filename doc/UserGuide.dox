@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.13
+/*! \mainpage Helios Documentation v1.3.14
 
   <p> <br> </p>
 
@@ -287,7 +287,7 @@ $ git pull
 
 */
 	
-/*! \page API Using the Helios API
+/*! \page API User/API Guide
   
   \tableofcontents
 
@@ -1292,12 +1292,12 @@ $ git pull
      std::vector<float> A;
      A.push_back(2.3);
      A.push_back(9.2);
-     context.setPrimitiveData(UUID,"somedataA",HELIOS_TYPE_FLOAT,A.size(),\&A[0]);
+     context.setPrimitiveData(UUID,"somedataA",HELIOS_TYPE_FLOAT,A.size(),&A[0]);
 
      float B[2];
      B[0] = 2.3;
      B[1] = 9.2;
-     context.setPrimitiveData(UUID,"somedataB",HELIOS_TYPE_FLOAT,2,\&B[0]);
+     context.setPrimitiveData(UUID,"somedataB",HELIOS_TYPE_FLOAT,2,&B[0]);
        
   }
 

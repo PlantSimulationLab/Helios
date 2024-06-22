@@ -144,8 +144,8 @@
       context.setDate(1,5,2015); //May 1, 2015
       context.setTime(30,12); //12:30
 
-      //Initialize the %SolarPosition class
-      %SolarPosition sun( 7, 31.256, 119.947, &context );
+      //Initialize the SolarPosition class
+      SolarPosition sun( 7, 31.256, 119.947, &context );
 
       //Get the sun position
       vec3 direction = sun.getSunDirectionVector(); //unit vector
@@ -186,15 +186,14 @@
       context.setDate(1,5,2015); //May 1, 2015
       context.setTime(30,12); //12:30
 
-      //Initialize the %SolarPosition class
+      //Initialize the SolarPosition class
       SolarPosition sun( 7, 31.256, 119.947, &context );
 
       //Get the sun position
       float zenith = sun.getSunZenith(); //zenithal angle (radians)
 
       //Calculate solar flux
-      float R = sun.getSolarFlux( 101000, 300, 0.6, 0.05 ); //flux perpendicular to sun
- (W/m^2)
+      float R = sun.getSolarFlux( 101000, 300, 0.6, 0.05 ); //flux perpendicular to sun (W/m^2)
       float R_horiz = R*cos(zenith);  //flux on horizontal surface
 
       float f_diff = sun.getDiffuseFraction( 101000, 300, 0.6, 0.05 ); //fraction of diffuse radiation
@@ -210,8 +209,76 @@
 
  For the calibration, you must load radiation flux data into a timeseries within the Context. There must be at least one clear-sky day in the timeseries data, and the radiative fluxes must be for the entire solar spectrum in units of W/m<sup>2</sup>. You can then use the \ref SolarPosition::calibrateTurbidityFromTimeseries() method. This method takes one argument, which is a string corresponding to the timeseries variable name containing the radiation flux data.
 
+ \subsubsection SolarFluxClouds Incorporating the effects of clouds
+
+ The REST2 model for solar fluxes was developed for clear-sky conditions and cannot directly be used when clouds are present. If incident solar radiation data is available (e.g., from a weather station), this can be used to calibrate the model to account for the possible presence of clouds. A simple model is described below for doing so.
+
+ Consider \f$R_{meas,h}\f$ to be the measured all-wave incoming solar radiation flux on a horizontal plane (clear or cloudy conditions), and \f$R_{clear}\f$ to be the predicted all-wave incoming solar radiation flux predicted by the REST2 model for clear-sky conditions perpendicular to the direction of the sun. This flux can be projected onto the horizontal plane according to
+
+ \f[
+    R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
+ \f]
+
+ The diffuse fraction can be approximated as
+
+ \f[
+    f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
+ \f]
+
+ where it is enforced that \f$0\leq f_{diff} \leq 1\f$. The resulting flux that is output from the model is (flux perpendicular to the sun)
+
+ \f[
+   R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
+ \f]
+
+ In order to enable flux calibration for cloudy conditions, you must 1) Load timeseries data into the Context containing the measured all-wave solar radiation flux. This data must cover the entire period of the simulation. 2) Call \ref SolarPosition::enableCloudCalibration(), which requires a string corresponding to the timeseries data value reference in (1). Below is a code example:
+
+ ~~~~~~
+ #include "SolarPosition"
+
+ int main(){
+    Context context; //declare the context
+
+    //Load radiation flux timeseries data from CSV file
+    //assume that weatherdatafile.txt has columns given in the argument below, and has a mixture of clear-sky and cloudy days
+    context.loadTabularTimeseriesData( "/path/to/weatherdatafile.txt", {"Date","Hour","R_tot_Wm2","Tair_C","humidity_rel","Patm_Pa"}, ",", "YYYYMMDD", 1 );
+
+    //Initialize the SolarPosition class
+    SolarPosition sun( 7, 31.256, 119.947, &context );
+
+    //Enable cloud calibration
+    sun.enableCloudCalibration( "R_tot_Wm2" ); //reference "R_tot_Wm2" data field in timeseries
+
+    //Calibrate the clear-sky turbidity
+    float turbidity = sun.calibrateTurbidityFromTimeseries( "R_tot_Wm2" ); //must have some clear-sky days in the weather data
+
+    //Loop over time
+    for( int t=0; t<context.getTimeseriesLength(); t++ ){
+        context.setCurrentTimeseriesPoint( "R_tot_Wm2", t );
+
+        float Tair_K = context.queryTimeseriesData( "Tair_C" ) + 273;
+        float humidity_rel = context.queryTimeseriesData( "humidity_rel" );
+        float Patm_Pa = context.queryTimeseriesData( "Patm_Pa" );
+
+        //Calculate solar flux
+        float R = sun.getSolarFlux( Patm_Pa, Tair_K, humidity_rel, turbidity ); //flux perpendicular to sun (W/m^2)
+
+        float f_diff = sun.getDiffuseFraction( Patm_Pa, Tair_K, humidity_rel, turbidity ); //fraction of diffuse radiation
+
+        float R_dir = R*(1.f-f_diff); //direct component of flux (W/m^2)
+        float R_diff = R*f_diff; //diffuse component of flux (W/m^2)
+
+    }
+ }
+ ~~~~~~
+
+ An example of the above model applied to actual direct-diffuse partitioned radiation data using a shadowband radiometer is shown below. It should be emphasized that the above model is a relatively simple approximation that produces reasonable fluxes, but more accurate predictions are possible and require much more complicated models.
+
+ \image html "CloudyFluxPartitioning.png"
+
+
  \subsection LWFlux Getting the Sky Longwave Flux
 
- The downwelling longwave radiation flux from the sky can be calculated using the \ref SolarPosition::getAmbientLongwaveFlux() function. This function takes the air temperature and humidity as arguments, which are defined in the same was as for the getSolarFlux() function described above. The value returned by the function is the clear-sky downwelling longwave radiation flux on a horizontal surface in W/m<sup>2</sup>.
+ The downwelling longwave radiation flux from the sky can be calculated using the \ref SolarPosition::getAmbientLongwaveFlux() function. This function takes the air temperature and humidity as arguments, which are defined in the same was as for the \ref SolarPosition::getSolarFlux() function described above. The value returned by the function is the clear-sky downwelling longwave radiation flux on a horizontal surface in W/m<sup>2</sup>.
 
 */

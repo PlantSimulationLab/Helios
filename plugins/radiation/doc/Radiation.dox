@@ -821,7 +821,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
     radiationmodel.writeCameraImage("visible", {"red","green","blue"}, "myimage" );
 
     \c// writing image labels based on primitive data 'bunny'
-    radiationmodel.writePrimitiveDataLabelMap( "visible", "labels.txt", "bunny" );
+    radiationmodel.writePrimitiveDataLabelMap( "visible", "labels", "bunny" );
 
  }</code></pre></div>
 

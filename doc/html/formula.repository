@@ -144,94 +144,112 @@
 \_form#136=11x11:${\mu}$
 \_form#137=17x15:$k_C$
 \_form#138=41x12:$A=0$
-\_form#139=60x14:$1-\rho-\tau$
-\_form#140=119x51:\[ \rho = \dfrac{\int_{\lambda_{min}}^{\lambda_{max}}\rho_\lambda I_\lambda d\lambda}{\int_{\lambda_{min}}^{\lambda_{max}} I_\lambda d\lambda}\]
-\_form#141=35x14:$\varepsilon \sigma T^4$
-\_form#142=8x8:$\varepsilon$
-\_form#143=177x18:$\sigma=5.67\times 10^{-8}\,W/m^2/K^4$
-\_form#144=12x11:$T$
-\_form#145=35x11:$\varepsilon=1$
-\_form#146=69x12:$T=300K$
-\_form#147=36x11:$\varepsilon\approx 0$
-\_form#148=89x14:$\rho+\tau+\varepsilon=0$
-\_form#149=62x14:$\rho=1-\varepsilon$
-\_form#150=38x11:$\tau=0$
-\_form#151=98x57:\[R = \int\limits_{\lambda_{min}}^{\lambda_{max}} R_\lambda d\lambda \]
-\_form#152=119x20:\[ f_d(\theta,\phi) = f_0\Psi^{-K},\]
-\_form#153=320x17:\[ \Psi = acos\left( cos\,\theta\,cos\,\theta_s + sin\,\theta\,sin\,\theta_s\,cos\,(\phi-\phi_s) \right), \]
-\_form#154=14x15:$\phi_s$
-\_form#155=45x14:$\Psi<1^\circ$
-\_form#156=11x12:$\Psi$
-\_form#157=14x15:$f_0$
-\_form#158=14x15:$f_d$
-\_form#159=200x57:\[ \frac{1}{\pi}\int\limits_0^{2\pi}\int\limits_0^{\pi/2}\,f_d\,\mathrm{cos}\,\theta\,\mathrm{sin}\,\theta\,d\theta d\phi = 1. \]
-\_form#160=14x12:$K$
-\_form#161=41x12:$K=0$
-\_form#162=38x12:$\Gamma=0$
-\_form#163=171x17:$\Gamma = 2\pi(DOY-1)/365.25$
-\_form#164=575x35:$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$
-\_form#165=527x35:$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$
-\_form#166=119x17:$h=15(LST-12)$
-\_form#167=234x17:$LST=hour+minute/60+TC/60$
-\_form#168=242x17:$TC=4(15UTC-longitude)+EoT$
-\_form#169=378x20:$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )$
-\_form#170=416x18:$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))$
-\_form#171=36x14:$\mathrm{cos}^{-1}$
-\_form#172=17x11:$2\pi$
-\_form#173=84x15:$\phi_s=2\pi-\phi_s$
-\_form#174=66x14:$LST>12$
-\_form#175=240x29:$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)$
-\_form#176=11x8:$u$
-\_form#177=78x18:$R_L=\epsilon_s\sigma T_a^4$
-\_form#178=104x14:$\sigma=5.67\times10^{-8}$
-\_form#179=122x17:$(\theta-\theta_w)/(\theta_f-\theta_w)$
-\_form#180=56x17:$\theta,\,\theta_f,\,\theta_w$
-\_form#181=14x15:$h_s$
-\_form#182=135x35:\[g_s = g_{s,0}+a_1A\beta\frac{h_s}{C_s},\]
-\_form#183=17x15:$C_s$
-\_form#184=24x12:$g_{s,0}$
-\_form#185=14x11:$a_1$
-\_form#186=87x38:\[\beta = \frac{\theta-\theta_w}{\theta_f-\theta_w},\]
-\_form#187=38x15:$\beta=1$
-\_form#188=54x15:$C_s\rightarrow \infty$
-\_form#189=131x36:\[C_s = C_a-\frac{A}{0.75g_{bw}},\]
-\_form#190=50x14:$0.75g_{bw}$
-\_form#191=375x17:\[g_s*e_{sat}(T_L)*(1-h_s) = g_{bw}*(e_{sat}(T_L)h_s-e_{sat}(T_a)h_a),\]
-\_form#192=53x17:$e_{sat}(T_L)$
-\_form#193=51x17:$e_{sat}(T_a)$
-\_form#194=15x15:$h_a$
-\_form#195=204x48:\[g_s = g_{s,0}+\frac{a_1A\beta}{\left(C_s-\Gamma\right)\left(1+\frac{D_s}{D_0}\right)},\]
-\_form#196=18x15:$D_s$
-\_form#197=18x15:$D_0$
-\_form#198=125x24:$D_s=\frac{e_{sat}(T_L)(1-h_s)}{p_{atm}}$
-\_form#199=239x38:\[g_s = g_{s,0}+1.6\left(1+\frac{g_1\sqrt{\beta}}{\sqrt{D_s P_{atm}}}\right)\frac{A}{C_s},\]
-\_form#200=32x15:$P_{atm}$
-\_form#201=50x15:$D_s\rightarrow 0$
-\_form#202=14x11:$g_1$
-\_form#203=41x17:$\sqrt{kPa}$
-\_form#204=177x38:\[g_s = \frac{E_m\beta(Q+i_0)}{k+bQ+(Q+i_0)D_s},\]
-\_form#205=65x15:$E_m,\,i_0,\,k,$
-\_form#206=6x12:$b$
-\_form#207=21x15:$E_m$
-\_form#208=12x14:$i_0$
-\_form#209=8x12:$k$
-\_form#210=29x12:$g_{s,ss}$
-\_form#211=111x33:\[\dfrac{d g_s}{dt} = \dfrac{g_{s,ss} - g_s}{\tau},\]
-\_form#212=9x8:$\tau$
-\_form#213=62x12:$\tau = \tau_{open}$
-\_form#214=63x11:$\tau = \tau_{close}$
-\_form#215=18x12:$\Delta t$
-\_form#216=189x35:\[g_s^{new} = g_s^{old} + \dfrac{g_{s,ss} - g_s^{old}}{\tau}\Delta t.\]
-\_form#217=33x12:$\tau_{open}$
-\_form#218=35x11:$\tau_{close}$
-\_form#219=44x15:$\theta_L=0$
-\_form#220=45x15:$\theta_L=\pi$
-\_form#221=17x11:$g_L$
-\_form#222=141x17:$\Delta \theta_L=\pi/18\approx 0.1795$
-\_form#223=105x36:$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1$
-\_form#224=54x15:$\theta_L=0.1$
-\_form#225=42x17:$1/\Delta \theta_L$
-\_form#226=60x17:$\theta_L<\pi/2$
-\_form#227=60x17:$\theta_L>\pi/2$
-\_form#228=15x15:$\theta_L$
-\_form#229=44x17:$g_L(\theta_L)$
+\_form#139=191x32:\[
+    d\theta = \frac{1}{2}\left(C_g-\theta\right)dL + T\xi(dL)
+\]
+\_form#140=15x12:$d\theta$
+\_form#141=18x12:$dL$
+\_form#142=12x11:$T$
+\_form#143=38x17:$\xi (dL)$
+\_form#144=60x14:$1-\rho-\tau$
+\_form#145=119x51:\[ \rho = \dfrac{\int_{\lambda_{min}}^{\lambda_{max}}\rho_\lambda I_\lambda d\lambda}{\int_{\lambda_{min}}^{\lambda_{max}} I_\lambda d\lambda}\]
+\_form#146=35x14:$\varepsilon \sigma T^4$
+\_form#147=8x8:$\varepsilon$
+\_form#148=177x18:$\sigma=5.67\times 10^{-8}\,W/m^2/K^4$
+\_form#149=35x11:$\varepsilon=1$
+\_form#150=69x12:$T=300K$
+\_form#151=36x11:$\varepsilon\approx 0$
+\_form#152=89x14:$\rho+\tau+\varepsilon=0$
+\_form#153=62x14:$\rho=1-\varepsilon$
+\_form#154=38x11:$\tau=0$
+\_form#155=98x57:\[R = \int\limits_{\lambda_{min}}^{\lambda_{max}} R_\lambda d\lambda \]
+\_form#156=119x20:\[ f_d(\theta,\phi) = f_0\Psi^{-K},\]
+\_form#157=320x17:\[ \Psi = acos\left( cos\,\theta\,cos\,\theta_s + sin\,\theta\,sin\,\theta_s\,cos\,(\phi-\phi_s) \right), \]
+\_form#158=14x15:$\phi_s$
+\_form#159=45x14:$\Psi<1^\circ$
+\_form#160=11x12:$\Psi$
+\_form#161=14x15:$f_0$
+\_form#162=14x15:$f_d$
+\_form#163=200x57:\[ \frac{1}{\pi}\int\limits_0^{2\pi}\int\limits_0^{\pi/2}\,f_d\,\mathrm{cos}\,\theta\,\mathrm{sin}\,\theta\,d\theta d\phi = 1. \]
+\_form#164=14x12:$K$
+\_form#165=41x12:$K=0$
+\_form#166=38x12:$\Gamma=0$
+\_form#167=171x17:$\Gamma = 2\pi(DOY-1)/365.25$
+\_form#168=575x35:$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$
+\_form#169=527x35:$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$
+\_form#170=119x17:$h=15(LST-12)$
+\_form#171=234x17:$LST=hour+minute/60+TC/60$
+\_form#172=242x17:$TC=4(15UTC-longitude)+EoT$
+\_form#173=378x20:$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )$
+\_form#174=416x18:$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))$
+\_form#175=36x14:$\mathrm{cos}^{-1}$
+\_form#176=17x11:$2\pi$
+\_form#177=84x15:$\phi_s=2\pi-\phi_s$
+\_form#178=66x14:$LST>12$
+\_form#179=240x29:$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)$
+\_form#180=11x8:$u$
+\_form#181=78x18:$R_L=\epsilon_s\sigma T_a^4$
+\_form#182=104x14:$\sigma=5.67\times10^{-8}$
+\_form#183=50x17:$R_{meas,h}$
+\_form#184=38x15:$R_{clear}$
+\_form#185=149x17:\[
+   R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
+\]
+\_form#186=206x36:\[
+   f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
+\]
+\_form#187=89x17:$0\leq f_{diff} \leq 1$
+\_form#188=162x36:\[
+  R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
+\]
+\_form#189=122x17:$(\theta-\theta_w)/(\theta_f-\theta_w)$
+\_form#190=56x17:$\theta,\,\theta_f,\,\theta_w$
+\_form#191=14x15:$h_s$
+\_form#192=135x35:\[g_s = g_{s,0}+a_1A\beta\frac{h_s}{C_s},\]
+\_form#193=17x15:$C_s$
+\_form#194=24x12:$g_{s,0}$
+\_form#195=14x11:$a_1$
+\_form#196=87x38:\[\beta = \frac{\theta-\theta_w}{\theta_f-\theta_w},\]
+\_form#197=38x15:$\beta=1$
+\_form#198=54x15:$C_s\rightarrow \infty$
+\_form#199=131x36:\[C_s = C_a-\frac{A}{0.75g_{bw}},\]
+\_form#200=50x14:$0.75g_{bw}$
+\_form#201=375x17:\[g_s*e_{sat}(T_L)*(1-h_s) = g_{bw}*(e_{sat}(T_L)h_s-e_{sat}(T_a)h_a),\]
+\_form#202=53x17:$e_{sat}(T_L)$
+\_form#203=51x17:$e_{sat}(T_a)$
+\_form#204=15x15:$h_a$
+\_form#205=204x48:\[g_s = g_{s,0}+\frac{a_1A\beta}{\left(C_s-\Gamma\right)\left(1+\frac{D_s}{D_0}\right)},\]
+\_form#206=18x15:$D_s$
+\_form#207=18x15:$D_0$
+\_form#208=125x24:$D_s=\frac{e_{sat}(T_L)(1-h_s)}{p_{atm}}$
+\_form#209=239x38:\[g_s = g_{s,0}+1.6\left(1+\frac{g_1\sqrt{\beta}}{\sqrt{D_s P_{atm}}}\right)\frac{A}{C_s},\]
+\_form#210=32x15:$P_{atm}$
+\_form#211=50x15:$D_s\rightarrow 0$
+\_form#212=14x11:$g_1$
+\_form#213=41x17:$\sqrt{kPa}$
+\_form#214=177x38:\[g_s = \frac{E_m\beta(Q+i_0)}{k+bQ+(Q+i_0)D_s},\]
+\_form#215=65x15:$E_m,\,i_0,\,k,$
+\_form#216=6x12:$b$
+\_form#217=21x15:$E_m$
+\_form#218=12x14:$i_0$
+\_form#219=8x12:$k$
+\_form#220=29x12:$g_{s,ss}$
+\_form#221=111x33:\[\dfrac{d g_s}{dt} = \dfrac{g_{s,ss} - g_s}{\tau},\]
+\_form#222=9x8:$\tau$
+\_form#223=62x12:$\tau = \tau_{open}$
+\_form#224=63x11:$\tau = \tau_{close}$
+\_form#225=18x12:$\Delta t$
+\_form#226=189x35:\[g_s^{new} = g_s^{old} + \dfrac{g_{s,ss} - g_s^{old}}{\tau}\Delta t.\]
+\_form#227=33x12:$\tau_{open}$
+\_form#228=35x11:$\tau_{close}$
+\_form#229=44x15:$\theta_L=0$
+\_form#230=45x15:$\theta_L=\pi$
+\_form#231=17x11:$g_L$
+\_form#232=141x17:$\Delta \theta_L=\pi/18\approx 0.1795$
+\_form#233=105x36:$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1$
+\_form#234=54x15:$\theta_L=0.1$
+\_form#235=42x17:$1/\Delta \theta_L$
+\_form#236=60x17:$\theta_L<\pi/2$
+\_form#237=60x17:$\theta_L>\pi/2$
+\_form#238=15x15:$\theta_L$
+\_form#239=44x17:$g_L(\theta_L)$

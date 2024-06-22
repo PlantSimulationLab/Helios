@@ -6,7 +6,7 @@
     <tab type="usergroup" visible="yes" title="User's Guide" intro="">
       <tab type="user" visible="yes" url="@ref Overview" title="Overview"/>
       <tab type="user" visible="yes" url="@ref DependentSoftware" title="Install and Set-up"/>
-      <tab type="user" visible="yes" url="@ref API" title="Using the Helios API"/>
+      <tab type="user" visible="yes" url="@ref API" title="User/API Guide"/>
       <tab type="user" visible="yes" url="@ref IO" title="File I/O"/>
       <tab type="user" visible="yes" url="@ref Tutorials" title="Tutorials"/>
       </tab>
