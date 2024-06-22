@@ -147,16 +147,17 @@ ShootParameters::ShootParameters( std::minstd_rand0 *generator ) {
 
     // ---- Geometric Parameters ---- //
 
-    max_nodes.initialize( 5, generator );
+    max_nodes.initialize( 10, generator );
 
-    internode_radius_initial.initialize(0.005,generator);
+    internode_radius_initial.initialize(0.001,generator);
+    internode_radius_max.initialize(1e6, generator);
 
     child_insertion_angle_tip.initialize(20, generator);
     child_insertion_angle_decay_rate.initialize(0, generator);
 
     child_internode_length_max.initialize(0.02, generator);
     child_internode_length_min.initialize(0.002, generator);
-    child_internode_length_decay_rate.initialize(0.005, generator);
+    child_internode_length_decay_rate.initialize(0, generator);
 
     base_roll.initialize(0, generator);
     base_yaw.initialize(0, generator);
@@ -166,18 +167,17 @@ ShootParameters::ShootParameters( std::minstd_rand0 *generator ) {
 
     // ---- Growth Parameters ---- //
 
-    phyllochron.initialize(0.0001,generator);
+    phyllochron.initialize(1, generator);
     leaf_flush_count = 1;
 
-    elongation_rate.initialize(0, generator);
+    elongation_rate.initialize(0.2, generator);
     girth_growth_rate.initialize(0, generator);
-    internode_radius_max.initialize(1e6, generator);
 
+    vegetative_bud_break_time.initialize(5, generator);
     vegetative_bud_break_probability.initialize(0,generator);
-    flower_bud_break_probability.initialize(1,generator);
-    fruit_set_probability.initialize(1,generator);
+    flower_bud_break_probability.initialize(0,generator);
+    fruit_set_probability.initialize(0,generator);
 
-    vegetative_bud_break_time.initialize(0, generator);
 
     flowers_require_dormancy = false;
     growth_requires_dormancy = false;
@@ -267,7 +267,7 @@ float Phytomer::getInternodeRadius( float stem_fraction ) const{
 void Phytomer::setVegetativeBudState( BudState state ){
     for( auto& petiole : vegetative_buds ){
         for( auto& bud : petiole ) {
-            bud.state = state;
+            setVegetativeBudState(state, bud);
         }
     }
 }
@@ -279,25 +279,73 @@ void Phytomer::setVegetativeBudState(BudState state, uint petiole_index, uint bu
     if( bud_index>=vegetative_buds.at(petiole_index).size() ){
         helios_runtime_error("ERROR (Phytomer::setVegetativeBudState): Bud index out of range.");
     }
-    vegetative_buds.at(petiole_index).at(bud_index).state = state;
+    setVegetativeBudState( state, vegetative_buds.at(petiole_index).at(bud_index) );
 }
 
-void Phytomer::setFloralBudState( BudState state ){
-    for( auto& petiole : floral_buds ) {
-        for (auto &bud: petiole) {
-            bud.state = state;
+void Phytomer::setVegetativeBudState( BudState state, VegetativeBud &vbud ){
+    vbud.state = state;
+}
+
+void Phytomer::setFloralBudState( BudState state ) {
+    for( auto &petiole :floral_buds ) {
+        for ( auto &fbud : petiole ) {
+            setFloralBudState(state, fbud);
         }
     }
 }
 
 void Phytomer::setFloralBudState(BudState state, uint petiole_index, uint bud_index) {
-    if( petiole_index>=floral_buds.size() ){
+    if (petiole_index >= floral_buds.size()) {
         helios_runtime_error("ERROR (Phytomer::setFloralBudState): Petiole index out of range.");
     }
-    if( bud_index>=floral_buds.at(petiole_index).size() ){
+    if (bud_index >= floral_buds.at(petiole_index).size()) {
         helios_runtime_error("ERROR (Phytomer::setFloralBudState): Bud index out of range.");
     }
-    floral_buds.at(petiole_index).at(bud_index).state = state;
+    setFloralBudState(state, floral_buds.at(petiole_index).at(bud_index));
+}
+
+void Phytomer::setFloralBudState(BudState a_state, FloralBud &fbud ) {
+
+    // If state is already at the desired state, do nothing
+    if (fbud.state == a_state) {
+        return;
+    } else if (a_state == BUD_DORMANT || a_state == BUD_ACTIVE ) {
+        fbud.state = a_state;
+        return;
+    }
+
+    // Delete geometry from previous reproductive state (if present)
+    context_ptr->deleteObject(inflorescence_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index));
+    inflorescence_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index).resize(0);
+    inflorescence_bases.at(fbud.parent_petiole_index).at(fbud.bud_index).resize(0);
+
+    if( build_context_geometry_peduncle ) {
+        context_ptr->deleteObject(peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index));
+        peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index).resize(0);
+    }
+
+    fbud.state = a_state;
+
+    if( a_state != BUD_DEAD ) { //add new reproductive organs
+
+        float pitch_adjustment;
+        float yaw_adjustment;
+        if (vegetative_buds.empty()) {
+            pitch_adjustment = 0;
+            yaw_adjustment = 0;
+        } else {
+            pitch_adjustment = fbud.bud_index * 0.1f * M_PI / float(vegetative_buds.size());
+            yaw_adjustment = -0.25f * M_PI + fbud.bud_index * 0.5f * M_PI / float(vegetative_buds.size());
+        }
+        addInflorescence(internode_vertices.back(), make_AxisRotation(pitch_adjustment, yaw_adjustment, 0), make_vec3(0, 0, 1), fbud);
+        fbud.time_counter = 0;
+        if (fbud.state == BUD_FRUITING) {
+            setInflorescenceScaleFraction(fbud, 0.1);
+        }
+
+    }
+
+
 }
 
 int Shoot::addPhytomer(const PhytomerParameters &params, const helios::vec3 internode_base_position, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
@@ -331,15 +379,15 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const helios::vec3 inte
             //sample the bud shoot type and initialize its state
             std::string child_shoot_type_label;
             if (sampleChildShootType(child_shoot_type_label)) {
-                vbud.state = BUD_DORMANT;
+                phytomer->setVegetativeBudState( BUD_DORMANT, vbud );
                 vbud.shoot_type_label = child_shoot_type_label;
             } else {
-                vbud.state = BUD_DEAD;
+                phytomer->setVegetativeBudState( BUD_DEAD, vbud );
             }
 
             // if the shoot type does not require dormancy, bud should be set to active
             if (!shoot_parameters.growth_requires_dormancy && vbud.state != BUD_DEAD) {
-                vbud.state = BUD_ACTIVE;
+                phytomer->setVegetativeBudState( BUD_ACTIVE, vbud );
             }
 
         }
@@ -352,11 +400,11 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const helios::vec3 inte
         for (auto &fbud: petiole) {
 
             //Set state of phytomer buds
-            fbud.state = BUD_DORMANT;
+            phytomer->setFloralBudState(BUD_DORMANT, fbud);
 
             // if the shoot type does not require dormancy, bud should be set to active
             if (!shoot_parameters.flowers_require_dormancy && fbud.state != BUD_DEAD) {
-                fbud.state = BUD_ACTIVE;
+                phytomer->setFloralBudState(BUD_ACTIVE, fbud);
             }
 
             fbud.parent_petiole_index = petiole_index;
@@ -410,16 +458,18 @@ void Shoot::breakDormancy(){
         for( auto& petiole : phytomer->floral_buds ) {
             for (auto &fbud: petiole) {
                 if (fbud.state != BUD_DEAD) {
-                    fbud.state = BUD_ACTIVE;
+                    phytomer->setFloralBudState( BUD_ACTIVE, fbud );
                 }
                 if (meristem_is_alive && is_terminal_phytomer) {
-                    fbud.state = BUD_ACTIVE;
+                    phytomer->setFloralBudState( BUD_ACTIVE, fbud );
                 }
                 fbud.time_counter = 0;
             }
+        }
+        for( auto& petiole : phytomer->vegetative_buds ) {
             for (auto &vbud: petiole) {
                 if (vbud.state != BUD_DEAD) {
-                    vbud.state = BUD_ACTIVE;
+                    phytomer->setVegetativeBudState(BUD_ACTIVE, vbud);
                 }
             }
         }
@@ -439,12 +489,14 @@ void Shoot::makeDormant(){
             //all currently active lateral buds die at dormancy
             for (auto &fbud: petiole) {
                 if (fbud.state != BUD_DORMANT) {
-                    fbud.state = BUD_DEAD;
+                    phytomer->setFloralBudState( BUD_DEAD, fbud );
                 }
             }
+        }
+        for( auto& petiole : phytomer->vegetative_buds ) {
             for (auto &vbud: petiole) {
                 if (vbud.state != BUD_DORMANT) {
-                    vbud.state = BUD_DEAD;
+                    phytomer->setVegetativeBudState(BUD_DEAD, vbud);
                 }
             }
         }
@@ -463,7 +515,7 @@ void Shoot::terminateAxillaryVegetativeBuds() {
     for( auto &phytomer : phytomers ){
         for( auto& petiole : phytomer->vegetative_buds ) {
             for (auto &vbud: petiole) {
-                vbud.state = BUD_DEAD;
+                phytomer->setVegetativeBudState( BUD_DEAD, vbud );
             }
         }
     }
@@ -480,8 +532,10 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     ShootParameters parent_shoot_parameters = parent_shoot->shoot_parameters;
 
     this->internode_radius_initial = internode_radius;
+    this->internode_radius_max = parent_shoot_parameters.internode_radius_max.val();
     this->internode_length_max = internode_length_max;
     this->shoot_index = make_int2(phytomer_index, parent_shoot_parameters.max_nodes.val()); //.x is the index of the phytomer along the shoot, .y is the maximum number of phytomers on the parent shoot.
+    this->rank = parent_shoot->rank;
 
 //    if( internode_radius==0.f || internode_length_max==0.f || parent_shoot_parameters.internode_radius_max.val()==0.f ){
 //        build_context_geometry_internode = false;
@@ -556,7 +610,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     internode_colors.resize(Ndiv_internode_length + 1 );
     internode_colors.at(0) = phytomer_parameters.internode.color;
     petiole_colors.resize(Ndiv_petiole_length + 1 );
-    petiole_colors.at(0) = phytomer_parameters.internode.color;
+    petiole_colors.at(0) = phytomer_parameters.petiole.color;
 
     vec3 internode_axis = parent_internode_axis;
 
@@ -673,7 +727,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             petiole_vertices.at(petiole).at(j) = petiole_vertices.at(petiole).at(j - 1) + dr_petiole.at(petiole) * petiole_axis;
 
             petiole_radii.at(petiole).at(j) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val() * (1.f - phytomer_parameters.petiole.taper.val() / float(Ndiv_petiole_length) * float(j) );
-            petiole_colors.at(j) = phytomer_parameters.internode.color;
+            petiole_colors.at(j) = phytomer_parameters.petiole.color;
 
         }
 
@@ -1119,6 +1173,12 @@ void Phytomer::scaleInternodeMaxLength( float scale_factor ){
     }
 }
 
+void Phytomer::setInternodeMaxRadius( float internode_radius_max ){
+
+    this->internode_radius_max = internode_radius_max;
+
+}
+
 void Phytomer::setLeafScaleFraction(float leaf_scale_factor_fraction ){
 
     assert(leaf_scale_factor_fraction >= 0 && leaf_scale_factor_fraction <= 1 );
@@ -1236,44 +1296,6 @@ void Phytomer::setInflorescenceScaleFraction(FloralBud &fbud, float inflorescenc
 
 }
 
-void Phytomer::changeReproductiveState(FloralBud &fbud, BudState a_state) {
-
-    // If state is already at the desired state, do nothing
-    if (fbud.state == a_state) {
-        return;
-    } else if (a_state == BUD_DORMANT || a_state == BUD_ACTIVE || a_state == BUD_DEAD) { //can only change to reproductive states
-        return;
-    }
-
-    // Delete geometry from previous reproductive state
-    context_ptr->deleteObject(inflorescence_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index));
-    inflorescence_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index).resize(0);
-    inflorescence_bases.at(fbud.parent_petiole_index).at(fbud.bud_index).resize(0);
-
-    if( build_context_geometry_peduncle ) {
-        context_ptr->deleteObject(peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index));
-        peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index).resize(0);
-    }
-
-    fbud.state = a_state;
-
-    float pitch_adjustment;
-    float yaw_adjustment;
-    if( vegetative_buds.empty() ) {
-        pitch_adjustment = 0;
-        yaw_adjustment = 0;
-    }else{
-        pitch_adjustment = fbud.bud_index*0.1f*M_PI/float(vegetative_buds.size());
-        yaw_adjustment = -0.25f*M_PI+fbud.bud_index*0.5f*M_PI/float(vegetative_buds.size());
-    }
-    addInflorescence(internode_vertices.back(), make_AxisRotation(pitch_adjustment, yaw_adjustment, 0), make_vec3(0, 0, 1), fbud );
-    fbud.time_counter = 0;
-    if ( fbud.state == BUD_FRUITING) {
-        setInflorescenceScaleFraction(fbud, 0.1);
-    }
-
-}
-
 void Phytomer::removeLeaf(){
 
     context_ptr->deleteObject(flatten(leaf_objIDs));
@@ -1283,18 +1305,6 @@ void Phytomer::removeLeaf(){
     if( build_context_geometry_petiole ) {
         context_ptr->deleteObject(flatten(petiole_objIDs));
         petiole_objIDs.resize(0);
-    }
-
-}
-
-void Phytomer::removeInflorescence(){
-
-    context_ptr->deleteObject(flatten(inflorescence_objIDs));
-    inflorescence_objIDs.resize(0);
-
-    if( build_context_geometry_peduncle ) {
-        context_ptr->deleteObject(flatten(peduncle_objIDs));
-        peduncle_objIDs.resize(0);
     }
 
 }
@@ -1343,8 +1353,10 @@ bool Shoot::sampleChildShootType(std::string &child_shoot_type_label) const{
 
     child_shoot_type_label = "";
 
-    if (shoot_ptr->shoot_parameters.child_shoot_type_labels.empty()) {
+    if ( shoot_ptr->shoot_parameters.child_shoot_type_labels.size()==0 ) { //if user doesn't specify child shoot types, generate the same type by default
         child_shoot_type_label = shoot_ptr->shoot_type_label;
+    }else if( shoot_ptr->shoot_parameters.child_shoot_type_labels.size()==1 ){ //if only one child shoot types was specified, use it
+        child_shoot_type_label = shoot_ptr->shoot_parameters.child_shoot_type_labels.at(0);
     }else{
         float randf = context_ptr->randu();
         int shoot_type_index = -1;
@@ -1584,9 +1596,9 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
 
             float radius = context_ptr->getConeObjectNodeRadius(objID, 0);
 
-            if( radius*girth_change > parent_shoot->shoot_parameters.internode_radius_max.val() ){
-                girth_change = parent_shoot->shoot_parameters.internode_radius_max.val()/radius;
-                radius = parent_shoot->shoot_parameters.internode_radius_max.val();
+            if( radius*girth_change > phytomer->internode_radius_max ){
+                girth_change = phytomer->internode_radius_max/radius;
+                radius = phytomer->internode_radius_max;
             }
 
             context_ptr->getConeObjectPointer(objID)->scaleGirth(girth_change);
@@ -1761,7 +1773,9 @@ void PlantArchitecture::harvestPlant(uint plantID){
 
     for( auto& shoot: plant_instances.at(plantID).shoot_tree ){
         for( auto& phytomer: shoot->phytomers ){
-            phytomer->removeInflorescence();
+
+            phytomer->setFloralBudState( BUD_DEAD );
+
         }
     }
 
@@ -2173,9 +2187,9 @@ void PlantArchitecture::advanceTime( float dt ) {
                                         (shoot->shoot_parameters.flowers_require_dormancy && phytomer->time_since_dormancy >= plant_instance.dd_to_flower_initiation)) {
                                         fbud.time_counter = 0;
                                         if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val() ) {
-                                            phytomer->changeReproductiveState(fbud, BUD_FLOWER_CLOSED);
+                                            phytomer->setFloralBudState(BUD_FLOWER_CLOSED, fbud);
                                         } else {
-                                            phytomer->changeReproductiveState(fbud, BUD_DEAD);
+                                            phytomer->setFloralBudState(BUD_DEAD, fbud);
                                         }
                                         if (shoot->shoot_parameters.determinate_shoot_growth) {
                                             shoot->terminateApicalBud();
@@ -2189,12 +2203,12 @@ void PlantArchitecture::advanceTime( float dt ) {
                                     if (fbud.time_counter >= plant_instance.dd_to_flower_opening) {
                                         fbud.time_counter = 0;
                                         if( fbud.state == BUD_FLOWER_CLOSED ) {
-                                            phytomer->changeReproductiveState(fbud, BUD_FLOWER_OPEN);
+                                            phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
                                         }else{
                                             if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val() ) {
-                                                phytomer->changeReproductiveState(fbud, BUD_FLOWER_OPEN);
+                                                phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
                                             } else {
-                                                phytomer->changeReproductiveState(fbud, BUD_DEAD);
+                                                phytomer->setFloralBudState(BUD_DEAD, fbud);
                                             }
                                         }
                                         if (shoot->shoot_parameters.determinate_shoot_growth) {
@@ -2211,12 +2225,13 @@ void PlantArchitecture::advanceTime( float dt ) {
                                 if ((fbud.state == BUD_FLOWER_OPEN && plant_instance.dd_to_fruit_set >= 0.f) || //flower opened and fruit set is enabled
                                     (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f) || //jumped straight to fruit set with no flowering
                                     (fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f)) { //jumped from closed flower to fruit set with no flower opening
+                                    std::cout << "potential for fruit set " << fbud.state << std::endl;
                                     if (fbud.time_counter >= plant_instance.dd_to_fruit_set) {
                                         fbud.time_counter = 0;
                                         if (context_ptr->randu() < shoot->shoot_parameters.fruit_set_probability.val() ) {
-                                            phytomer->changeReproductiveState(fbud, BUD_FRUITING);
+                                            phytomer->setFloralBudState(BUD_FRUITING, fbud);
                                         } else {
-                                            phytomer->changeReproductiveState(fbud, BUD_DEAD);
+                                            phytomer->setFloralBudState(BUD_DEAD, fbud);
                                         }
                                         if (shoot->shoot_parameters.determinate_shoot_growth) {
                                             shoot->terminateApicalBud();
@@ -2244,8 +2259,8 @@ void PlantArchitecture::advanceTime( float dt ) {
                     }
 
                     //scale internode girth
-                    if( phytomer->internode_radii.front() < shoot->shoot_parameters.internode_radius_max.val() ) {
-                        float dR = dt_max * (1.f+shoot->shoot_parameters.girth_growth_rate.val());
+                    if( phytomer->internode_radii.front() < phytomer->internode_radius_max ) {
+                        float dR = ( 1.f + dt_max * shoot->shoot_parameters.girth_growth_rate.val()/phytomer->internode_radii.front() );
                         incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dR);
                     }
 
@@ -2294,9 +2309,11 @@ void PlantArchitecture::advanceTime( float dt ) {
 
                                 float internode_radius = shoot_types.at(vbud.shoot_type_label).internode_radius_initial.val();
 
+//                                std::cout << "Adding child shoot of type " << vbud.shoot_type_label << std::endl;
+
                                 uint childID = addChildShoot(plantID, shoot->ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, vbud.shoot_type_label, parent_petiole_index);
 
-                                vbud.state = BUD_DEAD;
+                                phytomer->setVegetativeBudState( BUD_DEAD, vbud );
                                 vbud.shoot_ID = childID;
                                 shoot_tree->at(childID)->dormant = false;
 
@@ -2307,10 +2324,10 @@ void PlantArchitecture::advanceTime( float dt ) {
                     }
 
                     // check for ground collisions
-                    if( ground_clipping_height!=-99999 ){
+                    if( ground_clipping_height!=-99999  ){
 
                         // internode
-                        if ( detectGroundCollision( phytomer->internode_objIDs ) ) {
+                        if ( phytomer->shoot_index.x>0 && detectGroundCollision( phytomer->internode_objIDs ) ) {
                             context_ptr->deleteObject(phytomer->internode_objIDs);
                             phytomer->internode_objIDs.clear();
                         }

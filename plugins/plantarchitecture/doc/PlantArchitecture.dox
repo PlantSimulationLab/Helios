@@ -141,7 +141,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | pitch | RandomParameter_float | degrees | Angle of the leaf axis with respect to its parent petiole axis. |
 | yaw | RandomParameter_float | degrees | Rotation angle of the leaf about its base along the plane of its lamina. |
 | roll | RandomParameter_float | degrees | Rotation angle of the leaf about it's own axis (midrib). |
-| leaflet_offset | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. |
+| leaflet_offset | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. Note that the first two leaves from the tip will be offset from the tip by half this value. |
 | leaflet_scale | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the scaling factor of the leaflet moving down the petiole with respect to the previous leaf (<1 scales down, >1 scales up). |
 | prototype_scale | RandomParameter_float | - | Scaling factor applied to the leaf prototype. Usually the prototype has unit length, so this sets the physical length of the leaf. |
 | prototype_function | function pointer | - | Pointer to a function that generates the leaf prototype model. Function takes arguments ( helios::Context*, uint subdivisions, int flag ) and returns an object ID (uint). |
@@ -278,36 +278,35 @@ A shoot is the fundamental topological unit of organization in the plant archite
 
 Parameters defining the geometry and growth of the shoot are given in the \ref ShootParameters structure. Each parameter in the \ref ShootParameters structure is summarized in the table below, and described in more detail in the following sections.
 
-| Parameter | Type | Units | Description |
+| Parameter | Type | Default | Units | Description |
 | ------| ------ | ------ | ------ |
 | --- **%Phytomer Parameters** --- ||||
-| phytomer_parameters | PhytomerParameters | - | Parameters defining the geometry of the phytomers comprising this shoot. |
-| --- **Geometric Parameters** --- ||||
-| max_nodes | RandomParameter_int | - | Maximum number of nodes/phytomers along a shoot. |
-| base_roll | RandomParameter_float | radians | Roll angle of the first phytomer of the shoot about the shoot axis relative to vertical. |
-| internode_radius_initial | RandomParameter_float | meters | Initial radius of the internode at the base of the shoot. |
-| child_insertion_angle_tip | RandomParameter_float | degrees | Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot. |
-| child_insertion_angle_decay_rate | RandomParameter_float | degrees/node | Rate of increase of the child insertion angle moving down the parent shoot. |
-| child_internode_length_max | RandomParameter_float | meters | Maximum length (with respect to position along the parent shoot) of the internode of a child shoot. |
-| child_internode_length_min | RandomParameter_float | meters | Minimum length (with respect to position along the parent shoot) of the internode of a child shoot. |
-| child_internode_length_decay_rate | RandomParameter_float | meters/node | Rate of decrease of the internode length moving down the parent shoot. |
-| base_roll | RandomParameter_float | degrees | Roll angle of the shoot, which effectively specifies the angle of the first petiole relative to the parent shoot. |
-| base_yaw | RandomParameter_float | degrees | Yaw angle of the shoot relative to the parent shoot. |
-| gravitropic_curvature | RandomParameter_float | degrees/meter | Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward. |
-| tortuosity | RandomParameter_float | - | Factor determining the amount of random "wiggle" in internode growth along the shoot. |
-| --- **Growth Parameters** --- ||||
-| phyllochron | RandomParameter_float | days/leaf | Time between the emergence of successive phytomers along the shoot. |
-| leaf_flush_count | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of leaves/phytomers to flush at a time. Flushes will occur at an interval of phyllochron*leaf_flush_count. |
-| elongation_rate | RandomParameter_float | meter/meter/day | Rate of elongation of the internode of the shoot. |
-| girth_growth_rate | RandomParameter_float | meter/meter/day | Rate of increase of the internode radius of the shoot. |
-| internode_radius_max | RandomParameter_float | meters | Maximum internode radius for girth growth. For some species like grasses, girth growth stops at some radius. By default, girth growth will continue indefinitely. |
-| vegetative_bud_break_probability | RandomParameter_float | - | Probability of a bud breaking dormancy and emerging as a shoot. |
-| flower_bud_break_probability | RandomParameter_float | - | Probability of a flower bud emerging as a flower. |
-| fruit_set_probability | RandomParameter_float | - | Probability of a flower becoming a fruit. |
-| vegetative_bud_break_time | RandomParameter_float | days | Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break. |
-| growth_requires_dormancy | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | - | Flag indicating whether or not the vegetative buds require a winter dormancy period to break into a shoot. If true, the shoot will emerge in the same growing season as the parent shoot. If false, the shoot will emerge from a bud that requires a winter dormancy period. |
-| flowers_require_dormancy | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | - | Flag indicating whether or not the flower buds require a winter dormancy period to emerge. If true, the flowers will emerge in the same growing season as the parent shoot. If false, the flowers will emerge from a bud that requires a winter dormancy period. |
-| determinate_shoot_growth | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | - | Flag indicating whether or not shoot growth is determinate. If true, shoot growth will stop once flowering occurs, and the apical bud will become dormant. If false, the shoot will continue growing after flowering.  |
+| phytomer_parameters | PhytomerParameters | - | - | Parameters defining the geometry of the phytomers comprising this shoot. |
+| --- **Geometric Parameters** --- |||||
+| max_nodes | RandomParameter_int | 10 | - | Maximum number of nodes/phytomers along a shoot. |
+| internode_radius_initial | RandomParameter_float | 0.001 | meters | Initial radius of the internode when it is created. |
+| internode_radius_max | RandomParameter_float | unlimited | meters | Maximum internode radius for girth growth. For some species like grasses, girth growth stops at some radius. By default, girth growth will continue indefinitely. |
+| child_insertion_angle_tip | RandomParameter_float | 20 | degrees | Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot. |
+| child_insertion_angle_decay_rate | RandomParameter_float | 0 | degrees/node | Rate of increase of the child insertion angle moving down the parent shoot. |
+| child_internode_length_max | RandomParameter_float | 0.02 | meters | Maximum length (with respect to position along the parent shoot) of the internode of a child shoot. |
+| child_internode_length_min | RandomParameter_float | 0.002 | meters | Minimum length (with respect to position along the parent shoot) of the internode of a child shoot. |
+| child_internode_length_decay_rate | RandomParameter_float | 0 | meters/node | Rate of decrease of the internode length moving down the parent shoot. |
+| base_roll | RandomParameter_float | 0 | degrees | Roll angle of the shoot, which effectively specifies the angle of the first petiole relative to the parent shoot. |
+| base_yaw | RandomParameter_float | 0 | degrees | Yaw angle of the shoot relative to the parent shoot. |
+| gravitropic_curvature | RandomParameter_float | 0 | degrees/meter | Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward. |
+| tortuosity | RandomParameter_float | 0 | - | Factor determining the amount of random "wiggle" in internode growth along the shoot. |
+| --- **Growth Parameters** --- |||||
+| phyllochron | RandomParameter_float | 1.0 | days/leaf | Time between the emergence of successive phytomers along the shoot. |
+| leaf_flush_count | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | 1 | - | Number of leaves/phytomers to flush at a time. Flushes will occur at an interval of phyllochron*leaf_flush_count. |
+| elongation_rate | RandomParameter_float | 0.2 | meter/meter/day | Relative rate of elongation of the internode of the shoot. Units are meters of elongation per meter of maximum internode length per day. |
+| girth_growth_rate | RandomParameter_float | 0.0001 | meter/day | Rate of increase of the internode radius of the shoot. Units are meters of increase in internode radius per day. |
+| vegetative_bud_break_time | RandomParameter_float | 5 | days | Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break. |
+| vegetative_bud_break_probability | RandomParameter_float | 0 | - | Probability of a bud breaking dormancy and emerging as a shoot. |
+| flower_bud_break_probability | RandomParameter_float | 0 | - | Probability of a flower bud emerging as a flower. |
+| fruit_set_probability | RandomParameter_float | 0 | - | Probability of a flower becoming a fruit. |
+| growth_requires_dormancy | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | \htmlonly<font face="courier" color="orange">false</font>\endhtmlonly | - | Flag indicating whether or not the vegetative buds require a winter dormancy period to break into a shoot. If true, the shoot will emerge in the same growing season as the parent shoot. If false, the shoot will emerge from a bud that requires a winter dormancy period. |
+| flowers_require_dormancy | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | \htmlonly<font face="courier" color="orange">false</font>\endhtmlonly | - | Flag indicating whether or not the flower buds require a winter dormancy period to emerge. If true, the flowers will emerge in the same growing season as the parent shoot. If false, the flowers will emerge from a bud that requires a winter dormancy period. |
+| determinate_shoot_growth | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | \htmlonly<font face="courier" color="orange">true</font>\endhtmlonly | - | Flag indicating whether or not shoot growth is determinate. If true, shoot growth will stop once flowering occurs, and the apical bud will become dormant. If false, the shoot will continue growing after flowering.  |
 
 \subsection ShootParametersGeom Geometric Parameters of the Shoot
 
@@ -317,7 +316,7 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 
 \subsubsection ShootParam_base_roll base_roll
 
-\htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly is the roll angle of the first phytomer of the shoot about the shoot axis relative to vertical. If \htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly = 0, the first petiole along the shoot will be vertical (or as vertical as is possible given the shoot direction and the specified angle of the petiole relative to the internode). This parameter is used to set the initial orientation of the shoot. For example, if \htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly = 0, the first phytomer of the shoot will be oriented vertically. If \htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly = 0.5, the first phytomer of the shoot will be oriented 0.5 radians (about 30 degrees) from vertical.
+\htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly is the roll angle of the first phytomer of the shoot about the shoot axis relative to vertical. If \htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly = 0, the first petiole along the shoot will be vertical (or as vertical as is possible given the shoot direction and the specified angle of the petiole relative to the internode). This parameter is used to set the initial orientation of the shoot. For example, if \htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly = 0, the first phytomer of the shoot will be oriented vertically. If \htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly = 30, the first phytomer of the shoot will be oriented 30 degrees from vertical.
 
 \subsubsection ShootParam_inode_radius_initial internode_radius_initial
 

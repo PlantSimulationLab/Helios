@@ -1,7 +1,7 @@
 # Blender 3.3.0
 # www.blender.org
 mtllib BindweedFlower.mtl
-o petal
+o petals
 v 0.007270 0.024447 -0.012359
 v 0.358955 0.408821 0.022478
 v 0.007270 0.022638 -0.016150

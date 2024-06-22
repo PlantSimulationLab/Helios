@@ -260,12 +260,62 @@ enum BudState{
  */
 std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
 
+//struct VegetativeBud{
+//
+//    //state of the bud
+//    const BudState &state;
+//    //label of the shoot type that will be produced if the bud breaks into a shoot
+//    std::string shoot_type_label;
+//    //ID of the shoot that the bud will produce if it breaks into a shoot
+//    uint shoot_ID = -1;
+//
+//    VegetativeBud() : state(state_private) {
+//        state_private = BUD_DORMANT;
+//    }
+//
+//private:
+//
+//    //state of the bud
+//    BudState state_private;
+//
+//    friend class Phytomer;
+//
+//};
+
+//struct FloralBud{
+//
+//    //state of the bud
+//    const BudState &state;
+//    //amount of time since the bud flowered (=0 if it has not yet flowered)
+//    float time_counter = 0;
+//    //Index of the petiole within the internode that this floral bud originates from
+//    uint parent_petiole_index = 0;
+//    //Index of the bud within the petiole that this floral bud originates from
+//    uint bud_index = 0;
+//    //Scaling factor fraction of the fruit (if present), ranging from 0 to 1
+//    float current_fruit_scale_factor = 1;
+//
+//    FloralBud() : state_private(BUD_DORMANT), state(state_private) {
+//        time_counter = 0;
+//        parent_petiole_index = 0;
+//        bud_index = 0;
+//        current_fruit_scale_factor = 1;
+//    }
+//
+//protected:
+//
+//    BudState state_private;
+//
+//    friend class Phytomer;
+//
+//};
+
 struct VegetativeBud{
 
-    //label of the shoot type that will be produced if the bud breaks into a shoot
-    std::string shoot_type_label;
     //state of the bud
     BudState state = BUD_DORMANT;
+    //label of the shoot type that will be produced if the bud breaks into a shoot
+    std::string shoot_type_label;
     //ID of the shoot that the bud will produce if it breaks into a shoot
     uint shoot_ID = -1;
 
@@ -627,6 +677,8 @@ public:
 
     void scaleInternodeMaxLength( float scale_factor );
 
+    void setInternodeMaxRadius( float internode_radius_max );
+
     void setLeafScaleFraction(float leaf_scale_factor_fraction );
 
     void setLeafPrototypeScale( float leaf_prototype_scale );
@@ -639,19 +691,19 @@ public:
 
     void setPhytomerBase( const helios::vec3 &base_position );
 
-    void changeReproductiveState(FloralBud &fbud, BudState state);
-
     void setVegetativeBudState( BudState state );
 
     void setVegetativeBudState(BudState state, uint petiole_index, uint bud_index);
+
+    void setVegetativeBudState( BudState state, VegetativeBud &vbud );
 
     void setFloralBudState( BudState state );
 
     void setFloralBudState(BudState state, uint petiole_index, uint bud_index);
 
-    void removeLeaf();
+    void setFloralBudState(BudState state, FloralBud &fbud);
 
-    void removeInflorescence();
+    void removeLeaf();
 
     // ---- phytomer data ---- //
 
@@ -689,6 +741,7 @@ public:
     std::vector<std::vector<FloralBud>> floral_buds; //first index is petiole within internode, second index is bud within petiole
 
     float internode_radius_initial;
+    float internode_radius_max;
     float internode_length_max;
 
     bool build_context_geometry_internode = true;
@@ -810,8 +863,17 @@ public:
      */
     uint buildPlantInstanceFromLibrary( const helios::vec3 &base_position, float age );
 
+    //! Get the shoot parameters structure for a specific shoot type in the current plant model
+    /**
+     * \param[in] shoot_type_label User-defined label for the shoot type.
+     * \return ShootParameters structure for the specified shoot type.
+     */
     ShootParameters getCurrentShootParameters( const std::string &shoot_type_label );
 
+    //! Get the shoot parameters structure for all shoot types in the current plant model
+    /**
+     * \return Map of shoot type labels to ShootParameters structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding ShootParameters structure.
+     */
     std::map<std::string, ShootParameters> getCurrentShootParameters( );
 
     //! Update the parameters of a single shoot type in the current plant model
@@ -888,8 +950,8 @@ public:
      * \param[in] base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot.
      * \param[in] internode_radius Radius of the internodes along the shoot.
      * \param[in] internode_length_max Maximum length (i.e., fully elongated) of the internodes along the shoot.
-     * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual internode length (=1 applies no scaling).
-     * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual leaf size (=1 applies no scaling).
+     * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling).
+     * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
      * \param[in] shoot_type_label Label of the shoot type to be used for the base stem shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
@@ -900,9 +962,12 @@ public:
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] parent_shoot_ID ID of the shoot to which the new shoot will be appended.
-     * \param[in] current_node_number Number of nodes of the newly appended shoot.
-     * \param[in] internode_length_max Length of the internode of the newly appended shoot.
+     * \param[in] current_node_number Number of nodes/phytomers of the newly appended shoot.
      * \param[in] base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot relative to the parent shoot.
+     * \param[in] internode_radius Initial radius of the internodes along the shoot.
+     * \param[in] internode_length_max Length of the internode of the newly appended shoot.
+     * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling).
+     * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
@@ -916,11 +981,16 @@ public:
      * \param[in] parent_node_index Number of the node of the parent shoot at which the new shoot will be added.
      * \param[in] current_node_number Number of nodes of the newly added shoot.
      * \param[in] shoot_base_rotation AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot.
+     * \param[in] internode_radius Initial radius of the internodes along the shoot.
+     * \param[in] internode_length_max Length of the internode of the newly appended shoot.
+     * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling).
+     * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
-     * \return ID of the new shoot to be used to reference it later.
+     * \param[in] petiole_index [OPTIONAL] Index of the petiole within the internode to which the new shoot will be attached (when there are multiple petioles per internode)
+     * \return ID of the newly generated shoot.
      */
     uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max,
-                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &shoot_type_label, uint petiole_index);
+                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &shoot_type_label, uint petiole_index = 0 );
 
     //! Add a new phytomer at the terminal bud of a shoot.
     /**
@@ -929,9 +999,9 @@ public:
      * \param[in] phytomer_parameters Parameters of the phytomer to be added
      * \param[in] internode_radius Radius of the phytomer internode at the time of creation
      * \param[in] internode_length_max Maximum internode length at full elongation
-     * \param[in] internode_length_scale_factor_fraction Internode length fraction of fully elongated length
-     * \param[in] leaf_scale_factor_fraction Leaf scale as fraction of fully elongated leaf
-     * \return ID of phytomer
+     * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling).
+     * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
+     * \return ID of generated phytomer
      */
     int addPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
@@ -944,6 +1014,10 @@ public:
     //! Do not build peduncle primitive geometry in the Context
     void disablePeduncleContextBuild();
 
+    //! Enable automatic removal of organs that are below the ground plane
+    /**
+     * \param[in] ground_height [OPTIONAL] Height of the ground plane (default = 0).
+     */
     void enableGroundClipping( float ground_height = 0.f );
 
     // -- methods for modifying the current plant state -- //
@@ -1125,6 +1199,10 @@ protected:
     void initializeSorghumShoots();
 
     uint buildSorghumPlant( const helios::vec3 &base_position, float age );
+
+    void initializeStrawberryShoots();
+
+    uint buildStrawberryPlant( const helios::vec3 &base_position, float age );
 
     void initializeSugarbeetShoots();
 
