@@ -2474,7 +2474,7 @@ void Visualizer::addColorbarByCenter(const char* title, const helios::vec2 &size
             if(d2<1){
                 d2=1;
             }
-            std::snprintf(precision,10,"%%%d.%df",abs(d1)+1,d2);
+            std::snprintf(precision,10,"%%%u.%uf",(char)abs(d1)+1,(char)d2);
             std::snprintf(textstr,10,precision,value);
         }
 
@@ -2670,9 +2670,10 @@ void Visualizer::setColormap( Ctable colormap_name ){
     }
 }
 
-void Visualizer::setColormap(Ctable colormap_name, const std::vector<RGBcolor> &colors, const std::vector<float> &divisions ){
-    if( colormap_name!=COLORMAP_CUSTOM ){
-        helios_runtime_error("ERROR (Visualizer::setColormap): Setting a custom colormap requires calling setColormap with additional arguments defining the colormap.");
+void Visualizer::setColormap(const std::vector<RGBcolor> &colors, const std::vector<float> &divisions ){
+
+    if( colors.size() != divisions.size() ){
+        helios_runtime_error("ERROR (Visualizer::setColormap): The number of colors must be equal to the number of divisions.");
     }
 
     Colormap colormap_custom( colors, divisions, 100, 0, 1 );

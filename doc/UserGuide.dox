@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.14
+/*! \mainpage Helios Documentation v1.3.15
 
   <p> <br> </p>
 
@@ -25,7 +25,7 @@
   To do so, first install git, then using your command-line interface (e.g. terminal) change into the directory where you want to download the code, then type:
 
   ~~~~~~
-  $ git clone %https://www.github.com/PlantSimulationLab/Helios
+  $ git clone https://www.github.com/PlantSimulationLab/Helios
   ~~~~~~
 
   As updates are released, update your version of the code by typing:
@@ -151,6 +151,7 @@ $ git pull
   - \subpage SolarPositionDoc "Solar Position Model: Model for the position of the sun in the sky, as well as models of solar radiation flux and longwave flux from the sky."
   - \subpage VoxelIntersectionDoc "Voxel Intersection: Determine planar primitive elements that lie within voxel primitives."
   - \subpage CanopyGeneratorDoc "Canopy Generator: Simple generation of different type of plant and canopy geometries."
+  - \subpage PlantArchitectureDoc "Plant Architecture: Flexible procedural plant generation with dynamic growth and phenology."
 
 */
 

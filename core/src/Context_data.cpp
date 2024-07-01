@@ -3833,6 +3833,172 @@ std::vector<std::string> CompoundObject::listObjectData() const{
 
 }
 
+std::vector<uint> Context::filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, float filter_value, const std::string &comparator ){
+
+    if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+        helios_runtime_error("ERROR (Context::filterObjectsByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
+    }
+
+    std::vector<uint> objIDs_out = objIDs;
+    for( int p=objIDs.size()-1; p>=0; p-- ){
+        uint objID = objIDs_out.at(p);
+        if( doesObjectDataExist(objID,object_data_label.c_str()) && getObjectDataType(objID,object_data_label.c_str())==HELIOS_TYPE_FLOAT ){
+            float data;
+            getObjectData(objID,object_data_label.c_str(),data);
+            if( comparator=="==" && data==filter_value ){
+                continue;
+            }else if ( comparator==">" && data>filter_value ) {
+                continue;
+            }else if ( comparator=="<" && data<filter_value ){
+                continue;
+            }else if ( comparator==">=" && data>=filter_value ){
+                continue;
+            }else if ( comparator=="<=" && data<=filter_value ){
+                continue;
+            }
+
+            std::swap( objIDs_out.at(p),objIDs_out.back() );
+            objIDs_out.pop_back();
+        }else{
+            std::swap(objIDs_out.at(p), objIDs_out.back());
+            objIDs_out.pop_back();
+        }
+    }
+
+    return objIDs_out;
+
+}
+
+std::vector<uint> Context::filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, double filter_value, const std::string &comparator ){
+
+    if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+        helios_runtime_error("ERROR (Context::filterObjectsByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
+    }
+
+    std::vector<uint> objIDs_out = objIDs;
+    for( int p=objIDs.size()-1; p>=0; p-- ){
+        uint objID = objIDs_out.at(p);
+        if( doesObjectDataExist(objID,object_data_label.c_str()) && getObjectDataType(objID,object_data_label.c_str())==HELIOS_TYPE_DOUBLE ){
+            double data;
+            getObjectData(objID,object_data_label.c_str(),data);
+            if( comparator=="==" && data==filter_value ){
+                continue;
+            }else if ( comparator==">" && data>filter_value ) {
+                continue;
+            }else if ( comparator=="<" && data<filter_value ){
+                continue;
+            }else if ( comparator==">=" && data>=filter_value ){
+                continue;
+            }else if ( comparator=="<=" && data<=filter_value ){
+                continue;
+            }
+
+            std::swap( objIDs_out.at(p),objIDs_out.back() );
+            objIDs_out.pop_back();
+        }else{
+            std::swap(objIDs_out.at(p), objIDs_out.back());
+            objIDs_out.pop_back();
+        }
+    }
+
+    return objIDs_out;
+
+}
+
+std::vector<uint> Context::filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, int filter_value, const std::string &comparator ){
+
+    if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+        helios_runtime_error("ERROR (Context::filterObjectsByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
+    }
+
+    std::vector<uint> objIDs_out = objIDs;
+    for( int p=objIDs.size()-1; p>=0; p-- ){
+        uint objID = objIDs_out.at(p);
+        if( doesObjectDataExist(objID,object_data_label.c_str()) && getObjectDataType(objID,object_data_label.c_str())==HELIOS_TYPE_INT ){
+            int data;
+            getObjectData(objID,object_data_label.c_str(),data);
+            if( comparator=="==" && data==filter_value ){
+                continue;
+            }else if ( comparator==">" && data>filter_value ) {
+                continue;
+            }else if ( comparator=="<" && data<filter_value ){
+                continue;
+            }else if ( comparator==">=" && data>=filter_value ){
+                continue;
+            }else if ( comparator=="<=" && data<=filter_value ){
+                continue;
+            }
+
+            std::swap( objIDs_out.at(p),objIDs_out.back() );
+            objIDs_out.pop_back();
+        }else{
+            std::swap(objIDs_out.at(p), objIDs_out.back());
+            objIDs_out.pop_back();
+        }
+    }
+
+    return objIDs_out;
+
+}
+
+std::vector<uint> Context::filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, uint filter_value, const std::string &comparator ){
+
+    if( comparator!="==" && comparator!=">" && comparator!="<" && comparator!=">=" && comparator!="<="  ){
+        helios_runtime_error("ERROR (Context::filterObjectsByData): Invalid comparator. Must be one of '==', '>', '<', '>=', or '<='.");
+    }
+
+    std::vector<uint> objIDs_out = objIDs;
+    for( int p=objIDs.size()-1; p>=0; p-- ){
+        uint objID = objIDs_out.at(p);
+        if( doesObjectDataExist(objID,object_data_label.c_str()) && getObjectDataType(objID,object_data_label.c_str())==HELIOS_TYPE_UINT ){
+            uint data;
+            getObjectData(objID,object_data_label.c_str(),data);
+            if( comparator=="==" && data==filter_value ){
+                continue;
+            }else if ( comparator==">" && data>filter_value ) {
+                continue;
+            }else if ( comparator=="<" && data<filter_value ){
+                continue;
+            }else if ( comparator==">=" && data>=filter_value ){
+                continue;
+            }else if ( comparator=="<=" && data<=filter_value ){
+                continue;
+            }
+
+            std::swap( objIDs_out.at(p),objIDs_out.back() );
+            objIDs_out.pop_back();
+        }else{
+            std::swap(objIDs_out.at(p), objIDs_out.back());
+            objIDs_out.pop_back();
+        }
+    }
+
+    return objIDs_out;
+
+}
+
+std::vector<uint> Context::filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, const std::string &filter_value ){
+
+    std::vector<uint> objIDs_out = objIDs;
+    for( int p=objIDs.size()-1; p>=0; p-- ){
+        uint objID = objIDs_out.at(p);
+        if( doesPrimitiveDataExist(objID,object_data_label.c_str()) && getPrimitiveDataType(objID,object_data_label.c_str())==HELIOS_TYPE_STRING ){
+            std::string data;
+            getPrimitiveData(objID,object_data_label.c_str(),data);
+            if( data!=filter_value ) {
+                std::swap(objIDs_out.at(p), objIDs_out.back());
+                objIDs_out.pop_back();
+            }
+        }else{
+            std::swap(objIDs_out.at(p), objIDs_out.back());
+            objIDs_out.pop_back();
+        }
+    }
+
+    return objIDs_out;
+
+}
+
 // -------- Global Data ---------- //
 
 void Context::setGlobalData( const char* label, const int& data ){

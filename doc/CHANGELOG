@@ -1708,3 +1708,34 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Radiation*
 - Added "ActiveGrow_LED_RedBloom" light to light spectral library.
+
+[1.3.15] 2024-07-01
+
+*Added Contributing.md file to the root directory of the repository to help guide users on how to contribute to the Helios project.
+
+*Context*
+- Added checks to all primitive and object rotation functions to return immediately if a zero rotation is specified.
+- Added checks to all primitive and object scaling functions to return immediately if no scaling is to be applied.
+- Added checks to all primitive and object translation functions to return immediately if no translation is to be applied.
+- Using JPEG textures with tiles was broken in v1.3.12.
+- helios::readJPEG() was not working and would cause a segmentation fault.
+- Added helios::getImageResolutionJPEG() function to query the resolution of a JPEG image without loading it.
+- Changed UUID argument of Context::cropDomain() to be automatically trimmed of any UUIDs that were deleted as a result of cropping.
+- vertex0, vertex1, and vertex2 data members of Triangle primitives were removed, as they are not used.
+- Added Context::filterObjectsByData() methods to give object analogue to Context::filterPrimitivesByData().
+
+*Radiation*
+- Added ASTMG173 diffuse reference spectrum ("solar_spectrum_diffuse_ASTMG173") to solar_spectrum_ASTMG173.xml.
+- Renamed ASTMG173 direct reference spectrum to "solar_spectrum_direct_ASTMG173" in solar_spectrum_ASTMG173.xml. This should be used instead of the old "solar_spectrum_ASTMG173".
+- Setting band fluxes based on the source spectrum was not working correctly.
+- Changed self-test Case #9 to have a 'sun sphere' source instead of collimated source, since sun sphere sources are never checked in the self-test.
+
+*Plant Architecture*
+- Added selfTest(). This is empty for now, but will be run to compile the plug-in when tests are run.
+- Added PlantArchitecture::deletePlantInstance() to make sure everything gets cleaned up properly when deleting a plant. Just deleting the object IDs from the Context causes issues.
+- Added check in PlantArchitecture::detectGroundCollision() to ignore objects that don't exist in the Context.
+- Error corrected in parsing of plant string (credit to Heesup Yun for fixing this).
+- Changed output tags/labels (e.g., plantID, peduncleID, etc.) to be object data instead of primitive data to decrease memory usage.
+
+*Visualizer*
+- Fixed compiler warning about truncation when calling snprintf within Visualizer::addColorbarByCenter.

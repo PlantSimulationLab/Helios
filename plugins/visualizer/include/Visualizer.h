@@ -13,8 +13,8 @@
 
 */
 
-#ifndef __VISUALIZER__
-#define __VISUALIZER__
+#ifndef HELIOS_VISUALIZER
+#define HELIOS_VISUALIZER
 
 #include "Context.h"
 
@@ -25,35 +25,39 @@
 #include "glm/gtx/transform.hpp"
 
 //! Function to create a texture map from a JPEG image
-/** \param[in] "filename" Name of the JPEG image file
-    \param[out] "texture" Texture map created from JPEG image
-    \param[out] "height" Height of the image/texture in pixels
-    \param[out] "width" Width of the image/texture in pixels
+/**
+ * \param[in] filename Name of the JPEG image file
+ * \param[out] texture Texture map created from JPEG image
+ * \param[out] height Height of the image/texture in pixels
+ * \param[out] width Width of the image/texture in pixels
 */
 int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, uint & height, uint & width);
 
 //! Write current graphics window to a JPEG image file
-/** \param[in] "filename" Name of the JPEG image file
-    \param[in] "width" Width of the graphics window in pixels
-    \param[in] "height" Height of the graphics window in pixels
-    \param[in] "window" Pointer to the window object
+/**
+ * \param[in] filename Name of the JPEG image file
+ * \param[in] width Width of the graphics window in pixels
+ * \param[in] height Height of the graphics window in pixels
+ * \param[in] window Pointer to the window object
 */
 int write_JPEG_file (const char* filename, uint width, uint height, void* _window );
 
 
 //! Write a JPEG image file based on array of pixel data
-/** \param[in] "filename" Name of the JPEG image file
-    \param[in] "width" Width of the graphics window in pixels
-    \param[in] "height" Height of the graphics window in pixels
-    \param[in] "data" Vector of RGB pixel data
+/**
+ * \param[in] filename Name of the JPEG image file
+ * \param[in] width Width of the graphics window in pixels
+ * \param[in] height Height of the graphics window in pixels
+ * \param[in] data Vector of RGB pixel data
 */
 int write_JPEG_file (const char* filename, uint width, uint height, const std::vector<helios::RGBcolor>& data );
 
 //! Function to create a texture map from a PNG image
-/** \param[in] "filename" Name of the PNG image file
-    \param[out] "texture" Texture map created from PNG image
-    \param[out] "height" Height of the image/texture in pixels
-    \param[out] "width" Width of the image/texture in pixels
+/**
+ * \param[in] filename Name of the PNG image file
+ * \param[out] texture Texture map created from PNG image
+ * \param[out] height Height of the image/texture in pixels
+ * \param[out] width Width of the image/texture in pixels
 */
 void read_png_file( const char* filename, std::vector<unsigned char> &texture, uint & height, uint & width);
 
@@ -79,9 +83,9 @@ public:
   
   //! Color fragments using an RGB texture map
   /**
-   * \param[in] "texture_file" Handle to a texture map
-   * \param[out] "textureID" Identifier of the texture map.
-   * \param[out] "texture_size" Size of the texture map in pixels.
+   * \param[in] texture_file Handle to a texture map
+   * \param[out] textureID Identifier of the texture map.
+   * \param[out] texture_size Size of the texture map in pixels.
    */
   void setTextureMap( const char* texture_file, uint& textureID, helios::int2& texture_size );
 
@@ -90,16 +94,16 @@ public:
   
   //! Set fragment opacity using a Glyph (red channel)
   /**
-   * \param[in] "glyph" Pointer to Glyph object for texture mask
-   * \param[out] "textureID" Identifier of the texture map.
+   * \param[in] glyph Pointer to Glyph object for texture mask
+   * \param[out] textureID Identifier of the texture map.
    */
   void setTextureMask( const Glyph* glyph, uint& textureID );
 
   //! Set fragment opacity using a texture map file (red channel)
   /**
-   * \param[in] "texture_file" Handle to a texture map
-   * \param[out] "textureID" Identifier of the texture map.
-   * \param[out] "texture_size" Size of the texture map in pixels.
+   * \param[in] texture_file Handle to a texture map
+   * \param[out] textureID Identifier of the texture map.
+   * \param[out] texture_size Size of the texture map in pixels.
    */
   void setTextureMask( const char* texture_file, uint& textureID, helios::int2& texture_size );
   
@@ -123,8 +127,8 @@ public:
   
   //! Initialize the shader
   /**
-   * \param[in] "vertex_shader_file" Name of vertex shader file to be used by OpenGL in rendering graphics
-   * \param[in] "fragment_shader_file" Name of fragment shader file to be used by OpenGL in rendering graphics
+   * \param[in] vertex_shader_file Name of vertex shader file to be used by OpenGL in rendering graphics
+   * \param[in] fragment_shader_file Name of fragment shader file to be used by OpenGL in rendering graphics
   */
   void initialize( const char* vertex_shader_file, const char* fragment_shader_file );
 
@@ -257,14 +261,14 @@ public:
 
   //! Visualizer constructor
   /**
-   * \param[in] "Wdisplay" Width of the display window in pixels, and assumes default window aspect ratio of 1.25
+   * \param[in] Wdisplay Width of the display window in pixels, and assumes default window aspect ratio of 1.25
   */
   explicit Visualizer( uint Wdisplay );
 
   //! Visualizer constructor
   /**
-   * \param[in] "Wdisplay" Width of the display window in pixels
-   * \param[in] "Hdisplay" Height of the display window in pixels
+   * \param[in] Wdisplay Width of the display window in pixels
+   * \param[in] Hdisplay Height of the display window in pixels
   */
   Visualizer( uint Wdisplay, uint Hdisplay );
 
@@ -309,17 +313,17 @@ public:
 
   //! Pseudocolor map tables
   enum Ctable{
-    //! ``Hot" colormap
+    //! "Hot" colormap
     COLORMAP_HOT = 0,
-    //! ``Cool" colormap
+    //! "Cool" colormap
     COLORMAP_COOL = 1,
-    //! ``Rainbow" colormap
+    //! "Rainbow" colormap
     COLORMAP_RAINBOW = 2,
-    //! ``Lava" colormap
+    //! "Lava" colormap
     COLORMAP_LAVA = 3,
-    //! ``Parula" colormap
+    //! "Parula" colormap
     COLORMAP_PARULA = 4,
-    //! ``Gray" colormap
+    //! "Gray" colormap
     COLORMAP_GRAY = 5,
     //! Custom colormap
     COLORMAP_CUSTOM = 6
@@ -327,28 +331,28 @@ public:
 
   //! Set camera position
   /**
-   * \param[in] "cameraPosition" (x,y,z) position of the camera, i.e., this is where the actual camera or `eye' is positioned.
-   * \param[in] "lookAt" (x,y,z) position of where the camera is looking at.
+   * \param[in] cameraPosition (x,y,z) position of the camera, i.e., this is where the actual camera or `eye' is positioned.
+   * \param[in] lookAt (x,y,z) position of where the camera is looking at.
   */
   void setCameraPosition(const helios::vec3 &cameraPosition, const helios::vec3 &lookAt );
 
   //! Set camera position
   /**
-   * \param[in] "cameraAngle" (elevation,azimuth) angle to the camera with respect to the `lookAt' position.
-   * \param[in] "cameraRadius" Distance from the camera to the `lookAt' position.
-   * \param[in] "lookAt" (x,y,z) position of where the camera is looking at.
+   * \param[in] cameraAngle (elevation,azimuth) angle to the camera with respect to the `lookAt' position.
+   * \param[in] cameraRadius Distance from the camera to the `lookAt' position.
+   * \param[in] lookAt (x,y,z) position of where the camera is looking at.
   */
   void setCameraPosition(const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt );
 
   //! Set the camera field of view (angle width) in degrees. Default value is 45 degrees.
   /**
-   * \param[in] "angle_FOV" Angle of camera field of view in degrees.
+   * \param[in] angle_FOV Angle of camera field of view in degrees.
    */
   void setCameraFieldOfView( float angle_FOV );
 
   //! Set the direction of the light source
   /**
-   * \param[in] "direction" Vector pointing in the direction of the light source (vector starts at light source and points toward scene.)
+   * \param[in] direction Vector pointing in the direction of the light source (vector starts at light source and points toward scene.)
    */
   void setLightDirection(const helios::vec3 &direction );
 
@@ -372,298 +376,298 @@ public:
 
   //! Set the lighting model for shading of all primitives
   /**
-   * \param[in] "lightingmodel" Lighting model to be used
+   * \param[in] lightingmodel Lighting model to be used
    * \sa LightingModel
   */
   void setLightingModel(LightingModel lightingmodel );
 
   //! Set the background color for the visualizer window
   /**
-   * \param[in] "color" Background color
+   * \param[in] color Background color
    */
   void setBackgroundColor(const helios::RGBcolor &color );
 
   //! Add a rectangle by giving the coordinates of its center
   /**
-   * \param[in] "center" (x,y,z) location of the rectangle center
-   * \param[in] "size" Size in the x- and y-directions
-   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-   * \param[in] "color" R-G-B color of the rectangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] center (x,y,z) location of the rectangle center
+   * \param[in] size Size in the x- and y-directions
+   * \param[in] rotation spherical rotation angle (elevation,azimuth)
+   * \param[in] color R-G-B color of the rectangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its center
   /**
-   * \param[in] "center" (x,y,z) location of the rectangle center
-   * \param[in] "size" Size in the x- and y-directions
-   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-   * \param[in] "color" R-G-B-A color of the rectangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] center (x,y,z) location of the rectangle center
+   * \param[in] size Size in the x- and y-directions
+   * \param[in] rotation spherical rotation angle (elevation,azimuth)
+   * \param[in] color R-G-B-A color of the rectangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a texture mapped rectangle by giving the coordinates of its center
   /**
-   * \param[in] "center" (x,y,z) location of the rectangle center
-   * \param[in] "size" Size in the x- and y-directions
-   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] center (x,y,z) location of the rectangle center
+   * \param[in] size Size in the x- and y-directions
+   * \param[in] rotation spherical rotation angle (elevation,azimuth)
+   * \param[in] texture_file File corresponding to the JPEG image to be used as a texture map
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const char* texture_file, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its center - rectangle is colored by and RGB color value but is masked by the alpha channel of a PNG image file
   /**
-   * \param[in] "center" (x,y,z) location of the rectangle center
-   * \param[in] "size" Size in the x- and y-directions
-   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-   * \param[in] "color" R-G-B color of the rectangle
-   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] center (x,y,z) location of the rectangle center
+   * \param[in] size Size in the x- and y-directions
+   * \param[in] rotation spherical rotation angle (elevation,azimuth)
+   * \param[in] color R-G-B color of the rectangle
+   * \param[in] texture_file File corresponding to the JPEG image to be used as a texture map
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag );
 
   //! Add a texture masked rectangle by giving the coordinates of its center
   /**
-   * \param[in] "center" (x,y,z) location of the rectangle center
-   * \param[in] "size" Size in the x- and y-directions
-   * \param[in] "rotation" spherical rotation angle (elevation,azimuth)
-   * \param[in] "color" R-G-B color of the rectangle
-   * \param[in] "glyph" Pixel map of true/false values for a transparency mask
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] center (x,y,z) location of the rectangle center
+   * \param[in] size Size in the x- and y-directions
+   * \param[in] rotation spherical rotation angle (elevation,azimuth)
+   * \param[in] color R-G-B color of the rectangle
+   * \param[in] glyph Pixel map of true/false values for a transparency mask
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, const Glyph* glyph, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices
   /**
-   * \param[in] "vertices" (x,y,z) coordinates of four vertices
-   * \param[in] "color" R-G-B color of the rectangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertices (x,y,z) coordinates of four vertices
+   * \param[in] color R-G-B color of the rectangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices
   /**
-   * \param[in] "vertices" (x,y,z) coordinates of four vertices
-   * \param[in] "color" R-G-B-A color of the rectangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertices (x,y,z) coordinates of four vertices
+   * \param[in] color R-G-B-A color of the rectangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices
   /**
-   * \param[in] "vertices" (x,y,z) coordinates of four vertices
-   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertices (x,y,z) coordinates of four vertices
+   * \param[in] texture_file File corresponding to the JPEG image to be used as a texture map
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const char* texture_file, CoordinateSystem coordFlag );
   
   //! Add a rectangle by giving the coordinates of its four vertices and color by texture map
   /**
-   * \param[in] "vertices" (x,y,z) coordinates of four vertices
-   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "uvs" u-v coordinates for rectangle vertices
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertices (x,y,z) coordinates of four vertices
+   * \param[in] texture_file File corresponding to the JPEG image to be used as a texture map
+   * \param[in] uvs u-v coordinates for rectangle vertices
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices(const std::vector<helios::vec3>& vertices, const char* texture_file, const std::vector<helios::vec2> &uvs, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices and mask by texture map transparency channel, but color by R-G-B value
   /**
-   * \param[in] "vertices" (x,y,z) coordinates of four vertices
-   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "uvs" u-v coordinates for rectangle vertices
-   * \param[in] "color" R-G-B color of the rectangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertices (x,y,z) coordinates of four vertices
+   * \param[in] texture_file File corresponding to the JPEG image to be used as a texture map
+   * \param[in] uvs u-v coordinates for rectangle vertices
+   * \param[in] color R-G-B color of the rectangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, const std::vector<helios::vec2> &uvs, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices - rectangle is colored by an RGB color value but is masked by the alpha channel of a PNG image file
   /**
-   * \param[in] "vertices" (x,y,z) coordinates of four vertices
-   * \param[in] "color" R-G-B color of the rectangle
-   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertices (x,y,z) coordinates of four vertices
+   * \param[in] color R-G-B color of the rectangle
+   * \param[in] texture_file File corresponding to the JPEG image to be used as a texture map
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag);
   
   //! Add a rectangle by giving the coordinates of its four vertices
   /**
-   * \param[in] "vertices" (x,y,z) coordinates of four vertices
-   * \param[in] "color" R-G-B color of the glyph
-   * \param[in] "glyph" Glyph object used to render rectangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertices (x,y,z) coordinates of four vertices
+   * \param[in] color R-G-B color of the glyph
+   * \param[in] glyph Glyph object used to render rectangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const Glyph* glyph, CoordinateSystem coordFlag );
 
   //! Add a rectangle by giving the coordinates of its four vertices
   /**
-   * \param[in] "vertices" (x,y,z) coordinates of four vertices
-   * \param[in] "color" R-G-B-A color of the glyph
-   * \param[in] "glyph" Glyph object used to render rectangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertices (x,y,z) coordinates of four vertices
+   * \param[in] color R-G-B-A color of the glyph
+   * \param[in] glyph Glyph object used to render rectangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBAcolor &color, const Glyph* glyph, CoordinateSystem coordFlag );
   
   //! Add a triangle by giving the coordinates of its three vertices
   /**
-   * \param[in] "vertex0" (x,y,z) location of first vertex
-   * \param[in] "vertex1" (x,y,z) location of first vertex
-   * \param[in] "vertex2" (x,y,z) location of first vertex
-   * \param[in] "color" R-G-B color of the triangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertex0 (x,y,z) location of first vertex
+   * \param[in] vertex1 (x,y,z) location of first vertex
+   * \param[in] vertex2 (x,y,z) location of first vertex
+   * \param[in] color R-G-B color of the triangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a triangle by giving the coordinates of its three vertices
   /**
-   * \param[in] "vertex0" (x,y,z) location of first vertex
-   * \param[in] "vertex1" (x,y,z) location of first vertex
-   * \param[in] "vertex2" (x,y,z) location of first vertex
-   * \param[in] "color" R-G-B-A color of the triangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertex0 (x,y,z) location of first vertex
+   * \param[in] vertex1 (x,y,z) location of first vertex
+   * \param[in] vertex2 (x,y,z) location of first vertex
+   * \param[in] color R-G-B-A color of the triangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a triangle by giving the coordinates of its three vertices and color by texture map
   /**
-   * \param[in] "vertex0" (x,y,z) location of first vertex
-   * \param[in] "vertex1" (x,y,z) location of first vertex
-   * \param[in] "vertex2" (x,y,z) location of first vertex
-   * \param[in] "texture_file" File corresponding to the image to be used as a texture map
-   * \param[in] "uv0" u-v texture coordinates of vertex0
-   * \param[in] "uv1" u-v texture coordinates of vertex1
-   * \param[in] "uv2" u-v texture coordinates of vertex2
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertex0 (x,y,z) location of first vertex
+   * \param[in] vertex1 (x,y,z) location of first vertex
+   * \param[in] vertex2 (x,y,z) location of first vertex
+   * \param[in] texture_file File corresponding to the image to be used as a texture map
+   * \param[in] uv0 u-v texture coordinates of vertex0
+   * \param[in] uv1 u-v texture coordinates of vertex1
+   * \param[in] uv2 u-v texture coordinates of vertex2
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, CoordinateSystem coordFlag );
 
   //! Add a triangle by giving the coordinates of its three vertices and color by a constant color, but mask using transparency channel of texture map
   /**
-   * \param[in] "vertex0" (x,y,z) location of first vertex
-   * \param[in] "vertex1" (x,y,z) location of first vertex
-   * \param[in] "vertex2" (x,y,z) location of first vertex
-   * \param[in] "texture_file" File corresponding to the image to be used as a texture map
-   * \param[in] "uv0" u-v texture coordinates of vertex0
-   * \param[in] "uv1" u-v texture coordinates of vertex1
-   * \param[in] "uv2" u-v texture coordinates of vertex2
-   * \param[in] "color" R-G-B-A color of the triangle
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] vertex0 (x,y,z) location of first vertex
+   * \param[in] vertex1 (x,y,z) location of first vertex
+   * \param[in] vertex2 (x,y,z) location of first vertex
+   * \param[in] texture_file File corresponding to the image to be used as a texture map
+   * \param[in] uv0 u-v texture coordinates of vertex0
+   * \param[in] uv1 u-v texture coordinates of vertex1
+   * \param[in] uv2 u-v texture coordinates of vertex2
+   * \param[in] color R-G-B-A color of the triangle
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a voxel by giving the coordinates of its center
   /**
-   * \param[in] "size" Size in the x-, y- and z-directions
-   * \param[in] "center" (x,y,z) location of the voxel center
-   * \param[in] "color" R-G-B color of the voxel
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] size Size in the x-, y- and z-directions
+   * \param[in] center (x,y,z) location of the voxel center
+   * \param[in] color R-G-B color of the voxel
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a voxel by giving the coordinates of its center
   /**
-   * \param[in] "size" Size in the x-, y- and z-directions
-   * \param[in] "center" (x,y,z) location of the voxel center
-   * \param[in] "color" R-G-B-A color of the voxel
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] size Size in the x-, y- and z-directions
+   * \param[in] center (x,y,z) location of the voxel center
+   * \param[in] color R-G-B-A color of the voxel
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a disk by giving the coordinates of its center
   /**
-   * \param[in] "center" (x,y,z) location of the disk center
-   * \param[in] "size" length of disk semi-major and semi-minor axes
-   * \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
-   * \param[in] "color" R-G-B color of the disk
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] center (x,y,z) location of the disk center
+   * \param[in] size length of disk semi-major and semi-minor axes
+   * \param[in] Ndivisions Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
+   * \param[in] color R-G-B color of the disk
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a disk by giving the coordinates of its center
   /**
-   * \param[in] "center" (x,y,z) location of the disk center
-   * \param[in] "size" length of disk semi-major and semi-minor axes
-   * \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
-   * \param[in] "color" R-G-B-A color of the disk
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] center (x,y,z) location of the disk center
+   * \param[in] size length of disk semi-major and semi-minor axes
+   * \param[in] Ndivisions Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
+   * \param[in] color R-G-B-A color of the disk
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a texture mapped disk by giving the coordinates of its center
   /**
-   * \param[in] "center" (x,y,z) location of the disk center
-   * \param[in] "size" length of disk semi-major and semi-minor axes
-   * \param[in] "Ndivisions" Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
-   * \param[in] "texture_file" File corresponding to the JPEG image to be used as a texture map
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] center (x,y,z) location of the disk center
+   * \param[in] size length of disk semi-major and semi-minor axes
+   * \param[in] Ndivisions Number of discrete divisions in making disk. (e.g., Ndivisions=4 makes a square, Ndivisions=5 makes a pentagon, etc.)
+   * \param[in] texture_file File corresponding to the JPEG image to be used as a texture map
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag );
 
   //! Add Lines by giving the coordinates of points along the Lines
   /** 
-   * \param[in] "start" (x,y,z) coordinates of line starting position
-   * \param[in] "end" (x,y,z) coordinates of line ending position
-   * \param[in] "color" R-G-B color of the line
-   * \param[in] "linewidth" Width of the line in points
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] start (x,y,z) coordinates of line starting position
+   * \param[in] end (x,y,z) coordinates of line ending position
+   * \param[in] color R-G-B color of the line
+   * \param[in] linewidth Width of the line in points
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, uint linewidth, CoordinateSystem coordFlag );
 
   //! Add Lines by giving the coordinates of points along the Lines
   /** 
-   * \param[in] "start" (x,y,z) coordinates of line starting position
-   * \param[in] "end" (x,y,z) coordinates of line ending position
-   * \param[in] "color" R-G-B-A color of the line
-   * \param[in] "linewidth" Width of the line in points
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] start (x,y,z) coordinates of line starting position
+   * \param[in] end (x,y,z) coordinates of line ending position
+   * \param[in] color R-G-B-A color of the line
+   * \param[in] linewidth Width of the line in points
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, uint linewidth, CoordinateSystem coordFlag );
 
   //! Add a point by giving its coordinates and size
   /** 
-   * \param[in] "position" (x,y,z) coordinates of Point
-   * \param[in] "color" R-G-B color of the Point
-   * \param[in] "size" Size of the point in font points
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] position (x,y,z) coordinates of Point
+   * \param[in] color R-G-B color of the Point
+   * \param[in] size Size of the point in font points
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addPoint( const helios::vec3 &position, const helios::RGBcolor &color, uint pointsize,  CoordinateSystem coordFlag);
 
   //! Add a point by giving its coordinates and size
   /** 
-   * \param[in] "position" (x,y,z) coordinates of Point
-   * \param[in] "color" R-G-B-A color of the Point
-   * \param[in] "size" Size of the point in font points
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] position (x,y,z) coordinates of Point
+   * \param[in] color R-G-B-A color of the Point
+   * \param[in] size Size of the point in font points
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addPoint( const helios::vec3 &position, const helios::RGBAcolor &color, uint pointsize,  CoordinateSystem coordFlag );
   
   //! Add a sphere by giving the radius and center
   /** 
-   * \param[in] "radius" Radius of the sphere
-   * \param[in] "center" (x,y,z) location of sphere center
-   * \param[in] "Ndivisions" Number of discrete divisions in making sphere
-   * \param[in] "color" R-G-B color of the sphere
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] radius Radius of the sphere
+   * \param[in] center (x,y,z) location of sphere center
+   * \param[in] Ndivisions Number of discrete divisions in making sphere
+   * \param[in] color R-G-B color of the sphere
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addSphereByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag );
 
   //! Add a sphere by giving the radius and center
   /** 
-   * \param[in] "radius" Radius of the sphere
-   * \param[in] "center" (x,y,z) location of sphere center
-   * \param[in] "Ndivisions" Number of discrete divisions in making sphere
-   * \param[in] "color" R-G-B-A color of the sphere
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] radius Radius of the sphere
+   * \param[in] center (x,y,z) location of sphere center
+   * \param[in] Ndivisions Number of discrete divisions in making sphere
+   * \param[in] color R-G-B-A color of the sphere
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addSphereByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag );
 
   //! Add a Sky Dome, which is a hemispherical dome colored by a sky texture map
   /** 
-   * \param[in] "radius" Radius of the dome
-   * \param[in] "center" (x,y,z) location of dome center
-   * \param[in] "Ndivisions" Number of discrete divisions in making hemisphere
-   * \param[in] "texture_file" Name of the texture map file
+   * \param[in] radius Radius of the dome
+   * \param[in] center (x,y,z) location of dome center
+   * \param[in] Ndivisions Number of discrete divisions in making hemisphere
+   * \param[in] texture_file Name of the texture map file
   */
   void addSkyDomeByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const char* texture_file );
 
@@ -673,12 +677,12 @@ public:
 
   //! Add a text box by giving the coordinates of its center
   /**
-   * \param[in] "textstring" String of text to display
-   * \param[in] "center" (x,y,z) location of the text box center
-   * \param[in] "rotation" Spherical rotation angle in radians (elevation,azimuth)
-   * \param[in] "fontcolor" Color of the font
-   * \param[in] "fontsize" Size of the text font in points
-   * \param[in] "coordFlag" Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+   * \param[in] textstring String of text to display
+   * \param[in] center (x,y,z) location of the text box center
+   * \param[in] rotation Spherical rotation angle in radians (elevation,azimuth)
+   * \param[in] fontcolor Color of the font
+   * \param[in] fontsize Size of the text font in points
+   * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
   */
   void addTextboxByCenter( const char* textstring, const helios::vec3 &center, const helios::SphericalCoord &rotation, const helios::RGBcolor &fontcolor, uint fontsize, const char* fontname, CoordinateSystem coordFlag );
 
@@ -687,17 +691,17 @@ public:
 
   //! Add a coordinate axis
   /** 
-    * \param[in] "origin" (x,y,z) location of the coordinate axes orign
-    * \param[in] "length" length of coordinate axis lines from origin in each direction
-    * \param[in] "sign" either "both" or "positive" should the axes be drawn in both positive and negative directions or just positive
+    * \param[in] origin (x,y,z) location of the coordinate axes orign
+    * \param[in] length length of coordinate axis lines from origin in each direction
+    * \param[in] sign either "both" or "positive" should the axes be drawn in both positive and negative directions or just positive
    */
   void addCoordinateAxes(const helios::vec3 &origin, const helios::vec3 &length, const std::string &sign);
 
   //! Add a coordinate axis
   /** 
-    * \param[in] "center" (x,y,z) location of the center of the grid
-    * \param[in] "size" size of the grid in each direction
-    * \param[in] "subdiv" number of grid subdivisions in each direction
+    * \param[in] center (x,y,z) location of the center of the grid
+    * \param[in] size size of the grid in each direction
+    * \param[in] subdiv number of grid subdivisions in each direction
    */
   void addGridWireFrame(const helios::vec3 &center, const helios::vec3 &size, const helios::int3 &subdiv);
 
@@ -709,109 +713,111 @@ public:
 
   //! Set the position of the colorbar in normalized window coordinates (0-1)
   /**
-   * \param[in] "position" Position of the colorbar in normalized window coordinates
+   * \param[in] position Position of the colorbar in normalized window coordinates
   */
   void setColorbarPosition( helios::vec3 position );
 
   //! Set the size of the colorbar in normalized window units (0-1)
   /**
-   * \param[in] "size" Size of the colorbar in normalized window units (0-1)
+   * \param[in] size Size of the colorbar in normalized window units (0-1)
   */
   void setColorbarSize( helios::vec2 size );
 
   //! Set the range of the Colorbar
   /**
-   * \param[in] "cmin" Minimum value
-   * \param[out] "cmax" Maximum value
+   * \param[in] cmin Minimum value
+   * \param[out] cmax Maximum value
   */
   void setColorbarRange( float cmin, float cmax );
 
   //! Set the values in the colorbar where ticks and labels should be placed
   /**
-   * \param[in] "ticks" Vector of values corresponding to ticks
+   * \param[in] ticks Vector of values corresponding to ticks
       \note If tick values are outside of the colorbar range (see setColorBarRange()), the colorbar will be automatically expanded to fit the tick values.
   */
   void setColorbarTicks(const std::vector<float> &ticks );
 
   //! Set the title of the Colorbar
   /**
-   * \param[in] "title" Colorbar title
+   * \param[in] title Colorbar title
   */
   void setColorbarTitle( const char* title );
 
   //! Set the RGB color of the colorbar text
   /**
-   * \param[in] "color" Font color
+   * \param[in] color Font color
   */
   void setColorbarFontColor( helios::RGBcolor color );
 
   //! Set the font size of the colorbar text
   /**
-   * \param[in] "font_size" Font size
+   * \param[in] font_size Font size
   */
   void setColorbarFontSize( uint font_size );
 
-  //! Set the colormap used in Colorbar/visualization
+  //! Set the colormap used in Colorbar/visualization based on pre-defined colormaps
   /**
-   * \param[in] "colormap_name" Name of a colormap. Valid colormaps are "hot" and "lava".
+   * \param[in] colormap_name Name of a colormap.
+   * \note Valid colormaps are "COLORMAP_HOT", "COLORMAP_COOL", "COLORMAP_LAVA", "COLORMAP_RAINBOW", "COLORMAP_PARULA", "COLORMAP_GRAY".
   */
   void setColormap( Ctable colormap_name );
 
-  //! Set the colormap used in Colorbar/visualization
+  //! Set the colormap used in Colorbar/visualization based on a custom colormap
   /**
-   * \param[in] "colormap_name" Name of a colormap. Valid colormaps are "hot" and "lava".
+   * \param[in] colors Vector of colors defining control points on the colormap.
+   * \param[in] divisions Vector of values defining the normalized coordinates of each color control point on the colormap.
   */
-  void setColormap(Ctable colormap_name, const std::vector<helios::RGBcolor> &colors, const std::vector<float> &divisions );
+  void setColormap(const std::vector<helios::RGBcolor> &colors, const std::vector<float> &divisions );
 
   //! Get the current colormap used in Colorbar/visualization
   Colormap getCurrentColormap() const;
   
   //! Add all geometry from the Context to the visualizer
   /**
-   * \param[in] "context" Pointer to the simulation context
+   * \param[in] context Pointer to the simulation context
    */
   void buildContextGeometry( helios::Context* context_ptr );
 
   //! Add select geometry from the Context to the visualizer by their UUIDs
   /**
-   * \param[in] "context" Pointer to the simulation context
-   * \param[in] "UUIDs" UUIDs of Context primitives to be added to the visualizer
+   * \param[in] context Pointer to the simulation context
+   * \param[in] UUIDs UUIDs of Context primitives to be added to the visualizer
   */
   void buildContextGeometry(helios::Context* context_ptr, const std::vector<uint>& UUIDs );
 
   //! Color primitives from Context by color mapping their `Primitive Data'
   /**
-   * \param[in] "data_name" Name of `Primitive Data'
+   * \param[in] data_name Name of `Primitive Data'
    * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
   */
   void colorContextPrimitivesByData( const char* data_name );
 
   //! Color primitives from Context by color mapping their `Primitive Data'
   /**
-   * \param[in] "data_name" Name of `Primitive Data'
-   * \param[in] "UUIDs" UUID's of primitives to be colored by data
+   * \param[in] data_name Name of `Primitive Data'
+   * \param[in] UUIDs UUID's of primitives to be colored by data
    * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
   */
   void colorContextPrimitivesByData( const char* data_name, const std::vector<uint>& UUIDs );
 
   //! Color primitives from Context by color mapping their `Object Data'
   /**
-   * \param[in] "data_name" Name of `Object Data'
+   * \param[in] data_name Name of `Object Data'
    * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
   */
   void colorContextPrimitivesByObjectData( const char* data_name );
 
   //! Color primitives from Context by color mapping their `Object Data'
   /**
-   * \param[in] "data_name" Name of `Object Data'
-   * \param[in] "ObjIDs" Object ID's of primitives to be colored by object data
+   * \param[in] data_name Name of `Object Data'
+   * \param[in] ObjIDs Object ID's of primitives to be colored by object data
    * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
   */
   void colorContextPrimitivesByObjectData( const char* data_name, const std::vector<uint>& ObjIDs );
 
   //! Color primitives from Context with a random color
   /**
-   * \param[in] "UUIDs" Primitive UUIDs to color randomly
+   * \param[in] UUIDs Primitive UUIDs to color randomly
    * \note Useful for visualizing individual primitives that are part of compound objects
    */
   void colorContextPrimitivesRandomly(const std::vector<uint>& UUIDs );
@@ -852,7 +858,7 @@ public:
 
     //! Update the graphics window based on current geometry, then continue the program, with the option not to display the graphic window
     /** If running a large number of renderings, or running remotely, it can be desirable to not open the graphic window.
-     * \param[in] "hide_window" If false, do not display the graphic window.
+     * \param[in] hide_window If false, do not display the graphic window.
      */
     void plotUpdate( bool hide_window );
 
@@ -861,35 +867,35 @@ public:
   
   //! Print the current graphics window to a JPEG image file
   /**
-   * \param[in] "outfile" Path to file where image should be saved.
+   * \param[in] outfile Path to file where image should be saved.
    * \note If outfile does not have extension `.jpg', it will be appended to the file name.
   */
   void printWindow( const char* outfile );
 
   //! Get R-G-B pixel data in the current display window
   /**
-   * \param[out] "buffer" Pixel data. The data is stored as r-g-b * column * row. So indices (0,1,2) would be the RGB values for row 0 and column 0, indices (3,4,5) would be RGB values for row 0 and column 1, and so on. Thus, buffer is of size 3*width*height.
+   * \param[out] buffer Pixel data. The data is stored as r-g-b * column * row. So indices (0,1,2) would be the RGB values for row 0 and column 0, indices (3,4,5) would be RGB values for row 0 and column 1, and so on. Thus, buffer is of size 3*width*height.
    */
   void getWindowPixelsRGB( uint * buffer );
 
   //! Get depth buffer data for the current display window
   /**
-   * \param[out] "buffer" Distance to nearest object from the camera location.
+   * \param[out] buffer Distance to nearest object from the camera location.
    * \note The function plotDepthMap() must be called prior to getDepthMap().
   */
   void getDepthMap( float * buffer );
 
   //! Get the size of the display window in pixels
   /**
-   * \param[out] "width" Width of the display window in pixels
-   * \param[out] "height" Height of the display window in pixels
+   * \param[out] width Width of the display window in pixels
+   * \param[out] height Height of the display window in pixels
   */
   void getWindowSize( uint &width, uint &height ) const;
 
   //! Get the size of the framebuffer in pixels
   /**
-   * \param[out] "width" Width of the framebuffer in pixels
-   * \param[out] "height" Height of the framebuffer in pixels
+   * \param[out] width Width of the framebuffer in pixels
+   * \param[out] height Height of the framebuffer in pixels
   */
   void getFramebufferSize( uint &width, uint &height ) const;
 

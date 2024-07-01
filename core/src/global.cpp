@@ -82,6 +82,10 @@ vec3 helios::rotatePoint(const vec3& position, const SphericalCoord& rotation ) 
 
 vec3 helios::rotatePoint(const vec3& position, float theta, float phi) {
 
+    if( theta==0.f && phi==0.f ){
+        return position;
+    }
+
   float Ry[3][3], Rz[3][3];
 
   float st = sin(theta);
@@ -134,6 +138,10 @@ vec3 helios::rotatePoint(const vec3& position, float theta, float phi) {
 }
 
 vec3 helios::rotatePointAboutLine( const vec3& point, const vec3& line_base, const vec3& line_direction, float theta) {
+
+    if( theta==0.f ){
+        return point;
+    }
 
   //for reference this was taken from http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
 
@@ -1240,7 +1248,7 @@ bool helios::PNGHasAlpha( const char* filename ){
 
     std::string fn = filename;
     if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ) {
-        helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.");
+        helios_runtime_error("ERROR (PNGHasAlpha): File " + fn + " is not PNG format.");
     }
 
   uint Nchannels;
@@ -1261,16 +1269,16 @@ bool helios::PNGHasAlpha( const char* filename ){
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
   if (!png_ptr){
-      helios_runtime_error("ERROR (read_png_alpha): png_create_read_struct failed.");
+      helios_runtime_error("ERROR (PNGHasAlpha): png_create_read_struct failed.");
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr){
-      helios_runtime_error("ERROR (read_png_alpha): png_create_info_struct failed.");
+      helios_runtime_error("ERROR (PNGHasAlpha): png_create_info_struct failed.");
   }
   
   if (setjmp(png_jmpbuf(png_ptr))){
-      helios_runtime_error("ERROR (read_png_alpha): init_io failed.");
+      helios_runtime_error("ERROR (PNGHasAlpha): init_io failed.");
   }  
 
   png_init_io(png_ptr, fp);
@@ -1355,7 +1363,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr))){
-      helios_runtime_error("ERROR (read_png_alpha): read_image failed.");
+      helios_runtime_error("ERROR (readPNGAlpha): read_image failed.");
   }
 
   row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
@@ -1545,6 +1553,19 @@ void helios::writePNG( const std::string &filename, uint width, uint height, con
   png_destroy_write_struct(&png, &info);
 }
 
+struct jpg_error_mgr {
+
+    struct jpeg_error_mgr pub;	/* "public" fields */
+
+    jmp_buf setjmp_buffer;	/* for return to caller */
+};
+typedef struct jpg_error_mgr * jpg_error_ptr;
+METHODDEF(void) jpg_error_exit (j_common_ptr cinfo){
+    auto myerr = (jpg_error_ptr) cinfo->err;
+    (*cinfo->err->output_message) (cinfo);
+    longjmp(myerr->setjmp_buffer, 1);
+}
+
 void helios::readJPEG( const std::string &filename, uint &width, uint &height, std::vector<helios::RGBcolor> &pixel_data ) {
 
     auto file_extension = getFileExtension(filename);
@@ -1554,12 +1575,21 @@ void helios::readJPEG( const std::string &filename, uint &width, uint &height, s
 
     struct jpeg_decompress_struct cinfo;
 
+    struct jpg_error_mgr jerr;
     FILE * infile;		/* source file */
     JSAMPARRAY buffer;		/*output row buffer */
     int row_stride;
 
     if ((infile = fopen(filename.c_str(), "rb")) == nullptr ) {
         throw (std::runtime_error("ERROR (Context::readJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it."));
+    }
+
+    cinfo.err = jpeg_std_error(&jerr.pub);
+    jerr.pub.error_exit = jpg_error_exit;
+    if (setjmp(jerr.setjmp_buffer)) {
+        jpeg_destroy_decompress(&cinfo);
+        fclose(infile);
+        return;
     }
 
     jpeg_create_decompress(&cinfo);
@@ -1590,7 +1620,7 @@ void helios::readJPEG( const std::string &filename, uint &width, uint &height, s
         ba=buffer[0];
 
         for (int col=0; col < row_stride; col+=3){
-            pixel_data.at(row*width+col) = make_RGBcolor(ba[row]/255.f,ba[row+1]/255.f,ba[row+2]/255.f);
+            pixel_data.at(row*width+col/3.f) = make_RGBcolor(ba[row]/255.f,ba[row+1]/255.f,ba[row+2]/255.f);
         }
 
         row++;
@@ -1601,6 +1631,46 @@ void helios::readJPEG( const std::string &filename, uint &width, uint &height, s
     jpeg_destroy_decompress(&cinfo);
 
     fclose(infile);
+
+}
+
+helios::int2 helios::getImageResolutionJPEG( const std::string &filename ){
+
+    auto file_extension = getFileExtension(filename);
+    if ( file_extension != ".jpg" && file_extension != ".JPG" && file_extension != ".jpeg" && file_extension != ".JPEG" ) {
+        throw (std::runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " is not JPEG format."));
+    }
+
+    struct jpeg_decompress_struct cinfo;
+
+    struct jpg_error_mgr jerr;
+    FILE * infile;		/* source file */
+    JSAMPARRAY buffer;		/*output row buffer */
+    int row_stride;
+
+    if ((infile = fopen(filename.c_str(), "rb")) == nullptr ) {
+        throw (std::runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it."));
+    }
+
+    cinfo.err = jpeg_std_error(&jerr.pub);
+    jerr.pub.error_exit = jpg_error_exit;
+    if (setjmp(jerr.setjmp_buffer)) {
+        jpeg_destroy_decompress(&cinfo);
+        fclose(infile);
+        return {0,0};
+    }
+
+    jpeg_create_decompress(&cinfo);
+
+    jpeg_stdio_src(&cinfo, infile);
+
+    (void) jpeg_read_header(&cinfo, TRUE);
+    (void) jpeg_start_decompress(&cinfo);
+
+    row_stride = cinfo.output_width * cinfo.output_components;
+    buffer = (*cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+
+    return make_int2(cinfo.output_width,cinfo.output_height);
 
 }
 

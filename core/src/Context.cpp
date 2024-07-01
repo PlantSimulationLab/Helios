@@ -21,8 +21,6 @@ Context::Context(){
 
     //---- ALL DEFAULT VALUES ARE SET HERE ----//
 
-    iscontextinitialized=true;
-
     sim_date = make_Date(1,6,2000);
 
     sim_time = make_Time(12,0);
@@ -93,6 +91,9 @@ Texture::Texture( const char* texture_file ){
 
     if( hastransparencychannel ){
         transparencydata = readPNGAlpha( filename );
+        image_resolution = make_int2(int(transparencydata.front().size()),int(transparencydata.size()));
+    }else{
+        image_resolution = getImageResolutionJPEG( texture_file );
     }
 
     //-------- determine solid fraction --------------//
@@ -122,8 +123,8 @@ std::string Texture::getTextureFile() const{
     return filename;
 }
 
-helios::int2 Texture::getSize()const {
-    return make_int2(int(transparencydata.front().size()),int(transparencydata.size()));
+helios::int2 Texture::getImageResolution()const {
+    return image_resolution;
 }
 
 bool Texture::hasTransparencyChannel() const{
@@ -387,7 +388,7 @@ void Patch::calculateSolidFraction( const std::map<std::string,Texture> &texture
     const std::vector<std::vector<bool> >* alpha = textures.at(texturefile).getTransparencyData();
     int A = 0;
     int At = 0;
-    int2 sz = textures.at(texturefile).getSize();
+    int2 sz = textures.at(texturefile).getImageResolution();
     int2 uv_min( std::max(0,(int)roundf(uv.at(0).x*float(sz.x))), std::max(0,(int)roundf((1.f-uv.at(2).y)*float(sz.y))) );
     int2 uv_max( std::min(sz.x-1,(int)roundf(uv.at(2).x*float(sz.x))), std::min(sz.y-1,(int)roundf((1.f-uv.at(0).y)*float(sz.y))) );
     for( int j=uv_min.y; j<uv_max.y; j++ ){
@@ -413,7 +414,7 @@ void Triangle::calculateSolidFraction( const std::map<std::string,Texture> &text
 
   if( textures.at(texturefile).hasTransparencyChannel() ){
     const std::vector<std::vector<bool> >* alpha = textures.at(texturefile).getTransparencyData();
-    int2 sz = textures.at(texturefile).getSize();
+    int2 sz = textures.at(texturefile).getImageResolution();
     int2 uv_min( std::max(0,(int)round(fminf(fminf(uv.at(0).x,uv.at(1).x),uv.at(2).x)*float(sz.x))), std::max(0,(int)round(fmin(fminf(uv.at(0).y,uv.at(1).y),uv.at(2).y)*float(sz.y))) );
     int2 uv_max( std::min(sz.x-1,(int)round(fmaxf(fmaxf(uv.at(0).x,uv.at(1).x),uv.at(2).x)*float(sz.x))), std::min(sz.y-1,(int)round(fmaxf(fmaxf(uv.at(0).y,uv.at(1).y),uv.at(2).y)*float(sz.y))) );
     int A = 0;
@@ -458,7 +459,7 @@ bool Triangle::edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const 
 
 void Primitive::applyTransform( float (&T)[16] ){
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Primitive::applyTransform): Cannot transform individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Primitive::applyTransform): Cannot transform individual primitives within a compound object. Use the setter function for objects." << std::endl;
         return;
     }
 
@@ -468,7 +469,13 @@ void Primitive::applyTransform( float (&T)[16] ){
 void Primitive::scale( const vec3& S ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Primitive::scale): Cannot scale individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Primitive::scale): Cannot scale individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+    if( S.x==0 || S.y==0 || S.z==0 ){
+        helios_runtime_error( "ERROR (Primitive::scale): Scaling factor cannot be zero." );
+    }
+    if( S.x==1 && S.y==1 && S.z==1 ){
         return;
     }
 
@@ -480,7 +487,11 @@ void Primitive::scale( const vec3& S ){
 void Primitive::translate( const helios::vec3& shift ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Primitive::translate): Cannot translate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Primitive::translate): Cannot translate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+
+    if( shift==nullorigin ){
         return;
     }
 
@@ -489,24 +500,27 @@ void Primitive::translate( const helios::vec3& shift ){
     matmult(T,transform,transform);
 }
 
-void Patch::rotate( float rot, const char* axis ){
+void Patch::rotate(float rotation_radians, const char* rotation_axis_xyz_string ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+    if(rotation_radians == 0 ){
         return;
     }
 
-    if( strcmp(axis,"z")==0 ){
+    if(strcmp(rotation_axis_xyz_string, "z") == 0 ){
         float Rz[16];
-        makeRotationMatrix(rot,"z",Rz);
+        makeRotationMatrix(rotation_radians, "z", Rz);
         matmult(Rz,transform,transform);
-    }else if( strcmp(axis,"y")==0 ){
+    }else if(strcmp(rotation_axis_xyz_string, "y") == 0 ){
         float Ry[16];
-        makeRotationMatrix(rot,"y",Ry);
+        makeRotationMatrix(rotation_radians, "y", Ry);
         matmult(Ry,transform,transform);
-    }else if( strcmp(axis,"x")==0 ){
+    }else if(strcmp(rotation_axis_xyz_string, "x") == 0 ){
         float Rx[16];
-        makeRotationMatrix(rot,"x",Rx);
+        makeRotationMatrix(rotation_radians, "x", Rx);
         matmult(Rx,transform,transform);
     }else{
         helios_runtime_error( "ERROR (Patch::rotate): Rotation axis should be one of x, y, or z." );
@@ -514,48 +528,57 @@ void Patch::rotate( float rot, const char* axis ){
 
 }
 
-void Patch::rotate( float rot, const helios::vec3& axis ){
+void Patch::rotate(float rotation_radians, const helios::vec3& rotation_axis_vector ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+    if(rotation_radians == 0 ){
         return;
     }
 
     float R[16];
-    makeRotationMatrix(rot,axis,R);
+    makeRotationMatrix(rotation_radians, rotation_axis_vector, R);
     matmult(R,transform,transform);
 }
 
-void Patch::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
+void Patch::rotate(float rotation_radians, const helios::vec3& origin, const helios::vec3& rotation_axis_vector ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+    if(rotation_radians == 0 ){
         return;
     }
 
     float R[16];
-    makeRotationMatrix(rot,origin,axis,R);
+    makeRotationMatrix(rotation_radians, origin, rotation_axis_vector, R);
     matmult(R,transform,transform);
 }
 
-void Triangle::rotate( float rot, const char* axis ){
+void Triangle::rotate(float rotation_radians, const char* rotation_axis_xyz_string ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+    if(rotation_radians == 0 ){
         return;
     }
 
-    if( strcmp(axis,"z")==0 ){
+    if(strcmp(rotation_axis_xyz_string, "z") == 0 ){
         float Rz[16];
-        makeRotationMatrix(rot,"z",Rz);
+        makeRotationMatrix(rotation_radians, "z", Rz);
         matmult(Rz,transform,transform);
-    }else if( strcmp(axis,"y")==0 ){
+    }else if(strcmp(rotation_axis_xyz_string, "y") == 0 ){
         float Ry[16];
-        makeRotationMatrix(rot,"y",Ry);
+        makeRotationMatrix(rotation_radians, "y", Ry);
         matmult(Ry,transform,transform);
-    }else if( strcmp(axis,"x")==0 ){
+    }else if(strcmp(rotation_axis_xyz_string, "x") == 0 ){
         float Rx[16];
-        makeRotationMatrix(rot,"x",Rx);
+        makeRotationMatrix(rotation_radians, "x", Rx);
         matmult(Rx,transform,transform);
     }else{
         helios_runtime_error( "ERROR (Triangle::rotate): Rotation axis should be one of x, y, or z." );
@@ -563,49 +586,58 @@ void Triangle::rotate( float rot, const char* axis ){
 
 }
 
-void Triangle::rotate( float rot, const helios::vec3& axis ){
+void Triangle::rotate(float rotation_radians, const helios::vec3& rotation_axis_vector ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+    if(rotation_radians == 0 ){
         return;
     }
 
     float R[16];
-    makeRotationMatrix(rot,axis,R);
+    makeRotationMatrix(rotation_radians, rotation_axis_vector, R);
     matmult(R,transform,transform);
 }
 
-void Triangle::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
+void Triangle::rotate(float rotation_radians, const helios::vec3& origin, const helios::vec3& rotation_axis_vector ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+    if(rotation_radians == 0 ){
         return;
     }
 
     float R[16];
-    makeRotationMatrix(rot,origin,axis,R);
+    makeRotationMatrix(rotation_radians, origin, rotation_axis_vector, R);
     matmult(R,transform,transform);
 }
 
-void Voxel::rotate( float rot, const char* axis ){
+void Voxel::rotate(float rotation_radians, const char* rotation_axis_xyz_string ){
 
     if( parent_object_ID!=0 ){
-        std::cout << "WARNING (Voxel::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        std::cerr << "WARNING (Voxel::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }
+    if(rotation_radians == 0 ){
         return;
     }
 
     float Rz[16];
-    makeRotationMatrix(rot,"z",Rz);
+    makeRotationMatrix(rotation_radians, "z", Rz);
     matmult(Rz,transform,transform);
 
 }
 
-void Voxel::rotate( float rot, const helios::vec3& axis ){
-    std::cout << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
+void Voxel::rotate(float rotation_radians, const helios::vec3& rotation_axis_vector ){
+    std::cerr << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
 }
 
-void Voxel::rotate( float rot, const helios::vec3& origin, const helios::vec3& axis ){
-    std::cout << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
+void Voxel::rotate(float rotation_radians, const helios::vec3& origin, const helios::vec3& rotation_axis_vector ){
+    std::cerr << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
 }
 
 void Triangle::makeTransformationMatrix( const helios::vec3& vert0, const helios::vec3& vert1, const helios::vec3& vert2 ){
@@ -913,9 +945,9 @@ Triangle::Triangle( const helios::vec3& a_vertex0, const helios::vec3& a_vertex1
 
 }
 
-vec3 Triangle::getVertex( int number ){
+vec3 Triangle::getVertex( int vertex_index ){
 
-    if( number<0 || number>2 ){
+    if(vertex_index < 0 || vertex_index > 2 ){
         helios_runtime_error("ERROR (Context::getVertex): vertex index must be 1, 2, or 3.");
     }
 
@@ -926,9 +958,9 @@ vec3 Triangle::getVertex( int number ){
 
     vec3 vertex;
 
-    vertex.x = transform[0] * Y[number].x + transform[1] * Y[number].y + transform[2] * Y[number].z + transform[3];
-    vertex.y = transform[4] * Y[number].x + transform[5] * Y[number].y + transform[6] * Y[number].z + transform[7];
-    vertex.z = transform[8] * Y[number].x + transform[9] * Y[number].y + transform[10] * Y[number].z + transform[11];
+    vertex.x = transform[0] * Y[vertex_index].x + transform[1] * Y[vertex_index].y + transform[2] * Y[vertex_index].z + transform[3];
+    vertex.y = transform[4] * Y[vertex_index].x + transform[5] * Y[vertex_index].y + transform[6] * Y[vertex_index].z + transform[7];
+    vertex.z = transform[8] * Y[vertex_index].x + transform[9] * Y[vertex_index].y + transform[10] * Y[vertex_index].z + transform[11];
 
     return vertex;
 
@@ -1366,6 +1398,10 @@ void Context::rotatePrimitive(uint UUID, float rot, const char* axis ){
 
 void Context::rotatePrimitive( const std::vector<uint>& UUIDs, float rot, const char* axis ){
 
+    if( rot==0 ){
+        return;
+    }
+
     float T[16];
     if( strcmp(axis,"z")==0 ){
         makeRotationMatrix(rot,"z",T);
@@ -1379,7 +1415,7 @@ void Context::rotatePrimitive( const std::vector<uint>& UUIDs, float rot, const 
 
     for( uint UUID : UUIDs){
         if( strcmp(axis,"z")!=0 && getPrimitivePointer_private(UUID)->getType()==PRIMITIVE_TYPE_VOXEL ){
-            std::cout << "WARNING (Context::rotatePrimitive): Voxels can only be rotate about the z-axis. Ignoring this rotation." << std::endl;
+            std::cerr << "WARNING (Context::rotatePrimitive): Voxels can only be rotate about the z-axis. Ignoring this rotation." << std::endl;
         }
         getPrimitivePointer_private(UUID)->applyTransform(T);
     }
@@ -1391,12 +1427,16 @@ void Context::rotatePrimitive(uint UUID, float rot, const helios::vec3& axis ){
 
 void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const vec3 &axis ){
 
+    if( rot==0 ){
+        return;
+    }
+
     float T[16];
     makeRotationMatrix(rot,axis,T);
 
     for( uint UUID : UUIDs){
         if( getPrimitivePointer_private(UUID)->getType()==PRIMITIVE_TYPE_VOXEL ){
-            std::cout << "WARNING (Context::rotatePrimitive): Voxels can only be rotate about the z-axis. Ignoring this rotation." << std::endl;
+            std::cerr << "WARNING (Context::rotatePrimitive): Voxels can only be rotate about the z-axis. Ignoring this rotation." << std::endl;
         }
         getPrimitivePointer_private(UUID)->applyTransform(T);
     }
@@ -1408,12 +1448,16 @@ void Context::rotatePrimitive( uint UUID, float rot, const helios::vec3& origin,
 
 void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const helios::vec3& origin, const vec3 &axis ){
 
+    if( rot==0 ){
+        return;
+    }
+
     float T[16];
     makeRotationMatrix(rot,origin,axis,T);
 
     for( uint UUID : UUIDs){
         if( getPrimitivePointer_private(UUID)->getType()==PRIMITIVE_TYPE_VOXEL ){
-            std::cout << "WARNING (Context::rotatePrimitive): Voxels can only be rotate about the z-axis. Ignoring this rotation." << std::endl;
+            std::cerr << "WARNING (Context::rotatePrimitive): Voxels can only be rotate about the z-axis. Ignoring this rotation." << std::endl;
         }
         getPrimitivePointer_private(UUID)->applyTransform(T);
     }
@@ -1424,6 +1468,10 @@ void Context::scalePrimitive(uint UUID, const helios::vec3& S ){
 }
 
 void Context::scalePrimitive( const std::vector<uint>& UUIDs, const helios::vec3& S ){
+
+    if( S.x==1 && S.y==1 && S.z==1 ){
+        return;
+    }
 
     float T[16];
     makeScaleMatrix(S,T);
@@ -1742,7 +1790,7 @@ void Context::addTimeseriesData(const char* label, float value, const Date &date
             //data should be inserted somewhere in the middle of timeseries
             for( uint t=0; t<N-1; t++ ){
                 if( date_value==timeseries_datevalue[label].at(t) ){
-                    std::cout << "WARNING (Context::addTimeseriesData): Skipping duplicate timeseries date/time." << std::endl;
+                    std::cerr << "WARNING (Context::addTimeseriesData): Skipping duplicate timeseries date/time." << std::endl;
                     continue;
                 }
                 if( date_value>timeseries_datevalue[label].at(t) && date_value<timeseries_datevalue[label].at(t+1) ){
@@ -1788,7 +1836,7 @@ float Context::queryTimeseriesData(const char* label, const Date &date, const Ti
     }
 
     if( timeseries_datevalue.at(label).empty() ){
-        std::cout << "WARNING (queryTimeseriesData): timeseries " << label << " does not contain any data." << std::endl;
+        std::cerr << "WARNING (queryTimeseriesData): timeseries " << label << " does not contain any data." << std::endl;
         return 0;
     }else if( timeseries_datevalue.at(label).size() == 1 ){
         return timeseries_data.at(label).front();
@@ -2028,7 +2076,7 @@ void Context::cropDomainX(const vec2 &xbounds ){
     }
 
     if(getPrimitiveCount() == 0 ){
-        std::cout << "WARNING (cropDomainX): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
+        std::cerr << "WARNING (Context::cropDomainX): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
     }
 
 }
@@ -2053,7 +2101,7 @@ void Context::cropDomainY(const vec2 &ybounds ){
     }
 
     if(getPrimitiveCount() == 0 ){
-        std::cout << "WARNING (cropDomainY): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
+        std::cerr << "WARNING (Context::cropDomainY): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
     }
 
 }
@@ -2078,12 +2126,12 @@ void Context::cropDomainZ(const vec2 &zbounds ){
     }
 
     if(getPrimitiveCount() == 0 ){
-        std::cout << "WARNING (cropDomainZ): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
+        std::cerr << "WARNING (Context::cropDomainZ): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
     }
 
 }
 
-void Context::cropDomain(const std::vector<uint> &UUIDs, const vec2 &xbounds, const vec2 &ybounds, const vec2 &zbounds ){
+void Context::cropDomain( std::vector<uint> &UUIDs, const vec2 &xbounds, const vec2 &ybounds, const vec2 &zbounds ){
 
     std::vector<vec3> vertices;
 
@@ -2103,13 +2151,16 @@ void Context::cropDomain(const std::vector<uint> &UUIDs, const vec2 &xbounds, co
     }
 
     if( delete_count==UUIDs.size() ){
-        std::cout << "WARNING (cropDomain): No specified primitives were entirely inside cropped area, and thus all specified primitives were deleted." << std::endl;
+        std::cerr << "WARNING (Context::cropDomain): No specified primitives were entirely inside cropped area, and thus all specified primitives were deleted." << std::endl;
     }
+
+    cleanDeletedUUIDs( UUIDs );
 
 }
 
 void Context::cropDomain(const vec2 &xbounds, const vec2 &ybounds, const vec2 &zbounds ){
-    cropDomain( getAllUUIDs(), xbounds, ybounds, zbounds );
+    std::vector<uint> UUIDs = getAllUUIDs();
+    cropDomain( UUIDs, xbounds, ybounds, zbounds );
 }
 
 uint CompoundObject::getObjectID() const{
@@ -2224,6 +2275,10 @@ std::string CompoundObject::getTextureFile() const{
 
 void CompoundObject::translate( const helios::vec3& shift ){
 
+    if( shift==nullorigin ){
+        return;
+    }
+
     float T[16], T_prim[16];
     makeTranslationMatrix(shift,T);
 
@@ -2242,11 +2297,15 @@ void CompoundObject::translate( const helios::vec3& shift ){
 
 }
 
-void CompoundObject::rotate( float rot, const char* axis ){
+void CompoundObject::rotate(float rotation_radians, const char* rotation_axis_xyz_string ){
 
-    if( strcmp(axis,"z")==0 ){
+    if(rotation_radians == 0 ){
+        return;
+    }
+
+    if(strcmp(rotation_axis_xyz_string, "z") == 0 ){
         float Rz[16], Rz_prim[16];
-        makeRotationMatrix(-rot,"z",Rz);
+        makeRotationMatrix(-rotation_radians, "z", Rz);
         matmult(Rz,transform,transform);
 
         for( uint UUID : UUIDs){
@@ -2256,9 +2315,9 @@ void CompoundObject::rotate( float rot, const char* axis ){
                 context->setPrimitiveTransformationMatrix( UUID,Rz_prim);
             }
         }
-    }else if( strcmp(axis,"y")==0 ){
+    }else if(strcmp(rotation_axis_xyz_string, "y") == 0 ){
         float Ry[16], Ry_prim[16];
-        makeRotationMatrix(rot,"y",Ry);
+        makeRotationMatrix(rotation_radians, "y", Ry);
         matmult(Ry,transform,transform);
         for( uint UUID : UUIDs){
             if( context->doesPrimitiveExist( UUID ) ){
@@ -2267,9 +2326,9 @@ void CompoundObject::rotate( float rot, const char* axis ){
                 context->setPrimitiveTransformationMatrix( UUID,Ry_prim);
             }
         }
-    }else if( strcmp(axis,"x")==0 ){
+    }else if(strcmp(rotation_axis_xyz_string, "x") == 0 ){
         float Rx[16], Rx_prim[16];
-        makeRotationMatrix(rot,"x",Rx);
+        makeRotationMatrix(rotation_radians, "x", Rx);
         matmult(Rx,transform,transform);
         for( uint UUID : UUIDs){
             if( context->doesPrimitiveExist( UUID ) ){
@@ -2284,10 +2343,14 @@ void CompoundObject::rotate( float rot, const char* axis ){
 
 }
 
-void CompoundObject::rotate( float rot, const helios::vec3& axis ){
+void CompoundObject::rotate(float rotation_radians, const helios::vec3& rotation_axis_vector ){
+
+    if(rotation_radians == 0 ){
+        return;
+    }
 
     float R[16], R_prim[16];
-    makeRotationMatrix(rot,axis,R);
+    makeRotationMatrix(rotation_radians, rotation_axis_vector, R);
     matmult(R,transform,transform);
 
     for( uint UUID : UUIDs){
@@ -2304,10 +2367,14 @@ void CompoundObject::rotate( float rot, const helios::vec3& axis ){
 
 }
 
-void CompoundObject::rotate( float rot, const helios::vec3&  origin, const helios::vec3& axis ){
+void CompoundObject::rotate(float rotation_radians, const helios::vec3&  origin, const helios::vec3& rotation_axis_vector ){
+
+    if(rotation_radians == 0 ){
+        return;
+    }
 
     float R[16], R_prim[16];
-    makeRotationMatrix(rot,origin,axis,R);
+    makeRotationMatrix(rotation_radians, origin, rotation_axis_vector, R);
     matmult(R,transform,transform);
 
     for( uint UUID : UUIDs){
@@ -2325,6 +2392,10 @@ void CompoundObject::rotate( float rot, const helios::vec3&  origin, const helio
 }
 
 void CompoundObject::scale( const helios::vec3 &scale ){
+
+    if( scale.x==1.f && scale.y==1.f && scale.z==1.f ){
+        return;
+    }
 
     float T[16], T_prim[16];
     makeScaleMatrix( scale, T);
@@ -2384,6 +2455,36 @@ bool Context::areObjectPrimitivesComplete( uint objID ) const{
    return getObjectPointer(objID)->arePrimitivesComplete();
 }
 
+void Context::cleanDeletedObjectIDs( std::vector<uint> &objIDs ) const {
+    for (int i = objIDs.size() - 1; i >= 0; i--) {
+        if (!doesObjectExist(objIDs.at(i))) {
+            objIDs.erase(objIDs.begin() + i);
+        }
+    }
+}
+
+void Context::cleanDeletedObjectIDs( std::vector<std::vector<uint>> &objIDs ) const{
+    for( int j=objIDs.size()-1; j>=0; j-- ){
+        for (int i = objIDs.at(j).size() - 1; i >= 0; i--) {
+            if (!doesObjectExist(objIDs.at(j).at(i))) {
+                objIDs.at(j).erase( objIDs.at(j).begin() + i);
+            }
+        }
+    }
+}
+
+void Context::cleanDeletedObjectIDs( std::vector<std::vector<std::vector<uint>>> &objIDs ) const{
+    for( int k=objIDs.size()-1; k>=0; k-- ) {
+        for (int j = objIDs.at(k).size() - 1; j >= 0; j--) {
+            for (int i = objIDs.at(k).at(j).size() - 1; i >= 0; i--) {
+                if (!doesObjectExist(objIDs.at(k).at(j).at(i))) {
+                    objIDs.at(k).at(j).erase(objIDs.at(k).at(j).begin() + i);
+                }
+            }
+        }
+    }
+}
+
 CompoundObject* Context::getObjectPointer( uint ObjID ) const{
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
@@ -2419,7 +2520,7 @@ void Context::deleteObject(const std::vector<uint> &ObjIDs ){
 void Context::deleteObject(uint ObjID ){
     
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (deleteObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
+        helios_runtime_error("ERROR (Context::deleteObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
     
     CompoundObject* obj = objects.at(ObjID);
@@ -2452,7 +2553,7 @@ std::vector<uint> Context::copyObject(const std::vector<uint> &ObjIDs ){
 uint Context::copyObject(uint ObjID ){
 
     if( objects.find(ObjID) == objects.end() ){
-        helios_runtime_error("ERROR (copyObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
+        helios_runtime_error("ERROR (Context::copyObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 
     ObjectType type = objects.at(ObjID)->getObjectType();
@@ -2631,7 +2732,7 @@ std::vector<uint> Context::filterObjectsByData( const std::vector<uint> &IDs, co
                     }
                 }
             }else{
-                std::cout << "WARNING: Object data not of type UINT, INT, or FLOAT. Filtering for other types not yet supported." << std::endl;
+                std::cerr << "WARNING: Object data not of type UINT, INT, or FLOAT. Filtering for other types not yet supported." << std::endl;
             }
 
 
@@ -2736,13 +2837,13 @@ float Context::getTileObjectAreaRatio(const uint &ObjectID) const{
     
     if( getObjectPointer(ObjectID)->getObjectType() != OBJECT_TYPE_TILE )
     {
-        std::cerr << "WARNING (getTileObjectAreaRatio): ObjectID " << ObjectID<< " is not a tile object. Skipping..." << std::endl;
+        std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjectID<< " is not a tile object. Skipping..." << std::endl;
         return 0.0;
         
     }else{
         
         if(!(getObjectPointer(ObjectID)->arePrimitivesComplete())){
-            std::cerr << "WARNING (getTileObjectAreaRatio): ObjectID " << ObjectID << " is missing primitives. Area ratio calculated is area of non-missing subpatches divided by the area of an individual subpatch." << std::endl;
+            std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjectID << " is missing primitives. Area ratio calculated is area of non-missing subpatches divided by the area of an individual subpatch." << std::endl;
         }    
         
         int2 subdiv = getTileObjectPointer(ObjectID)->getSubdivisionCount();
@@ -2786,9 +2887,9 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
         //check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
         if( getObjectPointer(OBJID)->getObjectType() != OBJECT_TYPE_TILE )
         {
-            std::cerr << "WARNING (setTileObjectSubdivisionCount): ObjectID " << OBJID << " is not a tile object. Skipping..." << std::endl;
+            std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << OBJID << " is not a tile object. Skipping..." << std::endl;
         }else if(!(getObjectPointer(OBJID)->arePrimitivesComplete())){
-            std::cerr << "WARNING (setTileObjectSubdivisionCount): ObjectID " << OBJID << " is missing primitives. Skipping..." << std::endl;
+            std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << OBJID << " is missing primitives. Skipping..." << std::endl;
         }else{
             //test if the tile is textured and push into two different vectors
             Patch* p = getPatchPointer_private(getObjectPointer(OBJID)->getPrimitiveUUIDs().at(0));
@@ -2913,9 +3014,9 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
         //check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
         if( getObjectPointer(OBJID)->getObjectType() != OBJECT_TYPE_TILE )
         {
-            std::cerr << "WARNING (setTileObjectSubdivisionCount): ObjectID " << OBJID << " is not a tile object. Skipping..." << std::endl;
+            std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << OBJID << " is not a tile object. Skipping..." << std::endl;
         }else if(!(getObjectPointer(OBJID)->arePrimitivesComplete())){
-            std::cerr << "WARNING (setTileObjectSubdivisionCount): ObjectID " << OBJID << " is missing primitives. Skipping..." << std::endl;
+            std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << OBJID << " is missing primitives. Skipping..." << std::endl;
         }else{
             //test if the tile is textured and push into two different vectors
             Patch* p = getPatchPointer_private(getObjectPointer(OBJID)->getPrimitiveUUIDs().at(0));
@@ -4008,10 +4109,13 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 
     addTexture( texturefile );
     const std::vector<std::vector<bool> >* alpha;
-    int2 sz;
     if( textures.at(texturefile).hasTransparencyChannel() ){
         alpha = textures.at(texturefile).getTransparencyData();
-        sz = textures.at(texturefile).getSize();
+    }
+
+    int2 sz = textures.at(texturefile).getImageResolution();
+    if( subdiv.x>=sz.x || subdiv.y>=sz.y ){
+        helios_runtime_error("ERROR (Context::addTileObject): The resolution of the texture image '" + std::string(texturefile) + "' is lower than the number of tile subdivisions. Increase resolution of the texture image.");
     }
 
     for( uint j=0; j<subdiv.y; j++ ){
@@ -5230,11 +5334,11 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
     addTexture( texturefile );
     std::vector<std::vector<bool> > alpha;
-    int2 sz = textures.at(texturefile).getSize();
     if( textures.at(texturefile).hasTransparencyChannel() ){
         alpha = *textures.at(texturefile).getTransparencyData();
     }
 
+    int2 sz = textures.at(texturefile).getImageResolution();
     if( subdiv.x>=sz.x || subdiv.y>=sz.y ){
         helios_runtime_error("ERROR (Context::addTile): The resolution of the texture image '" + std::string(texturefile) + "' is lower than the number of tile subdivisions. Increase resolution of the texture image.");
     }
@@ -6065,7 +6169,7 @@ void Context::colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, c
   for( uint UUID : UUIDs ){
 
     if( !doesPrimitiveExist(UUID) ){
-      std::cout << "WARNING (Context::colorPrimitiveDataPseudocolor): primitive for UUID " << std::to_string(UUID) << " does not exist. Skipping this primitive." << std::endl;
+      std::cerr << "WARNING (Context::colorPrimitiveDataPseudocolor): primitive for UUID " << std::to_string(UUID) << " does not exist. Skipping this primitive." << std::endl;
       continue;
     }
 
@@ -6073,7 +6177,7 @@ void Context::colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, c
     if( doesPrimitiveDataExist(UUID,primitive_data.c_str()) ) {
 
       if( getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_FLOAT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_INT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_UINT && getPrimitiveDataType(UUID,primitive_data.c_str())!=HELIOS_TYPE_DOUBLE  ){
-        std::cout << "WARNING (Context::colorPrimitiveDataPseudocolor): Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive." << std::endl;
+        std::cerr << "WARNING (Context::colorPrimitiveDataPseudocolor): Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive." << std::endl;
         continue;
       }
 
@@ -6163,7 +6267,7 @@ void Context::colorPrimitiveByDataPseudocolor( const std::vector<uint> &UUIDs, c
 std::vector<RGBcolor> Context::generateColormap( const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors ){
 
   if( Ncolors>9999 ){
-    std::cout << "WARNING (Context::generateColormapTextures): Truncating number of color map textures to maximum value of 9999." << std::endl;
+    std::cerr << "WARNING (Context::generateColormap): Truncating number of color map textures to maximum value of 9999." << std::endl;
   }
 
   if( ctable.size()!=cfrac.size() ){
@@ -6560,7 +6664,7 @@ void Context::setPrimitiveTextureFile( uint UUID, const std::string &texturefile
 helios::int2 Context::getPrimitiveTextureSize( uint UUID ) const{
     std::string texturefile = getPrimitivePointer_private(UUID)->getTextureFile();
     if( !texturefile.empty() && textures.find(texturefile)!=textures.end() ){
-        return textures.at(texturefile).getSize();
+        return textures.at(texturefile).getImageResolution();
     }
     return make_int2(0,0);
 }

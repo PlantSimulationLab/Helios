@@ -17,7 +17,6 @@
 #define PLANT_ARCHITECTURE
 
 #include "Context.h"
-#include <random>
 #include <utility>
 
 //forward declarations of classes/structs
@@ -711,11 +710,14 @@ public:
     std::vector<std::vector<helios::vec3>> petiole_vertices; //first index is petiole within internode, second index is tube segment within petiole
     std::vector<std::vector<helios::vec3>> leaf_bases; //first index is petiole within internode, second index is leaf within petiole
     std::vector<std::vector<std::vector<helios::vec3>>> inflorescence_bases; //first index is the petiole within internode, second index is the floral bud, third index is flower/fruit within peduncle/rachis
-    float internode_length;
+    float internode_length, internode_pitch, internode_phyllotactic_angle;
 
     std::vector<float> internode_radii; //index is segment within internode
     std::vector<std::vector<float>> petiole_radii; //first index is petiole within internode, second index is segment within petiole
     std::vector<float> petiole_length; //index is petiole within internode
+    float petiole_pitch;
+    std::vector<float> leaf_size_max; //first index is petiole/leaf within internode
+    std::vector<std::vector<AxisRotation>> leaf_rotation; //first index is petiole within internode, second index is leaf within petiole
 
     std::vector<helios::RGBcolor> internode_colors;
     std::vector<helios::RGBcolor> petiole_colors;
@@ -759,7 +761,7 @@ protected:
 struct Shoot{
 
     Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node, uint parent_petiole_index, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number,
-          float internode_length_shoot_initial, ShootParameters shoot_params, const std::string &shoot_type_label, PlantArchitecture *plant_architecture_ptr);
+          float internode_length_shoot_initial, const ShootParameters& shoot_params, std::string shoot_type_label, PlantArchitecture *plant_architecture_ptr);
 
     void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
@@ -847,6 +849,9 @@ public:
      */
     explicit PlantArchitecture( helios::Context* context_ptr );
 
+    //! Unit test routines
+    static int selfTest();
+
     // ********* Methods for Building Plants from Existing Library ********* //
 
     //! Load an existing plant model from the library
@@ -910,6 +915,18 @@ public:
      * \return ID of the new plant instance.
      */
     uint duplicatePlantInstance(uint plantID, const helios::vec3 &base_position, const AxisRotation &base_rotation, float current_age);
+
+    //! Delete an existing plant instance
+    /**
+     * \param[in] plantID ID of the plant instance to be deleted.
+     */
+    void deletePlantInstance(uint plantID);
+
+    //! Delete multiple existing plant instances
+    /**
+     * \param[in] plantIDs IDs of the plant instances to be deleted.
+     */
+    void deletePlantInstance( const std::vector<uint> &plantIDs );
 
     //! Specify the threshold values for plant phenological stages
     /**
@@ -1214,5 +1231,6 @@ protected:
 
 };
 
+#include "Assets.h"
 
 #endif //PLANT_ARCHITECTURE

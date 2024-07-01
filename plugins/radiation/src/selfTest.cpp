@@ -906,7 +906,7 @@ int RadiationModel::selfTest(){
     radiation_9.disableEmission("direct");
     radiation_9.setDirectRayCount("direct",Ndirect_9);
     theta_s = 0.2*M_PI;
-    ID = radiation_9.addCollimatedRadiationSource( make_SphericalCoord(0.5f*float(M_PI)-theta_s,0.f) );
+    ID = radiation_9.addSunSphereRadiationSource( make_SphericalCoord(0.5f*float(M_PI)-theta_s,0.f) );
     radiation_9.setSourceFlux(ID,"direct",1.f/cosf(theta_s));
 
     radiation_9.addRadiationBand("diffuse");

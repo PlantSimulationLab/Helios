@@ -2,8 +2,6 @@
 #ifndef HELIOS_ASSETS_H
 #define HELIOS_ASSETS_H
 
-#include "PlantArchitecture.h"
-
 uint buildGenericLeafPrototype(helios::Context *context_ptr, uint subdivisions, const std::string &leaf_texture, float leaf_aspect_ratio, float midrib_fold_fraction, float x_curvature, float y_curvature, float petiole_roll, float wave_period, float wave_amplitude);
 
 uint AlmondLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes );

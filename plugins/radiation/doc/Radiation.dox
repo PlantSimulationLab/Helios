@@ -290,7 +290,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <pre><code> float eps = 0.9; //emissivity value
  context.setPrimitiveData( UUID, "emissivity_LW", eps);</code></pre></div>
 
- Note that you can also set the reflectivity and transmissivity for a band with emission. It is required that \f$\rho+\tau+\varepsilon=0\f$ in order to satisfy conservation of energy. If only the emissivity is set and reflectivity and transmissivity are left at their default values of 0, it is automatically assumed that \f$\rho=1-\varepsilon\f$ and \f$\tau=0\f$.
+ Note that you can also set the reflectivity and transmissivity for a band with emission. It is required that \f$\rho+\tau+\varepsilon=1\f$ in order to satisfy conservation of energy. If only the emissivity is set and reflectivity and transmissivity are left at their default values of 0, it is automatically assumed that \f$\rho=1-\varepsilon\f$ and \f$\tau=0\f$.
 
  \subsection RadSources External Radiation Sources
 
@@ -382,7 +382,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>
  uint SourceID = radiationmodel.addSunSphereRadiationSource(); //add a radiation source
- radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum
+ radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_direct_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum
  radiationmodel.addRadiationBand("PAR", 400, 700); //add a radiation band called "PAR" defined between 400-700nm
  radiationmodel.setSourceSpectrumIntegral(SourceID, 1000 ); //set the integral of solar flux spectrum across all bands to 1000 W/m^2</code></pre></div>
 
@@ -393,10 +393,11 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
  <pre><code>
  uint SourceID = radiationmodel.addSunSphereRadiationSource(); //add a radiation source
- radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum
+ radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_direct_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum (direct)
  radiationmodel.addRadiationBand("PAR", 400, 700); //add a radiation band called "PAR" defined between 400-700nm
  radiationmodel.setSourceSpectrumIntegral(SourceID, 300, 400, 700 ); //set the integral of solar flux spectrum from 400-700nm to 300 W/m^2</code></pre></div>
 
+ Now that the source spectrum is set, it is no longer necessary to call \ref RadiationModel::setSourceFlux(), because it will be automatically calculated by integrating the source spectrum. If \ref RadiationModel::setSourceFlux() is called for a band, it will override any source spectra.
 
  \subsubsection AmbSource Adding Diffuse/Ambient Sources
 
@@ -501,11 +502,6 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <td>Physical diameter of the camera lens.</td>
    </tr>
    <tr>
-     <td>sensor_size</td>
-     <td>\htmlonly<font face="courier" color="green">vec2</font>\endhtmlonly</td>
-     <td>Physical dimension (w x h) of the camera's pixel sensing array.</td>
-   </tr>
-   <tr>
      <td>focal_plane_distance</td>
      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
      <td>Distance from the camera lens to the focal plane (at this distance from the camera, all objects will be in focus).</td>
@@ -514,6 +510,11 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <td>HFOV</td>
      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
      <td>Angle of the horizontal camera field of view in degrees.</td>
+   </tr>
+   <tr>
+      <td>FOV_aspect_ratio</td>
+      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>Ratio of horizontal to vertical camera field of view.</td>
    </tr>
    <tr>
      <td>camera_resolution</td>
@@ -605,8 +606,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  A common task when using the radiation model is to integrate with the \ref SolarPosition plug-in to set the position of a collimated radiation source (i.e., the sun), potentially at several different times of the day.  In this case, one would initialize the SolarPosition and RadiationModel classes and set up relevant inputs, then execute a for-loop over each time of the day. For each time iteration, the current time is set in the Context, the direction of the sun is calculated for that particular time, then the sun direction is passed to the radiation model. An example is illustrated in the code below.
 
  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
-  #include "Visualizer.h"
+ <pre><code>  #include "Visualizer.h"
   #include "SolarPosition.h"
   #include "RadiationModel.h"
 
@@ -784,7 +784,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
     uint source = radiationmodel.addSunSphereRadiationSource(make_SphericalCoord(deg2rad(90-50), deg2rad(40)));
     \c// Set the solar spectrum to ASTMG173 from the library
     context.loadXML( "plugins/radiation/spectral_data/light_spectral_library.xml" );
-    radiationmodel.setSourceSpectrum( source, "solar_spectrum_ASTMG173" );
+    radiationmodel.setSourceSpectrum( source, "solar_spectrum_direct_ASTMG173" );
 
     float solar_flux = 900.f; //flux from sun, W/m2
 

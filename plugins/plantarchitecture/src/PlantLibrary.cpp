@@ -13,7 +13,7 @@
 
 */
 
-#include "Assets.h"
+#include "PlantArchitecture.h"
 
 using namespace helios;
 
@@ -585,7 +585,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     PhytomerParameters phytomer_parameters_trifoliate(context_ptr->getRandomGenerator());
 
     phytomer_parameters_trifoliate.internode.pitch = 20;
-    phytomer_parameters_trifoliate.internode.phyllotactic_angle.uniformDistribution(145, 215);
+    phytomer_parameters_trifoliate.internode.phyllotactic_angle = 180;//.uniformDistribution(145, 215);
     phytomer_parameters_trifoliate.internode.max_floral_buds_per_petiole = 1;
     phytomer_parameters_trifoliate.internode.max_vegetative_buds_per_petiole = 1;
     phytomer_parameters_trifoliate.internode.color = make_RGBcolor(0.61, 0.68, 0.42);
@@ -605,7 +605,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.leaf.pitch.normalDistribution(0, 10);
     phytomer_parameters_trifoliate.leaf.yaw = 10;
     phytomer_parameters_trifoliate.leaf.roll = -15;
-    phytomer_parameters_trifoliate.leaf.leaflet_offset = 0.5;
+    phytomer_parameters_trifoliate.leaf.leaflet_offset = 0.4;
     phytomer_parameters_trifoliate.leaf.leaflet_scale = 0.9;
     phytomer_parameters_trifoliate.leaf.prototype_function = CowpeaLeafPrototype_trifoliate;
     phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.09,0.1);

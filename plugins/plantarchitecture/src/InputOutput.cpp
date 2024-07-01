@@ -31,17 +31,23 @@ std::string PlantArchitecture::makeShootString(const std::string &current_string
     for( auto &phytomer: shoot->phytomers ){
 
         float length = phytomer->internode_length;
-        float radius = phytomer->internode_radius_initial;
+        float radius = phytomer->internode_radii.front();
 
-        outstring += "Internode(" + std::to_string(length) + "," + std::to_string(radius) + "," + std::to_string(phytomer->phytomer_parameters.internode.pitch.val() /*\todo */ ) + ")";
+        outstring += "Internode(" + std::to_string(length) + "," + std::to_string(radius) + "," + std::to_string( rad2deg(phytomer->internode_pitch) ) + "," + std::to_string( rad2deg(phytomer->internode_phyllotactic_angle) ) + ")";
 
-        outstring += "Petiole(" + std::to_string(phytomer->phytomer_parameters.petiole.length.val() /*\todo */ ) + "," + std::to_string(phytomer->phytomer_parameters.petiole.pitch.val() /*\todo */) + ")";
+//        for( uint petiole=0; petiole<phytomer->petiole_length.size(); petiole++ ){
+        uint petiole = 0;
 
-        outstring += "Leaf(" + std::to_string(phytomer->phytomer_parameters.leaf.prototype_scale.val() /*\todo */) + "," + std::to_string(phytomer->phytomer_parameters.leaf.pitch.val() /*\todo */) + "," + std::to_string(phytomer->phytomer_parameters.leaf.yaw.val() /*\todo */) + "," + std::to_string(phytomer->phytomer_parameters.leaf.roll.val() /*\todo */) + ")";
+            outstring += "Petiole(" + std::to_string( phytomer->petiole_length.at(petiole) ) + "," + std::to_string( phytomer->petiole_radii.at(petiole).front() ) + "," + std::to_string( rad2deg(phytomer->petiole_pitch) ) + ")";
 
-        if( shoot->childIDs.find(node_number)!=shoot->childIDs.end() ){
-            outstring = makeShootString(outstring, shoot_tree.at(shoot->childIDs.at(node_number)), shoot_tree );
-        }
+            //\todo If leaf is compound, just using rotation for the first leaf for now rather than adding multiple 'Leaf()' strings for each leaflet.
+            outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole)*phytomer->current_leaf_scale_factor ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().pitch) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().yaw) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().roll) ) + ")";
+
+            if( shoot->childIDs.find(node_number)!=shoot->childIDs.end() ){
+                outstring = makeShootString(outstring, shoot_tree.at(shoot->childIDs.at(node_number)), shoot_tree );
+            }
+
+//        }
 
         node_number++;
     }
@@ -113,7 +119,7 @@ void PlantArchitecture::parseShootArgument(const std::string &shoot_argument, co
     s_argument.erase(0, pos_shoot_start + 1);
     shoot_parameters.gravitropic_curvature = shoot_curvature;
 
-    if( pos_shoot_start != std::string::npos ) {
+    if( pos_shoot_start != std::string::npos ) { //shoot type argument was given
         pos_shoot_start = s_argument.find(',');
         phytomer_label = s_argument.substr(0, pos_shoot_start);
         s_argument.erase(0, pos_shoot_start + 1);
@@ -121,7 +127,7 @@ void PlantArchitecture::parseShootArgument(const std::string &shoot_argument, co
             helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): Phytomer parameters with label " + phytomer_label + " was not provided to PlantArchitecture::generatePlantFromString().");
         }
         shoot_parameters.phytomer_parameters = phytomer_parameters.at(phytomer_label);
-    }else{
+    }else{ //shoot type argument not given - use first phytomer parameters in the map
         phytomer_label = phytomer_parameters.begin()->first;
         shoot_parameters.phytomer_parameters = phytomer_parameters.begin()->second;
     }
@@ -134,6 +140,7 @@ void PlantArchitecture::parseInternodeArgument(const std::string &internode_argu
     // 1. internode length (m)
     // 2. internode radius (m)
     // 3. internode pitch (degrees)
+    // 4. phyllotactic angle (degrees)
 
     size_t pos_inode_start = 0;
 
@@ -154,12 +161,20 @@ void PlantArchitecture::parseInternodeArgument(const std::string &internode_argu
     inode_argument.erase(0, pos_inode_start + 1);
 
     pos_inode_start = inode_argument.find(',');
-    if( pos_inode_start != std::string::npos ){
+    if( pos_inode_start == std::string::npos ){
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Internode()' does not have the correct number of values given.");
     }
     float internode_pitch = std::stof(inode_argument.substr(0, pos_inode_start));
     inode_argument.erase(0, pos_inode_start + 1);
     phytomer_parameters.internode.pitch = internode_pitch;
+
+    pos_inode_start = inode_argument.find(',');
+    if( pos_inode_start != std::string::npos ){
+        helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Internode()' does not have the correct number of values given.");
+    }
+    float internode_phyllotaxis = std::stof(inode_argument.substr(0, pos_inode_start));
+    inode_argument.erase(0, pos_inode_start + 1);
+    phytomer_parameters.internode.phyllotactic_angle = internode_phyllotaxis;
 
 }
 
@@ -167,7 +182,8 @@ void PlantArchitecture::parsePetioleArgument(const std::string& petiole_argument
 
     //petiole argument order Petiole():
     // 1. petiole length (m)
-    // 2. petiole pitch (degrees)
+    // 2. petiole radius (m)
+    // 3. petiole pitch (degrees)
 
     if( petiole_argument.empty() ){
         phytomer_parameters.petiole.length = 0;
@@ -185,6 +201,14 @@ void PlantArchitecture::parsePetioleArgument(const std::string& petiole_argument
     float petiole_length = std::stof(pet_argument.substr(0, pos_petiole_start));
     pet_argument.erase(0, pos_petiole_start + 1);
     phytomer_parameters.petiole.length = petiole_length;
+
+    pos_petiole_start = pet_argument.find(',');
+    if( pos_petiole_start == std::string::npos ){
+        helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Petiole()' does not have the correct number of values given.");
+    }
+    float petiole_radius = std::stof(pet_argument.substr(0, pos_petiole_start));
+    pet_argument.erase(0, pos_petiole_start + 1);
+    phytomer_parameters.petiole.radius = petiole_radius;
 
     pos_petiole_start = pet_argument.find(',');
     if( pos_petiole_start != std::string::npos ){
@@ -247,23 +271,31 @@ void PlantArchitecture::parseLeafArgument(const std::string& leaf_argument, Phyt
 
 }
 
-size_t findShootClosingBracket(const std::string &lstring ){
+size_t findShootClosingBracket(const std::string &lstring) {
 
-
-    size_t pos_open = lstring.find_first_of('[',1);
-    size_t pos_close = lstring.find_first_of(']', 1);
-
-    if( pos_open>pos_close ){
+    size_t pos_close = std::string::npos;
+    size_t pos_open = lstring.find_first_of('[', 0);
+    if (pos_open == std::string::npos) {
         return pos_close;
     }
 
-    while( pos_open!=std::string::npos ){
-        pos_open = lstring.find('[', pos_close+1);
-        pos_close = lstring.find(']', pos_close+1);
+    size_t pos = pos_open;
+    int count = 1;
+    while (count > 0) {
+        pos++;
+        if (lstring[pos] == '[') {
+            count++;
+        } else if (lstring[pos] == ']') {
+            count--;
+        }
+        if (pos == lstring.length()) {
+            return pos_close;
+        }
     }
-
-    return pos_close;
-
+    if (count == 0) {
+        pos_close = pos;
+    }
+    return pos_close; // Return the position of the closing bracket
 }
 
 void PlantArchitecture::parseStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters) {
@@ -369,9 +401,6 @@ uint PlantArchitecture::generatePlantFromString(const std::string &generation_st
 uint PlantArchitecture::generatePlantFromString(const std::string &generation_string, const std::map<std::string,PhytomerParameters> &phytomer_parameters) {
 
     //check that first characters are 'Internode'
-//    if( lsystems_string.substr(0,10)!="Internode(" ){
-//        helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): First characters of string must be 'Internode('");
-//    }
     if(generation_string.front() != '{'){
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): First character of string must be '{'");
     }

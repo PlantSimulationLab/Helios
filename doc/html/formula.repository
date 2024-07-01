@@ -159,7 +159,7 @@
 \_form#149=35x11:$\varepsilon=1$
 \_form#150=69x12:$T=300K$
 \_form#151=36x11:$\varepsilon\approx 0$
-\_form#152=89x14:$\rho+\tau+\varepsilon=0$
+\_form#152=87x14:$\rho+\tau+\varepsilon=1$
 \_form#153=62x14:$\rho=1-\varepsilon$
 \_form#154=38x11:$\tau=0$
 \_form#155=98x57:\[R = \int\limits_{\lambda_{min}}^{\lambda_{max}} R_\lambda d\lambda \]
