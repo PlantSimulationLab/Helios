@@ -133,13 +133,14 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  In order for the model to calculate the absorbed all-wave radiation flux, it needs to know the names of all radiation bands that were added to the radiation model. This is done using the function \ref EnergyBalanceModel::addRadiationBand() "addRadiationBand()". In the following example, assume we have three radiative wavebands "PAR", "NIR", and "LW".
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> \c // Initialize the Model
-  %EnergyBalanceModel energybalance(&context);
+ ~~~~~~{.cpp}
+  // Initialize the Model
+  EnergyBalanceModel energybalance(&context);
 
   energybalance.addRadiationBand("PAR");
   energybalance.addRadiationBand("NIR");
-  energybalance.addRadiationBand("LW");</code></pre></div>
+  energybalance.addRadiationBand("LW");
+ ~~~~~~
 
  \subsection EBblc Boundary-layer Conductance Model
 
@@ -186,27 +187,31 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
    <p> <br><br> </p>
 
-   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code> #include "EnergyBalanceModel.h"
+   ~~~~~~{.cpp}
+    #include "EnergyBalanceModel.h"
+    using namespace helios;
 
- int main(void){
+    int main(){
 
-    \c// Initialize the Context
-    Context context;
+        // Initialize the Context
+        Context context;
 
-    \c// Add `Patch' primitive
-    vec3 center = make_vec3(0,0,1);
-    vec2 size = make_vec2(1,1);
-    uint UUID = context.addPatch( center, size );
+        // Add `Patch' primitive
+        vec3 center = make_vec3(0,0,1);
+        vec2 size = make_vec2(1,1);
+        uint UUID = context.addPatch( center, size );
 
-    %EnergyBalanceModel energybalance(&context);
+        EnergyBalanceModel energybalance(&context);
 
-    energybalance.addRadiationBand("PAR");
-    energybalance.addRadiationBand("NIR");
-    energybalance.addRadiationBand("LW");
+        energybalance.addRadiationBand("PAR");
+        energybalance.addRadiationBand("NIR");
+        energybalance.addRadiationBand("LW");
 
-    energybalance.run();
- }</code></pre></div>
+        energybalance.run();
+
+        return 0;
+    }
+   ~~~~~~
 
  \subsubsection EBRunUS Unsteady model with heat storage
 
@@ -229,28 +234,29 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  <p> <br><br> </p>
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> #include "EnergyBalanceModel.h"
+ ~~~~~~{.cpp}
+ #include "EnergyBalanceModel.h"
+ using namespace helios;
 
- int main(void){
+ int main(){
 
-    \c// Initialize the Context
+    // Initialize the Context
     Context context;
 
-    \c// Add one `Patch' primitive
+    // Add one 'Patch' primitive
     vec3 center = make_vec3(0,0,1);
     vec2 size = make_vec2(1,1);
     uint UUID1 = context.addPatch( center, size );
 
-    \c// Add a second `Patch' primitive
+    // Add a second `Patch' primitive
     center = make_vec3(2,0,1);
     uint UUID2 = context.addPatch( center, size );
 
-    \c// Set the heat capacity of the first patch so that the unsteady energy balance model will be run
+    // Set the heat capacity of the first patch so that the unsteady energy balance model will be run
     float Cp = 10000; //J/m^2-oC
     context.setPrimitiveData( UUID1, "heat_capacity", Cp );
 
-    %EnergyBalanceModel energybalance(&context);
+    EnergyBalanceModel energybalance(&context);
 
     energybalance.addRadiationBand("PAR");
     energybalance.addRadiationBand("NIR");
@@ -258,6 +264,10 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
     float dt = 180;
     energybalance.run( dt );
- }</code></pre></div>
+
+    return 0;
+ }
+ ~~~~~~
+
 
 */

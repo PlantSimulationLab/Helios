@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.15</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.16</span>
    </div>
   </td>
  </tr>
@@ -875,69 +875,81 @@ Building the Ground</h1>
 <div class="caption">
 Example ground surface. Each black box is mapped to a single texture map, which is sub-divided into 3x3 sub-patches (gray boxes).</div></div>
 <p >Example code is given below:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "Context.h"
-  #include "CanopyGenerator.h"
-
-  int main( void ){
-
-     Context context;
-
-     CanopyGenerator canopygenerator(&amp;context);
-
-     <code></code>//Variable defining the center of the ground
-     vec3 origin(0,0,0);
-
-     <code></code>//Variable defining the horizontal extent of the ground
-     vec2 extent(10,10);
-
-     <code></code>//Variable defining the number of texture tiles for the ground
-     int2 Ntiles(3,2);
-
-     <code></code>//Variable defining the number of sub-patches per texture tile
-     int2 subpatches(3,3);
-
-     <code></code>//Add the ground geometry to the Context
-     canopygenerator.buildGround( origin, extent, Ntiles, subpatches, "plugins/canopygenerator/textures/dirt.jpg" );
-
-   }</code></pre></div><h1><a class="anchor" id="CGenBuildPlant"></a>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_canopy_generator_8h.html">CanopyGenerator.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Variable defining the center of the ground</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> origin(0,0,0);</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Variable defining the horizontal extent of the ground</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html">vec2</a> extent(10,10);</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Variable defining the number of texture tiles for the ground</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1int2.html">int2</a> Ntiles(3,2);</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Variable defining the number of sub-patches per texture tile</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1int2.html">int2</a> subpatches(3,3);</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Add the ground geometry to the Context</span></div>
+<div class="line">   canopygenerator.buildGround( origin, extent, Ntiles, subpatches, <span class="stringliteral">&quot;plugins/canopygenerator/textures/dirt.jpg&quot;</span> );</div>
+<div class="line"> </div>
+<div class="line"> }</div>
+<div class="ttc" id="a_canopy_generator_8h_html"><div class="ttname"><a href="_canopy_generator_8h.html">CanopyGenerator.h</a></div></div>
+<div class="ttc" id="aclass_canopy_generator_html"><div class="ttname"><a href="class_canopy_generator.html">CanopyGenerator</a></div><div class="ttdef"><b>Definition:</b> <a href="_canopy_generator_8h_source.html#l00985">CanopyGenerator.h:985</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01786">Context.h:1786</a></div></div>
+<div class="ttc" id="astructhelios_1_1int2_html"><div class="ttname"><a href="structhelios_1_1int2.html">helios::int2</a></div><div class="ttdoc">Vector of two elements of type 'int'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00044">helios_vector_types.h:44</a></div></div>
+<div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00283">helios_vector_types.h:283</a></div></div>
+<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00424">helios_vector_types.h:424</a></div></div>
+</div><!-- fragment --><h1><a class="anchor" id="CGenBuildPlant"></a>
 Building an Individual Plant</h1>
 <p >Maximum flexibility in creating a canopy of plants is achieved by manually adding each individual plant. An example is given below to add a single grapevine plant on VSP trellis at the point (0,0,0).</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "CanopyGenerator.h"
-
-  int main( void ){
-
-     Context context;
-
-     CanopyGenerator canopygenerator(&amp;context);
-
-     <code></code>//Declare the parameter set for VSP grapevine
-     VSPGrapevineParameters parameters;
-
-     <code></code>//Variable defining the location of the plant
-     vec3 origin(0,0,0);
-
-     <code></code>//Add the grapevine geometry to the Context
-     canopygenerator.grapevineVSP( parameters, origin );
-
-   }</code></pre></div><p >The function grapevineVSP() could be called many times with different origin positions to create any canopy that is desired. Below, we will introduce functions that automatically generate a canopy according to the values set in the parameters structure.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_canopy_generator_8h.html">CanopyGenerator.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Declare the parameter set for VSP grapevine</span></div>
+<div class="line">   <a class="code hl_struct" href="struct_v_s_p_grapevine_parameters.html">VSPGrapevineParameters</a> parameters;</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Variable defining the location of the plant</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> origin(0,0,0);</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Add the grapevine geometry to the Context</span></div>
+<div class="line">   canopygenerator.grapevineVSP( parameters, origin );</div>
+<div class="line"> </div>
+<div class="line"> }</div>
+<div class="ttc" id="astruct_v_s_p_grapevine_parameters_html"><div class="ttname"><a href="struct_v_s_p_grapevine_parameters.html">VSPGrapevineParameters</a></div><div class="ttdoc">Parameters defining the grapevine canopy with vertical shoot positioned (VSP) trellis.</div><div class="ttdef"><b>Definition:</b> <a href="_canopy_generator_8h_source.html#l00161">CanopyGenerator.h:161</a></div></div>
+</div><!-- fragment --><p >The function grapevineVSP() could be called many times with different origin positions to create any canopy that is desired. Below, we will introduce functions that automatically generate a canopy according to the values set in the parameters structure.</p>
 <h1><a class="anchor" id="CGenBuildCanopy"></a>
 Building a Canopy</h1>
 <p >Functions are available for each plant type to quickly generate a canopy of many plants using the associated "buildCanopy()" function. The example below shows how to build a vineyard on VSP trellis.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "CanopyGenerator.h"
-
-  int main( void ){
-
-     Context context;
-
-     CanopyGenerator canopygenerator(&amp;context);
-
-     <code></code>//Declare the parameter set for VSP grapevine
-     VSPGrapevineParameters parameters;
-
-     <code></code>//Add the grapevine geometry to the Context
-     canopygenerator.buildCanopy( parameters );
-
-   }</code></pre></div><h1><a class="anchor" id="CGenUUIDs"></a>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_canopy_generator_8h.html">CanopyGenerator.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"> <span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Declare the parameter set for VSP grapevine</span></div>
+<div class="line">    <a class="code hl_struct" href="struct_v_s_p_grapevine_parameters.html">VSPGrapevineParameters</a> parameters;</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Add the grapevine geometry to the Context</span></div>
+<div class="line">    canopygenerator.buildCanopy( parameters );</div>
+<div class="line"> </div>
+<div class="line">  }</div>
+</div><!-- fragment --><h1><a class="anchor" id="CGenUUIDs"></a>
 Retrieving UUIDs for Primitives</h1>
 <p >The UUIDs of primitives making up the canopy geometry are grouped into four different types of elements: trunks, branches/shoots, leaves, and fruit. Not all canopy types will have all four groups of elements, for example the homogeneous canopy has no trunks, branches, or fruit. The UUIDs can be retrieved for a given plant using the appropriate getter function, as detailed in the table below. Additionally, UUIDs can be retrieved for the ground surface.</p>
 <p >UUIDs of some element types are grouped by multiple levels of organization. For example, leaves are grouped by each individual leaf, which may be further subdivided into patches or triangles. In many cases, leaves may not have any subdivisions (as set within the parameters structure), and thus the size of the second index in the leaf UUIDs vector is equal to 1. If you try to index the leaf UUID vector at a value greater than 0, you will get an out of bounds error.</p>
@@ -960,39 +972,43 @@ Retrieving UUIDs for Primitives</h1>
 <h1><a class="anchor" id="CGenParameterMod"></a>
 Modifying Geometric Parameters from Default Values</h1>
 <p >Changing the default parameters for a particular geometry is simply a matter of declaring an instance of the parameter structure, and changing the values of the members. An example is given below in which the height and horizontal extent of a homogeneous canopy is modified before building.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  Context context;
-
-  CanopyGenerator canopygenerator(&amp;context);
-
-  HomogeneousCanopyParameters parameters;
-
-  <code></code>// Modifying geometric parameters here
-  parameters.canopy_height = 2.0;
-  parameters.canopy_extent = make_vec2( 10.0, 10.0 );
-
-  canopygenerator.buildCanopy( parameters );</code></pre></div><h1><a class="anchor" id="CGenSeed"></a>
+<div class="fragment"><div class="line"><a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator(&amp;context);</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_struct" href="struct_homogeneous_canopy_parameters.html">HomogeneousCanopyParameters</a> parameters;</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Modifying geometric parameters here</span></div>
+<div class="line">parameters.canopy_height = 2.0;</div>
+<div class="line">parameters.canopy_extent = make_vec2( 10.0, 10.0 );</div>
+<div class="line"> </div>
+<div class="line">canopygenerator.buildCanopy( parameters );</div>
+<div class="ttc" id="astruct_homogeneous_canopy_parameters_html"><div class="ttname"><a href="struct_homogeneous_canopy_parameters.html">HomogeneousCanopyParameters</a></div><div class="ttdoc">Parameters defining the homogeneous canopy.</div><div class="ttdef"><b>Definition:</b> <a href="_canopy_generator_8h_source.html#l00023">CanopyGenerator.h:23</a></div></div>
+</div><!-- fragment --><h1><a class="anchor" id="CGenSeed"></a>
 Seeding the Random Number Generator</h1>
 <p >Random variability is added to plant geometries using a pseudorandom number generator. By default, the random number sequence is seeded based on the system clock, which produces different results for each run.</p>
 <p >If the exact same geometries are desired for successive runs, the random number generator can be manually seeded with the same value at the beginning of each run. This will still result in random variability between plants within the given canopy, but this randomness will be consistent no matter how many times the code is run.</p>
 <p >The random number sequence can be manually seeded using the <a class="el" href="class_canopy_generator.html#ad23ca24fa4ccb033293c8d5118903d16">CanopyGenerator::seedRandomGenerator( uint seed )</a>, which takes as its argument an unsigned integer. Regardless of its value, if this function is called with the same seed value at the beginning of the code, it will produce the exact same "random" number sequence. An example is given below.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  #include "CanopyGenerator.h"
-
-  int main( void ){
-
-     Context context;
-
-     CanopyGenerator canopygenerator(&amp;context);
-
-     <code></code>//Declare the parameter set for VSP grapevine
-     VSPGrapevineParameters parameters;
-
-     <code></code>//Seeding the random number generator here will result in the same random geometries below for each time the code is run
-     canopygenerator.seedRandomGenerator( 10 );
-
-     <code></code>//Add the grapevine geometry to the Context
-     canopygenerator.buildCanopy( parameters );
-
-   }</code></pre></div> </div></div><!-- contents -->
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_canopy_generator_8h.html">CanopyGenerator.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Declare the parameter set for VSP grapevine</span></div>
+<div class="line">   <a class="code hl_struct" href="struct_v_s_p_grapevine_parameters.html">VSPGrapevineParameters</a> parameters;</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Seeding the random number generator here will result in the same random geometries below for each time the code is run</span></div>
+<div class="line">   canopygenerator.seedRandomGenerator( 10 );</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Add the grapevine geometry to the Context</span></div>
+<div class="line">   canopygenerator.buildCanopy( parameters );</div>
+<div class="line"> </div>
+<div class="line">}</div>
+</div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

@@ -1,7 +1,7 @@
 # Blender 3.3.0
 # www.blender.org
 mtllib SugarbeetLeaf.mtl
-o Plane
+o leaf
 v 0.988023 -0.074357 -0.105320
 v 0.986108 -0.027555 -0.111109
 v 0.984455 0.012968 -0.112261

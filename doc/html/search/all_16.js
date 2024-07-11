@@ -25,12 +25,13 @@ var searchData=
   ['writenormcameraimage_22',['writeNormCameraImage',['../class_radiation_model.html#a61abdff90fd75f3ebebc6b8f189cdac9',1,'RadiationModel']]],
   ['writenormdepthimage_23',['writeNormDepthImage',['../class_radiation_model.html#a633d84a823ad4cd99495a06afc13d7a3',1,'RadiationModel']]],
   ['writeobj_24',['writeOBJ',['../classhelios_1_1_context.html#a8249b03fa781c9382863b7cf2caf0dd8',1,'helios::Context::writeOBJ(const std::string &amp;filename) const'],['../classhelios_1_1_context.html#a8a5040ff4aaa061eddabe881ac668a01',1,'helios::Context::writeOBJ(const std::string &amp;filename, const std::vector&lt; uint &gt; &amp;UUIDs) const'],['../classhelios_1_1_context.html#ae976f6626930c925c8fdacb543e1e923',1,'helios::Context::writeOBJ(const std::string &amp;filename, const std::vector&lt; uint &gt; &amp;UUIDs, const std::vector&lt; std::string &gt; &amp;primitive_dat_fields) const']]],
-  ['writeply_25',['writePLY',['../classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7',1,'helios::Context']]],
-  ['writepng_26',['writePNG',['../global_8h.html#afc2520441ef9a290c5221dd892ea9f01',1,'helios']]],
-  ['writeprimitivedata_27',['writePrimitiveData',['../classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844',1,'helios::Context::writePrimitiveData(std::string filename, const std::vector&lt; std::string &gt; &amp;column_format, bool print_header=false) const'],['../classhelios_1_1_context.html#a97378b12bfaf42c2052960c54ff096d4',1,'helios::Context::writePrimitiveData(std::string filename, const std::vector&lt; std::string &gt; &amp;column_format, const std::vector&lt; uint &gt; &amp;UUIDs, bool print_header=false) const']]],
-  ['writeprimitivedatalabelmap_28',['writePrimitiveDataLabelMap',['../class_radiation_model.html#a771c53fe19d75303c3f60017db8a2b50',1,'RadiationModel']]],
-  ['writespectralxmlfile_29',['writeSpectralXMLfile',['../struct_camera_calibration.html#a96b8a246adb36d20a09e3d527be9de25',1,'CameraCalibration']]],
-  ['writexml_30',['writeXML',['../classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d',1,'helios::Context::writeXML(const char *filename, bool quiet=false) const'],['../classhelios_1_1_context.html#a499545512efe3645e2085e4815dcb94e',1,'helios::Context::writeXML(const char *filename, const std::vector&lt; uint &gt; &amp;UUIDs, bool quiet=false) const']]],
-  ['writexml_5fbyobject_31',['writeXML_byobject',['../classhelios_1_1_context.html#ae2ada2bfdce5226cd970a6e6fa0ccc88',1,'helios::Context']]],
-  ['writing_20plugins_32',['Writing Plugins',['../_plugins.html',1,'']]]
+  ['writeobjectdatalabelmap_25',['writeObjectDataLabelMap',['../class_radiation_model.html#afdbe940b3c4ae5855a0fcbe5b0b7f708',1,'RadiationModel']]],
+  ['writeply_26',['writePLY',['../classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7',1,'helios::Context']]],
+  ['writepng_27',['writePNG',['../global_8h.html#afc2520441ef9a290c5221dd892ea9f01',1,'helios']]],
+  ['writeprimitivedata_28',['writePrimitiveData',['../classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844',1,'helios::Context::writePrimitiveData(std::string filename, const std::vector&lt; std::string &gt; &amp;column_format, bool print_header=false) const'],['../classhelios_1_1_context.html#a97378b12bfaf42c2052960c54ff096d4',1,'helios::Context::writePrimitiveData(std::string filename, const std::vector&lt; std::string &gt; &amp;column_format, const std::vector&lt; uint &gt; &amp;UUIDs, bool print_header=false) const']]],
+  ['writeprimitivedatalabelmap_29',['writePrimitiveDataLabelMap',['../class_radiation_model.html#a771c53fe19d75303c3f60017db8a2b50',1,'RadiationModel']]],
+  ['writespectralxmlfile_30',['writeSpectralXMLfile',['../struct_camera_calibration.html#a96b8a246adb36d20a09e3d527be9de25',1,'CameraCalibration']]],
+  ['writexml_31',['writeXML',['../classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d',1,'helios::Context::writeXML(const char *filename, bool quiet=false) const'],['../classhelios_1_1_context.html#a499545512efe3645e2085e4815dcb94e',1,'helios::Context::writeXML(const char *filename, const std::vector&lt; uint &gt; &amp;UUIDs, bool quiet=false) const']]],
+  ['writexml_5fbyobject_32',['writeXML_byobject',['../classhelios_1_1_context.html#ae2ada2bfdce5226cd970a6e6fa0ccc88',1,'helios::Context']]],
+  ['writing_20plugins_33',['Writing Plugins',['../_plugins.html',1,'']]]
 ];

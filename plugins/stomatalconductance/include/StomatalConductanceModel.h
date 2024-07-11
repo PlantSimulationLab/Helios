@@ -104,7 +104,8 @@ class StomatalConductanceModel{
 public:
 
     //! Default constructor
-    /** \param[in] "__context" Pointer to the helios context
+    /**
+     * \param[in] m_context Pointer to the helios context
      */
     explicit StomatalConductanceModel( helios::Context* m_context );
 
@@ -113,81 +114,81 @@ public:
 
     //! Set the model coefficient values for all primitives - Ball, Woodrow, Berry model
     /**
-     * \param[in] "coeffs" Model coefficient values
+     * \param[in] coeffs Model coefficient values
      */
     void setModelCoefficients( const BWBcoefficients &coeffs );
 
     //! Set the model coefficient values for a subset of primitives based on their UUIDs - Ball, Woodrow, Berry model
     /**
-     * \param[in] "coeffs" Model coefficient values
-     * \param[in] "UUIDs" Universal unique identifiers for primitives to set
+     * \param[in] coeffs Model coefficient values
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
      */
     void setModelCoefficients( const BWBcoefficients &coeffs, const std::vector<uint> &UUIDs );
 
     //! Set the model coefficient values for all primitives - Ball-Berry-Leuning model
     /**
-     * \param[in] "coeffs" Model coefficient values
+     * \param[in] coeffs Model coefficient values
      */
     void setModelCoefficients( const BBLcoefficients &coeffs );
 
     //! Set the model coefficient values for a subset of primitives based on their UUIDs - Ball-Berry-Leuning model
     /**
-     * \param[in] "coeffs" Model coefficient values
-     * \param[in] "UUIDs" Universal unique identifiers for primitives to set
+     * \param[in] coeffs Model coefficient values
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
      */
     void setModelCoefficients( const BBLcoefficients &coeffs, const std::vector<uint> &UUIDs );
 
     //! Set the model coefficient values for all primitives - Medlyn et al. optimality model
     /**
-     * \param[in] "coeffs" Model coefficient values
+     * \param[in] coeffs Model coefficient values
      */
     void setModelCoefficients( const MOPTcoefficients &coeffs );
 
     //! Set the model coefficient values for a subset of primitives based on their UUIDs - Medlyn et al. optimality model
     /**
-     * \param[in] "coeffs" Model coefficient values
-     * \param[in] "UUIDs" Universal unique identifiers for primitives to set
+     * \param[in] coeffs Model coefficient values
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
      */
     void setModelCoefficients( const MOPTcoefficients &coeffs, const std::vector<uint> &UUIDs );
 
     //! Set the model coefficient values for all primitives - Buckley, Mott, Farquhar model
     /**
-     * \param[in] "coeffs" Model coefficient values
+     * \param[in] coeffs Model coefficient values
      */
     void setModelCoefficients( const BMFcoefficients &coeffs );
 
     //! Set the model coefficient values for a subset of primitives based on their UUIDs - Buckley, Mott, Farquhar model
     /**
-     * \param[in] "coeffs" Model coefficient values
-     * \param[in] "UUIDs" Universal unique identifiers for primitives to set
+     * \param[in] coeffs Model coefficient values
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
      */
     void setModelCoefficients( const BMFcoefficients &coeffs, const std::vector<uint> &UUIDs );
 
     //! Set the model coefficient values for all primitives
     /**
-     * \param[in] "coeffs" Model coefficient values
+     * \param[in] coeffs Model coefficient values
      */
     void setModelCoefficients( const BBcoefficients &coeffs );
 
     //! Set the model coefficient values for a subset of primitives based on their UUIDs
     /**
-     * \param[in] "coeffs" Model coefficient values
-     * \param[in] "UUIDs" Universal unique identifiers for primitives to set
+     * \param[in] coeffs Model coefficient values
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
      */
     void setModelCoefficients( const BBcoefficients &coeffs, const std::vector<uint> &UUIDs );
 
     //! Set time constants for dynamic stomatal opening and closing for all primitives
     /**
-     * \param[in] "tau_open" Time constant (seconds) for dynamic stomatal opening
-     * \param[in] "tau_close" Time constant (seconds) for dynamic stomatal closing
+     * \param[in] tau_open Time constant (seconds) for dynamic stomatal opening
+     * \param[in] tau_close Time constant (seconds) for dynamic stomatal closing
      */
     void setDynamicTimeConstants( float tau_open, float tau_close );
 
     //! Set time constants for dynamic stomatal opening and closing for a subset of primitives based on their UUIDs
     /**
-     * \param[in] "tau_open" Time constant (seconds) for dynamic stomatal opening
-     * \param[in] "tau_close" Time constant (seconds) for dynamic stomatal closing
-     * \param[in] "UUIDs" Universal unique identifiers for primitives to set
+     * \param[in] tau_open Time constant (seconds) for dynamic stomatal opening
+     * \param[in] tau_close Time constant (seconds) for dynamic stomatal closing
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
      */
     void setDynamicTimeConstants( float tau_open, float tau_close, const std::vector<uint> &UUIDs );
 
@@ -196,26 +197,26 @@ public:
 
     //! Update the stomatal conductance for a subset of primitives in the context
     /**
-     * \param[in] "UUIDs" Universal unique identifiers for primitives to set
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
      */
     void run( const std::vector<uint> &UUIDs );
 
     //! Update the stomatal conductance for all primitives in the context based on the dynamic stomatal model version
     /**
-     * \param[in] "dt" Time step to advance stomatal conductance (seconds)
+     * \param[in] dt Time step to advance stomatal conductance (seconds)
      */
     void run( float dt );
 
     //! Update the stomatal conductance for a subset of primitives in the context
     /**
-     * \param[in] "dt" Time step to advance stomatal conductance (seconds)
-     * \param[in] "UUIDs" Universal unique identifiers for primitives to set
+     * \param[in] dt Time step to advance stomatal conductance (seconds)
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
      */
     void run( const std::vector<uint> &UUIDs, float dt );
 
     //! Add optional output primitive data values to the Context
     /**
-        * \param[in] "label" Name of primitive data (e.g., Ci)
+        * \param[in] label Name of primitive data (e.g., Ci)
      */
     void optionalOutputPrimitiveData( const char* label );
 
@@ -224,7 +225,7 @@ public:
 
     //! Print a report detailing usage of default input values based on a subset of primitive UUIDs
     /**
-     * \param[in] "UUIDs" Universal unique identifiers for report
+     * \param[in] UUIDs Universal unique identifiers for report
      */
     void printDefaultValueReport(const std::vector<uint> &UUIDs) const;
 

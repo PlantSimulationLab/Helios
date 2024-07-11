@@ -57,46 +57,46 @@ public:
 
     //! Run the LeafOptics model to generate reflectivity and transmissivity spectra, create associated global data, and assign to specified primitives.
     /**
-      * \param[in] UUIDs: UUIDs for primitives that will be assigned the generated reflectivity and transmissivity spectra.
-      * \param[in] leafproperties: LeafOptics properties.
-      * \param[in] label: label of spectra that will be created. This label will be appended to "leaf_reflectivity_" and "leaf_transmissivity_" (e.g., "leaf_reflectivity_bean" if the label is "bean").
+      * \param[in] UUIDs UUIDs for primitives that will be assigned the generated reflectivity and transmissivity spectra.
+      * \param[in] leafproperties LeafOptics properties.
+      * \param[in] label label of spectra that will be created. This label will be appended to "leaf_reflectivity_" and "leaf_transmissivity_" (e.g., "leaf_reflectivity_bean" if the label is "bean").
      */
     void run(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties, const std::string &label);
 
     //! Run the LeafOptics model to generate reflectivity and transmissivity spectra and create associated global data
     /**
-      * \param[in] leafproperties: LeafOptics properties.
-      * \param[in] label: label of spectra that will be created. This label will be appended to "leaf_reflectivity_" and "leaf_transmissivity_" (e.g., "leaf_reflectivity_bean" if the label is "bean").
+      * \param[in] leafproperties LeafOptics properties.
+      * \param[in] label label of spectra that will be created. This label will be appended to "leaf_reflectivity_" and "leaf_transmissivity_" (e.g., "leaf_reflectivity_bean" if the label is "bean").
      */
     void run(const LeafOpticsProperties &leafproperties, const std::string &label);
 
     //! LeafOptics model kernel
     /**
-     * \param[in] numberlayers: number of layers in the leaf
-     * \param[in] Chlorophyllcontent: chlorophyll content in the leaf
-     * \param[in] carotenoidcontent: carotenoid content in the leaf
-     * \param[in] anthocyancontent: anthocyan content in the leaf
-     * \param[in] brownpigments: brown pigment content in the leaf
-     * \param[in] watermass: water mass in the leaf
-     * \param[in] drymass: dry mass in the leaf
-     * \param[in] protein: protein content in the leaf
-     * \param[in] carbonconstituents: carbon constituents in the leaf
+     * \param[in] numberlayers number of layers in the leaf
+     * \param[in] Chlorophyllcontent chlorophyll content in the leaf
+     * \param[in] carotenoidcontent carotenoid content in the leaf
+     * \param[in] anthocyancontent anthocyan content in the leaf
+     * \param[in] brownpigments brown pigment content in the leaf
+     * \param[in] watermass water mass in the leaf
+     * \param[in] drymass dry mass in the leaf
+     * \param[in] protein protein content in the leaf
+     * \param[in] carbonconstituents carbon constituents in the leaf
      */
     void PROSPECT(float numberlayers, float Chlorophyllcontent, float carotenoidcontent, float anthocyancontent,
                   float brownpigments, float watermass, float drymass, float protein, float carbonconstituents, std::vector<float> &reflectivities_fit, std::vector<float> &transmissivities_fit );
 
     //! Get the leaf spectra
     /**
-     * \param[in] leafproperties: LeafOptics properties.
-     * \param[out] reflectivities_fit: reflectivities of the leaf
-     * \param[out] transmissivities_fit: transmissivities of the leaf
+     * \param[in] leafproperties LeafOptics properties.
+     * \param[out] reflectivities_fit reflectivities of the leaf
+     * \param[out] transmissivities_fit transmissivities of the leaf
      */
     void getLeafSpectra(const LeafOpticsProperties &leafproperties, std::vector<helios::vec2> &reflectivities_fit, std::vector<helios::vec2> &transmissivities_fit);
 
     //! Set leaf optical properties for a set of primitives
     /**
-     * \param[in] UUIDs: UUIDs for primitives for which optical properties should be set.
-     * \param[in] leafproperties: LeafOptics properties.
+     * \param[in] UUIDs UUIDs for primitives for which optical properties should be set.
+     * \param[in] leafproperties LeafOptics properties.
      */
     void setProperties(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties);
 

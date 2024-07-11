@@ -86,6 +86,15 @@ helios::vec3 interpolateTube( const std::vector<vec3> &P, float frac ){
 
 PlantArchitecture::PlantArchitecture( helios::Context* context_ptr ) : context_ptr(context_ptr){
     generator = context_ptr->getRandomGenerator();
+
+    output_object_data["age"] = false;
+    output_object_data["rank"] = false;
+    output_object_data["plantID"] = false;
+    output_object_data["leafID"] = false;
+    output_object_data["peduncleID"] = false;
+    output_object_data["closedflowerID"] = false;
+    output_object_data["openflowerID"] = false;
+    output_object_data["fruitID"] = false;
 }
 
 PhytomerParameters::PhytomerParameters() : PhytomerParameters(nullptr){}
@@ -177,7 +186,6 @@ ShootParameters::ShootParameters( std::minstd_rand0 *generator ) {
     vegetative_bud_break_probability.initialize(0,generator);
     flower_bud_break_probability.initialize(0,generator);
     fruit_set_probability.initialize(0,generator);
-
 
     flowers_require_dormancy = false;
     growth_requires_dormancy = false;
@@ -340,7 +348,7 @@ void Phytomer::setFloralBudState(BudState a_state, FloralBud &fbud ) {
         addInflorescence(internode_vertices.back(), make_AxisRotation(pitch_adjustment, yaw_adjustment, 0), make_vec3(0, 0, 1), fbud);
         fbud.time_counter = 0;
         if (fbud.state == BUD_FRUITING) {
-            setInflorescenceScaleFraction(fbud, 0.1);
+            setInflorescenceScaleFraction(fbud, 0.25);
         }
 
     }
@@ -420,17 +428,29 @@ int Shoot::addPhytomer(const PhytomerParameters &params, const helios::vec3 inte
     //Set output object data 'age'
     phytomer->age = 0;
     if( phytomer->build_context_geometry_internode ) {
-        context_ptr->setObjectData(phytomer->internode_objIDs, "age", phytomer->age);
-        context_ptr->setObjectData(phytomer->internode_objIDs, "rank", rank);
+        if( plant_architecture_ptr->output_object_data.at("age") ) {
+            context_ptr->setObjectData(phytomer->internode_objIDs, "age", phytomer->age);
+        }
+        if( plant_architecture_ptr->output_object_data.at("rank") ) {
+            context_ptr->setObjectData(phytomer->internode_objIDs, "rank", rank);
+        }
         context_ptr->setObjectData( phytomer->internode_objIDs, "plantID", (int)plantID );
     }
     if( phytomer->build_context_geometry_petiole ) {
-        context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
-        context_ptr->setObjectData(phytomer->petiole_objIDs, "rank", phytomer->rank);
+        if( plant_architecture_ptr->output_object_data.at("age") ) {
+            context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
+        }
+        if( plant_architecture_ptr->output_object_data.at("rank") ) {
+            context_ptr->setObjectData(phytomer->petiole_objIDs, "rank", phytomer->rank);
+        }
         context_ptr->setObjectData( phytomer->petiole_objIDs, "plantID", (int)plantID );
     }
-    context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
-    context_ptr->setObjectData(phytomer->leaf_objIDs, "rank", phytomer->rank);
+    if( plant_architecture_ptr->output_object_data.at("age") ) {
+        context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
+    }
+    if( plant_architecture_ptr->output_object_data.at("rank") ) {
+        context_ptr->setObjectData(phytomer->leaf_objIDs, "rank", phytomer->rank);
+    }
     context_ptr->setObjectData( phytomer->leaf_objIDs, "plantID", (int)plantID );
 
     for( auto &petiole : phytomer->leaf_objIDs ){
@@ -869,13 +889,13 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
 void Phytomer::addInflorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &a_inflorescence_bending_axis, FloralBud &fbud) {
 
-    uint Ndiv_rachis_length = std::max(uint(1), phytomer_parameters.peduncle.length_segments);
-    uint Ndiv_rachis_radius = std::max(uint(3), phytomer_parameters.peduncle.radial_subdivisions);
+    uint Ndiv_peduncle_length = std::max(uint(1), phytomer_parameters.peduncle.length_segments);
+    uint Ndiv_peduncle_radius = std::max(uint(3), phytomer_parameters.peduncle.radial_subdivisions);
     if( phytomer_parameters.peduncle.length_segments==0 || phytomer_parameters.peduncle.radial_subdivisions<3 ){
         build_context_geometry_peduncle = false;
     }
 
-    float dr_peduncle = phytomer_parameters.peduncle.length.val() / float(Ndiv_rachis_length);
+    float dr_peduncle = phytomer_parameters.peduncle.length.val() / float(Ndiv_peduncle_length);
     phytomer_parameters.peduncle.length.resample();
 
     std::vector<vec3> peduncle_vertices(phytomer_parameters.peduncle.length_segments + 1);
@@ -923,7 +943,7 @@ void Phytomer::addInflorescence(const helios::vec3 &base_position, const AxisRot
     phytomer_parameters.peduncle.radius.resample();
 
     if( build_context_geometry_peduncle) {
-        peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index).push_back(context_ptr->addTubeObject(Ndiv_rachis_radius, peduncle_vertices, peduncle_radii, peduncle_colors));
+        peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index).push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices, peduncle_radii, peduncle_colors));
     }
 
     for(int fruit=0; fruit < phytomer_parameters.inflorescence.flowers_per_rachis.val(); fruit++ ){
@@ -1028,7 +1048,7 @@ void Phytomer::addInflorescence(const helios::vec3 &base_position, const AxisRot
     phytomer_parameters.inflorescence.flowers_per_rachis.resample();
     phytomer_parameters.peduncle.roll.resample();
 
-    context_ptr->setObjectData( peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index), "rank", rank );
+    context_ptr->setObjectData(peduncle_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index), "rank", rank);
 
     context_ptr->setObjectData( inflorescence_objIDs.at(fbud.parent_petiole_index).at(fbud.bud_index), "rank", rank );
 
@@ -1413,9 +1433,9 @@ uint PlantArchitecture::addBaseStemShoot(uint plantID, uint current_node_number,
                                          const std::string &shoot_type_label) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
-        helios_runtime_error("ERROR (PlantArchitecture::addShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        helios_runtime_error("ERROR (PlantArchitecture::addBaseStemShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }else if( shoot_types.find(shoot_type_label) == shoot_types.end() ) {
-        helios_runtime_error("ERROR (PlantArchitecture::addShoot): Shoot type with label of " + shoot_type_label + " does not exist.");
+        helios_runtime_error("ERROR (PlantArchitecture::addBaseStemShoot): Shoot type with label of " + shoot_type_label + " does not exist.");
     }
 
     auto shoot_tree_ptr = &plant_instances.at(plantID).shoot_tree;
@@ -1425,7 +1445,7 @@ uint PlantArchitecture::addBaseStemShoot(uint plantID, uint current_node_number,
     validateShootTypes(shoot_parameters);
 
     if(current_node_number > shoot_parameters.max_nodes.val() ){
-        helios_runtime_error("ERROR (PlantArchitecture::addShoot): Cannot add shoot with " + std::to_string(current_node_number) + " nodes since the specified max node number is " + std::to_string(shoot_parameters.max_nodes.val()) + ".");
+        helios_runtime_error("ERROR (PlantArchitecture::addBaseStemShoot): Cannot add shoot with " + std::to_string(current_node_number) + " nodes since the specified max node number is " + std::to_string(shoot_parameters.max_nodes.val()) + ".");
     }
 
     uint shootID = shoot_tree_ptr->size();
@@ -1492,7 +1512,7 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::addChildShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }else if( shoot_types.find(shoot_type_label) == shoot_types.end() ) {
-        helios_runtime_error("ERROR (PlantArchitecture::addShoot): Shoot type with label of " + shoot_type_label + " does not exist.");
+        helios_runtime_error("ERROR (PlantArchitecture::addChildShoot): Shoot type with label of " + shoot_type_label + " does not exist.");
     }
 
     auto shoot_tree_ptr = &plant_instances.at(plantID).shoot_tree;
@@ -1646,7 +1666,6 @@ void PlantArchitecture::shiftDownstreamShoots(uint plantID, std::vector<std::sha
         }
 
     }
-
 }
 
 void PlantArchitecture::setPhytomerInternodeLengthScaleFraction(uint plantID, uint shootID, uint node_number, float internode_scale_factor_fraction) {
@@ -1729,7 +1748,7 @@ void PlantArchitecture::setShootOrigin(uint plantID, uint shootID, const helios:
 void PlantArchitecture::setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
-        helios_runtime_error("ERROR (PlantArchitecture::setPhytomerInternodeLengthScaleFraction): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        helios_runtime_error("ERROR (PlantArchitecture::setPhytomerLeafScale): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
     auto parent_shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
@@ -2200,7 +2219,6 @@ void PlantArchitecture::advanceTime( float dt ) {
                     shoot->breakDormancy();
                     dormancy_broken_this_timestep = true;
                     shoot->assimilate_pool = 1e6;
-//                std::cout << "Shoot " << shoot->ID << " breaking dormancy" << std::endl;
                 }
 
                 if (shoot->dormant) { //dormant, don't do anything
@@ -2322,7 +2340,7 @@ void PlantArchitecture::advanceTime( float dt ) {
 
                             // If the floral bud it in a 'fruiting' state, the fruit grows with time
                             if (fbud.state == BUD_FRUITING && fbud.time_counter > 0) {
-                                float scale = fmin(1, fbud.time_counter / plant_instance.dd_to_fruit_maturity);
+                                float scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / plant_instance.dd_to_fruit_maturity);
                                 phytomer->setInflorescenceScaleFraction(fbud, scale);
                             }
                         }
@@ -2407,13 +2425,15 @@ void PlantArchitecture::advanceTime( float dt ) {
 
                     phytomer->age += dt_max;
 
-                    if( phytomer->build_context_geometry_internode ) {
-                        context_ptr->setObjectData(phytomer->internode_objIDs, "age", phytomer->age);
+                    if( output_object_data.at("age") ) {
+                        if (phytomer->build_context_geometry_internode) {
+                            context_ptr->setObjectData(phytomer->internode_objIDs, "age", phytomer->age);
+                        }
+                        if (phytomer->build_context_geometry_petiole) {
+                            context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
+                        }
+                        context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
                     }
-                    if( phytomer->build_context_geometry_petiole ) {
-                        context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
-                    }
-                    context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
 
                     node_index++;
                 }
@@ -2556,4 +2576,22 @@ bool PlantArchitecture::detectGroundCollision(const std::vector<uint> &objID) {
     }
     return false;
 
+}
+
+void PlantArchitecture::optionalOutputObjectData( const std::string &object_data_label ){
+    if( output_object_data.find(object_data_label)==output_object_data.end() ){
+        std::cerr << "WARNING (PlantArchitecture::optionalOutputObjectData): Output object data of '" << object_data_label << "' is not a valid option." << std::endl;
+        return;
+    }
+    output_object_data.at(object_data_label) = true;
+}
+
+void PlantArchitecture::optionalOutputObjectData( const std::vector<std::string> &object_data_labels ){
+    for( auto &label : object_data_labels){
+        if( output_object_data.find(label)==output_object_data.end() ){
+            std::cerr << "WARNING (PlantArchitecture::optionalOutputObjectData): Output object data of '" << label << "' is not a valid option." << std::endl;
+            continue;
+        }
+        output_object_data.at(label) = true;
+    }
 }

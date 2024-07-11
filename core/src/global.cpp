@@ -475,6 +475,27 @@ void helios::makeScaleMatrix( const helios::vec3& scale, float (&T)[16] ){
   
 }
 
+void helios::makeScaleMatrix( const helios::vec3 &scale, const helios::vec3 &point, float (&T)[16] ){
+
+    T[0] = scale.x; //(0,0)
+    T[1] = 0.f; //(0,1)
+    T[2] = 0.f; //(0,2)
+    T[3] = point.x * (1 - scale.x); //(0,3)
+    T[4] = 0.f; //(1,0)
+    T[5] = scale.y;  //(1,1)
+    T[6] = 0.f; //(1,2)
+    T[7] = point.y * (1 - scale.y); //(1,3)
+    T[8] = 0.f; //(2,0)
+    T[9] = 0.f;  //(2,1)
+    T[10] = scale.z; //(2,2)
+    T[11] = point.z * (1 - scale.z);//(2,3)
+    T[12] = 0.f;//(3,0)
+    T[13] = 0.f;//(3,1)
+    T[14] = 0.f;//(3,2)
+    T[15] = 1.f;//(3,3)
+
+}
+
 void helios::matmult( const float ML[16], const float MR[16], float (&T)[16] ){
 
     float M[16]={0.f};

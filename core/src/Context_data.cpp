@@ -3017,21 +3017,21 @@ void Context::getObjectData( const uint objID, const char* label, std::vector<st
 
 HeliosDataType Context::getObjectDataType( const uint objID, const char* label )const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectDataType): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectDataType): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   return objects.at(objID)->getObjectDataType(label);
 }
 
 uint Context::getObjectDataSize( const uint objID, const char* label )const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (getObjectDataSize): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::getObjectDataSize): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   return objects.at(objID)->getObjectDataSize(label);
 }
 
 bool Context::doesObjectDataExist( const uint objID, const char* label ) const{
   if( objects.find(objID) == objects.end() ){
-    helios_runtime_error("ERROR (doesObjectDataExist): objID of " + std::to_string(objID) + " does not exist in the Context.");
+    helios_runtime_error("ERROR (Context::doesObjectDataExist): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
   return objects.at(objID)->doesObjectDataExist(label);
 }

@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.15</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.16</span>
    </div>
   </td>
  </tr>
@@ -1074,7 +1074,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>This function creates the following primitive data for each patch 1) <code>gridCell" which indicates the index of the gridcell that contains the patch, 2)&lt;/tt&gt;directFlag" which equals 1 if the leaf was part of the direct reconstruction, and 0 if the leaf was backfilled. </code></dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function creates the following primitive data for each patch 1) "gridCell" which indicates the index of the gridcell that contains the patch, 2) "directFlag" which equals 1 if the leaf was part of the direct reconstruction, and 0 if the leaf was backfilled. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00845">845</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -1114,7 +1114,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>This function creates the following primitive data for each patch 1) <code>gridCell" which indicates the index of the gridcell that contains the patch, 2)&lt;/tt&gt;directFlag" which equals 1 if the leaf was part of the direct reconstruction, and 0 if the leaf was backfilled. </code></dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function creates the following primitive data for each patch 1) "gridCell" which indicates the index of the gridcell that contains the patch, 2) "directFlag" which equals 1 if the leaf was part of the direct reconstruction, and 0 if the leaf was backfilled. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00849">849</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -1171,7 +1171,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>This function creates primitive data called ``leafGroup" which provides an identifier for each triangle based on the fill group it is in. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function creates primitive data called "leafGroup" which provides an identifier for each triangle based on the fill group it is in. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00892">892</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -1223,7 +1223,7 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Add triangle geometry to Helios context. </p>
-<p >\parameter[in] "context" Pointer to Helios context </p>
+<p >\parameter[in] context Pointer to Helios context </p>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01772">1772</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -2705,7 +2705,7 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Get the size of a grid cell by its index. </p>
-<pre class="fragment"> \param [in] "index" Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, an
+<pre class="fragment"> \param[in] index Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, an
 </pre><p> d the last cell's index is Ncells-1. </p>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01829">1829</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
@@ -3329,7 +3329,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </div><div class="memdoc">
 
 <p>Get hit point corresponding to first vertex of triangle. </p>
-<p >\parameter[in] "index" <a class="el" href="struct_triangulation.html">Triangulation</a> index (0 thru Ntriangles-1) </p><dl class="section return"><dt>Returns</dt><dd>Hit point index (0 thru Nhits-1) </dd></dl>
+<p >\parameter[in] index <a class="el" href="struct_triangulation.html">Triangulation</a> index (0 thru Ntriangles-1) </p><dl class="section return"><dt>Returns</dt><dd>Hit point index (0 thru Nhits-1) </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00512">512</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -4175,10 +4175,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">Lmax</td><td>Maximum allowable length of triangle sides. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">max_aspect_ratio</td><td>Maximum allowable aspect ratio of triangles.<ul>
-<li></li>
-</ul>
-</td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">max_aspect_ratio</td><td>Maximum allowable aspect ratio of triangles. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">scalar_field</td><td>Name of a scalar field defined in the ASCII point cloud data (e.g., "deviation") </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">threshold</td><td>Value for filter threshold </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">comparator</td><td>Points will not be used in triangulation if "scalar (comparator) threshold", where (comparator) is one of "&gt;", "&lt;", or "=" </td></tr>

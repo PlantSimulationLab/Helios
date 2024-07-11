@@ -466,21 +466,35 @@ void Primitive::applyTransform( float (&T)[16] ){
     matmult(T,transform,transform);
 }
 
-void Primitive::scale( const vec3& S ){
+void Primitive::scale( const vec3 &S ){
 
     if( parent_object_ID!=0 ){
         std::cerr << "WARNING (Primitive::scale): Cannot scale individual primitives within a compound object. Use the setter function for objects." << std::endl;
         return;
-    }
-    if( S.x==0 || S.y==0 || S.z==0 ){
+    }else if( S.x==0 || S.y==0 || S.z==0 ){
         helios_runtime_error( "ERROR (Primitive::scale): Scaling factor cannot be zero." );
-    }
-    if( S.x==1 && S.y==1 && S.z==1 ){
+    }else if( S.x==1 && S.y==1 && S.z==1 ){
         return;
     }
 
     float T[16];
     makeScaleMatrix(S,T);
+    matmult(T,transform,transform);
+}
+
+void Primitive::scale( const vec3 &S, const vec3 &point ){
+
+    if( parent_object_ID!=0 ){
+        std::cerr << "WARNING (Primitive::scale): Cannot scale individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        return;
+    }else if( S.x==0 || S.y==0 || S.z==0 ){
+        helios_runtime_error( "ERROR (Primitive::scale): Scaling factor cannot be zero." );
+    }else if( S.x==1 && S.y==1 && S.z==1 ){
+        return;
+    }
+
+    float T[16];
+    makeScaleMatrix(S, point,T);
     matmult(T,transform,transform);
 }
 
@@ -1464,20 +1478,41 @@ void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const h
 }
 
 void Context::scalePrimitive(uint UUID, const helios::vec3& S ){
-    getPrimitivePointer_private(UUID)->scale(S);
-}
 
-void Context::scalePrimitive( const std::vector<uint>& UUIDs, const helios::vec3& S ){
-
-    if( S.x==1 && S.y==1 && S.z==1 ){
+    if( !doesPrimitiveExist(UUID) ){
+        helios_runtime_error("ERROR (Context::scalePrimitive): UUID of " + std::to_string(UUID) + " not found in the context.");
+    }else if( S.x==1 && S.y==1 && S.z==1 ){
         return;
     }
 
     float T[16];
     makeScaleMatrix(S,T);
 
-    for( uint UUID : UUIDs){
-        getPrimitivePointer_private(UUID)->applyTransform(T);
+    getPrimitivePointer_private(UUID)->applyTransform(T);
+
+}
+
+void Context::scalePrimitive( const std::vector<uint>& UUIDs, const helios::vec3& S ){
+    for( uint UUID : UUIDs ){
+        scalePrimitive(UUID,S);
+    }
+}
+
+void Context::scalePrimitiveAboutPoint( uint UUID, const helios::vec3& S, const helios::vec3 point ){
+
+    if( !doesPrimitiveExist(UUID) ){
+        helios_runtime_error("ERROR (Context::scalePrimitiveAboutPoint): UUID of " + std::to_string(UUID) + " not found in the context.");
+    }else if( S.x==1 && S.y==1 && S.z==1 ){
+        return;
+    }
+
+    getPrimitivePointer_private(UUID)->scale(S, point);
+
+}
+
+void Context::scalePrimitiveAboutPoint( const std::vector<uint>& UUIDs, const helios::vec3& S, const helios::vec3 point ){
+    for( uint UUID : UUIDs ){
+        scalePrimitiveAboutPoint(UUID,S,point);
     }
 }
 
@@ -2392,13 +2427,21 @@ void CompoundObject::rotate(float rotation_radians, const helios::vec3&  origin,
 }
 
 void CompoundObject::scale( const helios::vec3 &scale ){
+    scaleAboutPoint( scale, nullorigin );
+}
+
+void CompoundObject::scaleAboutCenter( const helios::vec3 &scale ){
+    scaleAboutPoint( scale, getObjectCenter() );
+}
+
+void CompoundObject::scaleAboutPoint( const helios::vec3 &scale, const helios::vec3 &point ){
 
     if( scale.x==1.f && scale.y==1.f && scale.z==1.f ){
         return;
     }
 
     float T[16], T_prim[16];
-    makeScaleMatrix( scale, T);
+    makeScaleMatrix( scale, point, T);
     matmult(T,transform,transform);
 
     for( uint UUID : UUIDs) {
@@ -2755,33 +2798,33 @@ void Context::translateObject( const std::vector<uint>& ObjIDs, const vec3& shif
     }
 }
 
-void Context::rotateObject(uint ObjID, float rot, const char* axis ){
-    getObjectPointer(ObjID)->rotate(rot,axis);
+void Context::rotateObject(uint ObjID, float rotation_radians, const char* rotation_axis_xyz ){
+    getObjectPointer(ObjID)->rotate(rotation_radians, rotation_axis_xyz);
 }
 
-void Context::rotateObject( const std::vector<uint>& ObjIDs, float rot, const char* axis ){
+void Context::rotateObject(const std::vector<uint>& ObjIDs, float rotation_radians, const char* rotation_axis_xyz ){
     for( uint ID : ObjIDs){
-        getObjectPointer(ID)->rotate(rot,axis);
+        getObjectPointer(ID)->rotate(rotation_radians, rotation_axis_xyz);
     }
 }
 
-void Context::rotateObject(uint ObjID, float rot, const vec3& axis ){
-    getObjectPointer(ObjID)->rotate(rot,axis);
+void Context::rotateObject(uint ObjID, float rotation_radians, const vec3& rotation_axis_vector ){
+    getObjectPointer(ObjID)->rotate(rotation_radians, rotation_axis_vector);
 }
 
-void Context::rotateObject( const std::vector<uint>& ObjIDs, float rot, const vec3& axis ){
+void Context::rotateObject(const std::vector<uint>& ObjIDs, float rotation_radians, const vec3& rotation_axis_vector ){
     for( uint ID : ObjIDs){
-        getObjectPointer(ID)->rotate(rot,axis);
+        getObjectPointer(ID)->rotate(rotation_radians, rotation_axis_vector);
     }
 }
 
-void Context::rotateObject(uint ObjID, float rot, const vec3& origin, const vec3& axis ){
-    getObjectPointer(ObjID)->rotate(rot,origin,axis);
+void Context::rotateObject(uint ObjID, float rotation_radians, const vec3& rotation_origin, const vec3& rotation_axis_vector ){
+    getObjectPointer(ObjID)->rotate(rotation_radians, rotation_origin, rotation_axis_vector);
 }
 
-void Context::rotateObject( const std::vector<uint>& ObjIDs, float rot, const vec3& origin, const vec3& axis ){
+void Context::rotateObject(const std::vector<uint>& ObjIDs, float rotation_radians, const vec3& rotation_origin, const vec3& rotation_axis_vector ){
     for( uint ID : ObjIDs){
-        getObjectPointer(ID)->rotate(rot,origin,axis);
+        getObjectPointer(ID)->rotate(rotation_radians, rotation_origin, rotation_axis_vector);
     }
 }
 
@@ -2792,6 +2835,26 @@ void Context::scaleObject( uint ObjID, const helios::vec3 &scalefact ){
 void Context::scaleObject( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact ){
     for( uint ID : ObjIDs){
         getObjectPointer(ID)->scale(scalefact);
+    }
+}
+
+void Context::scaleObjectAboutCenter( uint ObjID, const helios::vec3 &scalefact ){
+    getObjectPointer(ObjID)->scaleAboutCenter(scalefact);
+}
+
+void Context::scaleObjectAboutCenter( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact ){
+    for( uint ID : ObjIDs){
+        getObjectPointer(ID)->scaleAboutCenter(scalefact);
+    }
+}
+
+void Context::scaleObjectAboutPoint( uint ObjID, const helios::vec3 &scalefact, const helios::vec3 &point ){
+    getObjectPointer(ObjID)->scaleAboutPoint(scalefact, point);
+}
+
+void Context::scaleObjectAboutPoint( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact, const helios::vec3 &point ){
+    for( uint ID : ObjIDs){
+        getObjectPointer(ID)->scaleAboutPoint(scalefact, point);
     }
 }
 

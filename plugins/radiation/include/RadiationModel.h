@@ -127,19 +127,6 @@ public:
         radiativepropertiesinitialized = false;
     }
 
-    //! Copy constructor
-    RadiationBand( const RadiationBand &band ) : label(band.label), directRayCount(band.directRayCount),
-                                                 diffuseRayCount(band.diffuseRayCount),
-                                                 diffuseFlux(band.diffuseFlux),
-                                                 diffuseExtinction(band.diffuseExtinction),
-                                                 diffusePeakDir(band.diffusePeakDir),
-                                                 diffuseDistNorm(band.diffuseDistNorm),
-                                                 scatteringDepth(band.scatteringDepth),
-                                                 minScatterEnergy(band.minScatterEnergy),
-                                                 emissionFlag(band.emissionFlag),
-                                                 wavebandBounds(band.wavebandBounds),
-                                                 radiativepropertiesinitialized(band.radiativepropertiesinitialized){}
-
     //! Label for band
     std::string label;
 
@@ -160,6 +147,9 @@ public:
 
     //! Diffuse distribution normalization factor
     float diffuseDistNorm;
+
+    //! Spectral distribution of diffuse radiation flux for wave band
+    std::vector<helios::vec2> diffuse_spectrum;
 
     //! Scattering depth for wave band
     uint scatteringDepth;
@@ -185,7 +175,7 @@ private:
     size_t diffuseRayCount_default = 1000;
 
     //! Default diffuse radiation flux
-    float diffuseFlux_default = 0.f;
+    float diffuseFlux_default = -1.f;
 
     //! Default minimum energy for scattering
     float minScatterEnergy_default = 0.1;
@@ -344,6 +334,36 @@ public:
         \param[in] peak_dir Spherical direction of the peak in diffuse radiation (this is usually the sun direction)
     */
     void setDiffuseRadiationExtinctionCoeff(const std::string &label, float K, const helios::SphericalCoord &peak_dir );
+
+    //! Set the integral of the diffuse spectral flux distribution across all possible wavelengths FOR ALL EXISTING BANDS (=∫Sdλ)
+    /**
+     * \param[in] spectrum_integral Integration of source spectral flux distribution across all possible wavelengths (=∫Sdλ)
+     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
+    */
+    void setDiffuseSpectrumIntegral( float spectrum_integral);
+
+    //! Scale the source spectral flux distribution based on a prescribed integral between two wavelengths FOR ALL EXISTING BANDS (=∫Sdλ)
+    /**
+     * \param[in] spectrum_integral Integration of source spectral flux distribution between two wavelengths (=∫Sdλ)
+     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
+    */
+    void setDiffuseSpectrumIntegral( float spectrum_integral, float wavelength1, float wavelength2);
+
+    //! Set the integral of the diffuse spectral flux distribution across all possible wavelengths (=∫Sdλ)
+    /**
+     * \param[in] band_label Label used to reference the band
+     * \param[in] spectrum_integral Integration of source spectral flux distribution across all possible wavelengths (=∫Sdλ)
+     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
+    */
+    void setDiffuseSpectrumIntegral( const std::string &band_label, float spectrum_integral);
+
+    //! Scale the source spectral flux distribution based on a prescribed integral between two wavelengths (=∫Sdλ)
+    /**
+     * \param[in] band_label Label used to reference the band
+     * \param[in] spectrum_integral Integration of source spectral flux distribution between two wavelengths (=∫Sdλ)
+     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
+    */
+    void setDiffuseSpectrumIntegral( const std::string &band_label, float spectrum_integral, float wavelength1, float wavelength2);
 
     //! Add a spectral radiation band to the model
     /**
@@ -556,17 +576,25 @@ public:
     */
     void setSourceSpectrum(const std::vector<uint> &source_ID, const std::string &spectrum_label );
 
-//    //! Set the spectral distribution of diffuse ambient radiation according to a vector of wavelength-intensity pairs.
-//    /**
-//     * \param[in] spectrum Vector containing spectral intensity data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity (.y).
-//     */
-//    void setDiffuseSpectrum( const std::vector<helios::vec2> &spectrum );
-//
-//    //! Set the spectral distribution of diffuse ambient radiation based on global data of wavelength-intensity pairs.
-//    /**
-//      * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
-//    */
-//    void setDiffuseSpectrum( const std::string &spectrum_label );
+    //! Set the spectral distribution of diffuse ambient radiation FOR ALL BANDS based on global data of wavelength-intensity pairs.
+    /**
+      * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
+    */
+    void setDiffuseSpectrum( const std::string &spectrum_label );
+
+    //! Set the spectral distribution of diffuse ambient radiation FOR A SINGLE BANDS based on global data of wavelength-intensity pairs.
+    /**
+      * \param[in] band_label Label used to reference the band
+      * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
+    */
+    void setDiffuseSpectrum( const std::string &band_label, const std::string &spectrum_label );
+
+    //! Get the diffuse flux for a given band
+    /**
+     * \param[in] band_label Label used to reference the band
+     * \return Diffuse flux for the band
+     */
+    float getDiffuseFlux( const std::string &band_label ) const;
 
     //! Add a 3D model of the light source (rectangular, disk, and sphere) to the Context for visualization purposes
     void enableLightModelVisualization();
@@ -925,6 +953,17 @@ public:
     */
     void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &primitive_data_label, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float padvalue = NAN);
 
+    //! Write image pixel labels to text file based on object data. Object data must have type 'float', 'double', 'uint', or 'int'.
+    /**
+     * \param[in] cameralabel Label of target camera
+     * \param[in] object_data_label Name of the object data label
+     * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame OPTIONAL: A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] padvalue Pad value for the empty pixels
+    */
+    void writeObjectDataLabelMap(const std::string &cameralabel, const std::string &object_data_label, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float padvalue = NAN);
+
     //! Write depth image data to text file
     /**
      * \param[in] cameralabel Label of target camera
@@ -1029,8 +1068,6 @@ protected:
 
     std::vector<RadiationSource> radiation_sources;
 
-    std::vector<helios::vec2> diffuse_spectrum;
-
     //! Number of external radiation sources
     RTvariable Nsources_RTvariable;
 
@@ -1133,6 +1170,13 @@ protected:
         \note \ref updateRadiativeProperties() must be called before simulation can be run
     */
     void updateRadiativeProperties( const std::vector<std::string> &labels );
+
+    //! Load Context global data corresponding to spectral data
+    /**
+     * \param[in] global_data_label Label for global data containing spectral data
+     * \return Vector of vec2 data containing spectral data (.x is wavelength in nanometers, .y is the spectral value)
+    */
+    std::vector<helios::vec2> loadSpectralData( const std::string &global_data_label )const;
 
     ///void updateFluxesFromSpectra( uint SourceID );
 
@@ -1603,6 +1647,8 @@ protected:
 
     //! Names of additional primitive data to add to the Context
     std::vector<std::string> output_prim_data;
+
+    std::vector<std::string> spectral_library_files;
 
 };
 

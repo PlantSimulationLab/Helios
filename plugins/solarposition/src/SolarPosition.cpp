@@ -48,96 +48,6 @@ SolarPosition::SolarPosition( int UTC_hrs, float latitude_deg, float longitude_d
     
 }
 
-int SolarPosition::selfTest() const{
-
-  std::cout << "Running solar position model self-test..." << std::flush;
-  int error_count = 0;
-
-  float latitude;
-  float longitude;
-  Date date;
-  Time time;
-  int UTC;
-
-  std::string answer;
-
-  float errtol = 1e-6;
-
-  Context context_s;
-
-  //---- Sun Zenith/Azimuth Test for Boulder, CO ---- //
-
-  latitude = 40.1250;
-  longitude = 105.2369;
-  date = make_Date(1,1,2000);
-  time = make_Time(10,30,0) ;
-  UTC = 7;
-
-  float theta_actual = 29.49;
-  float phi_actual = 154.18;  
-
-  context_s.setDate( date );
-  context_s.setTime( time );
-
-  SolarPosition solarposition_1( UTC, latitude, longitude, &context_s );
-
-  float theta_s = solarposition_1.getSunElevation()*180.f/M_PI;
-  float phi_s = solarposition_1.getSunAzimuth()*180.f/M_PI;
-
-  if( fabs(theta_s-theta_actual)>10 || fabs(phi_s-phi_actual)>5 ){
-    error_count++;
-    std::cout << "failed: verification test for known solar position does not agree with calculated result." << std::endl;
-  } 
-
-  //---- Test of Gueymard Solar Flux Model ---- //
-
-  latitude = 36.5289; //Billings, OK
-  longitude = 97.4439;
-  date = make_Date(5,5,2003);
-  time = make_Time(9,10,0) ;
-  UTC = 6;
-
-  context_s.setDate( date );
-  context_s.setTime( time );
-
-  SolarPosition solarposition_2( UTC, latitude, longitude, &context_s );
-
-  float pressure = 96660;
-  float temperature = 290;
-  float humidity = 0.5;
-  float turbidity = 0.025;
-
-  float Eb, Eb_PAR, Eb_NIR, fdiff;
-
-  solarposition_2.GueymardSolarModel( pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff );
-  Eb=Eb_PAR+Eb_NIR;
-
-  //----- Test of Ambient Longwave Model ------ //
-
-  SolarPosition solarposition_3( UTC, latitude, longitude, &context_s );
-
-  temperature = 290;
-  humidity = 0.5;
-
-  float LW = solarposition_3.getAmbientLongwaveFlux( temperature, humidity );
-
-  if( fabs(LW-310.03192f)>errtol ){
-    error_count++;
-    std::cout << "failed: verification test for ambient longwave model does not agree with known result." << std::endl;
-  }
-
-  if( error_count==0 ){
-    std::cout << "passed." << std::endl;
-    return 0;
-  }else{
-    std::cout << "Failed Context self-test with " << error_count << " errors." << std::endl;
-    return 1;
-  }
-
-
-
-}
-
 SphericalCoord SolarPosition::calculateSunDirection( const helios::Time &time, const helios::Date &date ) const{
   
   int solstice_day, LSTM;
@@ -468,7 +378,7 @@ float SolarPosition::getAmbientLongwaveFlux(float temperature_K, float humidity_
 
 }
 
-float turbidityResidualFunction(float turbidity, std::vector<float> &parameters, const void * a_solarpositionmodel) {
+float SolarPosition::turbidityResidualFunction(float turbidity, std::vector<float> &parameters, const void * a_solarpositionmodel) {
 
     auto* solarpositionmodel = reinterpret_cast<const SolarPosition*>(a_solarpositionmodel);
 

@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.15
+/*! \mainpage Helios Documentation v1.3.16
 
   <p> <br> </p>
 
@@ -282,7 +282,7 @@ $ git pull
 
   Git: It is recommended to install Git in order to facilitate easy download and updating of the Helios source software. This can be accomplished via the command line "brew install git".
 
-  CMake: Components of Helios are compiled using the CMake package (<a href="www.cmake.org">www.cmake.org</a>).  Version 2.5+ is required on Mac.  CMake can be easily installed via the command line using homebrew "brew install cmake".
+  CMake: Components of Helios are compiled using the CMake package (<a href="www.cmake.org">www.cmake.org</a>).  Version 3.15+ is required.  CMake can be easily installed via the command line using homebrew "brew install cmake".
 
   C/C++ Compiler: You will also need a C/C++ compiler installed - we recommend using the GNU compilers or the AppleClang compilers.  The GNU compilers can easily be installed via the command line "brew install gcc".
 
@@ -328,7 +328,7 @@ $ git pull
     
   \subsection CMake CMakeLists.txt File
   
-  Projects that use the Helios API are typically built using a CMakeLists.txt file.  A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.
+  Projects that use the Helios API are typically built using the CMake package a CMakeLists.txt file.  Helios requires CMake version 3.15+. A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.
 
   ~~~~~~
   # Helios standard CMakeLists.txt file version 1.9
@@ -448,6 +448,8 @@ $ git pull
 
  ~~~~~~{.cpp}
  #include "Context.h"
+ using namespace helios;
+
  int main(){
     Context context;
  }
@@ -541,9 +543,9 @@ $ git pull
  All primitives inherit the class '\ref helios::Primitive "Primitive"', which give them common properties and functions.  The available geometric primitive types are detailed below.  Each primitive type has an enumeration that can be used in the code to reference each primitive type.
  
  <table>
- <tr><th>Primitive</th><th>Description</th><th>Enumeration</th></tr>
- <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_PATCH "PRIMITIVE_TYPE_PATCH"</td></tr>
- <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE_TYPE_TRIANGLE"</td></tr>
+  <tr><th>Primitive</th><th>Description</th><th>Enumeration</th></tr>
+  <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_PATCH "PRIMITIVE_TYPE_PATCH"</td></tr>
+  <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE_TYPE_TRIANGLE"</td></tr>
   <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_VOXEL "PRIMITIVE_TYPE_VOXEL"</td></tr>
  </table>	
  
@@ -1137,8 +1139,8 @@ $ git pull
  </td>
  <tr><td>Cone</td><td>\ref helios::Context::getConeObjectPointer() "getConeObjectPointer()"</td><td>
        <ul>
-	 <li>\ref helios::Cone::getNodes() "getNodeCoordinates()"</li>
-	 <li>\ref helios::Cone::getNode() "getNodeCoordinate()"</li>
+	 <li>\ref helios::Cone::getNodeCoordinates() "getNodeCoordinates()"</li>
+	 <li>\ref helios::Cone::getNodeCoordinate() "getNodeCoordinate()"</li>
 	 <li>\ref helios::Cone::getNodeRadii() "getNodeRadii()"</li>
 	 <li>\ref helios::Cone::getNodeRadius() "getNodeRadius()"</li>
 	 <li>\ref helios::Cone::getSubdivisionCount() "getSubdivisionCount()"</li>
@@ -1328,22 +1330,19 @@ $ git pull
      context.getPrimitiveData(UUID,"emissivity",emissivity);
 
   }
-
  ~~~~~~
 
  In the above example, the value of 'emissivity' is 0.9.
 
- For a vector of primitive data, use the \ref helios::Context::getPrimitiveData_v() "getPrimitiveData_v" function.  Note that the 'getPrimitiveData_v' function can always be used regardless of whether the data is scalar or vector valued.  If the data is scalar and 'getPrimitiveData_v' is used, the function will simply return a vector structure of length 1.
-
  \subsubsection PrimDataHelpers Primitive Data Query Functions
 
- It is often necessary to query information about primitive data. The following table lists functions used to query primitive data information.  Note that the query functions are called through a pointer to the primitive, not directly from the Context (see example below).
+ It is often necessary to query information about primitive data. The following table lists functions used to query primitive data information.
 
  <table>
  <tr><th>Function</th><th>Description</th></tr>
- <tr><td>\ref helios::Primitive::doesPrimitiveDataExist( const char* label ) const "doesPrimitiveDataExist( const char* label )"</td><td>Check whether primitive data named 'label' exists for the primitive.</td></tr>
- <tr><td>\ref helios::Primitive::getPrimitiveDataType( const char* label ) const "getPrimitiveDataType( const char* label )"</td><td>Get the \ref helios::HeliosDataType for the primitive.</td></tr>
- <tr><td>\ref helios::Primitive::getPrimitiveDataSize( const char* label ) const "getPrimitiveDataSize( const char* label )"</td><td>Get the length/size of the primitive data named 'label'.</td></tr>
+ <tr><td>\ref helios::Context::doesPrimitiveDataExist() "doesPrimitiveDataExist( uint UUID, const char* label )"</td><td>Check whether primitive data named 'label' exists for the primitive.</td></tr>
+ <tr><td>\ref helios::Context::getPrimitiveDataType() "getPrimitiveDataType( uint UUID, const char* label )"</td><td>Get the \ref helios::HeliosDataType for the primitive.</td></tr>
+ <tr><td>\ref helios::Context::getPrimitiveDataSize() "getPrimitiveDataSize( uint UUID, const char* label )"</td><td>Get the length/size of the primitive data named 'label'.</td></tr>
  </table>  
  
  <p> <br> </p>  

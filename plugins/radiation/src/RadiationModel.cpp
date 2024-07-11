@@ -36,6 +36,13 @@ RadiationModel::RadiationModel( helios::Context* context_a ){
 
     periodic_flag = make_vec2(0,0);
 
+    spectral_library_files.push_back("plugins/radiation/spectral_data/camera_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/light_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/surface_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/color_board/DGK_DKK_colorboard.xml");
+
     initializeOptiX();
 
 }
@@ -119,6 +126,57 @@ void RadiationModel::setDiffuseRadiationExtinctionCoeff( const std::string &labe
     radiation_bands.at(label).diffuseExtinction = K;
     radiation_bands.at(label).diffusePeakDir = dir;
     radiation_bands.at(label).diffuseDistNorm = 1.f/norm;
+
+}
+
+void RadiationModel::setDiffuseSpectrumIntegral( float spectrum_integral){
+
+    for( auto &band : radiation_bands ) {
+        setDiffuseSpectrumIntegral( band.first, spectrum_integral );
+    }
+
+}
+
+void RadiationModel::setDiffuseSpectrumIntegral( float spectrum_integral, float wavelength1, float wavelength2){
+
+    for( auto &band : radiation_bands ) {
+        setDiffuseSpectrumIntegral( band.first, spectrum_integral, wavelength1, wavelength2 );
+    }
+
+}
+
+void RadiationModel::setDiffuseSpectrumIntegral( const std::string &band_label, float spectrum_integral){
+
+    if( spectrum_integral<0 ){
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseSpectrumIntegral): Source integral must be non-negative." );
+    }else if( !doesBandExist(band_label) ){
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseSpectrumIntegral): Cannot set integral for band '" + band_label + "' because it is not a valid band." );
+    }else if( radiation_bands.at(band_label).diffuse_spectrum.empty() ){
+        std::cerr << "WARNING (RadiationModel::setDiffuseSpectrumIntegral): Diffuse spectral distribution has not been set for radiation band '" + band_label + "'. Cannot set its integral." << std::endl;
+        return;
+    }
+
+    float current_integral = integrateSpectrum( radiation_bands.at(band_label).diffuse_spectrum );
+
+    for( vec2 &wavelength : radiation_bands.at(band_label).diffuse_spectrum ){
+        wavelength.y *= spectrum_integral/current_integral;
+    }
+
+}
+
+void RadiationModel::setDiffuseSpectrumIntegral( const std::string &band_label, float spectrum_integral, float wavelength1, float wavelength2){
+
+    if( spectrum_integral<0 ){
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseSpectrumIntegral): Source integral must be non-negative." );
+    }else if( !doesBandExist(band_label) ){
+        helios_runtime_error("ERROR (RadiationModel::setDiffuseSpectrumIntegral): Cannot set integral for band '" + band_label + "' because it is not a valid band." );
+    }
+
+    float current_integral = integrateSpectrum( radiation_bands.at(band_label).diffuse_spectrum, wavelength1, wavelength2 );
+
+    for( vec2 &wavelength : radiation_bands.at(band_label).diffuse_spectrum ){
+        wavelength.y *= spectrum_integral/current_integral;
+    }
 
 }
 
@@ -430,7 +488,7 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
 void RadiationModel::setSourceFlux( uint source_ID, const std::string &label, float flux ){
 
     if( !doesBandExist(label) ){
-        helios_runtime_error( "ERROR (RadiationModel::setSourceFlux): Cannot add radiation source for band '" + label + "' because it is not a valid band.");
+        helios_runtime_error( "ERROR (RadiationModel::setSourceFlux): Cannot add set source flux for band '" + label + "' because it is not a valid band.");
     }else if( source_ID >= radiation_sources.size() ){
         helios_runtime_error("ERROR (RadiationModel::setSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
     }else if( flux<0 ){
@@ -452,11 +510,9 @@ void RadiationModel::setSourceFlux(const std::vector<uint> &source_ID, const std
 float RadiationModel::getSourceFlux( uint source_ID, const std::string &label )const{
 
     if( !doesBandExist(label) ){
-        helios_runtime_error( "ERROR (RadiationModel::getSourceFlux): Cannot add radiation source for band '" + label + "' because it is not a valid band.");
+        helios_runtime_error( "ERROR (RadiationModel::getSourceFlux): Cannot get source flux for band '" + label + "' because it is not a valid band.");
     }else if( source_ID >= radiation_sources.size() ){
         helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size()-1) + " radiation sources have been created." );
-    }else if( radiation_sources.at(source_ID).source_fluxes.find(label) == radiation_sources.at(source_ID).source_fluxes.end() ) {
-        helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) + " because radiative band '" + label + "' does not exist.");
     }else if( radiation_sources.at(source_ID).source_fluxes.find(label) == radiation_sources.at(source_ID).source_fluxes.end() ) {
         helios_runtime_error("ERROR (RadiationModel::getSourceFlux): Cannot get flux for source #" + std::to_string(source_ID) + " because radiative band '" + label + "' does not exist.");
     }
@@ -515,30 +571,7 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
         helios_runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Cannot add radiation spectra for this source because it is not a valid radiation source ID.\n");
     }
 
-    std::vector<vec2> spectrum;
-
-    //standard solar spectrum
-    if( spectrum_label == "ASTMG173" || spectrum_label == "solar_spectrum_ASTMG173" || spectrum_label == "solar_spectrum_direct_ASTMG173" ) {
-
-        if( !context->doesGlobalDataExist("solar_spectrum_direct_ASTMG173") ) {
-            context->loadXML("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml", true);
-        }
-
-        if( !context->doesGlobalDataExist("solar_spectrum_direct_ASTMG173") ){
-            helios_runtime_error( "ERROR (RadiationModel::setSourceSpectrum): The file ""plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml"" could not be loaded.");
-        }
-
-        context->getGlobalData("solar_spectrum_direct_ASTMG173",spectrum);
-
-    //user-specified spectrum
-    }else{
-        if( !context->doesGlobalDataExist(spectrum_label.c_str()) ) {
-            helios_runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Global data " + std::string(spectrum_label) + " does not exist and thus source spectrum cannot be set.");
-        }
-
-        context->getGlobalData(spectrum_label.c_str(),spectrum);
-
-    }
+    std::vector<vec2> spectrum = loadSpectralData( spectrum_label );
 
     radiation_sources.at(source_ID).source_spectrum = spectrum;
     radiation_sources.at(source_ID).source_spectrum_label = spectrum_label;
@@ -551,53 +584,63 @@ void RadiationModel::setSourceSpectrum(const std::vector<uint> &source_ID, const
     }
 }
 
-//void RadiationModel::setDiffuseSpectrum( const std::vector<helios::vec2> &spectrum ){
-//
-//    //validate spectrum
-//    for( auto s=0; s<spectrum.size(); s++ ) {
-//        //check that wavelengths are monotonic
-//        if( s>0 && spectrum.at(s).x<=spectrum.at(s-1).x ) {
-//            helios_runtime_error("ERROR (RadiationModel::setDiffuseSpectrum): Source spectral data validation failed. Wavelengths must increase monotonically.");
-//        }
-//        //check that wavelength is within a reasonable range
-//        if( spectrum.at(s).x<0 || spectrum.at(s).x>100000 ) {
-//            helios_runtime_error("ERROR (RadiationModel::setDiffuseSpectrum): Source spectral data validation failed. Wavelength value of " + std::to_string(spectrum.at(s).x) + " appears to be erroneous.");
-//        }
-//        //check that flux is non-negative
-//        if( spectrum.at(s).y<0 ) {
-//            helios_runtime_error("ERROR (RadiationModel::setDiffuseSpectrum): Source spectral data validation failed. Flux value at wavelength of " + std::to_string(spectrum.at(s).x) + " appears is negative.");
-//        }
-//    }
-//
-//    diffuse_spectrum = spectrum;
-//
-//}
-//
-//void RadiationModel::setDiffuseSpectrum( const std::string &spectrum_label ){
-//
-//    std::vector<vec2> spectrum;
-//
-//    //standard solar spectrum
-//    if( spectrum_label == "ASTMG173" || spectrum_label == "solar_spectrum_diffuse_ASTMG173" ) {
-//        context->loadXML("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml", true);
-//        if( !context->doesGlobalDataExist("solar_spectrum_diffuse_ASTMG173") ){
-//            helios_runtime_error( "ERROR (RadiationModel::setDiffuseSpectrum): The file ""plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml"" could not be loaded.");
-//        }
-//
-//        context->getGlobalData("solar_spectrum_direct_ASTMG173",spectrum);
-//
-//    }else{
-//        if( !context->doesGlobalDataExist(spectrum_label.c_str()) ) {
-//            helios_runtime_error( "ERROR (RadiationModel::setSourceSpectrum): Global data " + std::string(spectrum_label) + " does not exist and thus source spectrum cannot be set.");
-//        }
-//
-//        context->getGlobalData(spectrum_label.c_str(),spectrum);
-//
-//    }
-//
-//    diffuse_spectrum = spectrum;
-//
-//}
+void RadiationModel::setDiffuseSpectrum( const std::string &spectrum_label ){
+
+    std::vector<vec2> spectrum;
+
+    //standard solar spectrum
+    if( spectrum_label == "ASTMG173" ){
+        spectrum = loadSpectralData("solar_spectrum_diffuse_ASTMG173");
+    }else{
+        spectrum = loadSpectralData(spectrum_label);
+    }
+
+    for( auto &band : radiation_bands ) {
+        band.second.diffuse_spectrum = spectrum;
+    }
+
+}
+
+void RadiationModel::setDiffuseSpectrum( const std::string &band_label, const std::string &spectrum_label ){
+
+    if( !doesBandExist(band_label) ){
+        helios_runtime_error( "ERROR (RadiationModel::setDiffuseSpectrum): Cannot set diffuse spectrum for band '" + band_label + "' because it is not a valid band.");
+    }
+
+    std::vector<vec2> spectrum;
+
+    //standard solar spectrum
+    if( spectrum_label == "ASTMG173" ){
+        spectrum = loadSpectralData("solar_spectrum_diffuse_ASTMG173");
+    }else{
+        spectrum = loadSpectralData(spectrum_label);
+    }
+
+    radiation_bands.at(band_label).diffuse_spectrum = spectrum;
+
+}
+
+float RadiationModel::getDiffuseFlux( const std::string &band_label ) const{
+
+    if( !doesBandExist(band_label) ){
+        helios_runtime_error( "ERROR (RadiationModel::getDiffuseFlux): Cannot get diffuse flux for band '" + band_label + "' because it is not a valid band.");
+    }
+
+    const std::vector<vec2> &spectrum = radiation_bands.at(band_label).diffuse_spectrum;
+
+    if( !spectrum.empty() && radiation_bands.at(band_label).diffuseFlux<0.f ){ //source spectrum was specified (and not overridden by setting flux manually)
+        vec2 wavebounds = radiation_bands.at(band_label).wavebandBounds;
+        if( wavebounds==make_vec2(0,0) ){
+            wavebounds = make_vec2(spectrum.front().x, spectrum.back().x);
+        }
+        return integrateSpectrum( spectrum, wavebounds.x, wavebounds.y );
+    }else if( radiation_bands.at(band_label).diffuseFlux<0.f ){
+        return 0;
+    }
+
+    return radiation_bands.at(band_label).diffuseFlux;
+
+}
 
 void RadiationModel::enableLightModelVisualization(){
     islightvisualizationenabled = true;
@@ -900,18 +943,7 @@ float RadiationModel::integrateSourceSpectrum( uint source_ID, float wavelength1
 
 void RadiationModel::scaleSpectrum( const std::string &existing_global_data_label, const std::string &new_global_data_label, float scale_factor ) const{
 
-    if( !context->doesGlobalDataExist( existing_global_data_label.c_str() ) ){
-        helios_runtime_error("ERROR (RadiationModel::scaleSpectrum): global data for spectrum " + existing_global_data_label + " does not exist");
-    }else if( context->getGlobalDataType( existing_global_data_label.c_str() ) != HELIOS_TYPE_VEC2 ){
-        helios_runtime_error("ERROR (RadiationModel::scaleSpectrum): global data for spectrum " + existing_global_data_label + " must have type helios::vec2");
-    }
-
-    std::vector<vec2> spectrum;
-    context->getGlobalData( existing_global_data_label.c_str(), spectrum );
-
-    if( spectrum.empty() ){
-        return;
-    }
+    std::vector<vec2> spectrum = loadSpectralData( existing_global_data_label );
 
     for( vec2 &s : spectrum ){
         s.y *= scale_factor;
@@ -923,18 +955,7 @@ void RadiationModel::scaleSpectrum( const std::string &existing_global_data_labe
 
 void RadiationModel::scaleSpectrum( const std::string &global_data_label, float scale_factor ) const{
 
-    if( !context->doesGlobalDataExist( global_data_label.c_str() ) ){
-        helios_runtime_error("ERROR (RadiationModel::scaleSpectrum): global data for spectrum " + global_data_label + " does not exist");
-    }else if( context->getGlobalDataType( global_data_label.c_str() ) != HELIOS_TYPE_VEC2 ){
-        helios_runtime_error("ERROR (RadiationModel::scaleSpectrum): global data for spectrum " + global_data_label + " must have type helios::vec2");
-    }
-
-    std::vector<vec2> spectrum;
-    context->getGlobalData( global_data_label.c_str(), spectrum );
-
-    if( spectrum.empty() ){
-        return;
-    }
+    std::vector<vec2> spectrum = loadSpectralData( global_data_label );
 
     for( vec2 &s : spectrum ){
         s.y *= scale_factor;
@@ -968,14 +989,7 @@ void RadiationModel::blendSpectra( const std::string &new_spectrum_label, const 
     uint lambda_end=0;
     for( uint i=0; i<spectrum_labels.size(); i++ ) {
 
-        if (!context->doesGlobalDataExist(spectrum_labels.at(i).c_str())) {
-            helios_runtime_error("ERROR (RadiationModel::blendSpectra): global data for spectrum '" + spectrum_labels.at(i) + "' does not exist");
-        } else if (context->getGlobalDataType(spectrum_labels.at(i).c_str()) != HELIOS_TYPE_VEC2) {
-            helios_runtime_error("ERROR (RadiationModel::blendSpectra): global data for spectrum '" + spectrum_labels.at(i) + "' must have type helios::vec2");
-        }
-
-
-        context->getGlobalData(spectrum_labels.at(i).c_str(), spectrum.at(i));
+        spectrum.at(i) = loadSpectralData(spectrum_labels.at(i));
 
         if( i==0 ) {
             lambda_start = spectrum.at(i).front().x;
@@ -1556,8 +1570,8 @@ void RadiationModel::initializeOptiX() {
     addBuffer( "radiation_out_bottom", radiation_out_bottom_RTbuffer, radiation_out_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
     // - camera - //
     addBuffer( "radiation_in_camera", radiation_in_camera_RTbuffer, radiation_in_camera_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
-    addBuffer( "camera_pixel_label", camera_pixel_label_RTbuffer, camera_pixel_label_RTvariable, RT_BUFFER_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1 );
-    addBuffer( "camera_pixel_depth", camera_pixel_depth_RTbuffer, camera_pixel_depth_RTvariable, RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT, 1 );
+    addBuffer( "camera_pixel_label", camera_pixel_label_RTbuffer, camera_pixel_label_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1 );
+    addBuffer( "camera_pixel_depth", camera_pixel_depth_RTbuffer, camera_pixel_depth_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1 );
 
     //primitive scattering buffers
     // - top - //
@@ -2526,8 +2540,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         }
                     }else if ( context->getGlobalDataType(camera_response.c_str()) == helios::HELIOS_TYPE_VEC2) {
 
-                        std::vector<helios::vec2> data;
-                        context->getGlobalData(camera_response.c_str(), data);
+                        std::vector<helios::vec2> data = loadSpectralData(camera_response.c_str());
 
                         camera_response_unique.at(cam).at(b) = data;
 
@@ -2567,8 +2580,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         surface_spectra_rho.emplace(spectrum_label, data);
                     }else if( context->getGlobalDataType(spectrum_label.c_str() ) == HELIOS_TYPE_VEC2 ) {
 
-                        std::vector<helios::vec2> data;
-                        context->getGlobalData(spectrum_label.c_str(), data);
+                        std::vector<helios::vec2> data = loadSpectralData(spectrum_label.c_str());
                         surface_spectra_rho.emplace(spectrum_label, data);
 
                     }else if ( context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_STRING ) {
@@ -2596,8 +2608,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         surface_spectra_tau.emplace(spectrum_label, data);
                     }else if( context->getGlobalDataType(spectrum_label.c_str() ) == HELIOS_TYPE_VEC2 ) {
 
-                        std::vector<helios::vec2> data;
-                        context->getGlobalData(spectrum_label.c_str(), data);
+                        std::vector<helios::vec2> data = loadSpectralData(spectrum_label.c_str());
                         surface_spectra_tau.emplace(spectrum_label, data);
 
                     }else if ( context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_STRING ) {
@@ -3018,6 +3029,56 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
 
 }
 
+std::vector<helios::vec2> RadiationModel::loadSpectralData( const std::string &global_data_label ) const{
+
+    std::vector<helios::vec2> spectrum;
+
+    if( !context->doesGlobalDataExist(global_data_label.c_str()) ){
+
+        //check if spectral data exists in any of the library files
+        bool data_found = false;
+        for( const auto &file : spectral_library_files ){
+            if( Context::scanXMLForTag( file, "globaldata_vec2", global_data_label ) ){
+                context->loadXML( file.c_str(), true );
+                data_found = true;
+                break;
+            }
+        }
+
+        if( !data_found ) {
+            helios_runtime_error("ERROR (RadiationModel::loadSpectralData): Global data for spectrum '" + global_data_label + "' could not be found.");
+        }
+    }
+
+    if( context->getGlobalDataType(global_data_label.c_str()) != HELIOS_TYPE_VEC2 ){
+        helios_runtime_error("ERROR (RadiationModel::loadSpectralData): Global data for spectrum '" + global_data_label + "' is not of type HELIOS_TYPE_VEC2.");
+    }
+
+    context->getGlobalData(global_data_label.c_str(), spectrum);
+
+    //validate spectrum
+    if( spectrum.empty() ){
+        helios_runtime_error("ERROR (RadiationModel::loadSpectralData): Global data for spectrum '" + global_data_label + "' is empty.");
+    }
+    for( auto s=0; s<spectrum.size(); s++ ) {
+        //check that wavelengths are monotonic
+        if( s>0 && spectrum.at(s).x<=spectrum.at(s-1).x ) {
+            helios_runtime_error("ERROR (RadiationModel::loadSpectralData): Source spectral data validation failed. Wavelengths must increase monotonically.");
+        }
+        //check that wavelength is within a reasonable range
+        if( spectrum.at(s).x<0 || spectrum.at(s).x>100000 ) {
+            helios_runtime_error("ERROR (RadiationModel::loadSpectralData): Source spectral data validation failed. Wavelength value of " + std::to_string(spectrum.at(s).x) + " appears to be erroneous.");
+        }
+        //check that flux is non-negative
+        if( spectrum.at(s).y<0 ) {
+            helios_runtime_error("ERROR (RadiationModel::loadSpectralData): Source spectral data validation failed. Flux value at wavelength of " + std::to_string(spectrum.at(s).x) + " appears is negative.");
+        }
+    }
+
+    return spectrum;
+
+}
+
 void RadiationModel::runBand( const std::string &label ) {
     std::vector<std::string> labels{label};
     runBand(labels);
@@ -3109,7 +3170,7 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
     std::vector<float> diffuse_flux(Nbands);
     bool diffuseenabled = false;
     for( auto b=0; b<Nbands; b++ ){
-        diffuse_flux.at(b) = radiation_bands.at(label.at(b)).diffuseFlux;
+        diffuse_flux.at(b) = getDiffuseFlux( label.at(b) );
         if( diffuse_flux.at(b)>0.f ){
             diffuseenabled=true;
         }
@@ -3508,7 +3569,7 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
         //re-set diffuse radiation fluxes
         if( diffuseenabled ){
             for( auto b=0; b<Nbands; b++ ){
-                diffuse_flux.at(b) = radiation_bands.at(label.at(b)).diffuseFlux;
+                diffuse_flux.at(b) = getDiffuseFlux(label.at(b));
             }
             initializeBuffer1Df( diffuse_flux_RTbuffer, diffuse_flux );
         }
@@ -4849,7 +4910,6 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
         RadiationModel::runBand({wavelengthlabel});
 
         std::vector<float> camera_data;
-        //RadiationModel::writeCameraImage(cameralabel,{wavelengthlabel},wavelengthlabel,"",1000);
         std::string global_data_label = "camera_" + cameralabel + "_" + wavelengthlabel;
         context->getGlobalData(global_data_label.c_str(), camera_data);
 
@@ -4894,8 +4954,7 @@ void RadiationModel::runRadiationImaging(const std::string& cameralabel, const s
     float sources_fluxsum = 0;
     std::vector<float> sources_fluxes;
     for (uint ID = 0; ID < sourcelabels.size(); ID++){
-        std::vector<vec2> Source_spectrum;
-        context->getGlobalData(sourcelabels.at(ID).c_str(), Source_spectrum);
+        std::vector<vec2> Source_spectrum = loadSpectralData(sourcelabels.at(ID).c_str());
         sources_fluxes.push_back(RadiationModel::integrateSpectrum(Source_spectrum, wavelengthrange.x, wavelengthrange.y));
         RadiationModel::setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
         RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
@@ -4936,8 +4995,7 @@ void RadiationModel::runRadiationImaging(const std::vector<std::string>& cameral
     float sources_fluxsum = 0;
     std::vector<float> sources_fluxes;
     for (uint ID = 0; ID < sourcelabels.size(); ID++){
-        std::vector<vec2> Source_spectrum;
-        context->getGlobalData(sourcelabels.at(ID).c_str(), Source_spectrum);
+        std::vector<vec2> Source_spectrum = loadSpectralData(sourcelabels.at(ID).c_str());
         sources_fluxes.push_back(RadiationModel::integrateSpectrum(Source_spectrum, wavelengthrange.x, wavelengthrange.y));
         RadiationModel::setSourceSpectrum(ID, sourcelabels.at(ID).c_str());
         RadiationModel::setSourceSpectrumIntegral(ID, sources_fluxes.at(ID));
@@ -5082,6 +5140,96 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
 
     if( empty_flag ){
         std::cerr << "WARNING (RadiationModel::writePrimitiveDataLabelMap): No primitive data of " << primitive_data_label << " found in camera image. Primitive data map contains only padded values." << std::endl;
+    }
+
+}
+
+void RadiationModel::writeObjectDataLabelMap(const std::string &cameralabel, const std::string &object_data_label, const std::string &imagefile_base, const std::string &image_path, int frame, float padvalue){
+
+    if( cameras.find(cameralabel)==cameras.end() ){
+        helios_runtime_error( "ERROR (RadiationModel::writeObjectDataLabelMap): Camera '" + cameralabel + "' does not exist." );
+    }
+
+    //Get image UUID labels
+    std::vector<uint> camera_UUIDs;
+    std::string global_data_label = "camera_" + cameralabel + "_pixel_UUID";
+    if( !context->doesGlobalDataExist(global_data_label.c_str() ) ){
+        helios_runtime_error( "ERROR (RadiationModel::writeObjectDataLabelMap): Pixel labels for camera '" + cameralabel + "' do not exist. Was the radiation model run to generate labels?" );
+    }
+    context->getGlobalData(global_data_label.c_str(), camera_UUIDs);
+    std::vector<uint> pixel_UUIDs = camera_UUIDs;
+    int2 camera_resolution = cameras.at(cameralabel).resolution;
+
+    std::string frame_str;
+    if( frame>=0 ) {
+        frame_str = std::to_string(frame);
+    }
+
+    std::ostringstream outfile;
+
+    if( image_path.find_last_of('/')==image_path.length()-1 ) {
+        outfile << image_path;
+    }else {
+        outfile << image_path << "/";
+    }
+
+    if( frame>=0 ) {
+        outfile << cameralabel << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame_str << ".txt";
+    }else{
+        outfile << cameralabel << "_" << imagefile_base << ".txt";
+    }
+
+    //Output label image in ".txt" format
+    std::ofstream pixel_data(outfile.str());
+
+    if( !pixel_data.is_open() ){
+        helios_runtime_error( "ERROR (RadiationModel::writeObjectDataLabelMap): Could not open file '" + outfile.str() + "' for writing." );
+    }
+
+    bool empty_flag = true;
+    for (uint j = 0; j < camera_resolution.y; j++) {
+        for (uint i = 0; i < camera_resolution.x; i++) {
+            uint ii = camera_resolution.x - i -1;
+            uint UUID =pixel_UUIDs.at(j * camera_resolution.x + ii)-1;
+            uint objID = context->getPrimitiveParentObjectID(UUID);
+            if (context->doesObjectExist(objID) && context->doesObjectDataExist(objID,object_data_label.c_str())){
+                HeliosDataType datatype = context->getObjectDataType(objID,object_data_label.c_str());
+                if( datatype == HELIOS_TYPE_FLOAT ){
+                    float labeldata;
+                    context->getObjectData(UUID,object_data_label.c_str(),labeldata);
+                    pixel_data << labeldata << " ";
+                    empty_flag = false;
+                }
+                else if (datatype == HELIOS_TYPE_UINT){
+                    uint labeldata;
+                    context->getObjectData(UUID,object_data_label.c_str(),labeldata);
+                    pixel_data << labeldata << " ";
+                    empty_flag = false;
+                }
+                else if (datatype == HELIOS_TYPE_INT){
+                    int labeldata;
+                    context->getObjectData(UUID,object_data_label.c_str(),labeldata);
+                    pixel_data << labeldata << " ";
+                    empty_flag = false;
+                }
+                else if (datatype == HELIOS_TYPE_DOUBLE){
+                    double labeldata;
+                    context->getObjectData(UUID,object_data_label.c_str(),labeldata);
+                    pixel_data << labeldata << " ";
+                    empty_flag = false;
+                }else{
+                    pixel_data << padvalue << " ";
+                }
+            }else{
+                pixel_data << padvalue << " ";
+            }
+        }
+        pixel_data << "\n";
+    }
+    pixel_data.close();
+
+    if( empty_flag ){
+        std::cerr << "WARNING (RadiationModel::writeObjectDataLabelMap): No object data of " << object_data_label << " found in camera image. Object data map contains only padded values." << std::endl;
     }
 
 }

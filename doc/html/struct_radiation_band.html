@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.15</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.16</span>
    </div>
   </td>
  </tr>
@@ -102,9 +102,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2586e38e51df184ade7736eaf40fcd8f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_radiation_band.html#a2586e38e51df184ade7736eaf40fcd8f">RadiationBand</a> (std::string a_label)</td></tr>
 <tr class="memdesc:a2586e38e51df184ade7736eaf40fcd8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <a href="struct_radiation_band.html#a2586e38e51df184ade7736eaf40fcd8f">More...</a><br /></td></tr>
 <tr class="separator:a2586e38e51df184ade7736eaf40fcd8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3fb3f3f1876087b56ac3f6f74b18e28b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_radiation_band.html#a3fb3f3f1876087b56ac3f6f74b18e28b">RadiationBand</a> (const <a class="el" href="struct_radiation_band.html">RadiationBand</a> &amp;band)</td></tr>
-<tr class="memdesc:a3fb3f3f1876087b56ac3f6f74b18e28b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy constructor.  <a href="struct_radiation_band.html#a3fb3f3f1876087b56ac3f6f74b18e28b">More...</a><br /></td></tr>
-<tr class="separator:a3fb3f3f1876087b56ac3f6f74b18e28b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -129,6 +126,9 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a774ee8eb75fc96a086688fe4c643cdec"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_radiation_band.html#a774ee8eb75fc96a086688fe4c643cdec">diffuseDistNorm</a></td></tr>
 <tr class="memdesc:a774ee8eb75fc96a086688fe4c643cdec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Diffuse distribution normalization factor.  <a href="struct_radiation_band.html#a774ee8eb75fc96a086688fe4c643cdec">More...</a><br /></td></tr>
 <tr class="separator:a774ee8eb75fc96a086688fe4c643cdec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24a0753d9bc91d02db11046a7278220b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_radiation_band.html#a24a0753d9bc91d02db11046a7278220b">diffuse_spectrum</a></td></tr>
+<tr class="memdesc:a24a0753d9bc91d02db11046a7278220b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Spectral distribution of diffuse radiation flux for wave band.  <a href="struct_radiation_band.html#a24a0753d9bc91d02db11046a7278220b">More...</a><br /></td></tr>
+<tr class="separator:a24a0753d9bc91d02db11046a7278220b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1e6751a77faec064c49aba70539865de"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_radiation_band.html#a1e6751a77faec064c49aba70539865de">scatteringDepth</a></td></tr>
 <tr class="memdesc:a1e6751a77faec064c49aba70539865de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scattering depth for wave band.  <a href="struct_radiation_band.html#a1e6751a77faec064c49aba70539865de">More...</a><br /></td></tr>
 <tr class="separator:a1e6751a77faec064c49aba70539865de"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -151,7 +151,7 @@ Data Fields</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00113">113</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a2586e38e51df184ade7736eaf40fcd8f" name="a2586e38e51df184ade7736eaf40fcd8f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2586e38e51df184ade7736eaf40fcd8f">&#9670;&#160;</a></span>RadiationBand() <span class="overload">[1/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a2586e38e51df184ade7736eaf40fcd8f">&#9670;&#160;</a></span>RadiationBand()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -180,37 +180,25 @@ Data Fields</h2></td></tr>
 
 </div>
 </div>
-<a id="a3fb3f3f1876087b56ac3f6f74b18e28b" name="a3fb3f3f1876087b56ac3f6f74b18e28b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3fb3f3f1876087b56ac3f6f74b18e28b">&#9670;&#160;</a></span>RadiationBand() <span class="overload">[2/2]</span></h2>
+<h2 class="groupheader">Field Documentation</h2>
+<a id="a24a0753d9bc91d02db11046a7278220b" name="a24a0753d9bc91d02db11046a7278220b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24a0753d9bc91d02db11046a7278220b">&#9670;&#160;</a></span>diffuse_spectrum</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">RadiationBand::RadiationBand </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="struct_radiation_band.html">RadiationBand</a> &amp;&#160;</td>
-          <td class="paramname"><em>band</em></td><td>)</td>
-          <td></td>
+          <td class="memname">std::vector&lt;<a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&gt; RadiationBand::diffuse_spectrum</td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
-<p>Copy constructor. </p>
+<p>Spectral distribution of diffuse radiation flux for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00131">131</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00152">152</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
-<h2 class="groupheader">Field Documentation</h2>
 <a id="a774ee8eb75fc96a086688fe4c643cdec" name="a774ee8eb75fc96a086688fe4c643cdec"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a774ee8eb75fc96a086688fe4c643cdec">&#9670;&#160;</a></span>diffuseDistNorm</h2>
 
@@ -225,7 +213,7 @@ Data Fields</h2></td></tr>
 
 <p>Diffuse distribution normalization factor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00162">162</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00149">149</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -243,7 +231,7 @@ Data Fields</h2></td></tr>
 
 <p>Distribution coefficient of ambient diffuse radiation for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00156">156</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00143">143</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -261,7 +249,7 @@ Data Fields</h2></td></tr>
 
 <p>Diffuse component of radiation flux integrated over wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00153">153</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00140">140</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -279,7 +267,7 @@ Data Fields</h2></td></tr>
 
 <p>Direction of peak in ambient diffuse radiation. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00159">159</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00146">146</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -297,7 +285,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of diffuse rays launched per element. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00150">150</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00137">137</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -315,7 +303,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of direct rays launched per element. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00147">147</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00134">134</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -333,7 +321,7 @@ Data Fields</h2></td></tr>
 
 <p>Flag that determines if emission calculations are performed for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00171">171</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00161">161</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -351,7 +339,7 @@ Data Fields</h2></td></tr>
 
 <p>Label for band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00144">144</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00131">131</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -369,7 +357,7 @@ Data Fields</h2></td></tr>
 
 <p>Minimum energy for scattering for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00168">168</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00158">158</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -387,7 +375,7 @@ Data Fields</h2></td></tr>
 
 <p>Flag to indicate whether radiative bands have been initialized for this band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00177">177</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00167">167</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -405,7 +393,7 @@ Data Fields</h2></td></tr>
 
 <p>Scattering depth for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00165">165</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00155">155</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -423,7 +411,7 @@ Data Fields</h2></td></tr>
 
 <p>Waveband range of band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00174">174</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00164">164</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>

@@ -25,7 +25,7 @@ public:
 
     //! Constructor
     /**
-     * \param[in] "context" Pointer to the Helios context
+     * \param[in] context Pointer to the Helios context
     */
     EnergyBalanceModel( helios::Context* context );
 
@@ -46,32 +46,32 @@ public:
 
     //! Function to run the dynamic /non steady state energy balance model for one timestep of length "dt" seconds
     /**
-     * \param[in] "dt" Time step in seconds.
+     * \param[in] dt Time step in seconds.
     */
     void run( float dt ) ;
 
     //! Function to run the energy balance model for a select set of primitives
     /**
-     * \param[in] "UUIDs" Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
+     * \param[in] UUIDs Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
     */
     void run( const std::vector<uint> &UUIDs );
 
     //! Function to run the energy balance model for a select set of primitives for one timestep of length "dt" seconds
     /**
-     * \param[in] "UUIDs"  Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
-     * \param[in] "dt" Time step in seconds.
+     * \param[in] UUIDs  Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
+     * \param[in] dt Time step in seconds.
     */
     void run( const std::vector<uint> &UUIDs, float dt );
 
     //! Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of the absorbed all-wave radiation flux
     /**
-     * \param[in] "band" Name of radiation band (e.g., PAR, NIR, LW, etc.)
+     * \param[in] band Name of radiation band (e.g., PAR, NIR, LW, etc.)
      */
     void addRadiationBand( const char* band );
 
     //! Add optional output primitive data values to the Context
     /**
-     * \param[in] "label" Name of primitive data (e.g., vapor_pressure_deficit)
+     * \param[in] label Name of primitive data (e.g., vapor_pressure_deficit)
     */
     void optionalOutputPrimitiveData( const char* label );
 
@@ -80,7 +80,7 @@ public:
 
     //! Print a report detailing usage of default input values based on a subset of primitive UUIDs
     /**
-     * \params[in] "UUIDs" Universal unique identifiers for report
+     * \params[in] UUIDs Universal unique identifiers for report
      */
     void printDefaultValueReport(const std::vector<uint> &UUIDs) const;
 

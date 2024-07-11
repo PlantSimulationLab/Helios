@@ -2400,6 +2400,46 @@ std::vector<std::string> Context::getLoadedXMLFiles() {
   return XMLfiles;
 }
 
+bool Context::scanXMLForTag( const std::string &filename, const std::string &tag, const std::string &label ){
+
+    std::string fn = filename;
+    std::string ext = getFileExtension(filename);
+    if (ext != ".xml" && ext != ".XML") {
+        helios_runtime_error("failed.\n File " + fn + " is not XML format.");
+    }
+
+    // Using "pugixml" parser.  See pugixml.org
+    pugi::xml_document xmldoc;
+
+    //load file
+    pugi::xml_parse_result load_result = xmldoc.load_file(filename.c_str());
+
+    //error checking
+    if (!load_result) {
+        helios_runtime_error("failed.\n XML [" + filename + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() + "\nError offset: " +
+                             std::to_string(load_result.offset) + " (error at [..." + (filename.c_str() + load_result.offset) + "]\n");
+    }
+
+    pugi::xml_node helios = xmldoc.child("helios");
+
+    if (helios.empty()) {
+        return false;
+    }
+
+    for (pugi::xml_node p = helios.child(tag.c_str()); p; p = p.next_sibling(tag.c_str())) {
+
+        const char* labelquery = p.attribute("label").value();
+
+        if( labelquery == label || label.empty() ) {
+            return true;
+        }
+
+    }
+
+    return false;
+
+}
+
 void Context::writeDataToXMLstream( const char* data_group, const std::vector<std::string> &data_labels, void* ptr, std::ofstream &outfile ) const{
 
   for(const auto& label : data_labels ) {

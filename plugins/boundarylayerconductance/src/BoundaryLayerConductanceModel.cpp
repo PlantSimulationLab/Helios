@@ -83,11 +83,11 @@ int BLConductanceModel::selfTest(){
 
 }
 
-void BLConductanceModel::enableMessages(void){
+void BLConductanceModel::enableMessages(){
   message_flag = true;
 }
 
-void BLConductanceModel::disableMessages(void){
+void BLConductanceModel::disableMessages(){
   message_flag = false;
 }
 
@@ -96,7 +96,7 @@ void BLConductanceModel::setBoundaryLayerModel( const char* gH_model ){
   setBoundaryLayerModel(UUIDs,gH_model);
 }
 
-void BLConductanceModel::setBoundaryLayerModel( const uint UUID, const char* gH_model ){
+void BLConductanceModel::setBoundaryLayerModel( uint UUID, const char* gH_model ){
   std::vector<uint> UUIDs{UUID};
   setBoundaryLayerModel(UUIDs,gH_model);
 }

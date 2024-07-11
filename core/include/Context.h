@@ -224,6 +224,19 @@ public:
      * \param[in] scale Scaling factor to apply in the x-, y- and z-directions
      */
     void scale( const helios::vec3 &scale );
+
+    //! Method to scale a compound object in the x-, y- and z-directions
+    /**
+     * \param[in] scale Scaling factor to apply in the x-, y- and z-directions
+     */
+    void scaleAboutCenter( const helios::vec3 &scale );
+
+    //! Method to scale a compound object in the x-, y- and z-directions
+    /**
+     * \param[in] scale Scaling factor to apply in the x-, y- and z-directions
+     * \param[in] point Cartesian coordinate of the point about which to scale
+     */
+    void scaleAboutPoint( const helios::vec3 &scale, const helios::vec3 &point );
     
     //! Method to return the Affine transformation matrix of a Compound Object
     /**
@@ -979,11 +992,18 @@ public:
      */
     virtual void rotate(float rotation_radians, const helios::vec3 &origin, const helios::vec3 &rotation_axis_vector ) = 0;
     
-    //! Method to scale the dimensions of a Primitive
+    //! Method to scale the dimensions of a Primitive about the origin
     /**
      * \param[in] S Scaling factor
      */
-    void scale( const helios::vec3& S );
+    void scale( const helios::vec3 &S );
+
+    //! Method to scale the dimensions of a Primitive about an arbitrary point
+    /**
+     * \param[in] S Scaling factor
+     * \param[in] point Cartesian coordinates of the point about which to scale
+     */
+    void scale( const helios::vec3 &S, const helios::vec3 &point );
     
     //-------- Primitive Data Methods ---------- //
     
@@ -2222,19 +2242,35 @@ public:
      */
     void rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const helios::vec3& origin, const vec3 &axis );
     
-    //! Scale a primitive using its UUID
+    //! Scale a primitive using its UUID relative to the origin (0,0,0)
     /**
      * \param[in] UUID Unique universal identifier (UUID) of primitive to be scaled
      * \param[in] S Scaling factor
      */
     void scalePrimitive( uint UUID, const helios::vec3& S );
     
-    //! Scale a group of primitives using a vector of UUIDs
+    //! Scale a group of primitives using a vector of UUIDs relative to the origin (0,0,0)
     /**
      * \param[in] UUID Vector of unique universal identifiers (UUIDs) of primitives to be scaled
      * \param[in] S Scaling factor
      */
     void scalePrimitive( const std::vector<uint>& UUIDs, const helios::vec3& S );
+
+    //! Scale a primitive using its UUID about an arbitrary point in space
+    /**
+     * \param[in] UUID Unique universal identifier (UUID) of primitive to be scaled
+     * \param[in] S Scaling factor
+     * \param[in] point Cartesian (x,y,z) coordinates of point about which to scale
+     */
+    void scalePrimitiveAboutPoint( uint UUID, const helios::vec3& S, const helios::vec3 point );
+
+    //! Scale a group of primitives using a vector of UUIDs about an arbitrary point in space
+    /**
+     * \param[in] UUID Vector of unique universal identifiers (UUIDs) of primitives to be scaled
+     * \param[in] S Scaling factor
+     * \param[in] point Cartesian (x,y,z) coordinates of point about which to scale
+     */
+    void scalePrimitiveAboutPoint( const std::vector<uint>& UUIDs, const helios::vec3& S, const helios::vec3 point );
     
     //! Delete a single primitive from the context
     /**
@@ -4321,52 +4357,52 @@ public:
     //! Rotate a single compound object about the x, y, or z axis
     /**
      * \param[in] ObjID Object ID to rotate
-     * \param[in] rot Rotation angle in radians
-     * \param[in] axis Axis about which to rotate (must be one of x, y, z)
+     * \param[in] rotation_radians Rotation angle in radians
+     * \param[in] rotation_axis_xyz Axis about which to rotate (must be one of x, y, z)
      */
-    void rotateObject(uint ObjID, float rot, const char* axis );
+    void rotateObject(uint ObjID, float rotation_radians, const char* rotation_axis_xyz );
     
     //! Rotate multiple compound objects about the x, y, or z axis based on a vector of UUIDs
     /**
      * \param[in] ObjIDs Vector of object IDs to translate
-     * \param[in] rot Rotation angle in radians
-     * \param[in] axis Axis about which to rotate (must be one of x, y, z)
+     * \param[in] rotation_radians Rotation angle in radians
+     * \param[in] rotation_axis_xyz Axis about which to rotate (must be one of x, y, z)
      */
-    void rotateObject(const std::vector<uint>& ObjIDs, float rot, const char* axis );
+    void rotateObject(const std::vector<uint>& ObjIDs, float rotation_radians, const char* rotation_axis_xyz );
     
     //! Rotate a single compound object about an arbitrary axis passing through the origin
     /**
      * \param[in] ObjID Object ID to rotate
-     * \param[in] rot Rotation angle in radians
-     * \param[in] axis Vector describing axis about which to rotate
+     * \param[in] rotation_radians Rotation angle in radians
+     * \param[in] rotation_axis_vector Vector describing axis about which to rotate
      */
-    void rotateObject(uint ObjID, float rot, const vec3& axis );
+    void rotateObject(uint ObjID, float rotation_radians, const vec3& rotation_axis_vector );
     
     //! Rotate multiple compound objects about an arbitrary axis passing through the origin based on a vector of UUIDs
     /**
      * \param[in] ObjIDs Vector of object IDs to translate
-     * \param[in] rot Rotation angle in radians
-     * \param[in] axis Vector describing axis about which to rotate
+     * \param[in] rotation_radians Rotation angle in radians
+     * \param[in] rotation_axis_vector Vector describing axis about which to rotate
      */
-    void rotateObject(const std::vector<uint>& ObjIDs, float rot, const vec3& axis );
+    void rotateObject(const std::vector<uint>& ObjIDs, float rotation_radians, const vec3& rotation_axis_vector );
     
     //! Rotate a single compound object about an arbitrary line (not necessarily passing through the origin)
     /**
      * \param[in] ObjID Object ID to rotate
-     * \param[in] rot Rotation angle in radians
-     * \param[in] origin Cartesian coordinate of the base/origin of rotation axis
-     * \param[in] axis Vector describing axis about which to rotate
+     * \param[in] rotation_radians Rotation angle in radians
+     * \param[in] rotation_origin Cartesian coordinate of the base/origin of rotation axis
+     * \param[in] rotation_axis_vector Vector describing axis about which to rotate
      */
-    void rotateObject( uint ObjID, float rot, const vec3& origin, const vec3& axis );
+    void rotateObject(uint ObjID, float rotation_radians, const vec3& rotation_origin, const vec3& rotation_axis_vector );
     
     //! Rotate multiple compound objects about an arbitrary line (not necessarily passing through the origin) based on a vector of UUIDs
     /**
      * \param[in] ObjIDs Vector of object IDs to translate
-     * \param[in] rot Rotation angle in radians
-     * \param[in] origin Cartesian coordinate of the base/origin of rotation axis
-     * \param[in] axis Vector describing axis about which to rotate
+     * \param[in] rotation_radians Rotation angle in radians
+     * \param[in] rotation_origin Cartesian coordinate of the base/origin of rotation axis
+     * \param[in] rotation_axis_vector Vector describing axis about which to rotate
      */
-    void rotateObject( const std::vector<uint>& ObjIDs, float rot, const vec3& origin, const vec3& axis );
+    void rotateObject(const std::vector<uint>& ObjIDs, float rotation_radians, const vec3& rotation_origin, const vec3& rotation_axis_vector );
 
     //! Method to scale a compound object in the x-, y- and z-directions
     /**
@@ -4381,6 +4417,36 @@ public:
      * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
      */
     void scaleObject( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact );
+
+    //! Method to scale a compound object in the x-, y- and z-directions
+    /**
+     * \param[in] ObjID Object ID to scale
+     * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
+     */
+    void scaleObjectAboutCenter( uint ObjID, const helios::vec3 &scalefact );
+
+    //! Method to scale a compound object in the x-, y- and z-directions
+    /**
+     * \param[in] ObjID Vector of object IDs to scale
+     * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
+     */
+    void scaleObjectAboutCenter( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact );
+
+    //! Method to scale a compound object in the x-, y- and z-directions
+    /**
+     * \param[in] ObjID Object ID to scale
+     * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
+     * \param[in] point Cartesian coordinate of the point about which to scale
+     */
+    void scaleObjectAboutPoint( uint ObjID, const helios::vec3 &scalefact, const helios::vec3 &point );
+
+    //! Method to scale a compound object in the x-, y- and z-directions
+    /**
+     * \param[in] ObjID Vector of object IDs to scale
+     * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
+     * \param[in] point Cartesian coordinate of the point about which to scale
+     */
+    void scaleObjectAboutPoint( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact, const helios::vec3 &point );
     
     //! Get primitive UUIDs associated with compound object (single object ID input)
     /**
@@ -4437,7 +4503,6 @@ public:
      * \param[in] area_ratio the approximate ratio between individual tile object area and individual subpatch area desired
      */
     void setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, float area_ratio);
-    
     
     //! Get the Cartesian (x,y,z) center position of a tile object
     /**
@@ -5465,7 +5530,16 @@ public:
      * \return Vector of XML files.
      */
     std::vector<std::string> getLoadedXMLFiles();
-    
+
+    //! Scan a Helios XML file to check if a tag exists
+    /**
+     * \param[in] filename name of XML file.
+     * \param[in] tag Tag to search for in XML file.
+     * \param[in] label (optional) Label to search for within the tag.
+     * \return True if tag exists in XML file, false otherwise.
+     */
+    static bool scanXMLForTag( const std::string &filename, const std::string &tag, const std::string &label="" );
+
     //! Write Context geometry and data to XML file for all UUIDs in the context
     /**
      * \param[in] filename name of XML file.

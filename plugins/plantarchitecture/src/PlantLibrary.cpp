@@ -585,11 +585,11 @@ void PlantArchitecture::initializeCowpeaShoots() {
     PhytomerParameters phytomer_parameters_trifoliate(context_ptr->getRandomGenerator());
 
     phytomer_parameters_trifoliate.internode.pitch = 20;
-    phytomer_parameters_trifoliate.internode.phyllotactic_angle = 180;//.uniformDistribution(145, 215);
+    phytomer_parameters_trifoliate.internode.phyllotactic_angle.uniformDistribution(145, 215);
     phytomer_parameters_trifoliate.internode.max_floral_buds_per_petiole = 1;
     phytomer_parameters_trifoliate.internode.max_vegetative_buds_per_petiole = 1;
     phytomer_parameters_trifoliate.internode.color = make_RGBcolor(0.61, 0.68, 0.42);
-    phytomer_parameters_trifoliate.internode.length_segments = 5;
+    phytomer_parameters_trifoliate.internode.length_segments = 2;
 
     phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;
     phytomer_parameters_trifoliate.petiole.pitch.uniformDistribution(45,60);
@@ -624,7 +624,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.inflorescence.flower_arrangement_pattern = "opposite";
     phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50,70);
     phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20,20);
-    phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.02;
+    phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.015;
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = CowpeaFlowerPrototype;
     phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.02,0.025);
     phytomer_parameters_trifoliate.inflorescence.fruit_prototype_function = CowpeaFruitPrototype;
@@ -1178,7 +1178,6 @@ void PlantArchitecture::initializeStrawberryShoots() {
 
     ShootParameters shoot_parameters(context_ptr->getRandomGenerator());
     shoot_parameters.phytomer_parameters = phytomer_parameters;
-    shoot_parameters.phytomer_parameters.phytomer_creation_function = TomatoPhytomerCreationFunction;
 
     shoot_parameters.max_nodes = 15;
     shoot_parameters.internode_radius_initial = 0.0005;
@@ -1193,11 +1192,11 @@ void PlantArchitecture::initializeStrawberryShoots() {
     shoot_parameters.gravitropic_curvature.uniformDistribution(-20,0);
     shoot_parameters.tortuosity = 0;
 
-    shoot_parameters.phyllochron = 1;
+    shoot_parameters.phyllochron = 1.5;
     shoot_parameters.leaf_flush_count = 1;
     shoot_parameters.elongation_rate = 0.1;
     shoot_parameters.girth_growth_rate = 0.00015;
-    shoot_parameters.vegetative_bud_break_time = 3;
+    shoot_parameters.vegetative_bud_break_time = 4;
     shoot_parameters.vegetative_bud_break_probability = 0.25;
     shoot_parameters.flower_bud_break_probability = 1;
     shoot_parameters.fruit_set_probability = 0.5;
@@ -1225,7 +1224,7 @@ uint PlantArchitecture::buildStrawberryPlant(const helios::vec3 &base_position, 
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, 14, 3, 3, 100);
+    setPlantPhenologicalThresholds(plantID, 0, -1, 12, 3, 3, 100);
 
     return plantID;
 
@@ -1326,7 +1325,7 @@ void PlantArchitecture::initializeTomatoShoots() {
     phytomer_parameters.leaf.pitch.uniformDistribution(-30,5);
     phytomer_parameters.leaf.yaw = 0;
     phytomer_parameters.leaf.roll.normalDistribution(0, 10);
-    phytomer_parameters.leaf.leaflet_offset = 0.15;
+    phytomer_parameters.leaf.leaflet_offset = 0.25;
     phytomer_parameters.leaf.leaflet_scale = 0.75;
     phytomer_parameters.leaf.prototype_function = TomatoLeafPrototype;
     phytomer_parameters.leaf.prototype_scale = 0.1;
@@ -1373,7 +1372,7 @@ void PlantArchitecture::initializeTomatoShoots() {
     shoot_parameters.phyllochron = 1;
     shoot_parameters.leaf_flush_count = 1;
     shoot_parameters.elongation_rate = 0.1;
-    shoot_parameters.girth_growth_rate = 0.0002;
+    shoot_parameters.girth_growth_rate = 0.00015;
     shoot_parameters.vegetative_bud_break_time = 3;
     shoot_parameters.vegetative_bud_break_probability = 0.75;
     shoot_parameters.flower_bud_break_probability = 1;

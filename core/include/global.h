@@ -120,13 +120,22 @@ namespace helios{
 */
     void makeTranslationMatrix( const helios::vec3& translation, float (&transform)[16] );
 
-    //! Construct matrix to scale
-/** 4x4 Affine scaling matrix 
-    * \param[in] scale Scaling factor to apply in x, y, and z directions.
-    * \param[out] transform Transformation matrix in a 1D array
-    * \ingroup functions
-*/
+    //! Construct matrix to scale about the origin
+    /** 4x4 Affine scaling matrix
+        * \param[in] scale Scaling factor to apply in x, y, and z directions.
+        * \param[out] transform Transformation matrix in a 1D array
+        * \ingroup functions
+    */
     void makeScaleMatrix( const helios::vec3& scale, float (&T)[16] );
+
+    //! Construct matrix to scale about arbitrary point in space
+    /** 4x4 Affine scaling matrix
+        * \param[in] scale Scaling factor to apply in x, y, and z directions.
+        * \param[in] point Cartesian coordinates of point about which to scale
+        * \param[out] transform Transformation matrix in a 1D array
+        * \ingroup functions
+    */
+    void makeScaleMatrix( const helios::vec3 &scale, const helios::vec3 &point, float (&T)[16] );
 
 //! Multiply 4x4 matrices: T=ML*MR 
     void matmult( const float ML[16], const float MR[16], float (&T)[16] );

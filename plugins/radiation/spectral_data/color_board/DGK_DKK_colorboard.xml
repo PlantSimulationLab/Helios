@@ -2,7 +2,7 @@
 <helios>
 
     <!-- white -->
-    <globaldata_vec2 label="ColorReference_01">
+    <globaldata_vec2 label="ColorReference_DGK_01">
         350 0.737146
         351 0.729600
         352 0.721313
@@ -2157,7 +2157,7 @@
     </globaldata_vec2>
 
     <!-- lightest gray -->
-    <globaldata_vec2 label="ColorReference_02">
+    <globaldata_vec2 label="ColorReference_DGK_02">
         350 0.345101
         351 0.343189
         352 0.340142
@@ -4312,7 +4312,7 @@
     </globaldata_vec2>
 
     <!-- medium light gray -->
-    <globaldata_vec2 label="ColorReference_03">
+    <globaldata_vec2 label="ColorReference_DGK_03">
         350 0.213344
         351 0.210834
         352 0.212029
@@ -6467,7 +6467,7 @@
     </globaldata_vec2>
 
     <!-- medium dark gray -->
-    <globaldata_vec2 label="ColorReference_04">
+    <globaldata_vec2 label="ColorReference_DGK_04">
         350 0.128797
         351 0.131708
         352 0.138018
@@ -8622,7 +8622,7 @@
     </globaldata_vec2>
 
     <!-- dark gray -->
-    <globaldata_vec2 label="ColorReference_05">
+    <globaldata_vec2 label="ColorReference_DGK_05">
         350 0.057553
         351 0.058321
         352 0.060011
@@ -10777,7 +10777,7 @@
     </globaldata_vec2>
 
     <!-- black -->
-    <globaldata_vec2 label="ColorReference_06">
+    <globaldata_vec2 label="ColorReference_DGK_06">
         350 0.041968
         351 0.042052
         352 0.043199
@@ -12932,7 +12932,7 @@
     </globaldata_vec2>
 
     <!-- red -->
-    <globaldata_vec2 label="ColorReference_07">
+    <globaldata_vec2 label="ColorReference_DGK_07">
         350 0.577520
         351 0.570220
         352 0.561890
@@ -15087,7 +15087,7 @@
     </globaldata_vec2>
 
     <!-- yellow -->
-    <globaldata_vec2 label="ColorReference_08">
+    <globaldata_vec2 label="ColorReference_DGK_08">
         350 0.723754
         351 0.714703
         352 0.705626
@@ -17242,7 +17242,7 @@
     </globaldata_vec2>
 
     <!-- green -->
-    <globaldata_vec2 label="ColorReference_09">
+    <globaldata_vec2 label="ColorReference_DGK_09">
         350 0.392574
         351 0.392435
         352 0.387997
@@ -19397,7 +19397,7 @@
     </globaldata_vec2>
 
     <!-- light blue -->
-    <globaldata_vec2 label="ColorReference_10">
+    <globaldata_vec2 label="ColorReference_DGK_10">
         350 0.354749
         351 0.348809
         352 0.339580
@@ -21552,7 +21552,7 @@
     </globaldata_vec2>
 
     <!-- dark blue -->
-    <globaldata_vec2 label="ColorReference_11">
+    <globaldata_vec2 label="ColorReference_DGK_11">
         350 0.143633
         351 0.144031
         352 0.141180
@@ -23707,7 +23707,7 @@
     </globaldata_vec2>
 
     <!-- magenta -->
-    <globaldata_vec2 label="ColorReference_12">
+    <globaldata_vec2 label="ColorReference_DGK_12">
         350 0.615791
         351 0.610878
         352 0.606638
@@ -25862,7 +25862,7 @@
     </globaldata_vec2>
 
     <!-- brick red -->
-    <globaldata_vec2 label="ColorReference_13">
+    <globaldata_vec2 label="ColorReference_DGK_13">
         350 0.583492
         351 0.577233
         352 0.574156
@@ -28017,7 +28017,7 @@
     </globaldata_vec2>
 
     <!-- orange -->
-    <globaldata_vec2 label="ColorReference_14">
+    <globaldata_vec2 label="ColorReference_DGK_14">
         350 0.418590
         351 0.415621
         352 0.411132
@@ -30172,7 +30172,7 @@
     </globaldata_vec2>
 
     <!-- teal -->
-    <globaldata_vec2 label="ColorReference_15">
+    <globaldata_vec2 label="ColorReference_DGK_15">
         350 0.233266
         351 0.229612
         352 0.226419
@@ -32327,7 +32327,7 @@
     </globaldata_vec2>
 
     <!-- purple/mauve -->
-    <globaldata_vec2 label="ColorReference_16">
+    <globaldata_vec2 label="ColorReference_DGK_16">
         350 0.546423
         351 0.544150
         352 0.536599
@@ -34482,7 +34482,7 @@
     </globaldata_vec2>
 
     <!-- light tan -->
-    <globaldata_vec2 label="ColorReference_17">
+    <globaldata_vec2 label="ColorReference_DGK_17">
         350 0.403171
         351 0.399401
         352 0.394144
@@ -36637,7 +36637,7 @@
     </globaldata_vec2>
 
     <!-- dark tan -->
-    <globaldata_vec2 label="ColorReference_18">
+    <globaldata_vec2 label="ColorReference_DGK_18">
         350 0.315125
         351 0.308663
         352 0.298192

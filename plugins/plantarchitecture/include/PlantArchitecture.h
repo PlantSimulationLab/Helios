@@ -581,7 +581,7 @@ struct ShootParameters{
     ShootParameters& operator=(const ShootParameters &a) {
         this->phytomer_parameters = a.phytomer_parameters;
         this->max_nodes = a.max_nodes;
-        max_nodes.resample();
+        this->max_nodes.resample();
         this->internode_radius_initial = a.internode_radius_initial;
         this->internode_radius_initial.resample();
         this->phyllochron = a.phyllochron;
@@ -593,8 +593,6 @@ struct ShootParameters{
         this->girth_growth_rate.resample();
         this->internode_radius_max = a.internode_radius_max;
         this->internode_radius_max.resample();
-        this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
-        this->vegetative_bud_break_probability.resample();
         this->flower_bud_break_probability = a.flower_bud_break_probability;
         this->flower_bud_break_probability.resample();
         this->fruit_set_probability = a.fruit_set_probability;
@@ -604,8 +602,11 @@ struct ShootParameters{
         this->tortuosity = a.tortuosity;
         this->tortuosity.resample();
         this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
+        this->vegetative_bud_break_probability.resample();
         this->flower_bud_break_probability = a.flower_bud_break_probability;
+        this->flower_bud_break_probability.resample();
         this->fruit_set_probability = a.fruit_set_probability;
+        this->fruit_set_probability.resample();
         this->vegetative_bud_break_time = a.vegetative_bud_break_time;
         this->vegetative_bud_break_time.resample();
         this->child_insertion_angle_tip = a.child_insertion_angle_tip;
@@ -851,6 +852,18 @@ public:
 
     //! Unit test routines
     static int selfTest();
+
+    //! Add optional output object data values to the Context
+    /**
+     * \param[in] object_data_label Name of object data (e.g., "age", "rank")
+    */
+    void optionalOutputObjectData( const std::string &object_data_label );
+
+    //! Add optional output object data values to the Context
+    /**
+     * \param[in] object_data_labels Vector of names of object data (e.g., {"age", "rank"})
+    */
+    void optionalOutputObjectData( const std::vector<std::string> &object_data_labels );
 
     // ********* Methods for Building Plants from Existing Library ********* //
 
@@ -1179,7 +1192,10 @@ protected:
 
     bool detectGroundCollision(const std::vector<uint> &objID);
 
-    // --- Plant Libary --- //
+    //! Names of additional object data to add to the Context
+    std::map<std::string,bool> output_object_data;
+
+    // --- Plant Library --- //
 
     void initializeAlmondTreeShoots();
 

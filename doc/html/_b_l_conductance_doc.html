@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.15</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.16</span>
    </div>
   </td>
  </tr>
@@ -221,21 +221,23 @@ Boundary-layer Conductance Models</h2>
 <p >where <img class="formulaInl" alt="$U$" src="form_25.png" width="12" height="12"/> is the wind speed at a height above the soil surface where the effect of the soil surface roughness is minimal; typically 0.05 to 0.2 m.</p>
 <h2><a class="anchor" id="BLCSet"></a>
 Setting the Boundary-layer Conductance Model To Be Used</h2>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> <code></code>// Declare the Context and add two primitives
-  Context context;
-
-  uint UUID0 = context.addPatch();
-
-  uint UUID1 = context.addPatch();
-
-  <code></code>// Initialize the boundary-layer conductance Model
-  BLConductanceModel boundarylayerconductance(&amp;context);
-
-  <code></code>// This changes the boundary-layer conductance model for all (both) primitives
-  boundarylayerconductance.setBoundaryLayerModel( "InclinedPlate" );
-
-  <code></code>// This changes the boundary-layer conductance model for the second primitive (while the first will keep the model set above)
-  boundarylayerconductance.setBoundaryLayerModel( UUID1, "ground" );</code></pre></div><h2><a class="anchor" id="BLCRun"></a>
+<div class="fragment"><div class="line"><span class="comment">// Declare the Context and add two primitives</span></div>
+<div class="line">Context context;</div>
+<div class="line"> </div>
+<div class="line">uint UUID0 = context.addPatch();</div>
+<div class="line"> </div>
+<div class="line">uint UUID1 = context.addPatch();</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Initialize the boundary-layer conductance Model</span></div>
+<div class="line"><a class="code hl_class" href="class_b_l_conductance_model.html">BLConductanceModel</a> boundarylayerconductance(&amp;context);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// This changes the boundary-layer conductance model for all (both) primitives</span></div>
+<div class="line">boundarylayerconductance.setBoundaryLayerModel( <span class="stringliteral">&quot;InclinedPlate&quot;</span> );</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// This changes the boundary-layer conductance model for the second primitive (while the first will keep the model set above)</span></div>
+<div class="line">boundarylayerconductance.setBoundaryLayerModel( UUID1, <span class="stringliteral">&quot;ground&quot;</span> );</div>
+<div class="ttc" id="aclass_b_l_conductance_model_html"><div class="ttname"><a href="class_b_l_conductance_model.html">BLConductanceModel</a></div><div class="ttdoc">Boundary-layer conductance model class.</div><div class="ttdef"><b>Definition:</b> <a href="_boundary_layer_conductance_model_8h_source.html#l00023">BoundaryLayerConductanceModel.h:23</a></div></div>
+</div><!-- fragment --><h2><a class="anchor" id="BLCRun"></a>
 Running the Model</h2>
 <p >The model can be run to calculate the boundary-layer conductance for all primitives or a sub-set of primitives using the appropriate run function below.</p>
 <table class="doxtable">
@@ -243,7 +245,7 @@ Running the Model</h2>
 <tr>
 <th>Model Run Function </th><th>Description </th></tr>
 <tr>
-<td><a class="el" href="class_b_l_conductance_model.html#a51ec4c164f767dcfd734d38e66134a7d">BLConductanceModel::run( void )</a> </td><td>Run model calculations for all primitives in the Context. </td></tr>
+<td><a class="el" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">BLConductanceModel::run( void )</a> </td><td>Run model calculations for all primitives in the Context. </td></tr>
 <tr>
 <td>BLConductanceModel::run( std::vector&lt;uint&gt; UUIDs ) </td><td>Run model calculations for a select set of primitives in the Context, which are specified by a vector of their UUIDs. </td></tr>
 </table>

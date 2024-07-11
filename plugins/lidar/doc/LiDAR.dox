@@ -173,25 +173,25 @@
 
   1) add the "lidar" plug-in to your CMakeLists.txt file.  Make sure that the "PLUGINS" variable in your CMakeLists.txt file includes "lidar".
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #specify which plug-ins to use (separate plug-in names with semicolon)
-   set( PLUGINS "lidar" )</code></pre></div>
+  ~~~~~~{.cmake}
+  #specify which plug-ins to use (separate plug-in names with semicolon)
+  set( PLUGINS "lidar" )
+  ~~~~~~
 
   2) include the "LiDAR.h" header file.
   
   The code sample below shows a program that initializes the LiDAR plug-in.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
    #include "LiDAR.h"
-
    using namespace helios;
 
-   int main(int argc, char* argv[]){
+   int main(){
 
-      %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+      LiDARcloud pointcloud; //Initialize the LiDAR point cloud
       
-   }</code></pre></div>
+   }
+  ~~~~~~
 
   -->
 
@@ -201,8 +201,8 @@
 
   The code below gives a sample XML file for loading multiple scans.  As specified in the metadata table above, not all entries are required (see above).
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> <helios>
+ ~~~~~~{.xml}
+ <helios>
 
 	<scan>
 	  <filename> /path/to/data/file.xyz </filename>
@@ -219,7 +219,8 @@
 	  <beamDivergence> 0.003 </beamDivergence>
 	</scan>
 	
- </helios></code></pre></div>
+ </helios>
+ ~~~~~~
 
  The ASCII text file containing the data is a plain text file, where each row corresponds to a hit point and each column is some data value associated with that hit point.  The "ASCII_format" tag defines the column format of the ASCII text file (in this case, file.xyz).  Each entry in the list specifies the meaning of each column.  Possible fields are listed in the table below:
 
@@ -243,19 +244,18 @@
 
  The XML file can be automatically loaded into the point cloud using the \ref loadXML() function, as illustrated below.
   
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ~~~~~~{.cpp}
   #include "LiDAR.h"
-
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
-     %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+     LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
      pointcloud.loadXML("/path/to/file.xml");
       
-  }</code></pre></div>
+  }
+ ~~~~~~
 
  \section LiDARgrid Establishing grid cells
 
@@ -277,15 +277,16 @@
 
  Grid cell options can be specified in an XML file using the tags listed in the table above.  Multiple grid cells are added by simply adding more <grid>...</grid> groups to the XML file.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> <grid>
-	 \<center> 0 0 0.5 \</center>
-	 \<size> 1 1 1 </size>
-	 \<rotation> 30 </rotation> 
-	 \<Nx> 3 </Nx> 
-	 \<Ny> 3 </Ny> 
-	 \<Nz> 3 </Nz> 
-  </grid></code></pre></div>
+ ~~~~~~{.xml}
+  <grid>
+	 <center> 0 0 0.5 </center>
+	 <size> 1 1 1 </size>
+	 <rotation> 30 </rotation>
+	 <Nx> 3 </Nx>
+	 <Ny> 3 </Ny>
+	 <Nz> 3 </Nz>
+  </grid>
+ ~~~~~~
 
 
  One way to figure out the appropriate dimension and position of the voxel grid is using the visualizer and trial-and-error. Make a guess of the voxel parameters, then visualize the point cloud and voxels together and adjust accordingly. This can be tedious and time-consuming because you need to re-run the entire code each time.
@@ -306,22 +307,20 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   The following code sample illustrates how to perform a triangulation.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
   #include "LiDAR.h"
-
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
-     %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+     LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
      pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
 
      pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5 
       
-  }</code></pre></div>
-
+  }
+  ~~~~~~
   
 
   <!--
@@ -336,15 +335,13 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   When using real LiDAR data, it is recommended to gapfill sky/miss points using the \ref LiDARcloud::gapfillMisses() method if this has not already been done by the scanner or in pre-processing. When a laser pulse does not intersect any object and reaches the sky, many scanners do not record any hit points. These miss points are important for accurate determination of leaf area.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
   #include "LiDAR.h"
-
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
-     %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+     LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
      pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
 
@@ -354,7 +351,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
      pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell
       
-  }</code></pre></div>
+  }
+  ~~~~~~
 
   \subsection LiDARresonstruction Plant reconstruction
 
@@ -368,15 +366,13 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   
   Below is an example of performing a reconstruction using alpha masks and adding the alpha masks to the Context.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> #include "Context.h"
+  ~~~~~~{.cpp}
   #include "LiDAR.h"
-
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
-     %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+     LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
      pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
 
@@ -390,8 +386,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
      pointcloud.addLeafReconstructionToContext( &context );
       
-  }</code></pre></div>
-
+  }
+  ~~~~~~
 
   \section LiDARsynthetic Generating Synthetic (Simulated) LiDAR Data
 
@@ -416,8 +412,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   The code block below gives an example XML file. As a reminder, you can place this XML file anywhere, but the path given to the LiDARcloud::loadXML() function should either be absolute or relative to the directory in which the executable is being run (usually build/).
   
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> <helios>
+  ~~~~~~{.xml}
+  <helios>
 
 	<scan>
 	  <ASCII_format> x y z r255 g255 b255 </ASCII_format>
@@ -429,23 +425,22 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 	  <phiMax> 360 </phiMax> 
 	</scan>
 	
-  </helios></code></pre></div>
+  </helios>
+  ~~~~~~
 
   Example code is given below for generating synthetic discrete-return data and writing to an ASCII text file.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>  #include "Context.h"
+  ~~~~~~{.cpp}
   #include "LiDAR.h"
-
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
-     %Context context;
+     Context context;
 
      context.addPatch(); // create some model geometry here
 
-     %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+     LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
      pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
 
@@ -453,7 +448,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
      pointcloud.exportPointCloud( "/path/to/file.xyz" );  //write to ASCII file
       
-  }</code></pre></div>
+  }
+  ~~~~~~
 
   \subsection LiDARsynthwaveform Synthetic waveform data
 
@@ -461,8 +457,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   Contents of an example XML file is given below.
 
-   <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code> <helios>
+   ~~~~~~{.xml}
+   <helios>
 
 	<scan>
 	  <ASCII_format> x y z r255 g255 b255 target_count target_index timestamp </ASCII_format>
@@ -476,27 +472,26 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 	  <beamDivergence> 0.003 </beamDivergence>
 	</scan>
 	
-  </helios></code></pre></div>
+  </helios>
+  ~~~~~~
 
-   Running the synthetic data generation function requires the specification of parameters associated with the simulation. The first is the number of rays to use per laser pulse in performing ray-tracing calculations, which sets the maximum possible number of hits possible per pulse. Specifying 1 ray/pulse effectively creates a discrete-return simulation, because that would mean you could only have a maximum of 1 hit/pulse. Ideally, you want a large number of rays/pulse because it allows for more hits/pulse if needed and results in more accurate simulations. The drawback to a very high number of rays/pulse is that the simulation will take longer to run. A value on the order of 100 is usually reasonable.
+  Running the synthetic data generation function requires the specification of parameters associated with the simulation. The first is the number of rays to use per laser pulse in performing ray-tracing calculations, which sets the maximum possible number of hits possible per pulse. Specifying 1 ray/pulse effectively creates a discrete-return simulation, because that would mean you could only have a maximum of 1 hit/pulse. Ideally, you want a large number of rays/pulse because it allows for more hits/pulse if needed and results in more accurate simulations. The drawback to a very high number of rays/pulse is that the simulation will take longer to run. A value on the order of 100 is usually reasonable.
 
   Second, the user needs to specify the distance threshold for aggregation of similar ray hit distances. For each simulated laser pulse, the number of rays/pulse specified above are launched from the scan origin. When some or all of those rays intersect the same surface, they will record a distance from the scanner to the hit point that is slightly different for each ray. Similar distances, which are presumed to lie on the same surface, are aggregated into a single hit point if they are within this distance threshold of each other. This is similar to how a real LiDAR instrument works as indicated in the sketch above, in that it aggregates similar returns into a single hit point. Specifying too small of a distance threshold may result in many duplicate hit points on the same surface. Specifying too large of a threshold may result in hit points that lie in between two disconnected surfaces (e.g., leaves). A threshold value that is smaller than the leaf or branch with is usually reasonable.
 
   Below is example code with a rays/pulse value of 100 and distance threshold of 0.02.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>  #include "Context.h"
+  ~~~~~~{.cpp}
   #include "LiDAR.h"
-
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
-     %Context context;
+     Context context;
 
      context.addPatch(); // create some model geometry here
 
-     %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+     LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
      pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
 
@@ -507,7 +502,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
      pointcloud.exportPointCloud( "/path/to/file.xyz" );  //write to ASCII file
       
-  }</code></pre></div>
+  }
+  ~~~~~~
 
   Synthetic hit points can be labeled based on the primitive they intersect based on the value of the primitive data "object_label" of type 'int'. Primitive groups can be labeled in any way by setting a common integer value for the "object_label" primitive data. In order to enable synthetic data labeling, the column "object_label" must be included within the <ASCII_format> tag in the scan XML file. The object_label value for each hit point will be recorded and a column will be written if the point cloud is exported to file.
 
@@ -527,26 +523,25 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   The following code sample illustrates how to visualize the point cloud.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>   #include "Context.h"
+  ~~~~~~{.cpp}
    #include "LiDAR.h"
-   #include "Visualizer.h"   
-
+   #include "Visualizer.h"
    using namespace helios;
 
-   int main( void ){
+   int main(){
 
-      %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+      LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
       pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
 
-      %Visualizer vis( 1000 ); //Initialize the visualizer
+      Visualizer vis( 1000 ); //Initialize the visualizer
 
       pointcloud.addHitsToVisualizer( &vis, 1 );  //Add the hit points to visualizer
 
       vis.plotInteractive();
       
-   }</code></pre></div>
+   }
+  ~~~~~~
 
   <!--
   \section LiDARcontext Adding geometry to the Context
@@ -569,15 +564,13 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   The following code sample illustrates an example of how to write results to file.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>   #include "Context.h"
+  ~~~~~~{.cpp}
    #include "LiDAR.h"
-
    using namespace helios;
 
-   int main( void ){
+   int main(){
 
-      %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+      LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
       pointcloud.loadXML("/path/to/file.xml");  //Load the XML file
 
@@ -589,7 +582,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
       
       char f_normals[50], f_areas[50];
       for( uint i=0; i<Ncells; i++ ){ //loop over grid cells
-	       \c// define strings with output file names
+	       // define strings with output file names
 	       sprintf(f_normals,"../output/triangle_normals_%d.txt",i);
 	       sprintf(f_areas,"../output/triangle_areas_%d.txt",i);
 
@@ -601,6 +594,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
       pointcloud.exportPointCloud( "../output/pointcloud.xyz" );			       
       
-   }</code></pre></div>
+   }
+  ~~~~~~
   
 */

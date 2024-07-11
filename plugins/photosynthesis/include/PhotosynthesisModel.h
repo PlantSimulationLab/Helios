@@ -119,7 +119,7 @@ public:
 
     //! Default constructor
     /**
-     * \param[in] "a_context" Pointer to the helios context
+     * \param[in] a_context Pointer to the helios context
      */
     explicit PhotosynthesisModel( helios::Context* a_context );
 
@@ -133,30 +133,30 @@ public:
 
     //! Set the empirical model coefficients for all primitives
     /**
-     * \param[in] "modelcoefficients" Set of model coefficients, which will be applied to all primitives.
+     * \param[in] modelcoefficients Set of model coefficients, which will be applied to all primitives.
      *  \note The model type will be set based on the most recent call to setModelCoefficients().
      */
     void setModelCoefficients( const EmpiricalModelCoefficients &modelcoefficients );
 
     //! Set the empirical model coefficients for a subset of primitives based on their UUIDs
     /**
-     * \param[in] "modelcoefficients" Set of model coefficients.
-     * \param[in] "UUIDs" Universal unique identifiers for primitives to be set.
+     * \param[in] modelcoefficients Set of model coefficients.
+     * \param[in] UUIDs Universal unique identifiers for primitives to be set.
      * \note The model type will be set based on the most recent call to setModelCoefficients().
      */
     void setModelCoefficients( const EmpiricalModelCoefficients &modelcoefficients, const std::vector<uint>& UUIDs );
 
     //! Set the Farquhar-von Caemmerer-Berry model coefficients for all primitives
     /**
-     * \param[in] "modelcoefficients" Set of model coefficients, which will be applied to all primitives.
+     * \param[in] modelcoefficients Set of model coefficients, which will be applied to all primitives.
      *  \note The model type will be set based on the most recent call to setModelCoefficients().
      */
     void setModelCoefficients(const FarquharModelCoefficients &modelcoefficients );
 
     //! Set the Farquhar-von Caemmerer-Berry model coefficients for a subset of primitives based on their UUIDs
     /**
-    * \param[in] "modelcoefficients" Set of model coefficients.
-    * \param[in] "UUIDs" Universal unique identifiers for primitives to be set.
+    * \param[in] modelcoefficients Set of model coefficients.
+    * \param[in] UUIDs Universal unique identifiers for primitives to be set.
     * \note The model type will be set based on the most recent call to setModelCoefficients().
     */
     void setModelCoefficients( const FarquharModelCoefficients &modelcoefficients, const std::vector<uint>& UUIDs );
@@ -175,7 +175,7 @@ public:
 
     //! Add optional output primitive data values to the Context
     /**
-    * \param[in] "label" Name of primitive data (e.g., Ci)
+    * \param[in] label Name of primitive data (e.g., Ci)
     */
     void optionalOutputPrimitiveData( const char* label );
 
@@ -184,7 +184,7 @@ public:
 
     //! Print a report detailing usage of default input values based on a subset of primitive UUIDs
     /**
-     * \params[in] "UUIDs" Universal unique identifiers for report
+     * \params[in] UUIDs Universal unique identifiers for report
      */
     void printDefaultValueReport(const std::vector<uint> &UUIDs) const;
 

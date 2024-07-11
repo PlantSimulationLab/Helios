@@ -13,8 +13,8 @@
 
 */
 
-#ifndef __BOUNDARYLAYERCONDUCTANCEMODEL__
-#define __BOUNDARYLAYERCONDUCTANCEMODEL__
+#ifndef BOUNDARYLAYERCONDUCTANCEMODEL
+#define BOUNDARYLAYERCONDUCTANCEMODEL
 
 #include "Context.h"
 
@@ -24,38 +24,45 @@ class BLConductanceModel{
 public:
 
   //! Constructor
-  /** \param[in] "context" Pointer to the Helios context */
+  /**
+   * \param[in] context Pointer to the Helios context
+   */
   BLConductanceModel( helios::Context* context );
 
   //! Self-test
-  /** \return 0 if test was successful, 1 if test failed. */
-  int selfTest( void );
+  /**
+   * \return 0 if test was successful, 1 if test failed.
+   */
+  int selfTest();
 
   //! Enable standard output from this plug-in (default)
-  void enableMessages( void );
+  void enableMessages();
 
   //! Disable standard output from this plug-in
-  void disableMessages( void );
+  void disableMessages();
 
   //! Set the boundary-layer conductance model to be used for all primitives in the Context
-  /** \param[in] "gH_model" 
+  /**
+   * \param[in] gH_model String corresponding to model to be run. One of "Polhausen", "InclinedPlate", "Sphere", or "Ground".
   */
   void setBoundaryLayerModel( const char* gH_model );
 
   //! Set the boundary-layer conductance model to be used for a set of primitives
-  /** \param[in] "UUID"  Unique universal identifier (UUID) for primitive the conductance model should be used.
-      \param[in] "gH_model" 
+  /**
+   * \param[in] UUID  Unique universal identifier (UUID) for primitive the conductance model should be used.
+   * \param[in] gH_model String corresponding to model to be run. One of "Polhausen", "InclinedPlate", "Sphere", or "Ground".
   */
-  void setBoundaryLayerModel( const uint UUID, const char* gH_model );
+  void setBoundaryLayerModel( uint UUID, const char* gH_model );
 
   //! Set the boundary-layer conductance model to be used for a set of primitives
-  /** \param[in] "UUIDs"  Unique universal identifiers (UUIDs) for primitives the conductance model should be used.
-      \param[in] "gH_model" 
+  /**
+   * \param[in] UUIDs  Unique universal identifiers (UUIDs) for primitives the conductance model should be used.
+   * \param[in] gH_model String corresponding to model to be run. One of "Polhausen", "InclinedPlate", "Sphere", or "Ground".
   */
   void setBoundaryLayerModel(const std::vector<uint> &UUIDs, const char* gH_model );
 
   //! Run boundary-layer conductance calculations for all primitives in the Context
-  void run( void );
+  void run();
 
   //! Run boundary-layer conductance calculations for a subset of primitives in the Context based on a vector of UUIDs
   void run(const std::vector<uint> &UUIDs );

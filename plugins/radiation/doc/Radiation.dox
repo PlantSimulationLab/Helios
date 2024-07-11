@@ -143,8 +143,9 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  The radiation model class contains functions and data associated with the model. To begin, declare an instance of the RadiationModel class. The class constructor takes one argument - a pointer to the Helios context. It uses this pointer to access model geometry and data in the context.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code>%RadiationModel radiationmodel(&context); //declare the model class</code></pre></div>
+ ~~~~~~{.cpp}
+ RadiationModel radiationmodel(&context); //declare the model class
+ ~~~~~~
 
  \subsection RadTwoSided Area Basis for Calculating Fluxes
 
@@ -152,8 +153,9 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):
 
-  <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code>context.setPrimitiveData( UUID, "twosided_flag", uint(1) );</code></pre></div>
+  ~~~~~~{.cpp}
+  context.setPrimitiveData( UUID, "twosided_flag", uint(1) );
+  ~~~~~~
 
  Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.
 
@@ -169,15 +171,17 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Radiation bands are defined in the model by calling the \ref RadiationModel::addRadiationBand() method. At a minimum, the user must provide an arbitrary label for the band to be added (e.g., "PAR"), which will be used to reference it later. The actual value of the label does not matter - calling a band "PAR" for example doesn't mean anything itself, it's just a label.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>radiationmodel.addRadiationBand( "PAR" ); //Add band 'PAR'</code></pre></div>
+ ~~~~~~{.cpp}
+ radiationmodel.addRadiationBand( "PAR" ); //Add band 'PAR'
+ ~~~~~~
 
  When a band is added in this way, we will need to manually specify source fluxes and surface radiative properties. These values are what would actually make the band "PAR", or "NIR", or "shortwave", for example. We would set source fluxes and radiative properties consistent with that particular band.
 
  If we have source flux spectral data, or surface spectral radiative properties, we can input this into the model and have it automatically calculate source fluxes and radiative properties. The procedure for actually inputting this spectral data is described in detail below, but in this case we need to specify the wavelength range for our band when we create it:
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>radiationmodel.addRadiationBand( "PAR", 400, 700 ); //Add band 'PAR', defined as 400-700nm</code></pre></div>
+ ~~~~~~{.cpp}
+ radiationmodel.addRadiationBand( "PAR", 400, 700 ); //Add band 'PAR', defined as 400-700nm
+ ~~~~~~
 
  In the example above, we have defined our wavelength band as 400-700 nm. Thus, any spectral data input to the model will be integrated over this wavelength band to determine source fluxes and radiative properties.
 
@@ -187,15 +191,16 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Spectral data is usually read into the Context from an XML file, although it could be manually created within a program and stored as global data. The spectral data should be stored in an XML file as global data, consisting of many vec2 data point and a label string. An example might be as follows (although it will typically have many more values in a real use case). See the page on \ref IO "File I/O" for more information about the specification of XML files in Helios.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code> \<helios\>
-    \<label="leaf_transmissivity"\>
+ ~~~~~~{.xml}
+ <helios>
+    <label="leaf_transmissivity">
         300.0 0.11880
         400.0 0.10533
         500.0 0.09013
         600.0 0.08810
-    \<\c/globaldata_vec2\>
- \<\c/helios\></code></pre></div>
+    <globaldata_vec2>
+ <helios>
+ ~~~~~~
 
  In this example, we've specified the leaf spectral transmissivity at four wavebands - 300, 400, 500, and 600 nm. Note that wavelength values are always given in nanometers. The label "leaf_transmissivity" is important, as this would be used later to assign this transmissivity spectrum to one or more primitives.
 
@@ -203,16 +208,18 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  In order to get the spectral data into the Context as global data, the XML file containing the data must be loaded. This is done via the usual procedure:
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-    <pre><code> context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");</code></pre></div>
+ ~~~~~~{.cpp}
+ context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
+ ~~~~~~
 
  This command would load all the surface spectra from the file "surface_spectral_library.xml" into the Context as global data. We could then access it in the usual way (see page on \ref GlobalData "Global Data" for details on Helios global data):
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> std::vector<vec2> transmissivity;
+ ~~~~~~{.cpp}
+ std::vector<vec2> transmissivity;
  context.getGlobalData("grape_leaf_transmissivity_0000", transmissivity);
  float wavelength = transmissivity.at(0).x;
- float tau = transmissivity.at(0).y;</code></pre></div>
+ float tau = transmissivity.at(0).y;
+ ~~~~~~
 
  In the above example, we've retrieved the spectrum in the file "surface_spectral_library.xml" with the tag "grape_leaf_transmissivity_0000" and stored it into the vector "transmissivity". As an example, we looked up the wavelength and transmissivity at the first wavelength (index of 0).
 
@@ -225,18 +232,19 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  By setting the value of primitive data "reflectivity_[*]" or "transmissivity_[*]", where "[*]" is the name of a radiative band that has been created, this sets a constant reflectivity or transmissivity value for the given band and primitive. And example is given below.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  \c// Initialize the Context
+ ~~~~~~{.cpp}
+  // Initialize the Context
   Context context;
 
-  \c// Add 'Patch' primitive
+  // Add 'Patch' primitive
   uint UUID = context.addPatch();
 
   float rho = 0.1; //reflectivity value
   context.setPrimitiveData( UUID, "reflectivity_PAR", rho);
 
   float tau = 0.1; //transmissivity value
-  context.setPrimitiveData( UUID, "transmissivity_PAR", tau);</code></pre></div>
+  context.setPrimitiveData( UUID, "transmissivity_PAR", tau);
+ ~~~~~~
 
  Note that absorptivity is not directly set, rather it is calculated as \f$1-\rho-\tau\f$.  If \f$1-\rho-\tau\f$ is calculated to be negative or greater than 1, an error is thrown.
 
@@ -250,28 +258,29 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \f[ \rho = \dfrac{\int_{\lambda_{min}}^{\lambda_{max}}\rho_\lambda I_\lambda d\lambda}{\int_{\lambda_{min}}^{\lambda_{max}} I_\lambda d\lambda}\f]
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  \c// Initialize the Context
+ ~~~~~~{.cpp}
+  // Initialize the Context
   Context context;
 
-  \c// Add 'Patch' primitive
+  // Add 'Patch' primitive
   uint UUID = context.addPatch();
 
-  \c// Load the surface spectral library
+  // Load the surface spectral library
   context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
 
-  \c// Set the reflectivity and transmissivity based on an example spectrum in the library
+  // Set the reflectivity and transmissivity based on an example spectrum in the library
   context.setPrimitiveData( UUID, "reflectivity_spectrum", "grape_leaf_reflectivity_0000" );
   context.setPrimitiveData( UUID, "transmissivity_spectrum", "grape_leaf_transmissivity_0000" );
 
-  \c// Declare the radiation model
+  // Declare the radiation model
   %RadiationModel radiationmodel(&context);
 
-  \c// Add a band with explicit wavelength bounds (400-700nm)
+  // Add a band with explicit wavelength bounds (400-700nm)
   radiationmodel.addRadiationBand( "PAR", 400, 700 );
 
-  \c// Updating the geometry will perform radiative property calculations and set primitive data
-  radiationmodel.updateGeometry();</code></pre></div>
+  // Updating the geometry will perform radiative property calculations and set primitive data
+  radiationmodel.updateGeometry();
+ ~~~~~~
 
  Note that in the above example, we did not add a radiative source or set its spectral distribution.
 
@@ -281,14 +290,16 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Emission can be disabled for the band by calling the \ref RadiationModel::disableEmission() "disableEmission()" function.  For example, for the photosynthetically active (PAR) band, terrestrial objects do not emit radiation (i.e., \f$\varepsilon\approx 0\f$) and thus rather than setting a zero emissivity for this band for all primitives, it is desirable to simply disable radiation emission for this band:
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code> radiationmodel.disableEmission( "PAR" ); //Disable emission for the 'PAR' band</code></pre></div>
+ ~~~~~~{.cpp}
+ radiationmodel.disableEmission( "PAR" ); //Disable emission for the 'PAR' band
+ ~~~~~~
 
  The surface emissivity can be changed similarly as was shown above for the reflectivity and transmissivity:
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
-   <pre><code> float eps = 0.9; //emissivity value
- context.setPrimitiveData( UUID, "emissivity_LW", eps);</code></pre></div>
+ ~~~~~~{.cpp}
+ float eps = 0.9; //emissivity value
+ context.setPrimitiveData( UUID, "emissivity_LW", eps);
+ ~~~~~~
 
  Note that you can also set the reflectivity and transmissivity for a band with emission. It is required that \f$\rho+\tau+\varepsilon=1\f$ in order to satisfy conservation of energy. If only the emissivity is set and reflectivity and transmissivity are left at their default values of 0, it is automatically assumed that \f$\rho=1-\varepsilon\f$ and \f$\tau=0\f$.
 
@@ -308,11 +319,12 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Below is an example of adding a collimated source oriented in the direction of the sun, with a flux of 800 and using 200 rays per primitive:
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> vec3 sun_dir(0,0,1);
+ ~~~~~~{.cpp}
+ vec3 sun_dir(0,0,1);
  uint SunSource = radiationmodel.addCollimatedRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'SunSource' variable
  radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source
- radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources </code></pre></div>
+ radiationmodel.setDirectRayCount("PAR",200); //set the ray count for sources
+ ~~~~~~
 
  The \ref RadiationModel::addCollimatedRadiationSource() method can also be called with no argument, in which case it will set the sun direction to be vertical. It can also be called based on a \ref helios::SphericalCoord.
 
@@ -322,40 +334,44 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  The spherical sun source is defined in a similar manner as the collimated radiation source, but using the \ref RadiationModel::addSunSphereRadiationSource() "addSunSphereRadiationSource()" function. Below is an example of adding a spherical sun source, with a flux of 800:
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> vec3 sun_dir(0,0,1);
+ ~~~~~~{.cpp}
+ vec3 sun_dir(0,0,1);
  uint SunSource = radiationmodel.addSunSphereRadiationSource( sun_dir ); //add the source, whose identifier is stored in the 'SunSource' variable
- radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source</code></pre></div>
+ radiationmodel.setSourceFlux(SunSource,"PAR",800); //set the flux of the source
+ ~~~~~~
 
  \subsubsection PointSource Adding Spherical Radiation Sources
 
  Spherical sources are added using the \ref RadiationModel::addSphereRadiationSource() "addSphereRadiationSource()" function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the surface of the source can also be set using the source identifier.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> vec3 sun_dir(0,0,1);
+ ~~~~~~{.cpp}
+ vec3 sun_dir(0,0,1);
  float sphere_radius = 1.0;
  uint SphereSource = radiationmodel.addSphereRadiationSource( sun_dir, sphere_radius ); //add the source, whose identifier is stored in the 'SphereSource' variable
- radiationmodel.setSourceFlux(SphereSource,"PAR",800); //set the flux of the source</code></pre></div>
+ radiationmodel.setSourceFlux(SphereSource,"PAR",800); //set the flux of the source
+ ~~~~~~
 
  \subsubsection DiskSource Adding Disk Radiation Sources
 
  A disk radiation source emits directionally from one surface of a circular disk. Disk sources are added using the \ref RadiationModel::addDiskRadiationSource() "addDiskRadiationSource()" function, which takes an (x,y,z) location of the disk source center, its radius, and its rotation as arguments. By default, the disk is horizontal and emits from its upper face. The rotation argument specifies the rotation angle in radians about its x-, y-, and z-axes. For example, to have a downward-emitting disk, the rotation would be (\f$\pi\f$, 0, 0).  The flux emanating from the surface of the disk can also be set using the source identifier.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> vec3 rotation(M_PI,0,0); //emitting downward
+ ~~~~~~{.cpp}
+ vec3 rotation(M_PI,0,0); //emitting downward
  float disk_radius = 1.0;
  uint DiskSource = radiationmodel.addDiskRadiationSource( nullorigin, disk_radius, rotation );
- radiationmodel.setSourceFlux(DiskSource,"PAR",800); //set the flux of the source</code></pre></div>
+ radiationmodel.setSourceFlux(DiskSource,"PAR",800); //set the flux of the source
+ ~~~~~~
 
  \subsubsection RectSource Adding Rectangular Radiation Sources
 
  Adding a rectangular radiation source is nearly the same as adding a disk source, except that the horizontal and lateral dimensions of the source can be specified independently. As with the disk source, the rectangle is horizontal by default and emits from its upper face.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> vec3 rotation(M_PI,0,0); //emitting downward
+ ~~~~~~{.cpp}
+ vec3 rotation(M_PI,0,0); //emitting downward
  vec2 size(2.0, 1.0);
  uint RectSource = radiationmodel.addRectangleRadiationSource( nullorigin, size, rotation );
- radiationmodel.setSourceFlux(RectSource,"PAR",800); //set the flux of the source</code></pre></div>
+ radiationmodel.setSourceFlux(RectSource,"PAR",800); //set the flux of the source
+ ~~~~~~
 
  \subsubsection SourceDist Setting the Radiation Source Spectral Distribution and Normalization
 
@@ -367,9 +383,9 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  An example of setting the source distribution based on the ASTMG173 standard solar spectral distribution is given below. Note that the ASTMG173 solar spectrum is automatically loaded by the radiation model. However, in general, the user needs to load an XML file containing the spectral data into the Context. For example,
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>
- context.loadXML("plugins/radiationmodel/spectral_data/light_spectral_library.xml");</code></pre></div>
+ ~~~~~~{.cpp}
+ context.loadXML("plugins/radiationmodel/spectral_data/light_spectral_library.xml");
+ ~~~~~~
 
  This would allow for use of the "CREE_XLamp_XHP70p2_6500K" source flux spectral distribution, for example.
 
@@ -379,23 +395,23 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  However, users typically want to change the integral of the source flux distribution dynamically throughout a simulation. This can be done using the \ref RadiationModel::setSourceSpectrumIntegral() method. The user can either set the integral of the source flux spectral distribution across all wavelengths to a prescribed value. The source flux spectral distribution can also be scaled based on a prescribed integral between two wavelengths. For example, if only the total PAR flux was known, the entire solar source flux distribution could be scaled based on the integral from 400-700nm. When called, the \ref RadiationModel::setSourceSpectrumIntegral() function properly normalizes the source spectral distribution, calculates radiative source fluxes for all bands through integration, then calls the \ref RadiationModel::setSourceFlux() method for all bands based on the updated fluxes.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>
+ ~~~~~~{.cpp}
  uint SourceID = radiationmodel.addSunSphereRadiationSource(); //add a radiation source
  radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_direct_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum
  radiationmodel.addRadiationBand("PAR", 400, 700); //add a radiation band called "PAR" defined between 400-700nm
- radiationmodel.setSourceSpectrumIntegral(SourceID, 1000 ); //set the integral of solar flux spectrum across all bands to 1000 W/m^2</code></pre></div>
+ radiationmodel.setSourceSpectrumIntegral(SourceID, 1000 ); //set the integral of solar flux spectrum across all bands to 1000 W/m^2
+ ~~~~~~
 
  In order to be able to set the source spectrum integral, it is required that: 1) the source has been assigned a spectral distribution via the \ref RadiationModel::setSourceSpectrum() method, and 2) bands should have been added with explicit wavelength bounds. If they were not, their fluxes will not be set based on the updated source flux integral.
 
  A user may want to set the source integral based on only a subset of wavelengths contained in the entire spectrum. For example, if only the PAR (400-700nm) flux was known, the entire source flux distribution could be normalized to produce a given PAR flux.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>
+ ~~~~~~{.cpp}
  uint SourceID = radiationmodel.addSunSphereRadiationSource(); //add a radiation source
  radiationmodel.setSourceSpectrum(SourceID, "solar_spectrum_direct_ASTMG173"); //set the source flux spectral distribution to ASTMG173 solar spectrum (direct)
  radiationmodel.addRadiationBand("PAR", 400, 700); //add a radiation band called "PAR" defined between 400-700nm
- radiationmodel.setSourceSpectrumIntegral(SourceID, 300, 400, 700 ); //set the integral of solar flux spectrum from 400-700nm to 300 W/m^2</code></pre></div>
+ radiationmodel.setSourceSpectrumIntegral(SourceID, 300, 400, 700 ); //set the integral of solar flux spectrum from 400-700nm to 300 W/m^2
+ ~~~~~~
 
  Now that the source spectrum is set, it is no longer necessary to call \ref RadiationModel::setSourceFlux(), because it will be automatically calculated by integrating the source spectrum. If \ref RadiationModel::setSourceFlux() is called for a band, it will override any source spectra.
 
@@ -403,13 +419,15 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  An ambient radiation source is added simply by setting its flux value:
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>radiationmodel.setDiffuseRadiationFlux("PAR",200.f); //set the flux</code></pre></div>
+ ~~~~~~{.cpp}
+ radiationmodel.setDiffuseRadiationFlux("PAR",200.f); //set the flux
+ ~~~~~~
 
  The default is to use 100 diffuse rays per primitive, which can be set to a user-defined value using the following command:
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>radiationmodel.setDiffuseRayCount("PAR",200); //set the number of rays</code></pre></div>	  
+ ~~~~~~{.cpp}
+ radiationmodel.setDiffuseRayCount("PAR",200); //set the number of rays
+ ~~~~~~
 
  By default, the diffuse radiation distribution is isotropic. An anisotropic diffuse radiation distribution can be utilized using the function \ref RadiationModel::setDiffuseRadiationExtinctionCoeff() "setDiffuseRadiationExtinctionCoeff()". This function applies an anisotropic diffuse distribution in which intensity declines exponentially away from the peak direction (usually the solar direction). The relative diffuse intensity is given by <a href="https://doi.org/10.1016/0038-092X(88)90072-2">(Harrison and Coombes, 1988)</a>
 
@@ -429,17 +447,19 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  An example implementation is given below.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> vec3 sun_dir(0,0,1); //sun direction
+ ~~~~~~{.cpp}
+ vec3 sun_dir(0,0,1); //sun direction
  float K = 0.1; //diffuse radiation distribution extinction coefficient
- radiation.setDiffuseRadiationExtinctionCoeff("PAR", K, sun_dir);</code></pre></div>
+ radiation.setDiffuseRadiationExtinctionCoeff("PAR", K, sun_dir);
+ ~~~~~~
 
  \subsection RadScatter Scattering Iterations
  
  If the reflectivity or transmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively until there is no energy left to be scattered.  The number of scattering iterations is defined using:
  
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>radiationmodel.setScatteringDepth( "PAR", 5); //set the number of scattering iterations</code></pre></div>	
+ ~~~~~~{.cpp}
+ radiationmodel.setScatteringDepth( "PAR", 5); //set the number of scattering iterations
+ ~~~~~~
 
  \subsection RadPeriodic Periodic Boundary Conditions
 
@@ -449,18 +469,20 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  A periodic boundary condition is specified using the \ref RadiationModel::enforcePeriodicBoundary() "enforcePeriodicBoundary()" function. The argument to this function is the lateral boundary that should be considered periodic: one of "x" (periodic in x-direction), "y" (periodic in y-direction), or "xy" (periodic in both x- and y-directions).
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>radiationmodel.enforcePeriodicBoundary("xy"); //enforce periodic boundaries in horizontal</code></pre></div>
+ ~~~~~~{.cpp}
+ radiationmodel.enforcePeriodicBoundary("xy"); //enforce periodic boundaries in horizontal
+ ~~~~~~
 
  Note that it is very important that no primitives extend laterally beyond the ground surface, otherwise the periodic boundary will lie beyond the lateral extent of the ground and there will potentially be ambient radiation that enters the domain from below. If there is a chance that primitives may laterally extend beyond the ground, it is recommended to use the \ref Context::cropDomain() function to crop the domain in the horizontal to the size of the ground.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> vec2 ground_size(10,10);  //lateral size of the ground
+ ~~~~~~{.cpp}
+ vec2 ground_size(10,10);  //lateral size of the ground
  vec3 ground_center(0,0,0);  //position of the ground center
  context.addPatch( ground_center, ground_size );  //ground patch
 
  context.cropDomainX( ground_center.x + make_vec2(-0.5*ground_size.x,0.5*ground_size.x) );
- context.cropDomainY( ground_center.y + make_vec2(-0.5*ground_size.y,0.5*ground_size.y) );</code></pre></div>
+ context.cropDomainY( ground_center.y + make_vec2(-0.5*ground_size.y,0.5*ground_size.y) );
+ ~~~~~~
 
  \subsection RadCam Radiation Cameras
 
@@ -527,15 +549,16 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Once all these parameters have been defined, we can add a camera to the simulation using the \ref RadiationModel::addRadiationCamera() method. The first argument to this method is an arbitrary label string (e.g., "thermal", "multispec", "mycamera") that will later be used to reference the camera. Example code is given below.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>%CameraProperties properties; //define the camera properties structure
+ ~~~~~~{.cpp}
+ CameraProperties properties; //define the camera properties structure
  properties.HFOV = 45;  //change some properties if we want
 
  vec3 camera_position(0,0,3);
  vec3 camera_lookat(0,0,0);
  uint antialiasing_samples = 100;
 
- radiationmodel.addRadiationCamera("visible", {"red","green","blue"}, camera_position, camera_lookat, properties, antialiasing_samples );</code></pre></div>
+ radiationmodel.addRadiationCamera("visible", {"red","green","blue"}, camera_position, camera_lookat, properties, antialiasing_samples );
+ ~~~~~~
 
  This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to \ref RadiationModel::addBand().
 
@@ -551,16 +574,16 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  By convention, the intensity spectra all sources other than the sun are normalized to 1.0. So when using camera calibrations based on these types of sources, you should set the source fluxes for each radiative band equal to 1.0. For solar sources, set the source flux for each band equal to the total solar flux integrated over all wavelengths.
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> Context context;
+ ~~~~~~{.cpp}
+ Context context;
  context.loadXML("plugins/radiation/spectral_data/camera_spectral_library.xml");
 
- \c// Assuming radiation model and camera have already been set up here //
+ // Assuming radiation model and camera have already been set up here //
 
  radiationmodel.setCameraSpectralResponse("visible", "red", "calibrated_ASTMG173_NikonD700_spectral_response_red");
  radiationmodel.setCameraSpectralResponse("visible", "green", "calibrated_ASTMG173_NikonD700_spectral_response_green");
- radiationmodel.setCameraSpectralResponse("visible", "blue", "calibrated_ASTMG173_NikonD700_spectral_response_blue");</code></pre></div>
- </code></pre></div>
+ radiationmodel.setCameraSpectralResponse("visible", "blue", "calibrated_ASTMG173_NikonD700_spectral_response_blue");
+ ~~~~~~
 
  When using a calibrated camera spectral response, you should set the source flux equal to 1.0 for all bands. This is because the calibrated camera spectral response is calibrated based on the actual intensity of the light source.
 
@@ -573,14 +596,15 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  \image html color_card_values.png
 
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> std::vector<std::vector<float>> truevalues(3);
+ ~~~~~~{.cpp}
+ std::vector<std::vector<float>> truevalues(3);
  // red channel
  truevalues.at(0) = {1.0, 0.69, 0.58, 0.47, 0.35, 0.0, 0.85, 0.99, 0.50, 0.30, 0.02, 0.85, 0.63, 0.77, 0.24, 0.69, 0.76, 0.69};
  // green channel
  truevalues.at(1) = {1.0, 0.71, 0.59, 0.47, 0.35, 0.0, 0.22, 0.95, 0.73, 0.67, 0.10, 0.18, 0.24, 0.51, 0.53, 0.36, 0.63, 0.58};
  // blue channel
- truevalues.at(2) = {1.0, 0.71, 0.60, 0.48, 0.36, 0.0, 0.20, 0.31, 0.35, 0.91, 0.31, 0.54, 0.24, 0.24, 0.63, 0.57, 0.56, 0.50};</code></pre></div>
+ truevalues.at(2) = {1.0, 0.71, 0.60, 0.48, 0.36, 0.0, 0.20, 0.31, 0.35, 0.91, 0.31, 0.54, 0.24, 0.24, 0.63, 0.57, 0.56, 0.50};
+ ~~~~~~
 
  It is preferable to use more significant digits for the color values for increased precision. The above example used only two significant digits for simplicity.
 
@@ -594,10 +618,11 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Simulations for each band are run separately via the \ref RadiationModel::runBand() "runBand()" command:
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> radiationmodel.updateGeometry(); //build the context geometry in the radiation model
+ ~~~~~~{.cpp}
+ radiationmodel.updateGeometry(); //build the context geometry in the radiation model
 
- radiationmodel.runBand("PAR"); //run the model for the 'PAR' band</code></pre></div>
+ radiationmodel.runBand("PAR"); //run the model for the 'PAR' band
+ ~~~~~~
 
  The model will create several primitive data in the context with values set using simulation results (see Sect. "Output Primitive Data" above).
 
@@ -605,16 +630,16 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  A common task when using the radiation model is to integrate with the \ref SolarPosition plug-in to set the position of a collimated radiation source (i.e., the sun), potentially at several different times of the day.  In this case, one would initialize the SolarPosition and RadiationModel classes and set up relevant inputs, then execute a for-loop over each time of the day. For each time iteration, the current time is set in the Context, the direction of the sun is calculated for that particular time, then the sun direction is passed to the radiation model. An example is illustrated in the code below.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Visualizer.h"
+ ~~~~~~{.cpp}
+  #include "Visualizer.h"
   #include "SolarPosition.h"
   #include "RadiationModel.h"
 
   using namespace helios;
 
-  int main( void ){
+  int main(){
 
-     \c//---- inputs ----//
+     //---- inputs ----//
      int UTC = 7;             //hours from UTC
      float latitude = 35.2;   //latitude in degrees
      float longitude = 124.3; //longitude in degrees
@@ -624,23 +649,23 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      float temperature = 300; //air temperature (K)
      float humidity = 0.5;    //relative humidity (-)
      float turbidity = 0.05;  //atmospheric turbidity coeff (-)
-     \c//----------------//
+     //----------------//
 
-     \c// --- 1. Initialize the Context and some geometry --- //
+     // --- 1. Initialize the Context and some geometry --- //
      Context context; //Initialize Context
 
-     \c// add some geometry
+     // add some geometry
      context.addTile( make_vec3(0,0,0), make_vec2(10,10), make_SphericalCoord(0,0), make_int2(500,500) );
 
      context.addSphere( 50, make_vec3(0,0,2), 1 );
 
-     \c// --- 2. Initialize the solar position model --- //
+     // --- 2. Initialize the solar position model --- //
 
-     %SolarPosition solarposition( UTC, latitude, longitude, &context ); //initialize the solar position model
+     SolarPosition solarposition( UTC, latitude, longitude, &context ); //initialize the solar position model
 
-     \c// --- 3. Initialize the radiation model --- //
+     // --- 3. Initialize the radiation model --- //
   
-     %RadiationModel radiationmodel( &context ); //initialize the radiation model
+     RadiationModel radiationmodel( &context ); //initialize the radiation model
   
      uint SunSource = radiationmodel.addCollimatedRadiationSource(); //add the source (sun), we'll set it's direction later
   
@@ -650,34 +675,34 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
   
      radiationmodel.updateGeometry();
 
-     \c// --- 4. Loop over various hours of the day (7:00 thru 21:00) --- //
+     // --- 4. Loop over various hours of the day (7:00 thru 21:00) --- //
   
      context.setDate( date ); //set the date, which will not change
      
      for( int hour=7; hour<22; hour++ ){
 
-        \c// --- 5. Set the current time and calculate the associated sun direction --- //
+        // --- 5. Set the current time and calculate the associated sun direction --- //
     
         context.setTime(0,hour); //set the current time for this iteration
 
-        \c//Set the correct sun position for the current date, time, latitude, etc.
+        //Set the correct sun position for the current date, time, latitude, etc.
         vec3 sdir = solarposition.getSunDirectionVector(); //get the solar direction from plug-in
         radiationmodel.setSourcePosition( SunSource, sdir ); //set the radiation source direction in radiation model
 
-        \c// --- 6. Calculate incoming solar fluxes for the current time --- //
+        // --- 6. Calculate incoming solar fluxes for the current time --- //
       
-        \c//Calculate the clear-sky direct and diffuse solar flux for the current date, time, latitude, etc.
+        //Calculate the clear-sky direct and diffuse solar flux for the current date, time, latitude, etc.
         float Rflux = solarposition.getSolarFlux( pressure, temperature, humidity, turbidity );
         float fdiff = solarposition.getDiffuseFraction( pressure, temperature, humidity, turbidity ); //fraction of Rflux that is diffuse
         radiationmodel.setSourceFlux( SunSource, "SW", Rflux*(1-fdiff) ); //set the direct flux: Rflux*(1-fdiff)
         radiationmodel.setDiffuseRadiationFlux( "SW", Rflux*fdiff ); //set the diffuse flux: Rflux*fdiff
 
-        \c// --- 7. Run the model --- //
+        // --- 7. Run the model --- //
         radiationmodel.runBand("SW");
 
-        \c// --- 8. Visualize the result --- //
+        // --- 8. Visualize the result --- //
     
-        %Visualizer vis(1000); //Initialize the visualizer
+        Visualizer vis(1000); //Initialize the visualizer
 
         vis.buildContextGeometry(&context); //add all geometry in the Context to the visualizer
         vis.colorContextPrimitivesByData( "radiation_flux_SW" ); //tell the visualizer to color based on radiation flux (primitive data)
@@ -694,7 +719,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
      return 0;     
      
-  }</code></pre></div>
+  }
+ ~~~~~~
 
  \subsection ModelOutputs Model Outputs
  
@@ -704,30 +730,31 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  A simple example of visualization of the absorbed flux for band "PAR" is given below, which assumes that a band exists named "PAR" and the model was run for that band.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> %Visualizer vis(1000);
+ ~~~~~~{.cpp}
+  Visualizer vis(1000);
 
   vis.buildContextGeometry( &context );
   vis.colorContextPrimitivesByData("radiation_flux_PAR");
   vis.enableColorbar();
 
-  vis.plotInteractive();</code></pre></div>
-
+  vis.plotInteractive();
+ ~~~~~~
 
  It could also be possible to visualize the net all-wave radiation flux by summing multiple band fluxes. The following example assumes that there are bands created in the model for shortwave radiation called "SW" and for longwave radiation called "LW", and that the model has been run for each of these bands.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  %Visualizer vis(1000);
+ ~~~~~~{.cpp}
+  Visualizer vis(1000);
 
   vis.buildContextGeometry( &context );
 
-  \c// sum the "SW" and "LW" fluxes for each primitive and store the result to new primitive data called "total_flux"
+  // sum the "SW" and "LW" fluxes for each primitive and store the result to new primitive data called "total_flux"
   context.aggregatePrimitiveDataSum( allUUIDs, {"radiation_flux_SW", "radiation_flux_LW"}, "total_flux" );
 	   
   vis.colorContextPrimitivesByData( "total_flux" );
   vis.enableColorbar();
 
-  vis.plotInteractive();</code></pre></div>
+  vis.plotInteractive();
+ ~~~~~~
 
  \subsubsection RadDataInt Integrating Fluxes
 
@@ -735,12 +762,12 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  There are many functions in the Context to help with aggregating primitive data, which can be utilized to easily calculate these integral quantities. The code below gives an example of calculating the total canopy and ground radiation absorption, and the associated fraction of radiation interception. To calculate the total radiation absorption for the canopy or ground, we can separately sum the product of the primitive absorbed flux and surface area. This would give the total rate of radiation absorption (in Watts) for the canopy and the ground. The Context method \ref helios::Context::calculatePrimitiveDataAreaWeightedSum() can do this calculation for us, given a vector of UUIDs corresponding to leaf or ground primitives. This is illustrated below.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> \c// *** Run the model and calculate PAR interception *** //
+ ~~~~~~{.cpp}
+  // *** Run the model and calculate PAR interception *** //
 
   radiation.runBand("PAR"); //run the radiation calculations for this band
 
-  \c// Calculate PAR interception
+  // Calculate PAR interception
   float PAR_tree;
   context.calculatePrimitiveDataAreaWeightedSum( UUIDs_tree, "radiation_flux_PAR", PAR_tree ); //sum up absorbed PAR flux for each tree primitive and weight by primitive surface area.
   float PAR_ground;
@@ -748,7 +775,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
   float fPAR = PAR_tree/(PAR_tree+PAR_ground);
 
-  std::cout << "Fraction of intercepted PAR is " << fPAR << std::endl;</code></pre></div>
+  std::cout << "Fraction of intercepted PAR is " << fPAR << std::endl;
+ ~~~~~~
 
  The above example assumes that we have already added some geometry to the Context, separated leaf and ground UUIDs, and declared and set up the radiation model. For a full example, see \ref radiation_basics "Tutorial 10".
 
@@ -760,35 +788,37 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  Below is example code of writing an RGB image (3 spectral bands).
 
- <div style="padding:10px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>int main(){
+ ~~~~~~{.cpp}
+ #include "RadiationModel.h"
+ using namespace helios;
 
-    %Context context;
+ int main(){
+
+    Context context;
 
     std::vector<uint> UUIDs_bunny = context.loadPLY( "../../../PLY/StanfordBunny.ply", nullorigin, 1.f );
 
     std::vector<uint> UUIDs_ground = context.addTile( nullorigin, make_vec2(3,3), nullrotation, make_int2(200,200) );
 
-    \c// Set labels that we'll use to label pixels
+    // Set labels that we'll use to label pixels
     context.setPrimitiveData( UUIDs_bunny, "bunny", 1 );
     context.setPrimitiveData( UUIDs_ground, "bunny", 0 );
 
-    \c// Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil
+    // Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil
     context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
     context.setPrimitiveData( UUIDs_bunny, "reflectivity_spectrum", "grape_leaf_reflectivity_0000" );
     context.setPrimitiveData( UUIDs_ground, "reflectivity_spectrum", "soil_reflectivity_0000" );
 
-    %RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel(&context);
 
-    \c// Add a sun sphere radiation source
+    // Add a sun sphere radiation source
     uint source = radiationmodel.addSunSphereRadiationSource(make_SphericalCoord(deg2rad(90-50), deg2rad(40)));
-    \c// Set the solar spectrum to ASTMG173 from the library
-    context.loadXML( "plugins/radiation/spectral_data/light_spectral_library.xml" );
+    // Set the solar spectrum to ASTMG173 from the library
     radiationmodel.setSourceSpectrum( source, "solar_spectrum_direct_ASTMG173" );
 
     float solar_flux = 900.f; //flux from sun, W/m2
 
-    \c// Add bands red, green, and blue
+    // Add bands red, green, and blue
     radiationmodel.addRadiationBand("red");
     radiationmodel.disableEmission("red");
     radiationmodel.setSourceFlux(source, "red", solar_flux);
@@ -799,7 +829,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
     radiationmodel.updateGeometry();
 
-    %CameraProperties properties; //default camera properties
+    CameraProperties properties; //default camera properties
     properties.focal_plane_distance = 1.25;
 
     vec3 camera_position(0,0,2);
@@ -808,7 +838,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
     radiationmodel.addRadiationCamera("visible", {"red","green","blue"}, camera_position, camera_lookat, properties, antialiasing_samples );
 
-    \c// Load and set calibrated camera spectral response for Nikon B500 camera and ASTMG173 solar spectrum
+    // Load and set calibrated camera spectral response for Nikon B500 camera and ASTMG173 solar spectrum
     context.loadXML("plugins/radiation/spectral_data/camera_spectral_library.xml");
     std::string camera_spectrum_base = "calibrated_sun_NikonB500_spectral_response";
     radiationmodel.setCameraSpectralResponse("visible", "red", camera_spectrum_base+"_red");
@@ -817,13 +847,15 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
     radiationmodel.runBand({"red","green","blue"});
 
-    \c// writing output image
+    // writing output image
     radiationmodel.writeCameraImage("visible", {"red","green","blue"}, "myimage" );
 
-    \c// writing image labels based on primitive data 'bunny'
+    // writing image labels based on primitive data 'bunny'
     radiationmodel.writePrimitiveDataLabelMap( "visible", "labels", "bunny" );
 
- }</code></pre></div>
+    return 0;
+ }
+ ~~~~~~
 
  The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.
 

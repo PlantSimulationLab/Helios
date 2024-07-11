@@ -279,8 +279,8 @@ A shoot is the fundamental topological unit of organization in the plant archite
 Parameters defining the geometry and growth of the shoot are given in the \ref ShootParameters structure. Each parameter in the \ref ShootParameters structure is summarized in the table below, and described in more detail in the following sections.
 
 | Parameter | Type | Default | Units | Description |
-| ------| ------ | ------ | ------ |
-| --- **%Phytomer Parameters** --- ||||
+| ------| ------ | ------ | ------ | ------ |
+| --- **%Phytomer Parameters** --- |||||
 | phytomer_parameters | PhytomerParameters | - | - | Parameters defining the geometry of the phytomers comprising this shoot. |
 | --- **Geometric Parameters** --- |||||
 | max_nodes | RandomParameter_int | 10 | - | Maximum number of nodes/phytomers along a shoot. |
@@ -392,7 +392,7 @@ A number of plant models are available in the plant architecture library, which 
 | Sugar Beet (*Beta vulgaris*) | generic | "sugarbeet" | mainstem | | | |
 | Tomato (*Solanum lycopersicum*) | determinate growth | "tomato" | mainstem | | | |
 
-\subsubsection PlantArchBuild_default Loading a Plant with Default Parameters
+\subsection PlantArchBuild_default Loading a Plant with Default Parameters
 
 Loading a plant from the library with default parameters is relatively simple, and requires only declaring the \ref PlantArchitecture class, loading the model using the \ref PlantArchitecture::loadPlantModelFromLibrary() method (which takes a string argument for the plant model as listed in the table above), and calling the \ref PlantArchitecture::buildPlantInstanceFromLibrary() method. The method takes two arguments: 1) the Cartesian (x,y,z) position of the plant base, and 2) the age of the plant in days. A code example is given below.
 

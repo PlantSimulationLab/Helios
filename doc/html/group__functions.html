@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.15</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.16</span>
    </div>
   </td>
  </tr>
@@ -116,8 +116,11 @@ Functions</h2></td></tr>
 <tr class="memdesc:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct translation matrix.  <a href="group__functions.html#ga6c071a3206c9d7a7d8694275b46b8d42">More...</a><br /></td></tr>
 <tr class="separator:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga9af58af4f070bf9f81a45141569e9c72"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga9af58af4f070bf9f81a45141569e9c72">helios::makeScaleMatrix</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scale, float(&amp;T)[16])</td></tr>
-<tr class="memdesc:ga9af58af4f070bf9f81a45141569e9c72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct matrix to scale.  <a href="group__functions.html#ga9af58af4f070bf9f81a45141569e9c72">More...</a><br /></td></tr>
+<tr class="memdesc:ga9af58af4f070bf9f81a45141569e9c72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct matrix to scale about the origin.  <a href="group__functions.html#ga9af58af4f070bf9f81a45141569e9c72">More...</a><br /></td></tr>
 <tr class="separator:ga9af58af4f070bf9f81a45141569e9c72"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf092b1b3100fcbc2f9d106a4b560efcd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaf092b1b3100fcbc2f9d106a4b560efcd">helios::makeScaleMatrix</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scale, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;point, float(&amp;T)[16])</td></tr>
+<tr class="memdesc:gaf092b1b3100fcbc2f9d106a4b560efcd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct matrix to scale about arbitrary point in space.  <a href="group__functions.html#gaf092b1b3100fcbc2f9d106a4b560efcd">More...</a><br /></td></tr>
+<tr class="separator:gaf092b1b3100fcbc2f9d106a4b560efcd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga60f429b247883516de80687774f4155c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga60f429b247883516de80687774f4155c">helios::deg2rad</a> (float deg)</td></tr>
 <tr class="memdesc:ga60f429b247883516de80687774f4155c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert degrees to radians.  <a href="group__functions.html#ga60f429b247883516de80687774f4155c">More...</a><br /></td></tr>
 <tr class="separator:ga60f429b247883516de80687774f4155c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -424,7 +427,7 @@ Functions</h2></td></tr>
 <p>Four quadrant arc tangent between 0 and 2*pi. </p>
 <dl class="section note"><dt>Note</dt><dd>atan2_2pi(0,1) = 0, atan2_2pi(1,0) = pi/2, etc. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00563">563</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00584">584</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -501,7 +504,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> vector. </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__functions.html#ga97e12cf9fda6bf8b65b3ccc17e788c12" title="Convert Spherical coordinates to Cartesian coordinates.">sphere2cart()</a>, <a class="el" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00589">589</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00610">610</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -549,7 +552,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00868">868</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00889">889</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -571,7 +574,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Remove all whitespace from character array. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00807">807</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00828">828</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -593,7 +596,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Remove all whitespace from a string. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00825">825</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00846">846</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -623,7 +626,7 @@ template&lt;typename anytype &gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>angle in radians </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__functions.html#ga0b9a2dac200293044d7e2ae1c03a3140" title="Convert radians to degrees.">rad2deg()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00555">555</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00576">576</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -645,7 +648,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D double vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01815">1815</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01836">1836</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -667,7 +670,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D float vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01794">1794</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01815">1815</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -689,7 +692,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01899">1899</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01920">1920</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -711,7 +714,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01920">1920</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01941">1941</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -733,7 +736,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01941">1941</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01962">1962</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -755,7 +758,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01836">1836</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01857">1857</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -777,7 +780,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01857">1857</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01878">1878</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -799,7 +802,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01878">1878</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01899">1899</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -821,7 +824,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D int vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01752">1752</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01773">1773</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -843,7 +846,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D string vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01962">1962</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01983">1983</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -865,7 +868,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D double vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02058">2058</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02079">2079</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -887,7 +890,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D float vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02033">2033</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02054">2054</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -909,7 +912,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02158">2158</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02179">2179</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -931,7 +934,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02183">2183</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02204">2204</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -953,7 +956,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02208">2208</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02229">2229</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -975,7 +978,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02083">2083</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02104">2104</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -997,7 +1000,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02108">2108</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02129">2129</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1019,7 +1022,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02133">2133</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02154">2154</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1041,7 +1044,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D int vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01983">1983</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02004">2004</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1063,7 +1066,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D string vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02233">2233</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02254">2254</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1085,7 +1088,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D double vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02345">2345</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02366">2366</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1107,7 +1110,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D float vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02316">2316</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02337">2337</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1129,7 +1132,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02461">2461</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02482">2482</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1151,7 +1154,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02490">2490</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02511">2511</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1173,7 +1176,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02519">2519</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02540">2540</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1195,7 +1198,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02374">2374</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02395">2395</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1217,7 +1220,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02403">2403</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02424">2424</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1239,7 +1242,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02432">2432</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02453">2453</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1261,7 +1264,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D int vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02258">2258</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02279">2279</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1283,7 +1286,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D string vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02548">2548</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02569">2569</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1305,7 +1308,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 4D uint vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02287">2287</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02308">2308</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1327,7 +1330,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 3D uint vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02008">2008</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02029">2029</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1349,7 +1352,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Function to flatten a 2D uint &amp;vector into a 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01773">1773</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01794">1794</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1379,7 +1382,7 @@ template&lt;typename anytype &gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="global_8h.html#a35cf3fa6f900627c962472dd550e3d39" title="Convert Julian day to calendar day (day,month,year)">CalendarDay()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01169">1169</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01190">1190</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1572,8 +1575,54 @@ template&lt;typename anytype &gt; </div>
 
 </div>
 </div>
+<a id="gaf092b1b3100fcbc2f9d106a4b560efcd" name="gaf092b1b3100fcbc2f9d106a4b560efcd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaf092b1b3100fcbc2f9d106a4b560efcd">&#9670;&#160;</a></span>makeScaleMatrix() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void helios::makeScaleMatrix </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;&#160;</td>
+          <td class="paramname"><em>scale</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;&#160;</td>
+          <td class="paramname"><em>point</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float(&amp;)&#160;</td>
+          <td class="paramname"><em>T</em>[16]&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct matrix to scale about arbitrary point in space. </p>
+<p >4x4 Affine scaling matrix </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">scale</td><td>Scaling factor to apply in x, y, and z directions. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">point</td><td>Cartesian coordinates of point about which to scale </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">transform</td><td>Transformation matrix in a 1D array </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00478">478</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
 <a id="ga9af58af4f070bf9f81a45141569e9c72" name="ga9af58af4f070bf9f81a45141569e9c72"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga9af58af4f070bf9f81a45141569e9c72">&#9670;&#160;</a></span>makeScaleMatrix()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ga9af58af4f070bf9f81a45141569e9c72">&#9670;&#160;</a></span>makeScaleMatrix() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1598,7 +1647,7 @@ template&lt;typename anytype &gt; </div>
       </table>
 </div><div class="memdoc">
 
-<p>Construct matrix to scale. </p>
+<p>Construct matrix to scale about the origin. </p>
 <p >4x4 Affine scaling matrix </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">scale</td><td>Scaling factor to apply in x, y, and z directions. </td></tr>
@@ -1674,7 +1723,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00959">959</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00980">980</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1702,7 +1751,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00969">969</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00990">990</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1730,7 +1779,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00979">979</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01000">1000</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1758,7 +1807,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00897">897</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00918">918</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1786,7 +1835,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01027">1027</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01048">1048</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1814,7 +1863,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00913">913</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00934">934</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1842,7 +1891,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00923">923</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00944">944</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1870,7 +1919,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00933">933</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00954">954</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1932,7 +1981,7 @@ template&lt;typename anytype &gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>angle in degrees </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00559">559</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00580">580</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2033,7 +2082,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01052">1052</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01073">1073</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2088,7 +2137,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01072">1072</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01093">1093</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2150,7 +2199,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01095">1095</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01116">1116</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2275,7 +2324,7 @@ template&lt;typename anytype &gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of substrings. If inputstring does not contain delimiter, empty vector is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00845">845</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00866">866</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2305,7 +2354,7 @@ template&lt;typename anytype &gt; </div>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vector of Cartesian coordinates </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__functions.html#ga32a34b00e0a28f4b35e501b8b34cfccd" title="Convert Cartesian coordinates to spherical coordinates.">cart2sphere()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00596">596</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00617">617</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2366,7 +2415,7 @@ template&lt;typename anytype &gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Interpolated (x,y,z) Cartesian point. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02577">2577</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02598">2598</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2394,7 +2443,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01005">1005</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01026">1026</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2416,7 +2465,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into an <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00662">662</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00683">683</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2438,7 +2487,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into an <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00682">682</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00703">703</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2460,7 +2509,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into an <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00702">702</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00723">723</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2482,7 +2531,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into an <a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">RGBcolor</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00722">722</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00743">743</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2504,7 +2553,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into a <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00602">602</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00623">623</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2526,7 +2575,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into a <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00622">622</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00643">643</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2548,7 +2597,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Convert a space-delimited string into a <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00642">642</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00663">663</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2576,7 +2625,7 @@ template&lt;typename anytype &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00882">882</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00903">903</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2598,7 +2647,7 @@ template&lt;typename anytype &gt; </div>
 
 <p>Remove leading and trailing whitespace from a string. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00829">829</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00850">850</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

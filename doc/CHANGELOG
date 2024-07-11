@@ -1739,3 +1739,26 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Visualizer*
 - Fixed compiler warning about truncation when calling snprintf within Visualizer::addColorbarByCenter.
+
+[1.3.16] 2024-07-11
+
+*Context*
+- Added Context::scanXMLForTag() to scan an XML file to see if it contains a specific tag.
+- Added capability to scale a primitive about an arbitrary point in space rather than about the origin (see Context::scalePrimitiveAboutPoint()).
+- Added capability to scale a compound object about its center or an arbitrary point in space rather than about the origin (see Context::scaleObjectAboutCenter() and Context::scaleObjectAboutPoint()).
+
+*Radiation*
+- Added capability to set diffuse flux spectrum (see RadiationModel::setDiffuseSpectrum(), RadiationModel::setDiffuseSpectrumIntegral()). For now, the model does not calculate separate surface reflectivity and transmissivity for diffuse radiation, it assumes the same values as for the external source. This will be updated in the future.
+- Added RadiationModel::getDiffuseFlux() to provide a consistent means for getting the diffuse flux for a band.
+- Added cowpea stem spectra to the default surface spectral library.
+- Changed the "ActiveGrow_LED_RedBloom" spectrum in the default light spectral library, as the one initially added in v1.3.14 was not correct.
+- Added RadiationModel::writeObjectDataLabelMap() to write out object data pixel labels to an image.
+- Error fixed that was causing incorrect pixel labels when there are multiple cameras.
+- If global data for a spectrum from any of the spectral library files in plugins/radiation/spectral_data/ are referenced, the corresponding XML file will be automatically loaded.
+- Labels for color board spectra in file plugins/radiation/spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml and plugins/radiation/spectral_data/color_board/DGK_DKK_colorboard.xml were changed to make them unique.
+
+*Solar Position*
+- Moved self-tests to separate selfTest.cpp file. Experimenting with new way of doing self-tests based on catch-try blocks and lambda functions.
+
+*Plant Architecture*
+- Changed initial fruit scaling to be 25% of full size when it is created.

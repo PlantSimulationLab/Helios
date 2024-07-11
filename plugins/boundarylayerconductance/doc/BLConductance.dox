@@ -125,22 +125,23 @@ Chen et al. (1986) mention that the equation for \f$\theta_L\leq 75^\circ\f$ is 
 
  \subsection BLCSet Setting the Boundary-layer Conductance Model To Be Used
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> \c// Declare the Context and add two primitives
+ ~~~~~~{.cpp}
+  // Declare the Context and add two primitives
   Context context;
 
   uint UUID0 = context.addPatch();
 
   uint UUID1 = context.addPatch();
 
-  \c// Initialize the boundary-layer conductance Model
-  %BLConductanceModel boundarylayerconductance(&context);
+  // Initialize the boundary-layer conductance Model
+  BLConductanceModel boundarylayerconductance(&context);
 
-  \c// This changes the boundary-layer conductance model for all (both) primitives
+  // This changes the boundary-layer conductance model for all (both) primitives
   boundarylayerconductance.setBoundaryLayerModel( "InclinedPlate" );
 
-  \c// This changes the boundary-layer conductance model for the second primitive (while the first will keep the model set above)
-  boundarylayerconductance.setBoundaryLayerModel( UUID1, "ground" );</code></pre></div>
+  // This changes the boundary-layer conductance model for the second primitive (while the first will keep the model set above)
+  boundarylayerconductance.setBoundaryLayerModel( UUID1, "ground" );
+ ~~~~~~
 
  \subsection BLCRun Running the Model
 

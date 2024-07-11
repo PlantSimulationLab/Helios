@@ -2,7 +2,7 @@
 <helios>
 
 	<!-- brown -->
-	<globaldata_vec2  label="ColorReference_01">
+	<globaldata_vec2  label="ColorReference_Calibrite_01">
 		350 0.357443
 		351 0.355438
 		352 0.354801
@@ -2157,7 +2157,7 @@
 	</globaldata_vec2>
 
 	<!-- peach -->
-	<globaldata_vec2  label="ColorReference_02">
+	<globaldata_vec2  label="ColorReference_Calibrite_02">
 		350 0.636127
 		351 0.630987
 		352 0.622410
@@ -4312,7 +4312,7 @@
 	</globaldata_vec2>
 
 	<!-- blue gray -->
-	<globaldata_vec2  label="ColorReference_03">
+	<globaldata_vec2  label="ColorReference_Calibrite_03">
 		350 0.407921
 		351 0.411294
 		352 0.409580
@@ -6467,7 +6467,7 @@
 	</globaldata_vec2>
 
 	<!-- olive -->
-	<globaldata_vec2  label="ColorReference_04">
+	<globaldata_vec2  label="ColorReference_Calibrite_04">
 		350 0.315864
 		351 0.313611
 		352 0.309973
@@ -8622,7 +8622,7 @@
 	</globaldata_vec2>
 
 	<!-- light purple -->
-	<globaldata_vec2  label="ColorReference_05">
+	<globaldata_vec2  label="ColorReference_Calibrite_05">
 		350 0.430980
 		351 0.428187
 		352 0.424938
@@ -10777,7 +10777,7 @@
 	</globaldata_vec2>
 
 	<!-- cyan -->
-	<globaldata_vec2  label="ColorReference_06">
+	<globaldata_vec2  label="ColorReference_Calibrite_06">
 		350 0.382912
 		351 0.387693
 		352 0.390191
@@ -12932,7 +12932,7 @@
 	</globaldata_vec2>
 
 	<!-- orange -->
-	<globaldata_vec2  label="ColorReference_07">
+	<globaldata_vec2  label="ColorReference_Calibrite_07">
 		350 0.645559
 		351 0.641663
 		352 0.633763
@@ -15087,7 +15087,7 @@
 	</globaldata_vec2>
 
 	<!-- medium blue -->
-	<globaldata_vec2  label="ColorReference_08">
+	<globaldata_vec2  label="ColorReference_Calibrite_08">
 		350 0.342660
 		351 0.340130
 		352 0.335714
@@ -17242,7 +17242,7 @@
 	</globaldata_vec2>
 
 	<!-- salmon -->
-	<globaldata_vec2  label="ColorReference_09">
+	<globaldata_vec2  label="ColorReference_Calibrite_09">
 		350 0.534299
 		351 0.519489
 		352 0.505403
@@ -19397,7 +19397,7 @@
 	</globaldata_vec2>
 
 	<!-- purple -->
-	<globaldata_vec2  label="ColorReference_10">
+	<globaldata_vec2  label="ColorReference_Calibrite_10">
 		350 0.514764
 		351 0.509473
 		352 0.504374
@@ -21552,7 +21552,7 @@
 	</globaldata_vec2>
 
 	<!-- lime green -->
-	<globaldata_vec2  label="ColorReference_11">
+	<globaldata_vec2  label="ColorReference_Calibrite_11">
 		350 0.446615
 		351 0.442460
 		352 0.438151
@@ -23707,7 +23707,7 @@
 	</globaldata_vec2>
 
 	<!-- goldenrod -->
-	<globaldata_vec2  label="ColorReference_12">
+	<globaldata_vec2  label="ColorReference_Calibrite_12">
 		350 0.570010
 		351 0.566595
 		352 0.559940
@@ -25862,7 +25862,7 @@
 	</globaldata_vec2>
 
 	<!-- dark blue -->
-	<globaldata_vec2  label="ColorReference_13">
+	<globaldata_vec2  label="ColorReference_Calibrite_13">
 		350 0.237026
 		351 0.235421
 		352 0.227306
@@ -28017,7 +28017,7 @@
 	</globaldata_vec2>
 
 	<!-- green -->
-	<globaldata_vec2  label="ColorReference_14">
+	<globaldata_vec2  label="ColorReference_Calibrite_14">
 		350 0.217334
 		351 0.225903
 		352 0.229889
@@ -30172,7 +30172,7 @@
 	</globaldata_vec2>
 
 	<!-- red -->
-	<globaldata_vec2  label="ColorReference_15">
+	<globaldata_vec2  label="ColorReference_Calibrite_15">
 		350 0.583644
 		351 0.576085
 		352 0.568369
@@ -32327,7 +32327,7 @@
 	</globaldata_vec2>
 
 	<!-- yellow -->
-	<globaldata_vec2  label="ColorReference_16">
+	<globaldata_vec2  label="ColorReference_Calibrite_16">
 		350 0.651477
 		351 0.644716
 		352 0.636529
@@ -34482,7 +34482,7 @@
 	</globaldata_vec2>
 
 	<!-- magenta -->
-	<globaldata_vec2  label="ColorReference_17">
+	<globaldata_vec2  label="ColorReference_Calibrite_17">
 		350 0.562704
 		351 0.555291
 		352 0.553333
@@ -36637,7 +36637,7 @@
 	</globaldata_vec2>
 
 	<!-- sky blue -->
-	<globaldata_vec2  label="ColorReference_18">
+	<globaldata_vec2  label="ColorReference_Calibrite_18">
 		350 0.271427
 		351 0.275528
 		352 0.274068
@@ -38792,7 +38792,7 @@
 	</globaldata_vec2>
 
 	<!-- white  -->
-	<globaldata_vec2  label="ColorReference_19">
+	<globaldata_vec2  label="ColorReference_Calibrite_19">
 		350 0.814152
 		351 0.813087
 		352 0.809134
@@ -40947,7 +40947,7 @@
 	</globaldata_vec2>
 
 	<!-- light gray -->
-	<globaldata_vec2  label="ColorReference_20">
+	<globaldata_vec2  label="ColorReference_Calibrite_20">
 		350 0.532984
 		351 0.522820
 		352 0.509741
@@ -43102,7 +43102,7 @@
 	</globaldata_vec2>
 
 	<!-- medium light gray -->
-	<globaldata_vec2  label="ColorReference_21">
+	<globaldata_vec2  label="ColorReference_Calibrite_21">
 		350 0.279912
 		351 0.274659
 		352 0.269037
@@ -45257,7 +45257,7 @@
 	</globaldata_vec2>
 
 	<!-- medium dark gray -->
-	<globaldata_vec2  label="ColorReference_22">
+	<globaldata_vec2  label="ColorReference_Calibrite_22">
 		350 0.172251
 		351 0.173998
 		352 0.173975
@@ -47412,7 +47412,7 @@
 	</globaldata_vec2>
 
 	<!-- dark gray -->
-	<globaldata_vec2  label="ColorReference_23">
+	<globaldata_vec2  label="ColorReference_Calibrite_23">
 		350 0.101721
 		351 0.096207
 		352 0.090665
@@ -49567,7 +49567,7 @@
 	</globaldata_vec2>
 
 	<!-- black -->
-	<globaldata_vec2  label="ColorReference_24">
+	<globaldata_vec2  label="ColorReference_Calibrite_24">
 		350 0.078164
 		351 0.065354
 		352 0.062743
