@@ -4165,6 +4165,7 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
   std::vector<OBJmaterial> materials;
 
   bool uuidexistswarning = false;
+  bool voxelwarning = false;
 
   std::vector<vec3> verts;
   std::vector<vec2> uv;
@@ -4178,6 +4179,9 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
 
     if( !doesPrimitiveExist(p) ){
       uuidexistswarning = true;
+      continue;
+    }else if( getPrimitivePointer_private(p)->getType()==PRIMITIVE_TYPE_VOXEL ){
+      voxelwarning = true;
       continue;
     }
 
@@ -4448,6 +4452,9 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
     if( datatypewarning ){
       std::cerr << "WARNING (Context::writeOBJ): Only scalar primitive data types (uint, int, float, and double) are supported for this function. A column of 0's was written in these cases." << std::endl;
     }
+    if( voxelwarning ){
+      std::cerr << "WARNING (Context::writeOBJ): Writing voxels to OBJ file is not supported. Some voxels were ignored. Use boxes or box objects to represent rectangular prism geometry." << std::endl;
+    }
 
   }
 
@@ -4686,7 +4693,7 @@ void Context::loadTabularTimeseriesData( const std::string &data_file, const std
         std::vector<std::string> line_separated = separate_string_by_delimiter( line, delimiter );
 
         if( line_separated.size()!=Ncolumns ){
-            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Line " + std::to_string(row) + " had " + std::to_string(line_separated.size()) + " lines, but was expecting " + std::to_string(Ncolumns) );
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Line " + std::to_string(row) + " had " + std::to_string(line_separated.size()) + " columns, but was expecting " + std::to_string(Ncolumns) );
         }
 
         //compile date

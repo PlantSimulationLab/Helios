@@ -1762,3 +1762,20 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Plant Architecture*
 - Changed initial fruit scaling to be 25% of full size when it is created.
+
+[1.3.17] 2024-08-19
+
+*Context*
+- Warning added to Context::loadOBJ() to warn if voxels exist in the Context (not supported for OBJ files). Previously, this would cause the program to crash.
+
+*Visualizer*
+- Fixed a warning that could be issued if no primitives have textures AND the watermark is hidden.
+
+*Plant Architecture*
+- The overall dimensions of several plant library models was increased to be more realistic.
+- Behavior of axillary and terminal buds were separated such that they can be controlled independently.
+- Fixed an error with leaf yaw when the leaf is compound.
+- Fixed an error in which some primitives were not being deleted when ground collision was enabled.
+- Sorghum model can now produce a panicle.
+- Optional output object data is now finished and should be working correctly. This avoids creating large amounts of object data when not needed.
+- When manually adding shoots via addBaseStemShoot(), appendShoot() or addChildShoot(), an option was added to give a taper to the shoot.

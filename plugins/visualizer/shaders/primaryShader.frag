@@ -24,7 +24,7 @@ flat in int coordinateFlag;
  
 void main(){
 
-  //There are several confusing flags that determin how this shader colors fragments
+  //There are several confusing flags that determine how this shader colors fragments
   // textureFlag:
   //    = 0 -> color fragments based on their RGB color value
   //    = 1 -> color fragments based on texture map color, set transparency according to texture alpha-value

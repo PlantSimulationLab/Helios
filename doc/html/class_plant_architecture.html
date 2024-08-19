@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.16</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.17</span>
    </div>
   </td>
  </tr>
@@ -138,8 +138,11 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a4d0425099bc0ac47c3853f39e3e568aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specify the threshold values for plant phenological stages.  <a href="class_plant_architecture.html#a4d0425099bc0ac47c3853f39e3e568aa">More...</a><br /></td></tr>
 <tr class="separator:a4d0425099bc0ac47c3853f39e3e568aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afac9e51e48de17afa485128dbea39019"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#afac9e51e48de17afa485128dbea39019">advanceTime</a> (float dt)</td></tr>
-<tr class="memdesc:afac9e51e48de17afa485128dbea39019"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance plant growth by a specified time interval.  <a href="class_plant_architecture.html#afac9e51e48de17afa485128dbea39019">More...</a><br /></td></tr>
+<tr class="memdesc:afac9e51e48de17afa485128dbea39019"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance plant growth by a specified time interval for all plants.  <a href="class_plant_architecture.html#afac9e51e48de17afa485128dbea39019">More...</a><br /></td></tr>
 <tr class="separator:afac9e51e48de17afa485128dbea39019"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad366a5288f6b07f0114b1603507e887f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#ad366a5288f6b07f0114b1603507e887f">advanceTime</a> (uint plantID, float dt)</td></tr>
+<tr class="memdesc:ad366a5288f6b07f0114b1603507e887f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance plant growth by a specified time interval for a single plant.  <a href="class_plant_architecture.html#ad366a5288f6b07f0114b1603507e887f">More...</a><br /></td></tr>
+<tr class="separator:ad366a5288f6b07f0114b1603507e887f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a03d02d9a32b4ea9e778e4080663998d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a03d02d9a32b4ea9e778e4080663998d8">incrementAssimilatePool</a> (uint plantID, uint shootID, float assimilate_increment_mg_g)</td></tr>
 <tr class="separator:a03d02d9a32b4ea9e778e4080663998d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa8b5c3b32ffcf9b0e9421e760f0da9e3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#aa8b5c3b32ffcf9b0e9421e760f0da9e3">incrementAssimilatePool</a> (uint plantID, float assimilate_increment_mg_g)</td></tr>
@@ -147,15 +150,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a9700f223b8f60bf37852ad87d30e7fc0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a9700f223b8f60bf37852ad87d30e7fc0">defineShootType</a> (const std::string &amp;shoot_type_label, const <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> &amp;shoot_params)</td></tr>
 <tr class="memdesc:a9700f223b8f60bf37852ad87d30e7fc0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define a new shoot type based on a set of <a class="el" href="struct_shoot_parameters.html">ShootParameters</a>.  <a href="class_plant_architecture.html#a9700f223b8f60bf37852ad87d30e7fc0">More...</a><br /></td></tr>
 <tr class="separator:a9700f223b8f60bf37852ad87d30e7fc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa035dac995a6ac7abeb18afce585775b"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#aa035dac995a6ac7abeb18afce585775b">addBaseStemShoot</a> (uint plantID, uint current_node_number, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &amp;shoot_type_label)</td></tr>
-<tr class="memdesc:aa035dac995a6ac7abeb18afce585775b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has already been created using the <a class="el" href="class_plant_architecture.html#a046541b573d8e03845a2038370cd6665" title="Create an instance of a plant.">addPlantInstance()</a> method.  <a href="class_plant_architecture.html#aa035dac995a6ac7abeb18afce585775b">More...</a><br /></td></tr>
-<tr class="separator:aa035dac995a6ac7abeb18afce585775b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aced9284293a890361b9cfe14a40963f2"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#aced9284293a890361b9cfe14a40963f2">appendShoot</a> (uint plantID, int parent_shoot_ID, uint current_node_number, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &amp;shoot_type_label)</td></tr>
-<tr class="memdesc:aced9284293a890361b9cfe14a40963f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of a shoot change along its length (e.g., from a unifoliate to trifoliate leaf).  <a href="class_plant_architecture.html#aced9284293a890361b9cfe14a40963f2">More...</a><br /></td></tr>
-<tr class="separator:aced9284293a890361b9cfe14a40963f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac86679dc3459e2805dd7469835241c57"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#ac86679dc3459e2805dd7469835241c57">addChildShoot</a> (uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &amp;shoot_type_label, uint petiole_index=0)</td></tr>
-<tr class="memdesc:ac86679dc3459e2805dd7469835241c57"><td class="mdescLeft">&#160;</td><td class="mdescRight">Manually add a child shoot at the axillary bud of a phytomer.  <a href="class_plant_architecture.html#ac86679dc3459e2805dd7469835241c57">More...</a><br /></td></tr>
-<tr class="separator:ac86679dc3459e2805dd7469835241c57"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a32e88ebd4d0bb468f6c0a2655833bff6"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a32e88ebd4d0bb468f6c0a2655833bff6">addBaseStemShoot</a> (uint plantID, uint current_node_number, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &amp;shoot_type_label)</td></tr>
+<tr class="memdesc:a32e88ebd4d0bb468f6c0a2655833bff6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has already been created using the <a class="el" href="class_plant_architecture.html#a046541b573d8e03845a2038370cd6665" title="Create an instance of a plant.">addPlantInstance()</a> method.  <a href="class_plant_architecture.html#a32e88ebd4d0bb468f6c0a2655833bff6">More...</a><br /></td></tr>
+<tr class="separator:a32e88ebd4d0bb468f6c0a2655833bff6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a25a69b3eee4eab6501a8bedc777b8c55"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a25a69b3eee4eab6501a8bedc777b8c55">appendShoot</a> (uint plantID, int parent_shoot_ID, uint current_node_number, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &amp;shoot_type_label)</td></tr>
+<tr class="memdesc:a25a69b3eee4eab6501a8bedc777b8c55"><td class="mdescLeft">&#160;</td><td class="mdescRight">Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of a shoot change along its length (e.g., from a unifoliate to trifoliate leaf).  <a href="class_plant_architecture.html#a25a69b3eee4eab6501a8bedc777b8c55">More...</a><br /></td></tr>
+<tr class="separator:a25a69b3eee4eab6501a8bedc777b8c55"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a97fab99ab3ed47f4f984c40193425667"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a97fab99ab3ed47f4f984c40193425667">addChildShoot</a> (uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &amp;shoot_type_label, uint petiole_index)</td></tr>
+<tr class="memdesc:a97fab99ab3ed47f4f984c40193425667"><td class="mdescLeft">&#160;</td><td class="mdescRight">Manually add a child shoot at the axillary bud of a phytomer.  <a href="class_plant_architecture.html#a97fab99ab3ed47f4f984c40193425667">More...</a><br /></td></tr>
+<tr class="separator:a97fab99ab3ed47f4f984c40193425667"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6456965ba0709d79b03af4933903fbab"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a6456965ba0709d79b03af4933903fbab">addPhytomerToShoot</a> (uint plantID, uint shootID, const <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a> &amp;phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction)</td></tr>
 <tr class="memdesc:a6456965ba0709d79b03af4933903fbab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a new phytomer at the terminal bud of a shoot.  <a href="class_plant_architecture.html#a6456965ba0709d79b03af4933903fbab">More...</a><br /></td></tr>
 <tr class="separator:a6456965ba0709d79b03af4933903fbab"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -197,6 +200,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a9c0f61ca54e7f1a9d8d0ed4a30e5dfca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a10f79f5379d69f3c1bfc2edaf1f30e6d"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a10f79f5379d69f3c1bfc2edaf1f30e6d">getShootNodeCount</a> (uint plantID, uint shootID) const</td></tr>
 <tr class="separator:a10f79f5379d69f3c1bfc2edaf1f30e6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab22db268480f9a9118d02cd138198849"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#ab22db268480f9a9118d02cd138198849">getShootTaper</a> (uint plantID, uint shootID) const</td></tr>
+<tr class="separator:ab22db268480f9a9118d02cd138198849"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e5ea512dbb0e612e5a9b946387e8056"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a4e5ea512dbb0e612e5a9b946387e8056">getPlantBasePosition</a> (uint plantID) const</td></tr>
 <tr class="separator:a4e5ea512dbb0e612e5a9b946387e8056"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acf9855048c790d30d8d4de7fa1dc3550"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#acf9855048c790d30d8d4de7fa1dc3550">getAllPlantObjectIDs</a> (uint plantID) const</td></tr>
@@ -238,12 +243,14 @@ Static Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
 Friends</h2></td></tr>
-<tr class="memitem:a90c0d1a921ef958e259ae203639253f2"><td class="memItemLeft" align="right" valign="top">class&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a90c0d1a921ef958e259ae203639253f2">Shoot</a></td></tr>
-<tr class="separator:a90c0d1a921ef958e259ae203639253f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae523f083b07818f3ff5bddaaafc89fb5"><td class="memItemLeft" align="right" valign="top">struct&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#ae523f083b07818f3ff5bddaaafc89fb5">Phytomer</a></td></tr>
+<tr class="separator:ae523f083b07818f3ff5bddaaafc89fb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a876d4958a4aafcb9240ec018fb58f63a"><td class="memItemLeft" align="right" valign="top">struct&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_plant_architecture.html#a876d4958a4aafcb9240ec018fb58f63a">Shoot</a></td></tr>
+<tr class="separator:a876d4958a4aafcb9240ec018fb58f63a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00844">844</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00820">820</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ab55c86604c49abcedde90adb395074e9" name="ab55c86604c49abcedde90adb395074e9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab55c86604c49abcedde90adb395074e9">&#9670;&#160;</a></span>PlantArchitecture()</h2>
@@ -282,8 +289,8 @@ Friends</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="aa035dac995a6ac7abeb18afce585775b" name="aa035dac995a6ac7abeb18afce585775b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa035dac995a6ac7abeb18afce585775b">&#9670;&#160;</a></span>addBaseStemShoot()</h2>
+<a id="a32e88ebd4d0bb468f6c0a2655833bff6" name="a32e88ebd4d0bb468f6c0a2655833bff6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a32e88ebd4d0bb468f6c0a2655833bff6">&#9670;&#160;</a></span>addBaseStemShoot()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -333,6 +340,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>radius_taper</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">const std::string &amp;&#160;</td>
           <td class="paramname"><em>shoot_type_label</em>&#160;</td>
         </tr>
@@ -360,12 +373,12 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the new shoot to be used to reference it later. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01432">1432</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01487">1487</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
-<a id="ac86679dc3459e2805dd7469835241c57" name="ac86679dc3459e2805dd7469835241c57"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac86679dc3459e2805dd7469835241c57">&#9670;&#160;</a></span>addChildShoot()</h2>
+<a id="a97fab99ab3ed47f4f984c40193425667" name="a97fab99ab3ed47f4f984c40193425667"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a97fab99ab3ed47f4f984c40193425667">&#9670;&#160;</a></span>addChildShoot()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -427,6 +440,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>radius_taper</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">const std::string &amp;&#160;</td>
           <td class="paramname"><em>shoot_type_label</em>, </td>
         </tr>
@@ -434,7 +453,7 @@ Friends</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">uint&#160;</td>
-          <td class="paramname"><em>petiole_index</em> = <code>0</code>&#160;</td>
+          <td class="paramname"><em>petiole_index</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -463,7 +482,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the newly generated shoot. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01509">1509</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01564">1564</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -538,7 +557,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of generated phytomer </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01574">1574</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01629">1629</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -578,12 +597,12 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the plant instance. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02053">2053</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02159">2159</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
 <a id="afac9e51e48de17afa485128dbea39019" name="afac9e51e48de17afa485128dbea39019"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afac9e51e48de17afa485128dbea39019">&#9670;&#160;</a></span>advanceTime()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#afac9e51e48de17afa485128dbea39019">&#9670;&#160;</a></span>advanceTime() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -598,7 +617,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Advance plant growth by a specified time interval. </p>
+<p>Advance plant growth by a specified time interval for all plants. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">dt</td><td>Time interval in days. </td></tr>
@@ -606,12 +625,51 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02159">2159</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02263">2263</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
-<a id="aced9284293a890361b9cfe14a40963f2" name="aced9284293a890361b9cfe14a40963f2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aced9284293a890361b9cfe14a40963f2">&#9670;&#160;</a></span>appendShoot()</h2>
+<a id="ad366a5288f6b07f0114b1603507e887f" name="ad366a5288f6b07f0114b1603507e887f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad366a5288f6b07f0114b1603507e887f">&#9670;&#160;</a></span>advanceTime() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantArchitecture::advanceTime </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>plantID</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>dt</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Advance plant growth by a specified time interval for a single plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dt</td><td>Time interval in days. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02275">2275</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a25a69b3eee4eab6501a8bedc777b8c55" name="a25a69b3eee4eab6501a8bedc777b8c55"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a25a69b3eee4eab6501a8bedc777b8c55">&#9670;&#160;</a></span>appendShoot()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -667,6 +725,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>radius_taper</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">const std::string &amp;&#160;</td>
           <td class="paramname"><em>shoot_type_label</em>&#160;</td>
         </tr>
@@ -695,7 +759,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the new shoot to be used to reference it later. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01461">1461</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01516">1516</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -715,7 +779,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01863">1863</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01943">1943</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -794,7 +858,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00213">213</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00214">214</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -822,7 +886,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02135">2135</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02240">2240</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -850,7 +914,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02123">2123</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02228">2228</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -871,7 +935,7 @@ Friends</h2></td></tr>
 
 <p>Do not build internode primitive geometry in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01601">1601</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01679">1679</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -892,7 +956,7 @@ Friends</h2></td></tr>
 
 <p>Do not build peduncle primitive geometry in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01609">1609</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01687">1687</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -913,7 +977,7 @@ Friends</h2></td></tr>
 
 <p>Do not build petiole primitive geometry in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01605">1605</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01683">1683</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -966,7 +1030,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the new plant instance. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02069">2069</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02175">2175</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -994,7 +1058,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01613">1613</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01691">1691</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1083,7 +1147,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all organs in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01883">1883</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01985">1985</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1112,7 +1176,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of primitive UUIDs for all primitives in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01909">1909</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02015">2015</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1134,7 +1198,7 @@ Friends</h2></td></tr>
 <p>Get the shoot parameters structure for all shoot types in the current plant model. </p>
 <dl class="section return"><dt>Returns</dt><dd>Map of shoot type labels to <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00075">75</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00079">79</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -1163,7 +1227,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structure for the specified shoot type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00066">66</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00070">70</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -1183,7 +1247,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01799">1799</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01879">1879</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1203,7 +1267,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01785">1785</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01865">1865</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1232,7 +1296,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all inflorescences in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01999">1999</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02105">2105</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1261,7 +1325,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all fruits in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02026">2026</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02132">2132</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1290,7 +1354,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all internodes in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01913">1913</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02019">2019</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1319,7 +1383,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all leaves in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01954">1954</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02060">2060</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1348,7 +1412,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all peduncles in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01975">1975</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02081">2081</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1377,7 +1441,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all petioles in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01933">1933</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02039">2039</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1427,7 +1491,37 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01874">1874</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01954">1954</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab22db268480f9a9118d02cd138198849" name="ab22db268480f9a9118d02cd138198849"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab22db268480f9a9118d02cd138198849">&#9670;&#160;</a></span>getShootTaper()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantArchitecture::getShootTaper </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>plantID</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>shootID</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01963">1963</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1447,7 +1541,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01808">1808</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01888">1888</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1477,7 +1571,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02483">2483</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02609">2609</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1513,7 +1607,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02471">2471</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02597">2597</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1555,7 +1649,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01617">1617</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01695">1695</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1603,7 +1697,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01853">1853</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01933">1933</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1631,7 +1725,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02581">2581</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02707">2707</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1659,7 +1753,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02589">2589</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02715">2715</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1679,7 +1773,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01841">1841</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01921">1921</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1709,7 +1803,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01824">1824</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01904">1904</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1780,7 +1874,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01671">1671</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01749">1749</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1822,7 +1916,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01748">1748</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01828">1828</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1852,7 +1946,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01794">1794</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01874">1874</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1882,7 +1976,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01770">1770</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01850">1850</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1957,7 +2051,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Any phenological stage can be skipped by specifying a negative threshold value. In this case, the stage will be skipped and the threshold for the next stage will be relative to the previous stage. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02143">2143</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02248">2248</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1993,7 +2087,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01718">1718</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01796">1796</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2023,7 +2117,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This will overwrite any existing shoot parameter definitions. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00086">86</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00090">90</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -2063,13 +2157,13 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This will overwrite any existing shoot parameter definitions. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00082">82</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00086">86</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Friends And Related Function Documentation</h2>
-<a id="a90c0d1a921ef958e259ae203639253f2" name="a90c0d1a921ef958e259ae203639253f2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a90c0d1a921ef958e259ae203639253f2">&#9670;&#160;</a></span>Shoot</h2>
+<a id="ae523f083b07818f3ff5bddaaafc89fb5" name="ae523f083b07818f3ff5bddaaafc89fb5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae523f083b07818f3ff5bddaaafc89fb5">&#9670;&#160;</a></span>Phytomer</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2078,7 +2172,7 @@ Friends</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">friend class <a class="el" href="struct_shoot.html">Shoot</a></td>
+          <td class="memname">friend struct <a class="el" href="struct_phytomer.html">Phytomer</a></td>
         </tr>
       </table>
   </td>
@@ -2088,7 +2182,31 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01149">1149</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01134">1134</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a876d4958a4aafcb9240ec018fb58f63a" name="a876d4958a4aafcb9240ec018fb58f63a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a876d4958a4aafcb9240ec018fb58f63a">&#9670;&#160;</a></span>Shoot</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">friend struct <a class="el" href="struct_shoot.html">Shoot</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">friend</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01135">1135</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

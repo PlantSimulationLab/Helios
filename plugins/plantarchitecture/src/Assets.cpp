@@ -105,7 +105,13 @@ void AlmondPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
         phytomer->setInternodeMaxRadius( 0.005 );
         phytomer->setVegetativeBudState( BUD_DEAD );
         phytomer->scaleLeafPrototypeScale( 0.7 );
-        //\todo Need to kill axillary buds here, but need to separate axillary and terminal buds
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+    //blind nodes
+    if( shoot_node_index<3 ){
+        phytomer->setVegetativeBudState( BUD_DEAD );
+        phytomer->setFloralBudState( BUD_DEAD );
     }
 
 }
@@ -192,7 +198,7 @@ void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoo
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
     if( shoot_node_index<=1 || shoot_node_index > 15){
-        phytomer->setFloralBudState( BUD_DEAD );
+        phytomer->setFloralBudState(BUD_DEAD);
     }
 
     //set leaf and internode scale based on position along the shoot
@@ -303,7 +309,7 @@ void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     if( shoot_node_index>5 || rank>1 ) {
         phytomer->setVegetativeBudState(BUD_DEAD);
     }else{
-        phytomer->setFloralBudState( BUD_DEAD );
+        phytomer->setFloralBudState(BUD_DEAD);
     }
 
     //set leaf and internode scale based on position along the shoot
@@ -396,10 +402,11 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
     }
 
     float panicle_height = 1;
-    float panicle_width = 0.25;
+    float panicle_width = 0.1;
     float width_seed = 0.1;
     float height_seed = 0.3;
     float seed_tilt = 50;
+    subdivisions = 6;
 
     std::string seed_texture_file = "plugins/plantarchitecture/assets/textures/SorghumSeed.png";
     RGBcolor stem_color(0.45,0.55,0.42);
@@ -433,7 +440,7 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
 
     std::vector<uint> UUIDs_seed_ptype = context_ptr->addTube( subdivisions, nodes_panicle, radius_panicle,seed_texture_file.c_str());
 
-    int Ntheta = ceil( 3.f*panicle_height/height_seed );
+    int Ntheta = ceil( 6.f*panicle_height/height_seed );
     int Nphi = ceil( 2.f*M_PI*panicle_width/width_seed);
 
     for(int j=0; j < Nphi; j++ ) {
@@ -444,6 +451,7 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
             }
 
             std::vector<uint> UUIDs_copy = context_ptr->copyPrimitive(UUIDs_seed_ptype);
+            context_ptr->scalePrimitive( UUIDs_copy, make_vec3(1,1,1)*context_ptr->randu(0.9f,1.1f));
 
             float phi = 2.f * M_PI * float(j + 0.5f*float(i%2)) / float(Nphi);
             float theta = acos(1 - 2 * float(i + float(j)/float(Nphi)) / float(Ntheta));
@@ -468,23 +476,16 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
 
     context_ptr->deletePrimitive(UUIDs_seed_ptype);
 
-    std::vector<vec3> stem_nodes;
-    std::vector<float> stem_radius;
-    std::vector<RGBcolor> stem_colors;
-    for(int i=0; i<subdivisions; i++){
-        stem_nodes.push_back(make_vec3(0,0, float(i)/float(subdivisions-1)*panicle_height*0.75f) );
-        stem_radius.push_back(0.25f*panicle_width);
-        stem_colors.push_back(stem_color);
-    }
+    std::vector<uint> UUIDs_sphere = context_ptr->addSphere( 10, make_vec3(0,0,0.5*panicle_height), 0.5f, "plugins/plantarchitecture/assets/textures/SorghumSeed.png" );
+    context_ptr->scalePrimitiveAboutPoint( UUIDs_sphere, make_vec3(1.9*panicle_width, 1.9*panicle_width, 0.8*panicle_height), make_vec3(0,0,0.5*panicle_height));
+    UUIDs.insert(UUIDs.end(), UUIDs_sphere.begin(), UUIDs_sphere.end());
 
-    std::vector<uint> UUIDS_stem = context_ptr->addTube( subdivisions, stem_nodes, stem_radius, stem_colors);
-    UUIDs.insert(UUIDs.end(), UUIDS_stem.begin(), UUIDS_stem.end());
-
-//    context_ptr->translatePrimitive(UUIDs, make_vec3(0,0,-0.3f*panicle_height) );
     context_ptr->rotatePrimitive(UUIDs, 0.5f*M_PI, "y");
+    context_ptr->translatePrimitive( UUIDs, make_vec3(-0.2,0,0));
 
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
+
 }
 
 void SorghumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
@@ -495,14 +496,6 @@ void SorghumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint s
 
     //set internode length based on position along the shoot
     phytomer->scaleInternodeMaxLength(scale);
-
-    //remove all vegetative buds
-    phytomer->setVegetativeBudState( BUD_DEAD );
-
-    //remove all floral buds except for the terminal one
-    if( shoot_node_index < shoot_max_nodes-1 ){
-        phytomer->setFloralBudState( BUD_DEAD );
-    }
 
 }
 
@@ -553,7 +546,7 @@ void SoybeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint s
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
     if( shoot_node_index<=0 || shoot_node_index > 15){
-        phytomer->setFloralBudState( BUD_DEAD );
+        phytomer->setFloralBudState(BUD_DEAD);
     }
 
     //set leaf and internode scale based on position along the shoot
@@ -660,6 +653,9 @@ void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
 
     if( shoot_node_index>5 || rank>1 ) {
         phytomer->setVegetativeBudState(BUD_DEAD);
+    }
+    if( shoot_node_index<8 && rank==0 ){
+        phytomer->setFloralBudState(BUD_DEAD);
     }
 
     //set leaf and internode scale based on position along the shoot

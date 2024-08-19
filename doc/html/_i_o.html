@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.16</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.17</span>
    </div>
   </td>
  </tr>
@@ -212,7 +212,7 @@ Adding Timeseries (Weather) Data from Tabular Text Files</h1>
 <div class="line">}</div>
 <div class="ttc" id="a_context_8h_html"><div class="ttname"><a href="_context_8h.html">Context.h</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01786">Context.h:1786</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a1dc9a0f79be2477c4873755586744e51"><div class="ttname"><a href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">helios::Context::loadTabularTimeseriesData</a></div><div class="ttdeci">void loadTabularTimeseriesData(const std::string &amp;data_file, const std::vector&lt; std::string &gt; &amp;column_labels, const std::string &amp;delimiter, const std::string &amp;date_string_format=&quot;YYYYMMDD&quot;, uint headerlines=0)</div><div class="ttdoc">Load tabular weather data from text file into timeseries.</div><div class="ttdef"><b>Definition:</b> <a href="_context__file_i_o_8cpp_source.html#l04537">Context_fileIO.cpp:4537</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a1dc9a0f79be2477c4873755586744e51"><div class="ttname"><a href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">helios::Context::loadTabularTimeseriesData</a></div><div class="ttdeci">void loadTabularTimeseriesData(const std::string &amp;data_file, const std::vector&lt; std::string &gt; &amp;column_labels, const std::string &amp;delimiter, const std::string &amp;date_string_format=&quot;YYYYMMDD&quot;, uint headerlines=0)</div><div class="ttdoc">Load tabular weather data from text file into timeseries.</div><div class="ttdef"><b>Definition:</b> <a href="_context__file_i_o_8cpp_source.html#l04544">Context_fileIO.cpp:4544</a></div></div>
 <div class="ttc" id="agroup__timeseries_html_ga8845155a8f5df1e6db968b78f5a5fb18"><div class="ttname"><a href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18">helios::Context::queryTimeseriesData</a></div><div class="ttdeci">float queryTimeseriesData(const char *label, const Date &amp;date, const Time &amp;time) const</div><div class="ttdoc">Get a timeseries data point by specifying a date and time vector.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l01854">Context.cpp:1854</a></div></div>
 <div class="ttc" id="astructhelios_1_1_date_html"><div class="ttname"><a href="structhelios_1_1_date.html">helios::Date</a></div><div class="ttdoc">Date vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01048">helios_vector_types.h:1048</a></div></div>
 <div class="ttc" id="astructhelios_1_1_time_html"><div class="ttname"><a href="structhelios_1_1_time.html">helios::Time</a></div><div class="ttdoc">Time vector.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l01231">helios_vector_types.h:1231</a></div></div>
@@ -385,7 +385,7 @@ Exporting Primitive Data to Text File</h1>
 <div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844">writePrimitiveData</a>( <span class="stringliteral">&quot;file.txt&quot;</span>, columns );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_ab643fc787ea7b1a215605c369f446844"><div class="ttname"><a href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844">helios::Context::writePrimitiveData</a></div><div class="ttdeci">void writePrimitiveData(std::string filename, const std::vector&lt; std::string &gt; &amp;column_format, bool print_header=false) const</div><div class="ttdoc">Write primitive data to an ASCII text file for all primitives in the Context.</div><div class="ttdef"><b>Definition:</b> <a href="_context__file_i_o_8cpp_source.html#l04458">Context_fileIO.cpp:4458</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_ab643fc787ea7b1a215605c369f446844"><div class="ttname"><a href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844">helios::Context::writePrimitiveData</a></div><div class="ttdeci">void writePrimitiveData(std::string filename, const std::vector&lt; std::string &gt; &amp;column_format, bool print_header=false) const</div><div class="ttdoc">Write primitive data to an ASCII text file for all primitives in the Context.</div><div class="ttdef"><b>Definition:</b> <a href="_context__file_i_o_8cpp_source.html#l04465">Context_fileIO.cpp:4465</a></div></div>
 </div><!-- fragment --><p >By default, column header labels will not be written, but if the optional third argument is set as "true" the label of the primitive data for each column will be written to the first line of the file. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->

@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.16</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.17</span>
    </div>
   </td>
  </tr>
@@ -97,17 +97,79 @@ Data Fields</h2></td></tr>
 <tr class="separator:a5ba0f2d1e68b7954ec1a7a79785e4290"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7850ba20f0ea97bddf73fab1ad9a8cf4"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#a7850ba20f0ea97bddf73fab1ad9a8cf4">time_counter</a> = 0</td></tr>
 <tr class="separator:a7850ba20f0ea97bddf73fab1ad9a8cf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab0db38b0c3416b859879e129ef7239a1"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#ab0db38b0c3416b859879e129ef7239a1">parent_petiole_index</a> = 0</td></tr>
-<tr class="separator:ab0db38b0c3416b859879e129ef7239a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c1ccad04abbb694507e78a9cc044da7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#a1c1ccad04abbb694507e78a9cc044da7">isterminal</a> = 0</td></tr>
+<tr class="separator:a1c1ccad04abbb694507e78a9cc044da7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af9d4927756d61098df0aa0ef62a6630d"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#af9d4927756d61098df0aa0ef62a6630d">parent_index</a> = 0</td></tr>
+<tr class="separator:af9d4927756d61098df0aa0ef62a6630d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac05237b5c72c34fd1a5449703ba3684d"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#ac05237b5c72c34fd1a5449703ba3684d">bud_index</a> = 0</td></tr>
 <tr class="separator:ac05237b5c72c34fd1a5449703ba3684d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abab0121583d54634083680e022a17457"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#abab0121583d54634083680e022a17457">current_fruit_scale_factor</a> = 1</td></tr>
 <tr class="separator:abab0121583d54634083680e022a17457"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2e0bb1be7fa4b40111021198d66b02ef"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#a2e0bb1be7fa4b40111021198d66b02ef">base_position</a></td></tr>
+<tr class="separator:a2e0bb1be7fa4b40111021198d66b02ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a92f9d1691e72aff0270300d7f78b7660"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_axis_rotation.html">AxisRotation</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#a92f9d1691e72aff0270300d7f78b7660">base_rotation</a></td></tr>
+<tr class="separator:a92f9d1691e72aff0270300d7f78b7660"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae710f92d578e58018348d7133a33fcb"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#aae710f92d578e58018348d7133a33fcb">bending_axis</a></td></tr>
+<tr class="separator:aae710f92d578e58018348d7133a33fcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa12a235bc3a5cc66c7c33f358329758"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#afa12a235bc3a5cc66c7c33f358329758">inflorescence_bases</a></td></tr>
+<tr class="separator:afa12a235bc3a5cc66c7c33f358329758"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5130959662caf5c6f2edc92d0576ca5a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#a5130959662caf5c6f2edc92d0576ca5a">peduncle_objIDs</a></td></tr>
+<tr class="separator:a5130959662caf5c6f2edc92d0576ca5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa28e9c19ff18318ef56742049c6e447c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_floral_bud.html#aa28e9c19ff18318ef56742049c6e447c">inflorescence_objIDs</a></td></tr>
+<tr class="separator:aa28e9c19ff18318ef56742049c6e447c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00323">323</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00277">277</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Field Documentation</h2>
+<a id="a2e0bb1be7fa4b40111021198d66b02ef" name="a2e0bb1be7fa4b40111021198d66b02ef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2e0bb1be7fa4b40111021198d66b02ef">&#9670;&#160;</a></span>base_position</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> FloralBud::base_position</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00293">293</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a92f9d1691e72aff0270300d7f78b7660" name="a92f9d1691e72aff0270300d7f78b7660"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a92f9d1691e72aff0270300d7f78b7660">&#9670;&#160;</a></span>base_rotation</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_axis_rotation.html">AxisRotation</a> FloralBud::base_rotation</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00294">294</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="aae710f92d578e58018348d7133a33fcb" name="aae710f92d578e58018348d7133a33fcb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae710f92d578e58018348d7133a33fcb">&#9670;&#160;</a></span>bending_axis</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> FloralBud::bending_axis</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00295">295</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
 <a id="ac05237b5c72c34fd1a5449703ba3684d" name="ac05237b5c72c34fd1a5449703ba3684d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac05237b5c72c34fd1a5449703ba3684d">&#9670;&#160;</a></span>bud_index</h2>
 
@@ -120,7 +182,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00332">332</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00289">289</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -136,23 +198,87 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00334">334</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00291">291</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
-<a id="ab0db38b0c3416b859879e129ef7239a1" name="ab0db38b0c3416b859879e129ef7239a1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab0db38b0c3416b859879e129ef7239a1">&#9670;&#160;</a></span>parent_petiole_index</h2>
+<a id="afa12a235bc3a5cc66c7c33f358329758" name="afa12a235bc3a5cc66c7c33f358329758"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa12a235bc3a5cc66c7c33f358329758">&#9670;&#160;</a></span>inflorescence_bases</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint FloralBud::parent_petiole_index = 0</td>
+          <td class="memname">std::vector&lt;<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&gt; FloralBud::inflorescence_bases</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00330">330</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00297">297</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="aa28e9c19ff18318ef56742049c6e447c" name="aa28e9c19ff18318ef56742049c6e447c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa28e9c19ff18318ef56742049c6e447c">&#9670;&#160;</a></span>inflorescence_objIDs</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;uint&gt; FloralBud::inflorescence_objIDs</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00299">299</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a1c1ccad04abbb694507e78a9cc044da7" name="a1c1ccad04abbb694507e78a9cc044da7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1c1ccad04abbb694507e78a9cc044da7">&#9670;&#160;</a></span>isterminal</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool FloralBud::isterminal = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00284">284</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="af9d4927756d61098df0aa0ef62a6630d" name="af9d4927756d61098df0aa0ef62a6630d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af9d4927756d61098df0aa0ef62a6630d">&#9670;&#160;</a></span>parent_index</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint FloralBud::parent_index = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00287">287</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a5130959662caf5c6f2edc92d0576ca5a" name="a5130959662caf5c6f2edc92d0576ca5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5130959662caf5c6f2edc92d0576ca5a">&#9670;&#160;</a></span>peduncle_objIDs</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;uint&gt; FloralBud::peduncle_objIDs</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00298">298</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -168,7 +294,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00326">326</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00280">280</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -184,7 +310,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00328">328</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00282">282</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

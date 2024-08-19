@@ -396,7 +396,7 @@ void Visualizer::openWindow(){
     Hframebuffer = uint(framebuffer_height);
 
     if( window_width<Wdisplay || window_height<Hdisplay ){
-        printf("WARNING: requested size of window is larger than the screen area.\n");
+        printf("WARNING (Visualizer): requested size of window is larger than the screen area.\n");
         //printf("Changing width from %d to %d and height from %d to %d\n",Wdisplay,window_width,Hdisplay,window_height);
         Wdisplay = uint(window_width);
         Hdisplay = uint(window_height);
@@ -409,7 +409,7 @@ void Visualizer::openWindow(){
     // Initialize GLEW
     glewExperimental=GL_TRUE; // Needed in core profile
     if (glewInit() != GLEW_OK) {
-        helios_runtime_error("ERROR(Visualizer): Failed to initialize GLEW.");
+        helios_runtime_error("ERROR (Visualizer): Failed to initialize GLEW.");
     }
 
     //NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
@@ -1124,15 +1124,15 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
         for(auto vertex : vertices){
             if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1230,15 +1230,15 @@ void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const
         for(auto vertex : vertices){
             if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1348,15 +1348,15 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
         for(auto vertex : vertices){
             if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1464,15 +1464,15 @@ void Visualizer::addRectangleByVertices( const std::vector<vec3>& vertices, cons
         for(auto vertex : vertices){
             if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1580,15 +1580,15 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
         for(auto & vertex : v){
             if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1667,15 +1667,15 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
         for(auto & vertex : v){
             if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.y < 0.f || vertex.y > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `y' position ( " << vertex.y << " ) is outside of drawable area." << std::endl;
                 }
             }else if(vertex.z < -1.f || vertex.z > 1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `z' position ( " << vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -1753,15 +1753,15 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
         for( uint i=0; i<v.size(); i++ ){
             if( v.at(i).x<0.f || v.at(i).x>1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
                 }
             }else if( v.at(i).y<0.f || v.at(i).y>1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
                 }
             }else if( v.at(i).z<-1.f || v.at(i).z>1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING: Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
@@ -2341,10 +2341,10 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
     if( message_flag ){
         if( coordFlag==COORDINATES_WINDOW_NORMALIZED ){
             if(xt<0 || xt>1){
-                std::cout << "WARNING: text x-coordinate is outside of window area" << std::endl;
+                std::cout << "WARNING (Visualizer::addTextboxByCenter): text x-coordinate is outside of window area" << std::endl;
             }
             if(yt<0 || yt>1){
-                std::cout << "WARNING: text y-coordinate is outside of window area" << std::endl;
+                std::cout << "WARNING (Visualizer::addTextboxByCenter): text y-coordinate is outside of window area" << std::endl;
             }
         }
     }
@@ -2788,7 +2788,7 @@ void Visualizer::buildContextGeometry_private() {
                 std::cout << "Adding " << psize << " Context primitives to visualizer...." << std::flush;
             }
         }else{
-            std::cout << "WARNING: No primitives were found in the Context..." << std::endl;
+            std::cout << "WARNING (Visualizer::buildContextGeometry): No primitives were found in the Context..." << std::endl;
         }
     }
 
@@ -2918,7 +2918,7 @@ void Visualizer::buildContextGeometry_private() {
             uint UUID = UUIDs.at(u);
 
             if( !context->doesPrimitiveExist(UUID) ){
-                std::cerr << "WARNING (buildContextGeometry): UUID vector contains ID(s) that do not exist in the Context...they will be ignored." << std::endl;
+                std::cerr << "WARNING (Visualizer::buildContextGeometry): UUID vector contains ID(s) that do not exist in the Context...they will be ignored." << std::endl;
                 continue;
             }
 
@@ -3523,6 +3523,7 @@ void Visualizer::render( bool shadow ){
         textureID_current = textureIDData["triangle"].at(0);
     }
 
+    glBindTexture(GL_TEXTURE_RECTANGLE,0);
 
     for( std::map<uint,int2>::iterator iter=group_start.begin(); iter!=group_start.end(); ++iter ){
 
@@ -4038,6 +4039,10 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
 
     RboundUniform = glGetUniformLocation(shaderID, "Rbound");
     glUniform1i(RboundUniform,0);
+
+    //initialize default texture in case none are added to the scene
+    glBindTexture(GL_TEXTURE_RECTANGLE,0);
+    glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     assert(checkerrors());
 

@@ -225,6 +225,10 @@ public:
     AxisRotation operator+(const AxisRotation& a) const;
     AxisRotation operator-(const AxisRotation& a) const;
 
+    friend std::ostream &operator<<(std::ostream &os, const AxisRotation &rot) {
+        return os << "AxisRotation<" << rot.pitch << ", " << rot.yaw << ", " << rot.roll << ">";
+    }
+
 };
 
 inline AxisRotation make_AxisRotation( float a_pitch, float a_yaw, float a_roll ) {
@@ -259,56 +263,6 @@ enum BudState{
  */
 std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
 
-//struct VegetativeBud{
-//
-//    //state of the bud
-//    const BudState &state;
-//    //label of the shoot type that will be produced if the bud breaks into a shoot
-//    std::string shoot_type_label;
-//    //ID of the shoot that the bud will produce if it breaks into a shoot
-//    uint shoot_ID = -1;
-//
-//    VegetativeBud() : state(state_private) {
-//        state_private = BUD_DORMANT;
-//    }
-//
-//private:
-//
-//    //state of the bud
-//    BudState state_private;
-//
-//    friend class Phytomer;
-//
-//};
-
-//struct FloralBud{
-//
-//    //state of the bud
-//    const BudState &state;
-//    //amount of time since the bud flowered (=0 if it has not yet flowered)
-//    float time_counter = 0;
-//    //Index of the petiole within the internode that this floral bud originates from
-//    uint parent_petiole_index = 0;
-//    //Index of the bud within the petiole that this floral bud originates from
-//    uint bud_index = 0;
-//    //Scaling factor fraction of the fruit (if present), ranging from 0 to 1
-//    float current_fruit_scale_factor = 1;
-//
-//    FloralBud() : state_private(BUD_DORMANT), state(state_private) {
-//        time_counter = 0;
-//        parent_petiole_index = 0;
-//        bud_index = 0;
-//        current_fruit_scale_factor = 1;
-//    }
-//
-//protected:
-//
-//    BudState state_private;
-//
-//    friend class Phytomer;
-//
-//};
-
 struct VegetativeBud{
 
     //state of the bud
@@ -326,13 +280,23 @@ struct FloralBud{
     BudState state = BUD_DORMANT;
     //amount of time since the bud flowered (=0 if it has not yet flowered)
     float time_counter = 0;
-    //Index of the petiole within the internode that this floral bud originates from
-    uint parent_petiole_index = 0;
+    //=0 for axillary buds, =1 for terminal buds
+    bool isterminal = 0;
+    //For axillary buds: index of the petiole within the internode that this floral bud originates from
+    //For terminal buds: index of the phytomer within the shoot that this floral bud originates from
+    uint parent_index = 0;
     //Index of the bud within the petiole that this floral bud originates from
     uint bud_index = 0;
     //Scaling factor fraction of the fruit (if present), ranging from 0 to 1
     float current_fruit_scale_factor = 1;
 
+    helios::vec3 base_position;
+    AxisRotation base_rotation;
+    helios::vec3 bending_axis;
+
+    std::vector<helios::vec3> inflorescence_bases;
+    std::vector<uint> peduncle_objIDs;
+    std::vector<uint> inflorescence_objIDs;
 };
 
 struct PhytomerParameters{
@@ -394,7 +358,7 @@ private:
     };
 
     struct LeafParameters{
-        uint leaves_per_petiole;
+        RandomParameter_int leaves_per_petiole;
         RandomParameter_float pitch;
         RandomParameter_float yaw;
         RandomParameter_float roll;
@@ -406,6 +370,7 @@ private:
 
         LeafParameters& operator=(const LeafParameters &a){
             this->leaves_per_petiole = a.leaves_per_petiole;
+            this->leaves_per_petiole.resample();
             this->pitch = a.pitch;
             this->pitch.resample();
             this->yaw = a.yaw;
@@ -513,8 +478,8 @@ public:
     explicit PhytomerParameters( std::minstd_rand0 *generator );
 
     friend class PlantArchitecture;
-    friend class Phytomer;
-    friend class Shoot;
+    friend struct Phytomer;
+    friend struct Shoot;
 
 };
 
@@ -561,6 +526,9 @@ struct ShootParameters{
     // Probability that bud with this shoot type will break and form a new shoot
     RandomParameter_float vegetative_bud_break_probability;
 
+    // Maximum number of floral buds at the shoot apex
+    RandomParameter_int max_terminal_floral_buds;
+
     // Probability that a phytomer will flower
     RandomParameter_float flower_bud_break_probability;
 
@@ -593,6 +561,8 @@ struct ShootParameters{
         this->girth_growth_rate.resample();
         this->internode_radius_max = a.internode_radius_max;
         this->internode_radius_max.resample();
+        this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
+        this->vegetative_bud_break_probability.resample();
         this->flower_bud_break_probability = a.flower_bud_break_probability;
         this->flower_bud_break_probability.resample();
         this->fruit_set_probability = a.fruit_set_probability;
@@ -603,6 +573,8 @@ struct ShootParameters{
         this->tortuosity.resample();
         this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
         this->vegetative_bud_break_probability.resample();
+        this->max_terminal_floral_buds = a.max_terminal_floral_buds;
+        this->max_terminal_floral_buds.resample();
         this->flower_bud_break_probability = a.flower_bud_break_probability;
         this->flower_bud_break_probability.resample();
         this->fruit_set_probability = a.fruit_set_probability;
@@ -632,7 +604,7 @@ struct ShootParameters{
     }
 
     friend class PlantArchitecture;
-    friend class Shoot;
+    friend struct Shoot;
 
 protected:
 
@@ -647,7 +619,7 @@ public:
     // Constructor
     Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin, const AxisRotation &shoot_base_rotation,
              float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, bool build_context_geometry_internode, bool build_context_geometry_petiole,
-             bool build_context_geometry_peduncle, helios::Context *context_ptr);
+             bool build_context_geometry_peduncle, PlantArchitecture *plantarchitecture_ptr, helios::Context *context_ptr);
 
     // ---- query info about the phytomer ---- //
 
@@ -665,11 +637,9 @@ public:
 
     bool hasLeaf() const;
 
-    bool hasInflorescence() const;
-
     // ---- modify the phytomer ---- //
 
-    void addInflorescence(const helios::vec3 &base_position, const AxisRotation &base_rotation, const helios::vec3 &a_inflorescence_bending_axis, FloralBud &fbud);
+    void updateInflorescence(FloralBud &fbud);
 
     void setInternodeLengthScaleFraction(float internode_scale_factor_fraction );
 
@@ -697,7 +667,7 @@ public:
 
     void setVegetativeBudState( BudState state, VegetativeBud &vbud );
 
-    void setFloralBudState( BudState state );
+    void setFloralBudState(BudState state );
 
     void setFloralBudState(BudState state, uint petiole_index, uint bud_index);
 
@@ -710,7 +680,6 @@ public:
     std::vector<helios::vec3> internode_vertices; //index is tube segment within internode
     std::vector<std::vector<helios::vec3>> petiole_vertices; //first index is petiole within internode, second index is tube segment within petiole
     std::vector<std::vector<helios::vec3>> leaf_bases; //first index is petiole within internode, second index is leaf within petiole
-    std::vector<std::vector<std::vector<helios::vec3>>> inflorescence_bases; //first index is the petiole within internode, second index is the floral bud, third index is flower/fruit within peduncle/rachis
     float internode_length, internode_pitch, internode_phyllotactic_angle;
 
     std::vector<float> internode_radii; //index is segment within internode
@@ -726,8 +695,6 @@ public:
     std::vector<uint> internode_objIDs; //index is segment within internode
     std::vector<std::vector<uint> > petiole_objIDs; //first index is petiole within internode, second index is segment within petiole
     std::vector<std::vector<uint>> leaf_objIDs; //first index is petiole within internode, second index is leaf within petiole
-    std::vector<std::vector<std::vector<uint>>> inflorescence_objIDs; //first index is the petiole within internode, second index is the floral bud, third index is flower/fruit within peduncle/rachis
-    std::vector<std::vector<std::vector<uint>>> peduncle_objIDs; //first index is the petiole within internode, second index is the floral bud, third index is flower/fruit within peduncle/rachis
 
     PhytomerParameters phytomer_parameters;
 
@@ -740,7 +707,7 @@ public:
     float current_internode_scale_factor = 1;
     float current_leaf_scale_factor = 1;
 
-    std::vector<std::vector<VegetativeBud>> vegetative_buds; //first index is petiole within internode, second index is bud within petiole
+    std::vector<std::vector<VegetativeBud>> axillary_vegetative_buds; //first index is petiole within internode, second index is bud within petiole
     std::vector<std::vector<FloralBud>> floral_buds; //first index is petiole within internode, second index is bud within petiole
 
     float internode_radius_initial;
@@ -757,6 +724,8 @@ protected:
 
     helios::Context *context_ptr;
 
+    PlantArchitecture *plantarchitecture_ptr;
+
 };
 
 struct Shoot{
@@ -764,7 +733,7 @@ struct Shoot{
     Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node, uint parent_petiole_index, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number,
           float internode_length_shoot_initial, const ShootParameters& shoot_params, std::string shoot_type_label, PlantArchitecture *plant_architecture_ptr);
 
-    void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
+    void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper);
 
     int addPhytomer(const PhytomerParameters &params, const helios::vec3 internode_base_position, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
                     float leaf_scale_factor_fraction);
@@ -779,6 +748,12 @@ struct Shoot{
     void terminateApicalBud();
 
     void terminateAxillaryVegetativeBuds();
+
+    void addTerminalFloralBud();
+
+    void setTerminalFloralBudState(BudState state);
+
+    void setTerminalInflorescenceScaleFraction( float scale_factor );
 
     uint current_node_number;
 
@@ -806,6 +781,7 @@ struct Shoot{
     float phyllochron_counter = 0;
 
     float curvature_perturbation = 0;
+    float yaw_perturbation = 0;
 
     const float internode_length_max_shoot_initial;
 
@@ -954,11 +930,18 @@ public:
      */
     void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence);
 
-    //! Advance plant growth by a specified time interval
+    //! Advance plant growth by a specified time interval for all plants
     /**
      * \param[in] dt Time interval in days.
      */
     void advanceTime( float dt );
+
+    //! Advance plant growth by a specified time interval for a single plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] dt Time interval in days.
+     */
+    void advanceTime( uint plantID, float dt );
 
     void incrementAssimilatePool( uint plantID, uint shootID, float assimilate_increment_mg_g );
 
@@ -986,7 +969,7 @@ public:
      * \return ID of the new shoot to be used to reference it later.
      */
     uint addBaseStemShoot(uint plantID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction,
-                          const std::string &shoot_type_label);
+                          float radius_taper, const std::string &shoot_type_label);
 
     //! Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of a shoot change along its length (e.g., from a unifoliate to trifoliate leaf).
     /**
@@ -1001,8 +984,8 @@ public:
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
-    uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
-                     float leaf_scale_factor_fraction, const std::string &shoot_type_label);
+    uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction,
+                     float radius_taper, const std::string &shoot_type_label);
 
     //! Manually add a child shoot at the axillary bud of a phytomer.
     /**
@@ -1020,7 +1003,7 @@ public:
      * \return ID of the newly generated shoot.
      */
     uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max,
-                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const std::string &shoot_type_label, uint petiole_index = 0 );
+                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, uint petiole_index);
 
     //! Add a new phytomer at the terminal bud of a shoot.
     /**
@@ -1079,6 +1062,8 @@ public:
     float getPlantAge(uint plantID) const;
 
     uint getShootNodeCount( uint plantID, uint shootID ) const;
+
+    float getShootTaper( uint plantID, uint shootID ) const;
 
     helios::vec3 getPlantBasePosition(uint plantID) const;
 
@@ -1146,7 +1131,8 @@ public:
 
     uint generatePlantFromString(const std::string &generation_string, const std::map<std::string,PhytomerParameters> &phytomer_parameters);
 
-    friend class Shoot;
+    friend struct Phytomer;
+    friend struct Shoot;
 
 protected:
 

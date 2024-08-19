@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.16</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.17</span>
    </div>
   </td>
  </tr>
@@ -343,7 +343,7 @@ Defining the Phytomer and its Parameters</h1>
 <div class="line">phytomer.leaf.pitch = 0.1;</div>
 <div class="line">phytomer.leaf.prototype_scale = 0.1;</div>
 <div class="line">phytomer.peduncle.length = 0.1;</div>
-<div class="ttc" id="astruct_phytomer_parameters_html"><div class="ttname"><a href="struct_phytomer_parameters.html">PhytomerParameters</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00338">PlantArchitecture.h:338</a></div></div>
+<div class="ttc" id="astruct_phytomer_parameters_html"><div class="ttname"><a href="struct_phytomer_parameters.html">PhytomerParameters</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00302">PlantArchitecture.h:302</a></div></div>
 </div><!-- fragment --><p >The figure below provides some examples of how various shoot growth patterns (e.g., alternate, opposite) can be created by varying the model parameters.</p>
 <div class="image">
 <img src="growth_pattern_schematic.jpeg" alt=""/>
@@ -571,7 +571,7 @@ Loading a Plant with Default Parameters</h2>
 <div class="line">    <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
 <div class="ttc" id="a_plant_architecture_8h_html"><div class="ttname"><a href="_plant_architecture_8h.html">PlantArchitecture.h</a></div></div>
-<div class="ttc" id="aclass_plant_architecture_html"><div class="ttname"><a href="class_plant_architecture.html">PlantArchitecture</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00844">PlantArchitecture.h:844</a></div></div>
+<div class="ttc" id="aclass_plant_architecture_html"><div class="ttname"><a href="class_plant_architecture.html">PlantArchitecture</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00820">PlantArchitecture.h:820</a></div></div>
 </div><!-- fragment --><h3><a class="anchor" id="PlantArchBuild_custom"></a>
 Modifying Parameters of a Plant from the Library</h3>
 <p >Building a plant from the library with modified parameters is similar to above, except that the parameters are modified before calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method. After calling <a class="el" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary()</a>, the parameters can be queried (at the shoot level), modified, and then set.</p>
@@ -585,7 +585,7 @@ Modifying Parameters of a Plant from the Library</h3>
 <div class="line"> </div>
 <div class="line">plantarchitecture.updateCurrentShootParameters( <span class="stringliteral">&quot;trunk&quot;</span>, shoot_parameters );</div>
 <div class="line">plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );</div>
-<div class="ttc" id="astruct_shoot_parameters_html"><div class="ttname"><a href="struct_shoot_parameters.html">ShootParameters</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00521">PlantArchitecture.h:521</a></div></div>
+<div class="ttc" id="astruct_shoot_parameters_html"><div class="ttname"><a href="struct_shoot_parameters.html">ShootParameters</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00486">PlantArchitecture.h:486</a></div></div>
 </div><!-- fragment --><p >Below is an example of modifying the parameters for all shoot types:</p>
 <div class="fragment"><div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;almond&quot;</span> );</div>
 <div class="line"> </div>
