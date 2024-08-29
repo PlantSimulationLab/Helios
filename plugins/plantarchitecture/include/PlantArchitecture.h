@@ -281,7 +281,7 @@ struct FloralBud{
     //amount of time since the bud flowered (=0 if it has not yet flowered)
     float time_counter = 0;
     //=0 for axillary buds, =1 for terminal buds
-    bool isterminal = 0;
+    bool isterminal = false;
     //For axillary buds: index of the petiole within the internode that this floral bud originates from
     //For terminal buds: index of the phytomer within the shoot that this floral bud originates from
     uint parent_index = 0;
@@ -366,7 +366,8 @@ private:
         RandomParameter_float leaflet_scale;
         RandomParameter_float prototype_scale;
         uint subdivisions;
-        uint(*prototype_function)( helios::Context*, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ) = nullptr;
+        uint unique_prototypes;
+        uint (*prototype_function)(helios::Context *, uint subdivisions, int compound_leaf_index) = nullptr;
 
         LeafParameters& operator=(const LeafParameters &a){
             this->leaves_per_petiole = a.leaves_per_petiole;
@@ -384,6 +385,7 @@ private:
             this->prototype_scale = a.prototype_scale;
             this->prototype_scale.resample();
             this->subdivisions = a.subdivisions;
+            this->unique_prototypes = a.unique_prototypes;
             this->prototype_function = a.prototype_function;
             return *this;
         }
@@ -426,6 +428,7 @@ private:
         RandomParameter_float fruit_prototype_scale;
         uint (*fruit_prototype_function)(helios::Context *, uint subdivisions, float time_since_fruit_set) = nullptr;
         RandomParameter_float fruit_gravity_factor_fraction;
+        uint unique_prototypes;
 
         InflorescenceParameters &operator=(const InflorescenceParameters &a) {
             this->flowers_per_rachis = a.flowers_per_rachis;
@@ -445,6 +448,7 @@ private:
             this->fruit_prototype_function = a.fruit_prototype_function;
             this->fruit_gravity_factor_fraction = a.fruit_gravity_factor_fraction;
             this->fruit_gravity_factor_fraction.resample();
+            this->unique_prototypes = a.unique_prototypes;
             return *this;
         }
     };
@@ -469,7 +473,14 @@ public:
      * \param[in] shoot_max_nodes Maximum number of phytomers in the shoot
      * \param[in] plant_age Age of the plant in days
      */
-    void (*phytomer_creation_function)(std::shared_ptr<Phytomer> phytomer_ptr, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age) = nullptr;
+    void (*phytomer_creation_function)(std::shared_ptr<Phytomer> phytomer_ptr, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) = nullptr;
+
+    //Custom user-defined function that is called for each phytomer on every time step
+    /**
+     * \param[in] phytomer_ptr Pointer to the phytomer to which the function will be applied
+     */
+    void (*phytomer_callback_function)(std::shared_ptr<Phytomer> phytomer_ptr) = nullptr;
+
 
     //! Default constructor - does not set random number generator
     PhytomerParameters();
@@ -495,16 +506,19 @@ struct ShootParameters{
 
     // ---- Geometric Parameters ---- //
 
+    // Maximum number of nodes along the shoot before the terminal vegetative bud dies
     RandomParameter_int max_nodes;
 
+    // Radius of phytomer internodes when they are first created
     RandomParameter_float internode_radius_initial;
 
-    RandomParameter_float child_insertion_angle_tip;
-    RandomParameter_float child_insertion_angle_decay_rate;
+    // Insertion angle of the most apical child shoot bud at the time it breaks
+    RandomParameter_float insertion_angle_tip;
+    RandomParameter_float insertion_angle_decay_rate;
 
-    RandomParameter_float child_internode_length_max;
-    RandomParameter_float child_internode_length_min;
-    RandomParameter_float child_internode_length_decay_rate;
+    RandomParameter_float internode_length_max;
+    RandomParameter_float internode_length_min;
+    RandomParameter_float internode_length_decay_rate;
 
     RandomParameter_float base_roll;
     RandomParameter_float base_yaw;
@@ -581,16 +595,16 @@ struct ShootParameters{
         this->fruit_set_probability.resample();
         this->vegetative_bud_break_time = a.vegetative_bud_break_time;
         this->vegetative_bud_break_time.resample();
-        this->child_insertion_angle_tip = a.child_insertion_angle_tip;
-        this->child_insertion_angle_tip.resample();
-        this->child_insertion_angle_decay_rate = a.child_insertion_angle_decay_rate;
-        this->child_insertion_angle_decay_rate.resample();
-        this->child_internode_length_max = a.child_internode_length_max;
-        this->child_internode_length_max.resample();
-        this->child_internode_length_min = a.child_internode_length_min;
-        this->child_internode_length_min.resample();
-        this->child_internode_length_decay_rate = a.child_internode_length_decay_rate;
-        this->child_internode_length_decay_rate.resample();
+        this->insertion_angle_tip = a.insertion_angle_tip;
+        this->insertion_angle_tip.resample();
+        this->insertion_angle_decay_rate = a.insertion_angle_decay_rate;
+        this->insertion_angle_decay_rate.resample();
+        this->internode_length_max = a.internode_length_max;
+        this->internode_length_max.resample();
+        this->internode_length_min = a.internode_length_min;
+        this->internode_length_min.resample();
+        this->internode_length_decay_rate = a.internode_length_decay_rate;
+        this->internode_length_decay_rate.resample();
         this->base_roll = a.base_roll;
         this->base_roll.resample();
         this->base_yaw = a.base_yaw;
@@ -661,6 +675,8 @@ public:
 
     void setPhytomerBase( const helios::vec3 &base_position );
 
+    void rotateLeaf( uint petiole_index, uint leaf_index, const AxisRotation &rotation );
+
     void setVegetativeBudState( BudState state );
 
     void setVegetativeBudState(BudState state, uint petiole_index, uint bud_index);
@@ -677,6 +693,7 @@ public:
 
     // ---- phytomer data ---- //
 
+    //! Coordinates of internode tube segments. Index is tube segment within internode
     std::vector<helios::vec3> internode_vertices; //index is tube segment within internode
     std::vector<std::vector<helios::vec3>> petiole_vertices; //first index is petiole within internode, second index is tube segment within petiole
     std::vector<std::vector<helios::vec3>> leaf_bases; //first index is petiole within internode, second index is leaf within petiole
@@ -686,7 +703,8 @@ public:
     std::vector<std::vector<float>> petiole_radii; //first index is petiole within internode, second index is segment within petiole
     std::vector<float> petiole_length; //index is petiole within internode
     float petiole_pitch;
-    std::vector<float> leaf_size_max; //first index is petiole/leaf within internode
+    float petiole_curvature;
+    std::vector<float> leaf_size_max; //first index is petiole within internode
     std::vector<std::vector<AxisRotation>> leaf_rotation; //first index is petiole within internode, second index is leaf within petiole
 
     std::vector<helios::RGBcolor> internode_colors;
@@ -699,10 +717,17 @@ public:
     PhytomerParameters phytomer_parameters;
 
     uint rank;
-    helios::int2 shoot_index; // .x = index of phytomer along shoot, .y = maximum number of phytomers on parent shoot
+    //! .x = index of phytomer along shoot, .y = current number of phytomers on parent shoot, .z = maximum number of phytomers on parent shoot
+    helios::int3 shoot_index;
 
+    uint plantID;
+    uint parent_shoot_ID;
+
+    //! Time since the phytomer was created
     float age = 0;
+    //! Time since the phytomer last broke dormancy (=0 if currently dormant)
     float time_since_dormancy = 0;
+    bool isdormant = false;
 
     float current_internode_scale_factor = 1;
     float current_leaf_scale_factor = 1;
@@ -726,9 +751,15 @@ protected:
 
     PlantArchitecture *plantarchitecture_ptr;
 
+    float calculatePhytomerConstructionCosts();
+    float calculateFlowerConstructionCosts(const FloralBud &fbud);
+    float calculateFruitConstructionCosts(const FloralBud &fbud);
+
+    friend struct Shoot;
+
 };
 
-struct Shoot{
+struct Shoot {
 
     Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node, uint parent_petiole_index, uint rank, const helios::vec3 &origin, const AxisRotation &shoot_base_rotation, uint current_node_number,
           float internode_length_shoot_initial, const ShootParameters& shoot_params, std::string shoot_type_label, PlantArchitecture *plant_architecture_ptr);
@@ -751,9 +782,7 @@ struct Shoot{
 
     void addTerminalFloralBud();
 
-    void setTerminalFloralBudState(BudState state);
-
-    void setTerminalInflorescenceScaleFraction( float scale_factor );
+    float calculateShootInternodeVolume() const;
 
     uint current_node_number;
 
@@ -768,12 +797,12 @@ struct Shoot{
     const uint rank;
     const uint parent_petiole_index;
 
-    float assimilate_pool;  // mg SC/g DW
+    float carbohydrate_pool_molC;  // mol C
 
     void breakDormancy();
     void makeDormant();
 
-    bool dormant;
+    bool isdormant;
     uint dormancy_cycles = 0;
 
     bool meristem_is_alive = true;
@@ -920,7 +949,7 @@ public:
     //! Specify the threshold values for plant phenological stages
     /**
      * \param[in] plantID ID of the plant.
-     * \param[in] time_to_dormancy_break Time required to break dormancy.
+     * \param[in] time_to_leaf_out Time from dormancy required for leaf out.
      * \param[in] time_to_flower_initiation Time from emergence/dormancy required to reach flower creation (closed flowers).
      * \param[in] time_to_flower_opening Time from flower initiation to flower opening.
      * \param[in] time_to_fruit_set Time from flower opening required to reach fruit set (i.e., flower dies and fruit is created).
@@ -928,7 +957,7 @@ public:
      * \param[in] time_to_senescence Time from emergence/dormancy required to reach senescence.
      * \note Any phenological stage can be skipped by specifying a negative threshold value. In this case, the stage will be skipped and the threshold for the next stage will be relative to the previous stage.
      */
-    void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence);
+    void setPlantPhenologicalThresholds(uint plantID, float time_to_leaf_out, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence);
 
     //! Advance plant growth by a specified time interval for all plants
     /**
@@ -942,10 +971,6 @@ public:
      * \param[in] dt Time interval in days.
      */
     void advanceTime( uint plantID, float dt );
-
-    void incrementAssimilatePool( uint plantID, uint shootID, float assimilate_increment_mg_g );
-
-    void incrementAssimilatePool( uint plantID, float assimilate_increment_mg_g );
 
     // -- plant building methods -- //
 
@@ -965,6 +990,7 @@ public:
      * \param[in] internode_length_max Maximum length (i.e., fully elongated) of the internodes along the shoot.
      * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling).
      * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
+     * \param[in] radius_taper Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius).
      * \param[in] shoot_type_label Label of the shoot type to be used for the base stem shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
@@ -981,6 +1007,7 @@ public:
      * \param[in] internode_length_max Length of the internode of the newly appended shoot.
      * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling).
      * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
+     * \p
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
      */
@@ -998,6 +1025,7 @@ public:
      * \param[in] internode_length_max Length of the internode of the newly appended shoot.
      * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling).
      * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
+     * \param[in] radius_taper Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius).
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \param[in] petiole_index [OPTIONAL] Index of the petiole within the internode to which the new shoot will be attached (when there are multiple petioles per internode)
      * \return ID of the newly generated shoot.
@@ -1034,6 +1062,10 @@ public:
     void enableGroundClipping( float ground_height = 0.f );
 
     // -- methods for modifying the current plant state -- //
+
+    void initializePlantCarbohydratePool(uint plantID, float carbohydrate_concentration_molC_m3 );
+
+    void initializeShootCarbohydratePool(uint plantID, uint shootID, float carbohydrate_concentration_molC_m3 );
 
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float girth_change);
 
@@ -1131,6 +1163,10 @@ public:
 
     uint generatePlantFromString(const std::string &generation_string, const std::map<std::string,PhytomerParameters> &phytomer_parameters);
 
+    void writePlantStructureXML(uint plantID, const std::string &filename) const;
+
+    std::vector<uint> readPlantStructureXML( const std::string &filename, bool quiet = false);
+
     friend struct Phytomer;
     friend struct Shoot;
 
@@ -1150,6 +1186,16 @@ protected:
 
     std::map<std::string,ShootParameters> shoot_types;
 
+    // Key is the shoot string label; value first index is the unique leaf prototype, second index is the leaflet along a compound leaf (if applicable)
+    std::map<std::string,std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
+
+    // Key is the shoot string label; value index is the unique flower prototype
+    std::map<std::string,std::vector<uint> > unique_open_flower_prototype_objIDs;
+    // Key is the shoot string label; value index is the unique flower prototype
+    std::map<std::string,std::vector<uint> > unique_closed_flower_prototype_objIDs;
+    // Key is the shoot string label; value index is the unique fruit prototype
+    std::map<std::string,std::vector<uint> > unique_fruit_prototype_objIDs;
+
     bool build_context_geometry_internode = true;
     bool build_context_geometry_petiole = true;
     bool build_context_geometry_peduncle = true;
@@ -1157,8 +1203,6 @@ protected:
     float ground_clipping_height = -99999;
 
     void validateShootTypes( ShootParameters &shoot_parameters ) const;
-
-    void accumulateShootPhotosynthesis( float dt );
 
     void parseStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters);
 
@@ -1181,11 +1225,21 @@ protected:
     //! Names of additional object data to add to the Context
     std::map<std::string,bool> output_object_data;
 
+    // --- Carbohydrate Model --- //
+
+    void accumulateShootPhotosynthesis();
+
+    void subtractShootMaintainenceCarbon(float dt );
+
     // --- Plant Library --- //
 
     void initializeAlmondTreeShoots();
 
     uint buildAlmondTree( const helios::vec3 &base_position, float age );
+
+    void initializeAsparagusShoots();
+
+    uint buildAsparagusPlant( const helios::vec3 &base_position, float age );
 
     void initializeBindweedShoots();
 
@@ -1207,9 +1261,9 @@ protected:
 
     uint buildPuncturevinePlant( const helios::vec3 &base_position, float age );
 
-    void initializeRedbudShoots();
+    void initializeEasternRedbudShoots();
 
-    uint buildRedbudPlant( const helios::vec3 &base_position, float age );
+    uint buildEasternRedbudPlant( const helios::vec3 &base_position, float age );
 
     void initializeSoybeanShoots();
 

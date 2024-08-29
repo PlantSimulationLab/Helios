@@ -260,6 +260,67 @@ namespace helios{
  */
     bool parse_uint( const std::string &input_string, uint &converted_uint );
 
+    //! Convert a string into a vec2 with error checking
+    /**
+     * \param[in] input_string String to be converted to numerical value
+     * \param[out] converted_vec2 Output numerical value converted from input string
+     * \return True if conversion was successful, false if unsuccessful
+     */
+    bool parse_vec2( const std::string &input_string, vec2 &converted_vec2 );
+
+    //! Convert a string into a vec3 with error checking
+    /**
+     * \param[in] input_string String to be converted to numerical value
+     * \param[out] converted_vec3 Output numerical value converted from input string
+     * \return True if conversion was successful, false if unsuccessful
+     */
+    bool parse_vec3( const std::string &input_string, vec3 &converted_vec3 );
+
+    //! Parse an XML tag containing an integer value
+    /**
+     * \param[in] node XML node containing the tag
+     * \param[in] tag Name of the tag to be parsed
+     * \param[in] calling_function Name of the function calling this function (for error reporting). e.g., Context::loadXML
+     * \return Integer value of the tag
+     */
+    int parse_xml_tag_int(const pugi::xml_node &node, const std::string &tag, const std::string &calling_function );
+
+    //! Parse an XML tag containing a float value
+    /**
+     * \param[in] node XML node containing the tag
+     * \param[in] tag Name of the tag to be parsed
+     * \param[in] calling_function Name of the function calling this function (for error reporting). e.g., Context::loadXML
+     * \return Float value of the tag
+     */
+    float parse_xml_tag_float( const pugi::xml_node &node, const std::string &tag, const std::string &calling_function );
+
+    //! Parse an XML tag containing a vec2 value (i.e., two space delimited floats)
+    /**
+     * \param[in] node XML node containing the tag
+     * \param[in] tag Name of the tag to be parsed
+     * \param[in] calling_function Name of the function calling this function (for error reporting). e.g., Context::loadXML
+     * \return vec2 value of the tag
+     */
+    vec2 parse_xml_tag_vec2( const pugi::xml_node &node, const std::string &tag, const std::string &calling_function );
+
+    //! Parse an XML tag containing a vec3 value (i.e., three space delimited floats)
+    /**
+     * \param[in] node XML node containing the tag
+     * \param[in] tag Name of the tag to be parsed
+     * \param[in] calling_function Name of the function calling this function (for error reporting). e.g., Context::loadXML
+     * \return vec3 value of the tag
+     */
+    vec3 parse_xml_tag_vec3( const pugi::xml_node &node, const std::string &tag, const std::string &calling_function );
+
+    //! Parse an XML tag containing a string
+    /**
+     * \param[in] node XML node containing the tag
+     * \param[in] tag Name of the tag to be parsed
+     * \param[in] calling_function Name of the function calling this function (for error reporting). e.g., Context::loadXML
+     * \return String value of the tag
+     */
+    std::string parse_xml_tag_string( const pugi::xml_node &node, const std::string &tag, const std::string &calling_function );
+
 //! Convert a space-delimited string into an RGBcolor vector
 /**
  * \ingroup functions

@@ -1779,3 +1779,30 @@ The radiation model has been re-designed, with the following primary additions:
 - Sorghum model can now produce a panicle.
 - Optional output object data is now finished and should be working correctly. This avoids creating large amounts of object data when not needed.
 - When manually adding shoots via addBaseStemShoot(), appendShoot() or addChildShoot(), an option was added to give a taper to the shoot.
+
+[1.3.18] 2024-08-28
+
+*Context*
+- Added parse_vec2 and parse_vec3 functions in global.h/global.cpp to parse vec2 and vec3 from a string.
+- Added parse_xml_node_[*] functions in global.h/global.cpp to parse XML nodes of different types.
+- Added the capability to calculate the volume of closed compound objects.
+- Added the capability to hide primitives and objects within the Context such that they won't be visualized or used in plug-in calculations.
+- Many performance improvements in the Context.
+
+*Radiation*
+- Added warning if users add more than one sun source.
+
+*Plant Architecture*
+- Changed name and behavior of shoot parameters: "insertion_angle_tip", "insertion_angle_decay_rate", "internode_length_max", "internode_length_min", "internode_length_decay_rate" (previously "child_insertion_angle_tip", "child_insertion_angle_decay_rate", "child_internode_length_max", "child_internode_length_min", "child_internode_length_decay_rate"). All of these parameters now apply to the shoot type corresponding to the ShootParameters structure and not the child.
+- Added new phytomer parameter 'leaf.unique_prototypes', which controls copying of leaf prototypes to improve efficiency. By default, leaf.unique_prototypes = 1, which means that all leaves will look identical. Increase this value to increase random variation.
+- Added Eastern redbud and asparagus models to the library.
+- Base framework for carbohydrate model added. These methods were moved to src/CarbohydrateModel.cpp.
+
+*Visualizer*
+- There was an error in the case 'samples/visualizer' related to the sun position. Thanks to Jan Graefe for pointing this out.
+
+*Energy Balance*
+- Removed use of "evaporating_faces" input primitive data to specify whether the leaf is hypostomatous or amphistomatous. Instead, a more general version using 'stomatal_sidedness' was implemented which allows continuous variation in stomatal sidedness.
+
+*Photosynthesis*
+- Treatment of twosided_flag and stomatal sidedness in the moisture/CO2 conductance is now consistent with the energy balance model.

@@ -149,6 +149,7 @@
          <td>Can be computed by \ref PhotosynthesisModel plug-in (need to enable optional primitive data output).</td>
          <td>100 \f$\mu\f$mol/mol</td>
      </tr>
+
   </table>
 
   \*\*The stomatal conductance model will also check for primitive data "boundarylayer_conductance_out" if "boundarylayer_conductance" does not exist. If you are using the energy balance model to calculate the boundary-layer conductance, you should enable optional output primitive data "boundarylayer_conductance_out" so that other plug-ins can use it.

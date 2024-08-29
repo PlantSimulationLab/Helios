@@ -29,7 +29,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
     }
 }
 
-__device__ float evaluateEnergyBalance( float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, char Ntranspire, float heatcapacity, float surfacehumidity, float dt, float Tprev ){
+__device__ float evaluateEnergyBalance( float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity, float surfacehumidity, float dt, float Tprev ){
 
     //Outgoing emission flux
     float Rout = float(Nsides)*eps*5.67e-8F*T*T*T*T;
@@ -40,7 +40,7 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
 
     //Latent heat flux
     float es = 611.f*exp(17.502f*(T-273.f)/((T-273.f)+240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in Kelvin, and result is in Pascals
-    float gM = float(Ntranspire)*1.08f*(gH/float(Nsides))*gS/(1.08f*(gH/float(Nsides))+gS);
+    float gM = 1.08f*gH*gS*(stomatal_sidedness/(1.08f*gH+gS*stomatal_sidedness) + (1.f-stomatal_sidedness)/(1.08f*gH+gS*(1.f-stomatal_sidedness)));
     if( gH==0 && gS==0 ){//if somehow both go to zero, can get NaN
         gM = 0;
     }
@@ -58,7 +58,7 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
 
 }
 
-__global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float* Qother, float* eps, float* Ta, float* ea, float* pressure, float* gH, float* gS, uint* Nsides, char* Ntranspire, float* TL, float* heatcapacity, float* surfacehumidity, float dt ){
+__global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float* Qother, float* eps, float* Ta, float* ea, float* pressure, float* gH, float* gS, uint* Nsides, float* stomatal_sidedness, float* TL, float* heatcapacity, float* surfacehumidity, float dt ){
 
     uint p = blockIdx.x*blockDim.x+threadIdx.x;
 
@@ -76,8 +76,8 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
     float T_old = T_old_old;
     T_old_old = 400.f;
 
-    float resid_old = evaluateEnergyBalance(T_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],Ntranspire[p],heatcapacity[p],surfacehumidity[p],dt,To[p]);
-    float resid_old_old = evaluateEnergyBalance(T_old_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],Ntranspire[p],heatcapacity[p],surfacehumidity[p],dt,To[p]);
+    float resid_old = evaluateEnergyBalance(T_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],stomatal_sidedness[p],heatcapacity[p],surfacehumidity[p],dt,To[p]);
+    float resid_old_old = evaluateEnergyBalance(T_old_old,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],stomatal_sidedness[p],heatcapacity[p],surfacehumidity[p],dt,To[p]);
 
     float resid = 100;
     float err = resid;
@@ -91,7 +91,7 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
 
         T = fabs((T_old_old*resid_old-T_old*resid_old_old)/(resid_old-resid_old_old));
 
-        resid = evaluateEnergyBalance(T,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],Ntranspire[p],heatcapacity[p],surfacehumidity[p],dt,To[p]);
+        resid = evaluateEnergyBalance(T,R[p],Qother[p],eps[p],Ta[p],ea[p],pressure[p],gH[p],gS[p],Nsides[p],stomatal_sidedness[p],heatcapacity[p],surfacehumidity[p],dt,To[p]);
 
         resid_old_old = resid_old;
         resid_old = resid;
@@ -227,9 +227,9 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     uint* d_Nsides;
     CUDA_CHECK_ERROR( cudaMalloc((void**)&d_Nsides, Nprimitives*sizeof(uint)) );
 
-    char* Ntranspire = (char*)malloc( Nprimitives*sizeof(char) );
-    char* d_Ntranspire;
-    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_Ntranspire, Nprimitives*sizeof(char)) );
+    float* stomatal_sidedness = (float*)malloc( Nprimitives*sizeof(float) );
+    float* d_stomatal_sidedness;
+    CUDA_CHECK_ERROR( cudaMalloc((void**)&d_stomatal_sidedness, Nprimitives*sizeof(float)) );
 
     float* heatcapacity = (float*)malloc( Nprimitives*sizeof(float) );
     float* d_heatcapacity;
@@ -313,16 +313,18 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         }
 
         //Number of evaporating/transpiring faces
-        if( Nsides[u]==2 && context->doesPrimitiveDataExist(p,"evaporating_faces") && context->getPrimitiveDataType(p,"evaporating_faces")==HELIOS_TYPE_UINT ){
+        stomatal_sidedness[u] = 0.f; //if Nsides=1, force this to be 0 (all stomata on upper surface)
+        if( Nsides[u]==2 && context->doesPrimitiveDataExist(p,"stomatal_sidedness") && context->getPrimitiveDataType(p,"stomatal_sidedness")==HELIOS_TYPE_FLOAT ){
+            context->getPrimitiveData(p,"stomatal_sidedness",stomatal_sidedness[u]);
+        //this is for backward compatability prior to v1.3.17
+        }else if( Nsides[u]==2 && context->doesPrimitiveDataExist(p,"evaporating_faces") && context->getPrimitiveDataType(p,"evaporating_faces")==HELIOS_TYPE_UINT ){
           uint flag;
           context->getPrimitiveData(p,"evaporating_faces",flag);
-          if( flag==1 || flag==2 ){
-            Ntranspire[u]=char(flag);
-          }else {
-            Ntranspire[u] = 1;
+          if( flag==1 ) { //stomata on one side
+            stomatal_sidedness[u] = 0.f;
+          }else if( flag==2 ){
+            stomatal_sidedness[u] = 0.5f;
           }
-        }else{
-          Ntranspire[u] = 1;
         }
 
         //Boundary-layer conductance to heat
@@ -419,7 +421,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     CUDA_CHECK_ERROR( cudaMemcpy(d_gH, gH, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_gS, gS, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_Nsides, Nsides, Nprimitives*sizeof(uint), cudaMemcpyHostToDevice) );
-    CUDA_CHECK_ERROR( cudaMemcpy(d_Ntranspire, Ntranspire, Nprimitives*sizeof(char), cudaMemcpyHostToDevice) );
+    CUDA_CHECK_ERROR( cudaMemcpy(d_stomatal_sidedness, stomatal_sidedness, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_heatcapacity, heatcapacity, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
     CUDA_CHECK_ERROR( cudaMemcpy(d_surfacehumidity, surfacehumidity, Nprimitives*sizeof(float), cudaMemcpyHostToDevice) );
 
@@ -431,7 +433,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     dim3 dimBlock( 64, 1 );
     dim3 dimGrid( ceil(Nprimitives/64.f) );
 
-    solveEnergyBalance <<< dimGrid, dimBlock >>>(Nprimitives,d_To,d_R,d_Qother,d_eps,d_Ta,d_ea,d_pressure,d_gH,d_gS,d_Nsides,d_Ntranspire,d_T,d_heatcapacity,d_surfacehumidity,dt);
+    solveEnergyBalance <<< dimGrid, dimBlock >>>(Nprimitives,d_To,d_R,d_Qother,d_eps,d_Ta,d_ea,d_pressure,d_gH,d_gS,d_Nsides,d_stomatal_sidedness,d_T,d_heatcapacity,d_surfacehumidity,dt);
 
     CUDA_CHECK_ERROR( cudaPeekAtLastError() );
     CUDA_CHECK_ERROR( cudaDeviceSynchronize() );
@@ -451,7 +453,10 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         context->setPrimitiveData(p,"sensible_flux",QH);
 
         float es = 611.f*exp(17.502f*(T[u]-273.f)/((T[u]-273.f)+240.97f));
-        float gM = float(Ntranspire[u])*1.08f*(gH[u]/float(Nsides[u]))*gS[u]/(1.08f*(gH[u]/float(Nsides[u]))+gS[u]);
+        float gM = 1.08f*gH[u]*gS[u]*(stomatal_sidedness[u]/(1.08f*gH[u]+gS[u]*stomatal_sidedness[u]) + (1.f-stomatal_sidedness[u])/(1.08f*gH[u]+gS[u]*(1.f-stomatal_sidedness[u])));
+        if( gH[u]==0 && gS[u]==0 ){//if somehow both go to zero, can get NaN
+            gM = 0;
+        }
         float QL = 44000*gM*(es-ea[u])/pressure[u];
         context->setPrimitiveData(p,"latent_flux",QL);
 
@@ -482,7 +487,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     free( gH );
     free( gS );
     free( Nsides );
-    free( Ntranspire );
+    free( stomatal_sidedness );
     free( heatcapacity );
     free( surfacehumidity );
     free( T );
@@ -498,7 +503,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     CUDA_CHECK_ERROR( cudaFree(d_gH) );
     CUDA_CHECK_ERROR( cudaFree(d_gS) );
     CUDA_CHECK_ERROR( cudaFree(d_Nsides) );
-    CUDA_CHECK_ERROR( cudaFree(d_Ntranspire) );
+    CUDA_CHECK_ERROR( cudaFree(d_stomatal_sidedness) );
     CUDA_CHECK_ERROR( cudaFree(d_heatcapacity) );
     CUDA_CHECK_ERROR( cudaFree(d_surfacehumidity) );
     CUDA_CHECK_ERROR( cudaFree(d_T) );

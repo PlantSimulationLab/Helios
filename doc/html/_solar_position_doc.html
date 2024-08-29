@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.17</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.18</span>
    </div>
   </td>
  </tr>
@@ -156,16 +156,16 @@ Model Theory</h1>
 <h2><a class="anchor" id="SolarPosTheory"></a>
 Position of the Sun</h2>
 <p >The solar position model was implemented following the description in <a href="https://www.sciencedirect.com/science/article/pii/B9780123737502500069">Chapter 1 of Iqbal (1983)</a>.</p>
-<p >The day angle <img class="formulaInl" alt="$\Gamma$" src="form_96.png" width="11" height="12"/> given as the polar angle of the earth relative to the sun ( <img class="formulaInl" alt="$\Gamma=0$" src="form_166.png" width="38" height="12"/> on Jan. 1) is calculated as</p>
-<center> <img class="formulaInl" alt="$\Gamma = 2\pi(DOY-1)/365.25$" src="form_167.png" width="171" height="17"/>, (1) </center><p >where DOY is the <a href="https://en.wikipedia.org/wiki/Julian_day">Julian Day</a> of the year.</p>
+<p >The day angle <img class="formulaInl" alt="$\Gamma$" src="form_119.png" width="11" height="12"/> given as the polar angle of the earth relative to the sun ( <img class="formulaInl" alt="$\Gamma=0$" src="form_120.png" width="38" height="12"/> on Jan. 1) is calculated as</p>
+<center> <img class="formulaInl" alt="$\Gamma = 2\pi(DOY-1)/365.25$" src="form_121.png" width="171" height="17"/>, (1) </center><p >where DOY is the <a href="https://en.wikipedia.org/wiki/Julian_day">Julian Day</a> of the year.</p>
 <p >The solar declination angle is then calculated as</p>
-<center> <img class="formulaInl" alt="$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$" src="form_168.png" width="575" height="35"/>. (2) </center><p >The <a href="https://en.wikipedia.org/wiki/Equation_of_time">equation of time</a> is calculated as</p>
-<center> <img class="formulaInl" alt="$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$" src="form_169.png" width="527" height="35"/>, (3) </center><p >The hour angle is given by</p>
-<center> <img class="formulaInl" alt="$h=15(LST-12)$" src="form_170.png" width="119" height="17"/>, (4) </center><p >with</p>
-<center> <img class="formulaInl" alt="$LST=hour+minute/60+TC/60$" src="form_171.png" width="234" height="17"/>, (5) </center><p >and</p>
-<center> <img class="formulaInl" alt="$TC=4(15UTC-longitude)+EoT$" src="form_172.png" width="242" height="17"/>, (6) </center><p >Finally, the solar elevation angle is given by</p>
-<center> <img class="formulaInl" alt="$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )$" src="form_173.png" width="378" height="20"/>, (7) </center><p >and the solar azimuthal angle is given by</p>
-<center> <img class="formulaInl" alt="$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))$" src="form_174.png" width="416" height="18"/>. (8) </center><p >Note that <img class="formulaInl" alt="$\mathrm{cos}^{-1}$" src="form_175.png" width="36" height="14"/> gives angles between 0 and <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/>, so to get a <img class="formulaInl" alt="$\phi_s$" src="form_158.png" width="14" height="15"/> between 0 and <img class="formulaInl" alt="$2\pi$" src="form_176.png" width="17" height="11"/>, we take <img class="formulaInl" alt="$\phi_s=2\pi-\phi_s$" src="form_177.png" width="84" height="15"/> if <img class="formulaInl" alt="$LST&gt;12$" src="form_178.png" width="66" height="14"/>.</p>
+<center> <img class="formulaInl" alt="$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$" src="form_122.png" width="575" height="35"/>. (2) </center><p >The <a href="https://en.wikipedia.org/wiki/Equation_of_time">equation of time</a> is calculated as</p>
+<center> <img class="formulaInl" alt="$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$" src="form_123.png" width="527" height="35"/>, (3) </center><p >The hour angle is given by</p>
+<center> <img class="formulaInl" alt="$h=15(LST-12)$" src="form_124.png" width="119" height="17"/>, (4) </center><p >with</p>
+<center> <img class="formulaInl" alt="$LST=hour+minute/60+TC/60$" src="form_125.png" width="234" height="17"/>, (5) </center><p >and</p>
+<center> <img class="formulaInl" alt="$TC=4(15UTC-longitude)+EoT$" src="form_126.png" width="242" height="17"/>, (6) </center><p >Finally, the solar elevation angle is given by</p>
+<center> <img class="formulaInl" alt="$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )$" src="form_127.png" width="378" height="20"/>, (7) </center><p >and the solar azimuthal angle is given by</p>
+<center> <img class="formulaInl" alt="$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))$" src="form_128.png" width="416" height="18"/>. (8) </center><p >Note that <img class="formulaInl" alt="$\mathrm{cos}^{-1}$" src="form_129.png" width="36" height="14"/> gives angles between 0 and <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/>, so to get a <img class="formulaInl" alt="$\phi_s$" src="form_111.png" width="14" height="15"/> between 0 and <img class="formulaInl" alt="$2\pi$" src="form_130.png" width="17" height="11"/>, we take <img class="formulaInl" alt="$\phi_s=2\pi-\phi_s$" src="form_131.png" width="84" height="15"/> if <img class="formulaInl" alt="$LST&gt;12$" src="form_132.png" width="66" height="14"/>.</p>
 <h2><a class="anchor" id="SolarFluxTheory"></a>
 Direct and Diffuse Solar Flux</h2>
 <p >Clear-sky solar fluxes are calculated using the 'REST-2' model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. REST-2 is a state-of-the-art atmospheric transmission model that calculates the solar flux at Earth's surface after attenuation by water vapor, CO<sub>2</sub>, Ozone, NO<sub>2</sub>, and aerosols. The model partitions the total radiative flux into direct and diffuse components.</p>
@@ -173,9 +173,9 @@ Direct and Diffuse Solar Flux</h2>
 Ambient Longwave Flux</h2>
 <p >The longwave radiation flux emanating from the clear-sky is modeled following <a href="https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/qj.49712253306">Prata (1996)</a>.</p>
 <p >The model surmounts to calculating the effective emissivity of the sky as a function of precipitable water in the atmosphere</p>
-<center> <img class="formulaInl" alt="$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)$" src="form_179.png" width="240" height="29"/>, </center><p >where <img class="formulaInl" alt="$u$" src="form_180.png" width="11" height="8"/> is the wator vapor path length (cm of precipitable water) which can be estimated following <a href="https://journals.ametsoc.org/doi/abs/10.1175/1520-0450(1981)020%3C0003%3ATRBTPW%3E2.0.CO%3B2">Viswanadham (1981)</a> for example.</p>
+<center> <img class="formulaInl" alt="$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)$" src="form_133.png" width="240" height="29"/>, </center><p >where <img class="formulaInl" alt="$u$" src="form_134.png" width="11" height="8"/> is the wator vapor path length (cm of precipitable water) which can be estimated following <a href="https://journals.ametsoc.org/doi/abs/10.1175/1520-0450(1981)020%3C0003%3ATRBTPW%3E2.0.CO%3B2">Viswanadham (1981)</a> for example.</p>
 <p >The downwelling longwave radiation flux on a horizontal surface is given by</p>
-<center> <img class="formulaInl" alt="$R_L=\epsilon_s\sigma T_a^4$" src="form_181.png" width="78" height="18"/>, </center><p >where <img class="formulaInl" alt="$\sigma=5.67\times10^{-8}$" src="form_182.png" width="104" height="14"/> W/m<sup>2</sup>-K<sup>4</sup>, and <img class="formulaInl" alt="$T_a$" src="form_43.png" width="17" height="14"/> is the air temperature in Kelvin measured near the ground (say 2 m height).</p>
+<center> <img class="formulaInl" alt="$R_L=\epsilon_s\sigma T_a^4$" src="form_135.png" width="78" height="18"/>, </center><p >where <img class="formulaInl" alt="$\sigma=5.67\times10^{-8}$" src="form_136.png" width="104" height="14"/> W/m<sup>2</sup>-K<sup>4</sup>, and <img class="formulaInl" alt="$T_a$" src="form_43.png" width="17" height="14"/> is the air temperature in Kelvin measured near the ground (say 2 m height).</p>
 <h1><a class="anchor" id="SolarLib"></a>
 Using the SolarPosition Plug-in</h1>
 <h2><a class="anchor" id="SolarPos"></a>
@@ -266,23 +266,23 @@ Calibrating the turbidity using weather station (radiometer) data</h3>
 <h3><a class="anchor" id="SolarFluxClouds"></a>
 Incorporating the effects of clouds</h3>
 <p >The REST2 model for solar fluxes was developed for clear-sky conditions and cannot directly be used when clouds are present. If incident solar radiation data is available (e.g., from a weather station), this can be used to calibrate the model to account for the possible presence of clouds. A simple model is described below for doing so.</p>
-<p >Consider <img class="formulaInl" alt="$R_{meas,h}$" src="form_183.png" width="50" height="17"/> to be the measured all-wave incoming solar radiation flux on a horizontal plane (clear or cloudy conditions), and <img class="formulaInl" alt="$R_{clear}$" src="form_184.png" width="38" height="15"/> to be the predicted all-wave incoming solar radiation flux predicted by the REST2 model for clear-sky conditions perpendicular to the direction of the sun. This flux can be projected onto the horizontal plane according to</p>
+<p >Consider <img class="formulaInl" alt="$R_{meas,h}$" src="form_137.png" width="50" height="17"/> to be the measured all-wave incoming solar radiation flux on a horizontal plane (clear or cloudy conditions), and <img class="formulaInl" alt="$R_{clear}$" src="form_138.png" width="38" height="15"/> to be the predicted all-wave incoming solar radiation flux predicted by the REST2 model for clear-sky conditions perpendicular to the direction of the sun. This flux can be projected onto the horizontal plane according to</p>
 <p class="formulaDsp">
 <img class="formulaDsp" alt="\[
    R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
-\]" src="form_185.png" width="149" height="17"/>
+\]" src="form_139.png" width="149" height="17"/>
 </p>
 <p >The diffuse fraction can be approximated as</p>
 <p class="formulaDsp">
 <img class="formulaDsp" alt="\[
    f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
-\]" src="form_186.png" width="206" height="36"/>
+\]" src="form_140.png" width="206" height="36"/>
 </p>
-<p >where it is enforced that <img class="formulaInl" alt="$0\leq f_{diff} \leq 1$" src="form_187.png" width="89" height="17"/>. The resulting flux that is output from the model is (flux perpendicular to the sun)</p>
+<p >where it is enforced that <img class="formulaInl" alt="$0\leq f_{diff} \leq 1$" src="form_141.png" width="89" height="17"/>. The resulting flux that is output from the model is (flux perpendicular to the sun)</p>
 <p class="formulaDsp">
 <img class="formulaDsp" alt="\[
   R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
-\]" src="form_188.png" width="162" height="36"/>
+\]" src="form_142.png" width="162" height="36"/>
 </p>
 <p >In order to enable flux calibration for cloudy conditions, you must 1) Load timeseries data into the Context containing the measured all-wave solar radiation flux. This data must cover the entire period of the simulation. 2) Call <a class="el" href="class_solar_position.html#abee2003c22cbbffb671e8e6a9305b66f">SolarPosition::enableCloudCalibration()</a>, which requires a string corresponding to the timeseries data value reference in (1). Below is a code example:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;SolarPosition&quot;</span></div>

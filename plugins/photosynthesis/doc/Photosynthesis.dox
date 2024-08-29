@@ -29,6 +29,8 @@
  <tr><td>air\_CO2</td><td>\f$C_a\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>CO<sub>2</sub> concentration of air outside of primitive boundary-layer.</td><td>N/A</td><td>390 \f$\mu\f$mol/mol</td></tr>
  <tr><td>moisture\_conductance</td><td>\f$g_S\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to moisture between sub-stomatal cells and leaf surface (i.e., stomatal conductance).</td><td>Can be computed by \ref StomatalConductanceModel plug-in.</td><td>0.25 mol/m<sup>2</sup>-s</td></tr>
  <tr><td>boundarylayer\_conductance**</td><td>\f$g_H\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to heat between leaf surface and outside of the boundary-layer (i.e., boundary-layer conductance).</td><td>Can be computed by \ref BLConductanceModel plug-in, or by \ref EnergyBalanceModel plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td><td>1.0 mol/m<sup>2</sup>-s</td></tr>
+ <tr><td>twosided\_flag <td>N/A <td>N/A <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Flag indicating the number of primitive faces with heat transfer (twosided\_flag = 0 for one-sided heat transfer; twosided\_flag = 1 for two-sided heat transfer). <td>N/A <td>1 </tr>
+ <tr><td>stomatal\_sidedness <td>\f$\zeta\f$ <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal\_sidedness will be automatically set to 0.<td>N/A <td>0  </tr>
  </table>
 
  \*\*The photosynthesis model will also check for primitive data "boundarylayer_conductance_out" if "boundarylayer_conductance" does not exist. If you are using the energy balance model to calculate the boundary-layer conductance, you should enable optional output primitive data "boundarylayer_conductance_out" so that other plug-ins can use it.
@@ -54,21 +56,21 @@
 
  By default, the plug-in uses the biochemical model. The model can either be set explicitly, as illustrated in the code below, or the model type will be inferred based on the model coefficients that are set (see descriptions below).
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.4">
-  <pre><code> #include "PhotosynthesisModel.h"
+ ~~~~~~{.cpp}
+  #include "PhotosynthesisModel.h"
 
-  int main( void ){
-	%PhotosynthesisModel photosynthesismodel(&context);
+  int main(){
+	PhotosynthesisModel photosynthesismodel(&context);
 
-	\c//Use the Farquahar-von Caemmerer-Berry model
+	//Use the Farquahar-von Caemmerer-Berry model
 	photosynthesismodel.setModelType_Farquhar();
 
 	photosynthesismodel.run();
 
-	\c//Switch back to the empirical model
+	//Switch back to the empirical model
 	photosynthesismodel.setModelType_Empirical();
-  }</code></pre>
-  </div>
+  }
+~~~~~~
 
  \section FarquharDescription Farquhar, von Caemmerer, Berry Model Description
 
@@ -100,9 +102,20 @@
 
  The intercellular CO<sub>2</sub> concentration \f$C_i\f$ is determined from the relation
 
- \f$A=0.75\left(\frac{1.08g_Hg_S}{1.08g_H+g_S}\right)\left(C_{a}-C_i\right)\f$
+ \f$A=0.75g_M\left(C_{a}-C_i\right)\f$
 
  which is solved numerically using the Secant method, since \f$A\f$ is a complex nonlinear function of \f$C_i\f$ which prevents an analytical solution for \f$C_i\f$. The 0.75 factor comes from the fact that diffusion of CO<sub>2</sub> in air is slower than that of water vapor (see Eq. 7.33 of <a href="http://www.springer.com/us/book/9780387949376#otherversion=9781461216261">Campbell and Norman</a>).
+
+ \f$g_M\f$ is the conductance to moisture transfer between the leaf interior and just outside of the leaf boundary-layer, and is calculated as
+
+ \f$g_M = 1.08g_Hg_S\left[\dfrac{\zeta}{1.08g_H+g_S\zeta}+\dfrac{(1-\zeta)}{1.08g_H+g_S(1-\zeta)}\right]\f$,
+
+ where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat. \f$n_s\f$ is the number of primitive faces, which is determined by the value of primitive data "twosided_flag" (twosided\_flag=0 is single-sided and \f$n_s=1\f$, twosided\_flag=1 is two-sided and \f$n_s=2\f$).
+
+ \f$\zeta=\dfrac{D_{upper}}{D_{lower}+D_{upper}}\f$
+
+ is the stomatal sidedness, which is the ratio of the stomatal density of the upper leaf surface to the sum of the upper and lower leaf surface densities, which is set by the primitive data value "stomatal_sidedness". For leaves, \f$\zeta=0\f$ corresponds to hypostomatous leaves (stomata on one side), and \f$\zeta=0.5\f$ to amphistomatous leaves (stomata equally on both sides). It is important to note that if \f$n_s=1\f$, then the value of \f$\zeta\f$ will be overridden and set to 0.
+
 
 \subsection FvCBtemperature Temperature response of model parameters
 

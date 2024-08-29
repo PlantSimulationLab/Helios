@@ -92,8 +92,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description <th>Available Plug-ins <th>Default Value
  <tr><td>radiation\_flux\_[*] <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Net absorbed radiation flux for band [*] (e.g., radiation_flux_PAR). <td>Can be computed by \ref RadiationModel plug-in. <td>N/A (must add at least one band)
-  <tr><td>wind\_speed <td>m/s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
-  <tr><td>object\_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
+ <tr><td>wind\_speed <td>m/s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
+ <tr><td>object\_length <td>m <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
  <tr><td>boundarylayer\_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
  <tr><td>air\_temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>300 K
  <tr><td>moisture\_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Conductance to moisture between sub-surface air spaces and surface (e.g., for leaves this is stomatal conductance). <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0
@@ -102,9 +102,10 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <tr><td>air\_pressure <td>Pascals <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Atmospheric pressure. <td>N/A <td>101,000 Pa
  <tr><td>heat\_capacity <td> J/m<sup>2</sup>/<sup>o</sup>C <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Heat capacity of object. <td>N/A <td>0
  <tr><td>other\_surface\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Other surface energy fluxes. <td>N/A <td>0
- <tr><td>twosided\_flag <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Flag indicating the number of primitive faces with heat transfer (twosided_flag = 0 for one-sided heat transfer; twosided_flag = 1 for two-sided heat transfer). <td>N/A <td>1
- <tr><td>evaporating\_faces <td>N/A</sup> <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Number of primitive faces from which water is evaporating (must be 1 or 2). Note: if "twosided_flag" is equal to 0, the number of evaporating faces will be automatically set to 1.<td>N/A <td>1  </table>
- 
+ <tr><td>twosided\_flag <td>N/A <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Flag indicating the number of primitive faces with heat transfer (twosided\_flag = 0 for one-sided heat transfer; twosided\_flag = 1 for two-sided heat transfer). <td>N/A <td>1 </tr>
+ <tr><td>stomatal\_sidedness <td>\f$\zeta\f$ <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal\_sidedness will be automatically set to 0.<td>N/A <td>0  </tr>
+ </table>
+
  \subsection EBOutputData Default Output Primitive Data
  
  <table>
@@ -152,7 +153,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \f$g_H = 0.135 n_s\sqrt{\frac{U}{L}}\f$,
 
- where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. \f$n_s\f$ is the number of primitive faces , which is determined by the value of primitive data "twosided_flag" (twosided\_flag=0 is single-sided and \f$n_s=1\f$, twosided\_flag=1 is two-sided and \f$n_s=2\f$).
+ where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. \f$n_s\f$ is the number of primitive faces, which is determined by the value of primitive data "twosided_flag" (twosided\_flag=0 is single-sided and \f$n_s=1\f$, twosided\_flag=1 is two-sided and \f$n_s=2\f$).
 
  \subsection EBgm Moisture Conductance
 
@@ -168,11 +169,13 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
    Once the water vapor has diffused to the surface, the rate of transfer is then determined by the surface boundary-layer conductance. The sub-surface conductance and boundary-layer conductance act in serial, and can be combined to yield an overall moisture conductance between the sub-surface air spaces and the outside of the boundary layer according to
 
-   \f$g_M = n_e\dfrac{(1.08g_H/n_s)g_S}{1.08g_H/n_s+g_S}\f$,
+   \f$g_M = 1.08g_Hg_S\left[\dfrac{\zeta}{1.08g_H+g_S\zeta}+\dfrac{(1-\zeta)}{1.08g_H+g_S(1-\zeta)}\right]\f$,
 
-   where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat. \f$n_e\f$ is the number of evaporating surfaces of the primitive (either 1 or 2), which is set by the primitive data value "evaporating_faces". For leaves, \f$n_e=1\f$ corresponds to hypostomatous leaves (stomata on one side), and \f$n_e=2\f$ to amphistomatous leaves (stomata on both sides).
+   where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat.
 
-   It is important to note that if \f$n_s=1\f$, then the value of \f$n_e\f$ will be overridden and also set to 1.
+   \f$\zeta=\dfrac{D_{upper}}{D_{lower}+D_{upper}}\f$
+
+   is the stomatal sidedness, which is the ratio of the stomatal density of the upper leaf surface to the sum of the upper and lower leaf surface densities, which is set by the primitive data value "stomatal_sidedness". For leaves, \f$\zeta=0\f$ corresponds to hypostomatous leaves (stomata on one side), and \f$\zeta=0.5\f$ to amphistomatous leaves (stomata equally on both sides). It is important to note that if \f$n_s=1\f$, then the value of \f$\zeta\f$ will be overridden and set to 0.
 
    \subsection EBRun Running the Steady-State Model
 

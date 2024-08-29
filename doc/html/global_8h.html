@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.17</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.18</span>
    </div>
   </td>
  </tr>
@@ -220,6 +220,27 @@ Functions</h2></td></tr>
 <tr class="memitem:a51430e9e359c2aad9d22d41650b2221a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a51430e9e359c2aad9d22d41650b2221a">helios::parse_uint</a> (const std::string &amp;input_string, uint &amp;converted_uint)</td></tr>
 <tr class="memdesc:a51430e9e359c2aad9d22d41650b2221a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an unsigned integer with error checking.  <a href="global_8h.html#a51430e9e359c2aad9d22d41650b2221a">More...</a><br /></td></tr>
 <tr class="separator:a51430e9e359c2aad9d22d41650b2221a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e1e35a11454f9616bad5639ccb49ff3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a3e1e35a11454f9616bad5639ccb49ff3">helios::parse_vec2</a> (const std::string &amp;input_string, <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;converted_vec2)</td></tr>
+<tr class="memdesc:a3e1e35a11454f9616bad5639ccb49ff3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into a <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> with error checking.  <a href="global_8h.html#a3e1e35a11454f9616bad5639ccb49ff3">More...</a><br /></td></tr>
+<tr class="separator:a3e1e35a11454f9616bad5639ccb49ff3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2e62477aa096b070d49a68b88427f7a5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a2e62477aa096b070d49a68b88427f7a5">helios::parse_vec3</a> (const std::string &amp;input_string, <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;converted_vec3)</td></tr>
+<tr class="memdesc:a2e62477aa096b070d49a68b88427f7a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into a <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> with error checking.  <a href="global_8h.html#a2e62477aa096b070d49a68b88427f7a5">More...</a><br /></td></tr>
+<tr class="separator:a2e62477aa096b070d49a68b88427f7a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afcb3f2f96f4679210db6f68845c87a51"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#afcb3f2f96f4679210db6f68845c87a51">helios::parse_xml_tag_int</a> (const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</td></tr>
+<tr class="memdesc:afcb3f2f96f4679210db6f68845c87a51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing an integer value.  <a href="global_8h.html#afcb3f2f96f4679210db6f68845c87a51">More...</a><br /></td></tr>
+<tr class="separator:afcb3f2f96f4679210db6f68845c87a51"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0627913352046dda81c72c9ce234a7e7"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a0627913352046dda81c72c9ce234a7e7">helios::parse_xml_tag_float</a> (const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</td></tr>
+<tr class="memdesc:a0627913352046dda81c72c9ce234a7e7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a float value.  <a href="global_8h.html#a0627913352046dda81c72c9ce234a7e7">More...</a><br /></td></tr>
+<tr class="separator:a0627913352046dda81c72c9ce234a7e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d4fc938af8d1e0db7836a610b7feda0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">vec2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a6d4fc938af8d1e0db7836a610b7feda0">helios::parse_xml_tag_vec2</a> (const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</td></tr>
+<tr class="memdesc:a6d4fc938af8d1e0db7836a610b7feda0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> value (i.e., two space delimited floats)  <a href="global_8h.html#a6d4fc938af8d1e0db7836a610b7feda0">More...</a><br /></td></tr>
+<tr class="separator:a6d4fc938af8d1e0db7836a610b7feda0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1b7e887e4b92085bc9f52a00227ca1d0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a1b7e887e4b92085bc9f52a00227ca1d0">helios::parse_xml_tag_vec3</a> (const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</td></tr>
+<tr class="memdesc:a1b7e887e4b92085bc9f52a00227ca1d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> value (i.e., three space delimited floats)  <a href="global_8h.html#a1b7e887e4b92085bc9f52a00227ca1d0">More...</a><br /></td></tr>
+<tr class="separator:a1b7e887e4b92085bc9f52a00227ca1d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a48786337175ba01ad180ef493f460b"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="global_8h.html#a8a48786337175ba01ad180ef493f460b">helios::parse_xml_tag_string</a> (const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</td></tr>
+<tr class="memdesc:a8a48786337175ba01ad180ef493f460b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a string.  <a href="global_8h.html#a8a48786337175ba01ad180ef493f460b">More...</a><br /></td></tr>
+<tr class="separator:a8a48786337175ba01ad180ef493f460b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8180158609698aae15da7574b085b817"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_b_acolor.html">RGBAcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga8180158609698aae15da7574b085b817">helios::string2RGBcolor</a> (const char *str)</td></tr>
 <tr class="memdesc:ga8180158609698aae15da7574b085b817"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an <a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">RGBcolor</a> vector.  <a href="group__functions.html#ga8180158609698aae15da7574b085b817">More...</a><br /></td></tr>
 <tr class="separator:ga8180158609698aae15da7574b085b817"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -716,7 +737,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>int3, with int3::x = day, int3::y = month, int3::z = year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>JulianDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01141">1141</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01225">1225</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -783,7 +804,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02807">2807</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02891">2891</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -813,7 +834,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain an extension, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02905">2905</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02989">2989</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -843,7 +864,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename including extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02946">2946</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03030">3030</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -884,7 +905,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File path contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a path, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02957">2957</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03041">3041</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -914,7 +935,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename without extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02931">2931</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03015">3015</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -942,7 +963,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01658">1658</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01742">1742</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -999,7 +1020,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>One-dimensional vector of floats contained in text file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02975">2975</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03059">3059</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1039,7 +1060,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of y interpolated at location x. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02852">2852</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02936">2936</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1087,7 +1108,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>CalendarDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01184">1184</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01268">1268</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1311,6 +1332,321 @@ Variables</h2></td></tr>
 
 </div>
 </div>
+<a id="a3e1e35a11454f9616bad5639ccb49ff3" name="a3e1e35a11454f9616bad5639ccb49ff3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3e1e35a11454f9616bad5639ccb49ff3">&#9670;&#160;</a></span>parse_vec2()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::parse_vec2 </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>input_string</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;&#160;</td>
+          <td class="paramname"><em>converted_vec2</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Convert a string into a vec2 with error checking. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">input_string</td><td>String to be converted to numerical value </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">converted_vec2</td><td>Output numerical value converted from input string </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00827">827</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2e62477aa096b070d49a68b88427f7a5" name="a2e62477aa096b070d49a68b88427f7a5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2e62477aa096b070d49a68b88427f7a5">&#9670;&#160;</a></span>parse_vec3()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::parse_vec3 </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>input_string</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;&#160;</td>
+          <td class="paramname"><em>converted_vec3</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Convert a string into a vec3 with error checking. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">input_string</td><td>String to be converted to numerical value </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">converted_vec3</td><td>Output numerical value converted from input string </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00843">843</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0627913352046dda81c72c9ce234a7e7" name="a0627913352046dda81c72c9ce234a7e7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0627913352046dda81c72c9ce234a7e7">&#9670;&#160;</a></span>parse_xml_tag_float()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float helios::parse_xml_tag_float </td>
+          <td>(</td>
+          <td class="paramtype">const pugi::xml_node &amp;&#160;</td>
+          <td class="paramname"><em>node</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>tag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>calling_function</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Parse an XML tag containing a float value. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">node</td><td>XML node containing the tag </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">tag</td><td>Name of the tag to be parsed </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">calling_function</td><td>Name of the function calling this function (for error reporting). e.g., Context::loadXML </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Float value of the tag </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00872">872</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afcb3f2f96f4679210db6f68845c87a51" name="afcb3f2f96f4679210db6f68845c87a51"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afcb3f2f96f4679210db6f68845c87a51">&#9670;&#160;</a></span>parse_xml_tag_int()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int helios::parse_xml_tag_int </td>
+          <td>(</td>
+          <td class="paramtype">const pugi::xml_node &amp;&#160;</td>
+          <td class="paramname"><em>node</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>tag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>calling_function</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Parse an XML tag containing an integer value. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">node</td><td>XML node containing the tag </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">tag</td><td>Name of the tag to be parsed </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">calling_function</td><td>Name of the function calling this function (for error reporting). e.g., Context::loadXML </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Integer value of the tag </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00860">860</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8a48786337175ba01ad180ef493f460b" name="a8a48786337175ba01ad180ef493f460b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a48786337175ba01ad180ef493f460b">&#9670;&#160;</a></span>parse_xml_tag_string()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string helios::parse_xml_tag_string </td>
+          <td>(</td>
+          <td class="paramtype">const pugi::xml_node &amp;&#160;</td>
+          <td class="paramname"><em>node</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>tag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>calling_function</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Parse an XML tag containing a string. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">node</td><td>XML node containing the tag </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">tag</td><td>Name of the tag to be parsed </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">calling_function</td><td>Name of the function calling this function (for error reporting). e.g., Context::loadXML </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>String value of the tag </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00908">908</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a6d4fc938af8d1e0db7836a610b7feda0" name="a6d4fc938af8d1e0db7836a610b7feda0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6d4fc938af8d1e0db7836a610b7feda0">&#9670;&#160;</a></span>parse_xml_tag_vec2()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec2.html">vec2</a> helios::parse_xml_tag_vec2 </td>
+          <td>(</td>
+          <td class="paramtype">const pugi::xml_node &amp;&#160;</td>
+          <td class="paramname"><em>node</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>tag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>calling_function</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Parse an XML tag containing a vec2 value (i.e., two space delimited floats) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">node</td><td>XML node containing the tag </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">tag</td><td>Name of the tag to be parsed </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">calling_function</td><td>Name of the function calling this function (for error reporting). e.g., Context::loadXML </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>vec2 value of the tag </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00884">884</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1b7e887e4b92085bc9f52a00227ca1d0" name="a1b7e887e4b92085bc9f52a00227ca1d0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1b7e887e4b92085bc9f52a00227ca1d0">&#9670;&#160;</a></span>parse_xml_tag_vec3()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec3.html">vec3</a> helios::parse_xml_tag_vec3 </td>
+          <td>(</td>
+          <td class="paramtype">const pugi::xml_node &amp;&#160;</td>
+          <td class="paramname"><em>node</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>tag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>calling_function</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Parse an XML tag containing a vec3 value (i.e., three space delimited floats) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">node</td><td>XML node containing the tag </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">tag</td><td>Name of the tag to be parsed </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">calling_function</td><td>Name of the function calling this function (for error reporting). e.g., Context::loadXML </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>vec3 value of the tag </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00896">896</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a07b0dda8b9aee4100e9f6332dbfe7f64" name="a07b0dda8b9aee4100e9f6332dbfe7f64"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a07b0dda8b9aee4100e9f6332dbfe7f64">&#9670;&#160;</a></span>PNGHasAlpha()</h2>
 
@@ -1335,7 +1671,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01268">1268</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01352">1352</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1375,7 +1711,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>distance between p1 and p2 in three dimensions </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02901">2901</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02985">2985</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1428,7 +1764,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01590">1590</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01674">1674</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1481,7 +1817,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01421">1421</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01505">1505</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1510,7 +1846,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>2D mask, where false denotes no material </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01322">1322</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01406">1406</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1692,7 +2028,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01698">1698</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01782">1782</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1745,7 +2081,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01510">1510</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01594">1594</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1784,7 +2120,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02638">2638</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02722">2722</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1823,7 +2159,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02655">2655</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02739">2739</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1862,7 +2198,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02732">2732</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02816">2816</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1901,7 +2237,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02747">2747</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02831">2831</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1940,7 +2276,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02762">2762</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02846">2846</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1979,7 +2315,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02777">2777</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02861">2861</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2018,7 +2354,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02792">2792</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02876">2876</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2057,7 +2393,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02672">2672</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02756">2756</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2096,7 +2432,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02687">2687</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02771">2771</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2135,7 +2471,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02702">2702</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02786">2786</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2174,7 +2510,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02717">2717</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02801">2801</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

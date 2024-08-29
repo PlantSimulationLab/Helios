@@ -533,6 +533,8 @@ public:
     
     //! Return labels for all object data for this particular object
     std::vector<std::string> listObjectData() const;
+
+    friend class Context;
     
 protected:
     
@@ -570,6 +572,8 @@ protected:
     std::map<std::string, std::vector<int4> > object_data_int4;
     std::map<std::string, std::vector<std::string> > object_data_string;
     std::map<std::string, std::vector<bool> > object_data_bool;
+
+    bool ishidden = false;
     
 };
 
@@ -611,6 +615,8 @@ public:
 protected:
     
     helios::int2 subdiv;
+
+    friend class CompoundObject;
     
 };
 
@@ -638,10 +644,15 @@ public:
      * \param[in] subdiv Number of subdivisions in zenithal and azimuthal directions.
      */
     void setSubdivisionCount(uint subdiv );
+
+    //! Get the volume of the sphere object
+    float getVolume() const;
     
 protected:
     
     uint subdiv;
+
+    friend class CompoundObject;
     
 };
 
@@ -672,6 +683,9 @@ public:
      * \param[in] subdiv Number of subdivisions in zenithal and azimuthal directions.
      */
     void setSubdivisionCount( uint subdiv );
+
+    //! Get the volume of the tube object
+    float getVolume() const;
     
 protected:
     
@@ -682,6 +696,8 @@ protected:
     std::vector<helios::RGBcolor> colors;
     
     uint subdiv;
+
+    friend class CompoundObject;
     
 };
 
@@ -709,10 +725,15 @@ public:
      * \param[in] subdiv Number of patch subdivisions in each direction.
      */
     void setSubdivisionCount( const helios::int3 &subdiv );
+
+    //! Get the volume of the box object
+    float getVolume() const;
     
 protected:
     
     helios::int3 subdiv;
+
+    friend class CompoundObject;
     
 };
 
@@ -744,6 +765,8 @@ public:
 protected:
     
     int2 subdiv;
+
+    friend class CompoundObject;
     
 };
 
@@ -756,9 +779,13 @@ public:
     
     //! Polymesh destructor
     ~Polymesh() override = default;
+
+    //! Get the volume of the polymesh object
+    float getVolume() const;
     
 protected:
-    
+
+    friend class CompoundObject;
     
 };
 
@@ -824,6 +851,9 @@ public:
      * \param[in] S Scaling factor
      */
     void scaleGirth( float S );
+
+    //! Get the volume of the cone object
+    float getVolume() const;
     
 protected:
     
@@ -831,6 +861,8 @@ protected:
     std::vector<float> radii;
     
     uint subdiv;
+
+    friend class CompoundObject;
     
 };
 
@@ -1299,7 +1331,9 @@ protected:
     std::map<std::string, std::vector<std::string> > primitive_data_string;
     std::map<std::string, std::vector<bool> > primitive_data_bool;
     
-    bool texturecoloroverridden;
+    bool texturecoloroverridden = false;
+
+    bool ishidden = false;
     
 };
 
@@ -1896,6 +1930,8 @@ private:
     void addTexture( const char* texture_file );
 
     bool doesTextureFileExist(const char* texture_file ) const;
+
+    bool validateTextureFileExtenstion( const char* texture_file ) const;
     
     //----------- GLOBAL DATA -------------//
     
@@ -2300,10 +2336,10 @@ public:
     
     //! copy all primitive data from one primitive to another
     /**
-     * \param[in] UUID unique universal identifier (UUID) of primitive that is the source of data for copying
-     * \param[in] currentUUID unique universal identifier (UUID) of primitive that is the destination for data copying
+     * \param[in] sourceUUID unique universal identifier (UUID) of primitive that is the source of data for copying
+     * \param[in] destinationUUID unique universal identifier (UUID) of primitive that is the destination for data copying
      */
-    void copyPrimitiveData( uint UUID, uint currentUUID);
+    void copyPrimitiveData(uint sourceUUID, uint destinationUUID);
 
     //! Rename primitive data for a primitive
     /**
@@ -2342,7 +2378,6 @@ public:
      */
     helios::vec2 getPatchSize( uint UUID ) const;
     
-    
     //! Get the Cartesian (x,y,z) center position of a patch element
     /**
      * \param[in] UUID Unique universal identifier for patch.
@@ -2378,12 +2413,26 @@ public:
     
     //!Get the total number of Primitives in the Context
     /**
+     * \note This includes hidden primitives
      * \ingroup primitives
      */
     uint getPrimitiveCount() const;
     
     //!Get all primitive UUIDs currently in the Context
     std::vector<uint> getAllUUIDs() const;
+
+    //! Hide primitives in the Context such that their UUIDs are not returned in Context::getAllUUIDs()
+    /**
+     * \param[in] UUIDs Vector of primitive UUIDs to hide
+     */
+    void hidePrimitive( const std::vector<uint> &UUIDs );
+
+    //! Query whether a primitive is hidden
+    /**
+     * \param[in] UUID Unique universal identifier of primitive element
+     * \return true if primitive is hidden, false if not
+     */
+    bool isPrimitiveHidden( uint UUID ) const;
 
     //! Delete UUIDs from vector if primitives no longer exist (1D vector)
     /**
@@ -3005,20 +3054,17 @@ public:
      */
     uint getPrimitiveParentObjectID( uint UUID  )const;
     
+    //! Method to return unique parent object IDs for a vector of primitive UUIDs
+    /**
+     * \param[in] UUIDs Vector of universal unique identifiers of primitives.
+     */
+    std::vector<uint> getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs) const;
     
     //! Method to return unique parent object IDs for a vector of primitive UUIDs
     /**
      * \param[in] UUIDs Vector of universal unique identifiers of primitives.
      */
-    std::vector<uint> getUniquePrimitiveParentObjectIDs(std::vector<uint> UUIDs) const;
-    
-    
-    //! Method to return unique parent object IDs for a vector of primitive UUIDs
-    /**
-     * \param[in] UUIDs Vector of universal unique identifiers of primitives.
-     */
-    std::vector<uint> getUniquePrimitiveParentObjectIDs(std::vector<uint> UUIDs, bool include_ObjID_zero) const;
-    
+    std::vector<uint> getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs, bool include_ObjID_zero) const;
     
     //! Method to return the surface area of a Primitive
     /**
@@ -3041,6 +3087,19 @@ public:
      * \param[out] max_corner (x,y,z) coordinate of the bounding box corner in the +x, +y and +z direction.
      */
     void getPrimitiveBoundingBox( const std::vector<uint> &UUID, vec3 &min_corner, vec3 &max_corner ) const;
+
+    //! Hide compound objects in the Context such that their object IDs are not returned in Context::getAllObjectIDs(), and are not counted in Context::getObjectCount()
+    /**
+     * \param[in] ObjID Identifier of the object.
+     */
+    void hideObject( const std::vector<uint> &ObjIDs );
+
+    //! Query if an object is hidden
+    /**
+     * \param[in] ObjID Identifier of the object.
+     * \return True if the object is hidden, false otherwise.
+     */
+    bool isObjectHidden( uint ObjID ) const;
     
     //! Method to return the one-sided surface area of an object
     /**
@@ -4312,10 +4371,10 @@ public:
 
     //! copy all object data from one compound object to another
     /**
-     * \param[in] objID uint Object identifier for compound object that is the source of data for copying
-     * \param[in] currentObjID uint Object identifier for compound object that is the destination for data copying
+     * \param[in] source_objID uint Object identifier for compound object that is the source of data for copying
+     * \param[in] destination_objID uint Object identifier for compound object that is the destination for data copying
      */
-    void copyObjectData( uint objID, uint currentObjID);
+    void copyObjectData(uint source_objID, uint destination_objID);
 
     //! Duplicate/copy existing object data
     /**
@@ -4482,7 +4541,7 @@ public:
     /**
      * \param[in] ObjID Identifier for Tile Compound Object.
      */
-    float getTileObjectAreaRatio(const uint &ObjectID) const;
+    float getTileObjectAreaRatio(uint ObjectID) const;
     
     //! Get the area ratio of a multiple tile objects (total object area / sub-patch area)
     /**
@@ -4495,7 +4554,7 @@ public:
      * \param[in] ObjectIDs object IDs of the tile objects to change
      * \param[in] new_subdiv the new subdivisions desired
      */
-    void setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, int2 new_subdiv);
+    void setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, const int2 &new_subdiv);
     
     //! change the subdivisions of a tile object
     /**
@@ -4506,42 +4565,41 @@ public:
     
     //! Get the Cartesian (x,y,z) center position of a tile object
     /**
-     * \param[in] ObjectID object ID of the tile object
+     * \param[in] ObjID object ID of the tile object
      * \return Center position of a Tile Object.
      * \note If the ObjID passed to this method does not correspond to a Tile Object, an error will be thrown.
      */
-    helios::vec3 getTileObjectCenter(uint &ObjectID) const;
-    
+    helios::vec3 getTileObjectCenter(uint ObjID) const;
     
     //! get the size of a tile object from the context
     /**
-     * \param[in] ObjectID object ID of the tile object
+     * \param[in] ObjID object ID of the tile object
      */
-    helios::vec2 getTileObjectSize(uint &ObjectID) const;
+    helios::vec2 getTileObjectSize(uint ObjID) const;
     
     //! get the subdivision count of a tile object from the context
     /**
-     * \param[in] ObjectID object ID of the tile object
+     * \param[in] ObjID object ID of the tile object
      */
-    helios::int2 getTileObjectSubdivisionCount(uint &ObjectID) const;
+    helios::int2 getTileObjectSubdivisionCount(uint ObjID) const;
     
     //! get the normal of a tile object from the context
     /**
-     * \param[in] ObjectID object ID of the tile object
+     * \param[in] ObjID object ID of the tile object
      */
-    helios::vec3 getTileObjectNormal(uint &ObjectID) const;
+    helios::vec3 getTileObjectNormal(uint ObjID) const;
     
     //! get the texture UV coordinates of a tile object from the context
     /**
-     * \param[in] ObjectID object ID of the tile object
+     * \param[in] ObjID object ID of the tile object
      */
-    std::vector<helios::vec2> getTileObjectTextureUV(uint &ObjectID) const;
+    std::vector<helios::vec2> getTileObjectTextureUV(uint ObjID) const;
     
     //! get the vertices of a tile object from the context
     /**
-     * \param[in] ObjectID object ID of the tile object
+     * \param[in] ObjID object ID of the tile object
      */
-    std::vector<helios::vec3> getTileObjectVertices(uint &ObjectID) const;
+    std::vector<helios::vec3> getTileObjectVertices(uint ObjID) const;
     
     //! Get a pointer to a Sphere Compound Object
     /**
@@ -4551,24 +4609,31 @@ public:
     
     //! get the center of a Sphere object from the context
     /**
-     * \param[in] ObjectID object ID of the Sphere object
+     * \param[in] ObjID object ID of the Sphere object
      */
-    helios::vec3 getSphereObjectCenter(uint &ObjectID) const;
+    helios::vec3 getSphereObjectCenter(uint ObjID) const;
     
     //! get the radius of a Sphere object from the context
     /**
      * \param[in] ObjectID object ID of the Sphere object
      */
-    helios::vec3 getSphereObjectRadius(uint &ObjID) const;
+    helios::vec3 getSphereObjectRadius(uint ObjID) const;
     
     //! get the subdivision count of a Sphere object from the context
     /**
-     * \param[in] ObjectID object ID of the Sphere object
+     * \param[in] ObjID object ID of the Sphere object
      */
-    uint getSphereObjectSubdivisionCount(uint &ObjectID) const;
+    uint getSphereObjectSubdivisionCount(uint ObjID) const;
+
+    //! get the volume of a Sphere object from the context
+    /**
+     * \param[in] ObjID object ID of the Sphere object
+     */
+    float getSphereObjectVolume( uint ObjID ) const;
     
     //! Get a pointer to a Tube Compound Object
-    /** \param[in] ObjID Identifier for Tube Compound Object.
+    /**
+     * \param[in] ObjID Identifier for Tube Compound Object.
      */
     Tube* getTubeObjectPointer(uint ObjID ) const;
     
@@ -4576,26 +4641,31 @@ public:
     /**
      * \param[in] ObjectID object ID of the Tube object
      */
-    uint getTubeObjectSubdivisionCount(uint &ObjectID) const;
+    uint getTubeObjectSubdivisionCount(uint ObjectID) const;
     
     //! get the nodes of a Tube object from the context
     /**
-     * \param[in] ObjectID object ID of the Tube object
+     * \param[in] ObjID object ID of the Tube object
      */
-    std::vector<helios::vec3> getTubeObjectNodes(uint &ObjectID) const;
+    std::vector<helios::vec3> getTubeObjectNodes(uint ObjID) const;
     
     //! get the node radii of a Tube object from the context
     /**
-     * \param[in] ObjectID object ID of the Tube object
+     * \param[in] ObjID object ID of the Tube object
      */
-    std::vector<float> getTubeObjectNodeRadii(uint &ObjectID) const;
+    std::vector<float> getTubeObjectNodeRadii(uint ObjID) const;
     
     //! get the node colors of a Tube object from the context
     /**
-     * \param[in] ObjectID object ID of the Tube object
+     * \param[in] ObjID object ID of the Tube object
      */
-    std::vector<RGBcolor> getTubeObjectNodeColors(uint &ObjectID) const;
-    
+    std::vector<RGBcolor> getTubeObjectNodeColors(uint ObjID) const;
+
+    //! get the volume of a Tube object from the context
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     */
+    float getTubeObjectVolume( uint ObjID ) const;
     
     //! Get a pointer to a Box Compound Object
     /**
@@ -4605,21 +4675,27 @@ public:
     
     //! get the center of a Box object from the context
     /**
-     * \param[in] ObjectID object ID of the Box object
+     * \param[in] ObjID object ID of the Box object
      */
-    helios::vec3 getBoxObjectCenter(uint &ObjectID) const;
+    helios::vec3 getBoxObjectCenter(uint ObjID) const;
     
     //! get the size of a Box object from the context
     /**
-     * \param[in] ObjectID object ID of the Box object
+     * \param[in] ObjID object ID of the Box object
      */
-    helios::vec3 getBoxObjectSize(uint &ObjectID) const;
+    helios::vec3 getBoxObjectSize(uint ObjID) const;
     
     //! get the subdivision count of a Box object from the context
     /**
-     * \param[in] ObjectID object ID of the Box object
+     * \param[in] ObjID object ID of the Box object
      */
-    helios::int3 getBoxObjectSubdivisionCount(uint &ObjectID) const;
+    helios::int3 getBoxObjectSubdivisionCount(uint ObjID) const;
+
+    //! get the volume of a Box object from the context
+    /**
+     * \param[in] ObjID object ID of the Box object
+     */
+    float getBoxObjectVolume( uint ObjID ) const;
     
     //! Get a pointer to a Disk Compound Object
     /**
@@ -4629,26 +4705,33 @@ public:
     
     //! get the center of a Disk object from the context
     /**
-     * \param[in] ObjectID object ID of the Disk object
+     * \param[in] ObjID object ID of the Disk object
      */
-    helios::vec3 getDiskObjectCenter(uint &ObjectID) const;
+    helios::vec3 getDiskObjectCenter(uint ObjID) const;
     
     //! get the size of a Disk object from the context
     /**
-     * \param[in] ObjectID object ID of the Disk object
+     * \param[in] ObjID object ID of the Disk object
      */
-    helios::vec2 getDiskObjectSize(uint &ObjectID) const;
+    helios::vec2 getDiskObjectSize(uint ObjID) const;
     
     //! get the subdivision count of a Disk object from the context
     /**
-     * \param[in] ObjectID object ID of the Disk object
+     * \param[in] ObjID object ID of the Disk object
      */
-    uint getDiskObjectSubdivisionCount(uint &ObjectID) const;
+    uint getDiskObjectSubdivisionCount(uint ObjID) const;
     
     //! Get a pointer to a Polygon Mesh Compound Object
-    /** \param[in] ObjID Identifier for Polygon Mesh Compound Object.
+    /**
+     * \param[in] ObjID Identifier for Polygon Mesh Compound Object.
      */
     Polymesh* getPolymeshObjectPointer(uint ObjID ) const;
+
+    //! Get the volume of a Polygon Mesh object from the context
+    /**
+     * \param[in] ObjID object ID of the Polygon Mesh object
+     */
+    float getPolymeshObjectVolume( uint ObjID ) const;
     
     //! Get a pointer to a Cone Compound Object
     /**
@@ -4658,46 +4741,52 @@ public:
     
     //! get the subdivision count of a Cone object from the context
     /**
-     * \param[in] ObjectID object ID of the Cone object
+     * \param[in] ObjID object ID of the Cone object
      */
-    uint getConeObjectSubdivisionCount(uint &ObjectID) const;
+    uint getConeObjectSubdivisionCount(uint ObjID) const;
     
     //! get the nodes of a Cone object from the context
     /**
-     * \param[in] ObjectID object ID of the Cone object
+     * \param[in] ObjID object ID of the Cone object
      */
-    std::vector<helios::vec3> getConeObjectNodes(uint &ObjectID) const;
+    std::vector<helios::vec3> getConeObjectNodes(uint ObjID) const;
     
     //! get the node radii of a Cone object from the context
     /**
-     * \param[in] ObjectID object ID of the Cone object
+     * \param[in] ObjID object ID of the Cone object
      */
-    std::vector<float> getConeObjectNodeRadii(uint &ObjectID) const;
+    std::vector<float> getConeObjectNodeRadii(uint ObjID) const;
     
     //! get a node of a Cone object from the context
     /**
-     * \param[in] ObjectID object ID of the Cone object
+     * \param[in] ObjID object ID of the Cone object
      */
-    helios::vec3 getConeObjectNode(uint &ObjectID, int number) const;
+    helios::vec3 getConeObjectNode(uint ObjID, int number) const;
     
     //! get a node radius of a Cone object from the context
     /**
-     * \param[in] ObjectID object ID of the Cone object
+     * \param[in] ObjID object ID of the Cone object
      */
-    float getConeObjectNodeRadius(uint &ObjectID, int number) const;
+    float getConeObjectNodeRadius(uint ObjID, int number) const;
     
     //! get the axis unit vector of a Cone object from the context
     /**
-     * \param[in] ObjectID object ID of the Cone object
+     * \param[in] ObjID object ID of the Cone object
      */
-    helios::vec3 getConeObjectAxisUnitVector(uint &ObjectID) const;
+    helios::vec3 getConeObjectAxisUnitVector(uint ObjID) const;
     
     //! get the length of a Cone object from the context
     /**
-     * \param[in] ObjectID object ID of the Cone object
+     * \param[in] ObjID object ID of the Cone object
      * \return Dimension of cone object in the axial direction
      */
-    float getConeObjectLength(uint &ObjectID) const;
+    float getConeObjectLength(uint ObjID) const;
+
+    //! get the volume of a Cone object from the context
+    /**
+     * \param[in] ObjID object ID of the Cone object
+     */
+    float getConeObjectVolume( uint ObjID ) const;
     
     //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
     /**
@@ -4989,12 +5078,12 @@ public:
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
-     * \param[in] texture_file path to JPEG file to be used as texture
+     * \param[in] texturefile path to JPEG file to be used as texture
      * \return Object ID of new disk object
      * \note Assumes a default color of black.
      * \ingroup compoundobjects
      */
-    uint addDiskObject(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
+    uint addDiskObject(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texturefile );
     
     //! Add new Polymesh Compound Object
     /** Method to add a new Polymesh to the Context given a vector of UUIDs
@@ -5303,12 +5392,12 @@ public:
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
-     * \param[in] texture_file path to JPEG file to be used as texture
+     * \param[in] texturefile path to JPEG file to be used as texture
      * \return Vector of UUIDs for each sub-triangle
      * \note Assumes a default color of black.
      * \ingroup compoundobjects
      */
-    std::vector<uint> addDisk(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texture_file );
+    std::vector<uint> addDisk(const int2 &Ndivs, const helios::vec3& center, const helios::vec2& size, const helios::SphericalCoord& rotation, const char* texturefile );
     
     //! Add a 3D cone to the Context
     /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
@@ -5726,7 +5815,7 @@ public:
      * \param[in] date Date vector
      * \sa getDate()
      */
-    void setDate( helios::Date date );
+    void setDate(const Date &date );
     
     //! Set simulation date by Julian day
     /**
@@ -5782,7 +5871,7 @@ public:
      * \sa getTime()
      * \sa setSunDirection()
      */
-    void setTime( helios::Time time );
+    void setTime(const Time &time );
     
     //! Get the simulation time
     /**

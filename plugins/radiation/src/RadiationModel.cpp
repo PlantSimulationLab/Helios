@@ -306,6 +306,16 @@ uint RadiationModel::addCollimatedRadiationSource(const vec3 &direction ){
         helios_runtime_error("ERROR (RadiationModel::addCollimatedRadiationSource): A maximum of 256 radiation sources are allowed.");
     }
 
+    bool warn_multiple_suns = false;
+    for( auto& source : radiation_sources ){
+        if( source.source_type==RADIATION_SOURCE_TYPE_COLLIMATED || source.source_type==RADIATION_SOURCE_TYPE_SUN_SPHERE ){
+            warn_multiple_suns = true;
+        }
+    }
+    if( warn_multiple_suns ) {
+        std::cerr << "WARNING (RadiationModel::addCollimatedRadiationSource): Multiple sun sources have been added to the radiation model. This may lead to unintended behavior." << std::endl;
+    }
+
     RadiationSource collimated_source( direction );
 
     //initialize fluxes
@@ -362,6 +372,16 @@ uint RadiationModel::addSunSphereRadiationSource(const vec3 &sun_direction ){
     uint Nsources = radiation_sources.size()+1;
     if( Nsources>256 ){
         helios_runtime_error("ERROR (RadiationModel::addSunSphereRadiationSource): A maximum of 256 radiation sources are allowed.");
+    }
+
+    bool warn_multiple_suns = false;
+    for( auto& source : radiation_sources ){
+        if( source.source_type==RADIATION_SOURCE_TYPE_COLLIMATED || source.source_type==RADIATION_SOURCE_TYPE_SUN_SPHERE ){
+            warn_multiple_suns = true;
+        }
+    }
+    if( warn_multiple_suns ) {
+        std::cerr << "WARNING (RadiationModel::addSunSphereRadiationSource): Multiple sun sources have been added to the radiation model. This may lead to unintended behavior." << std::endl;
     }
 
     RadiationSource sphere_source( 150e9*sun_direction/sun_direction.magnitude(), 150e9, 2.f*695.5e6, sigma*powf(5700,4)/1288.437f );

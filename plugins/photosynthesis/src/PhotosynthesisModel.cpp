@@ -219,15 +219,15 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs ){
             CO2 = CO2_default;
         }
 
-        float gM;
+        float gS;
         if( context->doesPrimitiveDataExist(UUID,"moisture_conductance") && context->getPrimitiveDataType(UUID,"moisture_conductance")==HELIOS_TYPE_FLOAT ){
-            context->getPrimitiveData(UUID,"moisture_conductance",gM);
-            if( gM<0 ){
-                gM = 0;
+            context->getPrimitiveData(UUID,"moisture_conductance",gS);
+            if( gS<0 ){
+                gS = 0;
                 std::cout << "WARNING (PhotosynthesisModel::run): Moisture conductance value provided was negative. Clipping to zero." << std::endl;
             }
         }else{
-            gM = gM_default;
+            gS = gM_default;
         }
 
         float gH;
@@ -243,8 +243,26 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs ){
             std::cout << "WARNING (PhotosynthesisModel::run): Boundary-layer conductance value provided was negative. Clipping to zero." << std::endl;
         }
 
-        //combine stomatal (gM) and boundary-layer (gH) conductances
-        gM = 1.08f*gH*gM/(1.08*gH+gM);
+        //Number of sides emitting radiation
+        uint Nsides = 2; //default is 2
+        if( context->doesPrimitiveDataExist(UUID,"twosided_flag") && context->getPrimitiveDataType(UUID,"twosided_flag")==HELIOS_TYPE_UINT ){
+            uint flag;
+            context->getPrimitiveData(UUID,"twosided_flag",flag);
+            if( flag==0 ){
+                Nsides=1;
+            }
+        }
+
+        float stomatal_sidedness = 0.f; //if Nsides=1, force this to be 0 (all stomata on upper surface)
+        if( Nsides==2 && context->doesPrimitiveDataExist(UUID,"stomatal_sidedness") && context->getPrimitiveDataType(UUID,"stomatal_sidedness")==HELIOS_TYPE_FLOAT ){
+            context->getPrimitiveData(UUID,"stomatal_sidedness",stomatal_sidedness);
+        }
+
+        //combine stomatal (gS) and boundary-layer (gH) conductances
+        float gM = 1.08f*gH*gS*(stomatal_sidedness/(1.08f*gH+gS*stomatal_sidedness) + (1.f-stomatal_sidedness)/(1.08f*gH+gS*(1.f-stomatal_sidedness)));
+        if( gH==0 && gS==0 ){//if somehow both go to zero, can get NaN
+            gM = 0;
+        }
 
         float A, Ci, Gamma;
         int limitation_state;

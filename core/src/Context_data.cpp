@@ -2,7 +2,7 @@
 
 Copyright (C) 2016-2024 Brian Bailey
 
-                    This program is free software: you can redistribute it and/or modify
+This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, version 2.
 
@@ -20,197 +20,164 @@ using namespace helios;
 // ------ Primitive Data -------- //
 
 void Primitive::setPrimitiveData( const char* label, const int& data ){
-  std::vector<int> vec{data};
-  primitive_data_int[label] = vec;
+  primitive_data_int[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_INT;
 }
 
 void Primitive::setPrimitiveData( const char* label, const uint& data ){
-  std::vector<uint> vec{data};
-  primitive_data_uint[label] = vec;
+  primitive_data_uint[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_UINT;
 }
 
 void Primitive::setPrimitiveData( const char* label, const float& data ){
-  std::vector<float> vec{data};
-  primitive_data_float[label] = vec;
+  primitive_data_float[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_FLOAT;
 }
 
 void Primitive::setPrimitiveData( const char* label, const double& data ){
-  std::vector<double> vec{data};
-  primitive_data_double[label] = vec;
+  primitive_data_double[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_DOUBLE;
 }
 
 void Primitive::setPrimitiveData( const char* label, const helios::vec2& data ){
-  std::vector<vec2> vec{data};
-  primitive_data_vec2[label] = vec;
+  primitive_data_vec2[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_VEC2;
 }
 
 void Primitive::setPrimitiveData( const char* label, const helios::vec3& data ){
-  std::vector<vec3> vec{data};
-  primitive_data_vec3[label] = vec;
+  primitive_data_vec3[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_VEC3;
 }
 
 void Primitive::setPrimitiveData( const char* label, const helios::vec4& data ){
-  std::vector<vec4> vec{data};
-  primitive_data_vec4[label] = vec;
+  primitive_data_vec4[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_VEC4;
 }
 
 void Primitive::setPrimitiveData( const char* label, const helios::int2& data ){
-  std::vector<int2> vec{data};
-  primitive_data_int2[label] = vec;
+  primitive_data_int2[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_INT2;
 }
 
 void Primitive::setPrimitiveData( const char* label, const helios::int3& data ){
-  std::vector<int3> vec{data};
-  primitive_data_int3[label] = vec;
+  primitive_data_int3[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_INT3;
 }
 
 void Primitive::setPrimitiveData( const char* label, const helios::int4& data ){
-  std::vector<int4> vec{data};
-  primitive_data_int4[label] = vec;
+  primitive_data_int4[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_INT4;
 }
 
 void Primitive::setPrimitiveData( const char* label, const std::string& data ){
-  std::vector<std::string> vec{data};
-  primitive_data_string[label] = vec;
+  primitive_data_string[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_STRING;
 }
 
 void Primitive::setPrimitiveData( const char* label, HeliosDataType type, uint size, void* data ){
 
-  primitive_data_types[label] = type;
+    primitive_data_types[label] = type;
 
-  if( type==HELIOS_TYPE_INT ){
+    if( type==HELIOS_TYPE_INT ){
 
-    int* data_ptr = (int*)data;
+        int* data_ptr = (int*)data;
 
-    std::vector<int> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
+        primitive_data_int[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_int[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_UINT ){
+
+        uint* data_ptr = (uint*)data;
+
+        primitive_data_uint[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_uint[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_FLOAT ){
+
+        auto* data_ptr = (float*)data;
+
+        primitive_data_float[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_float[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_DOUBLE ){
+
+        auto* data_ptr = (double*)data;
+
+        primitive_data_double[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_double[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_VEC2 ){
+
+        auto* data_ptr = (vec2*)data;
+
+        primitive_data_vec2[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_vec2[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_VEC3 ){
+
+        auto* data_ptr = (vec3*)data;
+
+        primitive_data_vec3[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_vec3[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_VEC4 ){
+
+        auto* data_ptr = (vec4*)data;
+
+        primitive_data_vec4[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_vec4[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_INT2 ){
+
+        auto* data_ptr = (int2*)data;
+
+        primitive_data_int2[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_int2[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_INT3 ){
+
+        auto* data_ptr = (int3*)data;
+
+        primitive_data_int3[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_int3[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_INT4 ){
+
+        auto* data_ptr = (int4*)data;
+
+        primitive_data_int4[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_int4[label].at(i) = data_ptr[i];
+        }
+
+    }else if( type==HELIOS_TYPE_STRING ){
+
+        auto* data_ptr = (std::string*)data;
+
+        primitive_data_string[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            primitive_data_string[label].at(i) = data_ptr[i];
+        }
+
     }
-    primitive_data_int[label] = vec;
-
-  }else if( type==HELIOS_TYPE_UINT ){
-
-    uint* data_ptr = (uint*)data;
-
-    std::vector<uint> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_uint[label] = vec;
-
-  }else if( type==HELIOS_TYPE_FLOAT ){
-
-    auto* data_ptr = (float*)data;
-
-    std::vector<float> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_float[label] = vec;
-
-  }else if( type==HELIOS_TYPE_DOUBLE ){
-
-    auto* data_ptr = (double*)data;
-
-    std::vector<double> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_double[label] = vec;
-
-  }else if( type==HELIOS_TYPE_VEC2 ){
-
-    auto* data_ptr = (vec2*)data;
-
-    std::vector<vec2> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_vec2[label] = vec;
-
-  }else if( type==HELIOS_TYPE_VEC3 ){
-
-    auto* data_ptr = (vec3*)data;
-
-    std::vector<vec3> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_vec3[label] = vec;
-
-  }else if( type==HELIOS_TYPE_VEC4 ){
-
-    auto* data_ptr = (vec4*)data;
-
-    std::vector<vec4> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_vec4[label] = vec;
-
-  }else if( type==HELIOS_TYPE_INT2 ){
-
-    auto* data_ptr = (int2*)data;
-
-    std::vector<int2> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_int2[label] = vec;
-
-  }else if( type==HELIOS_TYPE_INT3 ){
-
-    auto* data_ptr = (int3*)data;
-
-    std::vector<int3> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_int3[label] = vec;
-
-  }else if( type==HELIOS_TYPE_INT4 ){
-
-    auto* data_ptr = (int4*)data;
-
-    std::vector<int4> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_int4[label] = vec;
-
-  }else if( type==HELIOS_TYPE_STRING ){
-
-    auto* data_ptr = (std::string*)data;
-
-    std::vector<std::string> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    primitive_data_string[label] = vec;
-
-  }
 
 }
 
@@ -223,8 +190,7 @@ void Primitive::getPrimitiveData( const char* label, int& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT ){
-    std::vector<int> d = primitive_data_int.at(label);
-    data = d.at(0);
+    data = primitive_data_int.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int." );
   }
@@ -240,8 +206,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int>& data ) co
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT ){
-    std::vector<int> d = primitive_data_int.at(label);
-    data = d;
+    data = primitive_data_int.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int." );
   }
@@ -257,8 +222,7 @@ void Primitive::getPrimitiveData( const char* label, uint& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_UINT ){
-    std::vector<uint> d = primitive_data_uint.at(label);
-    data = d.front();
+    data = primitive_data_uint.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type uint, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint." );
   }
@@ -274,8 +238,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<uint>& data ) c
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_UINT ){
-    std::vector<uint> d = primitive_data_uint.at(label);
-    data = d;
+    data = primitive_data_uint.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type uint, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint." );
   }
@@ -291,8 +254,7 @@ void Primitive::getPrimitiveData( const char* label, float& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_FLOAT ){
-    std::vector<float> d = primitive_data_float.at(label);
-    data = d.front();
+    data = primitive_data_float.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type float, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float." );
   }
@@ -308,8 +270,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<float>& data ) 
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_FLOAT ){
-    std::vector<float> d = primitive_data_float.at(label);
-    data = d;
+    data = primitive_data_float.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type float, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float." );
   }
@@ -325,8 +286,7 @@ void Primitive::getPrimitiveData( const char* label, double& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_DOUBLE ){
-    std::vector<double> d = primitive_data_double.at(label);
-    data = d.front();
+    data = primitive_data_double.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type double, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double." );
   }
@@ -342,8 +302,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<double>& data )
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_DOUBLE ){
-    std::vector<double> d = primitive_data_double.at(label);
-    data = d;
+    data = primitive_data_double.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type double, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double." );
   }
@@ -359,8 +318,7 @@ void Primitive::getPrimitiveData( const char* label, vec2& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC2 ){
-    std::vector<vec2> d = primitive_data_vec2.at(label);
-    data = d.front();
+    data = primitive_data_vec2.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2." );
   }
@@ -376,8 +334,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec2>& data ) c
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC2 ){
-    std::vector<vec2> d = primitive_data_vec2.at(label);
-    data = d;
+    data = primitive_data_vec2.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2." );
   }
@@ -393,8 +350,7 @@ void Primitive::getPrimitiveData( const char* label, vec3& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC3 ){
-    std::vector<vec3> d = primitive_data_vec3.at(label);
-    data = d.front();
+    data = primitive_data_vec3.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3." );
   }
@@ -410,8 +366,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec3>& data ) c
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC3 ){
-    std::vector<vec3> d = primitive_data_vec3.at(label);
-    data = d;
+    data = primitive_data_vec3.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3." );
   }
@@ -427,8 +382,7 @@ void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC4 ){
-    std::vector<vec4> d = primitive_data_vec4.at(label);
-    data = d.front();
+    data = primitive_data_vec4.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4." );
   }
@@ -444,8 +398,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) c
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC4 ){
-    std::vector<vec4> d = primitive_data_vec4.at(label);
-    data = d;
+    data = primitive_data_vec4.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4." );
   }
@@ -461,8 +414,7 @@ void Primitive::getPrimitiveData( const char* label, int2& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT2 ){
-    std::vector<int2> d = primitive_data_int2.at(label);
-    data = d.front();
+    data = primitive_data_int2.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2." );
   }
@@ -478,8 +430,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) c
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT2 ){
-    std::vector<int2> d = primitive_data_int2.at(label);
-    data = d;
+    data = primitive_data_int2.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2." );
   }
@@ -495,8 +446,7 @@ void Primitive::getPrimitiveData( const char* label, int3& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT3 ){
-    std::vector<int3> d = primitive_data_int3.at(label);
-    data = d.front();
+    data = primitive_data_int3.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3." );
   }
@@ -512,8 +462,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) c
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT3 ){
-    std::vector<int3> d = primitive_data_int3.at(label);
-    data = d;
+    data = primitive_data_int3.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3." );
   }
@@ -529,8 +478,7 @@ void Primitive::getPrimitiveData( const char* label, int4& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT4 ){
-    std::vector<int4> d = primitive_data_int4.at(label);
-    data = d.front();
+    data = primitive_data_int4.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4." );
   }
@@ -546,8 +494,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) c
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT4 ){
-    std::vector<int4> d = primitive_data_int4.at(label);
-    data = d;
+    data = primitive_data_int4.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type int4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4." );
   }
@@ -563,8 +510,7 @@ void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_STRING ){
-    std::vector<std::string> d = primitive_data_string.at(label);
-    data = d.front();
+    data = primitive_data_string.at(label).front();
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type string, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string." );
   }
@@ -580,8 +526,7 @@ void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& d
   HeliosDataType type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_STRING ){
-    std::vector<std::string> d = primitive_data_string.at(label);
-    data = d;
+    data = primitive_data_string.at(label);
   }else{
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Attempted to get data for type string, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string." );
   }
@@ -1244,62 +1189,28 @@ void Context::clearPrimitiveData( const std::vector<uint>& UUIDs, const char* la
   }
 }
 
-void Context::copyPrimitiveData( uint UUID, uint oldUUID){
-  //copy the primitive data
-  std::vector<std::string> plabel = getPrimitivePointer_private(UUID)->listPrimitiveData();
-  for(auto & p : plabel){
+void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID){
 
-    HeliosDataType type = getPrimitiveDataType( UUID, p.c_str() );
-
-    if( type==HELIOS_TYPE_INT ){
-      std::vector<int> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_INT, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_UINT ){
-      std::vector<uint> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_UINT, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_FLOAT ){
-      std::vector<float> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_FLOAT, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_DOUBLE ){
-      std::vector<double> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_DOUBLE, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_VEC2 ){
-      std::vector<vec2> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_VEC2, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_VEC3 ){
-      std::vector<vec3> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_VEC3, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_VEC4 ){
-      std::vector<vec4> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_VEC4, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_INT2 ){
-      std::vector<int2> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_INT2, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_INT3 ){
-      std::vector<int3> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_INT3, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_INT4 ){
-      std::vector<int4> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_INT4, pdata.size(), &pdata.at(0) );
-    }else if( type==HELIOS_TYPE_STRING ){
-      std::vector<std::string> pdata;
-      getPrimitiveData( UUID, p.c_str(), pdata );
-      setPrimitiveData( oldUUID, p.c_str(), HELIOS_TYPE_STRING, pdata.size(), &pdata.at(0) );
-    }else{
-      assert(false);
+    if(primitives.find(sourceUUID) == primitives.end() ) {
+        helios_runtime_error("ERROR (Context::copyPrimitiveData): Source UUID of " + std::to_string(sourceUUID) + " does not exist in the Context.");
+    }else if(primitives.find(destinationUUID) == primitives.end() ) {
+        helios_runtime_error("ERROR (Context::copyPrimitiveData): Destination UUID of " + std::to_string(destinationUUID) + " does not exist in the Context.");
     }
 
-  }
+    primitives.at(destinationUUID)->primitive_data_types = primitives.at(sourceUUID)->primitive_data_types;
+
+    primitives.at(destinationUUID)->primitive_data_int = primitives.at(sourceUUID)->primitive_data_int;
+    primitives.at(destinationUUID)->primitive_data_uint = primitives.at(sourceUUID)->primitive_data_uint;
+    primitives.at(destinationUUID)->primitive_data_float = primitives.at(sourceUUID)->primitive_data_float;
+    primitives.at(destinationUUID)->primitive_data_double = primitives.at(sourceUUID)->primitive_data_double;
+    primitives.at(destinationUUID)->primitive_data_vec2 = primitives.at(sourceUUID)->primitive_data_vec2;
+    primitives.at(destinationUUID)->primitive_data_vec3 = primitives.at(sourceUUID)->primitive_data_vec3;
+    primitives.at(destinationUUID)->primitive_data_vec4 = primitives.at(sourceUUID)->primitive_data_vec4;
+    primitives.at(destinationUUID)->primitive_data_int2 = primitives.at(sourceUUID)->primitive_data_int2;
+    primitives.at(destinationUUID)->primitive_data_int3 = primitives.at(sourceUUID)->primitive_data_int3;
+    primitives.at(destinationUUID)->primitive_data_int4 = primitives.at(sourceUUID)->primitive_data_int4;
+    primitives.at(destinationUUID)->primitive_data_string = primitives.at(sourceUUID)->primitive_data_string;
+
 }
 
 void Context::renamePrimitiveData( uint UUID, const char* old_label, const char* new_label ){
@@ -1325,50 +1236,29 @@ void Context::duplicatePrimitiveData( uint UUID, const char* old_label, const ch
 
     HeliosDataType type = getPrimitiveDataType( UUID, old_label );
 
+    primitives.at(UUID)->primitive_data_types[new_label] = type;
     if( type==HELIOS_TYPE_INT ){
-        std::vector<int> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_INT, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_int[new_label] = primitives.at(UUID)->primitive_data_int.at(old_label);
     }else if( type==HELIOS_TYPE_UINT ){
-        std::vector<uint> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_UINT, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_uint[new_label] = primitives.at(UUID)->primitive_data_uint.at(old_label);
     }else if( type==HELIOS_TYPE_FLOAT ){
-        std::vector<float> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_FLOAT, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_float[new_label] = primitives.at(UUID)->primitive_data_float.at(old_label);
     }else if( type==HELIOS_TYPE_DOUBLE ){
-        std::vector<double> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_DOUBLE, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_double[new_label] = primitives.at(UUID)->primitive_data_double.at(old_label);
     }else if( type==HELIOS_TYPE_VEC2 ){
-        std::vector<vec2> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_VEC2, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_vec2[new_label] = primitives.at(UUID)->primitive_data_vec2.at(old_label);
     }else if( type==HELIOS_TYPE_VEC3 ){
-        std::vector<vec3> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_VEC3, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_vec3[new_label] = primitives.at(UUID)->primitive_data_vec3.at(old_label);
     }else if( type==HELIOS_TYPE_VEC4 ){
-        std::vector<vec4> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_VEC4, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_vec4[new_label] = primitives.at(UUID)->primitive_data_vec4.at(old_label);
     }else if( type==HELIOS_TYPE_INT2 ){
-        std::vector<int2> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_INT2, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_int2[new_label] = primitives.at(UUID)->primitive_data_int2.at(old_label);
     }else if( type==HELIOS_TYPE_INT3 ){
-        std::vector<int3> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_INT3, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_int3[new_label] = primitives.at(UUID)->primitive_data_int3.at(old_label);
     }else if( type==HELIOS_TYPE_INT4 ){
-        std::vector<int4> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_INT4, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_int4[new_label] = primitives.at(UUID)->primitive_data_int4.at(old_label);
     }else if( type==HELIOS_TYPE_STRING ){
-        std::vector<std::string> pdata;
-        getPrimitiveData( UUID, old_label, pdata );
-        setPrimitiveData( UUID, new_label, HELIOS_TYPE_STRING, pdata.size(), &pdata.at(0) );
+        primitives.at(UUID)->primitive_data_string[new_label] = primitives.at(UUID)->primitive_data_string.at(old_label);
     }else{
         assert(false);
     }
@@ -1381,53 +1271,33 @@ std::vector<std::string> Context::listPrimitiveData(uint UUID) const{
 
 void Context::duplicatePrimitiveData( const char* existing_data_label, const char* copy_data_label ){
 
-    for( auto primitive : primitives){
+    for( auto &primitive : primitives){
         if( primitive.second->doesPrimitiveDataExist(existing_data_label) ){
             HeliosDataType type = primitive.second->getPrimitiveDataType(existing_data_label);
+            primitive.second->primitive_data_types[copy_data_label] = type;
             if( type==HELIOS_TYPE_FLOAT ){
-                std::vector<float> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_float[copy_data_label] = primitive.second->primitive_data_float.at(existing_data_label);
             }else if( type==HELIOS_TYPE_DOUBLE ) {
-                std::vector<double> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_double[copy_data_label] = primitive.second->primitive_data_double.at(existing_data_label);
             }else if( type==HELIOS_TYPE_INT ) {
-                std::vector<int> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_int[copy_data_label] = primitive.second->primitive_data_int.at(existing_data_label);
             }else if( type==HELIOS_TYPE_UINT ) {
-                std::vector<uint> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_uint[copy_data_label] = primitive.second->primitive_data_uint.at(existing_data_label);
             }else if( type==HELIOS_TYPE_VEC2 ) {
-                std::vector<vec2> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_vec2[copy_data_label] = primitive.second->primitive_data_vec2.at(existing_data_label);
             }else if( type==HELIOS_TYPE_VEC3 ) {
-                std::vector<vec3> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_vec3[copy_data_label] = primitive.second->primitive_data_vec3.at(existing_data_label);
             }else if( type==HELIOS_TYPE_VEC4 ) {
-                std::vector<vec4> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_vec4[copy_data_label] = primitive.second->primitive_data_vec4.at(existing_data_label);
             }else if( type==HELIOS_TYPE_INT2 ) {
-                std::vector<int2> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_int2[copy_data_label] = primitive.second->primitive_data_int2.at(existing_data_label);
             }else if( type==HELIOS_TYPE_INT3 ) {
-                std::vector<int3> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_int3[copy_data_label] = primitive.second->primitive_data_int3.at(existing_data_label);
             }else if( type==HELIOS_TYPE_STRING ){
-                std::vector<std::string> data;
-                primitive.second->getPrimitiveData(existing_data_label, data);
-                primitive.second->setPrimitiveData(copy_data_label, type, data.size(), &data.front());
+                primitive.second->primitive_data_string[copy_data_label] = primitive.second->primitive_data_string.at(existing_data_label);
             }
         }
     }
-
 
 }
 
@@ -1889,25 +1759,31 @@ void Context::scalePrimitiveData( const std::vector<uint> &UUIDs, const std::str
         }
         HeliosDataType data_type = getPrimitiveDataType(UUID,label.c_str());
         if( data_type==HELIOS_TYPE_FLOAT ){
-            float data;
-            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
-            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+            for( int i=0; i<primitives.at(UUID)->primitive_data_float[label].size(); i++ ) {
+                primitives.at(UUID)->primitive_data_float[label].at(i) *= scaling_factor;
+            }
         }else if( data_type==HELIOS_TYPE_DOUBLE ){
-            double data;
-            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
-            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+            for( int i=0; i<primitives.at(UUID)->primitive_data_double[label].size(); i++ ) {
+                primitives.at(UUID)->primitive_data_double[label].at(i) *= scaling_factor;
+            }
         }else if( data_type==HELIOS_TYPE_VEC2 ){
-            vec2 data;
-            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
-            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+            for( int i=0; i<primitives.at(UUID)->primitive_data_vec2[label].size(); i++ ) {
+                primitives.at(UUID)->primitive_data_vec2[label].at(i).x *= scaling_factor;
+                primitives.at(UUID)->primitive_data_vec2[label].at(i).y *= scaling_factor;
+            }
         }else if( data_type==HELIOS_TYPE_VEC3 ){
-            vec3 data;
-            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
-            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+            for( int i=0; i<primitives.at(UUID)->primitive_data_vec3[label].size(); i++ ) {
+                primitives.at(UUID)->primitive_data_vec3[label].at(i).x *= scaling_factor;
+                primitives.at(UUID)->primitive_data_vec3[label].at(i).y *= scaling_factor;
+                primitives.at(UUID)->primitive_data_vec3[label].at(i).z *= scaling_factor;
+            }
         }else if( data_type==HELIOS_TYPE_VEC4 ){
-            vec4 data;
-            primitives.at(UUID)->getPrimitiveData(label.c_str(),data);
-            primitives.at(UUID)->setPrimitiveData(label.c_str(), data*scaling_factor );
+            for( int i=0; i<primitives.at(UUID)->primitive_data_vec4[label].size(); i++ ) {
+                primitives.at(UUID)->primitive_data_vec4[label].at(i).x *= scaling_factor;
+                primitives.at(UUID)->primitive_data_vec4[label].at(i).y *= scaling_factor;
+                primitives.at(UUID)->primitive_data_vec4[label].at(i).z *= scaling_factor;
+                primitives.at(UUID)->primitive_data_vec4[label].at(i).w *= scaling_factor;
+            }
         }else{
             helios_runtime_error("ERROR (Context::scalePrimitiveData): This operation only supports primitive data of type float, double, vec2, vec3, and vec4.");
         }
@@ -3036,63 +2912,28 @@ bool Context::doesObjectDataExist( const uint objID, const char* label ) const{
   return objects.at(objID)->doesObjectDataExist(label);
 }
 
-void Context::copyObjectData( uint objID, uint oldObjID){
+void Context::copyObjectData(uint source_objID, uint destination_objID){
 
-    //copy the object data
-    std::vector<std::string> plabel = getObjectPointer_private(objID)->listObjectData();
-    for(auto & p : plabel){
-
-        HeliosDataType type = getObjectDataType( objID, p.c_str() );
-
-        if( type==HELIOS_TYPE_INT ){
-            std::vector<int> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_INT, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_UINT ){
-            std::vector<uint> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_UINT, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_FLOAT ){
-            std::vector<float> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_FLOAT, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_DOUBLE ){
-            std::vector<double> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_DOUBLE, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_VEC2 ){
-            std::vector<vec2> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_VEC2, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_VEC3 ){
-            std::vector<vec3> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_VEC3, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_VEC4 ){
-            std::vector<vec4> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_VEC4, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_INT2 ){
-            std::vector<int2> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_INT2, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_INT3 ){
-            std::vector<int3> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_INT3, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_INT4 ){
-            std::vector<int4> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_INT4, pdata.size(), &pdata.at(0) );
-        }else if( type==HELIOS_TYPE_STRING ){
-            std::vector<std::string> pdata;
-            getObjectData( objID, p.c_str(), pdata );
-            setObjectData( oldObjID, p.c_str(), HELIOS_TYPE_STRING, pdata.size(), &pdata.at(0) );
-        }else{
-            assert(false);
-        }
-
+    if( objects.find(source_objID) == objects.end() ) {
+        helios_runtime_error("ERROR (Context::copyObjectData): Source object ID of " + std::to_string(source_objID) + " does not exist in the Context.");
+    }else if( objects.find(destination_objID) == objects.end() ) {
+        helios_runtime_error("ERROR (Context::copyObjectData): Destination object ID of " + std::to_string(destination_objID) + " does not exist in the Context.");
     }
+
+    objects.at(destination_objID)->object_data_types = objects.at(source_objID)->object_data_types;
+
+    objects.at(destination_objID)->object_data_int = objects.at(source_objID)->object_data_int;
+    objects.at(destination_objID)->object_data_uint = objects.at(source_objID)->object_data_uint;
+    objects.at(destination_objID)->object_data_float = objects.at(source_objID)->object_data_float;
+    objects.at(destination_objID)->object_data_double = objects.at(source_objID)->object_data_double;
+    objects.at(destination_objID)->object_data_vec2 = objects.at(source_objID)->object_data_vec2;
+    objects.at(destination_objID)->object_data_vec3 = objects.at(source_objID)->object_data_vec3;
+    objects.at(destination_objID)->object_data_vec4 = objects.at(source_objID)->object_data_vec4;
+    objects.at(destination_objID)->object_data_int2 = objects.at(source_objID)->object_data_int2;
+    objects.at(destination_objID)->object_data_int3 = objects.at(source_objID)->object_data_int3;
+    objects.at(destination_objID)->object_data_int4 = objects.at(source_objID)->object_data_int4;
+    objects.at(destination_objID)->object_data_string = objects.at(source_objID)->object_data_string;
+
 }
 
 void Context::duplicateObjectData( uint objID, const char* old_label, const char* new_label ){
@@ -3105,50 +2946,29 @@ void Context::duplicateObjectData( uint objID, const char* old_label, const char
 
     HeliosDataType type = getObjectDataType( objID, old_label );
 
+    objects.at(objID)->object_data_types[new_label] = type;
     if( type==HELIOS_TYPE_INT ){
-        std::vector<int> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_INT, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_int[new_label] = objects.at(objID)->object_data_int.at(old_label);
     }else if( type==HELIOS_TYPE_UINT ){
-        std::vector<uint> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_UINT, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_uint[new_label] = objects.at(objID)->object_data_uint.at(old_label);
     }else if( type==HELIOS_TYPE_FLOAT ){
-        std::vector<float> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_FLOAT, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_float[new_label] = objects.at(objID)->object_data_float.at(old_label);
     }else if( type==HELIOS_TYPE_DOUBLE ){
-        std::vector<double> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_DOUBLE, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_double[new_label] = objects.at(objID)->object_data_double.at(old_label);
     }else if( type==HELIOS_TYPE_VEC2 ){
-        std::vector<vec2> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_VEC2, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_vec2[new_label] = objects.at(objID)->object_data_vec2.at(old_label);
     }else if( type==HELIOS_TYPE_VEC3 ){
-        std::vector<vec3> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_VEC3, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_vec3[new_label] = objects.at(objID)->object_data_vec3.at(old_label);
     }else if( type==HELIOS_TYPE_VEC4 ){
-        std::vector<vec4> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_VEC4, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_vec4[new_label] = objects.at(objID)->object_data_vec4.at(old_label);
     }else if( type==HELIOS_TYPE_INT2 ){
-        std::vector<int2> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_INT2, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_int2[new_label] = objects.at(objID)->object_data_int2.at(old_label);
     }else if( type==HELIOS_TYPE_INT3 ){
-        std::vector<int3> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_INT3, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_int3[new_label] = objects.at(objID)->object_data_int3.at(old_label);
     }else if( type==HELIOS_TYPE_INT4 ){
-        std::vector<int4> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_INT4, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_int4[new_label] = objects.at(objID)->object_data_int4.at(old_label);
     }else if( type==HELIOS_TYPE_STRING ){
-        std::vector<std::string> pdata;
-        getObjectData( objID, old_label, pdata );
-        setObjectData( objID, new_label, HELIOS_TYPE_STRING, pdata.size(), &pdata.at(0) );
+        objects.at(objID)->object_data_string[new_label] = objects.at(objID)->object_data_string.at(old_label);
     }else{
         assert(false);
     }
@@ -3190,197 +3010,164 @@ std::vector<std::string> Context::listObjectData(uint ObjID) const{
 }
 
 void CompoundObject::setObjectData( const char* label, const int& data ){
-  std::vector<int> vec{data};
-  object_data_int[label] = vec;
+  object_data_int[label] = {data};
   object_data_types[label] = HELIOS_TYPE_INT;
 }
 
 void CompoundObject::setObjectData( const char* label, const uint& data ){
-  std::vector<uint> vec{data};
-  object_data_uint[label] = vec;
+  object_data_uint[label] = {data};
   object_data_types[label] = HELIOS_TYPE_UINT;
 }
 
 void CompoundObject::setObjectData( const char* label, const float& data ){
-  std::vector<float> vec{data};
-  object_data_float[label] = vec;
+  object_data_float[label] = {data};
   object_data_types[label] = HELIOS_TYPE_FLOAT;
 }
 
 void CompoundObject::setObjectData( const char* label, const double& data ){
-  std::vector<double> vec{data};
-  object_data_double[label] = vec;
+  object_data_double[label] = {data};
   object_data_types[label] = HELIOS_TYPE_DOUBLE;
 }
 
 void CompoundObject::setObjectData( const char* label, const helios::vec2& data ){
-  std::vector<vec2> vec{data};
-  object_data_vec2[label] = vec;
+  object_data_vec2[label] = {data};
   object_data_types[label] = HELIOS_TYPE_VEC2;
 }
 
 void CompoundObject::setObjectData( const char* label, const helios::vec3& data ){
-  std::vector<vec3> vec{data};
-  object_data_vec3[label] = vec;
+  object_data_vec3[label] = {data};
   object_data_types[label] = HELIOS_TYPE_VEC3;
 }
 
 void CompoundObject::setObjectData( const char* label, const helios::vec4& data ){
-  std::vector<vec4> vec{data};
-  object_data_vec4[label] = vec;
+  object_data_vec4[label] = {data};
   object_data_types[label] = HELIOS_TYPE_VEC4;
 }
 
 void CompoundObject::setObjectData( const char* label, const helios::int2& data ){
-  std::vector<int2> vec{data};
-  object_data_int2[label] = vec;
+  object_data_int2[label] = {data};
   object_data_types[label] = HELIOS_TYPE_INT2;
 }
 
 void CompoundObject::setObjectData( const char* label, const helios::int3& data ){
-  std::vector<int3> vec{data};
-  object_data_int3[label] = vec;
+  object_data_int3[label] = {data};
   object_data_types[label] = HELIOS_TYPE_INT3;
 }
 
 void CompoundObject::setObjectData( const char* label, const helios::int4& data ){
-  std::vector<int4> vec{data};
-  object_data_int4[label] = vec;
+  object_data_int4[label] = {data};
   object_data_types[label] = HELIOS_TYPE_INT4;
 }
 
 void CompoundObject::setObjectData( const char* label, const std::string& data ){
-  std::vector<std::string> vec{data};
-  object_data_string[label] = vec;
+  object_data_string[label] = {data};
   object_data_types[label] = HELIOS_TYPE_STRING;
 }
 
 void CompoundObject::setObjectData( const char* label, HeliosDataType a_type, uint size, void* data ){
 
-  object_data_types[label] = a_type;
+    object_data_types[label] = a_type;
 
-  if( a_type==HELIOS_TYPE_INT ){
+    if( a_type==HELIOS_TYPE_INT ){
 
-    int* data_ptr = (int*)data;
+        int* data_ptr = (int*)data;
 
-    std::vector<int> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
+        object_data_int[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_int[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_UINT ){
+
+        uint* data_ptr = (uint*)data;
+
+        object_data_uint[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_uint[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_FLOAT ){
+
+        auto* data_ptr = (float*)data;
+
+        object_data_float[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_float[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_DOUBLE ){
+
+        auto* data_ptr = (double*)data;
+
+        object_data_double[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_double[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_VEC2 ){
+
+        auto* data_ptr = (vec2*)data;
+
+        object_data_vec2[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_vec2[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_VEC3 ){
+
+        auto* data_ptr = (vec3*)data;
+
+        object_data_vec3[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_vec3[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_VEC4 ){
+
+        auto* data_ptr = (vec4*)data;
+
+        object_data_vec4[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_vec4[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_INT2 ){
+
+        auto* data_ptr = (int2*)data;
+
+        object_data_int2[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_int2[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_INT3 ){
+
+        auto* data_ptr = (int3*)data;
+
+        object_data_int3[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_int3[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_INT4 ){
+
+        auto* data_ptr = (int4*)data;
+
+        object_data_int4[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_int4[label].at(i) = data_ptr[i];
+        }
+
+    }else if( a_type==HELIOS_TYPE_STRING ){
+
+        auto* data_ptr = (std::string*)data;
+
+        object_data_string[label].resize(size);
+        for( size_t i=0; i<size; i++ ){
+            object_data_string[label].at(i) = data_ptr[i];
+        }
+
     }
-    object_data_int[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_UINT ){
-
-    uint* data_ptr = (uint*)data;
-
-    std::vector<uint> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_uint[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_FLOAT ){
-
-    auto* data_ptr = (float*)data;
-
-    std::vector<float> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_float[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_DOUBLE ){
-
-    auto* data_ptr = (double*)data;
-
-    std::vector<double> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_double[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_VEC2 ){
-
-    auto* data_ptr = (vec2*)data;
-
-    std::vector<vec2> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_vec2[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_VEC3 ){
-
-    auto* data_ptr = (vec3*)data;
-
-    std::vector<vec3> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_vec3[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_VEC4 ){
-
-    auto* data_ptr = (vec4*)data;
-
-    std::vector<vec4> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_vec4[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_INT2 ){
-
-    auto* data_ptr = (int2*)data;
-
-    std::vector<int2> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_int2[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_INT3 ){
-
-    auto* data_ptr = (int3*)data;
-
-    std::vector<int3> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_int3[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_INT4 ){
-
-    auto* data_ptr = (int4*)data;
-
-    std::vector<int4> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_int4[label] = vec;
-
-  }else if( a_type==HELIOS_TYPE_STRING ){
-
-    auto* data_ptr = (std::string*)data;
-
-    std::vector<std::string> vec;
-    vec.resize(size);
-    for( size_t i=0; i<size; i++ ){
-      vec.at(i) = data_ptr[i];
-    }
-    object_data_string[label] = vec;
-
-  }
 
 }
 
@@ -3391,8 +3178,7 @@ void CompoundObject::getObjectData( const char* label, int& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT ){
-    std::vector<int> d = object_data_int.at(label);
-    data = d.at(0);
+    data = object_data_int.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int.");
   }
@@ -3406,8 +3192,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<int>& data ) 
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT ){
-    std::vector<int> d = object_data_int.at(label);
-    data = d;
+    data = object_data_int.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int.");
   }
@@ -3421,8 +3206,7 @@ void CompoundObject::getObjectData( const char* label, uint& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_UINT ){
-    std::vector<uint> d = object_data_uint.at(label);
-    data = d.front();
+    data = object_data_uint.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type uint, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type uint.");
   }
@@ -3436,8 +3220,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<uint>& data )
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_UINT ){
-    std::vector<uint> d = object_data_uint.at(label);
-    data = d;
+    data = object_data_uint.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type uint, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type uint.");
   }
@@ -3451,8 +3234,7 @@ void CompoundObject::getObjectData( const char* label, float& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_FLOAT ){
-    std::vector<float> d = object_data_float.at(label);
-    data = d.front();
+    data = object_data_float.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type float, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type float.");
   }
@@ -3466,8 +3248,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<float>& data 
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_FLOAT ){
-    std::vector<float> d = object_data_float.at(label);
-    data = d;
+    data = object_data_float.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type float, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type float.");
   }
@@ -3481,8 +3262,7 @@ void CompoundObject::getObjectData( const char* label, double& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_DOUBLE ){
-    std::vector<double> d = object_data_double.at(label);
-    data = d.front();
+    data = object_data_double.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type double, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type double.");
   }
@@ -3496,8 +3276,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<double>& data
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_DOUBLE ){
-    std::vector<double> d = object_data_double.at(label);
-    data = d;
+    data = object_data_double.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type double, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type double.");
   }
@@ -3511,8 +3290,7 @@ void CompoundObject::getObjectData( const char* label, vec2& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC2 ){
-    std::vector<vec2> d = object_data_vec2.at(label);
-    data = d.front();
+    data = object_data_vec2.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec2.");
   }
@@ -3526,8 +3304,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<vec2>& data )
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC2 ){
-    std::vector<vec2> d = object_data_vec2.at(label);
-    data = d;
+    data = object_data_vec2.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec2.");
   }
@@ -3541,8 +3318,7 @@ void CompoundObject::getObjectData( const char* label, vec3& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC3 ){
-    std::vector<vec3> d = object_data_vec3.at(label);
-    data = d.front();
+    data = object_data_vec3.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec3.");
   }
@@ -3556,8 +3332,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<vec3>& data )
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC3 ){
-    std::vector<vec3> d = object_data_vec3.at(label);
-    data = d;
+    data = object_data_vec3.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec3.");
   }
@@ -3571,8 +3346,7 @@ void CompoundObject::getObjectData( const char* label, vec4& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC4 ){
-    std::vector<vec4> d = object_data_vec4.at(label);
-    data = d.front();
+    data = object_data_vec4.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec4.");
   }
@@ -3586,8 +3360,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<vec4>& data )
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC4 ){
-    std::vector<vec4> d = object_data_vec4.at(label);
-    data = d;
+    data = object_data_vec4.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec4.");
   }
@@ -3601,8 +3374,7 @@ void CompoundObject::getObjectData( const char* label, int2& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT2 ){
-    std::vector<int2> d = object_data_int2.at(label);
-    data = d.front();
+    data = object_data_int2.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int2.");
   }
@@ -3616,8 +3388,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<int2>& data )
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT2 ){
-    std::vector<int2> d = object_data_int2.at(label);
-    data = d;
+    data = object_data_int2.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int2.");
   }
@@ -3631,8 +3402,7 @@ void CompoundObject::getObjectData( const char* label, int3& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT3 ){
-    std::vector<int3> d = object_data_int3.at(label);
-    data = d.front();
+    data = object_data_int3.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int3.");
   }
@@ -3646,8 +3416,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<int3>& data )
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT3 ){
-    std::vector<int3> d = object_data_int3.at(label);
-    data = d;
+    data = object_data_int3.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int3.");
   }
@@ -3661,8 +3430,7 @@ void CompoundObject::getObjectData( const char* label, int4& data ) const{
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT4 ){
-    std::vector<int4> d = object_data_int4.at(label);
-    data = d.front();
+    data = object_data_int4.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int4.");
   }
@@ -3676,8 +3444,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<int4>& data )
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT4 ){
-    std::vector<int4> d = object_data_int4.at(label);
-    data = d;
+    data = object_data_int4.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int4.");
   }
@@ -3691,8 +3458,7 @@ void CompoundObject::getObjectData( const char* label, std::string& data ) const
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_STRING ){
-    std::vector<std::string> d = object_data_string.at(label);
-    data = d.front();
+    data = object_data_string.at(label).front();
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type string, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type string.");
   }
@@ -3706,8 +3472,7 @@ void CompoundObject::getObjectData( const char* label, std::vector<std::string>&
   }
 
   if( object_data_types.at(label)==HELIOS_TYPE_STRING ){
-    std::vector<std::string> d = object_data_string.at(label);
-    data = d;
+    data = object_data_string.at(label);
   }else{
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type string, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type string.");
   }

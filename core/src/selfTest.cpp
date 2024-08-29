@@ -315,6 +315,10 @@ int Context::selfTest(){
         std::cerr << "failed: addBox(). Face sizes incorrect." << std::endl;
     }
 
+    if( fabsf(context_test.getBoxObjectVolume(objID)-size3.x*size3.y*size3.z)>errtol ){
+        error_count++;
+        std::cerr << "failed: addBox(). Box volume incorrect." << std::endl;
+    }
     //------- Add a Rotated Tile --------//
 
     center = make_vec3(1,2,3);

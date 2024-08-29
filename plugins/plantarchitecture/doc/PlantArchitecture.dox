@@ -42,6 +42,7 @@
     <tr><td>closedflowerID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Unique identifier of flower (closed) the primitive belongs to (used for image labeling). Not defined if there are no closed flowers.</td></tr>
     <tr><td>openflowerID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Unique identifier of flower (open) the primitive belongs to (used for image labeling). Not defined if there are no open flowers.</td></tr>
     <tr><td>fruitID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Unique identifier of fruit the primitive belongs to (used for image labeling). Not defined if there are no fruits.</td></tr>
+    <tr><td>carbohydrate_concentration</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Concentration of carbohydrates in the shoot. Value is constant along the shoot, and zero for non-internode organs.</td></tr>
 </table>
 
 \subsection PlantArchOutputObjData Default Output Object Data
@@ -145,6 +146,8 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | leaflet_scale | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the scaling factor of the leaflet moving down the petiole with respect to the previous leaf (<1 scales down, >1 scales up). |
 | prototype_scale | RandomParameter_float | - | Scaling factor applied to the leaf prototype. Usually the prototype has unit length, so this sets the physical length of the leaf. |
 | prototype_function | function pointer | - | Pointer to a function that generates the leaf prototype model. Function takes arguments ( helios::Context*, uint subdivisions, int flag ) and returns an object ID (uint). |
+| subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of subdivisions to use for the leaf prototype model (if using procedurally generated prototype). |
+| unique_prototypes | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of unique leaf prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 | --- **peduncle** --- ||||
 | length | RandomParameter_float | meters | Length of the peduncle (inflorescence supporting structure). |
 | radius | RandomParameter_float | meters | Radius of the peduncle. |
@@ -163,6 +166,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open ) and returns an object ID (uint). |
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
 | fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint). |
+| unique_prototypes | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 
 <!--
 
@@ -286,11 +290,11 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | max_nodes | RandomParameter_int | 10 | - | Maximum number of nodes/phytomers along a shoot. |
 | internode_radius_initial | RandomParameter_float | 0.001 | meters | Initial radius of the internode when it is created. |
 | internode_radius_max | RandomParameter_float | unlimited | meters | Maximum internode radius for girth growth. For some species like grasses, girth growth stops at some radius. By default, girth growth will continue indefinitely. |
-| child_insertion_angle_tip | RandomParameter_float | 20 | degrees | Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot. |
-| child_insertion_angle_decay_rate | RandomParameter_float | 0 | degrees/node | Rate of increase of the child insertion angle moving down the parent shoot. |
-| child_internode_length_max | RandomParameter_float | 0.02 | meters | Maximum length (with respect to position along the parent shoot) of the internode of a child shoot. |
-| child_internode_length_min | RandomParameter_float | 0.002 | meters | Minimum length (with respect to position along the parent shoot) of the internode of a child shoot. |
-| child_internode_length_decay_rate | RandomParameter_float | 0 | meters/node | Rate of decrease of the internode length moving down the parent shoot. |
+| insertion_angle_tip | RandomParameter_float | 20 | degrees | Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot. |
+| insertion_angle_decay_rate | RandomParameter_float | 0 | degrees/node | Rate of increase of the child insertion angle moving down the parent shoot. |
+| internode_length_max | RandomParameter_float | 0.02 | meters | Maximum length (with respect to position along the parent shoot) of the internode of a child shoot. |
+| internode_length_min | RandomParameter_float | 0.002 | meters | Minimum length (with respect to position along the parent shoot) of the internode of a child shoot. |
+| internode_length_decay_rate | RandomParameter_float | 0 | meters/node | Rate of decrease of the internode length moving down the parent shoot. |
 | base_roll | RandomParameter_float | 0 | degrees | Roll angle of the shoot, which effectively specifies the angle of the first petiole relative to the parent shoot. |
 | base_yaw | RandomParameter_float | 0 | degrees | Yaw angle of the shoot relative to the parent shoot. |
 | gravitropic_curvature | RandomParameter_float | 0 | degrees/meter | Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward. |
@@ -322,29 +326,29 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 
 Will come back to this later. It is currently used in two places: 1. within addPhytomerToShoot() to set the radius of the internode added to an existing shoot, and 2) within buildShootPhytomers() to either set the radius of the internodes if it is the trunk/base, or the radius is set as a fraction of internode_radius_iniitial.
 
-\subsubsection ShootParam_insertion child_insertion_angle_tip and child_insertion_angle_decay_rate
+\subsubsection ShootParam_insertion insertion_angle_tip and insertion_angle_decay_rate
 
 The insertion angle of child shoots is the angle that a child shoot makes with its parent shoot growth axis.
 
 The methodology for determining the insertion angle of a child shoot differs depending on whether the shoot emerges from a bud that requires a winter dormancy period (proleptic shoot), or whether the shoot emerges in the same growing season. This behavior is set based on the parameter \ref ShootParameters::growth_requires_dormancy (more information on this parameter below).
 
-<b>For buds NOT requiring dormancy</b> (\ref ShootParameters::growth_requires_dormancy = false), the insertion angle of the child shoot is simply given by the parameter \htmlonly<font face="courier" color="blue">child_insertion_angle_tip</font>\endhtmlonly (degrees). (In this case, the parameter \htmlonly<font face="courier" color="blue">child_insertion_angle_decay_rate</font>\endhtmlonly is not used.)
+<b>For buds NOT requiring dormancy</b> (\ref ShootParameters::growth_requires_dormancy = false), the insertion angle of the child shoot is simply given by the parameter \htmlonly<font face="courier" color="blue">insertion_angle_tip</font>\endhtmlonly (degrees). (In this case, the parameter \htmlonly<font face="courier" color="blue">insertion_angle_decay_rate</font>\endhtmlonly is not used.)
 
 <b>For buds requiring dormancy</b> (proleptic; \ref ShootParameters::growth_requires_dormancy = true), the insertion angle of the child shoot is the smallest at the tip of the shoot (at the time dormancy is broken) and increases moving down the shoot toward and angle of 90 degrees.
 
-As shown in the figure below, the insertion angle at the shoot tip is given by the parameter \htmlonly<font face="courier" color="blue">child_insertion_angle_tip</font>\endhtmlonly (degrees). The angle increases linearly at a rate of \htmlonly<font face="courier" color="blue">child_insertion_angle_decay_rate</font>\endhtmlonly (units of degrees per node) until it reaches a maximum insertion angle of 90 degrees. For example, if \htmlonly<font face="courier" color="blue">child_insertion_angle_tip</font>\endhtmlonly = 20 degrees and \htmlonly<font face="courier" color="blue">child_insertion_angle_decay_rate</font>\endhtmlonly = 20 degrees/node, the insertion angle at the second node from the tip would be 40 degrees, 60 degrees at the third node, 80 degrees at the fourth node, and 90 degrees at all subsequent nodes, up until reaching the previous year's growth.
+As shown in the figure below, the insertion angle at the shoot tip is given by the parameter \htmlonly<font face="courier" color="blue">insertion_angle_tip</font>\endhtmlonly (degrees). The angle increases linearly at a rate of \htmlonly<font face="courier" color="blue">insertion_angle_decay_rate</font>\endhtmlonly (units of degrees per node) until it reaches a maximum insertion angle of 90 degrees. For example, if \htmlonly<font face="courier" color="blue">insertion_angle_tip</font>\endhtmlonly = 20 degrees and \htmlonly<font face="courier" color="blue">insertion_angle_decay_rate</font>\endhtmlonly = 20 degrees/node, the insertion angle at the second node from the tip would be 40 degrees, 60 degrees at the third node, 80 degrees at the fourth node, and 90 degrees at all subsequent nodes, up until reaching the previous year's growth.
 
 \image html insertion_angle_schematic.jpeg
 
-\subsubsection ShootParam_length child_internode_length_max, child_internode_length_min, and child_internode_length_decay_rate
+\subsubsection ShootParam_length internode_length_max, internode_length_min, and internode_length_decay_rate
 
 The "potential" or fully elongated internode length is specified for a shoot, and is constant along the length of the shoot. When a phytomer emerges from a bud (either apical or lateral along a parent shoot) it's internode is scaled to some short initial size, and elongates over time according to the \htmlonly<font face="courier" color="blue">elongation rate</font>\endhtmlonly parameter (see below).
 
 Similar to determination of the child insertion angle, the methodology for determination of the fully elongated internode length of a child shoot depends on whether or not the child shoot is emerging from a dormant bud.
 
-<b>For buds NOT requiring dormancy</b> (\ref ShootParameters::growth_requires_dormancy = false), the potential length of internodes along a shoot is determined according to the value of the \htmlonly<font face="courier" color="blue">child_internode_length_max</font>\endhtmlonly parameter.
+<b>For buds NOT requiring dormancy</b> (\ref ShootParameters::growth_requires_dormancy = false), the potential length of internodes along a shoot is determined according to the value of the \htmlonly<font face="courier" color="blue">internode_length_max</font>\endhtmlonly parameter.
 
-<b>For buds requiring dormancy</b> (proleptic; \ref ShootParameters::growth_requires_dormancy = true), the potential length of a shoot's internodes is maximum at the tip of the shoot (at the time dormancy is broken) and decreases moving down the shoot. The potential length of the internode at the tip of the shoot is given by the parameter \htmlonly<font face="courier" color="blue">child_internode_length_max</font>\endhtmlonly. The length decreases linearly at a rate of \htmlonly<font face="courier" color="blue">child_internode_length_decay_rate</font>\endhtmlonly (units of meters per node) until it reaches a minimum length given by the parameter \htmlonly<font face="courier" color="blue">child_internode_length_min</font>\endhtmlonly. For example, if \htmlonly<font face="courier" color="blue">child_internode_length_max</font>\endhtmlonly = 0.1 m, \htmlonly<font face="courier" color="blue">child_internode_length_min</font>\endhtmlonly = 0.01 m, and \htmlonly<font face="courier" color="blue">child_internode_length_decay_rate</font>\endhtmlonly = 0.03 m/node, the potential length of the internode at the second node from the tip would be 0.07 m, 0.04 m at the third node, 0.01 m at the fourth node, and 0.01 m at all subsequent nodes, up until reaching the previous year's growth.
+<b>For buds requiring dormancy</b> (proleptic; \ref ShootParameters::growth_requires_dormancy = true), the potential length of a shoot's internodes is maximum at the tip of the shoot (at the time dormancy is broken) and decreases moving down the shoot. The potential length of the internode at the tip of the shoot is given by the parameter \htmlonly<font face="courier" color="blue">internode_length_max</font>\endhtmlonly. The length decreases linearly at a rate of \htmlonly<font face="courier" color="blue">internode_length_decay_rate</font>\endhtmlonly (units of meters per node) until it reaches a minimum length given by the parameter \htmlonly<font face="courier" color="blue">internode_length_min</font>\endhtmlonly. For example, if \htmlonly<font face="courier" color="blue">internode_length_max</font>\endhtmlonly = 0.1 m, \htmlonly<font face="courier" color="blue">internode_length_min</font>\endhtmlonly = 0.01 m, and \htmlonly<font face="courier" color="blue">internode_length_decay_rate</font>\endhtmlonly = 0.03 m/node, the potential length of the internode at the second node from the tip would be 0.07 m, 0.04 m at the third node, 0.01 m at the fourth node, and 0.01 m at all subsequent nodes, up until reaching the previous year's growth.
 
  \image html internode_length_schematic.jpeg
 
@@ -386,6 +390,7 @@ A number of plant models are available in the plant architecture library, which 
 | Cheeseweed (*Malva neglecta*) | generic | "cheeseweed" | mainstem | | | |
 | Common Bean (*Phaseolus vulgaris*) | upright growth habit (determinate) | "bean" | unifoliate, trifoliate | | | |
 | Cowpea (*Vigna unguiculata*) | upright growth habit (determinate) | "cowpea" | unifoliate, trifoliate | | | |
+| Eastern Redbud (*Cercis canadensis*) | generic | "easternredbud" | eastern_redubud_trunk, eastern_redbud_shoot | | | |
 | Puncturevine (*Tribulus terrestris*) | generic | "puncturevine" | base, offshoots, children | | | |
 | Sorghum (*Sorghum bicolor*) | grain sorghum | "sorghum" | mainstem | | | |
 | Soybean (*Glycine max*) | upright growth habit (determinate) | "soybean" | unifoliate, trifoliate | | | |
@@ -396,7 +401,7 @@ A number of plant models are available in the plant architecture library, which 
 
 Loading a plant from the library with default parameters is relatively simple, and requires only declaring the \ref PlantArchitecture class, loading the model using the \ref PlantArchitecture::loadPlantModelFromLibrary() method (which takes a string argument for the plant model as listed in the table above), and calling the \ref PlantArchitecture::buildPlantInstanceFromLibrary() method. The method takes two arguments: 1) the Cartesian (x,y,z) position of the plant base, and 2) the age of the plant in days. A code example is given below.
 
-~~~~~~
+~~~~~~{c++}
 #include "PlantArchitecture.h"
 using namespace helios;
 

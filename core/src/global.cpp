@@ -824,6 +824,90 @@ bool helios::parse_uint( const std::string &input_string, uint &converted_uint )
 
 }
 
+bool helios::parse_vec2( const std::string &input_string, vec2 &converted_vec2 ){
+
+    std::istringstream vecstream(input_string);
+    std::vector<std::string> tmp_s(2);
+    vecstream >> tmp_s[0];
+    vecstream >> tmp_s[1];
+    vec2 tmp;
+    if (!parse_float(tmp_s[0], tmp.x) || !parse_float(tmp_s[1], tmp.y)) {
+        return false;
+    } else {
+        converted_vec2 = tmp;
+    }
+    return true;
+
+}
+
+bool helios::parse_vec3( const std::string &input_string, vec3 &converted_vec3 ){
+
+    std::istringstream vecstream(input_string);
+    std::vector<std::string> tmp_s(3);
+    vecstream >> tmp_s[0];
+    vecstream >> tmp_s[1];
+    vecstream >> tmp_s[2];
+    vec3 tmp;
+    if (!parse_float(tmp_s[0], tmp.x) || !parse_float(tmp_s[1], tmp.y) || !parse_float(tmp_s[2], tmp.z)) {
+        return false;
+    } else {
+        converted_vec3 = tmp;
+    }
+    return true;
+
+}
+
+int helios::parse_xml_tag_int(const pugi::xml_node &node, const std::string &tag, const std::string &calling_function ){
+    std::string value_string = node.child_value();
+    if( value_string.empty() ){
+        return 0;
+    }
+    int value;
+    if( !parse_int(value_string, value) ){
+        helios_runtime_error("ERROR (" + calling_function + "): Could not parse tag '" + tag + "' integer value.");
+    }
+    return value;
+}
+
+float helios::parse_xml_tag_float( const pugi::xml_node &node, const std::string &tag, const std::string &calling_function ){
+    std::string value_string = node.child_value();
+    if( value_string.empty() ){
+        return 0;
+    }
+    float value;
+    if( !parse_float(value_string, value) ){
+        helios_runtime_error("ERROR (" + calling_function + "): Could not parse tag '" + tag + "' float value.");
+    }
+    return value;
+}
+
+vec2 helios::parse_xml_tag_vec2( const pugi::xml_node &node, const std::string &tag, const std::string &calling_function ){
+    std::string value_string = node.child_value();
+    if( value_string.empty() ){
+        return {0,0};
+    }
+    vec2 value;
+    if( !parse_vec2(value_string, value) ){
+        helios_runtime_error("ERROR (" + calling_function + "): Could not parse tag '" + tag + "' vec2 value.");
+    }
+    return value;
+}
+
+vec3 helios::parse_xml_tag_vec3( const pugi::xml_node &node, const std::string &tag, const std::string &calling_function ){
+    std::string value_string = node.child_value();
+    if( value_string.empty() ){
+        return {0,0,0};
+    }
+    vec3 value;
+    if( !parse_vec3(value_string, value) ){
+        helios_runtime_error("ERROR (" + calling_function + "): Could not parse tag '" + tag + "' vec3 value.");
+    }
+    return value;
+}
+
+std::string helios::parse_xml_tag_string( const pugi::xml_node &node, const std::string &tag, const std::string &calling_function ){
+    return deblank(node.child_value());
+}
 
 std::string helios::deblank(const char* input)
 {

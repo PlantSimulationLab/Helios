@@ -43,8 +43,7 @@ int main(){
   context.loadPLY("../../../PLY/king.ply",make_vec3(3,1,0),1.2, RGB::white );
 
   SphericalCoord sun_dir;
-  sun_dir.elevation = 20*M_PI/180.f;
-  sun_dir.azimuth = 205*M_PI/180.f;
+  sun_dir = make_SphericalCoord(20*M_PI/180.f, 205*M_PI/180.f);
 
   Visualizer vis( 1000 );
 

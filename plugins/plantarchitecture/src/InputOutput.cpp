@@ -432,3 +432,277 @@ uint PlantArchitecture::generatePlantFromString(const std::string &generation_st
     return plantID;
 
 }
+
+void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &filename) const{
+
+    if( plant_instances.find(plantID)==plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+
+    //\todo Check the extension of 'filename' and add .xml if needed
+
+    std::ofstream output_xml(filename);
+
+    if( !output_xml.is_open() ){
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
+    }
+
+    output_xml << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl;
+    output_xml << "<helios>" << std::endl;
+    output_xml << "\t<plant_instance ID=\"" << plantID << "\">" << std::endl;
+
+    output_xml << "\t\t<base_position> " << plant_instances.at(plantID).base_position.x << " " << plant_instances.at(plantID).base_position.y << " " << plant_instances.at(plantID).base_position.z << " </base_position>" << std::endl;
+    output_xml << "\t\t<plant_age> " << plant_instances.at(plantID).current_age << " </plant_age>" << std::endl;
+
+    for( auto& shoot : plant_instances.at(plantID).shoot_tree ) {
+
+        output_xml << "\t\t<shoot ID=\"" << shoot->ID << "\">" << std::endl;
+        output_xml << "\t\t\t<shoot_type_label> " << shoot->shoot_type_label << " </shoot_type_label>" << std::endl;
+        output_xml << "\t\t\t<parent_shoot_ID> " << shoot->parent_shoot_ID << " </parent_shoot_ID>" << std::endl;
+        output_xml << "\t\t\t<parent_node_index> " << shoot->parent_node_index << " </parent_node_index>" << std::endl;
+        output_xml << "\t\t\t<parent_petiole_index> " << shoot->parent_petiole_index << " </parent_petiole_index>" << std::endl;
+        output_xml << "\t\t\t<base_rotation> " << rad2deg(shoot->base_rotation.pitch) << " " << rad2deg(shoot->base_rotation.yaw) << " " << rad2deg(shoot->base_rotation.roll) << " </base_rotation>" << std::endl;
+
+        for (auto &phytomer: shoot->phytomers) {
+
+            output_xml << "\t\t\t<phytomer>" << std::endl;
+            output_xml << "\t\t\t\t<internode>" << std::endl;
+            output_xml << "\t\t\t\t\t<internode_length>" << phytomer->internode_length << "</internode_length>" << std::endl;
+            output_xml << "\t\t\t\t\t<internode_radius>" << phytomer->internode_radii.front() << "</internode_radius>" << std::endl;
+            output_xml << "\t\t\t\t\t<internode_pitch>" << rad2deg(phytomer->internode_pitch) << "</internode_pitch>" << std::endl;
+            output_xml << "\t\t\t\t\t<internode_phyllotactic_angle>" << rad2deg(phytomer->internode_phyllotactic_angle) << "</internode_phyllotactic_angle>" << std::endl;
+
+            for (uint petiole = 0; petiole < phytomer->petiole_length.size(); petiole++) {
+
+                output_xml << "\t\t\t\t\t<petiole>" << std::endl;
+                output_xml << "\t\t\t\t\t\t<petiole_length>" << phytomer->petiole_length.at(petiole) << "</petiole_length>" << std::endl;
+                output_xml << "\t\t\t\t\t\t<petiole_radius>" << phytomer->petiole_radii.at(petiole).front() << "</petiole_radius>" << std::endl;
+                output_xml << "\t\t\t\t\t\t<petiole_pitch>" << rad2deg(phytomer->petiole_pitch) << "</petiole_pitch>" << std::endl;
+                output_xml << "\t\t\t\t\t\t<petiole_curvature>" << phytomer->petiole_curvature << "</petiole_curvature>" << std::endl;
+
+                for( uint leaf=0; leaf < phytomer->leaf_rotation.at(petiole).size(); leaf++ ){
+                    output_xml << "\t\t\t\t\t\t<leaf>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t<leaf_scale>" << phytomer->leaf_size_max.at(petiole)*phytomer->current_leaf_scale_factor << "</leaf_scale>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t<leaf_pitch>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).pitch) << "</leaf_pitch>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t<leaf_yaw>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).yaw) << "</leaf_yaw>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t<leaf_roll>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).roll) << "</leaf_roll>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t</leaf>" << std::endl;
+                }
+
+                output_xml << "\t\t\t\t\t</petiole>" << std::endl;
+            }
+            output_xml << "\t\t\t\t</internode>" << std::endl;
+            output_xml << "\t\t\t</phytomer>" << std::endl;
+        }
+        output_xml << "\t\t</shoot>" << std::endl;
+    }
+    output_xml << "\t</plant_instance>" << std::endl;
+    output_xml << "</helios>" << std::endl;
+    output_xml.close();
+
+
+}
+
+std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &filename, bool quiet){
+
+    if( !quiet ) {
+        std::cout << "Loading plant architecture XML file: " << filename << "..." << std::flush;
+    }
+
+    std::string fn = filename;
+    std::string ext = getFileExtension(filename);
+    if( ext != ".xml" && ext != ".XML" ) {
+        helios_runtime_error("failed.\n File " + fn + " is not XML format.");
+    }
+
+    std::vector<uint> plantIDs;
+
+    // Using "pugixml" parser.  See pugixml.org
+    pugi::xml_document xmldoc;
+
+    //load file
+    pugi::xml_parse_result load_result = xmldoc.load_file(filename.c_str());
+
+    //error checking
+    if (!load_result){
+        helios_runtime_error("ERROR (Context::readPlantStructureXML): Could not parse " + std::string(filename) + ":\nError description: " + load_result.description() );
+    }
+
+    pugi::xml_node helios = xmldoc.child("helios");
+
+    pugi::xml_node node;
+    std::string node_string;
+
+    if( helios.empty() ){
+        if( !quiet ) {
+            std::cout << "failed." << std::endl;
+        }
+        helios_runtime_error("ERROR (Context::readPlantStructureXML): XML file must have tag '<helios> ... </helios>' bounding all other tags.");
+    }
+
+    size_t phytomer_count = 0;
+
+    for (pugi::xml_node plant = helios.child("plant_instance"); plant; plant = plant.next_sibling("plant_instance")) {
+
+        int plantID = std::stoi(plant.attribute("ID").value());
+
+        // base position
+        node_string = "base_position";
+        vec3 base_position = parse_xml_tag_vec3(plant.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+        // plant age
+        node_string = "plant_age";
+        float plant_age = parse_xml_tag_float(plant.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+        plantID = addPlantInstance(base_position, plant_age);
+        plantIDs.push_back(plantID);
+
+        bool base_shoot = true;
+        uint current_shoot_ID;
+
+        for (pugi::xml_node shoot = plant.child("shoot"); shoot; shoot = shoot.next_sibling("shoot")) {
+
+            int shootID = std::stoi(shoot.attribute("ID").value());
+
+            // shoot type
+            node_string = "shoot_type_label";
+            std::string shoot_type_label = parse_xml_tag_string(shoot.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+            // parent shoot ID
+            node_string = "parent_shoot_ID";
+            int parent_shoot_ID = parse_xml_tag_int(shoot.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+            // parent node index
+            node_string = "parent_node_index";
+            int parent_node_index = parse_xml_tag_int(shoot.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+            // parent petiole index
+            node_string = "parent_petiole_index";
+            int parent_petiole_index = parse_xml_tag_int(shoot.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+            // base rotation
+            node_string = "base_rotation";
+            vec3 base_rot = parse_xml_tag_vec3(shoot.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+            AxisRotation base_rotation(base_rot.x, base_rot.y, base_rot.z);
+
+            for (pugi::xml_node phytomer = shoot.child("phytomer"); phytomer; phytomer = phytomer.next_sibling("phytomer")) {
+
+                pugi::xml_node internode = phytomer.child("internode");
+
+                // internode length
+                node_string = "internode_length";
+                float internode_length = parse_xml_tag_float(internode.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                // internode radius
+                node_string = "internode_radius";
+                float internode_radius = parse_xml_tag_float(internode.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                // internode pitch
+                node_string = "internode_pitch";
+                float internode_pitch = parse_xml_tag_float(internode.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                // internode phyllotactic angle
+                node_string = "internode_phyllotactic_angle";
+                float internode_phyllotactic_angle = parse_xml_tag_float(internode.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                float petiole_length;
+                float petiole_radius;
+                float petiole_pitch;
+                float petiole_curvature;
+                float leaf_scale;
+                float leaf_pitch;
+                float leaf_yaw;
+                float leaf_roll;
+                for (pugi::xml_node petiole = internode.child("petiole"); petiole; petiole = petiole.next_sibling("petiole")) {
+
+                    // petiole length
+                    node_string = "petiole_length";
+                    petiole_length = parse_xml_tag_float(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    // petiole radius
+                    node_string = "petiole_radius";
+                    petiole_radius = parse_xml_tag_float(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    // petiole pitch
+                    node_string = "petiole_pitch";
+                    petiole_pitch = parse_xml_tag_float(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    // petiole curvature
+                    node_string = "petiole_curvature";
+                    petiole_curvature = parse_xml_tag_float(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    for (pugi::xml_node leaf = petiole.child("leaf"); leaf; leaf = leaf.next_sibling("leaf")) {
+
+                        // leaf scale factor
+                        node_string = "leaf_scale";
+                        leaf_scale = parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                        // leaf pitch
+                        node_string = "leaf_pitch";
+                        leaf_pitch = parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                        // leaf yaw
+                        node_string = "leaf_yaw";
+                        leaf_yaw = parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                        // leaf roll
+                        node_string = "leaf_roll";
+                        leaf_roll = parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    }
+                } //petioles
+
+                if( shoot_types.find(shoot_type_label)==shoot_types.end() ){
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): Shoot type " + shoot_type_label + " not found in shoot types.");
+                }
+
+
+                ShootParameters shoot_parameters = getCurrentShootParameters(shoot_type_label);
+
+                shoot_parameters.phytomer_parameters.phytomer_creation_function = nullptr;
+
+                shoot_parameters.phytomer_parameters.internode.pitch = internode_pitch;
+                shoot_parameters.phytomer_parameters.internode.phyllotactic_angle = internode_phyllotactic_angle;
+
+                shoot_parameters.phytomer_parameters.petiole.length = petiole_length;
+                shoot_parameters.phytomer_parameters.petiole.radius = petiole_radius;
+                shoot_parameters.phytomer_parameters.petiole.pitch = petiole_pitch;
+                shoot_parameters.phytomer_parameters.petiole.curvature = petiole_curvature;
+
+                std::cout << "XML plant leaf scale: " << leaf_scale << std::endl;
+                shoot_parameters.phytomer_parameters.leaf.prototype_scale = leaf_scale;
+                shoot_parameters.phytomer_parameters.leaf.pitch = leaf_pitch;
+                shoot_parameters.phytomer_parameters.leaf.yaw = leaf_yaw;
+                shoot_parameters.phytomer_parameters.leaf.roll = leaf_roll;
+
+                std::string shoot_label = "shoot_" + std::to_string(phytomer_count);
+                defineShootType( shoot_label, shoot_parameters);
+
+                if( base_shoot ){
+
+                    if( parent_shoot_ID<0 ) { //this is the first shoot of the plant
+                        std::cout << "Adding base internode with length " << internode_length << " and radius " << internode_radius << std::endl;
+                        current_shoot_ID = addBaseStemShoot(plantID, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_label);
+                        std::cout << "Adding base shoot" << std::endl;
+                    }else{ //this is a child of an existing shoot
+                        current_shoot_ID = addChildShoot(plantID, parent_shoot_ID, parent_node_index, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_label, parent_petiole_index);
+                    }
+
+                    base_shoot = false;
+                }else{
+                    addPhytomerToShoot(plantID, current_shoot_ID, shoot_parameters.phytomer_parameters, internode_radius, internode_length, 1, 1);
+                }
+
+                phytomer_count++;
+        } //phytomers
+
+        } //shoots
+
+    } //plant instances
+
+    if( !quiet ) {
+        std::cout << "done." << std::endl;
+    }
+    return plantIDs;
+
+}

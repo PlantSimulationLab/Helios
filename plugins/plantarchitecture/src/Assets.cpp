@@ -1,4 +1,17 @@
+/** \file "Assets.cpp" Function definitions for plant organ prototypes plant architecture plug-in.
 
+    Copyright (C) 2016-2024 Brian Bailey
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, version 2.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+*/
 
 #include "PlantArchitecture.h"
 
@@ -81,7 +94,7 @@ uint buildGenericLeafPrototype(helios::Context *context_ptr, uint subdivisions, 
     return context_ptr->addPolymeshObject( UUIDs );
 }
 
-uint AlmondLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint AlmondLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
@@ -99,7 +112,7 @@ uint AlmondFlowerPrototype( helios::Context* context_ptr, uint subdivisions, boo
     return objID;
 }
 
-void AlmondPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ) {
+void AlmondPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ) {
 
     if( phytomer->internode_length_max < 0.01 ){ //spurs
         phytomer->setInternodeMaxRadius( 0.005 );
@@ -116,7 +129,44 @@ void AlmondPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
 
 }
 
-uint BeanLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint AsparagusLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+    float curve_magnitude = context_ptr->randu(0.f,0.2f);
+
+    std::vector<vec3> nodes;
+    nodes.push_back( make_vec3(0,0,0) );
+    nodes.push_back( make_vec3( context_ptr->randu(0.4f,0.7f),0,-0.25f*curve_magnitude) );
+    nodes.push_back( make_vec3(0.95,0,-0.9f*curve_magnitude) );
+    nodes.push_back( make_vec3(1,0,-curve_magnitude) );
+
+    std::vector<float> radius;
+    radius.push_back(0.015);
+    radius.push_back(0.015);
+    radius.push_back(0.015);
+    radius.push_back(0.0);
+
+    std::vector<RGBcolor> colors;
+    colors.push_back( RGB::forestgreen );
+    colors.push_back( RGB::forestgreen );
+    colors.push_back( RGB::forestgreen );
+    colors.push_back( RGB::forestgreen );
+
+    uint objID = context_ptr->addTubeObject( 8, nodes, radius, colors);
+    context_ptr->rotateObject( objID, context_ptr->randu(0,2.f*M_PI), "x" );
+    return objID;
+}
+
+void AsparagusPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ) {
+
+    //blind nodes
+    if( shoot_node_index<=2 ){
+        phytomer->scaleLeafPrototypeScale( 0.6 );
+        phytomer->setVegetativeBudState( BUD_DEAD );
+    }
+
+}
+
+uint BeanLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/BeanLeaf_unifoliate.png";
 
     float leaf_aspect = 0.8; //ratio of leaf width to leaf length
@@ -131,14 +181,14 @@ uint BeanLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivision
 
 }
 
-uint BeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint BeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::string leaf_texture;
     if( compound_leaf_index==0 ){
         leaf_texture = "plugins/plantarchitecture/assets/textures/BeanLeaf_tip.png";
     }else if( compound_leaf_index<0 ){
-        leaf_texture = "plugins/plantarchitecture/assets/textures/BeanLeaf_left.png";
+        leaf_texture = "plugins/plantarchitecture/assets/textures/BeanLeaf_left_centered.png";
     }else{
-        leaf_texture = "plugins/plantarchitecture/assets/textures/BeanLeaf_right.png";
+        leaf_texture = "plugins/plantarchitecture/assets/textures/BeanLeaf_right_centered.png";
     }
 
 
@@ -154,7 +204,7 @@ uint BeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivision
 
 }
 
-uint BeanLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint BeanLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::vector<uint> UUIDs;
     UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanLeaf_unifoliate.obj", true );
 
@@ -162,7 +212,7 @@ uint BeanLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivi
     return objID;
 }
 
-uint BeanLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint BeanLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::vector<uint> UUIDs;
     if( compound_leaf_index==0 ){
         UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanLeaf_tip.obj", true );
@@ -192,9 +242,9 @@ uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool 
     return objID;
 }
 
-void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
+void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
-    if( shoot_node_index>10 || rank>1 ) {
+    if( shoot_node_index>10 || phytomer->rank>1 ) {
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
     if( shoot_node_index<=1 || shoot_node_index > 15){
@@ -211,7 +261,7 @@ void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoo
 
 }
 
-uint BindweedLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint BindweedLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BindweedLeaf.obj", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
@@ -223,13 +273,13 @@ uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions, b
     return objID;
 }
 
-uint CheeseweedLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint CheeseweedLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CheeseweedLeaf.obj", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
 }
 
-uint CowpeaLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint CowpeaLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_unifoliate.png";
 
     float leaf_aspect = 0.8; //ratio of leaf width to leaf length
@@ -244,7 +294,7 @@ uint CowpeaLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisi
 
 }
 
-uint CowpeaLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint CowpeaLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::string leaf_texture;
     if( compound_leaf_index==0 ){
         leaf_texture = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_tip_centered.png";
@@ -266,7 +316,7 @@ uint CowpeaLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisi
 
 }
 
-uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::vector<uint> UUIDs;
     UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_unifoliate.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
 
@@ -274,7 +324,7 @@ uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdi
     return objID;
 }
 
-uint CowpeaLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint CowpeaLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::vector<uint> UUIDs;
     if( compound_leaf_index<0 ){
         UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_left_highres.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
@@ -304,9 +354,9 @@ uint CowpeaFlowerPrototype( helios::Context* context_ptr, uint subdivisions, boo
     return objID;
 }
 
-void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
+void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
-    if( shoot_node_index>5 || rank>1 ) {
+    if( shoot_node_index>5 || phytomer->rank>1 ) {
         phytomer->setVegetativeBudState(BUD_DEAD);
     }else{
         phytomer->setFloralBudState(BUD_DEAD);
@@ -322,7 +372,7 @@ void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
 
 }
 
-uint PuncturevineLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint PuncturevineLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
 
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/PuncturevineLeaf.png";
 
@@ -344,37 +394,54 @@ uint PuncturevineFlowerPrototype( helios::Context* context_ptr, uint subdivision
     return objID;
 }
 
-uint RedbudLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
-    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/RedbudLeaf.obj", make_vec3(0.,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
-    uint objID = context_ptr->addPolymeshObject( UUIDs );
+uint RedbudLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/RedbudLeaf.png";
+
+    float leaf_aspect = 1.0; //ratio of leaf width to leaf length
+
+    float midrib_fold = 0.3; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+
+    float x_curvature = -0.1; //curvature factor along x-direction. (+curves upward, -curved downward)
+
+    float y_curvature = -0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
+
+    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, 0, 0, 0);
+    context_ptr->translateObject( objID, make_vec3(-0.3,0,0) );
+
     return objID;
 }
 
 uint RedbudFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/RedbudFlower_open.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
-    uint objID = context_ptr->addPolymeshObject( UUIDs );
-    return objID;
+    return context_ptr->addPolymeshObject( UUIDs );
 }
 
 uint RedbudFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
-    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/RedbudPod.obj", make_vec3(0.,0,0), 0.75,nullrotation, RGB::black, "ZUP", true );
-    uint objID = context_ptr->addPolymeshObject( UUIDs );
-    return objID;
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/RedbudPod.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    return context_ptr->addPolymeshObject( UUIDs );
 }
 
-void RedbudPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
-
-//    //remove all vegetative buds
-//    phytomer->setVegetativeBudState( BUD_DEAD );
-//
-//    //remove all floral buds except for the terminal one
-//    if( shoot_node_index < shoot_max_nodes-1 ){
-//        phytomer->setFloralBudState( BUD_DEAD );
-//    }
+void RedbudPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
 }
 
-uint SorghumLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+void RedbudPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
+
+    int Nchild_shoots = randu(3,4);
+
+    if( phytomer->isdormant ){
+        if( phytomer->shoot_index.x < phytomer->shoot_index.y-Nchild_shoots ){
+            phytomer->setVegetativeBudState( BUD_DEAD );
+        }
+        else{
+        //if( phytomer->shoot_index.x >= phytomer->shoot_index.y-3 ||  phytomer->shoot_index.x < 3){
+            phytomer->setFloralBudState(BUD_DEAD);
+        }
+    }
+
+}
+
+uint SorghumLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
 
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
 
@@ -488,7 +555,7 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
 
 }
 
-void SorghumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
+void SorghumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
     //set leaf scale based on position along the shoot
     float scale = fmin(1.f, 0.5 + 0.5*float(shoot_node_index)/5.f);
@@ -499,7 +566,7 @@ void SorghumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint s
 
 }
 
-uint SoybeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint SoybeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
 //    std::vector<uint> UUIDs;
 //    UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/SoybeanLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
 //    uint objID = context_ptr->addPolymeshObject( UUIDs );
@@ -519,8 +586,8 @@ uint SoybeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivis
 
 }
 
-uint SoybeanLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
-    return SoybeanLeafPrototype_trifoliate(context_ptr, subdivisions, compound_leaf_index, shoot_node_index, shoot_max_nodes); //\todo Add separate model for unifoliate leaves
+uint SoybeanLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+    return SoybeanLeafPrototype_trifoliate(context_ptr, subdivisions, compound_leaf_index ); //\todo Add separate model for unifoliate leaves
 }
 
 uint SoybeanFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
@@ -540,9 +607,9 @@ uint SoybeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bo
     return objID;
 }
 
-void SoybeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
+void SoybeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
-    if( shoot_node_index>10 || rank>1 ) {
+    if( shoot_node_index>10 || phytomer->rank>1 ) {
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
     if( shoot_node_index<=0 || shoot_node_index > 15){
@@ -559,7 +626,7 @@ void SoybeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint s
 
 }
 
-uint StrawberryLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint StrawberryLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
 
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/StrawberryLeaf.png";
 
@@ -592,7 +659,7 @@ uint StrawberryFruitPrototype( helios::Context* context_ptr, uint subdivisions, 
     return objID;
 }
 
-uint SugarbeetLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint SugarbeetLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
 
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/SugarbeetLeaf.png";
 
@@ -614,7 +681,7 @@ uint SugarbeetLeafPrototype( helios::Context* context_ptr, uint subdivisions, in
 
 }
 
-uint TomatoLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){
+uint TomatoLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
 //    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/TomatoLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
 //    uint objID = context_ptr->addPolymeshObject( UUIDs );
 //    return objID;
@@ -649,12 +716,12 @@ uint TomatoFlowerPrototype( helios::Context* context_ptr, uint subdivisions, boo
     return objID;
 }
 
-void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, uint rank, float plant_age ){
+void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
-    if( shoot_node_index>5 || rank>1 ) {
+    if( shoot_node_index>5 || phytomer->rank>1 ) {
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
-    if( shoot_node_index<8 && rank==0 ){
+    if( shoot_node_index<8 && phytomer->rank==0 ){
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
