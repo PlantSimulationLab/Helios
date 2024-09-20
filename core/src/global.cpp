@@ -1775,6 +1775,8 @@ helios::int2 helios::getImageResolutionJPEG( const std::string &filename ){
     row_stride = cinfo.output_width * cinfo.output_components;
     buffer = (*cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
+    jpeg_destroy_decompress(&cinfo);
+
     return make_int2(cinfo.output_width,cinfo.output_height);
 
 }

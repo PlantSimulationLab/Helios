@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['vectors_0',['Vectors',['../group__vectors.html',1,'']]]
+  ['primitives_0',['Geometric Primitives',['../group__primitives.html',1,'']]]
 ];

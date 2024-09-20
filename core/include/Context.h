@@ -657,11 +657,12 @@ protected:
 };
 
 //! Tube compound object class
-class Tube: public CompoundObject {
+class Tube : public CompoundObject {
 public:
     
     //! Default constructor
-    Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
+    Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, const std::vector<std::vector<helios::vec3>> &a_triangle_vertices,
+         uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
     
     //! Tube destructor
     ~Tube() override = default;
@@ -674,28 +675,81 @@ public:
     
     //! Get the colors at each of the tube object nodes
     std::vector<helios::RGBcolor> getNodeColors() const;
+
+    //! Get positions of triangle vertices comprising the tube object
+    std::vector<std::vector<helios::vec3>> getTriangleVertices() const;
     
     //! Get the number of sub-triangle divisions of the tube object
     uint getSubdivisionCount() const;
-    
-    //! Set the number of sphere tesselation divisions
-    /**
-     * \param[in] subdiv Number of subdivisions in zenithal and azimuthal directions.
-     */
-    void setSubdivisionCount( uint subdiv );
+
+    //! Get the length of the tube object
+    float getLength() const;
 
     //! Get the volume of the tube object
     float getVolume() const;
-    
+
+    //! Get the volume of a segment within the tube object
+    /**
+     * \param[in] segment_index Index of the tube segment
+     */
+    float getSegmentVolume( uint segment_index ) const;
+
+    //! Append an additional segment to the existing tube object
+    /**
+     * \param[in] node_position Cartesian coordinates of the new tube segment node
+     * \param[in] node_radius Radius of the new tube segment node
+     * \param[in] node_color Color of the new tube segment node
+     */
+    void appendTubeSegment( const helios::vec3 &node_position, float node_radius, const helios::RGBcolor &node_color );
+
+    //! Append an additional segment to the existing tube object
+    /**
+     * \param[in] node_position Cartesian coordinates of the new tube segment node
+     * \param[in] node_radius Radius of the new tube segment node
+     * \param[in] texturefile Name of image file for texture map
+     * \param[in] textureuv_ufrac Fractional u-coordinate of texture map at the beginning (.x) and end (.y) of the segment
+     */
+    void appendTubeSegment( const helios::vec3 &node_position, float node_radius, const char* texturefile, const helios::vec2 &textureuv_ufrac );
+
+    //! Scale the girth of the tube object
+    /**
+     * \param[in] S Scaling factor
+     */
+    void scaleTubeGirth( float S);
+
+    //! Set tube radii at each segment node
+    /**
+     * \param[in] node_radii Vector of radii at each tube segment node
+     */
+    void setTubeRadii( const std::vector<float> &node_radii );
+
+    //! Scale the length of the tube object
+    /**
+     * \param[in] S Scaling factor
+     */
+    void scaleTubeLength( float S );
+
+    //! Set tube vertex coordinates at each segment node
+    /**
+     * \param[in] node_xyz Vector of Cartesian coordinates at each tube segment node
+     */
+    void setTubeNodes( const std::vector<helios::vec3> &node_xyz );
+
 protected:
     
     std::vector<helios::vec3> nodes;
-    
+
+    std::vector<std::vector<helios::vec3>> triangle_vertices; //first index is the tube segment ring, second index is vertex within segment ring, third index is the vertex within triangle
+
     std::vector<float> radius;
     
     std::vector<helios::RGBcolor> colors;
     
     uint subdiv;
+
+    void updateTriangleVertices();
+
+
 
     friend class CompoundObject;
     
@@ -790,7 +844,7 @@ protected:
 };
 
 //! Cone compound object class
-class Cone: public CompoundObject {
+class Cone : public CompoundObject {
 public:
     
     //! Default constructor
@@ -1535,6 +1589,14 @@ public:
 
     //! Calculate the fraction of the Triangle surface area that is solid (non-transparent)
     void calculateSolidFraction( const std::map<std::string,Texture> &textures ) override;
+
+    //! Manually set the Triangle vertices
+    /**
+     * \param[in] vertex0 Cartesian coordinate of triangle vertex 0.
+     * \param[in] vertex1 Cartesian coordinate of triangle vertex 1.
+     * \param[in] vertex2 Cartesian coordinate of triangle vertex 2.
+     */
+    void setVertices(const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2 );
     
 private:
     
@@ -1938,7 +2000,6 @@ private:
     std::map<std::string, GlobalData> globaldata;
     
     //---------- CONTEXT PRIVATE MEMBER VARIABLES ---------//
-    //NOTE: variables are initialized and documented in initializeContext() member method
     
     //! Simulation date (Date vector)
     /**
@@ -2394,7 +2455,16 @@ public:
      * \note If the UUID passed to this method does not correspond to a Triangle, an error will be thrown.
      */
     helios::vec3 getTriangleVertex( uint UUID, uint number ) const;
-    
+
+    //! //! Manually set the Triangle vertices
+    /**
+     * \param[in] UUID Unique universal identifier for Triangle.
+     * \param[in] vertex0 Cartesian (x,y,z) coordinate of vertex 0
+     * \param[in] vertex1 Cartesian (x,y,z) coordinate of vertex 1
+     * \param[in] vertex2 Cartesian (x,y,z) coordinate of vertex 2
+     */
+    void setTriangleVertices( uint UUID, const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2 );
+
     //! Get the Cartesian (x,y,z) center position of a voxel element
     /**
      * \param[in] UUID Unique universal identifier for voxel.
@@ -4666,7 +4736,61 @@ public:
      * \param[in] ObjID object ID of the Tube object
      */
     float getTubeObjectVolume( uint ObjID ) const;
-    
+
+    //! get the volume of a segment within a Tube object
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     * \param[in] segment_index Index of the segment within the Tube object
+     */
+    float getTubeObjectSegmentVolume( uint ObjID, uint segment_index ) const;
+
+    //! Append a tube segment to an existing tube object
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     * \param[in] node_position Cartesian coordinates of the node
+     * \param[in] radius Radius of the tube segment
+     * \param[in] color RGB color of the tube segment
+     */
+    void appendTubeSegment(uint ObjID, const helios::vec3 &node_position, float radius, const RGBcolor &color );
+
+    //! Append an additional segment to the existing tube object
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     * \param[in] node_position Cartesian coordinates of the new tube segment node
+     * \param[in] node_radius Radius of the new tube segment node
+     * \param[in] texturefile Name of image file for texture map
+     * \param[in] textureuv_ufrac Fractional u-coordinate of texture map at the beginning (.x) and end (.y) of the segment
+     */
+    void appendTubeSegment( uint ObjID, const helios::vec3 &node_position, float node_radius, const char* texturefile, const helios::vec2 &textureuv_ufrac );
+
+    //! Scale the girth for all nodes of a tube object
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     * \param[in] scale_factor Scaling factor to apply to the girth of the tube object
+     */
+    void scaleTubeGirth( uint ObjID, float scale_factor );
+
+    //! Set tube radii at each segment node
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     * \param[in] node_radii Vector of radii at each tube segment node
+     */
+    void setTubeRadii( uint ObjID, const std::vector<float> &node_radii );
+
+    //! Scale the length of a tube object by an arbitrary factor for all tube nodes
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     * \param[in] scale_factor Scaling factor to apply to the length of the tube object
+     */
+    void scaleTubeLength( uint ObjID, float scale_factor );
+
+    //! Set tube vertex coordinates at each segment node
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     * \param[in] node_xyz Vector of Cartesian coordinates at each tube segment node
+     */
+    void setTubeNodes( uint ObjID, const std::vector<helios::vec3> &node_xyz );
+
     //! Get a pointer to a Box Compound Object
     /**
      * \param[in] ObjID Identifier for Box Compound Object.
@@ -4893,18 +5017,18 @@ public:
     //! Add a 3D tube compound object to the Context
     /** A `tube' or `snake' compound object comprised of Triangle primitives
      * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
-     * \param[in] Ndivs Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
      * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
      * \param[in] radius Radius of the tube at each node position.
      * \return Object ID of new tube object.
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
-    uint addTubeObject(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius );
+    uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius );
     
     //! Add a 3D tube compound object to the Context and specify its diffuse color
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     * \param[in] Ndivs Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
      * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
      * \param[in] radius Radius of the tube at each node position.
      * \param[in] color Diffuse color of each tube segment.
@@ -4912,19 +5036,34 @@ public:
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
-    uint addTubeObject( uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color );
+    uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color );
     
-    //! Add a 3D tube compound object to the Context that is texture-mapped
+    //! Add a 3D tube compound object to the Context that is texture-mapped. Texture is mapped to span the entire tube.
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     * \param[in] Ndivs Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
      * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
      * \param[in] radius Radius of the tube at each node position.
      * \param[in] texturefile Name of image file for texture map
      * \return Object ID of new tube object.
      * \note Ndivs must be greater than 2.
+     * \note The tube is textured such that the x/u direction of the image runs longitudinally along the tube.
      * \ingroup compoundobjects
      */
-    uint addTubeObject( uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile );
+    uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile );
+
+    //! Add a 3D tube compound object to the Context that is texture-mapped
+    /** A `tube' or `snake' compound object comprised of Triangle primitives
+     * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
+     * \param[in] radius Radius of the tube at each node position.
+     * \param[in] texturefile Name of image file for texture map
+     * \param[in] textureuv_ufrac Vector of texture coordinates (u/longitudinal-direction) for each node position.
+     * \return Object ID of new tube object.
+     * \note Ndivs must be greater than 2.
+     * \note The tube is textured such that the x/u direction of the image runs longitudinally along the tube.
+     * \ingroup compoundobjects
+     */
+    uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile, const std::vector<float> &textureuv_vfrac );
     
     //! Add a rectangular prism tessellated with Patch primitives
     /**
@@ -5218,7 +5357,7 @@ public:
     
     //! Add a 3D tube compound object to the Context and specify its diffuse color
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     * \param[in] Ndivs Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
      * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
      * \param[in] radius Radius of the tube at each node position.
      * \param[in] color Diffuse color of each tube segment.
@@ -5226,11 +5365,11 @@ public:
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
-    std::vector<uint> addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color );
+    std::vector<uint> addTube(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color );
     
     //! Add a 3D tube compound object to the Context that is texture-mapped
     /** A `tube' or `snake' compound object comprised of Triangle primitives
-     * \param[in] Ndivs Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
+     * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
      * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
      * \param[in] radius Radius of the tube at each node position.
      * \param[in] texturefile Name of image file for texture map
@@ -5238,7 +5377,7 @@ public:
      * \note Ndivs must be greater than 2.
      * \ingroup compoundobjects
      */
-    std::vector<uint> addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile );
+    std::vector<uint> addTube(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile );
     
     //! Add a rectangular prism tessellated with Patch primitives
     /**

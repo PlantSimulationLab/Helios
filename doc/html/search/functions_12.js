@@ -17,5 +17,5 @@ var searchData=
   ['triangulatehitpoints_14',['triangulateHitPoints',['../class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a',1,'LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio)'],['../class_li_d_a_rcloud.html#a2e2d9ac728f839b64cedb20582d77d48',1,'LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const char *scalar_field, float threshold, const char *comparator)']]],
   ['trim_5fwhitespace_15',['trim_whitespace',['../group__functions.html#ga56b873fa7b729dd84412d44156fa2dca',1,'helios']]],
   ['trunkreconstruction_16',['trunkReconstruction',['../class_li_d_a_rcloud.html#aa7d6abb997267bce460c48cf02dc3545',1,'LiDARcloud']]],
-  ['tube_17',['Tube',['../classhelios_1_1_tube.html#a05c44fa2d123734071135961a9c151d5',1,'helios::Tube']]]
+  ['tube_17',['Tube',['../classhelios_1_1_tube.html#a10d74e5d06813e05c2b188ee170339c9',1,'helios::Tube']]]
 ];

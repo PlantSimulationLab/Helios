@@ -2407,6 +2407,8 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
 
     }
 
+    FT_Done_FreeType(ft);
+
 }
 
 void Visualizer::addColorbarByCenter(const char* title, const helios::vec2 &size, const helios::vec3 &center, const helios::RGBcolor &font_color, const Colormap &colormap ){

@@ -184,6 +184,126 @@ void StomatalConductanceModel::setModelCoefficients(const BMFcoefficients &coeff
     model = "BMF";
 }
 
+void StomatalConductanceModel::setBMFCoefficientsFromLibrary(const std::string &species_name) {
+    BMFcoefficients coeffs;
+    BMFcoeffs = coeffs;
+    BMFmodel_coefficients.clear();
+    model = "BMF";
+}
+
+void StomatalConductanceModel::setBMFCoefficientsFromLibrary(const std::string &species, const std::vector<uint> &UUIDs) {
+    BMFcoefficients coeffs;
+    coeffs = getBMFCoefficientsFromLibrary(species);
+    for (uint UUID: UUIDs) {
+        BMFmodel_coefficients[UUID] = coeffs;
+    }
+    model = "BMF";
+}
+
+BMFcoefficients StomatalConductanceModel::getBMFCoefficientsFromLibrary(const std::string &species) {
+    BMFcoefficients coeffs;
+    bool defaultSpecies = false;
+    const std::string &s = species;
+    if (s == "Almond" || s == "almond") {
+        coeffs.Em = 865.52;
+        coeffs.i0 = 38.65;
+        coeffs.k = 780320.1;
+        coeffs.b = 2086.07;
+    } else if (s == "Apple" || s == "apple") {
+        coeffs.Em = 24.82;
+        coeffs.i0 = 182.86;
+        coeffs.k = 109688.7;
+        coeffs.b = 21.30;
+    } else if (s == "Cherry" || s == "cherry") {
+        coeffs.Em = 138.03;
+        coeffs.i0 = 154.24;
+        coeffs.k = 262462.7;
+        coeffs.b = 545.59;
+    } else if (s == "Prune" || s == "prune") {
+        coeffs.Em = 5.47;
+        coeffs.i0 = 115.73;
+        coeffs.k = 12280.2;
+        coeffs.b = 6.10;
+    } else if (s == "Pear" || s == "pear") {
+        coeffs.Em = 13.06;
+        coeffs.i0 = 167.89;
+        coeffs.k = 25926.4;
+        coeffs.b = 9.81;
+    } else if (s == "PistachioFemale" || s == "pistachiofemale" || s == "pistachio_female" ||
+               s == "Pistachio_Female" || s == "Pistachio_female" || s == "pistachio" || s == "Pistachio") {
+        coeffs.Em = 24865.61;
+        coeffs.i0 = 171.52;
+        coeffs.k = 63444078.5;
+        coeffs.b = 22428.01;
+    } else if (s == "PistachioMale" || s == "pistachiomale" || s == "pistachio_male" ||
+               s == "Pistachio_Male" || s == "Pistachio_male") {
+        coeffs.Em = 236.89;
+        coeffs.i0 = 272.74;
+        coeffs.k = 1224393.7;
+        coeffs.b = 257.26;
+    } else if (s == "Walnut" || s == "walnut") {
+        coeffs.Em = 29.12;
+        coeffs.i0 = 68.03;
+        coeffs.k = 19778.8;
+        coeffs.b = 75.26;
+    } else if (s == "Grape" || s == "grape") {
+        //cv. Cabernet Sauvignon
+        coeffs.Em = 13.69;
+        coeffs.i0 = 201.f;
+        coeffs.k = 43510.f;
+        coeffs.b = 15.0;
+    } else if (s == "Elderberry" || s == "elderberry" || s == "blue_elderberry") {
+        coeffs.Em = 41.28;
+        coeffs.i0 = 305.3;
+        coeffs.k = 102490.f;
+        coeffs.b = 0.f;
+    } else if (s == "Toyon" || s == "toyon") {
+        coeffs.Em = 35.11;
+        coeffs.i0 = 395.f;
+        coeffs.k = 373530.f;
+        coeffs.b = 2.6058;
+    } else if (s == "Big_Leaf_Maple" || s == "big_leaf_maple" || s == "Maple" || s == "maple") {
+        coeffs.Em = 1.441;
+        coeffs.i0 = 292.5;
+        coeffs.k = 11639.f;
+        coeffs.b = 4.744;
+    } else if (s == "Western_Redbud" || s == "western_redbud" || s == "Redbud" || s == "redbud") {
+        coeffs.Em = 8.814;
+        coeffs.i0 = 150.7;
+        coeffs.k = 25540.f;
+        coeffs.b = 0.f;
+    } else if (s == "Baylaurel" || s == "baylaurel" || s == "Bay_Laurel" || s == "bay_laurel" || s == "bay" ||
+               s == "Bay") {
+        coeffs.Em = 1.6;
+        coeffs.i0 = 1.359f;
+        coeffs.k = 849.4;
+        coeffs.b = 6.485;
+    } else if (s == "Olive" || s == "olive") {
+        coeffs.Em = 3.9210;
+        coeffs.i0 = 0.f;
+        coeffs.k = 2294.8;
+        coeffs.b = 2.6058;
+    } else if (s == "EasternRedbud" || s == "easternredbud" || s == "easternredbud" ||
+               s == "EasternRedbud" || s == "EasternRedbud" ) {
+        coeffs.Em = 21.88;
+        coeffs.i0 = 11.47;
+        coeffs.k = 1.387e+05;
+        coeffs.b = 1.051e-06;
+    } else {
+        std::cout << "WARNING (StomatalConductanceModel::getModelCoefficients): unknown species " << s
+                  << ". Returning default (Almond)." << std::endl;
+        defaultSpecies = true;
+        coeffs.Em = 865.52;
+        coeffs.i0 = 38.65;
+        coeffs.k = 780320.1;
+        coeffs.b = 2086.07;
+    }
+    if (!defaultSpecies) {
+        std::cout << "Returning Stomatal Model Coefficients to " << s << std::endl;
+    }
+    return coeffs;
+}
+
 void StomatalConductanceModel::setModelCoefficients(const BBcoefficients &coeffs ){
     BBcoeffs = coeffs;
     BBmodel_coefficients.clear();

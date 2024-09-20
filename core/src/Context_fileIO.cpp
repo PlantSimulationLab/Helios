@@ -4134,10 +4134,10 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
   // - it would make more sense to write patches  as quads rather than two triangles
 
   if( UUIDs.empty() ){
-    std::cout << "failed. UUID vector was empty - OBJ file will not be written." << std::endl;
+    std::cout << "WARNING (Context::writeOBJ): No primitives found to write - OBJ file will not be written." << std::endl;
     return;
   }else if( filename.empty() ){
-    std::cout << "failed. Filename was empty - OBJ file will not be written." << std::endl;
+    std::cout << "WARNING (Context::writeOBJ): Filename was empty - OBJ file will not be written." << std::endl;
     return;
   }
 
@@ -4157,6 +4157,13 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
       mtlfilename = file_path + "/" + file_stem + ".mtl";
     }else{
       mtlfilename = file_stem + ".mtl";
+    }
+  }
+
+  if( !std::filesystem::exists(file_path) ){
+    if( !std::filesystem::create_directory(file_path) ){
+        std::cout << "failed. Directory " << file_path << " does not exist and it could not be created - OBJ file will not be written." << std::endl;
+        return;
     }
   }
 
@@ -4280,22 +4287,15 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
   }
 
   //copy material textures to new directory and edit old file paths
-  //DISABLED TEMPORARILY UNTIL A MORE PORTABLE FIX IS IMPLEMENTED
-  //  std::string texture_dir;
-  //  if( std::string(file_path).empty() ){
-  //    texture_dir = "obj_textures/";
-  //  }else{
-  //    texture_dir = std::string(file_path) + "/obj_textures/";
-  //  }
-  //  auto ret = fs::create_directory( texture_dir );
-  //  for (int mat = 0; mat < materials.size(); mat++) {
-  //    std::string texture = materials.at(mat).texture;
-  //    if( !texture.empty() && fs::exists(texture) ) {
-  //      auto file = fs::path(texture).filename();
-  //      fs::copy_file( texture, texture_dir + std::string(file), fs::copy_options::overwrite_existing );
-  //      materials.at(mat).texture = texture_dir + std::string(file);
-  //    }
-  //  }
+  std::string texture_dir = std::string(file_path);
+    for (int mat = 0; mat < materials.size(); mat++) {
+        std::string texture = materials.at(mat).texture;
+        if( !texture.empty() && std::filesystem::exists(texture) ) {
+            auto file = std::filesystem::path(texture).filename();
+            std::filesystem::copy_file( texture, texture_dir + file.string(), std::filesystem::copy_options::overwrite_existing );
+            materials.at(mat).texture = file.string();
+        }
+    }
 
   std::ofstream objfstream;
   objfstream.open(objfilename);
@@ -4351,13 +4351,13 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
         RGBcolor current_color = materials.at(mat).color;
         mtlfstream << "Ka " << current_color.r << " " << current_color.g << " " << current_color.b << std::endl;
         mtlfstream << "Kd " << current_color.r << " " << current_color.g << " " << current_color.b << std::endl;
-        mtlfstream << "Ks 0.0 0.0 0.0" << std::endl;
       }else{
         mtlfstream << "map_Kd " << current_texture << std::endl;
       }
       if( materials.at(mat).textureHasTransparency ){
         mtlfstream << "map_d " << current_texture << std::endl;
       }
+      mtlfstream << "Ks 0.0 0.0 0.0" << std::endl;
       mtlfstream << "illum 2 " << std::endl;
     }
 

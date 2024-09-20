@@ -72,10 +72,16 @@ public:
   int2 operator+(const int2& a) const;
   //! Increment int2 vector
   int2& operator+=(const int2& a);
+  //! Deccrement int2 vector
+  int2& operator-=(const int2& a);
   //! Subtract two int2 vectors
   int2 operator-(const int2& a) const;
   //! Equality for all elements
   bool operator==( const int2& a ) const;
+  //! Inequality for all elements
+  bool operator!=( const int2& a ) const;
+  //! Multiply each element by -1
+  int2 operator-() const;
 
   //! Write int2 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int2 &vec) {
@@ -86,17 +92,17 @@ public:
 
 //! Make an int2 vector from two ints
 /**
- * \param[in] "X" First component of integer vector
- * \param[in] "Y" First component of integer vector
+ * \param[in] x First component of integer vector
+ * \param[in] y First component of integer vector
  * \ingroup vectors
 */
-inline int2 make_int2( int X, int Y ){
-  return {X,Y};
+inline int2 make_int2( int x, int y ){
+  return {x,y};
 }
  
 //! Make an int2 vector from an array of ints
 /**
- * \param[in] "X" 2D array if integers
+ * \param[in] X 2D array if integers
  * \ingroup vectors
 */
 inline int2 make_int2( int X[2] ){
@@ -113,12 +119,26 @@ inline int2& int2::operator+=(const int2& a){
     return *this;
 }
 
+inline int2& int2::operator-=(const int2& a){
+    this->x -= a.x;
+    this->y -= a.y;
+    return *this;
+}
+
 inline int2 int2::operator-(const int2& a) const{
   return {x-a.x, y-a.y};
 }
 
 inline bool int2::operator==( const int2& a ) const{
   return a.x==x && a.y==y;
+}
+
+inline bool int2::operator!=( const int2& a ) const{
+    return a.x!=x || a.y!=y;
+}
+
+inline int2 int2::operator-() const{
+    return {-x,-y};
 }
 
 //! Vector of three elements of type 'int'. 
@@ -156,10 +176,16 @@ public:
   int3 operator+(const int3& a) const;
   //! Increment int3 vector
   int3& operator+=(const int3& a);
+  //! Decrement int3 vector
+  int3& operator-=(const int3& a);
   //! Subtract two int3 vectors
   int3 operator-(const int3& a) const;
   //! Equality for all elements
   bool operator==( const int3& a ) const;
+  //! Inequality for all elements
+  bool operator!=( const int3& a ) const;
+  //! Multiply each element by -1
+  int3 operator-() const;
 
   //! Write int3 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int3 &vec) {
@@ -189,12 +215,27 @@ inline int3& int3::operator+=(const int3& a){
     return *this;
 }
 
+inline int3& int3::operator-=(const int3& a){
+    this->x -= a.x;
+    this->y -= a.y;
+    this->z -= a.z;
+    return *this;
+}
+
 inline int3 int3::operator-(const int3& a) const{
   return {x-a.x, y-a.y, z-a.z};
 }
 
 inline bool int3::operator==( const int3& a ) const{
   return a.x==x && a.y==y && a.z==z;
+}
+
+inline bool int3::operator!=( const int3& a ) const{
+    return a.x!=x || a.y!=y || a.z!=z;
+}
+
+inline int3 int3::operator-() const{
+    return {-x,-y,-z};
 }
 
 //! Vector of four elements of type 'int'. 
@@ -236,10 +277,16 @@ public:
   int4 operator+(const int4& a) const;
   //! Increment int4 vector
   int4& operator+=(const int4& a);
+  //! Decrement int4 vector
+  int4& operator-=(const int4& a);
   //! Subtract two int4 vectors
   int4 operator-(const int4& a) const;
   //! Equality for all elements
   bool operator==( const int4& a ) const;
+  //! Inequality for all elements
+  bool operator!=( const int4& a ) const;
+  //! Multiply each element by -1
+  int4 operator-() const;
 
   //! Write int4 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int4 &vec) {
@@ -249,8 +296,8 @@ public:
 };
 
 //! Make an int4 vector from three ints
- inline int4 make_int4( int X, int Y, int Z, int W ){
-   return {X,Y,Z,W};
+ inline int4 make_int4(int x, int y, int z, int w ){
+   return {x, y, z, w};
  }
 
  //! Make an int4 vector from an array of ints
@@ -270,12 +317,28 @@ inline int4& int4::operator+=(const int4& a){
     return *this;
 }
 
+inline int4& int4::operator-=(const int4& a){
+    this->x -= a.x;
+    this->y -= a.y;
+    this->z -= a.z;
+    this->w -= a.w;
+    return *this;
+}
+
 inline int4 int4::operator-(const int4& a) const{
     return {a.x-x, a.y-y, a.z-z, a.w-w};
 }
 
 inline bool int4::operator==( const int4& a ) const{
   return a.x==x && a.y==y && a.z==z && a.w==w;
+}
+
+inline bool int4::operator!=( const int4& a ) const{
+    return a.x!=x || a.y!=y || a.z!=z || a.w!=w;
+}
+
+inline int4 int4::operator-() const{
+    return {-x,-y,-z,-w};
 }
 
 //! Vector of two elements of type 'float'. 
@@ -299,7 +362,7 @@ public:
   /**
    * \return magnitude of vector
   */
-  float magnitude() const{
+  [[nodiscard]] float magnitude() const{
     return sqrtf( x*x + y*y );
   }
 
@@ -327,6 +390,8 @@ public:
   vec2 operator+(const vec2& a) const;
   //! Increment vec2 vector
   vec2& operator+=(const vec2& a);
+  //! Decrement vec2 vector
+  vec2& operator-=(const vec2& a);
   //! Difference of two vec2 vectors
   vec2 operator-(const vec2& a) const;
   //! Multiply each element by scalar (scalar is multiplied on right: vec2*a)
@@ -341,6 +406,8 @@ public:
   bool operator==(const vec2& a) const;
   //! check for inequality of two vec2 vectors
   bool operator!=(const vec2& a) const;
+  //! Multiply each element by -1
+  vec2 operator-() const;
 
   //! Write vec2 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec2 &vec) {
@@ -357,12 +424,13 @@ vec2 operator+( float a, const vec2& v);
 vec2 operator-( float a, const vec2& v);
 
 //! Make a vec2 from two floats
-/** \param[in] "X" First element of vector
-    \param[in] "Y" Second element of vector
-    \ingroup vectors
+/**
+ * \param[in] x First element of vector
+ * \param[in] y Second element of vector
+ * \ingroup vectors
 */
-inline vec2 make_vec2( float X, float Y ){
-  return {X,Y};
+inline vec2 make_vec2(float x, float y ){
+  return {x, y};
 }
 
 inline float vec2::operator*(const vec2& a) const{
@@ -376,6 +444,12 @@ inline vec2 vec2::operator+(const vec2& a) const{
 inline vec2& vec2::operator+=(const vec2& a){
     this->x += a.x;
     this->y += a.y;
+    return *this;
+}
+
+inline vec2& vec2::operator-=(const vec2& a){
+    this->x -= a.x;
+    this->y -= a.y;
     return *this;
 }
 
@@ -419,6 +493,10 @@ inline bool vec2::operator!=(const vec2& a) const{
     return x != a.x || y != a.y;
 }
 
+inline vec2 vec2::operator-() const{
+    return {-x,-y};
+}
+
 //! Vector of three elements of type 'float'. 
 /** \ingroup vectors */
 struct vec3{
@@ -443,7 +521,7 @@ public:
   /**
    * \return magnitude of vector
    */
-  float magnitude() const{
+  [[nodiscard]] float magnitude() const{
     return sqrtf( x*x + y*y + z*z );
   }
 
@@ -472,20 +550,24 @@ public:
   vec3 operator+(const vec3& a) const;
   //! Increment vec3 vector
   vec3& operator+=(const vec3& a);
+  //! Decrement vec3 vector
+  vec3& operator-=(const vec3& a);
   //! Difference of two vec3 vectors
   vec3 operator-(const vec3& a) const;
   //! Multiply each element by scalar (scalar is multiplied on right: vec3*a)
   vec3 operator*( float a) const;
   //! Divide each element by scalar (scalar is divided on right: vec3/a)
   vec3 operator/( float a) const;
-  //!Add a scalar to each element (scalar is added on right: vec3+a)
+  //! Add a scalar to each element (scalar is added on right: vec3+a)
   vec3 operator+( float a) const;
-  //!Subtract a scalar from each element (scalar is subtracted on right: vec3-a)
+  //! Subtract a scalar from each element (scalar is subtracted on right: vec3-a)
   vec3 operator-( float a) const;
   //! check for equality of two vec3 vectors
   bool operator==(const vec3& a) const;
   //! check for inequality of two vec3 vectors
   bool operator!=(const vec3& a) const;
+  //! Multiply vector by -1
+  vec3 operator-() const;
 
   //! Write vec3 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec3 &vec) {
@@ -502,8 +584,8 @@ vec3 operator+( float a, const vec3& v);
 vec3 operator-( float a, const vec3& v);
 
 //! Make a vec3 from three floats
-inline vec3 make_vec3( float X, float Y, float Z ){
-  return {X,Y,Z};
+inline vec3 make_vec3(float x, float y, float z ){
+  return {x, y, z};
 }
 
 //! Make a vec3 from an array of floats
@@ -528,6 +610,13 @@ inline vec3& vec3::operator+=(const vec3& a){
     this->x += a.x;
     this->y += a.y;
     this->z += a.z;
+    return *this;
+}
+
+inline vec3& vec3::operator-=(const vec3& a){
+    this->x -= a.x;
+    this->y -= a.y;
+    this->z -= a.z;
     return *this;
 }
 
@@ -571,8 +660,14 @@ inline bool vec3::operator!=(const vec3& a) const{
     return x != a.x || y != a.y || z != a.z;
 }
 
+inline vec3 vec3::operator-() const{
+    return {-x,-y,-z};
+}
+
 //! Vector of four elements of type 'float'. 
-/** \ingroup vectors */
+/**
+ * \ingroup vectors
+ */
 struct vec4{
 public:
 
@@ -598,7 +693,7 @@ public:
   /**
    * \return magnitude of vector.
    */
-  float magnitude() const{
+  [[nodiscard]] float magnitude() const{
     return sqrt( x*x + y*y + z*z + w*w );
   }
 
@@ -628,6 +723,8 @@ public:
   vec4 operator+(const vec4& a) const;
   //! Increment vec4 vector
   vec4& operator+=(const vec4& a);
+  //! Decrement vec4 vector
+  vec4& operator-=(const vec4& a);
   //! Difference of two vec4 vectors
   vec4 operator-(const vec4& a) const;
   //! Multiply each element by scalar (scalar is multiplied on right: vec4*a)
@@ -642,6 +739,8 @@ public:
   bool operator==(const vec4& a) const;
   //! check for equality of two vec4 vectors
   bool operator!=(const vec4& a) const;
+  //! Multiply each element by -1
+  vec4 operator-() const;
 
   //! Write vec4 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec4 &vec) {
@@ -658,8 +757,8 @@ vec4 operator+( float a, const vec4& v);
 vec4 operator-( float a, const vec4& v);
 
 //! Make a vec4 from three floats
- inline vec4 make_vec4( float X, float Y, float Z, float W ){
-  return {X,Y,Z,W};
+ inline vec4 make_vec4( float x, float y, float z, float w ){
+  return {x, y, z, w};
 }
 
 //! Make a vec4 from an array of floats
@@ -682,6 +781,14 @@ inline vec4& vec4::operator+=(const vec4& a){
     this->w += a.w;
     return *this;
  }
+
+inline vec4& vec4::operator-=(const vec4& a){
+    this->x -= a.x;
+    this->y -= a.y;
+    this->z -= a.z;
+    this->w -= a.w;
+    return *this;
+    }
 
 inline vec4 vec4::operator+(const float a) const{
   return { x+a, y+a, z+a, w+a };
@@ -723,19 +830,25 @@ inline bool vec4::operator!=(const vec4& a) const{
   return x != a.x || y != a.y || z != a.z || w != a.w;
 }
 
+inline vec4 vec4::operator-() const{
+    return {-x,-y,-z, -w};
+}
+
 //! R-G-B color vector
-/**  \ingroup vectors */
+/**
+ * \ingroup vectors
+ */
 struct RGBcolor{
 public:
 
   //! Red color component.
-  /*! Takes a value between 0 and 1. */
+  /** Takes a value between 0 and 1. */
   float r;
   //! Green color component.  
-    /*! Takes a value between 0 and 1. */
+  /** Takes a value between 0 and 1. */
   float g;
   //! Blue color component.
-  /*! Takes a value between 0 and 1. */
+  /** Takes a value between 0 and 1. */
   float b;
 
   //! Default constructor - initializes color to black.
@@ -743,19 +856,19 @@ public:
 
   //! Constructor given three floats denoting R-G-B components.
   /**
-   *\param[in] "r_" Red color component
-   * \param[in] "g_" Green color component
-   * \param[in] "b_" Blue color component
+   * \param[in] r Red color component
+   * \param[in] g Green color component
+   * \param[in] b Blue color component
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
-  RGBcolor( float r_, float g_, float b_ ){
-    r=clamp(r_);
-    g=clamp(g_);
-    b=clamp(b_);
+  RGBcolor( float r, float g, float b ){
+      this->r=clamp(r);
+      this->g=clamp(g);
+      this->b=clamp(b);
   }
   //! Constructor given an array of three floats denoting R-G-B components.
   /**
-   * \param[in] "C" Array (3-elements) of R-G-B color components
+   * \param[in] C Array (3-elements) of R-G-B color components
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
   explicit RGBcolor( const float C[3] ){
@@ -765,7 +878,7 @@ public:
   }
   //! Constructor given a vector of three floats denoting R-G-B components.
   /**
-   * \param[in] "C" Vector (3-elements) of R-G-B color components
+   * \param[in] C Vector (3-elements) of R-G-B color components
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
   explicit RGBcolor( const std::vector<float> &C ){
@@ -778,7 +891,7 @@ public:
   }
   //! Constructor given a vec3 denoting R-G-B components.
   /**
-   * \param[in] "C" vec3 of R-G-B color components
+   * \param[in] C vec3 of R-G-B color components
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
   explicit RGBcolor(const vec3 &C ){
@@ -789,15 +902,15 @@ public:
 
   //! Scale RGBcolor by some factor.
   /**
-   * \param[in] "scl" Positive scaling factor
+   * \param[in] scale_factor Positive scaling factor
    */
-  void scale( float scl ){
-    if( scl<0 ){
-        throw(std::runtime_error("ERROR: cannot scale RGBcolor by negative factor."));
+  void scale( float scale_factor ){
+    if(scale_factor < 0 ){
+        throw(std::runtime_error("ERROR (RGBcolor::scale): cannot scale RGBcolor by negative factor."));
     }
-    r*=scl;
-    g*=scl;
-    b*=scl;
+    r*=scale_factor;
+    g*=scale_factor;
+    b*=scale_factor;
   }
 
   //! write RGBcolor to output stream
@@ -813,7 +926,7 @@ public:
 private:
   //! Clamp float to range of 0 to 1.
   /**
-   * \param[in] "value" Value to be clamped.
+   * \param[in] value Value to be clamped.
    * \return Clamped value
    */
   static float clamp( float value ){
@@ -829,19 +942,21 @@ private:
 };
 
 //! Make an RGBcolor vector
-/** \param[in] "r" Red component
-    \param[in] "g" Green component
-    \param[in] "b" Blue component
-    \ingroup vectors
+/**
+ * \param[in] r Red component
+ * \param[in] g Green component
+ * \param[in] b Blue component
+ * \ingroup vectors
 */
 inline RGBcolor make_RGBcolor( float r, float g, float b ){
   return {r,g,b};
 }
 
 //! Blend two RGB colors together
-/** \param[in] "color0_RGB" First color to be blended.
-    \param[in] "color1_RGB" Second color to be blended.
-    \param[out] "weight_RGB" Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
+/**
+ * \param[in] color0_RGB First color to be blended.
+ * \param[in] color1_RGB Second color to be blended.
+ * \param[out] weight_RGB Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
 */
 RGBcolor blend(const RGBcolor &color0_RGB, const RGBcolor &color1_RGB, float weight_RGB );
 
@@ -900,21 +1015,23 @@ namespace RGB{
 }
 
 //! R-G-B-A color vector
-/**  \ingroup vectors */
+/**
+ * \ingroup vectors
+ */
 struct RGBAcolor{
 public:
 
   //! Red color component.
-  /*! Takes a value between 0 and 1. */
+  /** Takes a value between 0 and 1. */
   float r;
   //! Green color component.  
-    /*! Takes a value between 0 and 1. */
+  /** Takes a value between 0 and 1. */
   float g;
   //! Blue color component.
-  /*! Takes a value between 0 and 1. */
+  /** Takes a value between 0 and 1. */
   float b;
   //! Alpha (transparency) component.
-  /*! Takes a value between 0 and 1. */
+  /** Takes a value between 0 and 1. */
   float a;
 
   //! Default constructor - initializes color to black.
@@ -922,22 +1039,22 @@ public:
 
   //! Constructor given three floats denoting R-G-B components.
   /**
-   * \param[in] "r_" Red color component
-   * \param[in] "g_" Green color component
-   * \param [in] "b_" Blue color component
-   * \param[in] "a_" Alpha (transparency) component
+   * \param[in] r Red color component
+   * \param[in] g Green color component
+   * \param [in] b Blue color component
+   * \param[in] a Alpha (transparency) component
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
-  RGBAcolor( float r_, float g_, float b_, float a_ ){
-    r=clamp(r_);
-    g=clamp(g_);
-    b=clamp(b_);
-    a=clamp(a_);
+  RGBAcolor( float r, float g, float b, float a ){
+      this->r=clamp(r);
+      this->g=clamp(g);
+      this->b=clamp(b);
+      this->a=clamp(a);
   }
   //! Constructor given an array of three floats denoting R-G-B-A components.
   /**
    * \note If arguments are outside of the range 0 to 1, values are clamped.
-   * \param[in] "C" Array (4-elements) of R-G-B-A color components
+   * \param[in] C Array (4-elements) of R-G-B-A color components
    */
   explicit RGBAcolor( const float C[4] ){
     r=clamp(C[0]);
@@ -947,7 +1064,7 @@ public:
   }
   //! Constructor given a vector of three floats denoting R-G-B-A components.
   /**
-   * \param[in] "C" Vector (4-elements) of R-G-B-A color components
+   * \param[in] C Vector (4-elements) of R-G-B-A color components
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
   explicit RGBAcolor( const std::vector<float> &C ){
@@ -962,16 +1079,16 @@ public:
 
   //! Scale RGBAcolor by some factor.
   /**
-   * \param[in] "scl" Positive scaling factor
+   * \param[in] scale_factor Positive scaling factor
    */
-  void scale( float scl ){
-    if( scl<0 ){
-        throw(std::runtime_error("ERROR: cannot scale RGBAcolor by negative factor."));
+  void scale( float scale_factor ){
+    if(scale_factor < 0 ){
+        throw(std::runtime_error("ERROR (RGBAcolor::scale): cannot scale RGBAcolor by negative factor."));
     }
-    r*=scl;
-    g*=scl;
-    b*=scl;
-    a*=scl;
+    r*=scale_factor;
+    g*=scale_factor;
+    b*=scale_factor;
+    a*=scale_factor;
   }
 
   //! write RGBAcolor to output stream
@@ -987,7 +1104,7 @@ public:
 private:
   //! Clamp float to range of 0 to 1.
   /**
-   * \param[in] "value" Value to be clamped.
+   * \param[in] value Value to be clamped.
    * \return Clamped value
    */
   static float clamp( float value ){
@@ -1004,10 +1121,10 @@ private:
 
 //! Make an RGBAcolor vector
 /**
- * \param[in] "r" Red component
- * \param[in] "g" Green component
- * \param[in] "b" Blue component
- * \param[in] "a" Alpha (transparency) component
+ * \param[in] r Red component
+ * \param[in] g Green component
+ * \param[in] b Blue component
+ * \param[in] a Alpha (transparency) component
  * \ingroup vectors
 */
 inline RGBAcolor make_RGBAcolor( float r, float g, float b, float a ){
@@ -1016,8 +1133,8 @@ inline RGBAcolor make_RGBAcolor( float r, float g, float b, float a ){
 
 //! Make an RGBAcolor vector (add alpha channel to RGBcolor)
 /**
- * \param[in] "color" RGBcolor
- * \param[in] "a" Alpha (transparency) component
+ * \param[in] color RGBcolor
+ * \param[in] a Alpha (transparency) component
  * \ingroup vectors
 */
 inline RGBAcolor make_RGBAcolor( RGBcolor color, float a ){
@@ -1026,9 +1143,9 @@ inline RGBAcolor make_RGBAcolor( RGBcolor color, float a ){
 
 //! Blend two RGBA colors together
 /**
- * \param[in] "color0_RGBA" First color to be blended.
- * \param[in] "color1_RGBA" Second color to be blended.
- * \param[out] "weight_RGBA" Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
+ * \param[in] color0_RGBA First color to be blended.
+ * \param[in] color1_RGBA Second color to be blended.
+ * \param[out] weight_RGBA Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
 */
 RGBAcolor blend(const helios::RGBAcolor &color0_RGBA, const helios::RGBAcolor &color1_RGBA, float weight_RGBA );
 
@@ -1063,9 +1180,10 @@ public:
   }
 
   //! Day/Month/Year constructor
-  /** \param[in] "day" Day of month (1-31)
-      \param[in] "month" Day of year (1-12)
-      \param[in] "year" Year in YYYY format
+  /**
+   * \param[in] day Day of month (1-31)
+   * \param[in] month Day of year (1-12)
+   * \param[in] year Year in YYYY format
   */
   Date(int day, int month, int year ){
     
@@ -1087,7 +1205,7 @@ public:
   /**
    * \return Julian day of the year
    */
-  int JulianDay() const;
+  [[nodiscard]] int JulianDay() const;
 
   //! Increment Date vector by one day
   void incrementDay();
@@ -1096,7 +1214,7 @@ public:
   /**
    * \return True if it is a leap year, false if not
    */
-  bool isLeapYear() const;
+  [[nodiscard]] bool isLeapYear() const;
 
   //! check for equality of two dates
   bool operator==( const helios::Date &c ) const;
@@ -1112,9 +1230,9 @@ public:
 
 //! Make a Date vector
 /**
- * \param[in] "day" Day of month (1-31)
- * \param[in] "month" Day of year (1-12)
- * \param[in] "year" Year in YYYY format
+ * \param[in] day Day of month (1-31)
+ * \param[in] month Day of year (1-12)
+ * \param[in] year Year in YYYY format
  * \ingroup vectors
 */
 inline Date make_Date( int day, int month, int year ){
@@ -1140,8 +1258,8 @@ inline bool Date::operator!=( const Date &c ) const{
 
 //! Convert a Julian day to a calendar \ref Date vector.
 /**
- * \param[in] "JulianDay" Julian day of year (0-366)
- * \param[in] "year" Year in YYYY format
+ * \param[in] JulianDay Julian day of year (0-366)
+ * \param[in] year Year in YYYY format
  * \ingroup vectors
 */
 inline Date Julian2Calendar( int JulianDay, int year ){
@@ -1183,7 +1301,7 @@ inline Date Julian2Calendar( int JulianDay, int year ){
 
 //! Convert a calendar Date vector to Julian day.
 /**
- * \param[in] "Date" Date vector
+ * \param[in] date Date vector
  * \ingroup vectors
 */
 inline int Calendar2Julian( Date date ){
@@ -1207,8 +1325,8 @@ inline int Calendar2Julian( Date date ){
 
 //! Make a Date vector
 /**
- * \param[in] "JulianDay" Julian day of year (0-366)
- * \param[in] "year" Year in YYYY format
+ * \param[in] JulianDay Julian day of year (0-366)
+ * \param[in] year Year in YYYY format
  * \ingroup vectors
 */
 inline Date make_Date( int JulianDay, int year ){
@@ -1246,8 +1364,8 @@ struct Time{
 
   //! second/minute/hour constructor
   /**
-   * \param[in] "hour" Hour of day (0-23)
-   * \param[in] "minute" Minute of hour (0-59)
+   * \param[in] hour Hour of day (0-23)
+   * \param[in] minute Minute of hour (0-59)
   */
   Time( int hour, int minute ){
 
@@ -1265,9 +1383,9 @@ struct Time{
 
   //! minute/hour constructor
   /**
-   * \param[in] "hour" Hour of day (0-23)
-   * \param[in] "minute" Minute of hour (0-59)
-   * \param[in] "second" Second of minute (0-59)
+   * \param[in] hour Hour of day (0-23)
+   * \param[in] minute Minute of hour (0-59)
+   * \param[in] second Second of minute (0-59)
   */
   Time( int hour, int minute, int second ){
 
@@ -1299,8 +1417,8 @@ struct Time{
 
 //! Make a Time vector
 /**
- * \param[in] "hour" Hour of day (0-23)
- * \param[in] "minute" Minute of hour (0-59)
+ * \param[in] hour Hour of day (0-23)
+ * \param[in] minute Minute of hour (0-59)
  * \ingroup vectors
 */
 inline Time make_Time( int hour, int minute ){
@@ -1316,9 +1434,9 @@ inline Time make_Time( int hour, int minute ){
 
 //! Make a Time vector
 /**
- * \param[in] "hour" Hour of day (0-23)
- * \param[in] "minute" Minute of hour (0-59)
- * \param[in] "second" Second of minute (0-59)
+ * \param[in] hour Hour of day (0-23)
+ * \param[in] minute Minute of hour (0-59)
+ * \param[in] second Second of minute (0-59)
  * \ingroup vectors
 */
 inline Time make_Time( int hour, int minute, int second ){
@@ -1378,11 +1496,11 @@ public:
   }
   //! Initialize SphericalCoord by specifying radius, elevation, and azimuth
   /**
-   * \param[in] "radius" Radius
-   * \param[in] "elevation" Elevation angle (radians)
-   * \param[in] "azimuth" Azimuthal angle (radians)
+   * \param[in] radius Radius
+   * \param[in] elevation Elevation angle (radians)
+   * \param[in] azimuth Azimuthal angle (radians)
   */
-  SphericalCoord( float a_radius, float a_elevation, float a_azimuth ) : elevation_private(a_elevation), elevation(elevation_private), zenith_private(0.5f*float(M_PI)-a_elevation), zenith(zenith_private), radius(a_radius), azimuth(a_azimuth) {}
+  SphericalCoord(float radius, float elevation_radians, float azimuth_radians ) : elevation_private(elevation_radians), elevation(elevation_private), zenith_private(0.5f * float(M_PI) - elevation_radians), zenith(zenith_private), radius(radius), azimuth(azimuth_radians) {}
 
   //! Copy constructor
   SphericalCoord( const SphericalCoord &c ) : elevation_private(c.elevation_private), elevation(elevation_private), zenith_private(c.zenith_private), zenith(zenith_private), radius(c.radius), azimuth(c.azimuth) {}
@@ -1411,20 +1529,22 @@ public:
 };
 
 //! Make a SphericalCoord by specifying elevation and azimuth
-/** \param[in] "elevation" Elevation angle (radians)
-    \param[in] "azimuth" Azimuthal angle (radians)
+/**
+ * \param[in] elevation_radians Elevation angle (radians)
+ * \param[in] azimuth_radians Azimuthal angle (radians)
   */
-inline SphericalCoord make_SphericalCoord( float elevation, float azimuth ){
-  return {1,elevation,azimuth};
+inline SphericalCoord make_SphericalCoord(float elevation_radians, float azimuth_radians ){
+  return {1, elevation_radians, azimuth_radians};
 }
 
 //! Make a SphericalCoord by specifying radius, elevation, and azimuth
-/** \param[in] "radius" Radius
-    \param[in] "elevation" Elevation angle (radians)
-    \param[in] "azimuth" Azimuthal angle (radians)
-  */
- inline SphericalCoord make_SphericalCoord( float radius, float elevation, float azimuth ){
-  return {radius,elevation,azimuth};
+/**
+ * \param[in] radius Radius
+ * \param[in] elevation_radians Elevation angle (radians)
+ * \param[in] azimuth_radians Azimuthal angle (radians)
+ */
+ inline SphericalCoord make_SphericalCoord(float radius, float elevation_radians, float azimuth_radians ){
+  return {radius, elevation_radians, azimuth_radians};
 }
 
 inline bool SphericalCoord::operator==( const SphericalCoord &c ) const{

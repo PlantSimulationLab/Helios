@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['x_0',['x',['../structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7',1,'helios::int2::x()'],['../structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50',1,'helios::int3::x()'],['../structhelios_1_1int4.html#a1ac3b0b91901dc1d1497267bd3f3b4c3',1,'helios::int4::x()'],['../structhelios_1_1vec2.html#a8dda241c2560b203a3b0a479d1c9e12e',1,'helios::vec2::x()'],['../structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1',1,'helios::vec3::x()'],['../structhelios_1_1vec4.html#a96036e1d3ac15f03190a7bbf74ce0d73',1,'helios::vec4::x()']]]
+  ['y_0',['y',['../structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21',1,'helios::int2::y'],['../structhelios_1_1int3.html#aeba3aa4380ec4d9c216f98be95083d5c',1,'helios::int3::y'],['../structhelios_1_1int4.html#ae979ffc27c702a6b67258d07ddcdf3b3',1,'helios::int4::y'],['../structhelios_1_1vec2.html#ab4afff51f764cbf9bab0949ae067977e',1,'helios::vec2::y'],['../structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65',1,'helios::vec3::y'],['../structhelios_1_1vec4.html#a3dd547e787593c51f07a6ea131bcab8d',1,'helios::vec4::y']]],
+  ['year_1',['year',['../structhelios_1_1_date.html#aee4be32c2bd722143658b4771fe96253',1,'helios::Date']]]
 ];

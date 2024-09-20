@@ -30,8 +30,8 @@ std::string PlantArchitecture::makeShootString(const std::string &current_string
     uint node_number = 0;
     for( auto &phytomer: shoot->phytomers ){
 
-        float length = phytomer->internode_length;
-        float radius = phytomer->internode_radii.front();
+        float length = phytomer->getInternodeLength();
+        float radius = phytomer->getInternodeRadius();
 
         outstring += "Internode(" + std::to_string(length) + "," + std::to_string(radius) + "," + std::to_string( rad2deg(phytomer->internode_pitch) ) + "," + std::to_string( rad2deg(phytomer->internode_phyllotactic_angle) ) + ")";
 
@@ -41,7 +41,7 @@ std::string PlantArchitecture::makeShootString(const std::string &current_string
             outstring += "Petiole(" + std::to_string( phytomer->petiole_length.at(petiole) ) + "," + std::to_string( phytomer->petiole_radii.at(petiole).front() ) + "," + std::to_string( rad2deg(phytomer->petiole_pitch) ) + ")";
 
             //\todo If leaf is compound, just using rotation for the first leaf for now rather than adding multiple 'Leaf()' strings for each leaflet.
-            outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole)*phytomer->current_leaf_scale_factor ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().pitch) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().yaw) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().roll) ) + ")";
+            outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole).front()*phytomer->current_leaf_scale_factor ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().pitch) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().yaw) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().roll) ) + ")";
 
             if( shoot->childIDs.find(node_number)!=shoot->childIDs.end() ){
                 outstring = makeShootString(outstring, shoot_tree.at(shoot->childIDs.at(node_number)), shoot_tree );
@@ -374,7 +374,7 @@ void PlantArchitecture::parseStringShoot(const std::string &LString_shoot, uint 
 
             base_shoot = false;
         }else{
-            addPhytomerToShoot(plantID, baseID, shoot_parameters.phytomer_parameters, internode_radius, internode_length, 1, 1);
+            appendPhytomerToShoot(plantID, baseID, shoot_parameters.phytomer_parameters, internode_radius, internode_length, 1, 1);
         }
 
         while( !lstring_tobeparsed.empty() && lstring_tobeparsed.substr(0,1) == "[" ){
@@ -467,8 +467,8 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
 
             output_xml << "\t\t\t<phytomer>" << std::endl;
             output_xml << "\t\t\t\t<internode>" << std::endl;
-            output_xml << "\t\t\t\t\t<internode_length>" << phytomer->internode_length << "</internode_length>" << std::endl;
-            output_xml << "\t\t\t\t\t<internode_radius>" << phytomer->internode_radii.front() << "</internode_radius>" << std::endl;
+            output_xml << "\t\t\t\t\t<internode_length>" << phytomer->getInternodeLength() << "</internode_length>" << std::endl;
+            output_xml << "\t\t\t\t\t<internode_radius>" << phytomer->getInternodeRadius() << "</internode_radius>" << std::endl;
             output_xml << "\t\t\t\t\t<internode_pitch>" << rad2deg(phytomer->internode_pitch) << "</internode_pitch>" << std::endl;
             output_xml << "\t\t\t\t\t<internode_phyllotactic_angle>" << rad2deg(phytomer->internode_phyllotactic_angle) << "</internode_phyllotactic_angle>" << std::endl;
 
@@ -479,10 +479,16 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << "\t\t\t\t\t\t<petiole_radius>" << phytomer->petiole_radii.at(petiole).front() << "</petiole_radius>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_pitch>" << rad2deg(phytomer->petiole_pitch) << "</petiole_pitch>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_curvature>" << phytomer->petiole_curvature << "</petiole_curvature>" << std::endl;
+                if( phytomer->leaf_rotation.at(petiole).size()==1 ){ //not compound leaf
+                    output_xml << "\t\t\t\t\t\t<leaflet_scale>" << 1.0 << "</leaflet_scale>" << std::endl;
+                }else {
+                    float tip_ind = floor(float(phytomer->leaf_rotation.at(petiole).size() - 1) / 2.f);
+                    output_xml << "\t\t\t\t\t\t<leaflet_scale>" << phytomer->leaf_size_max.at(petiole).at(int(tip_ind-1)) / max(phytomer->leaf_size_max.at(petiole)) << "</leaflet_scale>" << std::endl;
+                }
 
                 for( uint leaf=0; leaf < phytomer->leaf_rotation.at(petiole).size(); leaf++ ){
                     output_xml << "\t\t\t\t\t\t<leaf>" << std::endl;
-                    output_xml << "\t\t\t\t\t\t\t<leaf_scale>" << phytomer->leaf_size_max.at(petiole)*phytomer->current_leaf_scale_factor << "</leaf_scale>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t<leaf_scale>" << phytomer->leaf_size_max.at(petiole).at(leaf)*phytomer->current_leaf_scale_factor << "</leaf_scale>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_pitch>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).pitch) << "</leaf_pitch>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_yaw>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).yaw) << "</leaf_yaw>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_roll>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).roll) << "</leaf_roll>" << std::endl;
@@ -542,6 +548,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
 
     size_t phytomer_count = 0;
 
+    std::map<int,int> shoot_ID_mapping;
+
     for (pugi::xml_node plant = helios.child("plant_instance"); plant; plant = plant.next_sibling("plant_instance")) {
 
         int plantID = std::stoi(plant.attribute("ID").value());
@@ -557,12 +565,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
         plantID = addPlantInstance(base_position, plant_age);
         plantIDs.push_back(plantID);
 
-        bool base_shoot = true;
-        uint current_shoot_ID;
+        int current_shoot_ID;
 
         for (pugi::xml_node shoot = plant.child("shoot"); shoot; shoot = shoot.next_sibling("shoot")) {
 
             int shootID = std::stoi(shoot.attribute("ID").value());
+            bool base_shoot = true;
 
             // shoot type
             node_string = "shoot_type_label";
@@ -583,7 +591,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
             // base rotation
             node_string = "base_rotation";
             vec3 base_rot = parse_xml_tag_vec3(shoot.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-            AxisRotation base_rotation(base_rot.x, base_rot.y, base_rot.z);
+            AxisRotation base_rotation(deg2rad(base_rot.x), deg2rad(base_rot.y), deg2rad(base_rot.z));
 
             for (pugi::xml_node phytomer = shoot.child("phytomer"); phytomer; phytomer = phytomer.next_sibling("phytomer")) {
 
@@ -609,10 +617,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                 float petiole_radius;
                 float petiole_pitch;
                 float petiole_curvature;
-                float leaf_scale;
-                float leaf_pitch;
-                float leaf_yaw;
-                float leaf_roll;
+                float leaflet_scale;
+                std::vector<std::vector<float>> leaf_scale; //first index is petiole within internode; second index is leaf within petiole
+                std::vector<std::vector<float>> leaf_pitch;
+                std::vector<std::vector<float>> leaf_yaw;
+                std::vector<std::vector<float>> leaf_roll;
                 for (pugi::xml_node petiole = internode.child("petiole"); petiole; petiole = petiole.next_sibling("petiole")) {
 
                     // petiole length
@@ -631,23 +640,31 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                     node_string = "petiole_curvature";
                     petiole_curvature = parse_xml_tag_float(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
 
+                    // leaflet scale factor
+                    node_string = "leaflet_scale";
+                    leaflet_scale = parse_xml_tag_float(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    leaf_scale.resize(leaf_scale.size() + 1);
+                    leaf_pitch.resize(leaf_pitch.size() + 1);
+                    leaf_yaw.resize(leaf_yaw.size() + 1);
+                    leaf_roll.resize(leaf_roll.size() + 1);
                     for (pugi::xml_node leaf = petiole.child("leaf"); leaf; leaf = leaf.next_sibling("leaf")) {
 
                         // leaf scale factor
                         node_string = "leaf_scale";
-                        leaf_scale = parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+                        leaf_scale.back().push_back( parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") );
 
                         // leaf pitch
                         node_string = "leaf_pitch";
-                        leaf_pitch = parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+                        leaf_pitch.back().push_back( parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") );
 
                         // leaf yaw
                         node_string = "leaf_yaw";
-                        leaf_yaw = parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+                        leaf_yaw.back().push_back( parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") );
 
                         // leaf roll
                         node_string = "leaf_roll";
-                        leaf_roll = parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+                        leaf_roll.back().push_back( parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") );
 
                     }
                 } //petioles
@@ -669,11 +686,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                 shoot_parameters.phytomer_parameters.petiole.pitch = petiole_pitch;
                 shoot_parameters.phytomer_parameters.petiole.curvature = petiole_curvature;
 
-                std::cout << "XML plant leaf scale: " << leaf_scale << std::endl;
-                shoot_parameters.phytomer_parameters.leaf.prototype_scale = leaf_scale;
-                shoot_parameters.phytomer_parameters.leaf.pitch = leaf_pitch;
-                shoot_parameters.phytomer_parameters.leaf.yaw = leaf_yaw;
-                shoot_parameters.phytomer_parameters.leaf.roll = leaf_roll;
+                float tip_ind = floor(float(leaf_scale.front().size() - 1) / 2.f);
+                shoot_parameters.phytomer_parameters.leaf.prototype_scale = leaf_scale.front().at(tip_ind);
+                shoot_parameters.phytomer_parameters.leaf.pitch = 0;
+                shoot_parameters.phytomer_parameters.leaf.yaw = 0;
+                shoot_parameters.phytomer_parameters.leaf.roll = 0;
+                shoot_parameters.phytomer_parameters.leaf.leaflet_scale = leaflet_scale;
 
                 std::string shoot_label = "shoot_" + std::to_string(phytomer_count);
                 defineShootType( shoot_label, shoot_parameters);
@@ -681,16 +699,24 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                 if( base_shoot ){
 
                     if( parent_shoot_ID<0 ) { //this is the first shoot of the plant
-                        std::cout << "Adding base internode with length " << internode_length << " and radius " << internode_radius << std::endl;
                         current_shoot_ID = addBaseStemShoot(plantID, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_label);
-                        std::cout << "Adding base shoot" << std::endl;
+                        shoot_ID_mapping[shootID] = current_shoot_ID;
                     }else{ //this is a child of an existing shoot
-                        current_shoot_ID = addChildShoot(plantID, parent_shoot_ID, parent_node_index, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_label, parent_petiole_index);
+                        current_shoot_ID = addChildShoot(plantID, shoot_ID_mapping.at(parent_shoot_ID), parent_node_index, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_label, parent_petiole_index);
+                        shoot_ID_mapping[shootID] = current_shoot_ID;
                     }
 
                     base_shoot = false;
                 }else{
-                    addPhytomerToShoot(plantID, current_shoot_ID, shoot_parameters.phytomer_parameters, internode_radius, internode_length, 1, 1);
+                    appendPhytomerToShoot(plantID, current_shoot_ID, shoot_parameters.phytomer_parameters, internode_radius, internode_length, 1, 1);
+                }
+
+                //rotate leaves
+                auto phytomer_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)->phytomers.back();
+                for( int petiole = 0; petiole<phytomer_ptr->leaf_rotation.size(); petiole++ ){
+                    for( int leaf=0; leaf<phytomer_ptr->leaf_rotation.at(petiole).size(); leaf++ ){
+                        phytomer_ptr->rotateLeaf(petiole, leaf, make_AxisRotation(deg2rad(leaf_pitch.at(petiole).at(leaf)), deg2rad(leaf_yaw.at(petiole).at(leaf)), deg2rad(-leaf_roll.at(petiole).at(leaf))));
+                    }
                 }
 
                 phytomer_count++;

@@ -17,7 +17,8 @@
 
 using namespace helios;
 
-uint buildGenericLeafPrototype(helios::Context *context_ptr, uint subdivisions, const std::string &leaf_texture, float leaf_aspect_ratio, float midrib_fold_fraction, float x_curvature, float y_curvature, float petiole_roll, float wave_period, float wave_amplitude) {
+uint buildGenericLeafPrototype(helios::Context *context_ptr, uint subdivisions, const std::string &leaf_texture, float leaf_aspect_ratio, float midrib_fold_fraction, float longitudinal_curvature, float lateral_curvature, float petiole_roll, float wave_period,
+                               float wave_amplitude, bool build_petiolule) {
 
     // -- main leaf generation code -- //
 
@@ -46,12 +47,12 @@ uint buildGenericLeafPrototype(helios::Context *context_ptr, uint subdivisions, 
             float z_fold_jplus = sinf(0.5f*midrib_fold_fraction*M_PI)*fabs(y+dy);
 
             //x-curvature
-            float z_xcurve = x_curvature*powf(x,4);
-            float z_xcurve_iplus = x_curvature*powf(x+dx,4);
+            float z_xcurve = longitudinal_curvature * powf(x, 4);
+            float z_xcurve_iplus = longitudinal_curvature * powf(x + dx, 4);
 
             //y-curvature
-            float z_ycurve = y_curvature*powf(y/leaf_aspect_ratio,4);
-            float z_ycurve_jplus = y_curvature*powf((y+dy)/leaf_aspect_ratio,4);
+            float z_ycurve = lateral_curvature * powf(y / leaf_aspect_ratio, 4);
+            float z_ycurve_jplus = lateral_curvature * powf((y + dy) / leaf_aspect_ratio, 4);
 
             //petiole roll
             float z_petiole_0 = 0, z_petiole_1 = 0, z_petiole_2 = 0, z_petiole_3 = 0;
@@ -91,17 +92,38 @@ uint buildGenericLeafPrototype(helios::Context *context_ptr, uint subdivisions, 
         }
     }
 
+    if( build_petiolule ){
+        std::vector<uint> UUIDs_petiolule = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/PetiolulePrototype.obj", make_vec3(0,0,0), 0, nullrotation, RGB::black, "ZUP", true);
+        context_ptr->translatePrimitive(UUIDs, make_vec3(0.07,0,0.005) );
+        UUIDs.insert(UUIDs.end(), UUIDs_petiolule.begin(), UUIDs_petiolule.end());
+    }
+
     return context_ptr->addPolymeshObject( UUIDs );
 }
 
 uint AlmondLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
-    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
-    uint objID = context_ptr->addPolymeshObject( UUIDs );
+//    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+//    uint objID = context_ptr->addPolymeshObject( UUIDs );
+//    return objID;
+
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/AlmondLeaf.png";
+
+    float leaf_aspect = 0.4; //ratio of leaf width to leaf length
+
+    float midrib_fold = 0.; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+
+    float longitudinal_curvature = 0.05; //curvature factor along x-direction. (+curves upward, -curved downward)
+
+    float lateral_curvature = 0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
+
+    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, false);
+
     return objID;
+
 }
 
 uint AlmondFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
-    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondHull.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondHull_lowres.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
 }
@@ -117,14 +139,24 @@ void AlmondPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     if( phytomer->internode_length_max < 0.01 ){ //spurs
         phytomer->setInternodeMaxRadius( 0.005 );
         phytomer->setVegetativeBudState( BUD_DEAD );
-        phytomer->scaleLeafPrototypeScale( 0.7 );
+        phytomer->scaleLeafPrototypeScale( 0.8 );
         phytomer->setFloralBudState( BUD_DEAD );
     }
 
     //blind nodes
-    if( shoot_node_index<3 ){
-        phytomer->setVegetativeBudState( BUD_DEAD );
-        phytomer->setFloralBudState( BUD_DEAD );
+//    if( shoot_node_index<3 ){
+//        phytomer->setVegetativeBudState( BUD_DEAD );
+//        phytomer->setFloralBudState( BUD_DEAD );
+//    }
+
+}
+
+void AlmondPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
+
+    if( phytomer->isdormant ){
+        if( phytomer->shoot_index.x >= phytomer->shoot_index.y-3 && phytomer->internode_length_max > 0.01 ){
+            phytomer->setVegetativeBudState( BUD_DORMANT ); //first two vegetative buds always break
+        }
     }
 
 }
@@ -167,17 +199,17 @@ void AsparagusPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint
 }
 
 uint BeanLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
-    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/BeanLeaf_unifoliate.png";
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/BeanLeaf_unifoliate_centered.png";
 
     float leaf_aspect = 0.8; //ratio of leaf width to leaf length
 
     float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float x_curvature = -0.2; //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = -0.2; //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float y_curvature = -0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = -0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
 
-    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, 0, 0, 0);
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, true);
 
 }
 
@@ -191,16 +223,15 @@ uint BeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivision
         leaf_texture = "plugins/plantarchitecture/assets/textures/BeanLeaf_right_centered.png";
     }
 
-
     float leaf_aspect = 1.0; //ratio of leaf width to leaf length
 
-    float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+    float midrib_fold = 0.025; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float x_curvature = context_ptr->randu(-0.25f,-0.01f); //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = context_ptr->randu(-0.3f,-0.2f); //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float y_curvature = -0.2; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = -1.; //curvature factor along y-direction. (+curves upward, -curved downward)
 
-    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, 0, 0, 0);
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, true);
 
 }
 
@@ -244,19 +275,18 @@ uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool 
 
 void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
-    if( shoot_node_index>10 || phytomer->rank>1 ) {
+    if( shoot_node_index>5 || phytomer->rank>1 ) {
         phytomer->setVegetativeBudState(BUD_DEAD);
-    }
-    if( shoot_node_index<=1 || shoot_node_index > 15){
+    }else{
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
     //set leaf and internode scale based on position along the shoot
-    float leaf_scale = fmin(1.f, 0.3 + 0.7 * plant_age / 10.f);
+    float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
     phytomer->scaleLeafPrototypeScale(leaf_scale);
 
     //set internode length based on position along the shoot
-    float inode_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 10.f);
+    float inode_scale = fmin(1.f, 0.1 + 0.9 * plant_age / 15.f);
     phytomer->scaleInternodeMaxLength(inode_scale);
 
 }
@@ -280,17 +310,17 @@ uint CheeseweedLeafPrototype( helios::Context* context_ptr, uint subdivisions, i
 }
 
 uint CowpeaLeafPrototype_unifoliate(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
-    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_unifoliate.png";
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_unifoliate_centered.png";
 
     float leaf_aspect = 0.8; //ratio of leaf width to leaf length
 
     float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float x_curvature = -0.2; //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = -0.2; //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float y_curvature = -0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = -0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
 
-    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, 0, 0, 0);
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, false);
 
 }
 
@@ -308,11 +338,11 @@ uint CowpeaLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisi
 
     float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float x_curvature = context_ptr->randu(-0.25f,-0.01f); //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = context_ptr->randu(-0.4f,-0.1f); //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float y_curvature = -0.2; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = -0.4; //curvature factor along y-direction. (+curves upward, -curved downward)
 
-    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, 0, 0, 0);
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, true);
 
 }
 
@@ -367,7 +397,7 @@ void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     phytomer->scaleLeafPrototypeScale(leaf_scale);
 
     //set internode length based on position along the shoot
-    float inode_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
+    float inode_scale = fmin(1.f, 0.1 + 0.9 * plant_age / 15.f);
     phytomer->scaleInternodeMaxLength(inode_scale);
 
 }
@@ -380,11 +410,11 @@ uint PuncturevineLeafPrototype( helios::Context* context_ptr, uint subdivisions,
 
     float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float x_curvature = -0.1; //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = -0.1; //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float y_curvature = 0.4; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = 0.4; //curvature factor along y-direction. (+curves upward, -curved downward)
 
-    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, 0, 0, 0);
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, false);
 
 }
 
@@ -399,13 +429,17 @@ uint RedbudLeafPrototype( helios::Context* context_ptr, uint subdivisions, int c
 
     float leaf_aspect = 1.0; //ratio of leaf width to leaf length
 
-    float midrib_fold = 0.3; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+    float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float x_curvature = -0.1; //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = -0.15; //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float y_curvature = -0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = -0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
 
-    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, 0, 0, 0);
+    //parameters for leaf wave/wrinkles
+    float wave_period = 0.3f; //period factor of leaf waves
+    float wave_amplitude = 0.025f; // amplitude of leaf waves
+
+    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, wave_period, wave_amplitude, false);
     context_ptr->translateObject( objID, make_vec3(-0.3,0,0) );
 
     return objID;
@@ -427,17 +461,58 @@ void RedbudPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
 
 void RedbudPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
 
-    int Nchild_shoots = randu(3,4);
+    int Nchild_shoots = randu(0,3);
 
     if( phytomer->isdormant ){
+        if( phytomer->rank<=1 ){
+            Nchild_shoots = std::max(2,Nchild_shoots);
+        }
         if( phytomer->shoot_index.x < phytomer->shoot_index.y-Nchild_shoots ){
             phytomer->setVegetativeBudState( BUD_DEAD );
         }
         else{
-        //if( phytomer->shoot_index.x >= phytomer->shoot_index.y-3 ||  phytomer->shoot_index.x < 3){
             phytomer->setFloralBudState(BUD_DEAD);
         }
     }
+
+}
+
+uint RomaineLettuceLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/RomaineLettuceLeaf.png";
+
+//    float leaf_aspect = 0.65; //ratio of leaf width to leaf length
+    float leaf_aspect = 0.85; //ratio of leaf width to leaf length
+
+    float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+
+//    float longitudinal_curvature = context_ptr->randu(-0.05f,0.2f); //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = context_ptr->randu(-0.2f,0.05f); //curvature factor along x-direction. (+curves upward, -curved downward)
+
+    float lateral_curvature = -0.4; //curvature factor along y-direction. (+curves upward, -curved downward)
+
+    float petiole_roll = 0; //add a small radius roll at the based of the leaf to better mate with the petiole. Value is the magnitude of the roll (+rolls upward, - rolls downward)
+
+    //parameters for leaf wave/wrinkles
+//    float wave_period = context_ptr->randu( 0.1f, 0.2f); //period factor of leaf waves
+    float wave_period = context_ptr->randu( 0.15f, 0.25f); //period factor of leaf waves
+//    float wave_amplitude = context_ptr->randu(0.03f,0.075f); // amplitude of leaf waves
+    float wave_amplitude = context_ptr->randu(0.05f,0.1f); // amplitude of leaf waves
+
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, petiole_roll, wave_period, wave_amplitude, false);
+
+}
+
+void RomaineLettucePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+    float fact = float(shoot_max_nodes-shoot_node_index)/float(shoot_max_nodes);
+
+    //set leaf scale based on position along the shoot
+//    float scale = fmin(1.f, 1 + 0.1*fact);
+//    phytomer->scaleLeafPrototypeScale(scale);
+
+//    phytomer->rotateLeaf( 0, 0, make_AxisRotation(-deg2rad(15)*fact, 0, 0));
+    phytomer->rotateLeaf( 0, 0, make_AxisRotation(-deg2rad(60)*fact, 0, 0));
 
 }
 
@@ -445,20 +520,20 @@ uint SorghumLeafPrototype( helios::Context* context_ptr, uint subdivisions, int 
 
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
 
-    float leaf_aspect = 0.25; //ratio of leaf width to leaf length
+    float leaf_aspect = 0.2; //ratio of leaf width to leaf length
 
     float midrib_fold_fraction = 0.3;
 
-    float x_curvature = context_ptr->randu(-0.9f,-0.6f);
-    float y_curvature = -0.3;
+    float longitudinal_curvature = context_ptr->randu(-1.2f,-0.8f);
+    float lateral_curvature = -0.3;
 
     float petiole_roll = 0.04f;
 
     //parameters for leaf wave/wrinkles
     float wave_period = 0.1f; //period factor of leaf waves
-    float wave_amplitude = 0.035f; // amplitude of leaf waves
+    float wave_amplitude = 0.1f; // amplitude of leaf waves
 
-    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold_fraction, x_curvature, y_curvature, petiole_roll, wave_period, wave_amplitude);
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold_fraction, longitudinal_curvature, lateral_curvature, petiole_roll, wave_period, wave_amplitude, false);
 
 }
 
@@ -469,13 +544,13 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
     }
 
     float panicle_height = 1;
-    float panicle_width = 0.1;
-    float width_seed = 0.1;
-    float height_seed = 0.3;
+    float panicle_width = 0.08;
+    float width_seed = 0.08;
+    float height_seed = 0.25;
     float seed_tilt = 50;
     subdivisions = 6;
 
-    std::string seed_texture_file = "plugins/plantarchitecture/assets/textures/SorghumSeed.png";
+    std::string seed_texture_file = "plugins/plantarchitecture/assets/textures/SorghumSeed.jpeg";
     RGBcolor stem_color(0.45,0.55,0.42);
 
     std::vector<uint> UUIDs;
@@ -543,7 +618,7 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
 
     context_ptr->deletePrimitive(UUIDs_seed_ptype);
 
-    std::vector<uint> UUIDs_sphere = context_ptr->addSphere( 10, make_vec3(0,0,0.5*panicle_height), 0.5f, "plugins/plantarchitecture/assets/textures/SorghumSeed.png" );
+    std::vector<uint> UUIDs_sphere = context_ptr->addSphere( 10, make_vec3(0,0,0.5*panicle_height), 0.5f, seed_texture_file.c_str() );
     context_ptr->scalePrimitiveAboutPoint( UUIDs_sphere, make_vec3(1.9*panicle_width, 1.9*panicle_width, 0.8*panicle_height), make_vec3(0,0,0.5*panicle_height));
     UUIDs.insert(UUIDs.end(), UUIDs_sphere.begin(), UUIDs_sphere.end());
 
@@ -558,7 +633,7 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
 void SorghumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
     //set leaf scale based on position along the shoot
-    float scale = fmin(1.f, 0.5 + 0.5*float(shoot_node_index)/5.f);
+    float scale = fmin(1.f, 0.7 + 0.3*float(shoot_node_index)/5.f);
     phytomer->scaleLeafPrototypeScale(scale);
 
     //set internode length based on position along the shoot
@@ -578,11 +653,11 @@ uint SoybeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivis
 
     float midrib_fold = 0.1; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float x_curvature = context_ptr->randu(-0.2f,0.f); //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = context_ptr->randu(-0.2f,0.f); //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float y_curvature = -0.15; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = -0.25; //curvature factor along y-direction. (+curves upward, -curved downward)
 
-   return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, 0, 0, 0);
+   return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, true);
 
 }
 
@@ -609,19 +684,18 @@ uint SoybeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bo
 
 void SoybeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
-    if( shoot_node_index>10 || phytomer->rank>1 ) {
+    if( shoot_node_index>5 || phytomer->rank>1 ) {
         phytomer->setVegetativeBudState(BUD_DEAD);
-    }
-    if( shoot_node_index<=0 || shoot_node_index > 15){
+    }else{
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
     //set leaf and internode scale based on position along the shoot
-    float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 5.f);
+    float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
     phytomer->scaleLeafPrototypeScale(leaf_scale);
 
     //set internode length based on position along the shoot
-    float inode_scale = fmin(1.f, 0.75 + 0.25 * plant_age / 5.f);
+    float inode_scale = fmin(1.f, 0.1 + 0.9 * plant_age / 15.f);
     phytomer->scaleInternodeMaxLength(inode_scale);
 
 }
@@ -634,16 +708,14 @@ uint StrawberryLeafPrototype( helios::Context* context_ptr, uint subdivisions, i
 
     float midrib_fold_fraction = 0.2;
 
-    float x_curvature = -0.01;
-    float y_curvature = -0.2;
-
-    float petiole_roll = 0.05f;
+    float longitudinal_curvature = -0.01;
+    float lateral_curvature = -0.2;
 
     //parameters for leaf wave/wrinkles
-    float wave_period = 0.f; //period factor of leaf waves
-    float wave_amplitude = 0.0f; // amplitude of leaf waves
+    float wave_period = 0.3f; //period factor of leaf waves
+    float wave_amplitude = 0.01f; // amplitude of leaf waves
 
-    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold_fraction, x_curvature, y_curvature, petiole_roll, wave_period, wave_amplitude);
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold_fraction, longitudinal_curvature, lateral_curvature, 0, wave_period, wave_amplitude, true);
 
 }
 
@@ -667,9 +739,9 @@ uint SugarbeetLeafPrototype( helios::Context* context_ptr, uint subdivisions, in
 
     float midrib_fold = 0.1; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float x_curvature = -0.2; //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = -0.2; //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float y_curvature = 0.4; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = 0.4; //curvature factor along y-direction. (+curves upward, -curved downward)
 
     float petiole_roll = 0.75; //add a small radius roll at the based of the leaf to better mate with the petiole. Value is the magnitude of the roll (+rolls upward, - rolls downward)
 
@@ -677,7 +749,7 @@ uint SugarbeetLeafPrototype( helios::Context* context_ptr, uint subdivisions, in
     float wave_period = context_ptr->randu( 0.08f, 0.15f); //period factor of leaf waves
     float wave_amplitude = context_ptr->randu(0.02f,0.04f); // amplitude of leaf waves
 
-    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, petiole_roll, wave_period, wave_amplitude);
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, petiole_roll, wave_period, wave_amplitude, false);
 
 }
 
@@ -692,15 +764,15 @@ uint TomatoLeafPrototype( helios::Context* context_ptr, uint subdivisions, int c
 
     float midrib_fold = 0.1; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float x_curvature = context_ptr->randu(-0.45f,-0.2f); //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = context_ptr->randu(-0.45f,-0.2f); //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float y_curvature = -0.3; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = -0.3; //curvature factor along y-direction. (+curves upward, -curved downward)
 
     //parameters for leaf wave/wrinkles
-    float wave_period = 0.2f; //period factor of leaf waves
-    float wave_amplitude = 0.03f; // amplitude of leaf waves
+    float wave_period = 0.35f; //period factor of leaf waves
+    float wave_amplitude = 0.08f; // amplitude of leaf waves
 
-    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, 0, wave_period, wave_amplitude);
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, wave_period, wave_amplitude, false);
 
 }
 
@@ -732,5 +804,43 @@ void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     //set internode length based on position along the shoot
     float inode_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 10.f);
     phytomer->scaleInternodeMaxLength(inode_scale);
+
+}
+
+uint WheatLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
+
+    float leaf_aspect = 0.2; //ratio of leaf width to leaf length
+
+    float midrib_fold_fraction = 0.3;
+
+    float longitudinal_curvature = context_ptr->randu(-2.2f,-1.5f);
+    float lateral_curvature = -0.3;
+
+    float petiole_roll = 0.04f;
+
+    //parameters for leaf wave/wrinkles
+    float wave_period = 0.1f; //period factor of leaf waves
+    float wave_amplitude = 0.05f; // amplitude of leaf waves
+
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold_fraction, longitudinal_curvature, lateral_curvature, petiole_roll, wave_period, wave_amplitude, false);
+
+}
+
+uint WheatSpikePrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/WheatSpike.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+void WheatPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+    //set leaf scale based on position along the shoot
+    float scale = fmin(1.f, 0.7 + 0.3*float(shoot_node_index)/5.f);
+    phytomer->scaleLeafPrototypeScale(scale);
+
+    //set internode length based on position along the shoot
+    phytomer->scaleInternodeMaxLength(scale);
 
 }

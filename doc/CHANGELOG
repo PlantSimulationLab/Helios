@@ -1806,3 +1806,45 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Photosynthesis*
 - Treatment of twosided_flag and stomatal sidedness in the moisture/CO2 conductance is now consistent with the energy balance model.
+
+[1.3.19] 2024-09-20
+
+**Changed to c++17 standard**
+
+*Context*
+- Added capability of manually setting triangle vertices (see Context::setTriangleVertices()).
+- OBJ writer checks if output directory exists, and if not it creates it (and if it can't create it an error is thrown).
+- OBJ writer automatically copies all model texture files to the output directory.
+- Specular material property in OBJ output models was not being set when there is a texture.
+- Added version of Context::addTubeObject() that allows for explicit specification of texture mapping coordinates.
+- Added method to append a segment to an existing tube object (see Context::appendTubeSegment()).
+- Added methods to scale tube objects in the radial and axial directions (see Context::scaleTubeGirth() and Context::scaleTubeLength()).
+- Added decrement (-=) operator for vec2, vec3, vec4, int2, int3, and int4 vector types.
+- Added inequality (!-) operator for int2, int3, and int4 vector types.
+- Added unary minus (multiply by -1) operator for vec2, vec3, vec4, int2, int3, and int4 vector types.
+- A memory leak was fixed in helios::getImageResolutionJPEG() that would occur when JPEG image textures are used.
+
+*Plant Architecture*
+* Many significant updates to the plant architecture model. Some parameter names have changed.
+- Shoots are now made up of tube objects rather than cone segments.
+- Shoot tubes can be textured.
+- Peduncle tube color can be explicitly specified.
+- Context geometry is not updated until the end of the specified timestep (i.e., the argument of PlantArchitecture::advanceTime()). For example, if advanceTime() is given a timestep of 50 days, the Context geometry will only be updated at the end of 50 days. This makes the model run much faster.
+- Library models added for lettuce and wheat.
+
+*Photosynthesis*
+*Credit to Kyle Rizzo for these updates
+- Temperature response functions have been overhauled in the photosynthesis model. Users have the option to select from several different types of temperature response functions.
+- Users can now choose between a rectangular hyperbolic or non-rectangular hyperbolic J light response function.
+- Added a photosynthesis model (FvCB) parameter library for a range of species.
+- Added helper functions to assist setting the parameters for the temperature response functions.
+
+*Visualizer*
+- A memory leak was fixed in Visualizer::addTextboxByCenter due to freetype library not being properly cleaned up.
+
+*Radiation*
+- Reflected and transmitted diffuse radiation flux values were not correct. They were not being properly scaled by the ambient diffuse flux.
+
+*Stomatal Conductance*
+*Credit to Kyle Rizzo for these updates
+- Added a stomatal conductance model (BMF) parameter library for a range of species.

@@ -572,16 +572,18 @@ RT_PROGRAM void miss_diffuse() {
                     }
                 }
 
-//                absorption
-                atomicAdd(&radiation_in[ind_origin], fd * diffuse_flux[b] * (1.f - t_rho - t_tau) * prd.strength);
+                float strength = fd * diffuse_flux[b] * prd.strength;
+
+                        //                absorption
+                atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau) );
 
                 if (t_rho > 0 || t_tau > 0) {
                     if (prd.face) {//reflection from top, transmission from bottom
-                        atomicFloatAdd(&scatter_buff_top[ind_origin], prd.strength * t_rho); //reflection
-                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], prd.strength * t_tau); //transmission
+                        atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_rho); //reflection
+                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_tau); //transmission
                     } else {//reflection from bottom, transmission from top
-                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], prd.strength * t_rho); //reflection
-                        atomicFloatAdd(&scatter_buff_top[ind_origin], prd.strength * t_tau); //transmission
+                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); //reflection
+                        atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); //transmission
                     }
                 }
                 if( Ncameras>0 ) {
@@ -590,11 +592,11 @@ RT_PROGRAM void miss_diffuse() {
                     float t_tau_cam = tau_cam[ indc ];
                     if ( (t_rho_cam > 0 || t_tau_cam > 0) && prd.strength>0 ) {
                         if (prd.face) {//reflection from top, transmission from bottom
-                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_rho_cam); //reflection
-                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_tau_cam); //transmission
+                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_rho_cam); //reflection
+                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_tau_cam); //transmission
                         } else {//reflection from bottom, transmission from top
-                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_rho_cam); //reflection
-                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], fd * diffuse_flux[b] * prd.strength * t_tau_cam); //transmission
+                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_rho_cam); //reflection
+                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_tau_cam); //transmission
                         }
                     }
                 }

@@ -94,11 +94,17 @@
 
  is the rate limited by RuBP regeneration.
 
- Dependency of the potential electron transport rate \f$J\f$ is assumed to follow a rectangular hyperbolic relationship
+ The light response of \f$J\f$, the potential electron transport rate, can be described as a rectangular hyperbola with 1 shape parameter, or non-rectangular hyperbola with 2 shape parameters.
+ The rectangular hyperbola takes the form
 
- \f[J=\dfrac{\alpha J_{max} Q}{\alpha Q + J_{max}}.\f]
+ \f[ J(Q) = \dfrac{J_{max} \alpha Q}{\alpha Q + J_{max}} \f]
 
- Note that a limitation state based on TPU utilization is not included in the model for simplicity, since such limitation is rare in nature.
+ where \f$Q\f$ is the photosynthetically active absorbed radiation flux (\f$\mu mol\,m^{-2}\,s^{-1}\f$), \f$J_{max}\f$ is the temperature-dependent maximum potential electron transport rate (\f$\mu mol\,m^{-2}\,s^{-1}\f$), and \f$\alpha\f$ is the intrinsic quantum efficiency of electron transport (\f$electron\,photon^{-1}\f$) which defines the initial slope of the light response, determines its resulting shape in the rectangular hyperbolic form, and is thought to be relatively conserved around 0.5.
+ The non-rectangular hyperbola takes the form
+
+ \f[J(Q) = \dfrac{\alpha Q + J_{max} - \sqrt{(\alpha Q + J_{max})^2 - 4 \theta \alpha Q J_{max}}}{2 \theta}\f]
+
+ where \f$\theta\f$ is an additional parameter (unitless) that shapes the light response curve beyond its initial slope. When \f$\theta\f$ approaches zero, the two forms become equivalent. In Photosynthesis Plugin, the rectangular form will be assumed unless \f$\theta\f$ is specified by the user.
 
  The intercellular CO<sub>2</sub> concentration \f$C_i\f$ is determined from the relation
 
@@ -119,18 +125,40 @@
 
 \subsection FvCBtemperature Temperature response of model parameters
 
- The temperature dependence of model parameters is described using the relationships developed by <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/j.1365-3040.2001.00668.x">Bernacchi et al. (2001)</a>, and are given by the following equations
+Two different temperature response functions are commonly used in photosynthetic modeling and supported in the Photosynthesis Plugin. One is an Arrhenius equation, which is exponentially increasing with no decline in the region of use. The other is a modified Arrhenius equation with a peak or temperature optimum, beyond which there is a decline in the value of the function, representing a denaturing of an enzyme and subsequent reduction of its activity.
 
- \f{align*}{
- \Gamma^* &= \mathrm{exp}\left(19.02-37.83/(RT_s)\right),\\
- K_{c} &= \mathrm{exp}\left(38.05-79.43/(RT_s)\right),\\
- K_{o} &= \mathrm{exp}\left(20.30-36.38/(RT_s)\right),\\
- R_{d} &= R_{d,25}\,\mathrm{exp}\left(18.72-46.39/(RT_s)\right),\\
- V_{cmax} &= V_{cmax,25}\,\mathrm{exp}\left(26.35-65.33/(RT_s)\right),\\
- J_{cmax} &= J_{max,25}\,\mathrm{exp}\left(C_{Jmax}-\Delta H_{a,Jmax}/(RT_s)\right),
- \f}
- 
-  where \f$R\f$ is the universal gas constant, \f$T_s\f$ is the leaf temperature in absolute units, and the subscript 25 indicates the evaluation of the parameter at a temperature of 25\f$^\circ\f$C. 
+ \f[
+ \begin{aligned}
+ k &= k_{25} \cdot \exp \left[\frac{\Delta H_a}{R} \left(\frac{1}{298}-\frac{1}{T_{leaf}} \right) \right] \frac{f(298)}{f(T_{leaf})}, \\
+ f(T_{leaf}) &= 1+\exp \left[\frac{\Delta H_d}{R} \left(\frac{1}{T_{opt}} - \frac{1}{T_{leaf}} \right) - \ln \left(\frac{\Delta H_d}{\Delta H_a}-1 \right) \right]
+ \end{aligned}
+ \f]
+
+In this form, the model is conveniently parameterized by the commonly used standard reference rate at 25\f$^\circ\f$C, \f$k_{25}\f$, as well as the energy of activation, \f$A = \Delta H_a = dH_a\f$ of the Arrhenius equation, but also by the observable temperature optimum, \f$T_{opt}\f$ and one additional fitted parameter, the energy of deactivation, \f$D = \Delta H _d = dH_d\f$, related to the rate of decline from the optimum.
+
+As \f$T_{opt}\f$ \f$\to \infty\f$, then the peaked form approaches the standard, unpeaked Arrhenius equation, allowing for mathematical backwards compatibility for parameters obtained from fitting to the standard unpeaked form.
+
+In the Photosynthesis Plugin, the Arrhenius form will be assumed as it requires fewer parameters, unless the additional parameters \f$dH_d\f$ and \f$T_{opt}\f$ are specified by the user.
+
+| Parameter | Description                            | Units                     |
+| --------- | -------------------------------------- | ------------------------- |
+| \f$k_{25}\f$  | reference rate at 25\f$^\circ\f$C     | \f$\mu mol\,m^{-2}\,s^{-1}\f$ |
+| \f$dH_a\f$    | activation energy (rate of increase)   | \f$kJ\,mol^{-1}\f$            |
+| \f$dH_d\f$    | deactivation energy (rate of decrease) | \f$kJ\,mol^{-1}\f$            |
+| \f$T_{opt}\f$ | optimum temperature in Kelvin          | \f$K\f$                       |
+| \f$T_{leaf}\f$| leaf surface temperature in Kelvin     | \f$K\f$                       |
+| \f$R\f$       | ideal gas constant, 0.008314           | \f$kJ\,mol^{-1}\,K^{-1}\f$    |
+
+ Additional temperature parameters that are not typically fit to use the standard Arrhenius form with the parameters obtained by <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/j.1365-3040.2001.00668.x">Bernacchi et al. (2001)</a>, and are given by the following equations
+
+ \f[
+ \begin{aligned}
+ \Gamma^* &= 42.60 \cdot \exp \left[ \frac{37.83}{R} \left(\frac{1}{298} - \frac{1}{T_{leaf}} \right) \right] \\
+ K_c &= 400.3 \cdot \exp \left[ \frac{79.43}{R} \left(\frac{1}{298} - \frac{1}{T_{leaf}} \right) \right] \\
+ K_o &= 275.1 \cdot \exp \left[ \frac{36.38}{R} \left(\frac{1}{298} - \frac{1}{T_{leaf}} \right) \right] \\
+ R_d &= R_{d,25} \cdot \exp \left[ \frac{46.39}{R} \left(\frac{1}{298} - \frac{1}{T_{leaf}} \right) \right]
+ \end{aligned}
+ \f]
 
  \subsubsection FvCBPhotoVars Summary of FvCB Model Independent Variables
 
@@ -147,110 +175,59 @@
 
  The table below gives example model coefficients obtained for several different species.
 
- <table>
- <tr>
- 	<th>Species</th>
- 	<th>\f$V_{cmax,25}\f$ (\f$\mu\f$mol/m<sup>2</sup>-s)</th>
- 	<th>\f$J_{max,25}\f$ (\f$\mu\f$mol/m<sup>2</sup>-s)</th>
- 	<th>\f$C_{Jmax}\f$ (unitless)</th>
- 	<th>\f$H_{a,Jmax}\f$ (mol/J)</th>
- 	<th>\f$\alpha\f$ (unitless)</th>
- 	<th>\f$R_{d,25}\f$ (\f$\mu\f$mol/m<sup>2</sup>-s)</th>
- 	<th>\f$R^2\f$ of fit</th>
- </tr>
- <tr>
- 	<td>Almond (default)</td>
- 	<td>100.61</td>
- 	<td>166.34</td>
- 	<td> 18.86</td>
- 	<td> 46.36</td>
- 	<td>0.336</td>
- 	<td>1.490</td>
- 	<td>0.995</td>
- </tr>
- <tr>
- 	<td>Apple</td>
- 	<td>101.08</td>
- 	<td>167.03</td>
- 	<td> 19.54</td>
- 	<td> 47.62</td>
- 	<td>0.432</td>
- 	<td>3.000</td>
- 	<td>0.994</td>
- </tr>
- <tr>
- 	<td>Cherry</td>
- 	<td> 75.65</td>
- 	<td>129.06</td>
- 	<td> 19.88</td>
- 	<td> 48.49</td>
- 	<td>0.404</td>
- 	<td>2.120</td>
- 	<td>0.992</td>
- </tr>
- <tr>
- 	<td>Prune</td>
- 	<td> 75.88</td>
- 	<td>129.41</td>
- 	<td> 19.65</td>
- 	<td> 48.58</td>
- 	<td>0.402</td>
- 	<td>1.560</td>
- 	<td>0.990</td>
- </tr>
- <tr>
- 	<td>Pear</td>
- 	<td>107.69</td>
- 	<td>176.71</td>
- 	<td> 18.82</td>
- 	<td> 46.04</td>
- 	<td>0.274</td>
- 	<td>1.510</td>
- 	<td>0.994</td>
- </tr>
- <tr>
- 	<td>Pistachio (female)</td>
- 	<td>138.99</td>
- 	<td>221.76</td>
- 	<td> 17.81</td>
- 	<td> 43.80</td>
- 	<td>0.366</td>
- 	<td>2.850</td>
- 	<td>0.999</td>
- </tr>
- <tr>
- 	<td>Pistachio (male)</td>
- 	<td>154.17</td>
- 	<td>243.20</td>
- 	<td> 20.44</td>
- 	<td> 50.89</td>
- 	<td>0.335</td>
- 	<td>2.050</td>
- 	<td>0.994</td>
- </tr>
- <tr>
- 	<td>Walnut</td>
- 	<td>121.85</td>
- 	<td>197.25</td>
- 	<td> 19.57</td>
- 	<td> 48.35</td>
- 	<td>0.404</td>
- 	<td>1.960</td>
- 	<td>0.995</td>
- </tr>
- </table>
+| Species            | \f$V_{cmax25}\f$ | \f$J_{max25}\f$ | \f$TPU_{25}\f$ | \f$R_{d25}\f$ | \f$\alpha\f$ | \f$\theta\f$ | \f$\Delta H_{a,Vcmax}\f$ | \f$T _{opt,Vcmax}\f$ | \f$\Delta H_{d,Vcmax}\f$ | \f$\Delta H_{a,Jmax}\f$ | \f$T _{opt,Jmax}\f$ | \f$\Delta H_{d,Jmax}\f$ | \f$\Delta H_{a,TPU}\f$ | \f$T _{opt,TPU}\f$ | \f$\Delta H_{d,TPU}\f$ |
+| ----------         | ------------ | ----------- | ---------- | --------- | -------- | -------- | -------------------- | ---------------- | -------------------- | ------------------- | --------------- | ------------------- | ------------------ | -------------- | ------------------ |
+| Almond             | 72.6         | 144.2       | 6.4        | 0.2       | 0.094    | 0        | 27.3                 | 315.3            | 478.4                | 64.1                | 314.9           | 508.4               | 37.1               | 311.3          | 477.9              |
+| California Bay     | 97.5         | 193         | 3.3        | 0.1       | 0.037    | 0        | 49.1                 | 308.6            | 505.8                | 34                  | 308.5           | 456.7               | 0.1                | 309.4          | 477.5              |
+| Elderberry         | 37.7         | 149.7       | 7.3        | 1.3       | 0.202    | 0.472    | 66                   | 319.4            | 496                  | 24.5                | 314.8           | 492.9               | 33.6               | 314.5          | 497.5              |
+| Grape              | 74.5         | 180.2       | 7.7        | 1.3       | 0.304    | 0        | 76.1                 | 318.8            | 499.8                | 23                  | 313.8           | 502.3               | 24                 | 314.6          | 496.4              |
+| Maple              | 96.4         | 168         | 2.7        | 0.1       | 0.077    | 0        | 48.9                 | 307.1            | 505                  | 8.5                 | 304.7           | 476.7               | 32.1               | 308.3          | 471.6              |
+| Olive              | 75.9         | 170.4       | 8.3        | 1.9       | 0.398    | 0        | 55.4                 | 315.2            | 497                  | 32.2                | 312.5           | 493.4               | 37.2               | 311.7          | 498.9              |
+| Pistachio          | 101.8        | 223         | 9.8        | 1.5       | 0.216    | 0.65     | 56.5                 | 316.6            | 483.1                | 27.7                | 314.6           | 458.5               | 39.9               | 315.4          | 494.3              |
+| Toyon              | 52.8         | 142.4       | 6.6        | 0.8       | 0.29     | 0.532    | 42.1                 | 315.1            | 483                  | 9                   | 313             | 486.2               | 14                 | 314.8          | 493.8              |
+| Walnut             | 81.6         | 201.9       | 10.2       | 0.9       | 0.362    | 0        | 85.3                 | 316.5            | 500.6                | 41.4                | 308.6           | 308.2               | 21.9               | 310.4          | 434.9              |
+| Redbud             | 68.5         | 132.4       | 6.6        | 0.8       | 0.41     | 0        | 66.6                 | 315.1            | 496                  | 41.2                | 313.1           | 474                 | 34.3               | 312.8          | 463.2              |
+| Apple              | 101.08       | 167.03      | --         | 3.00      | 0.432    | 0        | 65.33                | --               | --                   | 47.62               | --              | --                  | --                 | --             | --                 |
+| Cherry             | 75.65        | 129.06      | --         | 2.12      | 0.404    | 0        | 65.33                | --               | --                   | 48.49               | --              | --                  | --                 | --             | --                 |
+| Pear               | 107.69       | 176.71      | --         | 1.51      | 0.274    | 0        | 65.33                | --               | --                   | 46.04               | --              | --                  | --                 | --             | --                 |
+| Prune              | 75.88        | 129.41      | --         | 1.65      | 0.402    | 0        | 65.33                | --               | --                   | 48.58               | --              | --                  | --                 | --             | --                 |
 
- <!--
-  <table>
-  <tr><th>Parameter</th><th>Units</th><th>Description</th></tr>
-  <tr><td>\f$V_{cmax,25}\f$</td><td>\f$\mu\f$mol/m<sup>2</sup>-sec</td><td>Maximum Rubisco carboxylation rate at reference temperature of 25\f$^\circ\f$.</td></tr>
-  <tr><td>\f$J_{max,25}\f$</td><td>\f$\mu\f$mol/m<sup>2</sup>-sec</td><td>Maximum electron transport rate at reference temperature of 25\f$^\circ\f$.</td></tr>
-  <tr><td>\f$C_{Jmax}\f$</td><td>unitless</td><td>Temperature response scaling coefficient for \f$J_{max}\f$.</td></tr>
-  <tr><td>\f$H_{a,Jmax}\f$</td><td>mol/J</td><td>Activation energy for \f$J_{max}\f$ temperature response.</td></tr>
-  <tr><td>\f$R_{d,25}\f$</td><td>\f$\mu\f$mol/m<sup>2</sup>-sec</td><td>Dark respiration rate at reference temperature of 25\f$^\circ\f$.</td></tr>
-  <tr><td>\f$\alpha\f$</td><td>unitless</td><td>Light response rate parameter</td></tr>
-   </table>
-   -->
+\subsubsection FvCBSettingPhotoParams Setting FvCB Model Parameters
+
+ ~~~~~~{.cpp}
+  #include "PhotosynthesisModel.h"
+
+  int main(){
+	PhotosynthesisModel photosynthesismodel(&context);
+
+	//Use the Farquahar-von Caemmerer-Berry model
+	photosynthesismodel.setModelType_Farquhar();
+
+    //Use a species from the library
+    photosynthesis.setModelCoefficients("almond");
+
+    //Or set parameters manually: fmc.setParam(k25, dHa, Topt(C), dHd)
+    FarquharModelCoefficients fmc;
+    fmc.setVcmax(74.5, 76.1);               // standard Arrhenius
+    fmc.setJmax(180.2, 23.0, 40.65, 502.3); // peaked Arrhenius
+    fmc.setTPU(7.7, 24.0, 41.1, 496.4);
+    fmc.setRd(1.3);
+    fmc.setQuantumEfficiency_alpha(0.304);
+    fmc.setLightResponseCurvature_theta(0.601);
+
+	photosynthesismodel.run();
+
+	//Set model coefficients for different leaf groups
+	photosynthesis.setModelCoefficients("almond", almondleaves);
+	photosynthesis.setModelCoefficients("grape", grapeleaves);
+
+	//Get and modify model coefficients
+	AlmondFarquharModelCoefficients afmc;
+	afmc = photosynthesis.getModelCoefficients("almond");
+	afmc.setVcmax(1.5*fmc.getVcmaxTempResponse().value_at_25C, fmc.getVcmaxTempResponse().dHa);
+	photosynthesis.setModelCoefficients(afmc,almondleaves);
+  }
+~~~~~~
 
   \section EmpiricalDescription Empirical Model Description
 

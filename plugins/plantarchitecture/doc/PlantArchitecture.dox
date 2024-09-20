@@ -154,6 +154,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | pitch | RandomParameter_float | degrees | Angle of the peduncle axis with respect to its parent internode axis. |
 | roll | RandomParameter_float | degrees | Rotation angle of the peduncle about it's own axis. |
 | curvature | RandomParameter_float | degrees/meter | Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward. |
+| color | helios::RGBcolor | - | Diffuse color of the peduncle tube. |
 | length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the inflorescence supporting structure. |
 | radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the inflorescence supporting structure (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **inflorescence** --- ||||
@@ -324,7 +325,7 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 
 \subsubsection ShootParam_inode_radius_initial internode_radius_initial
 
-Will come back to this later. It is currently used in two places: 1. within addPhytomerToShoot() to set the radius of the internode added to an existing shoot, and 2) within buildShootPhytomers() to either set the radius of the internodes if it is the trunk/base, or the radius is set as a fraction of internode_radius_iniitial.
+Will come back to this later. It is currently used in two places: 1. within appendPhytomerToShoot() to set the radius of the internode added to an existing shoot, and 2) within buildShootPhytomers() to either set the radius of the internodes if it is the trunk/base, or the radius is set as a fraction of internode_radius_iniitial.
 
 \subsubsection ShootParam_insertion insertion_angle_tip and insertion_angle_decay_rate
 

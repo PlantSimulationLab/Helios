@@ -177,6 +177,32 @@ public:
      */
     void setModelCoefficients( const BBcoefficients &coeffs, const std::vector<uint> &UUIDs );
 
+    //! Set the model coefficient values for a subset of primitives based on their UUIDs
+    /**
+     * \param[in] coeffs Vecotr of sets of model coefficient values
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
+     */
+    void setModelCoefficients(const std::vector<BMFcoefficients> &coeffs, const std::vector<uint> &UUIDs);
+
+    //! Set the model coefficient values using one of the available species in the library
+    /**
+     * \param[in] species Name of species
+     */
+    void setBMFCoefficientsFromLibrary(const std::string &species);
+
+    //! Set the model coefficient values using one of the available species in the library for a subset of primitives based on their UUIDs
+    /**
+     * \param[in] species Name of species
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
+     */
+    void setBMFCoefficientsFromLibrary(const std::string &species, const std::vector<uint> &UUIDs);
+
+    //! Get the model coefficient values using one of the available species in the library
+    /**
+     * \param[in] species Name of species
+     */
+    BMFcoefficients getBMFCoefficientsFromLibrary(const std::string &species);
+
     //! Set time constants for dynamic stomatal opening and closing for all primitives
     /**
      * \param[in] tau_open Time constant (seconds) for dynamic stomatal opening
