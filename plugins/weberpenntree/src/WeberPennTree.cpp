@@ -161,18 +161,30 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
   theta = 1e-5;
   phi = getVariation(2.f*M_PI);
 
+  uint base_splits = parameters.BaseSplits;
+  if( base_splits > 0 && parameters.BaseSplitsV > 0 )
+    base_splits += static_cast<uint>(round(getVariation(parameters.BaseSplitsV)));
+
+  float base_split_size = parameters.BaseSplitSize;
+  if( base_split_size > 0 && parameters.BaseSplitSizeV > 0 )
+    base_split_size += getVariation(parameters.BaseSplitSizeV);
+
+  float base_size = parameters.BaseSize;
+  if( base_size > 0 && parameters.BaseSizeV > 0 )
+    base_size += getVariation(parameters.BaseSizeV);
+
   //Region above trunk base
 
-  if( parameters.BaseSplits > 0 ){ //trunk splits at base
+  if( base_splits > 0 ){ //trunk splits at base
 
-    dlength0 = length0*(1.f-parameters.BaseSplitSize)/float(parameters.nCurveRes.at(0));
+    dlength0 = length0*(1.f-base_split_size)/float(parameters.nCurveRes.at(0));
 
     // Length of trunk base
     float base0;
-    if( parameters.BaseSplits > 0 ){
-      base0 = parameters.BaseSplitSize;
+    if( base_splits > 0 ){
+      base0 = base_split_size;
     }else{
-      base0 = parameters.BaseSize;
+      base0 = base_size;
     }
 
     for( uint i=1; i<base_nodes; i++ ){
@@ -190,11 +202,11 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
     
     vec3 base_position = nodes.at(base_nodes-1);
     
-    float offset_child = parameters.BaseSplitSize*length0;
+    float offset_child = base_split_size*length0;
     
     float phi_split = 0;//getVariation(2.f*M_PI);
     
-    for( uint j=0; j<parameters.BaseSplits+1; j++ ){ //looping over clones (splits)
+    for( uint j=0; j<base_splits+1; j++ ){ //looping over clones (splits)
 
       float angle_split = (parameters.nSplitAngle.at(0)-getVariation(parameters.nSplitAngleV.at(0)))*M_PI/180.f;
       
@@ -202,10 +214,10 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
       helios::SphericalCoord child_rotation = make_SphericalCoord(angle_split,phi_split);
       
-      recursiveBranch( parameters, 0, 0, base_position, current_normal, child_rotation, length0-offset_child, radius.at(base_nodes-1), offset_child, origin, scale, ID_leaf_template );
+      recursiveBranch( parameters, 0, 0, base_position, current_normal, child_rotation, length0-offset_child, radius.at(base_nodes-1), offset_child, origin, scale, ID_leaf_template, base_size, base_splits );
       
       //phi_split += (20+0.75*120*pow(getVariation(1),2))*M_PI/180.f;
-      phi_split += 2.f*M_PI/float(parameters.BaseSplits+1);
+      phi_split += 2.f*M_PI/float(base_splits+1);
 
 
     }
@@ -252,7 +264,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
       
       // --- Branch Recursion ---- //
 
-      if( parameters.Levels>0 && Zplus>=parameters.BaseSize ){
+      if( parameters.Levels>0 && Zplus>=base_size ){
       
 	for( uint s=0; s<stems_per_segment; s++ ){
 	
@@ -264,13 +276,13 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 	  float radius_parent = radius.at(i-1)+base_position.z/length0*(radius.at(i)-radius.at(i-1));
 	  	  
 	  //float offset_child = parameters.BaseSize*length0+(i-2)*dlength0 + dlength0*float(s)/float(stems_per_segment-1);
-	  float base_nodes = floor(parameters.BaseSize*parameters.nCurveRes.at(0));
-	  float offset_child = (Zminus-parameters.BaseSize)*length0+float(s+0.5)/float(stems_per_segment-1)*dlength0;
+	  float base_nodes = floor(base_size*parameters.nCurveRes.at(0));
+	  float offset_child = (Zminus-base_size)*length0+float(s+0.5)/float(stems_per_segment-1)*dlength0;
 
 	  phi_child += (parameters.nRotate.at(1)+getVariation(parameters.nRotateV.at(1)))*M_PI/180.f;
 
 	  if( offset_child>0 ){
-	    recursiveBranch( parameters, 1, 0, base_position, current_normal, child_rotation, length0, radius_parent, offset_child, origin, scale, ID_leaf_template );
+	    recursiveBranch( parameters, 1, 0, base_position, current_normal, child_rotation, length0, radius_parent, offset_child, origin, scale, ID_leaf_template, base_size, base_splits );
 	  }
 	  
 	}
@@ -326,7 +338,7 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
 }
 
-void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale, const uint leaf_template ){
+void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale, const uint leaf_template, float base_size, uint base_splits ){
 
   if( n<parameters.Levels ){ //Branches
 
@@ -352,7 +364,7 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
     // Ratio of position along parent
     float ratio;
     if( n<=1 ){
-      ratio = (length_parent*(1-parameters.BaseSize)-offset_child)/(length_parent*(1-parameters.BaseSize));
+      ratio = (length_parent*(1-base_size)-offset_child)/(length_parent*(1-base_size));
     }else{
       ratio = (length_parent-offset_child)/length_parent;
     }
@@ -467,7 +479,7 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
 
       	vec3 base_position = nodes.at(i-seg_start-1) + (nodes.at(i-seg_start)-nodes.at(i-seg_start-1))*f;
 
-      	if( parameters.BaseSplits > 0 && n==0 && base_position.z<parameters.BaseSize*length_parent ){
+      	if( base_splits > 0 && n==0 && base_position.z<base_size*length_parent ){
       	  continue;
       	}
 	
@@ -481,7 +493,7 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
       	float downangle = (parameters.nDownAngle.at(n+1)+getVariation(parameters.nDownAngleV.at(n+1)))*M_PI/180.f;
       	SphericalCoord rotation = make_SphericalCoord(downangle,phi_child);
 	
-      	recursiveBranch( parameters, n+1, 0, base_position, normal, rotation, length_child, radius_p, offset_child, origin, scale, leaf_template );
+      	recursiveBranch( parameters, n+1, 0, base_position, normal, rotation, length_child, radius_p, offset_child, origin, scale, leaf_template, base_size, base_splits );
 
 	if( n == parameters.Levels-1 ){//leaves
 	  phi_child += (parameters.nRotate.at(n+1)+getVariation(parameters.nRotateV.at(n+1)))*M_PI/180.f;
@@ -509,7 +521,7 @@ void WeberPennTree::recursiveBranch( WeberPennTreeParameters parameters, uint n,
 
 	  helios::SphericalCoord rotation = make_SphericalCoord(angle_split,phi_split);
       
-	  recursiveBranch( parameters, n, i, base_position, normal, rotation, length_parent, radius_p, offset_child, origin, scale, leaf_template );
+	  recursiveBranch( parameters, n, i, base_position, normal, rotation, length_parent, radius_p, offset_child, origin, scale, leaf_template, base_size, base_splits );
       
 	  phi_split += 2.f*M_PI/float(parameters.nSegSplits.at(n)+1);
       
@@ -808,6 +820,22 @@ void WeberPennTree::loadXML( const char* filename ){
       params.BaseSize = atof(basesize_str);
     }
 
+    // * Base Size V * //
+    pugi::xml_node basesizev_node = p.child("BaseSizeV");
+
+    const char* basesizev_str = basesizev_node.child_value();
+    if( strlen(basesizev_str)==0 ){
+      params.BaseSizeV = 0;
+    }else{
+      float bsv = atof(basesizev_str);
+      if ( params.BaseSize - bsv < 0 ){
+        std::cout << "failed." << std::endl;
+        std::cerr << "ERROR (WeberPennTree::loadXML): Given BaseSizeV (" << bsv << ") is too big for tree " << label << ". BaseSize - BaseSizeV should be positive." << std::endl;
+        exit(EXIT_FAILURE);
+      }
+      params.BaseSizeV = bsv;
+    }
+
     // * Base Splits * //
     pugi::xml_node basesplits_node = p.child("BaseSplits");
     
@@ -820,6 +848,22 @@ void WeberPennTree::loadXML( const char* filename ){
       params.BaseSplits = atoi(basesplits_str);
     }
 
+    // * Base Splits V * //
+    pugi::xml_node basesplitsv_node = p.child("BaseSplitsV");
+
+    const char* basesplitsv_str = basesplitsv_node.child_value();
+    if( strlen(basesplitsv_str)==0 ){
+      params.BaseSplitsV = 0;
+    }else{
+      uint bsv = atoi(basesplitsv_str);
+      if ( params.BaseSplits - bsv < 0 ){
+        std::cout << "failed." << std::endl;
+        std::cerr << "ERROR (WeberPennTree::loadXML): Given BaseSplitsV (" << bsv << ") is too big for tree " << label << ". BaseSplits - BaseSplitsV should be positive." << std::endl;
+        exit(EXIT_FAILURE);
+      }
+      params.BaseSplitsV = bsv;
+    }
+
     // * Base Split Size * //
     pugi::xml_node basesplitsize_node = p.child("BaseSplitSize");
     
@@ -830,6 +874,22 @@ void WeberPennTree::loadXML( const char* filename ){
       exit(EXIT_FAILURE);
     }else{
       params.BaseSplitSize = atof(basesplitsize_str);
+    }
+
+    // * Base Split Size V * //
+    pugi::xml_node basesplitsizev_node = p.child("BaseSplitSizeV");
+
+    const char* basesplitsizev_str = basesplitsizev_node.child_value();
+    if( strlen(basesplitsizev_str)==0 ){
+      params.BaseSplitSizeV = 0;
+    }else{
+      float bssv = atof(basesplitsizev_str);
+      if ( params.BaseSplitSize - bssv < 0 ){
+        std::cout << "failed." << std::endl;
+        std::cerr << "ERROR (WeberPennTree::loadXML): Given BaseSplitSizeV (" << bssv << ") is too big for tree " << label << ". BaseSplitSize - BaseSplitSizeV should be positive." << std::endl;
+        exit(EXIT_FAILURE);
+      }
+      params.BaseSplitSizeV = bssv;
     }
 
     // * Scale * //

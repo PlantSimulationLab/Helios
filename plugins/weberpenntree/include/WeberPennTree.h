@@ -25,13 +25,13 @@ struct WeberPennTreeParameters{
   int Shape;
 
   // Fractional branchless area at tree base
-  float BaseSize;
+  float BaseSize, BaseSizeV;
 
   // Number of splits at tree base
-  uint BaseSplits;
+  uint BaseSplits, BaseSplitsV;
 
   // Fractional height of split (if BaseSplits>0)
-  float BaseSplitSize;
+  float BaseSplitSize, BaseSplitSizeV;
 
   // Size and scaling of tree
   float Scale, ScaleV, ZScale, ZScaleV;
@@ -212,8 +212,10 @@ class WeberPennTree{
       \param[in] "offset_child" Length in meters of the child along the parent's branch
       \param[in] "phirot" Angle of rotation of child about parent's z-axis
       \param[in] "scale" Tree scaling factor
+      \param[in] "base_size" Base size computed (with the configured variance) for this specific tree instance
+      \param[in] "base_splits" Number of base splits computed (with the configured variance) for this specific tree instance
   */
-  void recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale, const uint leaf_template );
+  void recursiveBranch( WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child, helios::vec3 origin, float scale, const uint leaf_template, float base_size, uint base_splits );
 
   float getVariation( float V );
  
