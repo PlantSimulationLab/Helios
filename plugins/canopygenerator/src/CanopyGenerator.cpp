@@ -966,6 +966,11 @@ void CanopyGenerator::loadXML( const char* filename ){
                 vspgrapevineparameters.cluster_radius = clr;
             }
 
+            float clhm = XMLloadfloat(s, "cluster_height_max");
+            if (clhm != nullvalue_f) {
+                vspgrapevineparameters.cluster_height_max = clhm;
+            }
+
             RGBAcolor grape_color = XMLloadrgba(s, "grape_color");
             if ( grape_color.a != 0 ) {
                 vspgrapevineparameters.grape_color = make_RGBcolor(grape_color.r,grape_color.g,grape_color.b);
@@ -1076,11 +1081,16 @@ void CanopyGenerator::loadXML( const char* filename ){
                 splitgrapevineparameters.shoots_per_cordon = uint(spc);
             }
 
-/*
-      float spa = XMLloadfloat( s, "shoots_tip_angle" );
-      if( spa != nullvalue_f ){
-	splitgrapevineparameters.shoots_tip_angle = uint(spa);
-*/
+            float sat = XMLloadfloat( s, "shoot_angle_tip" );
+            if( sat != nullvalue_f ){
+                splitgrapevineparameters.shoot_angle_tip = sat;
+            }
+
+            float sab = XMLloadfloat( s, "shoot_angle_base" );
+            if( sab != nullvalue_f ){
+                splitgrapevineparameters.shoot_angle_base = sab;
+            }
+
             float lsf = XMLloadfloat(s, "leaf_spacing_fraction");
             if (lsf != nullvalue_f) {
                 splitgrapevineparameters.leaf_spacing_fraction = lsf;
@@ -1094,6 +1104,11 @@ void CanopyGenerator::loadXML( const char* filename ){
             float clr = XMLloadfloat(s, "cluster_radius");
             if (clr != nullvalue_f) {
                 splitgrapevineparameters.cluster_radius = clr;
+            }
+
+            float clhm = XMLloadfloat(s, "cluster_height_max");
+            if (clhm != nullvalue_f) {
+                splitgrapevineparameters.cluster_height_max = clhm;
             }
 
             RGBAcolor grape_color = XMLloadrgba(s, "grape_color");
@@ -1224,6 +1239,11 @@ void CanopyGenerator::loadXML( const char* filename ){
                 unilateralgrapevineparameters.cluster_radius = clr;
             }
 
+            float clhm = XMLloadfloat(s, "cluster_height_max");
+            if (clhm != nullvalue_f) {
+                unilateralgrapevineparameters.cluster_height_max = clhm;
+            }
+
             RGBAcolor grape_color = XMLloadrgba(s, "grape_color");
             if (grape_color.a!=0 ) {
                 unilateralgrapevineparameters.grape_color = make_RGBcolor(grape_color.r,grape_color.g,grape_color.b);
@@ -1349,6 +1369,11 @@ void CanopyGenerator::loadXML( const char* filename ){
             float clr = XMLloadfloat(s, "cluster_radius");
             if (clr != nullvalue_f) {
                 gobletgrapevineparameters.cluster_radius = clr;
+            }
+
+            float clhm = XMLloadfloat(s, "cluster_height_max");
+            if (clhm != nullvalue_f) {
+                gobletgrapevineparameters.cluster_height_max = clhm;
             }
 
             RGBAcolor grape_color = XMLloadrgba(s, "grape_color");
